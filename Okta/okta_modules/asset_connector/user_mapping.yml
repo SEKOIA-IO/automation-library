@@ -201,12 +201,6 @@ mapping:
       description: "User login/username (typically email)"
 
     - source: "profile.login"
-      target: "user.account.uid"
-      type: "string"
-      logic: "Direct mapping of user login as account identifier"
-      description: "Okta account identifier (login/email)"
-
-    - source: "profile.login"
       target: "user.account.name"
       type: "string"
       logic: "Direct mapping of user login"
@@ -218,10 +212,10 @@ mapping:
       logic: "Always 'OTHER' for Okta account type"
       description: "Account type identifier"
 
-    - source: "static: 42"
+    - source: "static: 99"
       target: "user.account.type_id"
       type: "integer"
-      logic: "Always 42 for Okta account type"
+      logic: "Always 99 for Okta account type"
       description: "OCSF account type ID"
 
     - source: "id"
@@ -260,10 +254,10 @@ mapping:
       logic: "Direct mapping of display name"
       description: "User display name"
 
-    - source: "calculated: profile.displayName"
+    - source: "calculated: profile.email"
       target: "user.domain"
       type: "string"
-      logic: "Extract domain from email address if displayName is an email, otherwise set to null"
+      logic: "Extract domain from email address, otherwise set to null"
       description: "User domain"
 
     - source: "profile.login"

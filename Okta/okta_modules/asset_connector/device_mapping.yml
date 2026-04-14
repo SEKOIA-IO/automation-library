@@ -200,15 +200,9 @@ mapping:
 
     - source: "profile.platform"
       target: "device.os.type_id"
-      type: "string"
+      type: "integer"
       logic: "Map platform to OS type ID"
       description: "Operating system type ID"
-
-    - source: "profile.osVersion"
-      target: "device.os.version"
-      type: "string"
-      logic: "Direct mapping of OS version"
-      description: "Operating system version"
 
     - source: "profile.manufacturer"
       target: "device.vendor_name"
@@ -248,19 +242,19 @@ mapping:
 
     # OCSF ENRICHMENTS FIELDS
     - source: "static: device_info"
-      target: "enrichments.name"
+      target: "enrichments[].name"
       type: "string"
       logic: "Always 'device_info' to indicate enrichment type for Okta device details"
       description: "Name of the enrichment containing Okta device details"
 
     - source: "static: hardware_and_security"
-      target: "enrichments.value"
+      target: "enrichments[].value"
       type: "string"
       logic: "Always 'hardware_and_security' to indicate enrichment category for device hardware and security posture"
       description: "Value of the enrichment indicating hardware and security posture details"
 
     - source: "calculated: diskEncryptionType, serialNumber, secureHardwarePresent and Sid"
-      target: "enrichments.data"
+      target: "enrichments[].data"
       type: "string"
       logic: "Calculate enrichment data with key Okta device details such as encryption type, serial number, secure hardware presence, and compliance status to provide additional context on device security posture"
       description: "Data field of the enrichment containing key Okta device details for additional context on device security posture"
