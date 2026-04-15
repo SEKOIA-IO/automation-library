@@ -210,11 +210,23 @@ mapping:
       logic: "Set to id only when uuid is used as primary uid; null otherwise"
       description: "Alternate device identifier (SentinelOne agent id)"
 
+    - source: "externalId"
+      target: "device.eid"
+      type: "string"
+      logic: "Direct mapping of external/third-party identifier"
+      description: "External identifier for the device"
+
     - source: "computerName"
       target: "device.hostname"
       type: "string"
       logic: "Direct mapping of computer name"
       description: "Device hostname"
+
+    - source: "computerName"
+      target: "device.name"
+      type: "string"
+      logic: "Direct mapping of computer name"
+      description: "Device name"
 
     - source: "domain"
       target: "device.domain"
@@ -351,6 +363,27 @@ mapping:
       type: "string"
       logic: "Use first location name as GeoLocation.city; null if locations list is absent or empty"
       description: "Device location city (GeoLocation.city from locations[0].name)"
+
+    - source: "accountName / accountId"
+      target: "device.org"
+      type: "object"
+      logic: "Build Organization(name=accountName or accountId, uid=accountId) when either field is present"
+      description: "SentinelOne account mapped as the device's organization"
+
+    # RISK LEVEL (derived)
+    - source: "infected + activeThreats"
+      target: "device.risk_level / device.risk_level_id"
+      type: "string / integer"
+      logic: |
+        Derived: infected=True → Critical (4);
+        activeThreats > 0 → High (3); otherwise → Info (0)
+      description: "Risk level derived from infection state and active threat count"
+
+    - source: "activeThreats"
+      target: "device.risk_score"
+      type: "integer"
+      logic: "Direct mapping of active threat count as raw risk score"
+      description: "Raw risk score (number of active threats)"
 
     # OCSF ENRICHMENT
     # NOTE: The code creates up to 5 separate DeviceEnrichmentObject entries depending on data availability.
