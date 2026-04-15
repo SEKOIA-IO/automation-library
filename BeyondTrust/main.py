@@ -1,7 +1,7 @@
 from beyondtrust_modules import BeyondTrustModule
 from beyondtrust_modules.connector_pra_platform import BeyondTrustPRAPlatformConnector
-from beyondtrust_modules.connector_pra_vault_account_activity import BeyondTrustPRAVaultAccountActivityConnector
 from beyondtrust_modules.connector_pra_syslog import BeyondTrustPRASyslogConnector
+from beyondtrust_modules.connector_pra_vault_account_activity import BeyondTrustPRAVaultAccountActivityConnector
 
 if __name__ == "__main__":
     module = BeyondTrustModule()

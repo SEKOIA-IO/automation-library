@@ -4,24 +4,28 @@ from lxml import etree
 
 
 def parse_session_list(raw: bytes) -> list[str]:
+    parser = etree.XMLParser(resolve_entities=False)
     namespace = {"ns": "http://www.beyondtrust.com/sra/namespaces/API/reporting"}
-    root = etree.fromstring(raw)
+
+    root = etree.fromstring(raw, parser=parser)
     lsids = root.xpath("//ns:session_summary/@lsid", namespaces=namespace)
     return lsids
 
 
 def parse_session_end_time(raw: bytes) -> int:
+    parser = etree.XMLParser(resolve_entities=False)
     namespace = {"ns": "http://www.beyondtrust.com/sra/namespaces/API/reporting"}
 
-    root = etree.fromstring(raw)
+    root = etree.fromstring(raw, parser=parser)
     end_time_elem = root.xpath("/ns:session_list/ns:session/ns:end_time/@timestamp", namespaces=namespace)
     return int(end_time_elem[0])
 
 
 def parse_session(raw: bytes) -> list[dict[str, Any]]:
+    parser = etree.XMLParser(resolve_entities=False)
     namespace = {"ns": "http://www.beyondtrust.com/sra/namespaces/API/reporting"}
 
-    root = etree.fromstring(raw)
+    root = etree.fromstring(raw, parser=parser)
     events_header = {
         "session_id": root.xpath("/ns:session_list/ns:session/@lsid", namespaces=namespace)[0],
         "jump_group": {
@@ -68,9 +72,10 @@ def parse_session(raw: bytes) -> list[dict[str, Any]]:
 
 
 def parse_vault_activity(raw: bytes) -> list[dict[str, Any]]:
+    parser = etree.XMLParser(resolve_entities=False)
     namespace = {"ns": "http://www.beyondtrust.com/sra/namespaces/API/reporting"}
 
-    root = etree.fromstring(raw)
+    root = etree.fromstring(raw, parser=parser)
 
     result = []
     events = root.xpath("/ns:vault_account_activity_list/ns:vault_account_activity", namespaces=namespace)
