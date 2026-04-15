@@ -56,6 +56,7 @@ filterwarnings = [
   "error",
   "ignore::DeprecationWarning",
   "ignore:.*unclosed.*:ResourceWarning",
+  "ignore::async_lru.AlruCacheLoopResetWarning",
 ]
 addopts = "  --strict-markers\n  --tb=short\n  --cov=aws_helpers\n  --cov=connectors\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n  --numprocesses=auto\n  --asyncio-mode=auto\n"
 

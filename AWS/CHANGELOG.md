@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-26 - 1.35.0
+
+### Added
+
+- Add STS support with temporary credentials caching
+
+## 2026-03-25 - 1.34.1
+
+### Fixed
+
+- Add `prefix_filter` to connector configuration
+
 ## 2026-03-17 - 1.34.0
 
 ### Added

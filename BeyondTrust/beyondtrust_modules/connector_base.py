@@ -87,7 +87,7 @@ class BeyondTrustBaseConnector(Connector):
             self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
             time.sleep(delta_sleep)
 
-    def run(self):  # pragma: no cover
+    def run(self) -> None:  # pragma: no cover
         self.log(message="Start fetching BeyondTrust events", level="info")
 
         while self.running:

@@ -9,6 +9,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import DeviceOCSFModel
 from sekoia_automation.module import Module
 
 from harfanglab.asset_connector.device_assets import HarfanglabAssetConnector
+from harfanglab.asset_connector.models import HarfanglabAgent, HarfanglabPolicy
 
 
 @pytest.fixture
@@ -651,13 +652,23 @@ def agent_endpoint_response(asset_first_object):
     return {"count": 1, "next": None, "previous": None, "results": [asset_first_object]}
 
 
+@pytest.fixture
+def agent_first_object(asset_first_object):
+    return HarfanglabAgent.parse_obj(asset_first_object)
+
+
+@pytest.fixture
+def agent_second_object(asset_second_object):
+    return HarfanglabAgent.parse_obj(asset_second_object)
+
+
 def test_base_url(test_harfanglab_asset_connector):
     assert test_harfanglab_asset_connector.base_url == "https://example.com"
 
 
 def test_extract_timestamp(test_harfanglab_asset_connector):
-    asset = {"firstseen": "2023-10-01T12:00:00Z"}
-    timestamp = test_harfanglab_asset_connector.extract_timestamp(asset)
+    agent = HarfanglabAgent(id="test-id", hostname="test-host", firstseen="2023-10-01T12:00:00Z")
+    timestamp = test_harfanglab_asset_connector.extract_timestamp(agent)
     assert timestamp == datetime.datetime(2023, 10, 1, 12, 0, tzinfo=datetime.timezone.utc)
     assert timestamp.isoformat() == "2023-10-01T12:00:00+00:00"
     assert isinstance(timestamp, datetime.datetime)
@@ -681,8 +692,8 @@ def test_extract_os_type(test_harfanglab_asset_connector):
     assert os_type == "UNKNOWN"
 
 
-def test_map_fields(test_harfanglab_asset_connector, asset_first_object):
-    mapped_device = test_harfanglab_asset_connector.map_fields(asset_first_object)
+def test_map_fields(test_harfanglab_asset_connector, agent_first_object, asset_first_object):
+    mapped_device = test_harfanglab_asset_connector.map_fields(agent_first_object)
 
     # Test static fields
     assert isinstance(mapped_device, DeviceOCSFModel)
@@ -711,8 +722,8 @@ def test_map_fields(test_harfanglab_asset_connector, asset_first_object):
     assert mapped_device.device.hostname == asset_first_object["hostname"]
 
 
-def test_map_fields_json_dumps(test_harfanglab_asset_connector, asset_first_object):
-    mapped_device = test_harfanglab_asset_connector.map_fields(asset_first_object)
+def test_map_fields_json_dumps(test_harfanglab_asset_connector, agent_first_object):
+    mapped_device = test_harfanglab_asset_connector.map_fields(agent_first_object)
     json_data = mapped_device.model_dump()
     serialized_json = json.dumps(json_data)
 
@@ -735,7 +746,9 @@ def test_fetch_devices(test_harfanglab_asset_connector, agent_endpoint_response,
         devices = list(test_harfanglab_asset_connector._fetch_devices(from_date))
 
         assert len(devices) == 1
-        assert devices[0] == [asset_first_object]
+        assert len(devices[0]) == 1
+        assert devices[0][0].id == asset_first_object["id"]
+        assert devices[0][0].hostname == asset_first_object["hostname"]
 
 
 def test_fetch_devices_no_results(test_harfanglab_asset_connector):
@@ -752,8 +765,8 @@ def test_fetch_devices_no_results(test_harfanglab_asset_connector):
         assert len(devices) == 0
 
 
-def test_build_network_interface(test_harfanglab_asset_connector, asset_first_object):
-    network_interface = test_harfanglab_asset_connector.build_network_interface(asset_first_object)
+def test_build_network_interface(test_harfanglab_asset_connector, agent_first_object):
+    network_interface = test_harfanglab_asset_connector.build_network_interface(agent_first_object)
 
     assert network_interface is not None
     assert network_interface.hostname == "testhostaname1"
@@ -765,14 +778,14 @@ def test_build_network_interface(test_harfanglab_asset_connector, asset_first_ob
 
 
 def test_build_network_interface_no_data(test_harfanglab_asset_connector):
-    asset_without_network = {"id": "test-id", "hostname": "test-host", "firstseen": "2023-10-01T12:00:00Z"}
+    agent_without_network = HarfanglabAgent(id="test-id", hostname="test-host", firstseen="2023-10-01T12:00:00Z")
 
-    network_interface = test_harfanglab_asset_connector.build_network_interface(asset_without_network)
+    network_interface = test_harfanglab_asset_connector.build_network_interface(agent_without_network)
     assert network_interface is None
 
 
-def test_build_enrichments(test_harfanglab_asset_connector, asset_first_object):
-    enrichment = test_harfanglab_asset_connector.build_enrichments(asset_first_object)
+def test_build_enrichments(test_harfanglab_asset_connector, agent_first_object):
+    enrichment = test_harfanglab_asset_connector.build_enrichments(agent_first_object)
 
     assert enrichment is not None
     assert enrichment.name == "compliance"
@@ -791,31 +804,31 @@ def test_build_enrichments(test_harfanglab_asset_connector, asset_first_object):
 
 
 def test_build_enrichments_no_firewall(test_harfanglab_asset_connector):
-    asset_no_firewall = {
-        "id": "test-id",
-        "hostname": "test",
-        "firstseen": "2023-10-01T12:00:00Z",
-        "policy": {"windows_self_protection_feature_firewall": False},
-        "disk_count": 0,
-        "encrypted_disk_count": 0,
-    }
+    agent_no_firewall = HarfanglabAgent(
+        id="test-id",
+        hostname="test",
+        firstseen="2023-10-01T12:00:00Z",
+        policy=HarfanglabPolicy(windows_self_protection_feature_firewall=False),
+        disk_count=0,
+        encrypted_disk_count=0,
+    )
 
-    enrichment = test_harfanglab_asset_connector.build_enrichments(asset_no_firewall)
+    enrichment = test_harfanglab_asset_connector.build_enrichments(agent_no_firewall)
     assert enrichment is not None
     assert enrichment.data.Firewall_status == "Disabled"
 
 
 def test_build_enrichments_mixed_encryption(test_harfanglab_asset_connector):
-    asset_mixed_encryption = {
-        "id": "test-id",
-        "hostname": "test",
-        "firstseen": "2023-10-01T12:00:00Z",
-        "policy": {},
-        "disk_count": 3,
-        "encrypted_disk_count": 2,
-    }
+    agent_mixed_encryption = HarfanglabAgent(
+        id="test-id",
+        hostname="test",
+        firstseen="2023-10-01T12:00:00Z",
+        policy=HarfanglabPolicy(),
+        disk_count=3,
+        encrypted_disk_count=2,
+    )
 
-    enrichment = test_harfanglab_asset_connector.build_enrichments(asset_mixed_encryption)
+    enrichment = test_harfanglab_asset_connector.build_enrichments(agent_mixed_encryption)
     assert enrichment is not None
     assert enrichment.data.Storage_encryption.partitions["disk_0"] == "Enabled"
     assert enrichment.data.Storage_encryption.partitions["disk_1"] == "Enabled"
@@ -823,20 +836,20 @@ def test_build_enrichments_mixed_encryption(test_harfanglab_asset_connector):
 
 
 def test_build_enrichments_no_data(test_harfanglab_asset_connector):
-    asset_no_data = {
-        "id": "test-id",
-        "hostname": "test",
-        "firstseen": "2023-10-01T12:00:00Z",
-        "disk_count": 0,
-        "encrypted_disk_count": 0,
-    }
+    agent_no_data = HarfanglabAgent(
+        id="test-id",
+        hostname="test",
+        firstseen="2023-10-01T12:00:00Z",
+        disk_count=0,
+        encrypted_disk_count=0,
+    )
 
-    enrichment = test_harfanglab_asset_connector.build_enrichments(asset_no_data)
+    enrichment = test_harfanglab_asset_connector.build_enrichments(agent_no_data)
     assert enrichment is None
 
 
-def test_build_device_extended_fields(test_harfanglab_asset_connector, asset_first_object):
-    device = test_harfanglab_asset_connector.build_device(asset_first_object)
+def test_build_device_extended_fields(test_harfanglab_asset_connector, agent_first_object):
+    device = test_harfanglab_asset_connector.build_device(agent_first_object)
 
     # Test new fields
     assert device.domain == "TestGROUP"
@@ -860,15 +873,15 @@ def test_build_device_extended_fields(test_harfanglab_asset_connector, asset_fir
 
 
 def test_build_device_missing_optional_fields(test_harfanglab_asset_connector):
-    minimal_asset = {
-        "id": "test-id",
-        "hostname": "test-host",
-        "firstseen": "2023-10-01T12:00:00Z",
-        "ostype": "linux",
-        "osproducttype": "Ubuntu 22.04",
-    }
+    minimal_agent = HarfanglabAgent(
+        id="test-id",
+        hostname="test-host",
+        firstseen="2023-10-01T12:00:00Z",
+        ostype="linux",
+        osproducttype="Ubuntu 22.04",
+    )
 
-    device = test_harfanglab_asset_connector.build_device(minimal_asset)
+    device = test_harfanglab_asset_connector.build_device(minimal_agent)
 
     assert device.uid == "test-id"
 
@@ -890,7 +903,7 @@ def test_iterate_devices(test_harfanglab_asset_connector, agent_endpoint_respons
 
             assert len(devices) == 1
             assert len(devices[0]) == 1
-            assert devices[0][0]["id"] == asset_first_object["id"]
+            assert devices[0][0].id == asset_first_object["id"]
 
 
 def test_iterate_devices_no_results(test_harfanglab_asset_connector):
@@ -944,8 +957,8 @@ def test_iterate_devices_pagination(test_harfanglab_asset_connector, asset_first
             devices = list(test_harfanglab_asset_connector.iterate_devices())
 
             assert len(devices) == 2
-            assert devices[0][0]["id"] == asset_first_object["id"]
-            assert devices[1][0]["id"] == asset_second_object["id"]
+            assert devices[0][0].id == asset_first_object["id"]
+            assert devices[1][0].id == asset_second_object["id"]
             assert test_harfanglab_asset_connector._latest_time == "2025-06-12T00:15:06.454735+00:00"
 
 

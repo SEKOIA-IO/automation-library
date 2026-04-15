@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "Automation module for Xsiam"
-version = "0.1.0"
+version = "1.0.1"
 description = ""
 authors = []
 package-mode = false

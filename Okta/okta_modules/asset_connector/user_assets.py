@@ -14,14 +14,18 @@ from okta.client import Client as OktaClient
 from okta.models.user import User as OktaUser
 from okta.models.role import Role as OktaRole
 from okta.models.role_status import RoleStatus as OktaRoleStatus
+from okta.models.user_status import UserStatus as OktaUserStatus
 from sekoia_automation.asset_connector import AsyncAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
+from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.asset_connector.models.ocsf.user import (
     Account,
     AccountTypeId,
     AccountTypeStr,
     Group,
     User,
+    UserDataObject,
+    UserEnrichmentObject,
     UserOCSFModel,
     UserTypeId,
     UserTypeStr,
@@ -262,9 +266,9 @@ class OktaUserAssetConnector(AsyncAssetConnector):
         if not okta_user.profile or not okta_user.profile.login:
             raise ValueError("User profile and login are required")
 
-        # Handle None values in name fields
-        first_name = okta_user.profile.firstName or "None"
-        last_name = okta_user.profile.lastName or "None"
+        # Handle None values in name fields (Okta SDK uses snake_case attributes)
+        first_name = okta_user.profile.first_name or "None"
+        last_name = okta_user.profile.last_name or "None"
         full_name = f"{first_name} {last_name}".strip()
 
         account = Account(
@@ -288,14 +292,13 @@ class OktaUserAssetConnector(AsyncAssetConnector):
         if okta_user.profile.email and "@" in okta_user.profile.email:
             domain = okta_user.profile.email.split("@")[1]
 
-        # Get display name if available
+        # Get display name if available (Okta SDK uses snake_case)
         display_name = None
-        if hasattr(okta_user.profile, "displayName"):
-            display_name_value = okta_user.profile.displayName
-            if display_name_value and isinstance(display_name_value, str):
-                display_name = display_name_value
+        display_name_value = okta_user.profile.display_name
+        if display_name_value and isinstance(display_name_value, str):
+            display_name = display_name_value
 
-        # Determine user type based on userType field if available
+        # Determine user type based on roles
         user_type_id = None
         user_type = None
         for role in roles:
@@ -303,6 +306,40 @@ class OktaUserAssetConnector(AsyncAssetConnector):
                 user_type_id = UserTypeId.ADMIN
                 user_type = UserTypeStr.ADMIN
                 break
+
+        # Build organization from profile fields
+        org = None
+        org_name_value = okta_user.profile.organization
+        department = okta_user.profile.department
+        org_name = org_name_value if org_name_value and isinstance(org_name_value, str) else None
+        dept_str = department if department and isinstance(department, str) else None
+        if org_name or domain or dept_str:
+            org = Organization(
+                name=org_name or domain or "Unknown",
+                ou_name=dept_str,
+            )
+
+        # Build enrichment data
+        is_enabled = (okta_user.status == OktaUserStatus.ACTIVE) if okta_user.status is not None else None
+        last_logon = str(okta_user.last_login) if okta_user.last_login else None
+        last_time_password_change = None
+        if okta_user.password_changed:
+            try:
+                last_time_password_change = isoparse(str(okta_user.password_changed)).timestamp()
+            except (ValueError, TypeError):
+                pass
+
+        enrichments = [
+            UserEnrichmentObject(
+                name="access_control",
+                value="okta",
+                data=UserDataObject(
+                    is_enabled=is_enabled,
+                    last_logon=last_logon,
+                    last_time_password_change=last_time_password_change,
+                ),
+            )
+        ]
 
         user = User(
             uid=okta_user.id,
@@ -317,6 +354,7 @@ class OktaUserAssetConnector(AsyncAssetConnector):
             uid_alt=okta_user.profile.login,
             type_id=user_type_id,
             type=user_type,
+            org=org,
         )
 
         return UserOCSFModel(
@@ -327,7 +365,7 @@ class OktaUserAssetConnector(AsyncAssetConnector):
             class_name="User Inventory Info",
             class_uid=5003,
             type_name="User Inventory Info: Collect",
-            type_uid=5003002,
+            type_uid=500302,
             severity="Informational",
             severity_id=1,
             time=isoparse(okta_user.created).timestamp(),
@@ -340,6 +378,7 @@ class OktaUserAssetConnector(AsyncAssetConnector):
                 version="1.6.0",
             ),
             user=user,
+            enrichments=enrichments,
         )
 
     async def get_assets(self) -> AsyncGenerator[UserOCSFModel, None]:
