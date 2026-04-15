@@ -55,7 +55,7 @@
         }
       }
     },
-    "oneOf": [
+    "anyOf": [
       { "required": ["os_type", "sha_1"] },
       { "required": ["os_type", "sha_256"] }
     ]
