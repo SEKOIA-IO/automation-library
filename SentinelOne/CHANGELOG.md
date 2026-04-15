@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Updated dependencies
 
+## 2026-04-10 - 1.22.1
+
+### Fixed
+
+- Fix field mappings in `device_mapping.yml` to align with the actual OCSF models
+
 ## 2026-03-12 - 1.22.0
 
 ### Added

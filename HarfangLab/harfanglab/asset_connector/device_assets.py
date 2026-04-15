@@ -46,9 +46,9 @@ class HarfanglabAssetConnector(AssetConnector):
     ACTIVITY_NAME: str = "Collect"
     CATEGORY_NAME: str = "Discovery"
     CATEGORY_UID: int = 5
-    CLASS_NAME: str = "Asset"
+    CLASS_NAME: str = "Device Inventory Info"
     CLASS_UID: int = 5001
-    TYPE_NAME: str = "Software Inventory Info: Collect"
+    TYPE_NAME: str = "Device Inventory Info: Collect"
     TYPE_UID: int = 500102
 
     def __init__(self, *args, **kwargs) -> None:

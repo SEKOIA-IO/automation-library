@@ -57,122 +57,6 @@ mapping:
         }
 
   fields:
-    # USER IDENTIFICATION
-    - source: "id"
-      target: "user.uid"
-      type: "string"
-      logic: "Direct mapping of Microsoft Entra ID user UUID"
-      description: "Microsoft Entra ID user unique identifier (UUID)"
-
-    - source: "userPrincipalName"
-      target: "user.name"
-      type: "string"
-      logic: "Direct mapping of user principal name"
-      description: "User principal name (UPN) - email-like format"
-
-    - source: "displayName"
-      target: "user.full_name"
-      type: "string"
-      logic: "Direct mapping of display name"
-      description: "User display name (\"Unknown\" if absent)"
-
-    - source: "displayName"
-      target: "user.display_name"
-      type: "string"
-      logic: "Direct mapping of display name"
-      description: "User display name"
-
-    - source: "userPrincipalName | split('@') | last"
-      target: "user.domain"
-      type: "string"
-      logic: "Extract domain from UPN (part after @)"
-      description: "User domain derived from UPN"
-
-    - source: "onPremisesSamAccountName"
-      target: "user.uid_alt"
-      type: "string"
-      logic: "Direct mapping of on-premises SAM account name"
-      description: "Alternate user identifier (on-premises SAM account name)"
-
-    # MFA STATUS (fetched via /users/{id}/authentication/methods)
-    - source: "api: authentication/methods"
-      target: "user.has_mfa"
-      type: "boolean"
-      logic: "true if any MicrosoftAuthenticator, SoftwareOath, or Phone method is registered"
-      description: "Whether the user has MFA configured"
-
-    # USER TYPE (computed from directory role membership)
-    - source: "api: transitiveMemberOf/microsoft.graph.directoryRole"
-      target: "user.type_id"
-      type: "integer"
-      logic: "2 (Admin) if user has directory roles, otherwise 1 (User)"
-      description: "OCSF user type ID"
-
-    - source: "api: transitiveMemberOf/microsoft.graph.directoryRole"
-      target: "user.type"
-      type: "string"
-      logic: "\"Admin\" if user has directory roles, otherwise \"User\""
-      description: "OCSF user type string"
-
-    # ACCOUNT INFORMATION
-    - source: "id"
-      target: "user.account.uid"
-      type: "string"
-      logic: "Direct mapping of Entra ID object UUID"
-      description: "Entra ID account unique identifier (UUID)"
-
-    - source: "userPrincipalName"
-      target: "user.account.name"
-      type: "string"
-      logic: "Direct mapping of user principal name"
-      description: "Account username (UPN)"
-
-    - source: "static: Azure AD Account"
-      target: "user.account.type"
-      type: "string"
-      logic: "Always 'Azure AD Account' (AccountTypeStr.AZURE_AD_ACCOUNT)"
-      description: "OCSF account type string"
-
-    - source: "static: 6"
-      target: "user.account.type_id"
-      type: "integer"
-      logic: "Always 6 for Azure AD Account (AccountTypeId.AZURE_AD_ACCOUNT)"
-      description: "OCSF account type ID"
-
-    # CONTACT INFORMATION
-    - source: "mail"
-      target: "user.email_addr"
-      type: "string"
-      logic: "Direct mapping of email address (\"Unknown\" if absent)"
-      description: "User email address"
-
-    # GROUPS (fetched via /users/{id}/memberOf)
-    - source: "api: memberOf"
-      target: "user.groups"
-      type: "array[object]"
-      logic: "Create Group objects with group displayName as name and id as uid"
-      description: "Group memberships (paginated)"
-
-    # ORGANIZATIONAL INFORMATION
-    - source: "companyName"
-      target: "user.org.name"
-      type: "string"
-      logic: "Present only when companyName is non-null"
-      description: "User's company/organization name"
-
-    - source: "officeLocation"
-      target: "user.org.ou_name"
-      type: "string"
-      logic: "Mapped as organizational unit name within the org object"
-      description: "Office location (organizational unit)"
-
-    # TEMPORAL INFORMATION
-    - source: "createdDateTime"
-      target: "time"
-      type: "float"
-      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp (0 if absent)"
-      description: "OCSF event timestamp (user creation time as Unix epoch)"
-
     # OCSF EVENT CLASSIFICATION
     - source: "static: 2"
       target: "activity_id"
@@ -213,13 +97,13 @@ mapping:
     - source: "static: 500302"
       target: "type_uid"
       type: "integer"
-      logic: "500300 + activity_id (2) = 500302"
+      logic: "Always 500302 for User Inventory Info"
       description: "OCSF type UID"
 
-    - source: "static: User Inventory"
+    - source: "static: User Inventory Info: Collect"
       target: "type_name"
       type: "string"
-      logic: "Always 'User Inventory'"
+      logic: "Always 'User Inventory Info: Collect'"
       description: "OCSF type name"
 
     - source: "static: Informational"
@@ -234,6 +118,13 @@ mapping:
       logic: "Always 1 for Informational severity"
       description: "OCSF severity ID"
 
+    # TIMESTAMP
+    - source: "createdDateTime"
+      target: "time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp"
+      description: "OCSF event timestamp (user discovery time)"
+
     # METADATA
     - source: "static: Microsoft Entra ID"
       target: "metadata.product.name"
@@ -244,7 +135,7 @@ mapping:
     - source: "static: 1.0"
       target: "metadata.product.version"
       type: "string"
-      logic: "Always '1.0'"
+      logic: "Unknown version, using 1.0 as default"
       description: "Source product version"
 
     - source: "static: 1.6.0"
@@ -253,18 +144,121 @@ mapping:
       logic: "Fixed OCSF schema version"
       description: "OCSF schema version"
 
-    # OCSF ENRICHMENT [0] - ACCOUNT STATUS
+    # USER ATTRIBUTES
+    - source: "id"
+      target: "user.has_mfa"
+      type: "boolean"
+      logic: "Fetch MFA status using user.id; true if user has MFA enabled, false otherwise"
+      description: "User MFA enabled status (requires additional API call using user ID)"
+
+    - source: "userPrincipalName"
+      target: "user.name"
+      type: "string"
+      logic: "Direct mapping of user principal name or unknown if not available"
+      description: "User principal name"
+
+    - source: "id"
+      target: "user.uid"
+      type: "string"
+      logic: "Direct mapping of Microsoft Entra ID user UUID"
+      description: "Microsoft Entra ID user unique identifier (UUID)"
+
+    - source: "id"
+      target: "user.groups"
+      type: "array[object]"
+      logic: "Create Group objects with group name as uid and name"
+      description: "Group memberships"
+
+    - source: "displayName"
+      target: "user.full_name"
+      type: "string"
+      logic: "Direct mapping of full name"
+      description: "User full name"
+
+    - source: "mail"
+      target: "user.email_addr"
+      type: "string"
+      logic: "Direct mapping of email address"
+      description: "User email address"
+
+    - source: "id"
+      target: "user.account.uid"
+      type: "string"
+      logic: "Direct mapping of the 'id' field as the unique identifier for the Entra ID account"
+      description: "Microsoft Entra ID account unique identifier (UUID)"
+
+    - source: "userPrincipalName"
+      target: "user.account.name"
+      type: "string"
+      logic: "Direct mapping of user principal name"
+      description: "Account username (UPN)"
+
+    - source: "static: Azure AD Account"
+      target: "user.account.type"
+      type: "string"
+      logic: "Always 'Azure AD Account'"
+      description: "OCSF Azure AD account type identifier"
+
+    - source: "static: 6"
+      target: "user.account.type_id"
+      type: "integer"
+      logic: "Always 6 for Azure AD Account account type"
+      description: "OCSF account type ID"
+
+    - source: "displayName"
+      target: "user.display_name"
+      type: "string"
+      logic: "Direct mapping of display name"
+      description: "User display name"
+
+    - source: "userPrincipalName"
+      target: "user.domain"
+      type: "string"
+      logic: "Extract domain from userPrincipalName"
+      description: "Domain of the user account"
+
+    - source: "computed: userType"
+      target: "user.type_id"
+      type: "integer"
+      logic: "If user is admin so type_id is 2, otherwise 1"
+      description: "User type id classification"
+
+    - source: "computed: userTypeID"
+      target: "user.type"
+      type: "string"
+      logic: "If user is admin so type_id is ADMIN, otherwise USER"
+      description: "User type classification"
+
+    - source: "companyName"
+      target: "user.org.name"
+      type: "string"
+      logic: "Direct mapping of organization name"
+      description: "Organization name"
+
+    - source: "officeLocation"
+      target: "user.org.ou_name"
+      type: "string"
+      logic: "Direct mapping of office location"
+      description: "Office location as organizational unit"
+
+    - source: "onPremisesSamAccountName"
+      target: "user.uid_alt"
+      type: "string"
+      logic: "Direct mapping of on-premises SAM account name"
+      description: "Alternate user identifier (on-premises SAM account name)"
+
+    # OCSF ENRICHMENT - USER ACCESS INFORMATION
     - source: "static: account"
       target: "enrichments[0].name"
       type: "string"
-      logic: "Always 'account'"
-      description: "Enrichment object name"
+      logic: "Always 'account' for user access information enrichment"
+      description: "Enrichment name for user access information"
 
     - source: "static: status"
       target: "enrichments[0].value"
       type: "string"
-      logic: "Always 'status'"
-      description: "Enrichment object value"
+      logic: "Always 'status' for user access information enrichment"
+      description: "Enrichment value for user access information"
 
     - source: "accountEnabled"
       target: "enrichments[0].data.is_enabled"
@@ -275,27 +269,14 @@ mapping:
     - source: "signInActivity.lastSignInDateTime"
       target: "enrichments[0].data.last_logon"
       type: "string"
-      logic: "ISO 8601 datetime of last sign-in; null if no sign-in recorded"
-      description: "Last sign-in datetime (ISO 8601)"
+      logic: "Direct mapping of ISO 8601 last sign-in datetime; return null if never signed in"
+      description: "Last logon datetime in ISO 8601 format"
 
     - source: "lastPasswordChangeDateTime"
       target: "enrichments[0].data.last_time_password_change"
-      type: "float"
-      logic: "Convert ISO 8601 to Unix timestamp; null if absent"
-      description: "Last password change timestamp (Unix epoch)"
-
-    # OCSF ENRICHMENT [1] - EMPLOYMENT INFO (conditional)
-    - source: "static: employment"
-      target: "enrichments[1].name"
       type: "string"
-      logic: "Present only when at least one of department, jobTitle, employeeId, or employeeType is non-null"
-      description: "Enrichment object name for employment info"
-
-    - source: "computed: \"{department} - {jobTitle}\".strip(\" -\") or \"info\""
-      target: "enrichments[1].value"
-      type: "string"
-      logic: "Concatenates department and jobTitle separated by ' - '; falls back to 'info'"
-      description: "Human-readable employment summary"
+      logic: "If lastPasswordChangeDateTime is available, convert to Unix epoch; otherwise return null"
+      description: "Last time password was changed as Unix epoch timestamp"
 
   ocsf_samples:
     - name: "User Inventory Info: Collect"
