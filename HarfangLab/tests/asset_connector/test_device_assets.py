@@ -701,9 +701,9 @@ def test_map_fields(test_harfanglab_asset_connector, agent_first_object, asset_f
     assert mapped_device.activity_name == "Collect"
     assert mapped_device.category_name == "Discovery"
     assert mapped_device.category_uid == 5
-    assert mapped_device.class_name == "Asset"
+    assert mapped_device.class_name == "Device Inventory Info"
     assert mapped_device.class_uid == 5001
-    assert mapped_device.type_name == "Software Inventory Info: Collect"
+    assert mapped_device.type_name == "Device Inventory Info: Collect"
     assert mapped_device.type_uid == 500102
     assert isinstance(mapped_device.time, float)
 

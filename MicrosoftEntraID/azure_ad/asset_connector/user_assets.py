@@ -199,7 +199,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             time=datetime.timestamp(user.created_date_time) if user.created_date_time is not None else 0,
             metadata=metadata,
             user=user_data,
-            type_name="User Inventory",
+            type_name="User Inventory Info: Collect",
             enrichments=enrichments or None,
         )
         return user_ocsf_model

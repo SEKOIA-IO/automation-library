@@ -104,25 +104,94 @@ mapping:
         }
 
   fields:
-    # DEVICE IDENTIFICATION
-    - source: "InstanceId"
-      target: "device.uid"
-      type: "string"
-      logic: "Direct mapping of EC2 instance ID"
-      description: "Unique EC2 instance identifier"
+    # OCSF EVENT CLASSIFICATION
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      logic: "Always 2 for 'Collect' activity"
+      description: "OCSF activity ID"
 
-    - source: "PublicDnsName || PrivateDnsName || InstanceId"
-      target: "device.hostname"
+    - source: "static: Collect"
+      target: "activity_name"
       type: "string"
-      logic: "Fallback chain: PublicDnsName → PrivateDnsName → InstanceId; skip empty strings"
-      description: "Device hostname or DNS name"
+      logic: "Always 'Collect' for asset inventory"
+      description: "OCSF activity name"
 
-    - source: "Tags[Key='Name'].Value"
-      target: "device.name"
+    - source: "static: Discovery"
+      target: "category_name"
       type: "string"
-      logic: "Extract 'Name' tag value; if absent, use InstanceId"
-      description: "Device name from tags"
+      logic: "Always 'Discovery'"
+      description: "OCSF category name"
 
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      logic: "Always 5 for Discovery category"
+      description: "OCSF category UID"
+
+    - source: "static: Device Inventory Info"
+      target: "class_name"
+      type: "string"
+      logic: "Always 'Device Inventory Info'"
+      description: "OCSF class name"
+
+    - source: "static: 5001"
+      target: "class_uid"
+      type: "integer"
+      logic: "Always 5001 for Device Inventory Info"
+      description: "OCSF class UID"
+
+    - source: "static: 500102"
+      target: "type_uid"
+      type: "integer"
+      logic: "Always 500102 for Device Inventory Info: Collect type"
+      description: "OCSF type UID"
+
+    - source: "static: Device Inventory Info: Collect"
+      target: "type_name"
+      type: "string"
+      logic: "Concatenate 'Device Inventory Info: Collect'"
+      description: "OCSF type name"
+
+    - source: "static: Informational"
+      target: "severity"
+      type: "string"
+      logic: "Always 'Informational' for inventory events"
+      description: "Event severity"
+
+    - source: "static: 1"
+      target: "severity_id"
+      type: "integer"
+      logic: "Always 1 for Informational severity"
+      description: "OCSF severity ID"
+
+    # TIMESTAMPS
+    - source: "LaunchTime"
+      target: "time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp"
+      description: "OCSF event timestamp"
+
+    # METADATA
+    - source: "static: AWS EC2"
+      target: "metadata.product.name"
+      type: "string"
+      logic: "Always 'AWS EC2'"
+      description: "Product name"
+
+    - source: "static: N/A"
+      target: "metadata.product.version"
+      type: "string"
+      logic: "Always N/A"
+      description: "Product version)"
+
+    - source: "static: 1.6.0"
+      target: "metadata.version"
+      type: "string"
+      logic: "Fixed OCSF schema version"
+      description: "OCSF schema version"
+
+    # DEVICE INFORMATION
     - source: "static: Server"
       target: "device.type"
       type: "string"
@@ -135,7 +204,24 @@ mapping:
       logic: "Always 1 for Server type"
       description: "OCSF device type ID"
 
-    # OPERATING SYSTEM
+    - source: "InstanceId"
+      target: "device.uid"
+      type: "string"
+      logic: "Direct mapping of EC2 instance ID"
+      description: "Unique EC2 instance identifier"
+
+    - source: "PublicDnsName || PrivateDnsName || InstanceId"
+      target: "device.hostname"
+      type: "string"
+      logic: "One of Public DNS, Private DNS, or Instance ID (in that order) as hostname"
+      description: "Device hostname or DNS name"
+
+    - source: "Tags[Key='Name'].Value"
+      target: "device.name"
+      type: "string"
+      logic: "Extract 'Name' tag value; if absent, use InstanceId"
+      description: "Device name from tags"
+
     - source: "PlatformDetails"
       target: "device.os.name"
       type: "string"
@@ -154,7 +240,6 @@ mapping:
       logic: "Map OS type: Windows→100, Linux→200, macOS→300, Unknown→0"
       description: "OCSF OS type ID"
 
-    # NETWORK INTERFACES
     - source: "NetworkInterfaces[]"
       target: "device.network_interfaces[]"
       type: "object"
@@ -203,20 +288,6 @@ mapping:
       logic: "Always 1 for Wired interface type"
       description: "Interface type ID"
 
-    # PRIMARY IP ADDRESS
-    - source: "PublicIpAddress || PrivateIpAddress"
-      target: "device.ip"
-      type: "ip"
-      logic: "Prefer public IP; fallback to private IP"
-      description: "Primary device IP address"
-
-    # SECURITY GROUPS
-    - source: "SecurityGroups[]"
-      target: "device.groups[]"
-      type: "object"
-      logic: "Iterate over security groups; map according to sub-mappings below"
-      description: "Security groups associated with instance"
-
     - source: "SecurityGroups[].GroupId"
       target: "device.groups[].uid"
       type: "string"
@@ -229,8 +300,13 @@ mapping:
       logic: "Direct mapping of security group name"
       description: "Security group name"
 
-    # CLOUD INFRASTRUCTURE
-    - source: "Placement.AvailabilityZone || Placement"
+    - source: "PublicIpAddress || PrivateIpAddress"
+      target: "device.ip"
+      type: "ip"
+      logic: "Prefer public IP; fallback to private IP"
+      description: "Primary device IP address"
+
+    - source: "Placement.AvailabilityZone"
       target: "device.region"
       type: "string"
       logic: "Extract availability zone (e.g., 'us-east-1a')"
@@ -254,32 +330,18 @@ mapping:
       logic: "Direct mapping (e.g., 'xen', 'nitro')"
       description: "Hypervisor type"
 
-    # INSTANCE DETAILS
-    - source: "InstanceType"
-      target: "device.model"
-      type: "string"
-      logic: "Direct mapping (e.g., 't3.medium', 'm5.large')"
-      description: "EC2 instance type"
-
-    - source: "ImageId"
-      target: "device.image_id"
-      type: "string"
-      logic: "Direct mapping of AMI ID"
-      description: "EC2 AMI (Amazon Machine Image) ID"
-
-    - source: "State.Name"
-      target: "device.state"
-      type: "string"
-      logic: "Direct mapping (running, stopped, terminated, etc.)"
-      description: "Instance state"
-
     - source: "static: Amazon Web Services"
       target: "device.vendor_name"
       type: "string"
       logic: "Always 'Amazon Web Services'"
       description: "Device vendor name"
 
-    # TIMESTAMPS
+    - source: "InstanceType"
+      target: "device.model"
+      type: "string"
+      logic: "Direct mapping (e.g., 't3.medium', 'm5.large')"
+      description: "EC2 instance type"
+
     - source: "LaunchTime"
       target: "device.boot_time"
       type: "timestamp"
@@ -292,13 +354,6 @@ mapping:
       logic: "Use EBS attachment time if available; fallback to launch time; convert to Unix epoch"
       description: "Device creation timestamp"
 
-    - source: "LaunchTime"
-      target: "time"
-      type: "timestamp"
-      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp"
-      description: "OCSF event timestamp"
-
-    # MANAGEMENT
     - source: "IamInstanceProfile"
       target: "device.is_managed"
       type: "boolean"
@@ -311,7 +366,12 @@ mapping:
       logic: "Extract 'aws:autoscaling:groupName' tag value if present"
       description: "Auto Scaling group name"
 
-    # ORGANIZATION
+    - source: "ImageId + State.Name"
+      target: "device.desc"
+      type: "string"
+      logic: "Concatenate as 'AMI: <ImageId>, State: <State.Name>'"
+      description: "Device description with image and state"
+
     - source: "OwnerId"
       target: "device.org.uid"
       type: "string"
@@ -324,86 +384,6 @@ mapping:
       logic: "Format as 'AWS Account <OwnerId>'"
       description: "Organization/Account name"
 
-    # DESCRIPTION
-    - source: "ImageId + State.Name"
-      target: "device.desc"
-      type: "string"
-      logic: "Concatenate as 'AMI: <ImageId>, State: <State.Name>'"
-      description: "Device description with image and state"
-
-    # METADATA
-    - source: "static: AWS EC2"
-      target: "metadata.product.name"
-      type: "string"
-      logic: "Always 'AWS EC2'"
-      description: "Product name"
-
-    - source: "static: 1.6.0"
-      target: "metadata.version"
-      type: "string"
-      logic: "Fixed OCSF schema version"
-      description: "OCSF schema version"
-
-    # OCSF EVENT CLASSIFICATION
-    - source: "static: 2"
-      target: "activity_id"
-      type: "integer"
-      logic: "Always 2 for 'Collect' activity"
-      description: "OCSF activity ID"
-
-    - source: "static: Collect"
-      target: "activity_name"
-      type: "string"
-      logic: "Always 'Collect' for asset inventory"
-      description: "OCSF activity name"
-
-    - source: "static: Discovery"
-      target: "category_name"
-      type: "string"
-      logic: "Always 'Discovery'"
-      description: "OCSF category name"
-
-    - source: "static: 5"
-      target: "category_uid"
-      type: "integer"
-      logic: "Always 5 for Discovery category"
-      description: "OCSF category UID"
-
-    - source: "static: Device Inventory Info"
-      target: "class_name"
-      type: "string"
-      logic: "Always 'Device Inventory Info'"
-      description: "OCSF class name"
-
-    - source: "static: 5001"
-      target: "class_uid"
-      type: "integer"
-      logic: "Always 5001 for Device Inventory Info"
-      description: "OCSF class UID"
-
-    - source: "computed: 500100 + activity_id"
-      target: "type_uid"
-      type: "integer"
-      logic: "Base 500100 + activity_id (2 = 500102)"
-      description: "OCSF type UID"
-
-    - source: "computed: class_name + ': ' + activity_name"
-      target: "type_name"
-      type: "string"
-      logic: "Concatenate 'Device Inventory Info: Collect'"
-      description: "OCSF type name"
-
-    - source: "static: Informational"
-      target: "severity"
-      type: "string"
-      logic: "Always 'Informational' for inventory events"
-      description: "Event severity"
-
-    - source: "static: 1"
-      target: "severity_id"
-      type: "integer"
-      logic: "Always 1 for Informational severity"
-      description: "OCSF severity ID"
 
   ocsf_samples:
     - name: "Device Inventory Info: Collect"
