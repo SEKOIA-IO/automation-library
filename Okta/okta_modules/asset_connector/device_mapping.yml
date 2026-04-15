@@ -216,6 +216,18 @@ mapping:
       logic: "Direct mapping of device model"
       description: "Device model"
 
+    - source: "profile.udid"
+      target: "device.udid"
+      type: "string"
+      logic: "Direct mapping of UDID for applicable devices (e.g., iOS)"
+      description: "Device UDID (applicable for certain platforms like iOS)"
+
+    - source: "profile.imei"
+      target: "device.imei_list"
+      type: "array[string]"
+      logic: "Wrap single IMEI string in a list if not null"
+      description: "International Mobile Equipment Identity list (mobile devices only)"
+
     - source: "created"
       target: "device.created_time"
       type: "integer"
@@ -239,6 +251,18 @@ mapping:
       type: "boolean"
       logic: "Calculate compliance boolean based on status (true if ACTIVE and COMPLIANT, false otherwise)"
       description: "Whether device is compliant"
+
+    - source: "profile.secureHardwarePresent"
+      target: "device.is_trusted"
+      type: "boolean"
+      logic: "Use secure hardware presence as a proxy for device trustworthiness (true if secure hardware is present, false otherwise)"
+      description: "Whether device is considered trusted based on secure hardware presence"
+
+    - source: "profile.serialNumber"
+      target: "device.uid_alt"
+      type: "string"
+      logic: "Serial number used as an alternative device identifier"
+      description: "Device serial number (alternative UID)"
 
     # OCSF ENRICHMENTS FIELDS
     - source: "static: device_info"

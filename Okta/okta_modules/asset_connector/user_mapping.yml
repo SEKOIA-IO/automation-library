@@ -278,6 +278,50 @@ mapping:
       logic: "If user has admin roles, set to 'Admin'; otherwise set to 'None'"
       description: "User type"
 
+    - source: "profile.organization"
+      target: "user.org.name"
+      type: "string"
+      logic: "Use Okta profile.organization if present and string, else fall back to email domain"
+      description: "Organization name"
+
+    - source: "profile.department"
+      target: "user.org.ou_name"
+      type: "string"
+      logic: "Use Okta profile.department if present and string, else set to null"
+      description: "Organizational unit name"
+
+  # ENRICHMENTS
+
+    - source: "static: access_control"
+      target: "enrichments[].name"
+      type: "string"
+      logic: "Always 'access_control' for this enrichment"
+      description: "Enrichment name for access control insights"
+
+    - source: "static: okta"
+      target: "enrichments[].value"
+      type: "string"
+      logic: "Always 'okta' to indicate enrichment source"
+      description: "Enrichment value indicating Okta as source"
+
+    - source: "calculated: is user account enabled in Okta"
+      target: "enrichments[].data.is_enabled"
+      type: "boolean"
+      logic: "True if user status is 'ACTIVE', false otherwise"
+      description: "Indicates if the user account is currently enabled in Okta"
+
+    - source: "lastLogin"
+      target: "enrichments[].data.last_logon"
+      type: "string"
+      logic: "Map Okta lastLogin timestamp to enrichment data for last logon time"
+      description: "The last time the user logged in according to Okta"
+
+    - source: "passwordChanged"
+      target: "enrichments[].data.last_time_password_change"
+      type: "integer"
+      logic: "Convert Okta passwordChanged timestamp to Unix epoch for enrichment data"
+      description: "The last time the user changed their password according to Okta"
+
   ocsf_samples:
     - name: "User Inventory Info: Collect"
       description: "Transformed Okta user to OCSF User Inventory Info event"
