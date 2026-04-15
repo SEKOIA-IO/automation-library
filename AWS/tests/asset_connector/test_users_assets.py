@@ -6,7 +6,8 @@ from dateutil.parser import isoparse
 from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel
 
 from asset_connector.users_assets import AwsUser, AwsUsersAssetConnector
-from connectors import AwsModule, AwsModuleConfiguration
+from aws_helpers.base import AwsModuleConfiguration
+from connectors import AwsModule
 
 
 @pytest.fixture
@@ -16,6 +17,7 @@ def test_aws_users_asset_connector(symphony_storage):
         aws_access_key="fakeKey",
         aws_secret_access_key="fakeSecret",
         aws_region_name="eu-north-1",
+        base_url="https://test.sekoia.io",
     )
     aws_users_connector = AwsUsersAssetConnector(module=module, data_path=symphony_storage)
     aws_users_connector.configuration = {
@@ -222,7 +224,17 @@ def test_aws_user_initialization():
 # Test client method
 def test_client_success(test_aws_users_asset_connector):
     """Test successful client creation."""
-    with mock.patch("boto3.Session") as mock_session:
+    test_aws_users_asset_connector.module.configuration.aws_role_arn = "arn:aws:iam::123456789012:role/test-role"
+    mock_assume_role = mock.MagicMock()
+    mock_assume_role.aws_access_key_id = "test_key_id"
+    mock_assume_role.aws_secret_access_key = "test_secret"
+    mock_assume_role.aws_session_token = "test_token"
+    mock_assume_role.aws_region = "eu-north-1"
+
+    with (
+        mock.patch.object(test_aws_users_asset_connector, "get_assume_role", return_value=mock_assume_role),
+        mock.patch("asset_connector.aws_assets.boto3.Session") as mock_session,
+    ):
         mock_client = mock.MagicMock()
         mock_session.return_value.client.return_value = mock_client
 
@@ -230,16 +242,18 @@ def test_client_success(test_aws_users_asset_connector):
 
         assert result == mock_client
         mock_session.assert_called_once_with(
-            aws_access_key_id="fakeKey", aws_secret_access_key="fakeSecret", region_name="eu-north-1"
+            aws_access_key_id="test_key_id",
+            aws_secret_access_key="test_secret",
+            region_name="eu-north-1",
+            aws_session_token="test_token",
         )
         mock_session.return_value.client.assert_called_once_with("iam")
 
 
 def test_client_no_credentials_error(test_aws_users_asset_connector):
     """Test client creation with NoCredentialsError."""
-    with mock.patch("boto3.Session") as mock_session:
-        mock_session.side_effect = NoCredentialsError()
-
+    test_aws_users_asset_connector.module.configuration.aws_role_arn = "arn:aws:iam::123456789012:role/test-role"
+    with mock.patch.object(test_aws_users_asset_connector, "get_assume_role", side_effect=NoCredentialsError()):
         with pytest.raises(NoCredentialsError):
             test_aws_users_asset_connector.client()
 
@@ -249,14 +263,13 @@ def test_client_no_credentials_error(test_aws_users_asset_connector):
 
 def test_client_general_exception(test_aws_users_asset_connector):
     """Test client creation with general exception."""
-    with mock.patch("boto3.Session") as mock_session:
-        mock_session.side_effect = Exception("General error")
-
+    test_aws_users_asset_connector.module.configuration.aws_role_arn = "arn:aws:iam::123456789012:role/test-role"
+    with mock.patch.object(test_aws_users_asset_connector, "get_assume_role", side_effect=Exception("General error")):
         with pytest.raises(Exception):
             test_aws_users_asset_connector.client()
 
         test_aws_users_asset_connector.log.assert_called_with(
-            "Failed to create AWS client: General error", level="error"
+            "Failed to create AWS client for iam: General error", level="error"
         )
         test_aws_users_asset_connector.log_exception.assert_called_once()
 

@@ -148,6 +148,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             type_id=user_type_id,
             type=user_type_str,
             org=org,
+            uid_alt=user.on_premises_sam_account_name,
         )
 
         # Build enrichment data
@@ -160,6 +161,9 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 user.sign_in_activity.last_sign_in_date_time.isoformat()
                 if user.sign_in_activity and user.sign_in_activity.last_sign_in_date_time
                 else None
+            ),
+            last_time_password_change=(
+                user.last_password_change_date_time.timestamp() if user.last_password_change_date_time else None
             ),
         )
 
@@ -297,6 +301,8 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 "companyName",
                 "officeLocation",
                 "isManagementRestricted",
+                "lastPasswordChangeDateTime",
+                "onPremisesSamAccountName",
             ],
             filter=f"createdDateTime ge {last_run_date}" if last_run_date else None,
             orderby=["createdDateTime asc"],

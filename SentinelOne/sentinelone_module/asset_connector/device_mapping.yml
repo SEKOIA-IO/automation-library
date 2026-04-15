@@ -46,6 +46,13 @@ mapping:
           "threatCount": 0,
           "domain": "example.com",
           "computerName": "LAPTOP-JOHN-DEV",
+          "uuid": "ff819e70af13be381993075eb0ce5f2f6de05be2",
+          "accountId": "226494730938493000",
+          "accountName": "Acme Corp",
+          "externalId": "ext-475482087580431375",
+          "activeThreats": 0,
+          "infected": false,
+          "isUpToDate": true,
           "userId": "u1234567890abcdef",
           "userName": "john.developer@example.com",
           "userFullName": "John Developer"
@@ -97,11 +104,23 @@ mapping:
 
   fields:
     # DEVICE IDENTIFICATION
-    - source: "id"
+    - source: "uuid"
       target: "device.uid"
       type: "string"
-      logic: "Direct mapping of SentinelOne device ID"
-      description: "SentinelOne device unique identifier"
+      logic: "Primary unique identifier; falls back to id when uuid is absent"
+      description: "SentinelOne device UUID (primary unique identifier)"
+
+    - source: "id"
+      target: "device.uid_alt"
+      type: "string"
+      logic: "Set as alternate UID when uuid is used as primary uid"
+      description: "SentinelOne numeric device ID (alternate unique identifier)"
+
+    - source: "externalId"
+      target: "device.eid"
+      type: "string"
+      logic: "Direct mapping of external/third-party identifier"
+      description: "External identifier for the device"
 
     - source: "name"
       target: "device.name"
@@ -120,6 +139,12 @@ mapping:
       type: "string"
       logic: "Direct mapping of domain"
       description: "Network domain name"
+
+    - source: "accountName / accountId"
+      target: "device.org"
+      type: "object"
+      logic: "Build Organization(name=accountName or accountId, uid=accountId) when either field is present"
+      description: "SentinelOne account mapped as the device's organization"
 
     # OPERATING SYSTEM INFORMATION
     - source: "osType"
@@ -215,17 +240,16 @@ mapping:
       description: "All MAC addresses associated with device"
 
     # DEVICE TYPE & STATUS
-    - source: "type"
-      target: "device.type"
-      type: "string"
-      logic: "Direct mapping of device type (computer, server, etc.)"
-      description: "Device type classification"
-
     - source: "machineType"
-      target: "device.machine_type"
-      type: "string"
-      logic: "Direct mapping of machine type (laptop, desktop, server, etc.)"
-      description: "Machine type (laptop, desktop, server, etc.)"
+      target: "device.type / device.type_id"
+      type: "string / integer"
+      logic: |
+        Mapped to OCSF DeviceTypeStr / DeviceTypeId enums:
+        desktop → Desktop (2), laptop → Desktop (2),
+        server → Server (1),
+        tablet → Mobile (5), mobile → Mobile (5),
+        virtual → Virtual (6), other/unknown → Other (99)
+      description: "Device type enum; laptop remaps to Desktop, tablet remaps to Mobile"
 
     - source: "isActive"
       target: "device.is_enabled"
@@ -287,6 +311,21 @@ mapping:
       type: "boolean"
       logic: "Direct mapping of tamper protection status"
       description: "Whether tamper protection is enabled"
+
+    # RISK LEVEL (derived)
+    - source: "infected + activeThreats"
+      target: "device.risk_level / device.risk_level_id"
+      type: "string / integer"
+      logic: |
+        Derived: infected=True → Critical (4);
+        activeThreats > 0 → High (3); otherwise → Info (0)
+      description: "Risk level derived from infection state and active threat count"
+
+    - source: "activeThreats"
+      target: "device.risk_score"
+      type: "integer"
+      logic: "Direct mapping of active threat count as raw risk score"
+      description: "Raw risk score (number of active threats)"
 
     # USER ASSOCIATION
     - source: "userId"
@@ -406,72 +445,42 @@ mapping:
       logic: "Fixed OCSF schema version"
       description: "OCSF schema version"
 
-    # OCSF ENRICHMENT - DEVICE SECURITY INFORMATION
-    - source: "threatLevel"
-      target: "enrichments[0].data.threat_level"
-      type: "string"
-      logic: "Direct mapping of threat level"
-      description: "Device threat level for security posture"
+    # OCSF ENRICHMENTS
+    - source: "firewallEnabled"
+      target: "enrichments[Firewall]"
+      type: "object"
+      logic: "Present when firewallEnabled is not null; Firewall_status set to 'Enabled' or 'Disabled'"
+      description: "Firewall status enrichment (DeviceDataObject.Firewall_status)"
 
-    - source: "threatCount"
-      target: "enrichments[0].data.threat_count"
-      type: "integer"
-      logic: "Direct mapping of threat count"
-      description: "Number of active threats"
+    - source: "domain"
+      target: "enrichments[Domain]"
+      type: "object"
+      logic: "Present when domain is not null; Full_qualified_domain_name set to domain value"
+      description: "Domain enrichment (DeviceDataObject.Full_qualified_domain_name)"
 
-    - source: "isActive"
-      target: "enrichments[0].data.is_enabled"
-      type: "boolean"
-      logic: "Direct mapping of active status"
-      description: "Whether device is active"
+    - source: "lastLoggedInUserName + osUsername"
+      target: "enrichments[Users]"
+      type: "object"
+      logic: "Present when at least one user field is not null; Users list contains unique non-null values"
+      description: "User association enrichment (DeviceDataObject.Users)"
 
-    - source: "agentStatus"
-      target: "enrichments[0].data.agent_status"
-      type: "string"
-      logic: "Direct mapping of agent status"
-      description: "SentinelOne agent status"
+    - source: "isUpToDate"
+      target: "enrichments[Update Status]"
+      type: "object"
+      logic: "Present when isUpToDate is not null; value is 'Up to Date' or 'Update Required'"
+      description: "Agent update status enrichment"
 
-    - source: "agentVersion"
-      target: "enrichments[0].data.agent_version"
-      type: "string"
-      logic: "Direct mapping of agent version"
-      description: "SentinelOne agent version"
+    - source: "activeThreats"
+      target: "enrichments[Active Threats]"
+      type: "object"
+      logic: "Present when activeThreats is not null; value is the string representation of the count"
+      description: "Active threat count enrichment"
 
-    - source: "encryptionEnabled"
-      target: "enrichments[0].data.is_encrypted"
-      type: "boolean"
-      logic: "Direct mapping of encryption status"
-      description: "Whether device is encrypted"
-
-    - source: "isFirewallEnabled"
-      target: "enrichments[0].data.is_firewall_enabled"
-      type: "boolean"
-      logic: "Direct mapping of firewall status"
-      description: "Whether firewall is enabled"
-
-    - source: "isTamperProtectionEnabled"
-      target: "enrichments[0].data.is_tamper_protected"
-      type: "boolean"
-      logic: "Direct mapping of tamper protection status"
-      description: "Whether tamper protection is enabled"
-
-    - source: "lastActiveDate"
-      target: "enrichments[0].data.last_seen"
-      type: "integer"
-      logic: "Convert ISO 8601 to Unix timestamp; null if never active"
-      description: "Last active timestamp (Unix epoch)"
-
-    - source: "static: device_security"
-      target: "enrichments[0].name"
-      type: "string"
-      logic: "Always 'device_security' for device enrichment type"
-      description: "Enrichment object name"
-
-    - source: "static: sentinelone_device"
-      target: "enrichments[0].value"
-      type: "string"
-      logic: "Always 'sentinelone_device' for SentinelOne device security enrichment"
-      description: "Enrichment object value"
+    - source: "infected"
+      target: "enrichments[Infection Status]"
+      type: "object"
+      logic: "Present when infected is not null; value is 'Infected' or 'Clean'"
+      description: "Device infection status enrichment"
 
   ocsf_samples:
     - name: "Device Inventory Info: Collect"
@@ -496,68 +505,72 @@ mapping:
             "version": "1.6.0"
           },
           "device": {
-            "uid": "475482087580431375",
+            "uid": "ff819e70af13be381993075eb0ce5f2f6de05be2",
+            "uid_alt": "475482087580431375",
             "name": "LAPTOP-JOHN-DEV",
             "hostname": "LAPTOP-JOHN-DEV",
+            "eid": "ext-475482087580431375",
             "domain": "example.com",
-            "type": "computer",
-            "machine_type": "laptop",
-            "serial_number": "ABC123DEF456GHI",
-            "manufacturer": "Dell",
+            "type": "Desktop",
+            "type_id": 2,
             "model": "Latitude 5540",
-            "cpu_count": 8,
-            "core_count": 8,
-            "memory_size": 16384,
+            "vendor_name": "Latitude 5540",
             "ip": "192.168.1.100",
-            "ipv4_addresses": [
-              "192.168.1.100",
-              "10.0.0.50"
-            ],
-            "ipv6_addresses": [
-              "fe80::1234:5678:90ab:cdef"
-            ],
-            "mac_address": "00:1A:2B:3C:4D:5E",
-            "mac_addresses": [
-              "00:1A:2B:3C:4D:5E"
-            ],
-            "is_enabled": true,
-            "is_online": true,
-            "is_encrypted": true,
-            "is_firewall_enabled": true,
-            "is_tamper_protected": true,
-            "threat_level": "good",
-            "threat_count": 0,
-            "agent_status": "active",
-            "agent_version": "23.4.1.1001",
-            "user_uid": "u1234567890abcdef",
-            "user_name": "john.developer@example.com",
-            "user_full_name": "John Developer",
+            "subnet": null,
+            "is_managed": true,
+            "is_compliant": true,
+            "risk_level": "Info",
+            "risk_level_id": 0,
+            "risk_score": 0,
+            "org": {
+              "name": "Acme Corp",
+              "uid": "226494730938493000"
+            },
+            "region": null,
             "created_time": 1685854800,
-            "updated_time": 1725184200,
             "last_seen_time": 1725184200,
-            "last_incident_time": null,
             "os": {
-              "name": "windows",
-              "type": "Windows",
-              "version": "Windows 10 Pro",
-              "build": "22H2"
+              "name": "Windows 10 Pro 22H2",
+              "type": "windows",
+              "type_id": 100
             }
           },
           "enrichments": [
             {
-              "name": "device_security",
-              "value": "sentinelone_device",
+              "name": "Firewall",
+              "value": "Enabled",
               "data": {
-                "threat_level": "good",
-                "threat_count": 0,
-                "is_enabled": true,
-                "agent_status": "active",
-                "agent_version": "23.4.1.1001",
-                "is_encrypted": true,
-                "is_firewall_enabled": true,
-                "is_tamper_protected": true,
-                "last_seen": 1725184200
+                "Firewall_status": "Enabled"
               }
+            },
+            {
+              "name": "Domain",
+              "value": "example.com",
+              "data": {
+                "Full_qualified_domain_name": "example.com"
+              }
+            },
+            {
+              "name": "Users",
+              "value": "john.developer@example.com",
+              "data": {
+                "Users": ["john.developer@example.com"]
+              }
+            },
+            {
+              "name": "Update Status",
+              "value": "Up to Date",
+              "data": {}
+            },
+            {
+              "name": "Active Threats",
+              "value": "0",
+              "data": {}
+            },
+            {
+              "name": "Infection Status",
+              "value": "Clean",
+              "data": {}
             }
           ]
         }

@@ -21,6 +21,7 @@ def trigger(data_storage):
     trigger.push_events_to_intakes = MagicMock()
     trigger.configuration = {
         "intake_key": "intake_key",
+        "frequency": 300,
     }
     yield trigger
 
@@ -70,9 +71,7 @@ def test_fetch_events(trigger, sessions_list_xml_with_one, session_xml):
 
 
 def test_next_batch_sleep_until_next_round(trigger, sessions_list_xml_with_one, session_xml):
-    with patch(
-        "beyondtrust_modules.connector_pra_platform.time"
-    ) as mock_time, requests_mock.Mocker() as mock_requests:
+    with patch("beyondtrust_modules.connector_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.register_uri(
             "POST",
             f"https://tenant.beyondtrustcloud.com/oauth2/token",

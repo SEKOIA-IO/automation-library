@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-12 - 2.10.0
+
+### Added
+
+- Add `imei`, `udid`, and `lastSeen` fields to Okta device model
+- Add `name`, `udid`, `imei_list`, `first_seen_time`, `is_trusted`, and `uid_alt` fields to device asset output
+- Add organization mapping from user profile fields (organization, department, domain)
+- Add user enrichments with access control data (enabled status, last login, last password change)
+
+### Fixed
+
+- Fix Okta SDK attribute names to use snake_case (`first_name`, `last_name`, `display_name`)
+- Fix URL query parameter construction for device pagination (remove extra `/`)
+- Make `osVersion` optional in device profile model
+- Remove OS version from `get_device_os` to avoid errors on missing version data
+- Fix `type_uid` value in user OCSF model
+- Improve disk encryption type handling with `BITLOCKER` and `FILEVAULT` support
+
 ## 2026-02-20 - 2.9.0
 
 ### Added

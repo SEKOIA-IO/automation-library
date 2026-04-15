@@ -1,12 +1,10 @@
 """Contains AwsSqsMessagesTrigger."""
 
 import os
-from functools import cached_property
 from typing import Any, Optional
 
 import orjson
 
-from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
 from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
 
 
@@ -32,25 +30,6 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
         self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
         self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 60))
-
-    @cached_property
-    def sqs_wrapper(self) -> SqsWrapper:
-        """
-        Get SQS wrapper.
-
-        Returns:
-            SqsWrapper:
-        """
-        config = SqsConfiguration(
-            frequency=self.configuration.sqs_frequency,
-            delete_consumed_messages=self.configuration.delete_consumed_messages,
-            queue_name=self.configuration.queue_name,
-            aws_access_key_id=self.module.configuration.aws_access_key,
-            aws_secret_access_key=self.module.configuration.aws_secret_access_key,
-            aws_region=self.module.configuration.aws_region_name,
-        )
-
-        return SqsWrapper(config)
 
     def is_aws_notification(self, message: Any) -> bool:
         """

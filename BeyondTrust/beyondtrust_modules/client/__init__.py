@@ -30,3 +30,28 @@ class ApiClient(requests.Session):
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             timeout=60,
         )
+
+    def get_session_listing(self, end_time: int) -> requests.Response:
+        return self.post(
+            f"{self._base_url}/api/reporting",
+            data={"generate_report": "AccessSessionListing", "duration": 0, "end_time": end_time},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=60,
+        )
+
+    def get_session(self, session_id: str) -> requests.Response:
+        return self.post(
+            f"{self._base_url}/api/reporting",
+            data={"generate_report": "AccessSession", "lsid": session_id},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=60,
+        )
+
+    def get_syslog(self) -> requests.Response:
+        return self.post(
+            f"{self._base_url}/api/reporting",
+            data={"generate_report": "Syslog"},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=120,
+            stream=True,
+        )
