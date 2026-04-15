@@ -60,7 +60,10 @@ class IlertTriggerAlertAction(Action):
         if isinstance(status, dict):
             status_name = status.get("name", "")
         else:
-            status_name = status or ""
+            status_name = status
+
+        if not isinstance(status_name, str):
+            status_name = ""
 
         normalized = status_name.lower()
 

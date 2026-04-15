@@ -26,6 +26,7 @@ def requests_retry_session(
         connect=retries,
         backoff_factor=backoff_factor,
         status_forcelist=status_forcelist,
+        allowed_methods=frozenset(["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"]),
     )
     adapter = HTTPAdapter(max_retries=retry)
     session.mount("http://", adapter)
