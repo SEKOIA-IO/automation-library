@@ -3,7 +3,7 @@ from typing import Generator
 from urllib.parse import urljoin
 
 from dateutil.parser import isoparse
-from pydantic import Field
+from pydantic.v1 import Field
 from sekoia_automation.checkpoint import CheckpointDatetime
 
 from . import TrendMicroModule

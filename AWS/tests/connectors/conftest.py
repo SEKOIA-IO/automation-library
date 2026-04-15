@@ -6,7 +6,8 @@ from unittest.mock import AsyncMock
 import pytest
 from faker import Faker
 
-from connectors import AwsModule, AwsModuleConfiguration
+from aws_helpers.base import AwsModuleConfiguration
+from connectors import AwsModule
 
 
 @pytest.fixture
@@ -64,6 +65,7 @@ def aws_configuration(faker: Faker) -> dict[str, str]:
         "aws_access_key": faker.word(),
         "aws_secret_access_key": faker.word(),
         "aws_region_name": "us-west-2",
+        "base_url": "https://test.sekoia.io",
     }
 
 

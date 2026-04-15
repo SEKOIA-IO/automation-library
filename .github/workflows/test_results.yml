@@ -6,25 +6,28 @@ on:
     types:
       - completed
 
-permissions:
-  checks: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   unit-test-results:
+    permissions:
+      actions: read  # for dawidd6/action-download-artifact to query and download artifacts
+      checks: write  # for EnricoMi/publish-unit-test-result-action to create and update check runs
+      contents: read  # for EnricoMi/publish-unit-test-result-action to read commits and compare branches
+      pull-requests: write  # for EnricoMi/publish-unit-test-result-action to post and update PR comments
     name: Unit Test Results
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion != 'skipped'
 
     steps:
       - name: Download Test Report
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@09b07ec687d10771279a426c79925ee415c12906 # v17
         with:
           run_id: ${{ github.event.workflow_run.id }}
           path: artifacts
 
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
+        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2.23.0
         with:
           commit: ${{ github.event.workflow_run.head_sha }}
           event_file: artifacts/Event File (*)/event.json

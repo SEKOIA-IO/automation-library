@@ -6,6 +6,7 @@ from ldap3.core.timezone import OffsetTzInfo
 from sekoia_automation.asset_connector.models.ocsf.user import AccountTypeId, UserOCSFModel, UserTypeId, UserTypeStr
 
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
+from microsoft_ad.models.common_models import LDAPUserAttributes
 
 
 @pytest.fixture
@@ -69,7 +70,7 @@ def test_user_metadata_object(connector):
 
 
 def test_compute_enabling_condition_enabled(connector):
-    user_attr = {"userAccountControl": 512}
+    user_attr = LDAPUserAttributes(userAccountControl=512)
 
     result = connector.compute_enabling_condition(user_attr)
 
@@ -77,7 +78,7 @@ def test_compute_enabling_condition_enabled(connector):
 
 
 def test_compute_enabling_condition_disabled(connector):
-    user_attr = {"userAccountControl": 514}
+    user_attr = LDAPUserAttributes(userAccountControl=514)
 
     result = connector.compute_enabling_condition(user_attr)
 
@@ -97,7 +98,7 @@ def test_convert_last_logon_to_timestamp(connector):
 
 def test_enrich_metadata(connector):
     last_logon = datetime(2024, 1, 1, 12, 0, 0, tzinfo=OffsetTzInfo(offset=0, name="UTC"))
-    user_attr = {"userAccountControl": 512, "lastLogon": last_logon, "badPwdCount": 0, "logonCount": 10}
+    user_attr = LDAPUserAttributes(userAccountControl=512, lastLogon=last_logon, badPwdCount=0, logonCount=10)
 
     enrichments = connector.enrich_metadata(user_attr)
 
@@ -109,7 +110,7 @@ def test_enrich_metadata(connector):
 
 
 def test_compute_user_type_admin(connector):
-    user_attr = {"member_of": ["CN=Domain Admins,DC=example,DC=com"]}
+    user_attr = LDAPUserAttributes(member_of=["CN=Domain Admins,DC=example,DC=com"])
 
     user_type, user_type_id = connector.compute_user_type(user_attr)
 
@@ -118,7 +119,7 @@ def test_compute_user_type_admin(connector):
 
 
 def test_compute_user_type_regular_user(connector):
-    user_attr = {"member_of": ["CN=Users,DC=example,DC=com"]}
+    user_attr = LDAPUserAttributes(member_of=["CN=Users,DC=example,DC=com"])
 
     user_type, user_type_id = connector.compute_user_type(user_attr)
 
@@ -127,7 +128,7 @@ def test_compute_user_type_regular_user(connector):
 
 
 def test_get_user_groups(connector):
-    user_attr = {"member_of": ["CN=Group1,DC=example,DC=com", "CN=Group2,DC=example,DC=com"]}
+    user_attr = LDAPUserAttributes(member_of=["CN=Group1,DC=example,DC=com", "CN=Group2,DC=example,DC=com"])
 
     groups = connector.get_user_groups(user_attr)
 
@@ -137,17 +138,17 @@ def test_get_user_groups(connector):
 
 
 def test_user_ocsf_object(connector):
-    user_attr = {
-        "givenName": "John",
-        "sn": "Doe",
-        "userPrincipalName": "john.doe@example.com",
-        "objectSid": "S-1-5-21-123456",
-        "objectGUID": "guid-123",
-        "displayName": "John Doe",
-        "mail": "john.doe@example.com",
-        "distinguishedName": "CN=John Doe,DC=example,DC=com",
-        "member_of": ["CN=Users,DC=example,DC=com"],
-    }
+    user_attr = LDAPUserAttributes(
+        givenName="John",
+        sn="Doe",
+        userPrincipalName="john.doe@example.com",
+        objectSid="S-1-5-21-123456",
+        objectGUID="guid-123",
+        displayName="John Doe",
+        mail="john.doe@example.com",
+        distinguishedName="CN=John Doe,DC=example,DC=com",
+        member_of=["CN=Users,DC=example,DC=com"],
+    )
 
     user_ocsf = connector.user_ocsf_object(user_attr)
 

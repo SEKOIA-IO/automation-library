@@ -1,10 +1,11 @@
 import requests
+from pydantic import HttpUrl, TypeAdapter
 from requests.auth import AuthBase, HTTPBasicAuth, HTTPDigestAuth
 from requests.exceptions import JSONDecodeError
 from sekoia_automation.action import Action
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
-from http_module.helpers import params_as_dict
+from .helpers import params_as_dict
 
 
 class HTTPBearerAuth(AuthBase):
@@ -28,12 +29,20 @@ class RequestAction(Action):
             reraise=True,
         )
 
+    @staticmethod
+    def validate_url(u: str) -> None:
+        # Validate URL with pydantic
+        url_adapter = TypeAdapter(HttpUrl)
+        url_adapter.validate_python(u)
+
     def run(self, arguments) -> dict:
+        url = arguments.get("url")
+        self.validate_url(url)
+
         method = arguments.get("method")
         data = arguments.get("data")
         json = arguments.get("json")
         params = params_as_dict(arguments.get("params"))
-        url = arguments.get("url")
         headers = arguments.get("headers")
         verify = arguments.get("verify_ssl", True)
         fail_on_http_error = arguments.get("fail_on_http_error", True)
@@ -80,7 +89,10 @@ class RequestAction(Action):
 
         if fail_on_http_error and not response.ok:
             # Will end action as in error
-            self.error(f"HTTP Request failed: {url} with {response.status_code}")
+            self.log(
+                f"HTTP Request failed: {url} with {response.status_code} - {response.reason}: {response.text}",
+                level="critical",
+            )
 
         json_response = None
         if (

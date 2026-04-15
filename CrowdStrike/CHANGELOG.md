@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.12.5 - 2026-04-10
+
+### Fixed
+
+- Fix the autimation module following changes in the AWS automation module
+
 ## 1.12.4 - 2026-02-18
 
 ### Changed

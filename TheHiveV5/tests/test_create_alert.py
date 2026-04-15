@@ -51,7 +51,11 @@ def test_create_alert_action_success():
     }
 
     with requests_mock.Mocker() as mock_requests:
-        mock_requests.post(url="https://thehive-project.org/api/v1/alert", status_code=200, json=HIVE_OUTPUT)
+        mock_requests.post(
+            url="https://thehive-project.org/api/v1/alert",
+            status_code=200,
+            json=HIVE_OUTPUT,
+        )
 
         result = action.run({"sekoia_base_url": SEKOIA_BASE_URL, "alert": ALERT})
         assert result is not None

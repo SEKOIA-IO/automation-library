@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-26 - 1.29.6
+
+### Added
+
+- Add option to update security events statuses along with a threat status
+
 ## 2026-02-23 - 1.29.5
 
 ### Changed

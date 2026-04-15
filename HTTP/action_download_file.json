@@ -12,7 +12,7 @@
         "type": "object"
       },
       "verify_ssl": {
-        "description": "Wether the SSL certificate must be verified. Default to true.",
+        "description": "Whether the SSL certificate must be verified. Default to true.",
         "type": "boolean",
         "default": true
       }
@@ -23,7 +23,7 @@
     "title": "Arguments",
     "type": "object"
   },
-  "description": "Donwload the given file and save it",
+  "description": "Download the given file and save it",
   "docker_parameters": "download-file",
   "name": "Download File",
   "results": {

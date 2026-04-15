@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Trapster",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Trapster deploys honeypots on your network to detect lateral movements, malicious scans and insider threats",
+  "name": "Trapster",
+  "uuid": "fa93909f-46c3-4f2c-9c87-a542714f10b4",
+  "version": "1.0.0",
+  "slug": "Trapster",
+  "categories": [
+    "Network"
+  ]
+}

@@ -19,10 +19,10 @@ profile = "black"
 line_length = 119
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.13.0"
-requests = "*"
-tenacity = "^8.0.1"
+python = ">=3.11,<3.12"
+sekoia-automation-sdk = "^1.22.4"
+requests = "^2.32.5"
+tenacity = "^9.1.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

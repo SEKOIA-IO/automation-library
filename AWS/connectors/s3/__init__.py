@@ -21,6 +21,7 @@ class AwsS3QueuedConfiguration(AbstractAwsConnectorConfiguration):
     chunk_size: int = 10000
     delete_consumed_messages: bool = True
     queue_name: str
+    prefix_filter: str | None = None
 
 
 class AwsS3LogsBaseConfiguration(BaseModel):
@@ -127,6 +128,16 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                             raise ValueError("Key is undefined", record)
 
                         normalized_key = normalize_s3_key(s3_key)
+
+                        if self.configuration.prefix_filter and not normalized_key.startswith(
+                            self.configuration.prefix_filter
+                        ):
+                            self.log(
+                                message=f"Skipping S3 object {normalized_key}: does not match prefix filter "
+                                f"'{self.configuration.prefix_filter}'",
+                                level="debug",
+                            )
+                            continue
 
                         stream: AsyncReader
                         async with (

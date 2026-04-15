@@ -71,6 +71,20 @@ def test_run():
                 "x_inthreat_sources_refs": [],
                 "confidence": 30,
             },
+            {
+                "id": "indicator--5",
+                "type": "indicator",
+                "pattern": "[network-traffic:dst_ref.value = '202.65.118.212' AND network-traffic:dst_port = 7002]]",
+                "x_ic_observable_types": ["ipv4-addr"],
+                "kill_chain_phases": [
+                    {"kill_chain_name": "lockheed-martin-cyber-kill-chain", "phase_name": "delivery"},
+                    {"kill_chain_name": "mitre-attack", "phase_name": "initial-access"},
+                ],
+                "valid_from": "2025-05-06T00:00:00Z",
+                "valid_until": "2025-11-24T00:00:00Z",
+                "x_inthreat_sources_refs": [],
+                "confidence": 30,
+            },
         ]
     )
 
@@ -127,9 +141,22 @@ def test_run():
                 },
             ],
         },
+        {
+            "class": "indicator--5",
+            "comment": "Valid from 2025-05-06T00:00:00Z AND STIX Pattern: "
+            "[network-traffic:dst_ref.value = '202.65.118.212' AND "
+            "network-traffic:dst_port = 7002]]",
+            "expiration_date": "1763942400000",
+            "indicator": "202.65.118.212",
+            "reliability": "D",
+            "reputation": "BAD",
+            "severity": "LOW",
+            "type": "IP",
+            "vendors": [],
+        },
     ]
 
     data = result["data"]
-    assert len(arguments.stix_objects) == 4
-    assert len(data) == 3
+    assert len(arguments.stix_objects) == 5
+    assert len(data) == 4
     assert data == expected_data

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-26 - 1.35.0
+
+### Added
+
+- Add STS support with temporary credentials caching
+
+## 2026-03-25 - 1.34.1
+
+### Fixed
+
+- Add `prefix_filter` to connector configuration
+
+## 2026-03-17 - 1.34.0
+
+### Added
+
+- Add optional `prefix_filter` parameter to all SQS-based S3 connectors. When set, only S3 objects whose key starts with the given prefix are processed. This allows filtering events when a single S3 bucket contains multiple log types (e.g. CloudTrail + other logs).
+
 ## 2026-02-24 - 1.33.17
 
 ### Changed
