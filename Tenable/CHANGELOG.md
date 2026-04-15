@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-04-10 - 1.0.14
+## 2026-04-10 - 1.0.15
 
 ### Fixed
 
 - Fix field mappings in `vulnerability_mapping.yml` to align with the actual OCSF models.
+
+## 2026-03-11 - 1.0.14
+
+### Changed
+
+- Truncate plugin description to the first sentence and append "See more details on Tenable" to avoid database field overflow
 
 ## 2026-03-04 - 1.0.13
 
