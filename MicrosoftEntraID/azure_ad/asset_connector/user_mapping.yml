@@ -241,6 +241,12 @@ mapping:
       logic: "Direct mapping of office location"
       description: "Office location as organizational unit"
 
+    - source: "onPremisesSamAccountName"
+      target: "user.uid_alt"
+      type: "string"
+      logic: "Direct mapping of on-premises SAM account name"
+      description: "Alternate user identifier (on-premises SAM account name)"
+
     # OCSF ENRICHMENT - USER ACCESS INFORMATION
     - source: "static: account"
       target: "enrichments[0].name"
