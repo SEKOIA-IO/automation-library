@@ -12,7 +12,7 @@ from .metrics import EVENTS_LAG
 
 
 class BeyondTrustPRAVaultAccountActivityConfiguration(DefaultConnectorConfiguration):
-    frequency: int = Field(60, description="Batch frequency in seconds")
+    frequency: int = Field(300, description="Batch frequency in seconds")
 
 
 class BeyondTrustPRAVaultAccountActivityConnector(BeyondTrustBaseConnector):
