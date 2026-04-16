@@ -27,7 +27,7 @@
           "type": "integer",
           "description": "Number of assets to fetch by batch",
           "minimum": 1,
-          "default": 100
+          "default": 50
       }
     },
     "required": ["sekoia_api_key"],
