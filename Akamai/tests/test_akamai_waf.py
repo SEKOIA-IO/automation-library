@@ -383,4 +383,3 @@ def test_chunk_size_limits_memory_per_yield(trigger, response_2):
 
     # And no events are lost
     assert sum(len(c) for c in chunks) == n_events
-
