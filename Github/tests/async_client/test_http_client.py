@@ -3,7 +3,7 @@
 import pytest
 from aioresponses import aioresponses
 
-from github_modules.async_client.http_client import AsyncGithubClient
+from github_modules.async_client.http_client import AsyncGithubClient, BadCredentialsError
 
 
 @pytest.mark.asyncio
@@ -321,3 +321,53 @@ async def test_github_client_get_audit_logs_with_pem_file_content_3(
         audit_logs = await github_client.get_audit_logs(last_timestamp)
 
         assert audit_logs == github_response + github_response + github_response
+
+
+@pytest.mark.asyncio
+async def test_github_client_get_audit_logs_with_incorrect_creds(
+    session_faker, pem_content, github_bad_creds_response, last_timestamp
+):
+    organization = session_faker.word()
+    github_client = AsyncGithubClient(
+        "https://api.github.com", organization, session_faker.word(), pem_content, session_faker.pyint()
+    )
+
+    with aioresponses() as mocked_responses:
+        audit_logs_url = github_client.audit_logs_url + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
+            last_timestamp
+        )
+
+        mocked_responses.get(audit_logs_url, status=401, payload=github_bad_creds_response, repeat=2)
+
+        with pytest.raises(BadCredentialsError):
+            await github_client.get_audit_logs(last_timestamp)
+
+
+@pytest.mark.asyncio
+async def test_github_client_get_audit_logs_retry_after_401(
+    github_bad_creds_response, github_response, session_faker, pem_content, last_timestamp
+):
+    organization = session_faker.word()
+    github_client = AsyncGithubClient(
+        "https://api.github.com", organization, session_faker.word(), pem_content, session_faker.pyint()
+    )
+
+    with aioresponses() as mocked_responses:
+        audit_logs_url = github_client.audit_logs_url + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
+            last_timestamp
+        )
+
+        mocked_responses.get(
+            audit_logs_url,
+            status=401,
+            payload=github_bad_creds_response,
+        )
+
+        mocked_responses.get(
+            audit_logs_url,
+            status=200,
+            payload=github_response,
+        )
+
+        audit_logs = await github_client.get_audit_logs(last_timestamp)
+        assert audit_logs == github_response
