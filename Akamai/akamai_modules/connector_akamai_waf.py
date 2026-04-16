@@ -31,6 +31,7 @@ class AkamaiWAFLogsConnector(Connector):
     configuration: AkamaiWAFLogsConnectorConfiguration
 
     PAGE_SIZE = 60_000  # default 1000, maximum 60000
+    CHUNK_SIZE = 1_000  # number of events to accumulate before yielding to limit memory usage
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -139,22 +140,32 @@ class AkamaiWAFLogsConnector(Connector):
         while self.running:
             self.__handle_response_error(response)
 
-            page = []
+            chunk: list = []
             offset = None
+            total_in_page = 0
 
             for line in response.iter_lines():
                 if line:
                     item: dict = orjson.loads(line)
                     if item.get("type") == "akamai_siem":
                         self.process_event(item)
-                        page.append(item)
+                        chunk.append(item)
+                        total_in_page += 1
+
+                        if len(chunk) >= self.CHUNK_SIZE:
+                            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
+                            yield chunk
+                            chunk = []
 
                     else:
                         offset = item["offset"]
                         # response context - last JSON line
-                        if len(page) > 0:
-                            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(page))
-                            yield page
+                        if total_in_page > 0:
+                            # Yield remaining events that didn't fill a full chunk
+                            if len(chunk) > 0:
+                                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
+                                yield chunk
+                                chunk = []
 
                         else:
                             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
