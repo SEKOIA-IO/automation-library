@@ -142,7 +142,7 @@ class AkamaiWAFLogsConnector(Connector):
 
             chunk: list = []
             offset = None
-            total_in_page = 0
+            events_in_page = 0
 
             for line in response.iter_lines():
                 if line:
@@ -150,7 +150,7 @@ class AkamaiWAFLogsConnector(Connector):
                     if item.get("type") == "akamai_siem":
                         self.process_event(item)
                         chunk.append(item)
-                        total_in_page += 1
+                        events_in_page += 1
 
                         if len(chunk) >= self.CHUNK_SIZE:
                             INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
@@ -160,7 +160,7 @@ class AkamaiWAFLogsConnector(Connector):
                     else:
                         offset = item["offset"]
                         # response context - last JSON line
-                        if total_in_page > 0:
+                        if events_in_page > 0:
                             # Yield remaining events that didn't fill a full chunk
                             if len(chunk) > 0:
                                 INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
