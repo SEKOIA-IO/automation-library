@@ -1,7 +1,7 @@
 """Pydantic models for raw AWS IAM API responses."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -26,7 +26,6 @@ class AwsApiUserGroup(BaseModel):
     Arn: Optional[str] = None
     CreateDate: Optional[datetime] = None
 
-from typing import Any, Dict, List
 
 class AwsApiBlockDeviceMappingEbs(BaseModel):
     AttachTime: Optional[datetime] = None

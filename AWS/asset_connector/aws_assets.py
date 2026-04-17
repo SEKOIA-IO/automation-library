@@ -4,15 +4,65 @@ This module centralizes authentication, checkpoint persistence, and AWS client
 creation for AWS asset connectors.
 """
 
-from typing import Optional
+import inspect
+from functools import wraps
+from typing import Any, Callable, Optional
 
 import boto3
-from botocore.exceptions import NoCredentialsError
+from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.storage import PersistentJSON
 from aws_helpers.client import AwsClientConfiguration
 from aws_helpers.oidc import OidcAwsMixin
 from aws_helpers.base import AwsModule
+
+
+def handle_aws_errors(operation: str) -> Callable:
+    """Decorator to standardize AWS API error handling across asset connectors.
+    
+    Args:
+        operation: A string describing the AWS API operation (e.g. 'fetching data')
+    """
+    def decorator(func: Callable) -> Callable:
+        if inspect.isgeneratorfunction(func):
+            @wraps(func)
+            def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+                try:
+                    yield from func(self, *args, **kwargs)
+                except ClientError as e:
+                    error_code = e.response.get("Error", {}).get("Code", "Unknown")
+                    self.log(f"AWS API error {operation} ({error_code}): {str(e)}", level="error")
+                    self.log_exception(e)
+                    raise
+                except BotoCoreError as e:
+                    self.log(f"Boto3 core error {operation}: {str(e)}", level="error")
+                    self.log_exception(e)
+                    raise
+                except Exception as e:
+                    self.log(f"Unexpected error {operation}: {str(e)}", level="error")
+                    self.log_exception(e)
+                    raise
+            return wrapper
+        else:
+            @wraps(func)
+            def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+                try:
+                    return func(self, *args, **kwargs)
+                except ClientError as e:
+                    error_code = e.response.get("Error", {}).get("Code", "Unknown")
+                    self.log(f"AWS API error {operation} ({error_code}): {str(e)}", level="error")
+                    self.log_exception(e)
+                    raise
+                except BotoCoreError as e:
+                    self.log(f"Boto3 core error {operation}: {str(e)}", level="error")
+                    self.log_exception(e)
+                    raise
+                except Exception as e:
+                    self.log(f"Unexpected error {operation}: {str(e)}", level="error")
+                    self.log_exception(e)
+                    raise
+            return wrapper
+    return decorator
 
 
 class AwsAssetsConnector(OidcAwsMixin, AssetConnector):

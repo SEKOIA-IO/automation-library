@@ -741,7 +741,7 @@ def test_get_aws_devices_client_error(test_aws_device_asset_connector):
         list(test_aws_device_asset_connector.get_aws_devices())
 
     test_aws_device_asset_connector.log.assert_called_with(
-        "AWS API error (UnauthorizedOperation): An error occurred (UnauthorizedOperation) when calling the DescribeInstances operation: Access denied",
+        "AWS API error collecting AWS devices (UnauthorizedOperation): An error occurred (UnauthorizedOperation) when calling the DescribeInstances operation: Access denied",
         level="error",
     )
 

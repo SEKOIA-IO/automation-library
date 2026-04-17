@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional
 
 import boto3
 import pytz
-from botocore.exceptions import BotoCoreError, ClientError
 from dateutil.parser import isoparse
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.device import (
@@ -29,7 +28,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 
-from asset_connector.aws_assets import AwsAssetsConnector
+from asset_connector.aws_assets import AwsAssetsConnector, handle_aws_errors
 
 
 class AwsDevice:
@@ -203,6 +202,7 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
         else:
             return OperatingSystem(name=platform_details, type=OSTypeStr.UNKNOWN, type_id=OSTypeId.UNKNOWN)
 
+    @handle_aws_errors("collecting AWS devices")
     def get_aws_devices(self) -> Generator[List[AwsDevice], None, None]:
         """Fetch AWS EC2 instances and convert them to AwsDevice objects.
 
@@ -215,63 +215,48 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
         """
         self.log("Starting AWS device collection...", level="info")
 
-        try:
-            paginator = self.client().get_paginator("describe_instances")
-            page_iterator = paginator.paginate()
+        paginator = self.client().get_paginator("describe_instances")
+        page_iterator = paginator.paginate()
 
-            # Parse the date filter for incremental collection
-            date_filter: Optional[datetime] = None
-            if self.most_recent_date_seen:
+        # Parse the date filter for incremental collection
+        date_filter: Optional[datetime] = None
+        if self.most_recent_date_seen:
+            try:
+                date_filter = isoparse(self.most_recent_date_seen)
+            except (ValueError, TypeError) as e:
+                self.log(f"Invalid date format in checkpoint: {self.most_recent_date_seen}", level="warning")
+                self.log_exception(e)
+
+        device_count = 0
+        for page in page_iterator:
+            devices = []
+
+            for reservation in page.get("Reservations", []):
                 try:
-                    date_filter = isoparse(self.most_recent_date_seen)
-                except (ValueError, TypeError) as e:
-                    self.log(f"Invalid date format in checkpoint: {self.most_recent_date_seen}", level="warning")
-                    self.log_exception(e)
+                    # Parse reservation dictionary into our Pydantic model
+                    reservation_model = AwsReservationApi(**reservation)
+                    owner_id = reservation_model.OwnerId
+                except Exception as e:
+                    self.log(f"Failed to parse reservation using AwsReservationApi: {str(e)}", level="error")
+                    continue
 
-            device_count = 0
-            for page in page_iterator:
-                devices = []
-
-                for reservation in page.get("Reservations", []):
+                for instance in reservation_model.Instances:
                     try:
-                        # Parse reservation dictionary into our Pydantic model
-                        reservation_model = AwsReservationApi(**reservation)
-                        owner_id = reservation_model.OwnerId
+                        # Extract device information with proper error handling
+                        device = self._extract_device_from_instance(instance, date_filter, owner_id)
+                        if device:
+                            devices.append(device)
+                            device_count += 1
                     except Exception as e:
-                        self.log(f"Failed to parse reservation using AwsReservationApi: {str(e)}", level="error")
+                        instance_id = getattr(instance, "InstanceId", "unknown")
+                        self.log(f"Failed to process instance {instance_id}: {str(e)}", level="error")
+                        self.log_exception(e)
                         continue
 
-                    for instance in reservation_model.Instances:
-                        try:
-                            # Extract device information with proper error handling
-                            device = self._extract_device_from_instance(instance, date_filter, owner_id)
-                            if device:
-                                devices.append(device)
-                                device_count += 1
-                        except Exception as e:
-                            instance_id = instance.InstanceId or "unknown"
-                            self.log(f"Failed to process instance {instance_id}: {str(e)}", level="error")
-                            self.log_exception(e)
-                            continue
+            if devices:
+                yield devices
 
-                if devices:
-                    yield devices
-
-            self.log(f"Successfully collected {device_count} AWS devices", level="info")
-
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "Unknown")
-            self.log(f"AWS API error ({error_code}): {str(e)}", level="error")
-            self.log_exception(e)
-            raise
-        except BotoCoreError as e:
-            self.log(f"Boto3 core error: {str(e)}", level="error")
-            self.log_exception(e)
-            raise
-        except Exception as e:
-            self.log(f"Unexpected error during device collection: {str(e)}", level="error")
-            self.log_exception(e)
-            raise
+        self.log(f"Successfully collected {device_count} AWS devices", level="info")
 
     def _extract_device_from_instance(
         self, instance: AwsApiInstance, date_filter: Optional[datetime], owner_id: Optional[str] = None

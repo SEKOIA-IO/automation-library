@@ -555,7 +555,7 @@ def test_get_groups_for_user_client_error(test_aws_users_asset_connector):
         test_aws_users_asset_connector.get_groups_for_user("testuser")
 
     test_aws_users_asset_connector.log.assert_called_with(
-        "AWS API error fetching groups for user testuser (AccessDenied): An error occurred (AccessDenied) when calling the ListGroupsForUser operation: Access denied",
+        "AWS API error fetching groups for user (AccessDenied): An error occurred (AccessDenied) when calling the ListGroupsForUser operation: Access denied",
         level="error",
     )
 
@@ -571,7 +571,7 @@ def test_get_groups_for_user_boto_core_error(test_aws_users_asset_connector):
         test_aws_users_asset_connector.get_groups_for_user("testuser")
 
     test_aws_users_asset_connector.log.assert_called_with(
-        "Boto3 core error fetching groups for user testuser: An unspecified error occurred", level="error"
+        "Boto3 core error fetching groups for user: An unspecified error occurred", level="error"
     )
 
 
@@ -663,7 +663,7 @@ def test_get_mfa_status_for_user_client_error(test_aws_users_asset_connector):
         test_aws_users_asset_connector.get_mfa_status_for_user("testuser")
 
     test_aws_users_asset_connector.log.assert_called_with(
-        "AWS API error checking MFA for user testuser (AccessDenied): An error occurred (AccessDenied) when calling the ListMFADevices operation: Access denied",
+        "AWS API error checking MFA status for user (AccessDenied): An error occurred (AccessDenied) when calling the ListMFADevices operation: Access denied",
         level="error",
     )
 
@@ -679,7 +679,7 @@ def test_get_mfa_status_for_user_boto_core_error(test_aws_users_asset_connector)
         test_aws_users_asset_connector.get_mfa_status_for_user("testuser")
 
     test_aws_users_asset_connector.log.assert_called_with(
-        "Boto3 core error checking MFA for user testuser: An unspecified error occurred", level="error"
+        "Boto3 core error checking MFA status for user: An unspecified error occurred", level="error"
     )
 
 
@@ -781,7 +781,7 @@ def test_get_aws_users_client_error(test_aws_users_asset_connector):
         list(test_aws_users_asset_connector.get_aws_users())
 
     test_aws_users_asset_connector.log.assert_called_with(
-        "AWS API error (AccessDenied): An error occurred (AccessDenied) when calling the ListUsers operation: Access denied",
+        "AWS API error collecting AWS users (AccessDenied): An error occurred (AccessDenied) when calling the ListUsers operation: Access denied",
         level="error",
     )
 
@@ -797,7 +797,7 @@ def test_get_aws_users_boto_core_error(test_aws_users_asset_connector):
         list(test_aws_users_asset_connector.get_aws_users())
 
     test_aws_users_asset_connector.log.assert_called_with(
-        "Boto3 core error: An unspecified error occurred", level="error"
+        "Boto3 core error collecting AWS users: An unspecified error occurred", level="error"
     )
 
 
