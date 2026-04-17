@@ -6,6 +6,7 @@ from dateutil.parser import isoparse
 from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel
 
 from asset_connector.users_assets import AwsUser, AwsUsersAssetConnector
+from asset_connector.aws_api_models import AwsApiUserGroup, AwsApiUser
 from aws_helpers.base import AwsModuleConfiguration
 from connectors import AwsModule
 
@@ -854,7 +855,7 @@ def test_extract_user_from_iam_user_success(test_aws_users_asset_connector):
     test_aws_users_asset_connector.get_mfa_status_for_user = mock.MagicMock(return_value=True)
     test_aws_users_asset_connector.user_has_admin_policy = mock.MagicMock(return_value=False)
 
-    aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(user_data, None)
+    aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(AwsApiUser(**user_data), None)
 
     assert aws_user is not None
     assert aws_user.user.name == "testuser"
@@ -875,7 +876,7 @@ def test_extract_user_from_iam_user_missing_username(test_aws_users_asset_connec
         "CreateDate": isoparse("2023-10-01T12:00:00Z"),
     }
 
-    aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(user_data, None)
+    aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(AwsApiUser(**user_data), None)
 
     assert aws_user is None
     test_aws_users_asset_connector.log.assert_called_with("User missing UserName or Arn, skipping", level="warning")
@@ -889,7 +890,7 @@ def test_extract_user_from_iam_user_missing_arn(test_aws_users_asset_connector):
         "CreateDate": isoparse("2023-10-01T12:00:00Z"),
     }
 
-    aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(user_data, None)
+    aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(AwsApiUser(**user_data), None)
 
     assert aws_user is None
     test_aws_users_asset_connector.log.assert_called_with("User missing UserName or Arn, skipping", level="warning")
@@ -903,7 +904,7 @@ def test_extract_user_from_iam_user_missing_create_date(test_aws_users_asset_con
         "Arn": "arn:aws:iam::123456789012:user/testuser",
     }
 
-    aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(user_data, None)
+    aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(AwsApiUser(**user_data), None)
 
     assert aws_user is None
     test_aws_users_asset_connector.log.assert_called_with(
@@ -923,7 +924,7 @@ def test_extract_user_from_iam_user_with_date_filter(test_aws_users_asset_connec
     # Date filter after user creation date
     date_filter = isoparse("2023-10-02T12:00:00Z")
 
-    aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(user_data, date_filter)
+    aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(AwsApiUser(**user_data), date_filter)
 
     assert aws_user is None  # User should be filtered out
 
@@ -941,7 +942,7 @@ def test_extract_user_from_iam_user_groups_error(test_aws_users_asset_connector)
     test_aws_users_asset_connector.get_mfa_status_for_user = mock.MagicMock(return_value=True)
     test_aws_users_asset_connector.user_has_admin_policy = mock.MagicMock(return_value=False)
 
-    aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(user_data, None)
+    aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(AwsApiUser(**user_data), None)
 
     assert aws_user is not None
     assert aws_user.user.groups == []  # Should be empty due to error
@@ -962,7 +963,7 @@ def test_extract_user_from_iam_user_mfa_error(test_aws_users_asset_connector):
     test_aws_users_asset_connector.get_mfa_status_for_user = mock.MagicMock(side_effect=Exception("MFA error"))
     test_aws_users_asset_connector.user_has_admin_policy = mock.MagicMock(return_value=False)
 
-    aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(user_data, None)
+    aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(AwsApiUser(**user_data), None)
 
     assert aws_user is not None
     assert aws_user.user.has_mfa is False  # Should be False due to error
@@ -983,7 +984,7 @@ def test_extract_user_from_iam_user_general_error(test_aws_users_asset_connector
     with mock.patch("asset_connector.users_assets.User") as mock_user_class:
         mock_user_class.side_effect = Exception("User creation error")
 
-        aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(user_data, None)
+        aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(AwsApiUser(**user_data), None)
 
         assert aws_user is None
         test_aws_users_asset_connector.log.assert_called_with(

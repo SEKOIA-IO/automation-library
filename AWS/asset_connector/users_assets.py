@@ -20,11 +20,14 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     AccountTypeStr,
     Group,
     User,
+    UserDataObject,
+    UserEnrichmentObject,
     UserOCSFModel,
     UserTypeId,
     UserTypeStr,
 )
 
+from asset_connector.aws_api_models import AwsApiUserGroup, AwsApiUser
 from asset_connector.aws_assets import AwsAssetsConnector
 
 
@@ -34,17 +37,20 @@ class AwsUser:
     Attributes:
         user: The OCSF User object containing user information
         date: The creation date of the user
+        enrichments: Optional list of UserEnrichmentObject instances
     """
 
-    def __init__(self, user: User, date: datetime) -> None:
+    def __init__(self, user: User, date: datetime, enrichments: Optional[List[UserEnrichmentObject]] = None) -> None:
         """Initialize an AwsUser instance.
 
         Args:
             user: The OCSF User object
             date: The creation date of the user
+            enrichments: Optional list of enrichment objects
         """
         self.user = user
         self.date = date
+        self.enrichments = enrichments
 
 
 class AwsUsersAssetConnector(AwsAssetsConnector):
@@ -140,12 +146,14 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             groups = []
 
             for page in page_iterator:
-                for group in page.get("Groups", []):
+                for raw_group in page.get("Groups", []):
                     try:
+                        group = AwsApiUserGroup(**raw_group)
+                        group_name = group.GroupName or ""
                         group_obj = Group(
-                            name=group.get("GroupName", ""),
-                            uid=group.get("Arn", ""),
-                            privileges=self.group_privileges(group.get("GroupName", "")),
+                            name=group_name,
+                            uid=group.Arn or "",
+                            privileges=self.group_privileges(group_name),
                         )
                         self.log(f"Fetched group: {group_obj.name} for user: {user_name}", level="debug")
                         groups.append(group_obj)
@@ -266,15 +274,16 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             for page in page_iterator:
                 users = []
 
-                for user in page.get("Users", []):
+                for raw_user in page.get("Users", []):
                     try:
                         # Extract user information with proper error handling
-                        aws_user = self._extract_user_from_iam_user(user, date_filter)
+                        user_model = AwsApiUser(**raw_user)
+                        aws_user = self._extract_user_from_iam_user(user_model, date_filter)
                         if aws_user:
                             users.append(aws_user)
                             user_count += 1
                     except Exception as e:
-                        user_name = user.get("UserName", "unknown")
+                        user_name = raw_user.get("UserName", "unknown") if isinstance(raw_user, dict) else "unknown"
                         self.log(f"Failed to process user {user_name}: {str(e)}", level="error")
                         self.log_exception(e)
                         continue
@@ -309,7 +318,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                     return True
         return False
 
-    def _extract_user_from_iam_user(self, user: Dict[str, Any], date_filter: Optional[datetime]) -> Optional[AwsUser]:
+    def _extract_user_from_iam_user(self, user: AwsApiUser, date_filter: Optional[datetime]) -> Optional[AwsUser]:
         """Extract user information from an AWS IAM user.
 
         Args:
@@ -321,15 +330,15 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
         """
         try:
             # Get user name and ARN
-            user_name = user.get("UserName")
-            user_arn = user.get("Arn")
+            user_name = user.UserName
+            user_arn = user.Arn
 
             if not user_name or not user_arn:
                 self.log("User missing UserName or Arn, skipping", level="warning")
                 return None
 
             # Get creation time
-            created_time = user.get("CreateDate")
+            created_time = user.CreateDate
             if not created_time:
                 self.log(f"User {user_name} has no creation time, skipping", level="warning")
                 return None
@@ -350,8 +359,17 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                 type=AccountTypeStr.AWS_ACCOUNT,
                 type_id=AccountTypeId.AWS_ACCOUNT,
                 uid=user_arn,
-                uid_alt=user.get("UserId"),
             )
+
+            # Build enrichment from available IAM data
+            enrichments = []
+            if user.PasswordLastUsed:
+                enrichments.append(
+                    UserEnrichmentObject(
+                        name="aws_iam",
+                        data=UserDataObject(last_logon=user.PasswordLastUsed.isoformat())
+                    )
+                )
 
             # Fetch groups, MFA status, and admin status for the user
             try:
@@ -373,6 +391,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             user_obj = User(
                 name=user_name,
                 uid=user_arn,
+                uid_alt=user.UserId,
                 groups=groups,
                 has_mfa=has_mfa,
                 account=account,
@@ -387,10 +406,10 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                 user_obj.type = UserTypeStr.USER
 
             self.log(f"Extracted user: {user_obj.name} ({user_arn})", level="debug")
-            return AwsUser(user=user_obj, date=created_time)
+            return AwsUser(user=user_obj, date=created_time, enrichments=enrichments if enrichments else None)
 
         except Exception as e:
-            user_name = user.get("UserName", "unknown")
+            user_name = user.UserName or "unknown"
             self.log(f"Error extracting user from IAM user {user_name}: {str(e)}", level="error")
             self.log_exception(e)
             return None
@@ -429,6 +448,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                             time=aws_user.date.timestamp(),
                             metadata=metadata,
                             user=aws_user.user,
+                            enrichments=aws_user.enrichments,
                         )
 
                         asset_count += 1
