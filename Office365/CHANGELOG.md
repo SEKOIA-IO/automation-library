@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fixed an issue with closed loop after each run
+- Fixed an issue with a closed loop after each run
 
 ## 2026-03-19 - 2.20.1
 
