@@ -1,7 +1,8 @@
 import re
 
+
 def remove_try_catch(filepath):
-    with open(filepath, 'r') as f:
+    with open(filepath, "r") as f:
         content = f.read()
 
     # We need to carefully remove the specific catch blocks for ClientError, BotoCoreError, Exception.

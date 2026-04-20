@@ -441,7 +441,9 @@ def test_extract_device_from_instance_success(test_aws_device_asset_connector):
     }
     owner_id = "516755368338"
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None, owner_id)
+    result = test_aws_device_asset_connector._extract_device_from_instance(
+        AwsApiInstance(**instance_data), None, owner_id
+    )
 
     assert isinstance(result, AwsDevice)
     assert result.device.uid == "i-1234567890abcdef0"

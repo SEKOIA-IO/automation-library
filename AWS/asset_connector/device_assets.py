@@ -334,7 +334,16 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
             name = self._extract_name_from_tags(tags_dicts)
 
             # Extract network interfaces
-            ni_dicts = [{"NetworkInterfaceId": ni.NetworkInterfaceId, "Description": ni.Description, "MacAddress": ni.MacAddress, "PrivateIpAddress": ni.PrivateIpAddress, "PrivateDnsName": ni.PrivateDnsName} for ni in instance.NetworkInterfaces]
+            ni_dicts = [
+                {
+                    "NetworkInterfaceId": ni.NetworkInterfaceId,
+                    "Description": ni.Description,
+                    "MacAddress": ni.MacAddress,
+                    "PrivateIpAddress": ni.PrivateIpAddress,
+                    "PrivateDnsName": ni.PrivateDnsName,
+                }
+                for ni in instance.NetworkInterfaces
+            ]
             network_interfaces = self._extract_network_interfaces(ni_dicts)
 
             # Extract security groups

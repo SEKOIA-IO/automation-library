@@ -30,12 +30,15 @@ class AwsApiUserGroup(BaseModel):
 class AwsApiBlockDeviceMappingEbs(BaseModel):
     AttachTime: Optional[datetime] = None
 
+
 class AwsApiBlockDeviceMapping(BaseModel):
     Ebs: Optional[AwsApiBlockDeviceMappingEbs] = None
+
 
 class AwsApiTag(BaseModel):
     Key: Optional[str] = None
     Value: Optional[str] = None
+
 
 class AwsApiNetworkInterface(BaseModel):
     NetworkInterfaceId: Optional[str] = None
@@ -44,18 +47,23 @@ class AwsApiNetworkInterface(BaseModel):
     PrivateIpAddress: Optional[str] = None
     PrivateDnsName: Optional[str] = None
 
+
 class AwsApiSecurityGroup(BaseModel):
     GroupId: Optional[str] = None
     GroupName: Optional[str] = None
 
+
 class AwsApiPlacement(BaseModel):
     AvailabilityZone: Optional[str] = None
+
 
 class AwsApiInstanceState(BaseModel):
     Name: Optional[str] = None
 
+
 class AwsApiInstance(BaseModel):
     """Raw AWS EC2 instance object returned by ``ec2:DescribeInstances``."""
+
     InstanceId: Optional[str] = None
     BlockDeviceMappings: Optional[List[AwsApiBlockDeviceMapping]] = Field(default_factory=list)
     LaunchTime: Any = None
@@ -76,8 +84,10 @@ class AwsApiInstance(BaseModel):
     IamInstanceProfile: Optional[Dict[str, Any]] = None
     PlatformDetails: Optional[str] = None
 
+
 class AwsReservationApi(BaseModel):
     """Raw AWS EC2 reservation object returned by ``ec2:DescribeInstances``."""
+
     ReservationId: Optional[str] = None
     OwnerId: Optional[str] = None
     Instances: Optional[List[AwsApiInstance]] = Field(default_factory=list)

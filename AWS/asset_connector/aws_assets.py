@@ -19,12 +19,14 @@ from aws_helpers.base import AwsModule
 
 def handle_aws_errors(operation: str) -> Callable:
     """Decorator to standardize AWS API error handling across asset connectors.
-    
+
     Args:
         operation: A string describing the AWS API operation (e.g. 'fetching data')
     """
+
     def decorator(func: Callable) -> Callable:
         if inspect.isgeneratorfunction(func):
+
             @wraps(func)
             def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
                 try:
@@ -42,8 +44,10 @@ def handle_aws_errors(operation: str) -> Callable:
                     self.log(f"Unexpected error {operation}: {str(e)}", level="error")
                     self.log_exception(e)
                     raise
+
             return wrapper
         else:
+
             @wraps(func)
             def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
                 try:
@@ -61,7 +65,9 @@ def handle_aws_errors(operation: str) -> Callable:
                     self.log(f"Unexpected error {operation}: {str(e)}", level="error")
                     self.log_exception(e)
                     raise
+
             return wrapper
+
     return decorator
 
 

@@ -104,7 +104,6 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                     policies.append(policy_name)
         return policies
 
-
     @handle_aws_errors("fetching groups for user")
     def get_groups_for_user(self, user_name: str) -> List[Group]:
         """Fetch groups associated with a specific user.
@@ -308,8 +307,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             if user.PasswordLastUsed:
                 enrichments.append(
                     UserEnrichmentObject(
-                        name="aws_iam",
-                        data=UserDataObject(last_logon=user.PasswordLastUsed.isoformat())
+                        name="aws_iam", data=UserDataObject(last_logon=user.PasswordLastUsed.isoformat())
                     )
                 )
 
