@@ -10,6 +10,7 @@ class TagsObject(BaseModel):
     added_by: str
     added_at: str
 
+
 class SourceInfo(BaseModel):
     name: str
     first_seen: str
