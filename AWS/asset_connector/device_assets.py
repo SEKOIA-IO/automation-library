@@ -273,7 +273,7 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
         """
         try:
             # Get instance ID
-            instance_id = instance.InstanceId if hasattr(instance, "InstanceId") else instance.get("InstanceId")
+            instance_id = getattr(instance, "InstanceId", None)
             if not instance_id:
                 self.log("Instance missing InstanceId, skipping", level="warning")
                 return None

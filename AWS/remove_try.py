@@ -1,7 +1,7 @@
 import re
 
 
-def remove_try_catch(filepath):
+def remove_try_catch(filepath: str) -> None:
     with open(filepath, "r") as f:
         content = f.read()
 

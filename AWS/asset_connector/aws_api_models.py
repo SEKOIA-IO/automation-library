@@ -65,13 +65,13 @@ class AwsApiInstance(BaseModel):
     """Raw AWS EC2 instance object returned by ``ec2:DescribeInstances``."""
 
     InstanceId: Optional[str] = None
-    BlockDeviceMappings: Optional[List[AwsApiBlockDeviceMapping]] = Field(default_factory=list)
+    BlockDeviceMappings: List[AwsApiBlockDeviceMapping] = Field(default_factory=list)
     LaunchTime: Any = None
     PublicDnsName: Optional[str] = None
     PrivateDnsName: Optional[str] = None
-    Tags: Optional[List[AwsApiTag]] = Field(default_factory=list)
-    NetworkInterfaces: Optional[List[AwsApiNetworkInterface]] = Field(default_factory=list)
-    SecurityGroups: Optional[List[AwsApiSecurityGroup]] = Field(default_factory=list)
+    Tags: List[AwsApiTag] = Field(default_factory=list)
+    NetworkInterfaces: List[AwsApiNetworkInterface] = Field(default_factory=list)
+    SecurityGroups: List[AwsApiSecurityGroup] = Field(default_factory=list)
     PublicIpAddress: Optional[str] = None
     PrivateIpAddress: Optional[str] = None
     Placement: Optional[AwsApiPlacement] = None
@@ -90,4 +90,4 @@ class AwsReservationApi(BaseModel):
 
     ReservationId: Optional[str] = None
     OwnerId: Optional[str] = None
-    Instances: Optional[List[AwsApiInstance]] = Field(default_factory=list)
+    Instances: List[AwsApiInstance] = Field(default_factory=list)

@@ -17,14 +17,14 @@ from aws_helpers.oidc import OidcAwsMixin
 from aws_helpers.base import AwsModule
 
 
-def handle_aws_errors(operation: str) -> Callable:
+def handle_aws_errors(operation: str) -> Callable[..., Any]:
     """Decorator to standardize AWS API error handling across asset connectors.
 
     Args:
         operation: A string describing the AWS API operation (e.g. 'fetching data')
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         if inspect.isgeneratorfunction(func):
 
             @wraps(func)
