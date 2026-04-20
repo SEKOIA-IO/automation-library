@@ -447,16 +447,29 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         Alerts that are filtered out (by rule_filter) or malformed never reach
         persisted state, so their locks cannot be freed by the state cleanup path.
         An LRU bound ensures the dict stays below _max_alert_locks entries.
+
+        Eviction skips locks that are currently acquired to avoid race conditions
+        where two threads could process the same alert concurrently.
         """
         with self._locks_lock:
             if alert_uuid in self._alert_locks:
                 self._alert_locks.move_to_end(alert_uuid)
                 return self._alert_locks[alert_uuid]
             if len(self._alert_locks) >= self._max_alert_locks:
-                self._alert_locks.popitem(last=False)
+                self._evict_oldest_unlocked()
             lock = Lock()
             self._alert_locks[alert_uuid] = lock
             return lock
+
+    def _evict_oldest_unlocked(self) -> None:
+        """Evict the oldest unlocked entry from the alert locks dict.
+
+        Must be called while holding self._locks_lock.
+        """
+        for uuid in list(self._alert_locks.keys()):
+            if not self._alert_locks[uuid].locked():
+                del self._alert_locks[uuid]
+                return
 
     def _start_time_threshold_thread(self) -> None:
         """Start the periodic time threshold check thread."""
@@ -513,8 +526,6 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             return
 
         config = self.validated_config
-        if not config.enable_time_threshold:
-            return
 
         try:
             self.state_manager.reload_state()
@@ -522,12 +533,17 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             self.log_exception(exp, message="Failed to reload state for time threshold check")
             return
 
+        # Run cleanup unconditionally (self-throttled to once/day) so that state
+        # and locks are pruned even when time_threshold is disabled (volume-only
+        # configs) or when there are no pending alerts.
+        self._cleanup_old_states()
+
+        if not config.enable_time_threshold:
+            return
+
         pending_alerts = self.state_manager.get_alerts_pending_time_check(config.time_window_hours)
         if not pending_alerts:
             return
-
-        # Also run cleanup during periodic check (not in the notification hot path)
-        self._cleanup_old_states()
 
         for alert_state in pending_alerts:
             try:
@@ -659,6 +675,11 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         except Exception as exp:
             self.log_exception(exp, message="Failed to initialize, aborting")
             return
+
+        # Run cleanup from handle_event so volume-only configurations (where the
+        # background time-threshold thread is not started) still prune old state
+        # and stale locks. The method self-throttles to once per day.
+        self._cleanup_old_states()
 
         alert_attrs = message.get("attributes", {})
         event_type: str = message.get("type", "")
@@ -1295,18 +1316,22 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             remaining_alerts = self.state_manager.get_all_alerts()
             STATE_SIZE.set(len(remaining_alerts))
 
-            # Purge locks for alerts no longer in state to prevent memory leak
+            # Purge locks for alerts no longer in state to prevent memory leak.
+            # Only delete locks that are not currently acquired to avoid race conditions.
             with self._locks_lock:
                 stale_lock_keys = set(self._alert_locks.keys()) - set(remaining_alerts.keys())
+                purged = 0
                 for key in stale_lock_keys:
-                    del self._alert_locks[key]
+                    if not self._alert_locks[key].locked():
+                        del self._alert_locks[key]
+                        purged += 1
 
-            if removed > 0:
+            if removed > 0 or purged > 0:
                 self.log(
-                    message=f"State cleanup: removed {removed} entries, purged {len(stale_lock_keys)} locks",
+                    message=f"State cleanup: removed {removed} entries, purged {purged} locks",
                     level="info",
                     removed_count=removed,
-                    purged_locks=len(stale_lock_keys),
+                    purged_locks=purged,
                 )
 
             self._last_cleanup = now
