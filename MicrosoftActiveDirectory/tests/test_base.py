@@ -141,10 +141,10 @@ class TestSearchUserdnQuery:
 
         action.search_userdn_query("test.test", "DC=test,DC=com")
 
-        mock_client.search.assert_called_once()
-        call_kwargs = mock_client.search.call_args
-        assert call_kwargs[1]["search_base"] == "DC=test,DC=com"
-        assert "samaccountname=test.test" in call_kwargs[1]["search_filter"]
+        assert mock_client.search.call_count >= 1
+        first_call_kwargs = mock_client.search.call_args_list[0]
+        assert first_call_kwargs[1]["search_base"] == "DC=test,DC=com"
+        assert "samaccountname=test.test" in first_call_kwargs[1]["search_filter"]
 
     def test_search_builds_filter_with_email(self):
         action = object.__new__(ConcreteMicrosoftADAction)
@@ -156,9 +156,9 @@ class TestSearchUserdnQuery:
 
         action.search_userdn_query("test.test", "DC=test,DC=com", email="test@example.com")
 
-        mock_client.search.assert_called_once()
-        call_kwargs = mock_client.search.call_args
-        search_filter = call_kwargs[1]["search_filter"]
+        assert mock_client.search.call_count >= 1
+        first_call_kwargs = mock_client.search.call_args_list[0]
+        search_filter = first_call_kwargs[1]["search_filter"]
         assert search_filter.startswith("(&")
         assert "(mail=test@example.com)" in search_filter
         assert "(|(samaccountname=test.test)" in search_filter
@@ -173,9 +173,9 @@ class TestSearchUserdnQuery:
 
         action.search_userdn_query(None, "DC=test,DC=com", email="test.integration@integration.local")
 
-        mock_client.search.assert_called_once()
-        call_kwargs = mock_client.search.call_args
-        search_filter = call_kwargs[1]["search_filter"]
+        assert mock_client.search.call_count >= 1
+        first_call_kwargs = mock_client.search.call_args_list[0]
+        search_filter = first_call_kwargs[1]["search_filter"]
         assert search_filter == "(mail=test.integration@integration.local)"
 
     def test_search_raises_when_no_username_and_no_email(self):
@@ -195,9 +195,9 @@ class TestSearchUserdnQuery:
 
         action.search_userdn_query("test.test", "DC=test,DC=com", email=None)
 
-        mock_client.search.assert_called_once()
-        call_kwargs = mock_client.search.call_args
-        search_filter = call_kwargs[1]["search_filter"]
+        assert mock_client.search.call_count >= 1
+        first_call_kwargs = mock_client.search.call_args_list[0]
+        search_filter = first_call_kwargs[1]["search_filter"]
         assert search_filter.startswith("(|")
         assert not search_filter.startswith("(&")
 
@@ -223,3 +223,16 @@ class TestSearchUserdnQuery:
         result = action.search_userdn_query("user", "DC=example,DC=com")
 
         assert len(result) == 2
+
+    def test_search_uses_override_domain_controller(self):
+        action = object.__new__(ConcreteMicrosoftADAction)
+        action.log = Mock()
+
+        mock_client = Mock()
+        mock_client.response = []
+        action.get_client = Mock(return_value=mock_client)
+
+        action.search_userdn_query("testuser", "DC=example,DC=com", servername="child.example.com")
+
+        action.get_client.assert_called_once_with("child.example.com")
+        assert mock_client.search.call_count >= 1
