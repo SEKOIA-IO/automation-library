@@ -88,7 +88,7 @@ class AkamaiWAFLogsConnector(Connector):
             # Alternate field name converted from plural:
             member_as_singular = re.sub("s$", "", member)
             url_decoded = urllib.parse.unquote(attack_section[member])
-            member_array = [member for member in url_decoded.split(";")]
+            member_array = [item for item in url_decoded.split(";")]
             if not len(rules_array):
                 for i in range(len(member_array)):
                     rules_array.append({})
