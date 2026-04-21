@@ -283,7 +283,7 @@ class AkamaiWAFLogsConnector(Connector):
             self.log(f"Next batch in the future. Waiting {delta_sleep} seconds", level="debug")
             time.sleep(delta_sleep)
 
-    def run(self):
+    def run(self):  # pragma: no cover
         self.log(message="Start fetching Akamai WAF system logs", level="info")
 
         while self.running:
