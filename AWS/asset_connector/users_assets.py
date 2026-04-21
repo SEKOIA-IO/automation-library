@@ -6,11 +6,10 @@ to OCSF User Inventory format for asset management and security monitoring.
 
 from collections.abc import Generator
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 import boto3
 import pytz
-from botocore.exceptions import BotoCoreError, ClientError
 from dateutil.parser import isoparse
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
@@ -20,12 +19,15 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     AccountTypeStr,
     Group,
     User,
+    UserDataObject,
+    UserEnrichmentObject,
     UserOCSFModel,
     UserTypeId,
     UserTypeStr,
 )
 
-from asset_connector.aws_assets import AwsAssetsConnector
+from asset_connector.aws_api_models import AwsApiUserGroup, AwsApiUser
+from asset_connector.aws_assets import AwsAssetsConnector, handle_aws_errors
 
 
 class AwsUser:
@@ -34,17 +36,20 @@ class AwsUser:
     Attributes:
         user: The OCSF User object containing user information
         date: The creation date of the user
+        enrichments: Optional list of UserEnrichmentObject instances
     """
 
-    def __init__(self, user: User, date: datetime) -> None:
+    def __init__(self, user: User, date: datetime, enrichments: Optional[List[UserEnrichmentObject]] = None) -> None:
         """Initialize an AwsUser instance.
 
         Args:
             user: The OCSF User object
             date: The creation date of the user
+            enrichments: Optional list of enrichment objects
         """
         self.user = user
         self.date = date
+        self.enrichments = enrichments
 
 
 class AwsUsersAssetConnector(AwsAssetsConnector):
@@ -70,6 +75,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
         """
         return self.get_client("iam")
 
+    @handle_aws_errors("checking admin status for group")
     def group_privileges(self, group_name: str) -> List[str]:
         """Retrieve the list of policies attached to a specific group.
 
@@ -87,34 +93,18 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             self.log("Empty group name provided, returning False for admin status", level="warning")
             return []
 
-        try:
-            policies = []
-            paginator = self.client().get_paginator("list_attached_group_policies")
-            page_iterator = paginator.paginate(GroupName=group_name)
+        policies = []
+        paginator = self.client().get_paginator("list_attached_group_policies")
+        page_iterator = paginator.paginate(GroupName=group_name)
 
-            for page in page_iterator:
-                for attached_policy in page.get("AttachedPolicies", []):
-                    policy_name = attached_policy.get("PolicyName")
-                    if policy_name:
-                        policies.append(policy_name)
-            return policies
+        for page in page_iterator:
+            for attached_policy in page.get("AttachedPolicies", []):
+                policy_name = attached_policy.get("PolicyName")
+                if policy_name:
+                    policies.append(policy_name)
+        return policies
 
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "Unknown")
-            self.log(
-                f"AWS API error checking admin status for group {group_name} ({error_code}): {str(e)}", level="error"
-            )
-            self.log_exception(e)
-            raise
-        except BotoCoreError as e:
-            self.log(f"Boto3 core error checking admin status for group {group_name}: {str(e)}", level="error")
-            self.log_exception(e)
-            raise
-        except Exception as e:
-            self.log(f"Unexpected error checking admin status for group {group_name}: {str(e)}", level="error")
-            self.log_exception(e)
-            raise
-
+    @handle_aws_errors("fetching groups for user")
     def get_groups_for_user(self, user_name: str) -> List[Group]:
         """Fetch groups associated with a specific user.
 
@@ -134,42 +124,29 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
 
         self.log(f"Fetching groups for user: {user_name}", level="debug")
 
-        try:
-            paginator = self.client().get_paginator("list_groups_for_user")
-            page_iterator = paginator.paginate(UserName=user_name)
-            groups = []
+        paginator = self.client().get_paginator("list_groups_for_user")
+        page_iterator = paginator.paginate(UserName=user_name)
+        groups = []
 
-            for page in page_iterator:
-                for group in page.get("Groups", []):
-                    try:
-                        group_obj = Group(
-                            name=group.get("GroupName", ""),
-                            uid=group.get("Arn", ""),
-                            privileges=self.group_privileges(group.get("GroupName", "")),
-                        )
-                        self.log(f"Fetched group: {group_obj.name} for user: {user_name}", level="debug")
-                        groups.append(group_obj)
-                    except Exception as e:
-                        self.log(f"Failed to process group for user {user_name}: {str(e)}", level="error")
-                        self.log_exception(e)
-                        continue
+        for page in page_iterator:
+            for raw_group in page.get("Groups", []):
+                try:
+                    group = AwsApiUserGroup(**raw_group)
+                    group_name = group.GroupName or ""
+                    group_obj = Group(
+                        name=group_name,
+                        uid=group.Arn or "",
+                        privileges=self.group_privileges(group_name),
+                    )
+                    self.log(f"Fetched group: {group_obj.name} for user: {user_name}", level="debug")
+                    groups.append(group_obj)
+                except Exception as e:
+                    self.log(f"Failed to process group for user {user_name}: {str(e)}", level="error")
+                    self.log_exception(e)
+                    continue
 
-            self.log(f"Successfully fetched {len(groups)} groups for user: {user_name}", level="debug")
-            return groups
-
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "Unknown")
-            self.log(f"AWS API error fetching groups for user {user_name} ({error_code}): {str(e)}", level="error")
-            self.log_exception(e)
-            raise
-        except BotoCoreError as e:
-            self.log(f"Boto3 core error fetching groups for user {user_name}: {str(e)}", level="error")
-            self.log_exception(e)
-            raise
-        except Exception as e:
-            self.log(f"Unexpected error fetching groups for user {user_name}: {str(e)}", level="error")
-            self.log_exception(e)
-            raise
+        self.log(f"Successfully fetched {len(groups)} groups for user: {user_name}", level="debug")
+        return groups
 
     def _extract_organization_from_arn(self, arn: str) -> Optional[Organization]:
         """Extract organization information from AWS ARN.
@@ -198,6 +175,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
 
         return None
 
+    @handle_aws_errors("checking MFA status for user")
     def get_mfa_status_for_user(self, user_name: str) -> bool:
         """Check if a user has MFA devices configured.
 
@@ -217,26 +195,12 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
 
         self.log(f"Checking MFA status for user: {user_name}", level="debug")
 
-        try:
-            response = self.client().list_mfa_devices(UserName=user_name)
-            has_mfa = len(response.get("MFADevices", [])) > 0
-            self.log(f"User {user_name} has MFA: {has_mfa}", level="debug")
-            return has_mfa
+        response = self.client().list_mfa_devices(UserName=user_name)
+        has_mfa = len(response.get("MFADevices", [])) > 0
+        self.log(f"User {user_name} has MFA: {has_mfa}", level="debug")
+        return has_mfa
 
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "Unknown")
-            self.log(f"AWS API error checking MFA for user {user_name} ({error_code}): {str(e)}", level="error")
-            self.log_exception(e)
-            raise
-        except BotoCoreError as e:
-            self.log(f"Boto3 core error checking MFA for user {user_name}: {str(e)}", level="error")
-            self.log_exception(e)
-            raise
-        except Exception as e:
-            self.log(f"Unexpected error checking MFA for user {user_name}: {str(e)}", level="error")
-            self.log_exception(e)
-            raise
-
+    @handle_aws_errors("collecting AWS users")
     def get_aws_users(self) -> Generator[List[AwsUser], None, None]:
         """Fetch AWS IAM users and convert them to AwsUser objects.
 
@@ -249,54 +213,40 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
         """
         self.log("Starting AWS user collection...", level="info")
 
-        try:
-            paginator = self.client().get_paginator("list_users")
-            page_iterator = paginator.paginate()
+        paginator = self.client().get_paginator("list_users")
+        page_iterator = paginator.paginate()
 
-            # Parse the date filter for incremental collection
-            date_filter: Optional[datetime] = None
-            if self.most_recent_date_seen:
+        # Parse the date filter for incremental collection
+        date_filter: Optional[datetime] = None
+        if self.most_recent_date_seen:
+            try:
+                date_filter = isoparse(self.most_recent_date_seen)
+            except (ValueError, TypeError) as e:
+                self.log(f"Invalid date format in checkpoint: {self.most_recent_date_seen}", level="warning")
+                self.log_exception(e)
+
+        user_count = 0
+        for page in page_iterator:
+            users = []
+
+            for raw_user in page.get("Users", []):
                 try:
-                    date_filter = isoparse(self.most_recent_date_seen)
-                except (ValueError, TypeError) as e:
-                    self.log(f"Invalid date format in checkpoint: {self.most_recent_date_seen}", level="warning")
+                    # Extract user information with proper error handling
+                    user_model = AwsApiUser(**raw_user)
+                    aws_user = self._extract_user_from_iam_user(user_model, date_filter)
+                    if aws_user:
+                        users.append(aws_user)
+                        user_count += 1
+                except Exception as e:
+                    user_name = raw_user.get("UserName", "unknown") if isinstance(raw_user, dict) else "unknown"
+                    self.log(f"Failed to process user {user_name}: {str(e)}", level="error")
                     self.log_exception(e)
+                    continue
 
-            user_count = 0
-            for page in page_iterator:
-                users = []
+            if users:
+                yield users
 
-                for user in page.get("Users", []):
-                    try:
-                        # Extract user information with proper error handling
-                        aws_user = self._extract_user_from_iam_user(user, date_filter)
-                        if aws_user:
-                            users.append(aws_user)
-                            user_count += 1
-                    except Exception as e:
-                        user_name = user.get("UserName", "unknown")
-                        self.log(f"Failed to process user {user_name}: {str(e)}", level="error")
-                        self.log_exception(e)
-                        continue
-
-                if users:
-                    yield users
-
-            self.log(f"Successfully collected {user_count} AWS users", level="info")
-
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "Unknown")
-            self.log(f"AWS API error ({error_code}): {str(e)}", level="error")
-            self.log_exception(e)
-            raise
-        except BotoCoreError as e:
-            self.log(f"Boto3 core error: {str(e)}", level="error")
-            self.log_exception(e)
-            raise
-        except Exception as e:
-            self.log(f"Unexpected error during user collection: {str(e)}", level="error")
-            self.log_exception(e)
-            raise
+        self.log(f"Successfully collected {user_count} AWS users", level="info")
 
     def user_has_admin_policy(self, user_groups: List[Group]) -> bool:
         """Check if a user has admin policies."""
@@ -309,7 +259,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                     return True
         return False
 
-    def _extract_user_from_iam_user(self, user: Dict[str, Any], date_filter: Optional[datetime]) -> Optional[AwsUser]:
+    def _extract_user_from_iam_user(self, user: AwsApiUser, date_filter: Optional[datetime]) -> Optional[AwsUser]:
         """Extract user information from an AWS IAM user.
 
         Args:
@@ -321,15 +271,15 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
         """
         try:
             # Get user name and ARN
-            user_name = user.get("UserName")
-            user_arn = user.get("Arn")
+            user_name = user.UserName
+            user_arn = user.Arn
 
             if not user_name or not user_arn:
                 self.log("User missing UserName or Arn, skipping", level="warning")
                 return None
 
             # Get creation time
-            created_time = user.get("CreateDate")
+            created_time = user.CreateDate
             if not created_time:
                 self.log(f"User {user_name} has no creation time, skipping", level="warning")
                 return None
@@ -350,8 +300,16 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                 type=AccountTypeStr.AWS_ACCOUNT,
                 type_id=AccountTypeId.AWS_ACCOUNT,
                 uid=user_arn,
-                uid_alt=user.get("UserId"),
             )
+
+            # Build enrichment from available IAM data
+            enrichments = []
+            if user.PasswordLastUsed:
+                enrichments.append(
+                    UserEnrichmentObject(
+                        name="aws_iam", data=UserDataObject(last_logon=user.PasswordLastUsed.isoformat())
+                    )
+                )
 
             # Fetch groups, MFA status, and admin status for the user
             try:
@@ -373,6 +331,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             user_obj = User(
                 name=user_name,
                 uid=user_arn,
+                uid_alt=user.UserId,
                 groups=groups,
                 has_mfa=has_mfa,
                 account=account,
@@ -387,10 +346,10 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                 user_obj.type = UserTypeStr.USER
 
             self.log(f"Extracted user: {user_obj.name} ({user_arn})", level="debug")
-            return AwsUser(user=user_obj, date=created_time)
+            return AwsUser(user=user_obj, date=created_time, enrichments=enrichments if enrichments else None)
 
         except Exception as e:
-            user_name = user.get("UserName", "unknown")
+            user_name = user.UserName or "unknown"
             self.log(f"Error extracting user from IAM user {user_name}: {str(e)}", level="error")
             self.log_exception(e)
             return None
@@ -429,6 +388,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                             time=aws_user.date.timestamp(),
                             metadata=metadata,
                             user=aws_user.user,
+                            enrichments=aws_user.enrichments,
                         )
 
                         asset_count += 1

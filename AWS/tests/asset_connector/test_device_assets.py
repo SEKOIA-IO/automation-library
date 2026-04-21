@@ -1,3 +1,4 @@
+from asset_connector.aws_api_models import AwsApiInstance
 from datetime import datetime
 from unittest import mock
 
@@ -440,7 +441,9 @@ def test_extract_device_from_instance_success(test_aws_device_asset_connector):
     }
     owner_id = "516755368338"
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None, owner_id)
+    result = test_aws_device_asset_connector._extract_device_from_instance(
+        AwsApiInstance(**instance_data), None, owner_id
+    )
 
     assert isinstance(result, AwsDevice)
     assert result.device.uid == "i-1234567890abcdef0"
@@ -460,7 +463,7 @@ def test_extract_device_from_instance_no_instance_id(test_aws_device_asset_conne
         "LaunchTime": isoparse("2023-10-01T12:00:00Z"),
     }
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert result is None
     test_aws_device_asset_connector.log.assert_called_with("Instance missing InstanceId, skipping", level="warning")
@@ -474,7 +477,7 @@ def test_extract_device_from_instance_no_creation_time(test_aws_device_asset_con
         "PlatformDetails": "Linux/UNIX",
     }
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert result is None
     test_aws_device_asset_connector.log.assert_called_with(
@@ -492,7 +495,7 @@ def test_extract_device_from_instance_with_launch_time(test_aws_device_asset_con
         "PublicDnsName": "ec2-203-0-113-25.compute-1.amazonaws.com",
     }
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert isinstance(result, AwsDevice)
     assert result.device.uid == "i-1234567890abcdef0"
@@ -510,7 +513,7 @@ def test_extract_device_from_instance_with_private_dns(test_aws_device_asset_con
         "PrivateDnsName": "ip-10-0-1-1.ec2.internal",
     }
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert isinstance(result, AwsDevice)
     assert result.device.hostname == "ip-10-0-1-1.ec2.internal"
@@ -525,7 +528,7 @@ def test_extract_device_from_instance_with_instance_id_hostname(test_aws_device_
         "LaunchTime": isoparse("2023-10-01T12:00:00Z"),
     }
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert isinstance(result, AwsDevice)
     assert result.device.hostname == "i-1234567890abcdef0"
@@ -558,7 +561,7 @@ def test_extract_device_from_instance_timezone_handling(test_aws_device_asset_co
         "LaunchTime": naive_datetime,
     }
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert isinstance(result, AwsDevice)
     # The date should be converted to UTC
@@ -573,7 +576,7 @@ def test_extract_device_from_instance_exception_handling(test_aws_device_asset_c
         "LaunchTime": "invalid_date",  # This will cause an exception during parsing
     }
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert result is None
     # Verify that an error was logged (error message may vary depending on parsing implementation)
@@ -740,7 +743,7 @@ def test_get_aws_devices_client_error(test_aws_device_asset_connector):
         list(test_aws_device_asset_connector.get_aws_devices())
 
     test_aws_device_asset_connector.log.assert_called_with(
-        "AWS API error (UnauthorizedOperation): An error occurred (UnauthorizedOperation) when calling the DescribeInstances operation: Access denied",
+        "AWS API error collecting AWS devices (UnauthorizedOperation): An error occurred (UnauthorizedOperation) when calling the DescribeInstances operation: Access denied",
         level="error",
     )
 
