@@ -40,7 +40,7 @@ class SynchronizeAssetsWithAD(Action):
 
         return session
 
-    def get_assets(self, search_query: str, also_search_in_detection_properties: bool = False) -> Dict[str, Any]:
+    def get_assets(self, search_query: str, also_search_in_detection_properties: bool = False) -> Any:
         params = {"search": search_query}
         if also_search_in_detection_properties:
             params["also_search_in_detection_properties"] = "true"
@@ -58,7 +58,7 @@ class SynchronizeAssetsWithAD(Action):
         except requests.exceptions.JSONDecodeError:
             self.error(f"Expected JSON, got: {response.text}")
 
-    def post_request(self, endpoint: str, json_data: str) -> Dict[str, Any]:
+    def post_request(self, endpoint: str, json_data: str) -> Any:
         api_path = urljoin(self.base_url + "/", endpoint)
         response = self.session.post(api_path, data=json_data)
         if not response.ok:
