@@ -281,6 +281,7 @@ def test_long_next_batch_should_not_sleep(trigger, response_1, response_2):
 
 
 def test_fetch_events_less_than_chunk_size_yields_single_chunk(trigger, response_2):
+    trigger.chunk_size = 10
     n_events = trigger.chunk_size - 1
     big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
 
