@@ -1,4 +1,5 @@
 import base64
+import os
 import re
 import time
 import urllib.parse
@@ -30,8 +31,10 @@ class AkamaiWAFLogsConnector(Connector):
     module: AkamaiModule
     configuration: AkamaiWAFLogsConnectorConfiguration
 
-    PAGE_SIZE = 60_000  # default 1000, maximum 60000
-    CHUNK_SIZE = 1_000  # number of events to accumulate before yielding to limit memory usage
+    PAGE_SIZE = int(os.environ.get("AKAMAI_PAGE_SIZE", 60_000))  # default 1000, maximum 60000
+    CHUNK_SIZE = int(
+        os.environ.get("AKAMAI_CHINK_SIZE", 1_000)
+    )  # number of events to accumulate before yielding to limit memory usage
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
