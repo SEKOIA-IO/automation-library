@@ -31,11 +31,6 @@ class AkamaiWAFLogsConnector(Connector):
     module: AkamaiModule
     configuration: AkamaiWAFLogsConnectorConfiguration
 
-    PAGE_SIZE = int(os.environ.get("AKAMAI_PAGE_SIZE", 60_000))  # default 1000, maximum 60000
-    CHUNK_SIZE = int(
-        os.environ.get("AKAMAI_CHINK_SIZE", 1_000)
-    )  # number of events to accumulate before yielding to limit memory usage
-
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
@@ -50,6 +45,13 @@ class AkamaiWAFLogsConnector(Connector):
         # This cache should be big enough to cover all events within 1 second.
         self.cache_size = 10_000
         self.events_cache: Cache = self.load_events_cache()
+
+        self.page_size = max(
+            1000, min(60_000, int(os.environ.get("AKAMAI_PAGE_SIZE", 60_000)))
+        )  # default 1000, maximum 60000
+        self.chunk_size = max(
+            1, min(1000, int(os.environ.get("AKAMAI_CHUNK_SIZE", 1_000)))
+        )  # number of events to accumulate before yielding to limit memory usage
 
     def load_events_cache(self) -> Cache:
         result: LRUCache = LRUCache(maxsize=self.cache_size)
@@ -137,7 +139,7 @@ class AkamaiWAFLogsConnector(Connector):
     def __fetch_next_events(self, from_date: int) -> Generator[list, None, None]:
         url = f"{self.module.configuration.base_url}/siem/v1/configs/{self.configuration.config_id}"
         response = self.client.get(
-            url=url, params={"from": from_date, "limit": self.PAGE_SIZE}, timeout=60, stream=True
+            url=url, params={"from": from_date, "limit": self.page_size}, timeout=60, stream=True
         )
 
         while self.running:
@@ -155,7 +157,7 @@ class AkamaiWAFLogsConnector(Connector):
                         chunk.append(item)
                         events_in_page += 1
 
-                        if len(chunk) >= self.CHUNK_SIZE:
+                        if len(chunk) >= self.chunk_size:
                             INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
                             yield chunk
                             chunk = []
@@ -181,7 +183,7 @@ class AkamaiWAFLogsConnector(Connector):
                 return
 
             response = self.client.get(
-                url=url, params={"offset": offset, "limit": self.PAGE_SIZE}, timeout=60, stream=True
+                url=url, params={"offset": offset, "limit": self.page_size}, timeout=60, stream=True
             )
 
     def fetch_events(self) -> Generator[list, None, None]:

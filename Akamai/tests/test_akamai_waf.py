@@ -281,7 +281,7 @@ def test_long_next_batch_should_not_sleep(trigger, response_1, response_2):
 
 
 def test_fetch_events_less_than_chunk_size_yields_single_chunk(trigger, response_2):
-    n_events = trigger.CHUNK_SIZE - 1
+    n_events = trigger.chunk_size - 1
     big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
 
     with requests_mock.Mocker() as mock_requests:
@@ -304,7 +304,7 @@ def test_fetch_events_less_than_chunk_size_yields_single_chunk(trigger, response
 
 
 def test_fetch_events_exactly_chunk_size_yields_single_chunk(trigger, response_2):
-    n_events = trigger.CHUNK_SIZE
+    n_events = trigger.chunk_size
     big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
 
     with requests_mock.Mocker() as mock_requests:
@@ -326,7 +326,7 @@ def test_fetch_events_exactly_chunk_size_yields_single_chunk(trigger, response_2
 
 
 def test_fetch_events_more_than_chunk_size_yields_multiple_chunks(trigger, response_2):
-    n_events = trigger.CHUNK_SIZE + 500  # one full chunk + a remainder
+    n_events = trigger.chunk_size + 500  # one full chunk + a remainder
     big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
 
     with requests_mock.Mocker() as mock_requests:
@@ -344,13 +344,13 @@ def test_fetch_events_more_than_chunk_size_yields_multiple_chunks(trigger, respo
         chunks = list(trigger.fetch_events())
 
     assert len(chunks) == 2
-    assert len(chunks[0]) == trigger.CHUNK_SIZE
+    assert len(chunks[0]) == trigger.chunk_size
     assert len(chunks[1]) == 500
     assert sum(len(c) for c in chunks) == n_events
 
 
 def test_fetch_events_multiple_full_chunks(trigger, response_2):
-    n_events = trigger.CHUNK_SIZE * 3
+    n_events = trigger.chunk_size * 3
     big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
 
     with requests_mock.Mocker() as mock_requests:
@@ -368,11 +368,11 @@ def test_fetch_events_multiple_full_chunks(trigger, response_2):
         chunks = list(trigger.fetch_events())
 
     assert len(chunks) == 3
-    assert all(len(c) == trigger.CHUNK_SIZE for c in chunks)
+    assert all(len(c) == trigger.chunk_size for c in chunks)
 
 
 def test_chunk_size_limits_memory_per_yield(trigger, response_2):
-    n_events = trigger.CHUNK_SIZE * 2 + 300
+    n_events = trigger.chunk_size * 2 + 300
     big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
 
     with requests_mock.Mocker() as mock_requests:
@@ -391,7 +391,7 @@ def test_chunk_size_limits_memory_per_yield(trigger, response_2):
 
     # The key invariant: memory is bounded per chunk
     for chunk in chunks:
-        assert len(chunk) <= trigger.CHUNK_SIZE
+        assert len(chunk) <= trigger.chunk_size
 
     # And no events are lost
     assert sum(len(c) for c in chunks) == n_events
@@ -399,7 +399,7 @@ def test_chunk_size_limits_memory_per_yield(trigger, response_2):
 
 def test_fetch_events_truncated_response_sub_chunk_yields_all_events(trigger):
     """When the API stream ends without a context/offset line and the number of events
-    is below CHUNK_SIZE, no events should be silently dropped."""
+    is below chunk_size, no events should be silently dropped."""
     n_events = 5
     truncated_response = make_truncated_response_with_n_events(n_events)
 
@@ -419,7 +419,7 @@ def test_fetch_events_truncated_response_multi_chunk_yields_all_events(trigger):
     """When the API stream ends without a context/offset line and the number of events
     spans more than one chunk, both the already-yielded full chunks and the remaining
     partial chunk should be returned — none of the tail events silently dropped."""
-    n_events = trigger.CHUNK_SIZE + 300  # one full chunk flushed mid-stream + 300 remainder
+    n_events = trigger.chunk_size + 300  # one full chunk flushed mid-stream + 300 remainder
     truncated_response = make_truncated_response_with_n_events(n_events)
 
     with requests_mock.Mocker() as mock_requests:
@@ -432,6 +432,6 @@ def test_fetch_events_truncated_response_multi_chunk_yields_all_events(trigger):
         chunks = list(trigger.fetch_events())
 
     assert len(chunks) == 2
-    assert len(chunks[0]) == trigger.CHUNK_SIZE
+    assert len(chunks[0]) == trigger.chunk_size
     assert len(chunks[1]) == 300
     assert sum(len(c) for c in chunks) == n_events
