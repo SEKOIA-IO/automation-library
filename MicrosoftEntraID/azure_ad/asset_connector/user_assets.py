@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from typing import cast
 from datetime import datetime, timezone
 
 from azure.identity.aio import ClientSecretCredential  # async credentials only
@@ -11,7 +12,6 @@ from msgraph.generated.models.microsoft_authenticator_authentication_method impo
 )
 from msgraph.generated.models.phone_authentication_method import PhoneAuthenticationMethod
 from msgraph.generated.models.software_oath_authentication_method import SoftwareOathAuthenticationMethod
-from msgraph.generated.models.user import User
 from msgraph.generated.users.users_request_builder import UsersRequestBuilder
 from sekoia_automation.asset_connector import AsyncAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
@@ -32,6 +32,9 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
 )
 from sekoia_automation.storage import PersistentJSON
 
+from azure_ad.asset_connector.model import DirectoryRole as DirectoryRoleModel
+from azure_ad.asset_connector.model import Group as GroupModel
+from azure_ad.asset_connector.model import User as UserModel
 from azure_ad.base import AzureADModule
 
 
@@ -90,7 +93,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 .isoformat()
             )
 
-    def map_fields(self, user: User, has_mfa: bool, groups: list[UserOCSFGroup], is_admin: bool) -> UserOCSFModel:
+    def map_fields(self, user: UserModel, has_mfa: bool, groups: list[UserOCSFGroup], is_admin: bool) -> UserOCSFModel:
         """Map fields from User to UserOCSFModel.
 
         Args:
@@ -211,11 +214,11 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         groups: list[UserOCSFGroup] = []
         try:
             user_groups = await self.client.users.by_user_id(user_id).member_of.get()
-
             if user_groups and user_groups.value:
                 for group in user_groups.value:
                     if isinstance(group, Group):
-                        groups.append(UserOCSFGroup(name=group.display_name, uid=group.id))
+                        group_model = cast(GroupModel, group)
+                        groups.append(UserOCSFGroup(name=group_model.display_name, uid=group_model.id))
 
             # Handle pagination for multiple pages of results
             while user_groups is not None and user_groups.odata_next_link is not None:
@@ -225,7 +228,8 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 if user_groups and user_groups.value:
                     for group in user_groups.value:
                         if isinstance(group, Group):
-                            groups.append(UserOCSFGroup(name=group.display_name, uid=group.id))
+                            group_model = cast(GroupModel, group)
+                            groups.append(UserOCSFGroup(name=group_model.display_name, uid=group_model.id))
 
             return groups
         except Exception as e:
@@ -237,7 +241,12 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         """
         try:
             user_roles = await self.client.users.by_user_id(user_id).transitive_member_of.graph_directory_role.get()
-            return bool(user_roles and user_roles.value)
+            if user_roles and user_roles.value:
+                for role in user_roles.value:
+                    role_model = cast(DirectoryRoleModel, role)
+                    if role_model.id:
+                        return True
+            return False
         except Exception as e:
             raise ValueError(f"Error fetching user admin roles: {e}") from e
 
@@ -264,7 +273,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         except Exception as e:
             raise ValueError(f"Error fetching user MFA: {e}") from e
 
-    async def fetch_user(self, user: User) -> UserOCSFModel:
+    async def fetch_user(self, user: UserModel) -> UserOCSFModel:
         """
         Fetch user details and map to UserOCSFModel.
         """
@@ -320,7 +329,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             if users and users.value:
                 for user in users.value:
                     # Fetch user details including MFA status
-                    new_user = await self.fetch_user(user)
+                    new_user = await self.fetch_user(cast(UserModel, user))
                     yield new_user
                     self._latest_time = new_user.time
 
@@ -334,7 +343,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 )
                 if users and users.value:
                     for user in users.value:
-                        new_user = await self.fetch_user(user)
+                        new_user = await self.fetch_user(cast(UserModel, user))
                         yield new_user
                         self._latest_time = new_user.time
         except Exception as e:

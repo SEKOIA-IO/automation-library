@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-21 - 2.10.20
+
+### Changed
+
+- Add dedicated Pydantic typing models for Entra ID user assets responses (users, groups, roles, and MFA methods)
+- Update the sekoia-automation-sdk dependency to version 1.22.5
+
 ## 2026-03-29 - 2.10.19
 
 ### Changed
