@@ -1,7 +1,9 @@
-from urllib.parse import urljoin
-from typing import List, Dict, Any, Optional
-import requests
 import json
+from functools import cached_property
+from typing import Any, Dict, List, Optional
+from urllib.parse import urljoin
+
+import requests
 from pydantic.v1 import BaseModel
 from sekoia_automation.action import Action
 
@@ -18,6 +20,75 @@ class SynchronizeAssetsWithAD(Action):
     Action to synchronize asset with Active Directory (AD).
     """
 
+    @cached_property
+    def base_url(self) -> str:
+        return self.module.configuration.get("base_url", "").rstrip("/")
+
+    @cached_property
+    def api_key(self) -> str:
+        return self.module.configuration.get("api_key", "")
+
+    @cached_property
+    def session(self) -> requests.Session:
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}",
+        }
+
+        session = requests.Session()
+        session.headers.update(headers)
+
+        return session
+
+    def get_assets(self, search_query: str, also_search_in_detection_properties: bool = False) -> Dict[str, Any]:
+        params = {"search": search_query}
+        if also_search_in_detection_properties:
+            params["also_search_in_detection_properties"] = "true"
+
+        api_path = urljoin(self.base_url + "/", "v2/asset-management/assets")
+        response = self.session.get(api_path, params=params)
+        if not response.ok:
+            self.error(
+                f"HTTP GET request failed: {response.url} with status code {response.status_code} - {response.reason}"
+            )
+
+        try:
+            return response.json()
+
+        except requests.exceptions.JSONDecodeError:
+            self.error(f"Expected JSON, got: {response.text}")
+
+    def post_request(self, endpoint: str, json_data: str) -> Dict[str, Any]:
+        api_path = urljoin(self.base_url + "/", endpoint)
+        response = self.session.post(api_path, data=json_data)
+        if not response.ok:
+            self.error(
+                f"HTTP POST request failed: {api_path} with status code {response.status_code} - {response.reason}"
+            )
+
+        try:
+            return response.json()
+
+        except requests.exceptions.JSONDecodeError:
+            self.error(f"Expected JSON, got: {response.text}")
+
+    def put_request(self, endpoint: str, json_data: str) -> None:
+        api_path = urljoin(self.base_url + "/", endpoint)
+        response = self.session.put(api_path, data=json_data)
+        if not response.ok:
+            self.error(
+                f"HTTP PUT request failed: {api_path} with status code {response.status_code} - {response.reason}"
+            )
+
+    def merge_assets(self, destination: str, sources: List[str]) -> None:
+        api_path = urljoin(self.base_url + "/", "v2/asset-management/assets/merge")
+        payload = {"destination": destination, "sources": sources}
+        response = self.session.post(api_path, json=payload)
+        if not response.ok:
+            self.error(
+                f"HTTP POST merge request failed: {api_path} with status code {response.status_code} - {response.reason}"
+            )
+
     def run(self, arguments: dict) -> Dict[str, List[Dict[str, Any]]]:
         asset_conf = arguments["asset_synchronization_configuration"]
         community_uuid = arguments["community_uuid"]
@@ -28,54 +99,14 @@ class SynchronizeAssetsWithAD(Action):
             user_ad_data = [user_ad_data]
 
         # Extract and validate configuration
-        base_url = self.module.configuration.get("base_url", "").rstrip("/")
-        api_key = self.module.configuration.get("api_key", "")
-        if not base_url or not api_key:
+        if not self.base_url or not self.api_key:
             self.error("Configuration must include 'base_url' and 'api_key'.")
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        }
 
         asset_name_field = asset_conf.get("asset_name_field")
         if not asset_name_field:
             self.error("Configuration must include 'asset_name_field'.")
 
         assert isinstance(asset_name_field, str)
-
-        session = requests.Session()
-        session.headers.update(headers)
-
-        def get_assets(search_query: str, also_search_in_detection_properties: bool = False) -> Dict[str, Any]:
-            params = {"search": search_query}
-            if also_search_in_detection_properties:
-                params["also_search_in_detection_properties"] = "true"
-            api_path = urljoin(base_url + "/", "v2/asset-management/assets")
-            response = session.get(api_path, params=params)
-            if not response.ok:
-                self.error(f"HTTP GET request failed: {response.url} with status code {response.status_code}")
-            return response.json()
-
-        def post_request(endpoint: str, json_data: str) -> Dict[str, Any]:
-            api_path = urljoin(base_url + "/", endpoint)
-            response = session.post(api_path, data=json_data)
-            if not response.ok:
-                self.error(f"HTTP POST request failed: {api_path} with status code {response.status_code}")
-            return response.json()
-
-        def put_request(endpoint: str, json_data: str) -> None:
-            api_path = urljoin(base_url + "/", endpoint)
-            response = session.put(api_path, data=json_data)
-            if not response.ok:
-                self.error(f"HTTP PUT request failed: {api_path} with status code {response.status_code}")
-
-        def merge_assets(destination: str, sources: List[str]) -> None:
-            api_path = urljoin(base_url + "/", "v2/asset-management/assets/merge")
-            payload = {"destination": destination, "sources": sources}
-            response = session.post(api_path, json=payload)
-            if not response.ok:
-                self.error(f"HTTP POST merge request failed: {api_path} with status code {response.status_code}")
 
         responses = []  # To collect responses for each user_ad_data item
 
@@ -89,7 +120,7 @@ class SynchronizeAssetsWithAD(Action):
             assert isinstance(asset_name, str)
 
             # Search for asset by name
-            asset_name_json = get_assets(search_query=asset_name)
+            asset_name_json = self.get_assets(search_query=asset_name)
 
             # Search assets with detection properties
             detection_properties_config = asset_conf.get("detection_properties", {})
@@ -99,7 +130,7 @@ class SynchronizeAssetsWithAD(Action):
                 for key in keys:
                     value = single_user_ad_data.get(key)
                     if value:
-                        assets = get_assets(search_query=value, also_search_in_detection_properties=True)
+                        assets = self.get_assets(search_query=value, also_search_in_detection_properties=True)
                         if assets.get("total", 0) > 0:
                             for asset in assets.get("items", []):
                                 found_assets.add(asset["uuid"])
@@ -150,11 +181,11 @@ class SynchronizeAssetsWithAD(Action):
                     sources_to_merge = list(found_assets - {destination_asset})
 
                     if sources_to_merge:
-                        merge_assets(destination=destination_asset, sources=sources_to_merge)
+                        self.merge_assets(destination=destination_asset, sources=sources_to_merge)
 
                     endpoint = f"v2/asset-management/assets/{destination_asset}"
                     self.log(f"PUT request: {endpoint} and payload asset is {json_payload_asset}")
-                    put_request(endpoint=endpoint, json_data=json_payload_asset)
+                    self.put_request(endpoint=endpoint, json_data=json_payload_asset)
                 else:
                     self.error(f"Unexpected asset name search response: {asset_name_json}")
             elif asset_name_json.get("total", 0) == 0:
@@ -163,7 +194,7 @@ class SynchronizeAssetsWithAD(Action):
 
                 # Create the asset
                 payload_asset["community_uuid"] = community_uuid
-                create_response = post_request(
+                create_response = self.post_request(
                     endpoint="v2/asset-management/assets", json_data=json.dumps(payload_asset)
                 )
                 destination_asset = create_response.get("uuid", "")
@@ -173,7 +204,7 @@ class SynchronizeAssetsWithAD(Action):
                 # Merge found assets into the new asset
                 sources_to_merge = list(found_assets)
                 if sources_to_merge:
-                    merge_assets(destination=destination_asset, sources=sources_to_merge)
+                    self.merge_assets(destination=destination_asset, sources=sources_to_merge)
             else:
                 self.error(f"Unexpected asset name search response: {asset_name_json}")
 
