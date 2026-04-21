@@ -84,8 +84,11 @@ def parse_vault_activity(raw: bytes) -> list[dict[str, Any]]:
             "timestamp": event.attrib["timestamp"],
             "account_id": event.attrib["account"],
             "event_type": event.attrib["event_type"],
-            "data": event.find("ns:data", namespaces=namespace).text,
         }
+
+        data_elem = event.find("ns:data", namespaces=namespace)
+        if data_elem is not None:
+            event_record["data"] = data_elem.text
 
         performed_by_elem = event.find("ns:performed_by", namespaces=namespace)
 
