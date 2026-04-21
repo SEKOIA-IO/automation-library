@@ -104,6 +104,29 @@ def response_2() -> bytes:
     return b"""{"total": 0, "offset": "EMPTY_TOKEN"}\n"""
 
 
+def make_response_with_n_events(n: int, offset_token: str = "OFFSET_TOKEN") -> bytes:
+    lines = []
+    for i in range(n):
+        lines.append(
+            f'{{"type": "akamai_siem", "format": "json", "version": 1.0, '
+            f'"attackData": {{}}, "httpMessage": {{"requestId": {i}, "start": "1743505200"}}}}'
+        )
+    lines.append(f'{{"total": {n}, "offset": "{offset_token}"}}')
+    return ("\n".join(lines) + "\n").encode()
+
+
+def make_truncated_response_with_n_events(n: int) -> bytes:
+    """Build a response that contains n events but no trailing context/offset line,
+    simulating a truncated or malformed API stream."""
+    lines = []
+    for i in range(n):
+        lines.append(
+            f'{{"type": "akamai_siem", "format": "json", "version": 1.0, '
+            f'"attackData": {{}}, "httpMessage": {{"requestId": {i}, "start": "1743505200"}}}}'
+        )
+    return ("\n".join(lines) + "\n").encode()
+
+
 def test_extract_attack_data(trigger, raw_event):
     attack_data = trigger.extract_attack_data(raw_event)
 
@@ -255,3 +278,161 @@ def test_long_next_batch_should_not_sleep(trigger, response_1, response_2):
 
         assert trigger.push_events_to_intakes.call_count == 1
         assert mock_time.sleep.call_count == 0
+
+
+def test_fetch_events_less_than_chunk_size_yields_single_chunk(trigger, response_2):
+    trigger.chunk_size = 10
+    n_events = trigger.chunk_size - 1
+    big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=big_response,
+        )
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
+            status_code=200,
+            content=response_2,
+        )
+
+        chunks = list(trigger.fetch_events())
+
+    # All events fit in a single chunk (remainder chunk)
+    assert len(chunks) == 1
+    assert len(chunks[0]) == n_events
+
+
+def test_fetch_events_exactly_chunk_size_yields_single_chunk(trigger, response_2):
+    n_events = trigger.chunk_size
+    big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=big_response,
+        )
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
+            status_code=200,
+            content=response_2,
+        )
+
+        chunks = list(trigger.fetch_events())
+
+    assert len(chunks) == 1
+    assert len(chunks[0]) == n_events
+
+
+def test_fetch_events_more_than_chunk_size_yields_multiple_chunks(trigger, response_2):
+    n_events = trigger.chunk_size + 500  # one full chunk + a remainder
+    big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=big_response,
+        )
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
+            status_code=200,
+            content=response_2,
+        )
+
+        chunks = list(trigger.fetch_events())
+
+    assert len(chunks) == 2
+    assert len(chunks[0]) == trigger.chunk_size
+    assert len(chunks[1]) == 500
+    assert sum(len(c) for c in chunks) == n_events
+
+
+def test_fetch_events_multiple_full_chunks(trigger, response_2):
+    n_events = trigger.chunk_size * 3
+    big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=big_response,
+        )
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
+            status_code=200,
+            content=response_2,
+        )
+
+        chunks = list(trigger.fetch_events())
+
+    assert len(chunks) == 3
+    assert all(len(c) == trigger.chunk_size for c in chunks)
+
+
+def test_chunk_size_limits_memory_per_yield(trigger, response_2):
+    n_events = trigger.chunk_size * 2 + 300
+    big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=big_response,
+        )
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
+            status_code=200,
+            content=response_2,
+        )
+
+        chunks = list(trigger.fetch_events())
+
+    # The key invariant: memory is bounded per chunk
+    for chunk in chunks:
+        assert len(chunk) <= trigger.chunk_size
+
+    # And no events are lost
+    assert sum(len(c) for c in chunks) == n_events
+
+
+def test_fetch_events_truncated_response_sub_chunk_yields_all_events(trigger):
+    """When the API stream ends without a context/offset line and the number of events
+    is below chunk_size, no events should be silently dropped."""
+    n_events = 5
+    truncated_response = make_truncated_response_with_n_events(n_events)
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=truncated_response,
+        )
+
+        chunks = list(trigger.fetch_events())
+
+    assert sum(len(c) for c in chunks) == n_events
+
+
+def test_fetch_events_truncated_response_multi_chunk_yields_all_events(trigger):
+    """When the API stream ends without a context/offset line and the number of events
+    spans more than one chunk, both the already-yielded full chunks and the remaining
+    partial chunk should be returned — none of the tail events silently dropped."""
+    n_events = trigger.chunk_size + 300  # one full chunk flushed mid-stream + 300 remainder
+    truncated_response = make_truncated_response_with_n_events(n_events)
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=truncated_response,
+        )
+
+        chunks = list(trigger.fetch_events())
+
+    assert len(chunks) == 2
+    assert len(chunks[0]) == trigger.chunk_size
+    assert len(chunks[1]) == 300
+    assert sum(len(c) for c in chunks) == n_events
