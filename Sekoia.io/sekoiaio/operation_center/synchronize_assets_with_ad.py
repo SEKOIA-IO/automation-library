@@ -49,7 +49,8 @@ class SynchronizeAssetsWithAD(Action):
         response = self.session.get(api_path, params=params)
         if not response.ok:
             self.error(
-                f"HTTP GET request failed: {response.url} with status code {response.status_code} - {response.reason}"
+                f"HTTP GET request failed: {response.url} with status code "
+                f"{response.status_code} - {response.reason} : {response.text}"
             )
 
         try:
@@ -63,7 +64,8 @@ class SynchronizeAssetsWithAD(Action):
         response = self.session.post(api_path, data=json_data)
         if not response.ok:
             self.error(
-                f"HTTP POST request failed: {api_path} with status code {response.status_code} - {response.reason}"
+                f"HTTP POST request failed: {api_path} with status code "
+                f"{response.status_code} - {response.reason} : {response.text}"
             )
 
         try:
@@ -77,7 +79,8 @@ class SynchronizeAssetsWithAD(Action):
         response = self.session.put(api_path, data=json_data)
         if not response.ok:
             self.error(
-                f"HTTP PUT request failed: {api_path} with status code {response.status_code} - {response.reason}"
+                f"HTTP PUT request failed: {api_path} with status code "
+                f"{response.status_code} - {response.reason} : {response.text}"
             )
 
     def merge_assets(self, destination: str, sources: List[str]) -> None:
@@ -86,7 +89,8 @@ class SynchronizeAssetsWithAD(Action):
         response = self.session.post(api_path, json=payload)
         if not response.ok:
             self.error(
-                f"HTTP POST merge request failed: {api_path} with status code {response.status_code} - {response.reason}"
+                f"HTTP POST merge request failed: {api_path} with status code "
+                f"{response.status_code} - {response.reason} : {response.text}"
             )
 
     def run(self, arguments: dict) -> Dict[str, List[Dict[str, Any]]]:
