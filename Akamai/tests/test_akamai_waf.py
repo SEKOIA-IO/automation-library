@@ -115,6 +115,18 @@ def make_response_with_n_events(n: int, offset_token: str = "OFFSET_TOKEN") -> b
     return ("\n".join(lines) + "\n").encode()
 
 
+def make_truncated_response_with_n_events(n: int) -> bytes:
+    """Build a response that contains n events but no trailing context/offset line,
+    simulating a truncated or malformed API stream."""
+    lines = []
+    for i in range(n):
+        lines.append(
+            f'{{"type": "akamai_siem", "format": "json", "version": 1.0, '
+            f'"attackData": {{}}, "httpMessage": {{"requestId": {i}, "start": "1743505200"}}}}'
+        )
+    return ("\n".join(lines) + "\n").encode()
+
+
 def test_extract_attack_data(trigger, raw_event):
     attack_data = trigger.extract_attack_data(raw_event)
 
@@ -382,4 +394,44 @@ def test_chunk_size_limits_memory_per_yield(trigger, response_2):
         assert len(chunk) <= trigger.CHUNK_SIZE
 
     # And no events are lost
+    assert sum(len(c) for c in chunks) == n_events
+
+
+def test_fetch_events_truncated_response_sub_chunk_yields_all_events(trigger):
+    """When the API stream ends without a context/offset line and the number of events
+    is below CHUNK_SIZE, no events should be silently dropped."""
+    n_events = 5
+    truncated_response = make_truncated_response_with_n_events(n_events)
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=truncated_response,
+        )
+
+        chunks = list(trigger.fetch_events())
+
+    assert sum(len(c) for c in chunks) == n_events
+
+
+def test_fetch_events_truncated_response_multi_chunk_yields_all_events(trigger):
+    """When the API stream ends without a context/offset line and the number of events
+    spans more than one chunk, both the already-yielded full chunks and the remaining
+    partial chunk should be returned — none of the tail events silently dropped."""
+    n_events = trigger.CHUNK_SIZE + 300  # one full chunk flushed mid-stream + 300 remainder
+    truncated_response = make_truncated_response_with_n_events(n_events)
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=truncated_response,
+        )
+
+        chunks = list(trigger.fetch_events())
+
+    assert len(chunks) == 2
+    assert len(chunks[0]) == trigger.CHUNK_SIZE
+    assert len(chunks[1]) == 300
     assert sum(len(c) for c in chunks) == n_events

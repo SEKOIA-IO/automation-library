@@ -165,7 +165,7 @@ class AkamaiWAFLogsConnector(Connector):
                         # response context - last JSON line
                         if events_in_page > 0:
                             # Yield remaining events that didn't fill a full chunk
-                            if len(chunk) > 0:
+                            if chunk:
                                 INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
                                 yield chunk
                                 chunk = []
@@ -175,6 +175,9 @@ class AkamaiWAFLogsConnector(Connector):
                             return
 
             if offset is None:
+                if chunk:
+                    INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
+                    yield chunk
                 return
 
             response = self.client.get(
