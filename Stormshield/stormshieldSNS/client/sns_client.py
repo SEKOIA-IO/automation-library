@@ -46,8 +46,8 @@ class StormshieldSNSClient:
         }
 
     @staticmethod
-    def _parse_response_body(response: requests.Response) -> dict | str:
+    def _parse_response_body(response: requests.Response) -> dict:
         try:
             return response.json()
         except ValueError:
-            return response.text
+            return {"error": "Invalid JSON response", "raw_response": response.text}

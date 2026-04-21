@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 
 from stormshieldSNS.block_ip_action import BlockIPAddressAction
-from stormshieldSNS.models.common_models import StormshieldSNSModule
+from stormshieldSNS.models.common_models import StormshieldSNSConfiguration, StormshieldSNSModule
 
 
 class MockResponse:
@@ -25,10 +25,10 @@ class MockResponse:
 def configured_action() -> BlockIPAddressAction:
     module = StormshieldSNSModule()
     action = BlockIPAddressAction(module)
-    action.module.configuration = {
-        "url": "https://sns.example.local/",
-        "api_token": "token",
-    }
+    action.module.configuration = StormshieldSNSConfiguration(
+        url="https://sns.example.local/",
+        api_token="token",
+    )
     return action
 
 
