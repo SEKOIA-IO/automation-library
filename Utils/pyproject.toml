@@ -23,7 +23,7 @@ python = ">=3.11,<3.13"
 sekoia-automation-sdk = "^1.21.0"
 jsonpath_ng = "^1.5"
 orjson = "*"
-lxml = "^4.6.3"
+lxml = ">=4.6.3,<7.0.0"
 datetime = "^5.2"
 structlog = "^25.5.0"
 
