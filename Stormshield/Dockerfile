@@ -17,8 +17,6 @@ RUN poetry config virtualenvs.create false && poetry install --only main
 
 COPY . .
 
-RUN echo "35.180.198.19 api.stormshield.lab" >> /etc/hosts
-
 RUN useradd -ms /bin/bash sekoiaio-runtime
 USER sekoiaio-runtime
 
