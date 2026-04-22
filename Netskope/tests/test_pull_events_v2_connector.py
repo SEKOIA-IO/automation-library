@@ -25,6 +25,7 @@ def trigger(symphony_storage):
     trigger.push_events_to_intakes = MagicMock()
     trigger.module.configuration = {
         "base_url": "https://my.fake.sekoia",
+        "api_key": "fake_api_key",
     }
     trigger.configuration = {
         "api_token": "api_token",

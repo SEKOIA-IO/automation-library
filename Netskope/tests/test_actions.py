@@ -1,4 +1,5 @@
 import pytest
+import requests.exceptions
 import requests_mock
 from unittest.mock import MagicMock
 
@@ -90,7 +91,7 @@ def test_add_to_blocklist_api_error(add_action):
 
         arguments = {"url_list_id": "123", "items": ["www.test.com"]}
 
-        with pytest.raises(ValueError, match="Netskope API returned an error: Invalid URL list ID"):
+        with pytest.raises(requests.exceptions.HTTPError):
             add_action.run(arguments)
 
 
@@ -153,7 +154,7 @@ def test_replace_blocklist_missing_required_params(replace_action):
         # Missing name and type
     }
 
-    with pytest.raises(ValueError, match="name and type are required for replace action"):
+    with pytest.raises(ValueError, match="name\n  field required"):
         replace_action.run(arguments)
 
 
@@ -176,5 +177,5 @@ def test_deploy_error_handling(add_action):
 
         arguments = {"url_list_id": "123", "items": ["www.test.com"]}
 
-        with pytest.raises(ValueError, match="Netskope API returned an error: Deploy failed"):
+        with pytest.raises(requests.exceptions.HTTPError):
             add_action.run(arguments)

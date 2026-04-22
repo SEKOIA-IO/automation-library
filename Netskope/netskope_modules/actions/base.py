@@ -14,11 +14,11 @@ class NetskopeAction(Action):
 
     @cached_property
     def api_key(self):
-        return self.module.configuration.get("api_key")
+        return self.module.configuration.api_key
 
     @cached_property
     def base_url(self):
-        return self.module.configuration["base_url"].rstrip("/")
+        return self.module.configuration.base_url.rstrip("/")
 
     def get_api_url(self, endpoint: str) -> str:
         return f"{self.base_url}/{endpoint}"
