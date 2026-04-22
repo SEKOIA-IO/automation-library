@@ -1,0 +1,285 @@
+mapping:
+  ocsf_class: "Device Inventory Info"
+  class_uid: 5001
+  ocsf_version: "1.6.0"
+
+  samples:
+    - name: "Sophos EDR endpoint sample"
+      description: "Sample endpoint data from Sophos Central API GET /endpoint/v1/endpoints"
+      data:
+        {
+          "id": "51a8f1a0-db9d-4980-a201-7e1d97ca5877",
+          "type": "computer",
+          "tenant": {
+            "id": "4feff6df-7454-4036-923d-7b2444462416"
+          },
+          "hostname": "mymjnbegguqa-vm",
+          "health": {
+            "overall": "bad",
+            "threats": { "status": "good" },
+            "services": { "status": "bad" }
+          },
+          "os": {
+            "isServer": false,
+            "platform": "windows",
+            "name": "Windows 10 Pro N",
+            "majorVersion": 10,
+            "minorVersion": 0,
+            "build": 19044
+          },
+          "ipv4Addresses": ["10.0.4.4"],
+          "macAddresses": ["00:22:48:37:FE:2F"],
+          "tamperProtectionEnabled": true,
+          "associatedPerson": {
+            "name": "mymjnbegguqa-vm\\\\adminuser",
+            "id": "c8c3f320-f7c0-46ba-b5ab-388d235ee686"
+          },
+          "lastSeenAt": "2024-01-07T06:26:08.668Z",
+          "registeredAt": "2023-06-26T10:28:08.836Z",
+          "online": false,
+          "cloud": { "provider": "azure", "instanceId": "7bb240a3-b6ac-47e8-96b1-e2be0901d8eb" },
+          "isolation": { "status": "notIsolated" }
+        }
+
+  fields:
+    # EVENT CLASSIFICATION
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      description: "OCSF activity ID – always 2 for Collect"
+
+    - source: "static: Collect"
+      target: "activity_name"
+      type: "string"
+      description: "OCSF activity name"
+
+    - source: "static: Discovery"
+      target: "category_name"
+      type: "string"
+      description: "OCSF category name"
+
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      description: "OCSF category UID"
+
+    - source: "static: Device Inventory Info"
+      target: "class_name"
+      type: "string"
+      description: "OCSF class name"
+
+    - source: "static: 5001"
+      target: "class_uid"
+      type: "integer"
+      description: "OCSF class UID"
+
+    - source: "static: 500102"
+      target: "type_uid"
+      type: "integer"
+      description: "OCSF type UID"
+
+    - source: "static: Device Inventory Info: Collect"
+      target: "type_name"
+      type: "string"
+      description: "OCSF type name"
+
+    - source: "static: Informational"
+      target: "severity"
+      type: "string"
+      description: "Event severity"
+
+    - source: "static: 1"
+      target: "severity_id"
+      type: "integer"
+      description: "OCSF severity ID"
+
+    # TIMESTAMPS
+    - source: "lastSeenAt"
+      target: "time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch; fallback to registeredAt then now()"
+      description: "OCSF event timestamp"
+
+    # METADATA
+    - source: "static: Sophos EDR"
+      target: "metadata.product.name"
+      type: "string"
+      description: "Source product name"
+
+    - source: "static: N/A"
+      target: "metadata.product.version"
+      type: "string"
+      description: "Product version"
+
+    - source: "static: 1.6.0"
+      target: "metadata.version"
+      type: "string"
+      description: "OCSF schema version"
+
+    # DEVICE IDENTIFICATION
+    - source: "id"
+      target: "device.uid"
+      type: "string"
+      description: "Sophos endpoint UUID"
+
+    - source: "hostname"
+      target: "device.hostname"
+      type: "string"
+      description: "Device hostname"
+
+    - source: "hostname"
+      target: "device.name"
+      type: "string"
+      description: "Device name"
+
+    - source: "type"
+      target: "device.type / device.type_id"
+      type: "string"
+      logic: "computer → Desktop (2), server → Server (1), else Unknown (0)"
+      description: "OCSF device type"
+
+    # OPERATING SYSTEM
+    - source: "os.platform"
+      target: "device.os.type / device.os.type_id"
+      type: "string"
+      logic: "windows→Windows(100), linux→Linux(200), macos→macOS(300), android→Android(201)"
+      description: "OCSF OS type"
+
+    - source: "os.name"
+      target: "device.os.name"
+      type: "string"
+      description: "Full OS name (e.g. 'Windows 10 Pro N')"
+
+    # NETWORK
+    - source: "ipv4Addresses[0]"
+      target: "device.ip"
+      type: "ip"
+      description: "Primary IPv4 address"
+
+    - source: "ipv4Addresses[]"
+      target: "device.network_interfaces[].ip"
+      type: "ip"
+      logic: "One NetworkInterface per IPv4; paired with matching MAC by index"
+      description: "Network interface IP addresses"
+
+    - source: "ipv6Addresses[]"
+      target: "device.network_interfaces[].ip"
+      type: "ip"
+      logic: "Additional interfaces for IPv6 addresses"
+      description: "IPv6 network interface addresses"
+
+    - source: "macAddresses[]"
+      target: "device.network_interfaces[].mac"
+      type: "string"
+      logic: "Normalised to XX:XX:XX:XX:XX:XX; paired with IP by index"
+      description: "Network interface MAC addresses"
+
+    - source: "hostname"
+      target: "device.network_interfaces[0].hostname"
+      type: "string"
+      description: "Hostname on primary interface"
+
+    # ORGANISATION (TENANT)
+    - source: "tenant.id"
+      target: "device.org.uid"
+      type: "string"
+      description: "Sophos tenant UUID"
+
+    # CLOUD
+    - source: "cloud.provider"
+      target: "device.region"
+      type: "string"
+      description: "Cloud provider (azure, aws, …)"
+
+    # TIMESTAMPS
+    - source: "registeredAt"
+      target: "device.first_seen_time / device.created_time"
+      type: "timestamp"
+      description: "Endpoint registration date"
+
+    - source: "lastSeenAt"
+      target: "device.last_seen_time"
+      type: "timestamp"
+      description: "Last seen date"
+
+    # MANAGEMENT / COMPLIANCE
+    - source: "static: True"
+      target: "device.is_managed"
+      type: "boolean"
+      description: "Always true – device is enrolled in Sophos Central"
+
+    - source: "health.overall"
+      target: "device.is_compliant"
+      type: "boolean"
+      logic: "good→True, bad/suspicious→False, else None"
+      description: "Device health / compliance status"
+
+    # ENRICHMENTS
+    - source: "tamperProtectionEnabled"
+      target: "enrichments[0].data.Firewall_status"
+      type: "string"
+      logic: "true→Enabled, false→Disabled; used as proxy for protection status"
+      description: "Tamper-protection / firewall-like status"
+
+    - source: "static: compliance"
+      target: "enrichments[0].name"
+      type: "string"
+      description: "Enrichment type name"
+
+    - source: "static: hygiene"
+      target: "enrichments[0].value"
+      type: "string"
+      description: "Enrichment value"
+
+  ocsf_samples:
+    - name: "Device Inventory Info – Sophos EDR"
+      description: "Transformed Sophos endpoint to OCSF Device Inventory Info"
+      data:
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "Device Inventory Info",
+          "class_uid": 5001,
+          "type_name": "Device Inventory Info: Collect",
+          "type_uid": 500102,
+          "severity": "Informational",
+          "severity_id": 1,
+          "time": 1704610568,
+          "metadata": {
+            "product": { "name": "Sophos EDR", "version": "N/A" },
+            "version": "1.6.0"
+          },
+          "device": {
+            "uid": "51a8f1a0-db9d-4980-a201-7e1d97ca5877",
+            "hostname": "mymjnbegguqa-vm",
+            "name": "mymjnbegguqa-vm",
+            "type": "Desktop",
+            "type_id": 2,
+            "os": { "name": "Windows 10 Pro N", "type": "windows", "type_id": 100 },
+            "ip": "10.0.4.4",
+            "network_interfaces": [
+              {
+                "hostname": "mymjnbegguqa-vm",
+                "ip": "10.0.4.4",
+                "mac": "00:22:48:37:FE:2F",
+                "name": "eth0"
+              }
+            ],
+            "org": { "uid": "4feff6df-7454-4036-923d-7b2444462416" },
+            "region": "azure",
+            "is_managed": true,
+            "is_compliant": false,
+            "first_seen_time": 1687773488,
+            "created_time": 1687773488,
+            "last_seen_time": 1704610568
+          },
+          "enrichments": [
+            {
+              "name": "compliance",
+              "value": "hygiene",
+              "data": { "Firewall_status": "Enabled" }
+            }
+          ]
+        }
