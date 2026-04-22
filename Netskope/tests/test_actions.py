@@ -41,17 +41,14 @@ def test_add_to_blocklist_success(add_action):
             "https://my.fake.netskope.com/api/v2/policy/urllist/123/append",
             status_code=200,
             json={
-                "data": {
-                    "type": "exact",
-                    "urls": ["www.test.com", "malicious.com"]
-                },
+                "data": {"type": "exact", "urls": ["www.test.com", "malicious.com"]},
                 "id": 123,
                 "modify_by": "Netskope API",
                 "modify_time": "1997-01-01 00:00:00",
                 "modify_type": "Edited",
                 "name": "Test Blocklist",
-                "pending": 1
-            }
+                "pending": 1,
+            },
         )
 
         # Mock the deploy request
@@ -60,24 +57,18 @@ def test_add_to_blocklist_success(add_action):
             status_code=200,
             json=[
                 {
-                    "data": {
-                        "type": "exact",
-                        "urls": ["www.test.com", "malicious.com"]
-                    },
+                    "data": {"type": "exact", "urls": ["www.test.com", "malicious.com"]},
                     "id": 123,
                     "modify_by": "Netskope API",
                     "modify_time": "1997-01-01 00:00:00",
                     "modify_type": "Created",
                     "name": "Test Blocklist",
-                    "pending": 0
+                    "pending": 0,
                 }
-            ]
+            ],
         )
 
-        arguments = {
-            "url_list_id": "123",
-            "items": ["www.test.com", "malicious.com"]
-        }
+        arguments = {"url_list_id": "123", "items": ["www.test.com", "malicious.com"]}
 
         result = add_action.run(arguments)
 
@@ -94,13 +85,10 @@ def test_add_to_blocklist_api_error(add_action):
         mock_requests.patch(
             "https://my.fake.netskope.com/api/v2/policy/urllist/123/append",
             status_code=400,
-            json={"error": {"message": "Invalid URL list ID"}}
+            json={"error": {"message": "Invalid URL list ID"}},
         )
 
-        arguments = {
-            "url_list_id": "123",
-            "items": ["www.test.com"]
-        }
+        arguments = {"url_list_id": "123", "items": ["www.test.com"]}
 
         with pytest.raises(ValueError, match="Netskope API returned an error: Invalid URL list ID"):
             add_action.run(arguments)
@@ -114,17 +102,14 @@ def test_replace_blocklist_success(replace_action):
             "https://my.fake.netskope.com/api/v2/policy/urllist/456/replace",
             status_code=200,
             json={
-                "data": {
-                    "type": "exact",
-                    "urls": ["new-blocked.com", "another-blocked.com"]
-                },
+                "data": {"type": "exact", "urls": ["new-blocked.com", "another-blocked.com"]},
                 "id": 456,
                 "modify_by": "Netskope API",
                 "modify_time": "1997-01-01 00:00:00",
                 "modify_type": "Edited",
                 "name": "Updated Blocklist",
-                "pending": 1
-            }
+                "pending": 1,
+            },
         )
 
         # Mock the deploy request
@@ -133,25 +118,22 @@ def test_replace_blocklist_success(replace_action):
             status_code=200,
             json=[
                 {
-                    "data": {
-                        "type": "exact",
-                        "urls": ["new-blocked.com", "another-blocked.com"]
-                    },
+                    "data": {"type": "exact", "urls": ["new-blocked.com", "another-blocked.com"]},
                     "id": 456,
                     "modify_by": "Netskope API",
                     "modify_time": "1997-01-01 00:00:00",
                     "modify_type": "Created",
                     "name": "Updated Blocklist",
-                    "pending": 0
+                    "pending": 0,
                 }
-            ]
+            ],
         )
 
         arguments = {
             "url_list_id": "456",
             "items": ["new-blocked.com", "another-blocked.com"],
             "name": "Updated Blocklist",
-            "type": "exact"
+            "type": "exact",
         }
 
         result = replace_action.run(arguments)
@@ -182,20 +164,17 @@ def test_deploy_error_handling(add_action):
         mock_requests.patch(
             "https://my.fake.netskope.com/api/v2/policy/urllist/123/append",
             status_code=200,
-            json={"id": 123, "pending": 1}
+            json={"id": 123, "pending": 1},
         )
 
         # Mock deploy failure
         mock_requests.post(
             "https://my.fake.netskope.com/api/v2/policy/urllist/deploy",
             status_code=500,
-            json={"error": {"message": "Deploy failed"}}
+            json={"error": {"message": "Deploy failed"}},
         )
 
-        arguments = {
-            "url_list_id": "123",
-            "items": ["www.test.com"]
-        }
+        arguments = {"url_list_id": "123", "items": ["www.test.com"]}
 
         with pytest.raises(ValueError, match="Netskope API returned an error: Deploy failed"):
             add_action.run(arguments)

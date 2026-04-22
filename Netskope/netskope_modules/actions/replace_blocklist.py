@@ -19,18 +19,10 @@ class ReplaceBlocklistAction(NetskopeAction):
         args = ReplaceBlocklistArguments(**arguments)
 
         # Replace the entire URL list
-        replace_payload = {
-            "data": {
-                "type": args.type,
-                "urls": args.items
-            },
-            "name": args.name
-        }
+        replace_payload = {"data": {"type": args.type, "urls": args.items}, "name": args.name}
 
         replace_response = self.execute_request(
-            "PATCH",
-            f"api/v2/policy/urllist/{args.url_list_id}/replace",
-            json=replace_payload
+            "PATCH", f"api/v2/policy/urllist/{args.url_list_id}/replace", json=replace_payload
         )
 
         # Deploy the changes
@@ -39,5 +31,5 @@ class ReplaceBlocklistAction(NetskopeAction):
         return {
             "replace_result": replace_response,
             "deploy_result": deploy_response,
-            "message": f"Successfully replaced blocklist with {len(args.items)} item(s)"
+            "message": f"Successfully replaced blocklist with {len(args.items)} item(s)",
         }

@@ -17,16 +17,10 @@ class AddToBlocklistAction(NetskopeAction):
         args = AddToBlocklistArguments(**arguments)
 
         # Add items to the URL list
-        add_payload = {
-            "data": {
-                "urls": args.items
-            }
-        }
+        add_payload = {"data": {"urls": args.items}}
 
         add_response = self.execute_request(
-            "PATCH",
-            f"api/v2/policy/urllist/{args.url_list_id}/append",
-            json=add_payload
+            "PATCH", f"api/v2/policy/urllist/{args.url_list_id}/append", json=add_payload
         )
 
         # Deploy the changes
@@ -35,5 +29,5 @@ class AddToBlocklistAction(NetskopeAction):
         return {
             "add_result": add_response,
             "deploy_result": deploy_response,
-            "message": f"Successfully added {len(args.items)} item(s) to blocklist"
+            "message": f"Successfully added {len(args.items)} item(s) to blocklist",
         }
