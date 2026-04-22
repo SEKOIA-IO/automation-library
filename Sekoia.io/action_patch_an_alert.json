@@ -148,7 +148,7 @@
           }
         }
       },
-       "custom_status_uuid": {
+      "custom_status_uuid": {
         "type": "string",
         "format": "uuid",
         "x-nullable": true,
