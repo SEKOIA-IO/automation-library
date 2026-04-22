@@ -34,10 +34,7 @@ class ReplaceBlocklistAction(NetskopeAction):
         )
 
         # Deploy the changes
-        deploy_response = self.execute_request(
-            "POST",
-            "api/v2/policy/urllist/deploy"
-        )
+        deploy_response = self.deploy_blocklist_changes()
 
         return {
             "replace_result": replace_response,

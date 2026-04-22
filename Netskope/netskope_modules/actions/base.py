@@ -61,3 +61,22 @@ class NetskopeAction(Action):
         self._handle_response_error(response)
 
         return response.json() if response.content else {}
+
+    def deploy_blocklist_changes(self) -> dict:
+        """
+        Deploy blocklist changes to make them active.
+        """
+        return self.execute_request("POST", "api/v2/policy/urllist/deploy")
+
+    def execute_request(self, method: str, endpoint: str, **kwargs) -> dict:
+        """
+        Execute a request to the Netskope API.
+        """
+        url = self.get_api_url(endpoint)
+        headers = {"Authorization": f"Bearer {self.api_key}", **kwargs.get("headers", {})}
+
+        response = requests.request(method, url, headers=headers, **kwargs)
+
+        self._handle_response_error(response)
+
+        return response.json() if response.content else {}
