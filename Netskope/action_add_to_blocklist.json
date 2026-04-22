@@ -1,0 +1,28 @@
+{
+  "description": "Add IP addresses, domains, or URLs to an existing Netskope blocklist",
+  "docker_parameters": "add_to_blocklist",
+  "name": "Add to Blocklist",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "url_list_id": {
+        "type": "string",
+        "description": "The ID of the URL list to modify"
+      },
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of items to add to the blocklist (IPs, domains, or URLs)"
+      }
+    },
+    "required": [
+      "url_list_id",
+      "items"
+    ],
+    "title": "Add items to blocklist",
+    "type": "object"
+  },
+  "uuid": "add-to-blocklist-uuid"
+}

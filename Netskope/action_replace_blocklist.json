@@ -1,0 +1,38 @@
+{
+  "description": "Replace an entire Netskope blocklist with new items",
+  "docker_parameters": "replace_blocklist",
+  "name": "Replace Blocklist",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "url_list_id": {
+        "type": "string",
+        "description": "The ID of the URL list to replace"
+      },
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of items to set in the blocklist (IPs, domains, or URLs)"
+      },
+      "name": {
+        "type": "string",
+        "description": "Name of the URL list"
+      },
+      "type": {
+        "type": "string",
+        "default": "exact",
+        "description": "Type of URL list (exact, regex, etc.)"
+      }
+    },
+    "required": [
+      "url_list_id",
+      "items",
+      "name"
+    ],
+    "title": "Replace blocklist",
+    "type": "object"
+  },
+  "uuid": "replace-blocklist-uuid"
+}
