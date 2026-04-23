@@ -27,7 +27,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- New `netskope_security_check_connector` that collects Netskope sandbox / security-check.
+- New `netskope_security_check_connector` that collects Netskope sandbox / security-check
+
+## 2026-04-23 - 2.0.0
+
+### Added
+
+- Add blocklist management actions (append to blocklist and replace blocklist)
+- Add required `api_token` parameter to manifest, for Netskope api authentication
 
 ## 2026-04-23 - 1.12.0
 
