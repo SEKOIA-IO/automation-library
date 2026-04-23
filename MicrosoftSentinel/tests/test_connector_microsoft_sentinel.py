@@ -174,3 +174,56 @@ def test_get_incidents_without_batch(trigger, incidents_list):
         parsed_second = orjson.loads(results[0][1])
         assert parsed_second["title"] == "title 2"
         assert parsed_second["entities"] == [{"id": "dummy_entity_id"}]
+
+
+def test_get_incident_entities_coverage(trigger):
+    from azure.core.exceptions import AzureError
+    from unittest.mock import MagicMock
+
+    # Case 1: as_dict
+    class EntityAsDict:
+        def as_dict(self):
+            return {"type": "as_dict"}
+
+    # Case 2: serialize
+    class EntitySerialize:
+        def serialize(self):
+            return {"type": "serialize"}
+
+    # Case 3: dict parse
+    class EntityDictParse:
+        def __iter__(self):
+            yield "type", "dict_parse"
+
+    # Case 4: Exception type
+    class EntityDictError:
+        pass
+
+    entity_dict = {"type": "dict"}
+
+    mock_response = MagicMock()
+    mock_response.entities = [EntityAsDict(), EntitySerialize(), entity_dict, EntityDictParse(), EntityDictError()]
+
+    trigger.client = MagicMock()
+    trigger.client.incidents.list_entities.return_value = mock_response
+
+    res = trigger._get_incident_entities("inc1")
+    assert len(res) == 4
+    assert res[0] == {"type": "as_dict"}
+    assert res[1] == {"type": "serialize"}
+    assert res[2] == {"type": "dict"}
+    assert res[3] == {"type": "dict_parse"}
+
+    # Test exceptions
+    trigger.client.incidents.list_entities.side_effect = AzureError("azure_err")
+    assert trigger._get_incident_entities("inc1") == []
+
+    trigger.client.incidents.list_entities.side_effect = Exception("err")
+    assert trigger._get_incident_entities("inc1") == []
+
+    # Test None / no entities
+    mock_response_empty = MagicMock()
+    del mock_response_empty.entities
+    trigger.client.incidents.list_entities.side_effect = None
+    trigger.client.incidents.list_entities.return_value = mock_response_empty
+    assert trigger._get_incident_entities("inc1") == []
