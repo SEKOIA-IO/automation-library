@@ -70,6 +70,29 @@ class MicrosoftSentineldConnector(Connector):
             filter=self.incidents_filter,
         )  # type: ignore
 
+    def _get_incident_entities(self, incident_id: str) -> list[Dict[str, Any]]:
+        """
+        Fetch entities for a given incident.
+        """
+        try:
+            response = self.client.incidents.list_entities(
+                resource_group_name=self.module.configuration.resource_group,
+                workspace_name=self.module.configuration.workspace_name,
+                incident_id=incident_id
+            )
+            entities = getattr(response, "entities", response)
+            if entities:
+                return [
+                    entity.as_dict() if hasattr(entity, "as_dict") else (
+                        entity.serialize() if hasattr(entity, "serialize") else dict(entity)
+                    )
+                    for entity in entities
+                ]
+            return []
+        except Exception as e:
+            self.log_exception(e, message=f"Failed to fetch entities for incident {incident_id}")
+            return []
+
     def _serialize_incident(self, incident: Incident) -> Dict[str, Any]:
         keys_to_extract = list(MicrosoftSentinelResponseModel.__fields__.keys())
         conversion_map: Dict[type, Callable[[Any], Any]] = {
@@ -80,7 +103,7 @@ class MicrosoftSentineldConnector(Connector):
         new_dict = {}
 
         for key in keys_to_extract:
-            value = getattr(incident, key)
+            value = getattr(incident, key, None)
             if isinstance(value, list) and all(isinstance(item, IncidentLabel) for item in value):
                 new_dict[key] = [labels_data_to_dict(item) for item in value]
             elif type(value) in conversion_map:
@@ -107,6 +130,15 @@ class MicrosoftSentineldConnector(Connector):
         for item in response:
             created_time = item.created_time_utc
             serialezed_incident = self._serialize_incident(item)
+            
+            incident_id = getattr(item, "name", None)
+            if incident_id:
+                entities = self._get_incident_entities(incident_id)
+                if entities:
+                    serialezed_incident["Entities"] = entities
+                    # Also keep lowercased to match model key if preferred
+                    serialezed_incident["entities"] = entities
+
             jsonify_item = orjson.dumps(serialezed_incident).decode("utf-8")
             alerts_batch.append(jsonify_item)
 
