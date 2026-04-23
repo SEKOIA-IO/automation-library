@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-23 - 1.18.0
+
+### Added
+
+- Add Sophos Device Asset Connector (`SophosDeviceAssetConnector`) that collects endpoint inventory from the Sophos Central API
+- Add account validator for the Sophos Device Asset Connector (`SophosDeviceAssetAccountValidator`)
+
 ## 2025-12-15 - 1.17.6
 
 ### Fixed

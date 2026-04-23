@@ -19,6 +19,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
 )
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
+from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.storage import PersistentJSON
 
 from sophos_module.client import SophosApiClient
@@ -28,8 +29,7 @@ from sophos_module.client.auth import SophosApiAuthentication
 class SophosDeviceAssetConnector(AssetConnector):
     """
     Asset connector for Sophos EDR devices.
-    Collects endpoint devices from the Sophos Central API:
-    GET /endpoint/v1/endpoints
+    Collects endpoint devices from the Sophos Central API
     """
 
     PRODUCT_NAME: str = "Sophos EDR"
@@ -50,6 +50,7 @@ class SophosDeviceAssetConnector(AssetConnector):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+        self._latest_time: str | None = None
 
     @property
     def last_seen_cursor(self) -> str | None:
@@ -88,7 +89,6 @@ class SophosDeviceAssetConnector(AssetConnector):
         if not mac:
             return None
         return mac.replace("-", ":").upper()
-
 
     def _get_os(self, endpoint: dict[str, Any]) -> OperatingSystem:
         """Map Sophos os object to OCSF OperatingSystem."""
@@ -180,7 +180,6 @@ class SophosDeviceAssetConnector(AssetConnector):
             return "Disabled"
         return None
 
-
     @staticmethod
     def _get_organization(endpoint: dict[str, Any]) -> Organization | None:
         tenant: dict[str, Any] = endpoint.get("tenant") or {}
@@ -188,7 +187,6 @@ class SophosDeviceAssetConnector(AssetConnector):
         if tenant_id:
             return Organization(uid=tenant_id, name=tenant_id)
         return None
-
 
     def _get_enrichments(self, endpoint: dict[str, Any]) -> list[DeviceEnrichmentObject] | None:
         """Build enrichment objects from Sophos-specific fields."""
@@ -205,6 +203,40 @@ class SophosDeviceAssetConnector(AssetConnector):
                 data=device_data,
             )
         ]
+
+    def _get_groups(self, endpoint: dict[str, Any]) -> list[Group] | None:
+        """Get Groups from Sophos"""
+        sophos_groups = endpoint.get("group")
+        if not sophos_groups:
+            return None
+
+        return [
+            Group(
+                uid=group.get("id"),
+                name=group["name"],
+            )
+            for group in sophos_groups
+            if group.get("name")
+        ] or None
+
+    @staticmethod
+    def _is_trusted(endpoint: dict[str, Any]) -> bool | None:
+        health: dict[str, Any] = endpoint.get("health") or {}
+        overall: str = (health.get("overall") or "").lower()
+        isolation: dict[str, Any] = endpoint.get("isolation") or {}
+        isolation_status: str = (isolation.get("status") or "").lower()
+        tamper_enabled: bool | None = endpoint.get("tamperProtectionEnabled")
+
+        if isolation_status == "isolated":
+            return False
+
+        if overall == "good" and tamper_enabled is True:
+            return True
+
+        if overall in ("bad", "suspicious"):
+            return False
+
+        return None
 
     def map_device_fields(self, endpoint: dict[str, Any]) -> DeviceOCSFModel | None:
         """
@@ -227,10 +259,12 @@ class SophosDeviceAssetConnector(AssetConnector):
         org = self._get_organization(endpoint)
         enrichments = self._get_enrichments(endpoint)
         is_compliant = self._is_compliant(endpoint)
+        groups = self._get_groups(endpoint)
 
-        # Use first IPv4 as primary IP
+        # Use first IPv4 as primary IP otherwise IPv6
         ipv4_list: list[str] = endpoint.get("ipv4Addresses") or []
-        primary_ip: str | None = ipv4_list[0] if ipv4_list else None
+        ipv6_list: list[str] = endpoint.get("ipv6Addresses") or []
+        primary_ip: str | None = ipv4_list[0] if ipv4_list else (ipv6_list[0] if ipv6_list else None)
 
         # Cloud region
         cloud: dict[str, Any] = endpoint.get("cloud") or {}
@@ -248,22 +282,24 @@ class SophosDeviceAssetConnector(AssetConnector):
         event_time = last_seen_ts or registered_ts or datetime.now(tz=timezone.utc).timestamp()
 
         device = Device(
-            uid=uid,
-            hostname=hostname,
-            name=hostname,
             type_id=type_id,
             type=type_str,
+            uid=uid,
             os=os,
+            hostname=hostname,
+            created_time=registered_ts,
+            first_seen_time=registered_ts,
+            desc=person_name,
+            groups=groups,
+            is_compliant=is_compliant,
+            name=hostname,
             ip=primary_ip,
             network_interfaces=interfaces,
             org=org,
             region=region,
-            is_managed=True,  # Managed by Sophos Central
-            is_compliant=is_compliant,
+            is_managed=True,
+            is_trusted=self._is_trusted(endpoint),
             last_seen_time=last_seen_ts,
-            first_seen_time=registered_ts,
-            created_time=registered_ts,
-            desc=person_name,
         )
 
         return DeviceOCSFModel(
@@ -284,13 +320,13 @@ class SophosDeviceAssetConnector(AssetConnector):
         )
 
     def _iter_endpoints(self) -> Generator[dict[str, Any], None, None]:
-        """
-        Paginate through GET /endpoint/v1/endpoints and yield each endpoint dict.
-        """
         params: dict[str, Any] = {
             "pageSize": self.PAGE_SIZE,
             "view": "full",
         }
+
+        if self.last_seen_cursor:
+            params["lastSeenAfter"] = self.last_seen_cursor
 
         while self.running:
             response = self.client.list_endpoints(params)
@@ -299,6 +335,10 @@ class SophosDeviceAssetConnector(AssetConnector):
 
             items: list[dict[str, Any]] = data.get("items") or []
             for item in items:
+                last_seen = item.get("lastSeenAt")
+                if last_seen:
+                    if self._latest_time is None or last_seen > self._latest_time:
+                        self._latest_time = last_seen
                 yield item
 
             pages = data.get("pages") or {}
@@ -307,10 +347,13 @@ class SophosDeviceAssetConnector(AssetConnector):
                 break
             params["pageFromKey"] = next_key
 
-
     def update_checkpoint(self) -> None:
-        """No incremental checkpoint needed – we always do a full pull."""
-        pass
+        if self._latest_time:
+            with self.context as cache:
+                cache["last_seen_cursor"] = self._latest_time
+            self.log(f"Checkpoint updated successfully - New timestamp: {self._latest_time}", level="debug")
+        else:
+            self.log("No checkpoint update needed - No new timestamp available", level="debug")
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
         """Main entry point: yield all Sophos device assets as OCSF models."""
@@ -331,4 +374,3 @@ class SophosDeviceAssetConnector(AssetConnector):
             raise
 
         self.log(f"Sophos device asset collection complete – total={total}, skipped={skipped}", level="info")
-

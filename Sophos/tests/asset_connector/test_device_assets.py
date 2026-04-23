@@ -1,6 +1,7 @@
 """
 Unit tests for SophosDeviceAssetConnector (asset_connector/device_assets.py).
 """
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,40 +16,50 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
 )
 
-# ---------------------------------------------------------------------------
-# Sample API response payloads
-# ---------------------------------------------------------------------------
+
+TENANT_ID = "00000000-0000-0000-0000-000000000001"
 
 COMPUTER_ENDPOINT = {
-    "id": "51a8f1a0-db9d-4980-a201-7e1d97ca5877",
+    "id": "aaaaaaaa-0000-0000-0000-000000000001",
     "type": "computer",
-    "tenant": {"id": "4feff6df-7454-4036-923d-7b2444462416"},
-    "hostname": "mymjnbegguqa-vm",
+    "tenant": {"id": TENANT_ID},
+    "hostname": "test-computer-01",
     "health": {"overall": "bad", "threats": {"status": "good"}, "services": {"status": "bad"}},
-    "os": {"isServer": False, "platform": "windows", "name": "Windows 10 Pro N", "majorVersion": 10, "minorVersion": 0, "build": 19044},
-    "ipv4Addresses": ["10.0.4.4"],
+    "os": {
+        "isServer": False,
+        "platform": "windows",
+        "name": "Windows 10 Pro",
+        "majorVersion": 10,
+        "minorVersion": 0,
+        "build": 19044,
+    },
+    "ipv4Addresses": ["192.168.1.10"],
     "ipv6Addresses": [],
-    "macAddresses": ["00:22:48:37:FE:2F", "00:FF:2F:8A:93:75"],
+    "macAddresses": ["AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"],
     "tamperProtectionEnabled": True,
-    "associatedPerson": {"name": "mymjnbegguqa-vm\\adminuser", "viaLogin": "mymjnbegguqa-vm\\adminuser", "id": "c8c3f320"},
+    "associatedPerson": {
+        "name": "test-computer-01\\testuser",
+        "viaLogin": "test-computer-01\\testuser",
+        "id": "bbbbbbbb-0000-0000-0000-000000000001",
+    },
     "lastSeenAt": "2024-01-07T06:26:08.668Z",
     "registeredAt": "2023-06-26T10:28:08.836Z",
-    "cloud": {"provider": "azure", "instanceId": "7bb240a3"},
+    "cloud": {"provider": "azure", "instanceId": "cccccccc-0000-0000-0000-000000000001"},
     "isolation": {"status": "notIsolated", "adminIsolated": False, "selfIsolated": False},
     "online": False,
     "tags": [],
 }
 
 SERVER_ENDPOINT = {
-    "id": "a92622ec-6a11-4b1b-b179-780d520bf8e6",
+    "id": "aaaaaaaa-0000-0000-0000-000000000002",
     "type": "server",
-    "tenant": {"id": "4feff6df-7454-4036-923d-7b2444462416"},
-    "hostname": "ubuntu-xenial",
+    "tenant": {"id": TENANT_ID},
+    "hostname": "test-server-01",
     "health": {"overall": "good", "threats": {"status": "good"}, "services": {"status": "good"}},
-    "os": {"isServer": True, "platform": "linux", "name": "Ubuntu 16.04.7 LTS"},
-    "ipv4Addresses": ["10.0.2.15"],
-    "ipv6Addresses": ["fe80::be:82ff:fe6b:cc1d"],
-    "macAddresses": ["02:be:82:6b:cc:1d"],
+    "os": {"isServer": True, "platform": "linux", "name": "Ubuntu 22.04 LTS"},
+    "ipv4Addresses": ["192.168.1.20"],
+    "ipv6Addresses": ["fe80::1"],
+    "macAddresses": ["AA:BB:CC:DD:EE:03"],
     "tamperProtectionEnabled": False,
     "associatedPerson": {},
     "lastSeenAt": "2025-01-06T11:24:27.741Z",
@@ -58,10 +69,10 @@ SERVER_ENDPOINT = {
 }
 
 MINIMAL_ENDPOINT = {
-    "id": "aaa-bbb-ccc",
+    "id": "aaaaaaaa-0000-0000-0000-000000000003",
     "type": "computer",
-    "tenant": {"id": "tenant-123"},
-    "hostname": "minimal-host",
+    "tenant": {"id": TENANT_ID},
+    "hostname": "test-minimal-01",
     "health": {"overall": "good"},
     "os": {"platform": "macos", "name": "macOS 14"},
     "ipv4Addresses": [],
@@ -94,7 +105,7 @@ AUTH_TOKEN_RESPONSE = {
 }
 
 WHOAMI_RESPONSE = {
-    "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
+    "id": TENANT_ID,
     "idType": "tenant",
     "apiHosts": {
         "global": "https://api.central.sophos.com",
@@ -103,7 +114,6 @@ WHOAMI_RESPONSE = {
 }
 
 AUTH_URL = "https://id.sophos.com/api/v2/oauth2/token"
-
 
 
 @pytest.fixture
@@ -127,7 +137,7 @@ class TestGetOs:
         os_obj = connector._get_os(COMPUTER_ENDPOINT)
         assert os_obj.type_id == OSTypeId.WINDOWS
         assert os_obj.type == OSTypeStr.WINDOWS
-        assert os_obj.name == "Windows 10 Pro N"
+        assert os_obj.name == "Windows 10 Pro"
 
     def test_linux(self, connector):
         os_obj = connector._get_os(SERVER_ENDPOINT)
@@ -177,17 +187,17 @@ class TestGetNetworkInterfaces:
         assert interfaces is not None
         assert len(interfaces) == 1
         iface = interfaces[0]
-        assert iface.ip == "10.0.4.4"
-        assert iface.mac == "00:22:48:37:FE:2F"
-        assert iface.hostname == "mymjnbegguqa-vm"
+        assert iface.ip == "192.168.1.10"
+        assert iface.mac == "AA:BB:CC:DD:EE:01"
+        assert iface.hostname == "test-computer-01"
         assert iface.name == "eth0"
 
     def test_ipv4_and_ipv6(self):
         interfaces = SophosDeviceAssetConnector._get_network_interfaces(SERVER_ENDPOINT)
         assert interfaces is not None
         assert len(interfaces) == 2
-        assert interfaces[0].ip == "10.0.2.15"
-        assert interfaces[1].ip == "fe80::be:82ff:fe6b:cc1d"
+        assert interfaces[0].ip == "192.168.1.20"
+        assert interfaces[1].ip == "fe80::1"
 
     def test_no_addresses_returns_none(self):
         result = SophosDeviceAssetConnector._get_network_interfaces(
@@ -198,7 +208,7 @@ class TestGetNetworkInterfaces:
     def test_mac_normalization(self):
         endpoint = {
             "hostname": "h",
-            "ipv4Addresses": ["1.2.3.4"],
+            "ipv4Addresses": ["10.0.0.1"],
             "ipv6Addresses": [],
             "macAddresses": ["aa-bb-cc-dd-ee-ff"],
         }
@@ -208,9 +218,9 @@ class TestGetNetworkInterfaces:
     def test_hostname_only_on_first_interface(self):
         endpoint = {
             "hostname": "myhost",
-            "ipv4Addresses": ["1.1.1.1", "2.2.2.2"],
+            "ipv4Addresses": ["10.0.0.1", "10.0.0.2"],
             "ipv6Addresses": [],
-            "macAddresses": ["AA:BB:CC:DD:EE:FF", "11:22:33:44:55:66"],
+            "macAddresses": ["AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"],
         }
         interfaces = SophosDeviceAssetConnector._get_network_interfaces(endpoint)
         assert interfaces[0].hostname == "myhost"
@@ -222,7 +232,7 @@ class TestNormalizeMac:
         assert SophosDeviceAssetConnector._normalize_mac("aa-bb-cc-dd-ee-ff") == "AA:BB:CC:DD:EE:FF"
 
     def test_already_correct(self):
-        assert SophosDeviceAssetConnector._normalize_mac("00:22:48:37:FE:2F") == "00:22:48:37:FE:2F"
+        assert SophosDeviceAssetConnector._normalize_mac("AA:BB:CC:DD:EE:FF") == "AA:BB:CC:DD:EE:FF"
 
     def test_none_input(self):
         assert SophosDeviceAssetConnector._normalize_mac(None) is None
@@ -266,7 +276,7 @@ class TestGetOrganization:
     def test_tenant_present(self):
         org = SophosDeviceAssetConnector._get_organization(COMPUTER_ENDPOINT)
         assert org is not None
-        assert org.uid == "4feff6df-7454-4036-923d-7b2444462416"
+        assert org.uid == TENANT_ID
 
     def test_tenant_missing(self):
         assert SophosDeviceAssetConnector._get_organization({}) is None
@@ -295,15 +305,15 @@ class TestMapDeviceFields:
     def test_computer_mapping(self, connector):
         result = connector.map_device_fields(COMPUTER_ENDPOINT)
         assert result is not None
-        assert result.device.uid == "51a8f1a0-db9d-4980-a201-7e1d97ca5877"
-        assert result.device.hostname == "mymjnbegguqa-vm"
+        assert result.device.uid == "aaaaaaaa-0000-0000-0000-000000000001"
+        assert result.device.hostname == "test-computer-01"
         assert result.device.type_id == DeviceTypeId.DESKTOP
         assert result.device.os.type_id == OSTypeId.WINDOWS
-        assert result.device.ip == "10.0.4.4"
+        assert result.device.ip == "192.168.1.10"
         assert result.device.is_compliant is False
         assert result.device.is_managed is True
         assert result.device.region == "azure"
-        assert result.device.desc == "mymjnbegguqa-vm\\adminuser"
+        assert result.device.desc == "test-computer-01\\testuser"
         assert result.activity_id == 2
         assert result.class_uid == 5001
         assert result.type_uid == 500102
@@ -352,6 +362,21 @@ class TestMapDeviceFields:
         assert result is not None
         assert result.device.last_seen_time is not None
         assert result.device.first_seen_time is not None
+
+    def test_ipv6_fallback_when_no_ipv4(self, connector):
+        endpoint = {
+            **SERVER_ENDPOINT,
+            "ipv4Addresses": [],
+            "ipv6Addresses": ["fe80::1"],
+        }
+        result = connector.map_device_fields(endpoint)
+        assert result is not None
+        assert result.device.ip == "fe80::1"
+
+    def test_no_ip_when_no_addresses(self, connector):
+        result = connector.map_device_fields(MINIMAL_ENDPOINT)
+        assert result is not None
+        assert result.device.ip is None
 
 
 class TestIterEndpoints:
@@ -402,6 +427,33 @@ class TestIterEndpoints:
 
         assert list(connector._iter_endpoints()) == []
 
+    def test_latest_time_updated(self, connector):
+        """_latest_time should track the most recent lastSeenAt across all items."""
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "items": [COMPUTER_ENDPOINT, SERVER_ENDPOINT],
+            "pages": {"size": 50, "maxSize": 500},
+        }
+        connector.client = MagicMock()
+        connector.client.list_endpoints.return_value = mock_response
+
+        list(connector._iter_endpoints())
+        # SERVER_ENDPOINT has a more recent lastSeenAt
+        assert connector._latest_time == SERVER_ENDPOINT["lastSeenAt"]
+
+
+class TestUpdateCheckpoint:
+    def test_saves_latest_time_when_set(self, connector):
+        connector._latest_time = "2025-01-06T11:24:27.741Z"
+        connector.update_checkpoint()
+        assert connector.last_seen_cursor == "2025-01-06T11:24:27.741Z"
+
+    def test_noop_when_no_latest_time(self, connector):
+        connector._latest_time = None
+        connector.update_checkpoint()  # must not raise
+        assert connector.last_seen_cursor is None
+
 
 class TestGetAssets:
     def test_yields_valid_models(self, connector):
@@ -441,9 +493,6 @@ class TestGetAssets:
         with pytest.raises(Exception, match="HTTP 500"):
             list(connector.get_assets())
 
-    def test_update_checkpoint_is_noop(self, connector):
-        connector.update_checkpoint()  # must not raise
-
 
 class TestFullHttpRoundTrip:
     def test_collect_endpoints_via_http(self, connector):
@@ -466,6 +515,5 @@ class TestFullHttpRoundTrip:
 
         assert len(assets) == 2
         hostnames = {a.device.hostname for a in assets}
-        assert "mymjnbegguqa-vm" in hostnames
-        assert "ubuntu-xenial" in hostnames
-
+        assert "test-computer-01" in hostnames
+        assert "test-server-01" in hostnames

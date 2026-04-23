@@ -1,6 +1,7 @@
 """
 Unit tests for SophosAccountValidator (sophos_module/account_validator.py).
 """
+
 from unittest.mock import MagicMock, patch, PropertyMock
 
 import pytest
@@ -12,7 +13,6 @@ from sophos_module.client.exceptions import SophosApiAuthenticationError
 
 AUTH_URL = "https://id.sophos.com/api/v2/oauth2/token"
 API_HOST = "https://api.central.sophos.com"
-
 
 
 @pytest.fixture
@@ -133,4 +133,3 @@ class TestBuildAuth:
 
         auth = validator._build_auth()
         assert isinstance(auth, SophosApiAuthentication)
-

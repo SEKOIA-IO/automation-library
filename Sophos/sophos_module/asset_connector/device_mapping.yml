@@ -8,12 +8,12 @@ mapping:
       description: "Sample endpoint data from Sophos Central API GET /endpoint/v1/endpoints"
       data:
         {
-          "id": "51a8f1a0-db9d-4980-a201-7e1d97ca5877",
+          "id": "00000000-0000-0000-0000-000000000001",
           "type": "computer",
           "tenant": {
-            "id": "4feff6df-7454-4036-923d-7b2444462416"
+            "id": "00000000-0000-0000-0000-000000000010"
           },
-          "hostname": "mymjnbegguqa-vm",
+          "hostname": "example-workstation",
           "health": {
             "overall": "bad",
             "threats": { "status": "good" },
@@ -22,23 +22,29 @@ mapping:
           "os": {
             "isServer": false,
             "platform": "windows",
-            "name": "Windows 10 Pro N",
+            "name": "Windows 10 Pro",
             "majorVersion": 10,
             "minorVersion": 0,
             "build": 19044
           },
-          "ipv4Addresses": ["10.0.4.4"],
-          "macAddresses": ["00:22:48:37:FE:2F"],
+          "ipv4Addresses": ["192.0.2.10"],
+          "ipv6Addresses": [],
+          "macAddresses": ["00:00:5E:00:53:01"],
           "tamperProtectionEnabled": true,
+          "mdrManaged": false,
           "associatedPerson": {
-            "name": "mymjnbegguqa-vm\\\\adminuser",
-            "id": "c8c3f320-f7c0-46ba-b5ab-388d235ee686"
+            "name": "example-workstation\\\\user",
+            "id": "00000000-0000-0000-0000-000000000020"
+          },
+          "group": {
+            "id": "00000000-0000-0000-0000-000000000030",
+            "name": "Workstations"
           },
           "lastSeenAt": "2024-01-07T06:26:08.668Z",
           "registeredAt": "2023-06-26T10:28:08.836Z",
           "online": false,
-          "cloud": { "provider": "azure", "instanceId": "7bb240a3-b6ac-47e8-96b1-e2be0901d8eb" },
-          "isolation": { "status": "notIsolated" }
+          "cloud": { "provider": "azure", "instanceId": "00000000-0000-0000-0000-000000000040" },
+          "isolation": { "status": "notIsolated", "adminIsolated": false, "selfIsolated": false }
         }
 
   fields:
@@ -130,7 +136,7 @@ mapping:
     - source: "hostname"
       target: "device.name"
       type: "string"
-      description: "Device name"
+      description: "Device name (same as hostname)"
 
     - source: "type"
       target: "device.type / device.type_id"
@@ -148,61 +154,75 @@ mapping:
     - source: "os.name"
       target: "device.os.name"
       type: "string"
-      description: "Full OS name (e.g. 'Windows 10 Pro N')"
+      description: "Full OS name (e.g. 'Windows 10 Pro')"
 
     # NETWORK
-    - source: "ipv4Addresses[0]"
+    - source: "ipv4Addresses[0] or ipv6Addresses[0]"
       target: "device.ip"
       type: "ip"
-      description: "Primary IPv4 address"
+      logic: "Prefer first IPv4; fallback to first IPv6 if no IPv4 available"
+      description: "Primary IP address"
 
     - source: "ipv4Addresses[]"
       target: "device.network_interfaces[].ip"
       type: "ip"
-      logic: "One NetworkInterface per IPv4; paired with matching MAC by index"
-      description: "Network interface IP addresses"
+      logic: "One NetworkInterface per IPv4; paired with matching MAC by index; hostname set on first interface only"
+      description: "Network interface IPv4 addresses"
 
     - source: "ipv6Addresses[]"
       target: "device.network_interfaces[].ip"
       type: "ip"
-      logic: "Additional interfaces for IPv6 addresses"
+      logic: "Additional interfaces for IPv6 addresses (appended after IPv4 interfaces)"
       description: "IPv6 network interface addresses"
 
     - source: "macAddresses[]"
       target: "device.network_interfaces[].mac"
       type: "string"
-      logic: "Normalised to XX:XX:XX:XX:XX:XX; paired with IP by index"
+      logic: "Normalised to XX:XX:XX:XX:XX:XX uppercase; dashes replaced by colons; paired with IP by index"
       description: "Network interface MAC addresses"
 
     - source: "hostname"
       target: "device.network_interfaces[0].hostname"
       type: "string"
-      description: "Hostname on primary interface"
+      description: "Hostname on primary interface only"
+
+    # GROUPS
+    - source: "group[].id / group[].name"
+      target: "device.groups[].uid / device.groups[].name"
+      type: "object"
+      logic: "Map Sophos group array (each with id and name) to OCSF Group objects; only groups with a name are included"
+      description: "Device group membership (Sophos group field)"
 
     # ORGANISATION (TENANT)
     - source: "tenant.id"
-      target: "device.org.uid"
+      target: "device.org.uid / device.org.name"
       type: "string"
-      description: "Sophos tenant UUID"
+      description: "Sophos tenant UUID used as both uid and name (no display name available from API)"
 
     # CLOUD
     - source: "cloud.provider"
       target: "device.region"
       type: "string"
-      description: "Cloud provider (azure, aws, …)"
+      description: "Cloud provider (azure, aws, gcp, …)"
+
+    # USER / DESCRIPTION
+    - source: "associatedPerson.name"
+      target: "device.desc"
+      type: "string"
+      description: "Associated user login name set as device description"
 
     # TIMESTAMPS
     - source: "registeredAt"
       target: "device.first_seen_time / device.created_time"
       type: "timestamp"
-      description: "Endpoint registration date"
+      description: "Endpoint registration date – used for both first_seen_time and created_time"
 
     - source: "lastSeenAt"
       target: "device.last_seen_time"
       type: "timestamp"
       description: "Last seen date"
 
-    # MANAGEMENT / COMPLIANCE
+    # MANAGEMENT / COMPLIANCE / TRUST
     - source: "static: True"
       target: "device.is_managed"
       type: "boolean"
@@ -214,11 +234,28 @@ mapping:
       logic: "good→True, bad/suspicious→False, else None"
       description: "Device health / compliance status"
 
+    - source: "health.overall + isolation.status + tamperProtectionEnabled"
+      target: "device.is_trusted"
+      type: "boolean"
+      logic: |
+        isolated → False
+        health==good AND tamperProtectionEnabled==true → True
+        health==bad or suspicious → False
+        else → None
+      description: "Computed trust status based on isolation, health and tamper protection"
+
+    # CHECKPOINT
+    - source: "lastSeenAt (max across all items in collection run)"
+      target: "context.last_seen_cursor"
+      type: "string"
+      logic: "The most recent lastSeenAt ISO string seen during a collection run is persisted as the checkpoint. On the next run, this value is passed as lastSeenAfter query parameter to avoid re-fetching already-seen devices."
+      description: "Incremental collection checkpoint"
+
     # ENRICHMENTS
     - source: "tamperProtectionEnabled"
       target: "enrichments[0].data.Firewall_status"
       type: "string"
-      logic: "true→Enabled, false→Disabled; used as proxy for protection status"
+      logic: "true→Enabled, false→Disabled; used as proxy for endpoint protection status"
       description: "Tamper-protection / firewall-like status"
 
     - source: "static: compliance"
@@ -230,6 +267,24 @@ mapping:
       target: "enrichments[0].value"
       type: "string"
       description: "Enrichment value"
+
+  not_mapped:
+    - field: "hypervisor"
+      reason: "Sophos API does not expose a hypervisor field for endpoints"
+    - field: "model"
+      reason: "Sophos API does not expose the hardware model (e.g. HP, Dell) for endpoints"
+    - field: "vendor_name"
+      reason: "Sophos API does not expose the hardware vendor/manufacturer"
+    - field: "is_backed_up"
+      reason: "No backup information available in Sophos endpoint API"
+    - field: "is_personal"
+      reason: "OCSF is_personal refers to BYOD devices; Sophos does not expose this concept"
+    - field: "is_shared"
+      reason: "Not available in Sophos endpoint API"
+    - field: "is_supervised"
+      reason: "OCSF is_supervised is specific to MDM-managed mobile devices (e.g. Apple Supervised mode); not applicable to Sophos EDR endpoints"
+    - field: "os_machine_uuid"
+      reason: "Not exposed by Sophos endpoint API"
 
   ocsf_samples:
     - name: "Device Inventory Info – Sophos EDR"
@@ -252,25 +307,36 @@ mapping:
             "version": "1.6.0"
           },
           "device": {
-            "uid": "51a8f1a0-db9d-4980-a201-7e1d97ca5877",
-            "hostname": "mymjnbegguqa-vm",
-            "name": "mymjnbegguqa-vm",
+            "uid": "00000000-0000-0000-0000-000000000001",
+            "hostname": "example-workstation",
+            "name": "example-workstation",
+            "desc": "example-workstation\\user",
             "type": "Desktop",
             "type_id": 2,
-            "os": { "name": "Windows 10 Pro N", "type": "windows", "type_id": 100 },
-            "ip": "10.0.4.4",
+            "os": { "name": "Windows 10 Pro", "type": "windows", "type_id": 100 },
+            "ip": "192.0.2.10",
             "network_interfaces": [
               {
-                "hostname": "mymjnbegguqa-vm",
-                "ip": "10.0.4.4",
-                "mac": "00:22:48:37:FE:2F",
+                "hostname": "example-workstation",
+                "ip": "192.0.2.10",
+                "mac": "00:00:5E:00:53:01",
                 "name": "eth0"
               }
             ],
-            "org": { "uid": "4feff6df-7454-4036-923d-7b2444462416" },
+            "groups": [
+              {
+                "uid": "00000000-0000-0000-0000-000000000030",
+                "name": "Workstations"
+              }
+            ],
+            "org": {
+              "uid": "00000000-0000-0000-0000-000000000010",
+              "name": "00000000-0000-0000-0000-000000000010"
+            },
             "region": "azure",
             "is_managed": true,
             "is_compliant": false,
+            "is_trusted": false,
             "first_seen_time": 1687773488,
             "created_time": 1687773488,
             "last_seen_time": 1704610568

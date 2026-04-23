@@ -63,4 +63,3 @@ class SophosAccountValidator(AccountValidator):
             self.log_exception(exc, message="Unexpected error during credential validation")
             self.error("Failed to validate Sophos credentials due to an unexpected error")
             return False
-
