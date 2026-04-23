@@ -55,7 +55,9 @@
         "description": "Direction of the sort (accepted values: 'asc', 'desc')."
       }
     },
-    "required": ["case_uuid"]
+    "required": [
+      "case_uuid"
+    ]
   },
   "results": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

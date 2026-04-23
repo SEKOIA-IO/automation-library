@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-27 - 2.71.3
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix several bugs and robustness issues identified during code review
+  - `cleanup_old_states()` was silently removing never-triggered alerts (used empty string instead of `created_at` as cutoff reference)
+  - Time threshold trigger was using potentially stale `alert_info`; now re-reads from state after lock acquisition
+  - `update_alert_info()` was not called when event count was absent from notification, preventing background thread from seeing the alert
+  - Retry logic on API methods was broken by inner `try/except` swallowing errors before tenacity could retry
+  - `_wait_for_search_job` had two redundant polling loops causing up to 300s blocking
+  - Event count from notification was not validated as `int`
+  - `custom_status` and `verdict` fields missing from trigger output on `alert:created` events
+
+### Changed
+
+- AlertEventsThresholdTrigger: Drop async search job fallback when notification has no event count — defaults to 0 and defers to background time threshold thread (removes blocking round-trip on hot path)
+- AlertEventsThresholdTrigger: Purge per-alert locks on state cleanup to prevent unbounded memory growth
+- AlertStateManager: Reduce S3 round-trips (2 per notification instead of 3–4); move cleanup off the notification hot path; remove duplicate error logging
+
 ## 2026-03-24 - 2.71.2
 
 ### Fixed
