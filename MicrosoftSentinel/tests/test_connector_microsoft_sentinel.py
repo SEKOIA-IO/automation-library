@@ -224,7 +224,7 @@ def test_get_incident_entities_coverage(trigger):
     # Test None / no entities
     mock_response_empty = MagicMock()
     mock_response_empty.entities = []
-    
+
     # Test when response has no entities attribute at all
     mock_response_no_entities = MagicMock()
     del mock_response_no_entities.entities
@@ -233,3 +233,39 @@ def test_get_incident_entities_coverage(trigger):
     trigger.client.incidents.list_entities.side_effect = None
     trigger.client.incidents.list_entities.return_value = mock_response_empty
     assert trigger._get_incident_entities("inc1") == []
+
+
+def test_run_method_coverage(trigger):
+    from requests.exceptions import HTTPError
+
+    # We will control the while loop by changing trigger._stop_event to True after one iteration
+    def mock_get_incidents():
+        trigger._stop_event.set()
+
+    trigger.get_incidents = mock_get_incidents
+
+    # normal run
+    trigger._stop_event.clear()
+    trigger.run()
+
+    # HTTPError run
+    def mock_get_incidents_http():
+        trigger._stop_event.set()
+        raise HTTPError("http error")
+
+    trigger.get_incidents = mock_get_incidents_http
+    trigger._stop_event.clear()
+    trigger.run()
+
+    # Exception run
+    def mock_get_incidents_err():
+        trigger._stop_event.set()
+        raise Exception("generic error")
+
+    trigger.get_incidents = mock_get_incidents_err
+    trigger._stop_event.clear()
+
+    import pytest
+
+    with pytest.raises(Exception):
+        trigger.run()
