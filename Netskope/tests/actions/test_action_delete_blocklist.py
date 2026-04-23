@@ -3,7 +3,7 @@ import requests_mock
 from unittest.mock import MagicMock
 
 from netskope_modules import NetskopeModule
-from netskope_modules.actions.delete_blocklist import DeleteBlocklistAction
+from netskope_modules.actions.action_delete_blocklist import DeleteBlocklistAction
 
 
 @pytest.fixture

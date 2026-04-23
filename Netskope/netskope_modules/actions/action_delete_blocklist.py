@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from netskope_modules.actions.base import NetskopeAction
+from netskope_modules.actions.action_base import NetskopeAction
 
 
 class DeleteBlocklistArguments(BaseModel):

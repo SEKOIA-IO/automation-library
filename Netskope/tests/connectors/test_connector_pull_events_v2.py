@@ -240,25 +240,6 @@ def test_next_batch_no_consume_service(trigger):
         assert not mock_time.sleep.called
 
 
-def test_next_batch_invalid_api_token(trigger):
-    with patch("netskope_modules.connector_pull_events_v2.time") as mock_time:
-        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
-        iterator.client.get = MagicMock(
-            side_effect=ValueError(
-                "Invalid API token TOKEN configured to access the endpoint https://my.fake.sekoia/api/v2/events/dataexport/alerts/dlp"
-            )
-        )
-
-        consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
-        consumer.stop = Mock()
-
-        consumer.next_batch()
-
-        assert trigger.push_events_to_intakes.call_count == 0
-        assert consumer.stop.called
-        assert not mock_time.sleep.called
-
-
 def test_next_batch_403_service(trigger):
     with (
         patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time,

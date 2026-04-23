@@ -4,7 +4,7 @@ import requests_mock
 from unittest.mock import MagicMock
 
 from netskope_modules import NetskopeModule
-from netskope_modules.actions.append_to_blocklist import AppendToBlocklistAction
+from netskope_modules.actions.action_append_to_blocklist import AppendToBlocklistAction
 
 
 @pytest.fixture
