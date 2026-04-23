@@ -248,7 +248,8 @@ class SophosDeviceAssetConnector(AssetConnector):
 
         # Primary IP: prefer IPv4, fallback to IPv6
         primary_ip: str | None = (
-            endpoint.ipv4Addresses[0] if endpoint.ipv4Addresses
+            endpoint.ipv4Addresses[0]
+            if endpoint.ipv4Addresses
             else (endpoint.ipv6Addresses[0] if endpoint.ipv6Addresses else None)
         )
 

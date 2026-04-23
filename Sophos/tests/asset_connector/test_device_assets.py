@@ -37,7 +37,9 @@ COMPUTER_ENDPOINT = SophosEndpoint(
     tenant=SophosTenant(id="bbbbbbbb-0000-0000-0000-000000000001"),
     hostname="test-computer-01",
     health=SophosHealth(overall="bad"),
-    os=SophosOS(isServer=False, platform="windows", name="Windows 10 Pro", majorVersion=10, minorVersion=0, build=19044),
+    os=SophosOS(
+        isServer=False, platform="windows", name="Windows 10 Pro", majorVersion=10, minorVersion=0, build=19044
+    ),
     ipv4Addresses=["192.0.2.1"],
     ipv6Addresses=[],
     macAddresses=["AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"],
@@ -97,12 +99,23 @@ COMPUTER_ENDPOINT_DICT = {
     "tenant": {"id": "bbbbbbbb-0000-0000-0000-000000000001"},
     "hostname": "test-computer-01",
     "health": {"overall": "bad", "threats": {"status": "good"}, "services": {"status": "bad"}},
-    "os": {"isServer": False, "platform": "windows", "name": "Windows 10 Pro", "majorVersion": 10, "minorVersion": 0, "build": 19044},
+    "os": {
+        "isServer": False,
+        "platform": "windows",
+        "name": "Windows 10 Pro",
+        "majorVersion": 10,
+        "minorVersion": 0,
+        "build": 19044,
+    },
     "ipv4Addresses": ["192.0.2.1"],
     "ipv6Addresses": [],
     "macAddresses": ["AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"],
     "tamperProtectionEnabled": True,
-    "associatedPerson": {"name": "test-computer-01\\testuser", "viaLogin": "test-computer-01\\testuser", "id": "cccccccc-0000-0000-0000-000000000001"},
+    "associatedPerson": {
+        "name": "test-computer-01\\testuser",
+        "viaLogin": "test-computer-01\\testuser",
+        "id": "cccccccc-0000-0000-0000-000000000001",
+    },
     "lastSeenAt": "2024-01-07T06:26:08.668Z",
     "registeredAt": "2023-06-26T10:28:08.836Z",
     "cloud": {"provider": "azure", "instanceId": "dddddddd-0000-0000-0000-000000000001"},
@@ -135,7 +148,20 @@ API_RESPONSE_PAGE1 = {
 }
 
 API_RESPONSE_PAGE2 = {
-    "items": [{"id": "aaaaaaaa-0000-0000-0000-000000000003", "type": "computer", "tenant": {"id": "bbbbbbbb-0000-0000-0000-000000000002"}, "hostname": "test-minimal-01", "health": {"overall": "good"}, "os": {"platform": "macos", "name": "macOS 14"}, "ipv4Addresses": [], "macAddresses": [], "online": True, "tags": []}],
+    "items": [
+        {
+            "id": "aaaaaaaa-0000-0000-0000-000000000003",
+            "type": "computer",
+            "tenant": {"id": "bbbbbbbb-0000-0000-0000-000000000002"},
+            "hostname": "test-minimal-01",
+            "health": {"overall": "good"},
+            "os": {"platform": "macos", "name": "macOS 14"},
+            "ipv4Addresses": [],
+            "macAddresses": [],
+            "online": True,
+            "tags": [],
+        }
+    ],
     "pages": {"size": 50, "maxSize": 500},
 }
 
@@ -256,7 +282,8 @@ class TestGetNetworkInterfaces:
 
     def test_mac_normalization(self):
         ep = SophosEndpoint(
-            id="x", hostname="h",
+            id="x",
+            hostname="h",
             ipv4Addresses=["192.0.2.10"],
             ipv6Addresses=[],
             macAddresses=["aa-bb-cc-dd-ee-ff"],
@@ -267,7 +294,8 @@ class TestGetNetworkInterfaces:
 
     def test_hostname_only_on_first_interface(self):
         ep = SophosEndpoint(
-            id="x", hostname="myhost",
+            id="x",
+            hostname="myhost",
             ipv4Addresses=["192.0.2.1", "192.0.2.2"],
             ipv6Addresses=[],
             macAddresses=["AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"],
@@ -506,7 +534,18 @@ class TestGetAssets:
     def test_skips_invalid_endpoints(self, connector):
         no_id = {**COMPUTER_ENDPOINT_DICT, "id": None}
         no_hostname = {**SERVER_ENDPOINT_DICT, "hostname": ""}
-        minimal = {"id": "aaaaaaaa-0000-0000-0000-000000000003", "type": "computer", "tenant": {"id": "bbbbbbbb-0000-0000-0000-000000000002"}, "hostname": "test-minimal-01", "health": {"overall": "good"}, "os": {"platform": "macos"}, "ipv4Addresses": [], "macAddresses": [], "online": True, "tags": []}
+        minimal = {
+            "id": "aaaaaaaa-0000-0000-0000-000000000003",
+            "type": "computer",
+            "tenant": {"id": "bbbbbbbb-0000-0000-0000-000000000002"},
+            "hostname": "test-minimal-01",
+            "health": {"overall": "good"},
+            "os": {"platform": "macos"},
+            "ipv4Addresses": [],
+            "macAddresses": [],
+            "online": True,
+            "tags": [],
+        }
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
         mock_response.json.return_value = {

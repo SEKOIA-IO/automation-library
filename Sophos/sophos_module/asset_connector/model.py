@@ -2,6 +2,7 @@
 Pydantic models for Sophos Central API endpoint responses.
 Reference: GET /endpoint/v1/endpoints
 """
+
 from pydantic import BaseModel, Field
 
 
@@ -127,4 +128,3 @@ class SophosPages(BaseModel):
 class SophosEndpointsResponse(BaseModel):
     items: list[SophosEndpoint] = Field(default_factory=list)
     pages: SophosPages | None = None
-
