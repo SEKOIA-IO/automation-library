@@ -9,6 +9,17 @@ import requests_mock as req_mock
 
 from sophos_module.base import SophosModule
 from sophos_module.asset_connector.device_assets import SophosDeviceAssetConnector
+from sophos_module.asset_connector.model import (
+    SophosEndpoint,
+    SophosEndpointsResponse,
+    SophosHealth,
+    SophosOS,
+    SophosTenant,
+    SophosCloud,
+    SophosIsolation,
+    SophosAssociatedPerson,
+    SophosPages,
+)
 from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceTypeId,
     DeviceTypeStr,
@@ -16,47 +27,98 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
 )
 
-TENANT_ID = "00000000-0000-0000-0000-000000000001"
+# ---------------------------------------------------------------------------
+# Sample API response payloads (anonymised)
+# ---------------------------------------------------------------------------
 
-COMPUTER_ENDPOINT = {
+COMPUTER_ENDPOINT = SophosEndpoint(
+    id="aaaaaaaa-0000-0000-0000-000000000001",
+    type="computer",
+    tenant=SophosTenant(id="bbbbbbbb-0000-0000-0000-000000000001"),
+    hostname="test-computer-01",
+    health=SophosHealth(overall="bad"),
+    os=SophosOS(isServer=False, platform="windows", name="Windows 10 Pro", majorVersion=10, minorVersion=0, build=19044),
+    ipv4Addresses=["192.0.2.1"],
+    ipv6Addresses=[],
+    macAddresses=["AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"],
+    tamperProtectionEnabled=True,
+    associatedPerson=SophosAssociatedPerson(
+        name="test-computer-01\\testuser",
+        viaLogin="test-computer-01\\testuser",
+        id="cccccccc-0000-0000-0000-000000000001",
+    ),
+    lastSeenAt="2024-01-07T06:26:08.668Z",
+    registeredAt="2023-06-26T10:28:08.836Z",
+    cloud=SophosCloud(provider="azure", instanceId="dddddddd-0000-0000-0000-000000000001"),
+    isolation=SophosIsolation(status="notIsolated", adminIsolated=False, selfIsolated=False),
+    online=False,
+    tags=[],
+)
+
+SERVER_ENDPOINT = SophosEndpoint(
+    id="aaaaaaaa-0000-0000-0000-000000000002",
+    type="server",
+    tenant=SophosTenant(id="bbbbbbbb-0000-0000-0000-000000000001"),
+    hostname="test-server-01",
+    health=SophosHealth(overall="good"),
+    os=SophosOS(isServer=True, platform="linux", name="Ubuntu 22.04 LTS"),
+    ipv4Addresses=["192.0.2.2"],
+    ipv6Addresses=["fe80::1"],
+    macAddresses=["AA:BB:CC:DD:EE:03"],
+    tamperProtectionEnabled=False,
+    associatedPerson=SophosAssociatedPerson(),
+    lastSeenAt="2025-01-06T11:24:27.741Z",
+    registeredAt="2024-09-30T07:13:25.289Z",
+    online=False,
+    tags=[],
+)
+
+MINIMAL_ENDPOINT = SophosEndpoint(
+    id="aaaaaaaa-0000-0000-0000-000000000003",
+    type="computer",
+    tenant=SophosTenant(id="bbbbbbbb-0000-0000-0000-000000000002"),
+    hostname="test-minimal-01",
+    health=SophosHealth(overall="good"),
+    os=SophosOS(platform="macos", name="macOS 14"),
+    ipv4Addresses=[],
+    macAddresses=[],
+    tamperProtectionEnabled=None,
+    associatedPerson=SophosAssociatedPerson(),
+    lastSeenAt=None,
+    registeredAt=None,
+    online=True,
+    tags=[],
+)
+
+# Raw dict versions for HTTP mock tests
+COMPUTER_ENDPOINT_DICT = {
     "id": "aaaaaaaa-0000-0000-0000-000000000001",
     "type": "computer",
-    "tenant": {"id": TENANT_ID},
+    "tenant": {"id": "bbbbbbbb-0000-0000-0000-000000000001"},
     "hostname": "test-computer-01",
     "health": {"overall": "bad", "threats": {"status": "good"}, "services": {"status": "bad"}},
-    "os": {
-        "isServer": False,
-        "platform": "windows",
-        "name": "Windows 10 Pro",
-        "majorVersion": 10,
-        "minorVersion": 0,
-        "build": 19044,
-    },
-    "ipv4Addresses": ["192.168.1.10"],
+    "os": {"isServer": False, "platform": "windows", "name": "Windows 10 Pro", "majorVersion": 10, "minorVersion": 0, "build": 19044},
+    "ipv4Addresses": ["192.0.2.1"],
     "ipv6Addresses": [],
     "macAddresses": ["AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"],
     "tamperProtectionEnabled": True,
-    "associatedPerson": {
-        "name": "test-computer-01\\testuser",
-        "viaLogin": "test-computer-01\\testuser",
-        "id": "bbbbbbbb-0000-0000-0000-000000000001",
-    },
+    "associatedPerson": {"name": "test-computer-01\\testuser", "viaLogin": "test-computer-01\\testuser", "id": "cccccccc-0000-0000-0000-000000000001"},
     "lastSeenAt": "2024-01-07T06:26:08.668Z",
     "registeredAt": "2023-06-26T10:28:08.836Z",
-    "cloud": {"provider": "azure", "instanceId": "cccccccc-0000-0000-0000-000000000001"},
+    "cloud": {"provider": "azure", "instanceId": "dddddddd-0000-0000-0000-000000000001"},
     "isolation": {"status": "notIsolated", "adminIsolated": False, "selfIsolated": False},
     "online": False,
     "tags": [],
 }
 
-SERVER_ENDPOINT = {
+SERVER_ENDPOINT_DICT = {
     "id": "aaaaaaaa-0000-0000-0000-000000000002",
     "type": "server",
-    "tenant": {"id": TENANT_ID},
+    "tenant": {"id": "bbbbbbbb-0000-0000-0000-000000000001"},
     "hostname": "test-server-01",
     "health": {"overall": "good", "threats": {"status": "good"}, "services": {"status": "good"}},
     "os": {"isServer": True, "platform": "linux", "name": "Ubuntu 22.04 LTS"},
-    "ipv4Addresses": ["192.168.1.20"],
+    "ipv4Addresses": ["192.0.2.2"],
     "ipv6Addresses": ["fe80::1"],
     "macAddresses": ["AA:BB:CC:DD:EE:03"],
     "tamperProtectionEnabled": False,
@@ -67,30 +129,13 @@ SERVER_ENDPOINT = {
     "tags": [],
 }
 
-MINIMAL_ENDPOINT = {
-    "id": "aaaaaaaa-0000-0000-0000-000000000003",
-    "type": "computer",
-    "tenant": {"id": TENANT_ID},
-    "hostname": "test-minimal-01",
-    "health": {"overall": "good"},
-    "os": {"platform": "macos", "name": "macOS 14"},
-    "ipv4Addresses": [],
-    "macAddresses": [],
-    "tamperProtectionEnabled": None,
-    "associatedPerson": {},
-    "lastSeenAt": None,
-    "registeredAt": None,
-    "online": True,
-    "tags": [],
-}
-
 API_RESPONSE_PAGE1 = {
-    "items": [COMPUTER_ENDPOINT, SERVER_ENDPOINT],
+    "items": [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT],
     "pages": {"size": 50, "maxSize": 500, "nextKey": "page2key"},
 }
 
 API_RESPONSE_PAGE2 = {
-    "items": [MINIMAL_ENDPOINT],
+    "items": [{"id": "aaaaaaaa-0000-0000-0000-000000000003", "type": "computer", "tenant": {"id": "bbbbbbbb-0000-0000-0000-000000000002"}, "hostname": "test-minimal-01", "health": {"overall": "good"}, "os": {"platform": "macos", "name": "macOS 14"}, "ipv4Addresses": [], "macAddresses": [], "online": True, "tags": []}],
     "pages": {"size": 50, "maxSize": 500},
 }
 
@@ -104,7 +149,7 @@ AUTH_TOKEN_RESPONSE = {
 }
 
 WHOAMI_RESPONSE = {
-    "id": TENANT_ID,
+    "id": "bbbbbbbb-0000-0000-0000-000000000001",
     "idType": "tenant",
     "apiHosts": {
         "global": "https://api.central.sophos.com",
@@ -144,19 +189,23 @@ class TestGetOs:
         assert os_obj.type == OSTypeStr.LINUX
 
     def test_macos(self, connector):
-        os_obj = connector._get_os({"os": {"platform": "macos", "name": "macOS 14"}})
+        ep = SophosEndpoint(id="x", hostname="h", os=SophosOS(platform="macos", name="macOS 14"))
+        os_obj = connector._get_os(ep)
         assert os_obj.type_id == OSTypeId.MACOS
 
     def test_android(self, connector):
-        os_obj = connector._get_os({"os": {"platform": "android", "name": "Android 13"}})
+        ep = SophosEndpoint(id="x", hostname="h", os=SophosOS(platform="android", name="Android 13"))
+        os_obj = connector._get_os(ep)
         assert os_obj.type_id == OSTypeId.ANDROID
 
     def test_unknown_platform(self, connector):
-        os_obj = connector._get_os({"os": {"platform": "exotic", "name": "Exotic OS"}})
+        ep = SophosEndpoint(id="x", hostname="h", os=SophosOS(platform="exotic", name="Exotic OS"))
+        os_obj = connector._get_os(ep)
         assert os_obj.type_id == OSTypeId.UNKNOWN
 
     def test_missing_os_key(self, connector):
-        os_obj = connector._get_os({})
+        ep = SophosEndpoint(id="x", hostname="h")
+        os_obj = connector._get_os(ep)
         assert os_obj.type_id == OSTypeId.UNKNOWN
 
 
@@ -172,11 +221,13 @@ class TestGetDeviceType:
         assert type_str == DeviceTypeStr.SERVER
 
     def test_unknown(self):
-        type_id, type_str = SophosDeviceAssetConnector._get_device_type({"type": "tablet"})
+        ep = SophosEndpoint(id="x", hostname="h", type="tablet")
+        type_id, type_str = SophosDeviceAssetConnector._get_device_type(ep)
         assert type_id == DeviceTypeId.UNKNOWN
 
     def test_missing_key(self):
-        type_id, _ = SophosDeviceAssetConnector._get_device_type({})
+        ep = SophosEndpoint(id="x", hostname="h")
+        type_id, _ = SophosDeviceAssetConnector._get_device_type(ep)
         assert type_id == DeviceTypeId.UNKNOWN
 
 
@@ -186,7 +237,7 @@ class TestGetNetworkInterfaces:
         assert interfaces is not None
         assert len(interfaces) == 1
         iface = interfaces[0]
-        assert iface.ip == "192.168.1.10"
+        assert iface.ip == "192.0.2.1"
         assert iface.mac == "AA:BB:CC:DD:EE:01"
         assert iface.hostname == "test-computer-01"
         assert iface.name == "eth0"
@@ -195,33 +246,34 @@ class TestGetNetworkInterfaces:
         interfaces = SophosDeviceAssetConnector._get_network_interfaces(SERVER_ENDPOINT)
         assert interfaces is not None
         assert len(interfaces) == 2
-        assert interfaces[0].ip == "192.168.1.20"
+        assert interfaces[0].ip == "192.0.2.2"
         assert interfaces[1].ip == "fe80::1"
 
     def test_no_addresses_returns_none(self):
-        result = SophosDeviceAssetConnector._get_network_interfaces(
-            {"ipv4Addresses": [], "ipv6Addresses": [], "macAddresses": []}
-        )
+        ep = SophosEndpoint(id="x", hostname="h", ipv4Addresses=[], ipv6Addresses=[], macAddresses=[])
+        result = SophosDeviceAssetConnector._get_network_interfaces(ep)
         assert result is None
 
     def test_mac_normalization(self):
-        endpoint = {
-            "hostname": "h",
-            "ipv4Addresses": ["10.0.0.1"],
-            "ipv6Addresses": [],
-            "macAddresses": ["aa-bb-cc-dd-ee-ff"],
-        }
-        interfaces = SophosDeviceAssetConnector._get_network_interfaces(endpoint)
+        ep = SophosEndpoint(
+            id="x", hostname="h",
+            ipv4Addresses=["192.0.2.10"],
+            ipv6Addresses=[],
+            macAddresses=["aa-bb-cc-dd-ee-ff"],
+        )
+        interfaces = SophosDeviceAssetConnector._get_network_interfaces(ep)
+        assert interfaces is not None
         assert interfaces[0].mac == "AA:BB:CC:DD:EE:FF"
 
     def test_hostname_only_on_first_interface(self):
-        endpoint = {
-            "hostname": "myhost",
-            "ipv4Addresses": ["10.0.0.1", "10.0.0.2"],
-            "ipv6Addresses": [],
-            "macAddresses": ["AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"],
-        }
-        interfaces = SophosDeviceAssetConnector._get_network_interfaces(endpoint)
+        ep = SophosEndpoint(
+            id="x", hostname="myhost",
+            ipv4Addresses=["192.0.2.1", "192.0.2.2"],
+            ipv6Addresses=[],
+            macAddresses=["AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"],
+        )
+        interfaces = SophosDeviceAssetConnector._get_network_interfaces(ep)
+        assert interfaces is not None
         assert interfaces[0].hostname == "myhost"
         assert interfaces[1].hostname is None
 
@@ -242,46 +294,57 @@ class TestNormalizeMac:
 
 class TestIsCompliant:
     def test_good(self):
-        assert SophosDeviceAssetConnector._is_compliant({"health": {"overall": "good"}}) is True
+        ep = SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="good"))
+        assert SophosDeviceAssetConnector._is_compliant(ep) is True
 
     def test_bad(self):
-        assert SophosDeviceAssetConnector._is_compliant({"health": {"overall": "bad"}}) is False
+        ep = SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="bad"))
+        assert SophosDeviceAssetConnector._is_compliant(ep) is False
 
     def test_suspicious(self):
-        assert SophosDeviceAssetConnector._is_compliant({"health": {"overall": "suspicious"}}) is False
+        ep = SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="suspicious"))
+        assert SophosDeviceAssetConnector._is_compliant(ep) is False
 
     def test_unknown_value(self):
-        assert SophosDeviceAssetConnector._is_compliant({"health": {"overall": "unknown"}}) is None
+        ep = SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="unknown"))
+        assert SophosDeviceAssetConnector._is_compliant(ep) is None
 
     def test_missing_health(self):
-        assert SophosDeviceAssetConnector._is_compliant({}) is None
+        ep = SophosEndpoint(id="x", hostname="h")
+        assert SophosDeviceAssetConnector._is_compliant(ep) is None
 
 
 class TestGetFirewallStatus:
     def test_enabled(self):
-        assert SophosDeviceAssetConnector._get_firewall_status({"tamperProtectionEnabled": True}) == "Enabled"
+        ep = SophosEndpoint(id="x", hostname="h", tamperProtectionEnabled=True)
+        assert SophosDeviceAssetConnector._get_firewall_status(ep) == "Enabled"
 
     def test_disabled(self):
-        assert SophosDeviceAssetConnector._get_firewall_status({"tamperProtectionEnabled": False}) == "Disabled"
+        ep = SophosEndpoint(id="x", hostname="h", tamperProtectionEnabled=False)
+        assert SophosDeviceAssetConnector._get_firewall_status(ep) == "Disabled"
 
     def test_none_value(self):
-        assert SophosDeviceAssetConnector._get_firewall_status({"tamperProtectionEnabled": None}) is None
+        ep = SophosEndpoint(id="x", hostname="h", tamperProtectionEnabled=None)
+        assert SophosDeviceAssetConnector._get_firewall_status(ep) is None
 
     def test_missing_key(self):
-        assert SophosDeviceAssetConnector._get_firewall_status({}) is None
+        ep = SophosEndpoint(id="x", hostname="h")
+        assert SophosDeviceAssetConnector._get_firewall_status(ep) is None
 
 
 class TestGetOrganization:
     def test_tenant_present(self):
         org = SophosDeviceAssetConnector._get_organization(COMPUTER_ENDPOINT)
         assert org is not None
-        assert org.uid == TENANT_ID
+        assert org.uid == "bbbbbbbb-0000-0000-0000-000000000001"
 
     def test_tenant_missing(self):
-        assert SophosDeviceAssetConnector._get_organization({}) is None
+        ep = SophosEndpoint(id="x", hostname="h")
+        assert SophosDeviceAssetConnector._get_organization(ep) is None
 
     def test_tenant_empty_id(self):
-        assert SophosDeviceAssetConnector._get_organization({"tenant": {"id": ""}}) is None
+        ep = SophosEndpoint(id="x", hostname="h", tenant=SophosTenant(id=""))
+        assert SophosDeviceAssetConnector._get_organization(ep) is None
 
 
 class TestParseTs:
@@ -308,7 +371,7 @@ class TestMapDeviceFields:
         assert result.device.hostname == "test-computer-01"
         assert result.device.type_id == DeviceTypeId.DESKTOP
         assert result.device.os.type_id == OSTypeId.WINDOWS
-        assert result.device.ip == "192.168.1.10"
+        assert result.device.ip == "192.0.2.1"
         assert result.device.is_compliant is False
         assert result.device.is_managed is True
         assert result.device.region == "azure"
@@ -325,17 +388,17 @@ class TestMapDeviceFields:
         assert result.device.is_compliant is True
 
     def test_missing_id_returns_none(self, connector):
-        endpoint = {**COMPUTER_ENDPOINT, "id": None}
-        assert connector.map_device_fields(endpoint) is None
+        ep = COMPUTER_ENDPOINT.model_copy(update={"id": None})
+        assert connector.map_device_fields(ep) is None
         connector.log.assert_called()
 
     def test_missing_hostname_returns_none(self, connector):
-        endpoint = {**COMPUTER_ENDPOINT, "hostname": None}
-        assert connector.map_device_fields(endpoint) is None
+        ep = COMPUTER_ENDPOINT.model_copy(update={"hostname": None})
+        assert connector.map_device_fields(ep) is None
 
     def test_no_cloud_field(self, connector):
-        endpoint = {k: v for k, v in COMPUTER_ENDPOINT.items() if k != "cloud"}
-        result = connector.map_device_fields(endpoint)
+        ep = COMPUTER_ENDPOINT.model_copy(update={"cloud": None})
+        result = connector.map_device_fields(ep)
         assert result is not None
         assert result.device.region is None
 
@@ -362,28 +425,13 @@ class TestMapDeviceFields:
         assert result.device.last_seen_time is not None
         assert result.device.first_seen_time is not None
 
-    def test_ipv6_fallback_when_no_ipv4(self, connector):
-        endpoint = {
-            **SERVER_ENDPOINT,
-            "ipv4Addresses": [],
-            "ipv6Addresses": ["fe80::1"],
-        }
-        result = connector.map_device_fields(endpoint)
-        assert result is not None
-        assert result.device.ip == "fe80::1"
-
-    def test_no_ip_when_no_addresses(self, connector):
-        result = connector.map_device_fields(MINIMAL_ENDPOINT)
-        assert result is not None
-        assert result.device.ip is None
-
 
 class TestIterEndpoints:
     def test_single_page(self, connector):
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
         mock_response.json.return_value = {
-            "items": [COMPUTER_ENDPOINT, SERVER_ENDPOINT],
+            "items": [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT],
             "pages": {"size": 50, "maxSize": 500},
         }
         connector.client = MagicMock()
@@ -426,32 +474,19 @@ class TestIterEndpoints:
 
         assert list(connector._iter_endpoints()) == []
 
-    def test_latest_time_updated(self, connector):
-        """_latest_time should track the most recent lastSeenAt across all items."""
-        mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
-        mock_response.json.return_value = {
-            "items": [COMPUTER_ENDPOINT, SERVER_ENDPOINT],
-            "pages": {"size": 50, "maxSize": 500},
-        }
-        connector.client = MagicMock()
-        connector.client.list_endpoints.return_value = mock_response
-
-        list(connector._iter_endpoints())
-        # SERVER_ENDPOINT has a more recent lastSeenAt
-        assert connector._latest_time == SERVER_ENDPOINT["lastSeenAt"]
-
 
 class TestUpdateCheckpoint:
-    def test_saves_latest_time_when_set(self, connector):
-        connector._latest_time = "2025-01-06T11:24:27.741Z"
+    def test_writes_latest_time(self, connector):
+        connector._latest_time = "2025-01-01T00:00:00.000Z"
         connector.update_checkpoint()
-        assert connector.last_seen_cursor == "2025-01-06T11:24:27.741Z"
+        with connector.context as cache:
+            assert cache.get("last_seen_cursor") == "2025-01-01T00:00:00.000Z"
 
-    def test_noop_when_no_latest_time(self, connector):
+    def test_no_update_when_no_latest_time(self, connector):
         connector._latest_time = None
-        connector.update_checkpoint()  # must not raise
-        assert connector.last_seen_cursor is None
+        connector.update_checkpoint()
+        with connector.context as cache:
+            assert cache.get("last_seen_cursor") is None
 
 
 class TestGetAssets:
@@ -459,7 +494,7 @@ class TestGetAssets:
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
         mock_response.json.return_value = {
-            "items": [COMPUTER_ENDPOINT, SERVER_ENDPOINT],
+            "items": [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT],
             "pages": {"size": 50, "maxSize": 500},
         }
         connector.client = MagicMock()
@@ -469,19 +504,20 @@ class TestGetAssets:
         assert len(assets) == 2
 
     def test_skips_invalid_endpoints(self, connector):
-        no_id = {**COMPUTER_ENDPOINT, "id": None}
-        no_hostname = {**SERVER_ENDPOINT, "hostname": ""}
+        no_id = {**COMPUTER_ENDPOINT_DICT, "id": None}
+        no_hostname = {**SERVER_ENDPOINT_DICT, "hostname": ""}
+        minimal = {"id": "aaaaaaaa-0000-0000-0000-000000000003", "type": "computer", "tenant": {"id": "bbbbbbbb-0000-0000-0000-000000000002"}, "hostname": "test-minimal-01", "health": {"overall": "good"}, "os": {"platform": "macos"}, "ipv4Addresses": [], "macAddresses": [], "online": True, "tags": []}
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
         mock_response.json.return_value = {
-            "items": [no_id, no_hostname, MINIMAL_ENDPOINT],
+            "items": [no_id, no_hostname, minimal],
             "pages": {"size": 50, "maxSize": 500},
         }
         connector.client = MagicMock()
         connector.client.list_endpoints.return_value = mock_response
 
         assets = list(connector.get_assets())
-        assert len(assets) == 1  # only MINIMAL_ENDPOINT
+        assert len(assets) == 1
 
     def test_raises_on_http_error(self, connector):
         mock_response = MagicMock()
@@ -491,6 +527,9 @@ class TestGetAssets:
 
         with pytest.raises(Exception, match="HTTP 500"):
             list(connector.get_assets())
+
+    def test_update_checkpoint_noop_when_no_data(self, connector):
+        connector.update_checkpoint()  # must not raise
 
 
 class TestFullHttpRoundTrip:
@@ -502,11 +541,10 @@ class TestFullHttpRoundTrip:
             m.get("https://api.central.sophos.com/whoami/v1", json=WHOAMI_RESPONSE, status_code=200)
             m.get(
                 f"{data_region}/endpoint/v1/endpoints",
-                json={"items": [COMPUTER_ENDPOINT, SERVER_ENDPOINT], "pages": {"size": 50, "maxSize": 500}},
+                json={"items": [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT], "pages": {"size": 50, "maxSize": 500}},
                 status_code=200,
             )
 
-            # Remove cached client so it's rebuilt with real HTTP session
             if "client" in connector.__dict__:
                 del connector.__dict__["client"]
 

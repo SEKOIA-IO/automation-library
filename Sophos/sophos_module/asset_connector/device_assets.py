@@ -22,6 +22,10 @@ from sekoia_automation.asset_connector.models.ocsf.organization import Organizat
 from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.storage import PersistentJSON
 
+from sophos_module.asset_connector.model import (
+    SophosEndpoint,
+    SophosEndpointsResponse,
+)
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
 
@@ -55,7 +59,7 @@ class SophosDeviceAssetConnector(AssetConnector):
     @property
     def last_seen_cursor(self) -> str | None:
         with self.context as cache:
-            return cache.get("last_seen_cursor")
+            return cache.get("last_seen_cursor") or None
 
     @cached_property
     def client(self) -> SophosApiClient:
@@ -90,11 +94,11 @@ class SophosDeviceAssetConnector(AssetConnector):
             return None
         return mac.replace("-", ":").upper()
 
-    def _get_os(self, endpoint: dict[str, Any]) -> OperatingSystem:
+    def _get_os(self, endpoint: SophosEndpoint) -> OperatingSystem:
         """Map Sophos os object to OCSF OperatingSystem."""
-        os_data: dict[str, Any] = endpoint.get("os") or {}
-        platform: str = (os_data.get("platform") or "").lower()
-        os_name: str | None = os_data.get("name")
+        os_data = endpoint.os
+        platform: str = (os_data.platform or "").lower() if os_data else ""
+        os_name: str | None = os_data.name if os_data else None
 
         _mapping: dict[str, tuple[OSTypeId, OSTypeStr]] = {
             "windows": (OSTypeId.WINDOWS, OSTypeStr.WINDOWS),
@@ -107,9 +111,9 @@ class SophosDeviceAssetConnector(AssetConnector):
         return OperatingSystem(name=os_name, type=type_str, type_id=type_id)
 
     @staticmethod
-    def _get_device_type(endpoint: dict[str, Any]) -> tuple[DeviceTypeId, DeviceTypeStr]:
+    def _get_device_type(endpoint: SophosEndpoint) -> tuple[DeviceTypeId, DeviceTypeStr]:
         """Map Sophos endpoint type (computer / server) to OCSF device type."""
-        ep_type: str = (endpoint.get("type") or "").lower()
+        ep_type: str = (endpoint.type or "").lower()
         if ep_type == "server":
             return DeviceTypeId.SERVER, DeviceTypeStr.SERVER
         if ep_type == "computer":
@@ -117,16 +121,15 @@ class SophosDeviceAssetConnector(AssetConnector):
         return DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN
 
     @staticmethod
-    def _get_network_interfaces(endpoint: dict[str, Any]) -> list[NetworkInterface] | None:
+    def _get_network_interfaces(endpoint: SophosEndpoint) -> list[NetworkInterface] | None:
         """Build NetworkInterface list from ipv4, ipv6 and mac addresses."""
-        ipv4_list: list[str] = endpoint.get("ipv4Addresses") or []
-        ipv6_list: list[str] = endpoint.get("ipv6Addresses") or []
-        mac_list: list[str] = endpoint.get("macAddresses") or []
-        hostname: str | None = endpoint.get("hostname")
+        ipv4_list = endpoint.ipv4Addresses
+        ipv6_list = endpoint.ipv6Addresses
+        mac_list = endpoint.macAddresses
+        hostname = endpoint.hostname
 
         interfaces: list[NetworkInterface] = []
 
-        # One interface per IPv4, attach matching MAC if available
         for idx, ip in enumerate(ipv4_list):
             mac = mac_list[idx] if idx < len(mac_list) else None
             interfaces.append(
@@ -138,7 +141,6 @@ class SophosDeviceAssetConnector(AssetConnector):
                 )
             )
 
-        # Additional IPv6-only entries
         for idx, ip6 in enumerate(ipv6_list):
             mac_idx = len(ipv4_list) + idx
             mac = mac_list[mac_idx] if mac_idx < len(mac_list) else None
@@ -153,15 +155,14 @@ class SophosDeviceAssetConnector(AssetConnector):
         return interfaces if interfaces else None
 
     @staticmethod
-    def _is_compliant(endpoint: dict[str, Any]) -> bool | None:
+    def _is_compliant(endpoint: SophosEndpoint) -> bool | None:
         """
         Determine compliance based on Sophos health.overall field:
           good  → True
           bad   → False
           other → None (unknown)
         """
-        health: dict[str, Any] = endpoint.get("health") or {}
-        overall: str = (health.get("overall") or "").lower()
+        overall: str = (endpoint.health.overall or "").lower() if endpoint.health else ""
         if overall == "good":
             return True
         if overall in ("bad", "suspicious"):
@@ -169,31 +170,29 @@ class SophosDeviceAssetConnector(AssetConnector):
         return None
 
     @staticmethod
-    def _get_firewall_status(endpoint: dict[str, Any]) -> str | None:
+    def _get_firewall_status(endpoint: SophosEndpoint) -> str | None:
         """
         Sophos does not expose a direct firewall field.
         We infer from tamperProtectionEnabled as a proxy.
         """
-        if endpoint.get("tamperProtectionEnabled") is True:
+        if endpoint.tamperProtectionEnabled is True:
             return "Enabled"
-        if endpoint.get("tamperProtectionEnabled") is False:
+        if endpoint.tamperProtectionEnabled is False:
             return "Disabled"
         return None
 
     @staticmethod
-    def _get_organization(endpoint: dict[str, Any]) -> Organization | None:
-        tenant: dict[str, Any] = endpoint.get("tenant") or {}
-        tenant_id: str | None = tenant.get("id")
-        if tenant_id:
-            return Organization(uid=tenant_id, name=tenant_id)
+    def _get_organization(endpoint: SophosEndpoint) -> Organization | None:
+        if endpoint.tenant and endpoint.tenant.id:
+            return Organization(uid=endpoint.tenant.id, name=endpoint.tenant.id)
         return None
 
-    def _get_enrichments(self, endpoint: dict[str, Any]) -> list[DeviceEnrichmentObject] | None:
+    def _get_enrichments(self, endpoint: SophosEndpoint) -> list[DeviceEnrichmentObject] | None:
         """Build enrichment objects from Sophos-specific fields."""
         firewall_status = self._get_firewall_status(endpoint)
 
         device_data = DeviceDataObject(
-            Firewall_status=firewall_status,  # type: ignore[arg-type]
+            Firewall_status=firewall_status,
         )
 
         return [
@@ -204,47 +203,33 @@ class SophosDeviceAssetConnector(AssetConnector):
             )
         ]
 
-    def _get_groups(self, endpoint: dict[str, Any]) -> list[Group] | None:
+    def _get_groups(self, endpoint: SophosEndpoint) -> list[Group] | None:
         """Get Groups from Sophos"""
-        sophos_groups = endpoint.get("group")
-        if not sophos_groups:
+        if not endpoint.group or not endpoint.group.name:
             return None
-
-        return [
-            Group(
-                uid=group.get("id"),
-                name=group["name"],
-            )
-            for group in sophos_groups
-            if group.get("name")
-        ] or None
+        return [Group(uid=endpoint.group.id, name=endpoint.group.name)]
 
     @staticmethod
-    def _is_trusted(endpoint: dict[str, Any]) -> bool | None:
-        health: dict[str, Any] = endpoint.get("health") or {}
-        overall: str = (health.get("overall") or "").lower()
-        isolation: dict[str, Any] = endpoint.get("isolation") or {}
-        isolation_status: str = (isolation.get("status") or "").lower()
-        tamper_enabled: bool | None = endpoint.get("tamperProtectionEnabled")
+    def _is_trusted(endpoint: SophosEndpoint) -> bool | None:
+        overall: str = (endpoint.health.overall or "").lower() if endpoint.health else ""
+        isolation_status: str = (endpoint.isolation.status or "").lower() if endpoint.isolation else ""
+        tamper_enabled = endpoint.tamperProtectionEnabled
 
         if isolation_status == "isolated":
             return False
-
         if overall == "good" and tamper_enabled is True:
             return True
-
         if overall in ("bad", "suspicious"):
             return False
-
         return None
 
-    def map_device_fields(self, endpoint: dict[str, Any]) -> DeviceOCSFModel | None:
+    def map_device_fields(self, endpoint: SophosEndpoint) -> DeviceOCSFModel | None:
         """
-        Map a Sophos endpoint JSON record to an OCSF DeviceOCSFModel.
+        Map a Sophos endpoint to an OCSF DeviceOCSFModel.
         Returns None if mandatory fields are missing.
         """
-        uid: str | None = endpoint.get("id")
-        hostname: str | None = endpoint.get("hostname")
+        uid = endpoint.id
+        hostname = endpoint.hostname
 
         if not uid:
             self.log(f"Skipping endpoint: missing 'id'. Data: {endpoint}", level="warning")
@@ -261,22 +246,21 @@ class SophosDeviceAssetConnector(AssetConnector):
         is_compliant = self._is_compliant(endpoint)
         groups = self._get_groups(endpoint)
 
-        # Use first IPv4 as primary IP otherwise IPv6
-        ipv4_list: list[str] = endpoint.get("ipv4Addresses") or []
-        ipv6_list: list[str] = endpoint.get("ipv6Addresses") or []
-        primary_ip: str | None = ipv4_list[0] if ipv4_list else (ipv6_list[0] if ipv6_list else None)
+        # Primary IP: prefer IPv4, fallback to IPv6
+        primary_ip: str | None = (
+            endpoint.ipv4Addresses[0] if endpoint.ipv4Addresses
+            else (endpoint.ipv6Addresses[0] if endpoint.ipv6Addresses else None)
+        )
 
         # Cloud region
-        cloud: dict[str, Any] = endpoint.get("cloud") or {}
-        region: str | None = cloud.get("provider")
+        region: str | None = endpoint.cloud.provider if endpoint.cloud else None
 
         # Associated person (user)
-        associated_person: dict[str, Any] = endpoint.get("associatedPerson") or {}
-        person_name: str | None = associated_person.get("name") or None
+        person_name: str | None = endpoint.associatedPerson.name if endpoint.associatedPerson else None
 
         # Timestamps
-        last_seen_ts = self._parse_ts(endpoint.get("lastSeenAt"))
-        registered_ts = self._parse_ts(endpoint.get("registeredAt"))
+        last_seen_ts = self._parse_ts(endpoint.lastSeenAt)
+        registered_ts = self._parse_ts(endpoint.registeredAt)
 
         # Event time: prefer lastSeenAt, fallback to registeredAt, then now
         event_time = last_seen_ts or registered_ts or datetime.now(tz=timezone.utc).timestamp()
@@ -319,7 +303,7 @@ class SophosDeviceAssetConnector(AssetConnector):
             enrichments=enrichments,
         )
 
-    def _iter_endpoints(self) -> Generator[dict[str, Any], None, None]:
+    def _iter_endpoints(self) -> Generator[SophosEndpoint, None, None]:
         params: dict[str, Any] = {
             "pageSize": self.PAGE_SIZE,
             "view": "full",
@@ -331,18 +315,15 @@ class SophosDeviceAssetConnector(AssetConnector):
         while self.running:
             response = self.client.list_endpoints(params)
             response.raise_for_status()
-            data = response.json()
+            data = SophosEndpointsResponse.model_validate(response.json())
 
-            items: list[dict[str, Any]] = data.get("items") or []
-            for item in items:
-                last_seen = item.get("lastSeenAt")
-                if last_seen:
-                    if self._latest_time is None or last_seen > self._latest_time:
-                        self._latest_time = last_seen
+            for item in data.items:
+                if item.lastSeenAt:
+                    if self._latest_time is None or item.lastSeenAt > self._latest_time:
+                        self._latest_time = item.lastSeenAt
                 yield item
 
-            pages = data.get("pages") or {}
-            next_key: str | None = pages.get("nextKey")
+            next_key: str | None = data.pages.nextKey if data.pages else None
             if not next_key:
                 break
             params["pageFromKey"] = next_key
