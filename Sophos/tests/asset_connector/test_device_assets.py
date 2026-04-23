@@ -16,7 +16,6 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
 )
 
-
 TENANT_ID = "00000000-0000-0000-0000-000000000001"
 
 COMPUTER_ENDPOINT = {
