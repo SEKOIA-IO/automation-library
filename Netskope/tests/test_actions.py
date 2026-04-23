@@ -4,14 +4,14 @@ import requests_mock
 from unittest.mock import MagicMock
 
 from netskope_modules import NetskopeModule
-from netskope_modules.actions.add_to_blocklist import AddToBlocklistAction
+from netskope_modules.actions.append_to_blocklist import AppendToBlocklistAction
 from netskope_modules.actions.replace_blocklist import ReplaceBlocklistAction
 
 
 @pytest.fixture
-def add_action(symphony_storage):
+def append_action(symphony_storage):
     module = NetskopeModule()
-    action = AddToBlocklistAction(module=module, data_path=symphony_storage)
+    action = AppendToBlocklistAction(module=module, data_path=symphony_storage)
     action.log = MagicMock()
     action.log_exception = MagicMock()
     action.module.configuration = {
@@ -34,8 +34,8 @@ def replace_action(symphony_storage):
     return action
 
 
-def test_add_to_blocklist_success(add_action):
-    """Test successful addition of items to blocklist"""
+def test_append_to_blocklist_success(append_action):
+    """Test successful appending of items to blocklist"""
     with requests_mock.Mocker() as mock_requests:
         # Mock the append request
         mock_requests.patch(
@@ -71,17 +71,17 @@ def test_add_to_blocklist_success(add_action):
 
         arguments = {"url_list_id": "123", "items": ["www.test.com", "malicious.com"]}
 
-        result = add_action.run(arguments)
+        result = append_action.run(arguments)
 
-        assert result["add_result"]["id"] == 123
-        assert result["add_result"]["pending"] == 1
+        assert result["append_result"]["id"] == 123
+        assert result["append_result"]["pending"] == 1
         assert len(result["deploy_result"]) == 1
         assert result["deploy_result"][0]["pending"] == 0
-        assert "Successfully added 2 item(s) to blocklist" in result["message"]
+        assert "Successfully appended 2 item(s) to blocklist" in result["message"]
 
 
-def test_add_to_blocklist_api_error(add_action):
-    """Test API error handling for add to blocklist"""
+def test_append_to_blocklist_api_error(append_action):
+    """Test API error handling for append to blocklist"""
     with requests_mock.Mocker() as mock_requests:
         mock_requests.patch(
             "https://my.fake.netskope.com/api/v2/policy/urllist/123/append",
@@ -92,7 +92,7 @@ def test_add_to_blocklist_api_error(add_action):
         arguments = {"url_list_id": "123", "items": ["www.test.com"]}
 
         with pytest.raises(requests.exceptions.HTTPError):
-            add_action.run(arguments)
+            append_action.run(arguments)
 
 
 def test_replace_blocklist_success(replace_action):
@@ -158,7 +158,7 @@ def test_replace_blocklist_missing_required_params(replace_action):
         replace_action.run(arguments)
 
 
-def test_deploy_error_handling(add_action):
+def test_deploy_error_handling(append_action):
     """Test error handling during deploy phase"""
     with requests_mock.Mocker() as mock_requests:
         # Mock successful append
@@ -178,10 +178,10 @@ def test_deploy_error_handling(add_action):
         arguments = {"url_list_id": "123", "items": ["www.test.com"]}
 
         with pytest.raises(requests.exceptions.HTTPError):
-            add_action.run(arguments)
+            append_action.run(arguments)
 
 
-def test_api_error_in_json_response(add_action):
+def test_api_error_in_json_response(append_action):
     """Test handling of error message in JSON response with 200 status"""
     with requests_mock.Mocker() as mock_requests:
         # Mock the append request with 200 status but error in JSON
@@ -194,10 +194,10 @@ def test_api_error_in_json_response(add_action):
         arguments = {"url_list_id": "123", "items": ["invalid-url"]}
 
         with pytest.raises(ValueError, match="Netskope API returned an error: Invalid URL format"):
-            add_action.run(arguments)
+            append_action.run(arguments)
 
 
-def test_invalid_json_response(add_action):
+def test_invalid_json_response(append_action):
     """Test handling of invalid JSON response with 200 status"""
     with requests_mock.Mocker() as mock_requests:
         # Mock the append request with 200 status but invalid JSON
@@ -213,4 +213,4 @@ def test_invalid_json_response(add_action):
         from requests.exceptions import JSONDecodeError
 
         with pytest.raises(JSONDecodeError):
-            add_action.run(arguments)
+            append_action.run(arguments)
