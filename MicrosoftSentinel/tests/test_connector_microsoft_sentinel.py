@@ -1,7 +1,7 @@
 import pytest
 import orjson
 from datetime import datetime, timezone
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, call
 
 
 from microsoft_sentinel import MicrosoftSentinelModule
@@ -160,14 +160,17 @@ def test_get_incidents_without_batch(trigger, incidents_list):
         mock_get_incident_entities.return_value = [{"id": "dummy_entity_id"}]
 
         trigger.get_incidents()
-        results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+        results = [c.kwargs["events"] for c in trigger.push_events_to_intakes.call_args_list]
 
         assert len(results[0]) == 2
 
+        assert mock_get_incident_entities.call_count == len(incidents_list)
+        assert mock_get_incident_entities.call_args_list == [call(incident.name) for incident in incidents_list]
+
         parsed_first = orjson.loads(results[0][0])
         assert parsed_first["title"] == "title"
-        assert parsed_first["Entities"] == [{"id": "dummy_entity_id"}]
+        assert parsed_first["entities"] == [{"id": "dummy_entity_id"}]
 
         parsed_second = orjson.loads(results[0][1])
         assert parsed_second["title"] == "title 2"
-        assert parsed_second["Entities"] == [{"id": "dummy_entity_id"}]
+        assert parsed_second["entities"] == [{"id": "dummy_entity_id"}]

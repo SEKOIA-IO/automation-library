@@ -13,6 +13,7 @@ from requests.exceptions import HTTPError
 from azure.identity import ClientSecretCredential
 from azure.mgmt.securityinsight import SecurityInsights
 from azure.core.paging import ItemPaged
+from azure.core.exceptions import AzureError
 from azure.mgmt.securityinsight.models import IncidentAdditionalData, IncidentOwnerInfo, Incident, IncidentLabel
 
 from sekoia_automation.connector import Connector
@@ -81,18 +82,32 @@ class MicrosoftSentineldConnector(Connector):
                 incident_id=incident_id,
             )
             entities: Any = getattr(response, "entities", response)
-            if entities:
-                return [
-                    (
-                        entity.as_dict()
-                        if hasattr(entity, "as_dict")
-                        else (entity.serialize() if hasattr(entity, "serialize") else dict(entity))
-                    )
-                    for entity in entities
-                ]
+            if not entities:
+                return []
+
+            parsed_entities = []
+            for entity in entities:
+                if hasattr(entity, "as_dict"):
+                    parsed_entities.append(entity.as_dict())
+                elif hasattr(entity, "serialize"):
+                    parsed_entities.append(entity.serialize())
+                elif isinstance(entity, dict):
+                    parsed_entities.append(entity)
+                else:
+                    try:
+                        parsed_entities.append(dict(entity))
+                    except (TypeError, ValueError):
+                        self.log(
+                            level="warning", message=f"Could not reliably parse entity for incident {incident_id}"
+                        )
+
+            return parsed_entities
+
+        except AzureError as e:
+            self.log_exception(e, message=f"AzureError while fetching entities for incident {incident_id}")
             return []
         except Exception as e:
-            self.log_exception(e, message=f"Failed to fetch entities for incident {incident_id}")
+            self.log_exception(e, message=f"Unexpected error while fetching entities for incident {incident_id}")
             return []
 
     def _serialize_incident(self, incident: Incident) -> Dict[str, Any]:
@@ -137,8 +152,6 @@ class MicrosoftSentineldConnector(Connector):
             if incident_id:
                 entities = self._get_incident_entities(incident_id)
                 if entities:
-                    serialezed_incident["Entities"] = entities
-                    # Also keep lowercased to match model key if preferred
                     serialezed_incident["entities"] = entities
 
             jsonify_item = orjson.dumps(serialezed_incident).decode("utf-8")
