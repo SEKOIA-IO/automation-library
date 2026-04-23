@@ -148,11 +148,14 @@ def test_serialize_incident(trigger, first_incident_item):
 
 
 def test_get_incidents_without_batch(trigger, incidents_list):
-    with patch(
-        "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator"
-    ) as mock_incidents_iterator, patch(
-        "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._get_incident_entities"
-    ) as mock_get_incident_entities:
+    with (
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator"
+        ) as mock_incidents_iterator,
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._get_incident_entities"
+        ) as mock_get_incident_entities,
+    ):
         mock_incidents_iterator.return_value = incidents_list
         mock_get_incident_entities.return_value = [{"id": "dummy_entity_id"}]
 
@@ -160,11 +163,11 @@ def test_get_incidents_without_batch(trigger, incidents_list):
         results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
 
         assert len(results[0]) == 2
-        
+
         parsed_first = orjson.loads(results[0][0])
         assert parsed_first["title"] == "title"
         assert parsed_first["Entities"] == [{"id": "dummy_entity_id"}]
-        
+
         parsed_second = orjson.loads(results[0][1])
         assert parsed_second["title"] == "title 2"
         assert parsed_second["Entities"] == [{"id": "dummy_entity_id"}]

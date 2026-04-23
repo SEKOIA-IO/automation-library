@@ -78,13 +78,15 @@ class MicrosoftSentineldConnector(Connector):
             response = self.client.incidents.list_entities(
                 resource_group_name=self.module.configuration.resource_group,
                 workspace_name=self.module.configuration.workspace_name,
-                incident_id=incident_id
+                incident_id=incident_id,
             )
-            entities = getattr(response, "entities", response)
+            entities: Any = getattr(response, "entities", response)
             if entities:
                 return [
-                    entity.as_dict() if hasattr(entity, "as_dict") else (
-                        entity.serialize() if hasattr(entity, "serialize") else dict(entity)
+                    (
+                        entity.as_dict()
+                        if hasattr(entity, "as_dict")
+                        else (entity.serialize() if hasattr(entity, "serialize") else dict(entity))
                     )
                     for entity in entities
                 ]
@@ -100,7 +102,7 @@ class MicrosoftSentineldConnector(Connector):
             IncidentOwnerInfo: owner_data_to_dict,
             date_time.datetime: lambda dt: dt.isoformat(),
         }
-        new_dict = {}
+        new_dict: Dict[str, Any] = {}
 
         for key in keys_to_extract:
             value = getattr(incident, key, None)
@@ -130,7 +132,7 @@ class MicrosoftSentineldConnector(Connector):
         for item in response:
             created_time = item.created_time_utc
             serialezed_incident = self._serialize_incident(item)
-            
+
             incident_id = getattr(item, "name", None)
             if incident_id:
                 entities = self._get_incident_entities(incident_id)
