@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-23 - 1.18.1
+
+### Added
+
+- Update whoami for the Sophos Device Asset Connector to use the account validator
+
 ## 2026-04-23 - 1.18.0
 
 ### Added

@@ -87,8 +87,9 @@ class SophosApiAuthentication(AuthBase):
         Call the Whoami endpoint to get tenancy information
         """
         # Get the whoami
+        # Doc: https://developer.sophos.com/intro
         response = self.__http_session.get(
-            url=f"{self.__api_host}/whoami/v1",
+            url="https://api.central.sophos.com/whoami/v1",
             headers={"Authorization": credentials.authorization},
         )
 
