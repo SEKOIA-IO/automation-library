@@ -16,7 +16,7 @@ def add_action(symphony_storage):
     action.log_exception = MagicMock()
     action.module.configuration = {
         "base_url": "https://my.fake.netskope.com",
-        "api_key": "fake_api_key",
+        "api_token": "fake_api_token",
     }
     return action
 
@@ -29,7 +29,7 @@ def replace_action(symphony_storage):
     action.log_exception = MagicMock()
     action.module.configuration = {
         "base_url": "https://my.fake.netskope.com",
-        "api_key": "fake_api_key",
+        "api_token": "fake_api_token",
     }
     return action
 

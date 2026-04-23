@@ -13,8 +13,8 @@ logger = get_logger()
 class NetskopeAction(Action):
 
     @cached_property
-    def api_key(self):
-        return self.module.configuration.api_key
+    def api_token(self):
+        return self.module.configuration.api_token
 
     @cached_property
     def base_url(self):
@@ -60,7 +60,7 @@ class NetskopeAction(Action):
         Execute a request to the Netskope API.
         """
         url = self.get_api_url(endpoint)
-        headers = {"Authorization": f"Bearer {self.api_key}", **kwargs.get("headers", {})}
+        headers = {"Authorization": f"Bearer {self.api_token}", **kwargs.get("headers", {})}
 
         response = requests.request(method, url, headers=headers, **kwargs)
 
