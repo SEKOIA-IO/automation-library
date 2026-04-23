@@ -4,8 +4,7 @@
     "properties": {
       "url": {
         "description": "Target URL of the HTTP request",
-        "type": "string",
-        "format": "uri"
+        "type": "string"
       },
       "headers": {
         "description": "Headers to use when sending the requests. e.g. {\"Content-Type\": \"application/json\"}",
