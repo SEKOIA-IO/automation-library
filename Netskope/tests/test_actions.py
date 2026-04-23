@@ -179,3 +179,38 @@ def test_deploy_error_handling(add_action):
 
         with pytest.raises(requests.exceptions.HTTPError):
             add_action.run(arguments)
+
+
+def test_api_error_in_json_response(add_action):
+    """Test handling of error message in JSON response with 200 status"""
+    with requests_mock.Mocker() as mock_requests:
+        # Mock the append request with 200 status but error in JSON
+        mock_requests.patch(
+            "https://my.fake.netskope.com/api/v2/policy/urllist/123/append",
+            status_code=200,
+            json={"error": {"message": "Invalid URL format"}},
+        )
+
+        arguments = {"url_list_id": "123", "items": ["invalid-url"]}
+
+        with pytest.raises(ValueError, match="Netskope API returned an error: Invalid URL format"):
+            add_action.run(arguments)
+
+
+def test_invalid_json_response(add_action):
+    """Test handling of invalid JSON response with 200 status"""
+    with requests_mock.Mocker() as mock_requests:
+        # Mock the append request with 200 status but invalid JSON
+        mock_requests.patch(
+            "https://my.fake.netskope.com/api/v2/policy/urllist/123/append",
+            status_code=200,
+            text="<html>Invalid JSON Response</html>",
+        )
+
+        arguments = {"url_list_id": "123", "items": ["www.test.com"]}
+
+        # Should raise an error for invalid JSON
+        from requests.exceptions import JSONDecodeError
+
+        with pytest.raises(JSONDecodeError):
+            add_action.run(arguments)
