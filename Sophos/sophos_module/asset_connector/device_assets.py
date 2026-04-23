@@ -316,7 +316,7 @@ class SophosDeviceAssetConnector(AssetConnector):
         while self.running:
             response = self.client.list_endpoints(params)
             response.raise_for_status()
-            data = SophosEndpointsResponse.model_validate(response.json())
+            data: SophosEndpointsResponse = SophosEndpointsResponse.model_validate(response.json())
 
             for item in data.items:
                 if item.lastSeenAt:

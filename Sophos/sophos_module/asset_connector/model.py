@@ -12,12 +12,12 @@ class SophosTenant(BaseModel):
 
 class SophosHealthServices(BaseModel):
     status: str | None = None
-    serviceDetails: list[dict] | None = None
+    serviceDetails: list[dict[str, str]] | None = None
 
 
 class SophosHealth(BaseModel):
     overall: str | None = None
-    threats: dict | None = None
+    threats: dict[str, str] | None = None
     services: SophosHealthServices | None = None
 
 
@@ -46,7 +46,7 @@ class SophosPackageItem(BaseModel):
     assignedId: str | None = None
     name: str | None = None
     status: str | None = None
-    available: list[dict] | None = None
+    available: list[dict[str, str]] | None = None
 
 
 class SophosPackages(BaseModel):
