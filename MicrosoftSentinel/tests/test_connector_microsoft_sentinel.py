@@ -223,7 +223,13 @@ def test_get_incident_entities_coverage(trigger):
 
     # Test None / no entities
     mock_response_empty = MagicMock()
-    del mock_response_empty.entities
+    mock_response_empty.entities = []
+    
+    # Test when response has no entities attribute at all
+    mock_response_no_entities = MagicMock()
+    del mock_response_no_entities.entities
+    trigger.client.incidents.list_entities.return_value = mock_response_no_entities
+    assert trigger._get_incident_entities("inc1") == []
     trigger.client.incidents.list_entities.side_effect = None
     trigger.client.incidents.list_entities.return_value = mock_response_empty
     assert trigger._get_incident_entities("inc1") == []
