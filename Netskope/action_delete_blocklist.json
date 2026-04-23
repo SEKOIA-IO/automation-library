@@ -5,12 +5,17 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
+      "api_token": {
+        "type": "string",
+        "description": "API token for authentication"
+      },
       "id": {
         "type": "integer",
         "description": "ID of the URL list"
       }
     },
     "required": [
+      "api_token",
       "id"
     ],
     "title": "Delete blocklist",

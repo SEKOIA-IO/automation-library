@@ -37,7 +37,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - append to blocklist
     - delete blocklist
     - replace blocklist
-- Add required `api_token` parameter to manifest, for Netskope api authentication
 
 ## 2026-04-23 - 1.12.0
 

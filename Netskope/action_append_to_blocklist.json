@@ -5,6 +5,10 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
+      "api_token": {
+        "type": "string",
+        "description": "API token for authentication"
+      },
       "url_list_id": {
         "type": "string",
         "description": "The ID of the URL list to modify"
@@ -18,6 +22,7 @@
       }
     },
     "required": [
+      "api_token",
       "url_list_id",
       "items"
     ],
