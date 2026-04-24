@@ -5,7 +5,6 @@ from azure.identity.aio import ClientSecretCredential  # async credentials only
 from kiota_abstractions.base_request_configuration import RequestConfiguration
 from kiota_authentication_azure.azure_identity_authentication_provider import AzureIdentityAuthenticationProvider
 from msgraph import GraphRequestAdapter, GraphServiceClient
-from msgraph.generated.models.directory_role import DirectoryRole
 from msgraph.generated.models.group import Group
 from msgraph.generated.models.microsoft_authenticator_authentication_method import (
     MicrosoftAuthenticatorAuthenticationMethod,
