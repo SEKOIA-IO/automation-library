@@ -1,0 +1,70 @@
+[tool.poetry]
+name = "automation-for-mokn"
+version = "0.0.0"
+description = "Sekoia.io automation module for MokN"
+authors = []
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.11"
+sekoia-automation-sdk = "^1.0"
+mypy = "^1.20"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+requests = "*"
+requests-mock = "*"
+types-requests = "*"
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py311']
+include = '\.pyi?$'
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+allow_subclassing_any = true
+allow_untyped_calls = true
+pretty = true
+show_error_codes = true
+implicit_reexport = true
+allow_untyped_decorators = true
+warn_return_any = true
+exclude = ["tests/*"]
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "tests",
+]
+addopts = '''
+  --strict-markers
+  --tb=short
+  --cov=actions
+  --cov=client
+  --cov=connectors
+  --cov=mokn
+  --cov=module
+  --cov-branch
+  --cache-clear
+  --cov-report=html
+  --cov-report=term-missing:skip-covered
+  --cov-fail-under=5
+  --capture=sys
+'''
