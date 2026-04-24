@@ -1,7 +1,7 @@
 import json
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from typing import Any, Iterator
+from typing import Any, Iterator, Optional
 
 from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector
@@ -21,6 +21,7 @@ class MoknLoginAttemptsTrigger(Connector):
     description = "Collect MokN bait attempts and forward them to Sekoia.io"
     module: MoknModule
     configuration: MoknLoginAttemptsTriggerConfiguration
+    _next_cursor: Optional[AttemptCursor] = None
 
     @property
     def frequency(self) -> int:

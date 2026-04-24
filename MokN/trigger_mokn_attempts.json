@@ -80,7 +80,7 @@
       },
       "statuses": {
         "title": "Statuses",
-        "description": "List of MokN status codes to include in the polling query. Accepts integer values. Refer to the API documentation available in the console for the supported codes.",
+        "description": "List of MokN status codes included in the polling query. Accepts integer values. Refer to the API documentation available in the console for the supported codes.",
         "type": "array",
         "items": {
           "anyOf": [
