@@ -30,10 +30,18 @@ class MicrosoftDefenderCredentials:
 
 
 class ApiKeyAuthentication(AuthBase):
-    def __init__(self, app_id: str, app_secret: str, tenant_id: str, ratelimit_per_minute: int):
+    def __init__(
+        self,
+        app_id: str,
+        app_secret: str,
+        tenant_id: str,
+        ratelimit_per_minute: int,
+        base_url: str = "https://api.securitycenter.microsoft.com",
+    ):
         self.__app_id = app_id
         self.__app_secret = app_secret
         self.__tenant_id = tenant_id
+        self.__base_url = base_url.rstrip("/")
 
         self.__api_credentials: MicrosoftDefenderCredentials | None = None
 
@@ -54,9 +62,8 @@ class ApiKeyAuthentication(AuthBase):
 
         if self.__api_credentials is None or current_dt + timedelta(seconds=300) >= self.__api_credentials.expires_at:
             url = "https://login.microsoftonline.com/%s/oauth2/token" % self.__tenant_id
-            resource_app_id_uri = "https://api.securitycenter.microsoft.com"
             body = {
-                "resource": resource_app_id_uri,
+                "resource": self.__base_url,
                 "client_id": self.__app_id,
                 "client_secret": self.__app_secret,
                 "grant_type": "client_credentials",

@@ -1,0 +1,39 @@
+{
+  "description": "Fetch incidents from the Microsoft Defender XDR API (OData /api/incidents)",
+  "docker_parameters": "connector_defender_incidents",
+  "name": "Fetch incidents from Microsoft Defender XDR",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "base_url": {
+        "description": "Base URL of the Defender XDR API hosting /api/incidents (e.g. 'https://api-eu.security.microsoft.com'). If empty, the module-level base_url is used.",
+        "type": "string"
+      },
+      "start_time": {
+        "type": "integer",
+        "description": "The number of hours from which incidents should be queried on the first run.",
+        "default": 1
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Polling frequency in seconds",
+        "default": 60
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "title": "Events",
+    "type": "object"
+  },
+  "uuid": "35700bd5-72bc-4dc5-9ca8-b905bcc180ee"
+}

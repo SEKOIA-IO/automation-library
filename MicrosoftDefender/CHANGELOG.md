@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-04-21 - 1.2.0
+
+### Added
+
+- New connector `connector_defender_alerts` fetching alerts.
+- New connector `connector_defender_incidents` fetching incidents.
+- OAuth token audience is now derived from the configured `base_url`.
+
 ## 2026-03-16 - 1.1.0
 
 ### Added
