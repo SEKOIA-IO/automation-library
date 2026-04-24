@@ -26,7 +26,7 @@ from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.storage import PersistentJSON
 
-from crowdstrike_falcon.asset_connectors.crowdstrike_device import CrowdStrikeDevice
+from crowdstrike_falcon.asset_connectors.crowdstrike_device_model import CrowdStrikeDevice
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
 
 

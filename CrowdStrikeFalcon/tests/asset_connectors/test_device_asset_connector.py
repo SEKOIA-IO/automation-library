@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock
 
-from crowdstrike_falcon.asset_connectors.crowdstrike_device import CrowdStrikeDevice, PolicyEntry
+from crowdstrike_falcon.asset_connectors.crowdstrike_device_model import CrowdStrikeDevice, PolicyEntry
 from crowdstrike_falcon.asset_connectors.device_assets import CrowdstrikeDeviceAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeId,

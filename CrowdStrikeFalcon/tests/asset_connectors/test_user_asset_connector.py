@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime
 from unittest.mock import Mock
 
-from crowdstrike_falcon.asset_connectors.crowdstrike_user import (
+from crowdstrike_falcon.asset_connectors.crowdstrike_user_model import (
     CrowdStrikeUser,
     CrowdStrikeUserAccount,
     CrowdStrikeUserRole,

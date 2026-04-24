@@ -18,7 +18,7 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
 from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId, RiskLevelStr
 from sekoia_automation.storage import PersistentJSON
 
-from crowdstrike_falcon.asset_connectors.crowdstrike_user import CrowdStrikeUser, CrowdStrikeUserAccount
+from crowdstrike_falcon.asset_connectors.crowdstrike_user_model import CrowdStrikeUser, CrowdStrikeUserAccount
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
 
 IDENTITY_ENTITIES_QUERY = """
