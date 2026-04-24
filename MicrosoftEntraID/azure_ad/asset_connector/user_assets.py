@@ -237,11 +237,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         """
         try:
             user_roles = await self.client.users.by_user_id(user_id).transitive_member_of.graph_directory_role.get()
-            if user_roles and user_roles.value:
-                for role in user_roles.value:
-                    if isinstance(role, DirectoryRole) and role.id:
-                        return True
-            return False
+            return bool(user_roles and user_roles.value)
         except Exception as e:
             raise ValueError(f"Error fetching user admin roles: {e}") from e
 
