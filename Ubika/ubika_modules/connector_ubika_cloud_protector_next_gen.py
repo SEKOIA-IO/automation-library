@@ -218,7 +218,6 @@ class UbikaCloudProtectorNextGenConnector(Connector):
         end_timestamp = int(end.timestamp() * 1000)
 
         most_recent_event_timestamp: int | None = None
-        current_lag: float = 0
 
         # Fetch next batch
         for events in self.__fetch_next_events(start_timestamp, end_timestamp):
@@ -246,11 +245,6 @@ class UbikaCloudProtectorNextGenConnector(Connector):
                     message="No events to forward",
                     level="info",
                 )  # pragma: no cover
-
-        if most_recent_event_timestamp is not None:
-            current_lag = time.time() - (most_recent_event_timestamp / 1000)
-
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
         # just in case
         self.save_events_cache()
