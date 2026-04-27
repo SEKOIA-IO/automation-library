@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Log as critical when failing to activate the subscription
-- Fix the way to shutdown the connector
+- Fix the way to shut down the connector
 
 ## 2026-04-16 - 2.20.2
 
