@@ -17,7 +17,7 @@ from . import UbikaModule
 from .client import UbikaCloudProtectorNextGenApiClient
 
 from .client.auth import AuthorizationError, AuthorizationTimeoutError
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 from .timestepper import TimeStepper
 
 
