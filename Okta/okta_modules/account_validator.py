@@ -34,7 +34,7 @@ class OktaAccountValidator(AccountValidator):
 
                 return False
         except Exception as e:
-            self.log(f"Error while validating account: {e}", level="error")
+            self.log(f"Error while validating account. Authentication failed: {e}", level="error")
 
             return False
 

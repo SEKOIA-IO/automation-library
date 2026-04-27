@@ -53,7 +53,9 @@ class TestOktaAccountValidator:
                 result = self.validator.validate()
 
                 assert result is False
-                mock_log.assert_called_once_with("Error while validating account: Connection failed", level="error")
+                mock_log.assert_called_once_with(
+                    "Error while validating account. Authentication failed: Connection failed", level="error"
+                )
 
     def test_validate_authentication_error_from_sdk_tuple(self):
         """Okta SDK returns (None, resp, error) on 401 — validator must detect it."""
@@ -73,9 +75,8 @@ class TestOktaAccountValidator:
 
                     assert result is False
                     mock_log.assert_called_once_with(
-                        f"Error while validating account: {okta_error.message}", level="error"
+                        f"Error while validating account. Authentication failed: {okta_error.message}", level="error"
                     )
-                    mock_error.assert_called_once_with(f"Authentication failed: {okta_error.message}")
 
     def test_validate_error_without_message_attribute(self):
         """Validator falls back to str(err) when the error has no message attribute."""
@@ -91,7 +92,9 @@ class TestOktaAccountValidator:
                 result = self.validator.validate()
 
                 assert result is False
-                mock_log.assert_called_once_with("Error while validating account: raw string error", level="error")
+                mock_log.assert_called_once_with(
+                    "Error while validating account. Authentication failed: raw string error", level="error"
+                )
 
     def test_validate_success(self):
         """Test successful validation when list_users() completes without error."""
@@ -121,7 +124,9 @@ class TestOktaAccountValidator:
                 result = self.validator.validate()
 
                 assert result is False
-                mock_log.assert_called_once_with("Error while validating account: Network timeout", level="error")
+                mock_log.assert_called_once_with(
+                    "Error while validating account. Authentication failed: Network timeout", level="error"
+                )
 
     def test_validate_with_different_module_configurations(self):
         """Test validation with different module configurations."""
@@ -181,4 +186,6 @@ class TestOktaAccountValidator:
                 result = self.validator.validate()
 
                 assert result is False
-                mock_log.assert_called_once_with(f"Error while validating account: {error_message}", level="error")
+                mock_log.assert_called_once_with(
+                    f"Error while validating account. Authentication failed: {error_message}", level="error"
+                )
