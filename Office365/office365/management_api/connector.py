@@ -119,6 +119,10 @@ class Office365Connector(AsyncConnector):
                 exception=exp,
                 message="An exception occurred when trying to subscribe to Office365 events.",
             )
+            self.log(
+                message="Failed to activate Office365 subscriptions. The connector will produce no events.",
+                level="critical",
+            )
 
     async def forward_next_batches(self, checkpoint: Checkpoint):
         start_pull_date = checkpoint.offset
