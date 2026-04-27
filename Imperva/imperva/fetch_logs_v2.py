@@ -8,9 +8,9 @@ from functools import cached_property
 from posixpath import join as urljoin
 
 import requests
+from cryptography.hazmat.primitives import padding as sym_padding
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives import padding as sym_padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from pydantic.v1 import BaseModel
 from sekoia_automation.checkpoint import CheckpointCursor
@@ -30,6 +30,7 @@ class HandlingFileResult(BaseModel):
     log_name: LogFileId
     successful: bool
     last_timestamp: int | None = None
+    nb_forwarded_events: int | None = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -110,11 +111,18 @@ class ImpervaLogsConnector(Connector):
         try:
             last_timestamp = extract_last_timestamp(response.content)
             decrypted_file = self.decrypt_file(response.content, log_name.get_filename())
-            self.handle_log_decrypted_content(decrypted_file)
+            nb_events_forwarded = self.handle_log_decrypted_content(decrypted_file)
 
             self.log(
                 message=f"File {log_name.get_filename()} downloading and processing completed successfully",
                 level="info",
+            )
+
+            return HandlingFileResult(
+                log_name=log_name,
+                successful=True,
+                last_timestamp=last_timestamp,
+                nb_forwarded_events=nb_events_forwarded,
             )
 
         except Exception as e:
@@ -124,9 +132,7 @@ class ImpervaLogsConnector(Connector):
             )
             return HandlingFileResult(log_name=log_name, successful=False)
 
-        return HandlingFileResult(log_name=log_name, successful=True, last_timestamp=last_timestamp)
-
-    def handle_log_decrypted_content(self, decrypted_file: bytes) -> None:
+    def handle_log_decrypted_content(self, decrypted_file: bytes) -> int:
         decrypted_file_text: str = decrypted_file.decode("utf-8")  # many lines
         events_list: list[str] = decrypted_file_text.split("\n")
 
@@ -135,7 +141,8 @@ class ImpervaLogsConnector(Connector):
 
         OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events_list))
 
-        self.push_events_to_intakes(events_list)
+        events_ids = self.push_events_to_intakes(events_list)
+        return len(events_ids)
 
     def decrypt_file(self, file_content: bytes, filename: str) -> bytes:
         # each log file is built from a header section and a content section, the two are divided by a |==| mark
@@ -263,6 +270,7 @@ class ImpervaLogsConnector(Connector):
 
             self.in_progress.extend(additions)
             last_timestamp = None
+            nb_forwarded_events = list()
             try:
                 with ThreadPoolExecutor(max_workers=self.NUM_WORKERS) as pool:
                     for item in pool.map(self.process_file, additions, timeout=3600):
@@ -270,6 +278,9 @@ class ImpervaLogsConnector(Connector):
                             last_timestamp is None or item.last_timestamp > last_timestamp
                         ):
                             last_timestamp = item.last_timestamp
+
+                        if item.nb_forwarded_events is not None:
+                            nb_forwarded_events.append(item.nb_forwarded_events)
 
                 if self.processed:
                     if last_timestamp:
@@ -279,18 +290,23 @@ class ImpervaLogsConnector(Connector):
 
                     self.last_seen_log = max(self.processed)
                     self.cursor.offset = self.last_seen_log.get_filename()
-
-                # get the ending time and compute the duration to fetch the events
-                batch_end_time = time.time()
-                batch_duration = int(batch_end_time - batch_start_time)
-                self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="info")
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
             except Exception as e:
                 self.log_exception(e)
 
                 # Clear failed items - successful ones already removed in process_file
                 additions_set = set(additions)
                 self.in_progress = deque(item for item in self.in_progress if item not in additions_set)
+
+            # Compute the total number of forwarded events in this batch
+            total_forwarded_events = sum(nb_forwarded_events) if nb_forwarded_events else 0
+
+            # get the ending time and compute the duration to fetch the events
+            batch_end_time = time.time()
+            batch_duration = int(batch_end_time - batch_start_time)
+            self.log(
+                f"Fetched and forwarded {total_forwarded_events} events in {batch_duration} seconds", level="info"
+            )
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
             # compute the remaining sleeping time. If greater than 0, sleep
             delta_sleep = self.configuration.frequency - batch_duration
