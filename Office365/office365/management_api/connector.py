@@ -168,7 +168,7 @@ class Office365Connector(AsyncConnector):
 
     def _handle_stop_signal(self, loop):
         """
-        Handle gracefully the shutdown
+        Handle graceful shutdown
         """
         self.log(message="Received stop signal", level="info")
         loop.create_task(self.shutdown())
