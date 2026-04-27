@@ -10,11 +10,13 @@
     "properties": {
       "uuid": {
         "type": "string",
-        "in": "path"
+        "in": "path",
+        "description": "UUID of the alert to retrieve."
       },
       "stix": {
         "in": "query",
-        "type": "boolean"
+        "type": "boolean",
+        "description": "If true, include the full STIX 2 bundle in the response (default: false)."
       },
       "cases": {
         "in": "query",
@@ -56,6 +58,7 @@
       },
       "history": {
         "type": "array",
+        "description": "Ordered list of modifications made to the alert (status changes, field updates, assignments, etc.).",
         "items": {
           "type": "object",
           "properties": {
@@ -232,6 +235,7 @@
       },
       "assets": {
         "type": "array",
+        "description": "UUIDs of the assets involved in the alert.",
         "items": {
           "type": "string",
           "format": "uuid"
@@ -239,6 +243,7 @@
       },
       "countermeasures": {
         "type": "array",
+        "description": "Response actions (countermeasures) recommended or applied in reaction to the alert. Each countermeasure has a name, a description, a list of concrete action steps to execute, and a lifecycle status (pending → activated or denied). They can originate from three sources, reflected in the `type` field: `text` (free-form analyst note, e.g. 'Isolate the affected host'), `intelligence_center` (a course of action sourced from SEKOIA.IO's threat intelligence, e.g. 'Block IOC X on your firewall'), or `openc2` (a machine-readable OpenC2 command sent to a security actuator). Included by default; opt out with `?countermeasures=false`.",
         "items": {
           "type": "object",
           "properties": {
@@ -485,10 +490,12 @@
       },
       "updated_at": {
         "type": "integer",
-        "format": "int32"
+        "format": "int32",
+        "description": "Unix timestamp (seconds, may include fractional seconds) of the last update to the alert."
       },
       "comments": {
         "type": "array",
+        "description": "Comments left by analysts on the alert. Each entry carries an `unseen` flag for the current user.",
         "items": {
           "type": "object",
           "properties": {
@@ -505,7 +512,8 @@
               "description": "Author of the comment"
             },
             "unseen": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Whether this comment has not yet been seen by the current user."
             },
             "date": {
               "type": "integer",
@@ -533,6 +541,7 @@
       },
       "ttps": {
         "type": "array",
+        "description": "MITRE ATT&CK techniques, tactics and procedures (TTPs) associated with the alert, as minimal STIX SCO objects.",
         "items": {
           "type": "object",
           "properties": {
@@ -558,10 +567,12 @@
       },
       "number_of_unseen_comments": {
         "type": "integer",
-        "format": "int32"
+        "format": "int32",
+        "description": "Number of comments on the alert not yet seen by the current user."
       },
       "status": {
         "type": "object",
+        "description": "Current workflow status of the alert (e.g. `Pending`, `Acknowledged`, `Ongoing`, `Closed`).",
         "properties": {
           "description": {
             "type": "string"
@@ -617,28 +628,35 @@
         }
       },
       "created_by": {
-        "type": "string"
+        "type": "string",
+        "description": "UUID of the profile that created the alert."
       },
       "updated_by": {
-        "type": "string"
+        "type": "string",
+        "description": "UUID of the profile that last updated the alert."
       },
       "source": {
-        "type": "string"
+        "type": "string",
+        "description": "Source of the suspicious activity (e.g. an IP address or hostname)."
       },
       "community_uuid": {
         "type": "string",
-        "format": "uuid"
+        "format": "uuid",
+        "description": "UUID of the community the alert belongs to."
       },
       "number_of_total_comments": {
         "type": "integer",
-        "format": "int32"
+        "format": "int32",
+        "description": "Total number of comments on the alert."
       },
       "uuid": {
         "type": "string",
-        "format": "uuid"
+        "format": "uuid",
+        "description": "Unique identifier of the alert."
       },
       "rule": {
         "type": "object",
+        "description": "Detection rule that triggered the alert.",
         "properties": {
           "type": {
             "type": "string"
@@ -666,6 +684,7 @@
       },
       "adversaries": {
         "type": "array",
+        "description": "Threat actors or adversary groups attributed to the alert, as minimal STIX SCO objects.",
         "items": {
           "type": "object",
           "properties": {
@@ -690,15 +709,18 @@
         }
       },
       "short_id": {
-        "type": "string"
+        "type": "string",
+        "description": "Human-readable short identifier for the alert (e.g. `ALa1b2c3d4e5`)."
       },
       "first_seen_at": {
         "type": "string",
-        "format": "date-time"
+        "format": "date-time",
+        "description": "Timestamp of the first event that contributed to this alert."
       },
       "last_seen_at": {
         "type": "string",
-        "format": "date-time"
+        "format": "date-time",
+        "description": "Timestamp of the most recent event that contributed to this alert."
       },
       "event_uuids": {
         "type": "array",
@@ -708,14 +730,17 @@
         }
       },
       "kill_chain_short_id": {
-        "type": "string"
+        "type": "string",
+        "description": "Short identifier of the MITRE ATT&CK kill-chain phase associated with the alert (e.g. `TA0001`)."
       },
       "similar": {
         "type": "integer",
-        "format": "int32"
+        "format": "int32",
+        "description": "Number of similar alerts detected by the platform's deduplication mechanism."
       },
       "alert_type": {
         "type": "object",
+        "description": "Category and value describing the type of threat (e.g. category `malware`, value `ransomware`).",
         "properties": {
           "category": {
             "type": "string"
@@ -726,16 +751,20 @@
         }
       },
       "details": {
-        "type": "string"
+        "type": "string",
+        "description": "Free-text field providing additional analyst context or notes about the alert."
       },
       "stix": {
-        "type": "object"
+        "type": "object",
+        "description": "Full STIX 2 bundle describing the alert and its related objects. Only populated when `?stix=true` is passed."
       },
       "created_by_type": {
-        "type": "string"
+        "type": "string",
+        "description": "Type of the profile that created the alert (e.g. `application`, `avatar`)."
       },
       "entity": {
         "type": "object",
+        "description": "Entity (asset group) targeted by the alert.",
         "properties": {
           "uuid": {
             "type": "string",
@@ -752,19 +781,24 @@
       },
       "created_at": {
         "type": "integer",
-        "format": "int32"
+        "format": "int32",
+        "description": "Unix timestamp (seconds, may include fractional seconds) when the alert was created."
       },
       "updated_by_type": {
-        "type": "string"
+        "type": "string",
+        "description": "Type of the profile that last updated the alert (e.g. `application`, `avatar`)."
       },
       "title": {
-        "type": "string"
+        "type": "string",
+        "description": "Human-readable title of the alert."
       },
       "target": {
-        "type": "string"
+        "type": "string",
+        "description": "Target of the suspicious activity (e.g. an IP address or hostname)."
       },
       "cases": {
         "type": "array",
+        "description": "Cases this alert has been grouped into. Only populated when `?cases=true` is passed.",
         "items": {
           "type": "object",
           "properties": {
