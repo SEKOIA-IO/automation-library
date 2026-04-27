@@ -1,10 +1,16 @@
+import re
 from unittest.mock import patch
 from uuid import UUID, uuid4
 
 import pytest
 import requests
 
-from sekoiaio.operation_center.execute_a_query import ExecuteAQuery, QueryExecutionError, QueryListingError
+from sekoiaio.operation_center.execute_a_query import (
+    ExecuteAQuery,
+    QueryExecutionError,
+    QueryListingError,
+    ExecuteAQueryArguments,
+)
 
 BASE_URL = "https://fake.url/"
 API_KEY = "fake_api_key"
@@ -55,6 +61,8 @@ def make_action() -> ExecuteAQuery:
 
 def test_execute_query_by_uuid_success(requests_mock):
     action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", json=SAMPLE_QUERY)
     requests_mock.post(QUERY_RUNS_URL, json=SAMPLE_QUERY_RUN)
@@ -76,6 +84,8 @@ def test_execute_query_by_uuid_success(requests_mock):
 
 def test_execute_query_by_uuid_csv_format(requests_mock):
     action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", json=SAMPLE_QUERY)
     requests_mock.post(QUERY_RUNS_URL, json=SAMPLE_QUERY_RUN)
@@ -103,6 +113,8 @@ def test_execute_query_by_uuid_csv_format(requests_mock):
 
 def test_execute_query_by_name_success(requests_mock):
     action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(
         QUERIES_URL,
@@ -127,6 +139,32 @@ def test_execute_query_by_name_success(requests_mock):
 
 
 # ---------------------------------------------------------------------------
+# run() happy path & Result saved in file
+# ---------------------------------------------------------------------------
+
+
+def test_execute_query_save_to_file(requests_mock, tmp_path):
+    action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
+    action._data_path = tmp_path
+
+    requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", json=SAMPLE_QUERY)
+    requests_mock.post(QUERY_RUNS_URL, json=SAMPLE_QUERY_RUN)
+    requests_mock.get(f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "done"})
+    requests_mock.get(
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
+        text='{"event.action": "login"}\n{"event.action": "logout"}\n',
+    )
+    argument = ExecuteAQueryArguments(query_uuid=SAMPLE_QUERY["uuid"], result_format="csv", to_file=True)
+
+    result = action.run(arguments=argument)
+
+    assert result["output_path"] is not None
+    assert re.match(r"^query_output-[0-9a-f-]{36}\.csv$", result["output_path"])
+
+
+# ---------------------------------------------------------------------------
 # get_query_by_name() — edge cases
 # ---------------------------------------------------------------------------
 
@@ -134,6 +172,7 @@ def test_execute_query_by_name_success(requests_mock):
 def test_get_query_by_name_multiple_results_raises(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(
         QUERIES_URL,
@@ -156,6 +195,7 @@ def test_get_query_by_name_empty_results_raises(requests_mock):
 
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(
         QUERIES_URL,
@@ -172,6 +212,7 @@ def test_get_query_by_name_empty_results_raises(requests_mock):
 def test_get_query_by_name_http_error(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(QUERIES_URL, status_code=500, text="Internal Server Error")
 
@@ -192,6 +233,7 @@ def test_get_query_by_name_http_error(requests_mock):
 def test_get_query_by_uuid_http_error(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", status_code=404, text="Not Found")
 
@@ -212,6 +254,7 @@ def test_get_query_by_uuid_http_error(requests_mock):
 def test_trigger_query_execution_http_error(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.post(QUERY_RUNS_URL, status_code=422, text="Unprocessable Entity")
 
@@ -236,6 +279,7 @@ def test_trigger_query_execution_http_error(requests_mock):
 def test_wait_for_query_completion_error_status_raises(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(
         f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}",
@@ -256,6 +300,7 @@ def test_wait_for_query_completion_error_status_raises(requests_mock):
 def test_wait_for_query_completion_step_http_error_raises(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", status_code=500, text="Server Error")
 
@@ -274,6 +319,7 @@ def test_wait_for_query_completion_polls_until_done(requests_mock):
     """Status transitions: pending → done; time.sleep is patched to avoid delays."""
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(
         f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}",
@@ -295,6 +341,7 @@ def test_wait_for_query_completion_error_in_loop(requests_mock):
     """Error status returned during polling loop raises QueryExecutionError."""
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(
         f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}",
@@ -323,6 +370,7 @@ def test_wait_for_query_completion_error_in_loop(requests_mock):
 def test_download_query_result_http_error(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(
         f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
@@ -348,6 +396,8 @@ def test_download_query_result_http_error(requests_mock):
 def test_execute_query_full_polling_cycle(requests_mock):
     """Verify wait_for_query_completion handles pending → running → done transitions."""
     action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", json=SAMPLE_QUERY)
     requests_mock.post(QUERY_RUNS_URL, json={"uuid": SAMPLE_QUERY_RUN["uuid"]})

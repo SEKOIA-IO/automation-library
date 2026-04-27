@@ -1,17 +1,14 @@
-from uuid import UUID
 from requests import Session
 from posixpath import join as urljoin
-from urllib3.util.retry import Retry
+
 from typing import Any
 
 from pydantic.v1 import BaseModel
-from sekoia_automation.action import Action
+
 import urllib3
 
 import requests
-import urllib3
-from requests.adapters import HTTPAdapter
-from requests.structures import CaseInsensitiveDict
+
 from tenacity import (
     retry,
     wait_exponential,
@@ -21,10 +18,18 @@ from tenacity import (
 
 from sekoia_automation.action import Action
 from sekoiaio.utils import user_agent
+from .base_sol import BaseSolAction
 
 
 class ListQueriesArguments(BaseModel):
     """Input arguments for the ListQueries action."""
+
+    match_uuid: str | None = None
+    match_name: str | None = None
+    match_visualization: str | None = None
+    match_isshared: bool | None = None
+    match_created_by: str | None = None
+    parameters: str | None = None
 
 
 class ListQueriesResults(BaseModel):
@@ -33,7 +38,7 @@ class ListQueriesResults(BaseModel):
     queries: list[dict[str, Any]]
 
 
-class ListQueries(Action):
+class ListQueries(BaseSolAction):
     """Action that retrieves all SOL queries available."""
 
     http_session: Session
@@ -41,30 +46,9 @@ class ListQueries(Action):
 
     results_model = ListQueriesResults
 
-    def configure_http_session(self) -> None:
-        """Set up the query API base path and configure the HTTP session with retry and auth headers."""
+    def configure_urls(self) -> None:
+        """Set up the query API base path."""
         self.query_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/queries")
-
-        # Configure http with retry strategy
-        retry_strategy = Retry(
-            total=10,  # Total number of retries for all types of errors
-            status=10,  # Number of retries specifically for responses with status codes in status_forcelist
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["HEAD", "GET", "OPTIONS"],
-            backoff_factor=1,
-            backoff_max=120,
-        )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        self.http_session = requests.Session()
-        self.http_session.mount("https://", adapter)
-        self.http_session.mount("http://", adapter)
-        self.http_session.headers = CaseInsensitiveDict(
-            data={
-                "Accept": "application/json",
-                "Authorization": f"Bearer {self.module.configuration['api_key']}",
-                "User-Agent": user_agent(),
-            }
-        )
 
     @retry(
         reraise=True,
@@ -73,7 +57,7 @@ class ListQueries(Action):
         retry=retry_if_exception_type(requests.exceptions.Timeout)
         | retry_if_exception_type(urllib3.exceptions.TimeoutError),
     )
-    def get_queries(self) -> list[dict[str, Any]]:
+    def get_queries(self, argument: ListQueriesArguments) -> list[dict[str, Any]]:
         """Retrieve all SOL queries, with pagination.
 
         :return: List of query definition dicts
@@ -89,6 +73,12 @@ class ListQueries(Action):
                 params={
                     "limit": limit,
                     "offset": offset,
+                    "match[uuid]": argument.match_uuid,
+                    "match[name]": argument.match_name,
+                    "match[visualization]": argument.match_visualization,
+                    "match[is_shared_run]": argument.match_isshared,
+                    "match[created_by]": argument.match_created_by,
+                    "parameters": argument.parameters,
                 },
                 timeout=20,
             )
@@ -113,7 +103,7 @@ class ListQueries(Action):
                     )
                 break
             results += response_content["items"]
-            total = min(response_content["total"], limit)
+            total = response_content["total"]
 
             offset += limit
         return results
@@ -126,5 +116,5 @@ class ListQueries(Action):
         """
         self.configure_http_session()
         # Retrieve all queries.
-        queries = self.get_queries()
+        queries = self.get_queries(arguments)
         return ListQueriesResults(queries=queries)

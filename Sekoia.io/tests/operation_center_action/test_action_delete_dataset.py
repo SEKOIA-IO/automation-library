@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 import pytest
 import requests
 
-from sekoiaio.operation_center.delete_dataset import DeleteDataset, DeleteDatasetResults
+from sekoiaio.operation_center.delete_dataset import DeleteDataset, DeleteDatasetArguments, DeleteDatasetResults
 
 BASE_URL = "https://fake.url/"
 API_KEY = "fake_api_key"
@@ -32,6 +32,7 @@ def make_action() -> DeleteDataset:
 def test_get_dataset_uuid_success(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     mock_list_response = {
         "uuid": DATASET_UUID,
@@ -65,6 +66,7 @@ def test_get_dataset_uuid_success(requests_mock):
 def test_get_dataset_uuid_not_found(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(
         DATASETS_URL,
@@ -83,6 +85,7 @@ def test_get_dataset_uuid_not_found(requests_mock):
 def test_get_dataset_uuid_multiple_found(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     mock_list_response_1 = {
         "uuid": DATASET_UUID,
@@ -141,6 +144,7 @@ def test_get_dataset_uuid_multiple_found(requests_mock):
 def test_get_dataset_uuid_http_error(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.get(DATASETS_URL, status_code=500, text="Internal Server Error")
 
@@ -162,6 +166,7 @@ def test_get_dataset_uuid_http_error(requests_mock):
 def test_delete_dataset_success(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.delete(f"{DATASETS_URL}/{DATASET_UUID}", status_code=204)
 
@@ -171,9 +176,20 @@ def test_delete_dataset_success(requests_mock):
     assert result is None
 
 
+def test_delete_dataset_by_uuid_success(requests_mock):
+    action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
+
+    requests_mock.delete(f"{DATASETS_URL}/{DATASET_UUID}", status_code=204)
+    action.run(DeleteDatasetArguments(uuid=UUID(DATASET_UUID)))
+    assert len(action._logs) == 0
+
+
 def test_delete_dataset_http_error(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.delete(
         f"{DATASETS_URL}/{DATASET_UUID}",
@@ -194,7 +210,7 @@ def test_delete_dataset_http_error(requests_mock):
 def test_delete_dataset_not_found(requests_mock):
     action = make_action()
     action.configure_http_session()
-
+    action.configure_urls()
     mock_not_found_response = {"detail": {"message": "Dataset does not exist", "code": "DATASET_NOT_FOUND"}}
 
     requests_mock.delete(

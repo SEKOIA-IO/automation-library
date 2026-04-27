@@ -7,6 +7,37 @@
     "title": "ListQueriesArguments",
     "type": "object",
     "properties": {
+      "match_uuid": {
+        "title": "match[uuid]",
+        "type": "string",
+        "description": "Filter queries by UUID."
+      },
+      "match_name": {
+        "title": "match[Name]",
+        "type": "string",
+        "description": "Filter queries by name."
+      },
+      "match_visualization": {
+        "title": "match[Visualization]",
+        "type": "string",
+        "description": "Filter queries by visualization type."
+      },
+      "match_isshared": {
+        "title": "match[IsShared]",
+        "type": "boolean",
+        "description": "Filter queries by shared status."
+      },
+      "match_created_by": {
+        "title": "match[CreatedBy]",
+        "type": "string",
+        "description": "Filter queries by the UUID of the creator."
+      },
+      "parameters": {
+        "title": "parameters",
+        "type": "string",
+        "description": "Filter queries by the parameters they use"
+      } 
+
     }
   },
   "results": {
@@ -123,11 +154,11 @@
               }
             }
           }
-        },
-        "required": [
-          "queries"
-        ]
+        }
       }
-    }
+    },
+    "required": [
+        "queries"
+      ]
   }
 }

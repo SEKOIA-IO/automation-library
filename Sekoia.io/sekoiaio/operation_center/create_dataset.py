@@ -1,24 +1,21 @@
-from uuid import UUID
-from requests import Session
 from posixpath import join as urljoin
-from urllib3.util.retry import Retry
 
 from pydantic.v1 import BaseModel
-import urllib3
 
-import requests
-import urllib3
-from requests.adapters import HTTPAdapter
-from requests.structures import CaseInsensitiveDict
+from requests import Session
+from requests.exceptions import Timeout, HTTPError
+
+
 from tenacity import (
     retry,
-    wait_exponential,
-    stop_after_attempt,
     retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
 )
 
-from sekoia_automation.action import Action
-from sekoiaio.utils import user_agent
+from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
+
+from .base_sol import BaseSolAction
 
 
 class CreateDatasetArguments(BaseModel):
@@ -32,7 +29,7 @@ class CreateDatasetResults(BaseModel):
     """Output returned by the CreateDataset action (empty on success)."""
 
 
-class CreateDataset(Action):
+class CreateDataset(BaseSolAction):
     """Action that validates and uploads a CSV dataset to the Sekoia notebooks API."""
 
     http_session: Session
@@ -40,37 +37,15 @@ class CreateDataset(Action):
 
     results_model = CreateDatasetResults
 
-    def configure_http_session(self) -> None:
-        """Set up the dataset API base path and configure the HTTP session with retry and auth headers."""
+    def configure_urls(self) -> None:
+        """Set up the dataset API base path."""
         self.dataset_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/datasets")
-
-        # Configure http with retry strategy
-        retry_strategy = Retry(
-            total=10,  # Total number of retries for all types of errors
-            status=10,  # Number of retries specifically for responses with status codes in status_forcelist
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["HEAD", "GET", "OPTIONS"],
-            backoff_factor=1,
-            backoff_max=120,
-        )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        self.http_session = requests.Session()
-        self.http_session.mount("https://", adapter)
-        self.http_session.mount("http://", adapter)
-        self.http_session.headers = CaseInsensitiveDict(
-            data={
-                "Accept": "application/json",
-                "Authorization": f"Bearer {self.module.configuration['api_key']}",
-                "User-Agent": user_agent(),
-            }
-        )
 
     @retry(
         reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
-        retry=retry_if_exception_type(requests.exceptions.Timeout)
-        | retry_if_exception_type(urllib3.exceptions.TimeoutError),
+        retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
     )
     def validate_dataset(self, dataset: bytes, name: str) -> None:
         """Send the dataset to the validation endpoint before creation.
@@ -86,7 +61,7 @@ class CreateDataset(Action):
         )
         try:
             response_validate.raise_for_status()
-        except requests.exceptions.HTTPError as e:
+        except HTTPError as e:
             self.log(
                 f"HTTP error when validating dataset: {e}. Response status: {response_validate.status_code}, Response text: {response_validate.text}",
                 level="error",
@@ -97,8 +72,7 @@ class CreateDataset(Action):
         reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
-        retry=retry_if_exception_type(requests.exceptions.Timeout)
-        | retry_if_exception_type(urllib3.exceptions.TimeoutError),
+        retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
     )
     def create_dataset(self, dataset: bytes, name: str) -> None:
         """Upload and create the dataset via the notebooks API.
@@ -114,7 +88,7 @@ class CreateDataset(Action):
         )
         try:
             response_create.raise_for_status()
-        except requests.exceptions.HTTPError as e:
+        except HTTPError as e:
             self.log(
                 f"HTTP error when creating dataset: {e}. Response status: {response_create.status_code}, Response text: {response_create.text}",
                 level="error",
@@ -144,6 +118,7 @@ class CreateDataset(Action):
         :return: Empty result on success
         """
         self.configure_http_session()
+        self.configure_urls()
 
         # Encode the dataset string to bytes for multipart upload
         encoded_dataset = self.encode_dataset(arguments.dataset)

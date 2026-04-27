@@ -29,6 +29,8 @@ def make_action() -> CreateDataset:
 
 def test_create_dataset_success(requests_mock):
     action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
 
     mock_created_response = {
         "uuid": DATASET_UUID,
@@ -70,6 +72,7 @@ def test_create_dataset_success(requests_mock):
 def test_validate_dataset_http_error(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     mock_validate_response = {
         "detail": {"message": "Row has 1 columns but expected 2 columns", "code": "DATASET_VALIDATION_ERROR"}
@@ -90,6 +93,7 @@ def test_validate_dataset_http_error(requests_mock):
 def test_validate_dataset_server_error(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.post(VALIDATE_URL, status_code=500, text="Internal Server Error")
 
@@ -108,6 +112,7 @@ def test_validate_dataset_server_error(requests_mock):
 def test_create_dataset_http_error(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     mock_create_response = {
         "detail": {
@@ -131,6 +136,8 @@ def test_create_dataset_http_error(requests_mock):
 def test_run_stops_on_validate_error(requests_mock):
     """If validate fails, create should never be called."""
     action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
 
     requests_mock.post(VALIDATE_URL, status_code=422, text="Unprocessable entity")
     create_mock = requests_mock.post(DATASETS_URL, status_code=201)
@@ -149,6 +156,7 @@ def test_run_stops_on_validate_error(requests_mock):
 def test_encode_dataset_returns_utf8_bytes(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     dataset_str = "col1,col2\nval1,val2"
     result = action.encode_dataset(dataset_str)
@@ -160,6 +168,7 @@ def test_encode_dataset_returns_utf8_bytes(requests_mock):
 def test_encode_dataset_handles_unicode(requests_mock):
     action = make_action()
     action.configure_http_session()
+    action.configure_urls()
 
     dataset_str = "name\néàü"
     result = action.encode_dataset(dataset_str)

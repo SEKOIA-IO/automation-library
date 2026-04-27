@@ -1,19 +1,16 @@
 from typing import Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 from requests import Session
 from posixpath import join as urljoin
 import time
-from urllib3.util.retry import Retry
+
 from typing import Any, Callable
 
 from pydantic.v1 import BaseModel
-from sekoia_automation.action import Action
+
 import urllib3
 
 import requests
-import urllib3
-from requests.adapters import HTTPAdapter
-from requests.structures import CaseInsensitiveDict
 from tenacity import (
     retry,
     wait_exponential,
@@ -21,8 +18,8 @@ from tenacity import (
     retry_if_exception_type,
 )
 
-from sekoia_automation.action import Action
 from sekoiaio.utils import user_agent
+from .base_sol import BaseSolAction
 
 
 class QueryExecutionError(Exception):
@@ -40,15 +37,17 @@ class ExecuteAQueryArguments(BaseModel):
     query_uuid: UUID | None = None
     parameters: dict | None = None
     result_format: Literal["jsonl", "csv"]
+    to_file: bool = False
 
 
 class ExecuteAQueryResults(BaseModel):
     """Output returned by the ExecuteAQuery action."""
 
-    query_result: str
+    query_result: str | None = None
+    output_path: str | None = None
 
 
-class ExecuteAQuery(Action):
+class ExecuteAQuery(BaseSolAction):
     """Action that executes a SOL (Sekoia Query Language) query and returns its result.
 
     Resolves the query by UUID or by name, triggers an asynchronous execution run,
@@ -61,31 +60,10 @@ class ExecuteAQuery(Action):
 
     results_model = ExecuteAQueryResults
 
-    def configure_http_session(self) -> None:
+    def configure_urls(self) -> None:
         """Set up API base paths and configure the HTTP session with retry and auth headers."""
         self.query_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/queries")
         self.query_runs_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/queries/runs")
-
-        # Configure http with retry strategy
-        retry_strategy = Retry(
-            total=10,  # Total number of retries for all types of errors
-            status=10,  # Number of retries specifically for responses with status codes in status_forcelist
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["HEAD", "GET", "OPTIONS"],
-            backoff_factor=1,
-            backoff_max=120,
-        )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        self.http_session = requests.Session()
-        self.http_session.mount("https://", adapter)
-        self.http_session.mount("http://", adapter)
-        self.http_session.headers = CaseInsensitiveDict(
-            data={
-                "Accept": "application/json",
-                "Authorization": f"Bearer {self.module.configuration['api_key']}",
-                "User-Agent": user_agent(),
-            }
-        )
 
     @retry(
         reraise=True,
@@ -339,6 +317,13 @@ class ExecuteAQuery(Action):
         self._wait_for_query_completion_step(run_uuid, lambda status: status == "running", timeout=1800)
         self.log(f"Query run '{run_uuid}' has completed.", run_uuid=run_uuid)
 
+    def save_to_file(self, result: str, format: str) -> str:
+        filename = f"query_output-{uuid4()}.{format}"
+        with self._data_path.joinpath(filename).open("w") as f:
+            if isinstance(result, str):
+                f.write(result)
+        return filename
+
     def run(self, arguments: ExecuteAQueryArguments) -> ExecuteAQueryResults:
         """Execute a SOL query and return its result.
 
@@ -367,8 +352,11 @@ class ExecuteAQuery(Action):
         result = self.download_query_result(run_uuid=run_uuid, result_format=arguments.result_format)
 
         self.log(
-            f"Query execution completed successfully for query_uuid '{query['uuid']}' and run_uuid '{run_uuid}', here is the result: {result}",
+            f"Query execution completed successfully for query_uuid '{query['uuid']}' and run_uuid '{run_uuid}'.",
             query_uuid=query["uuid"],
             run_uuid=run_uuid,
         )
-        return ExecuteAQueryResults(query_result=result)
+        if arguments.to_file:
+            filepath = self.save_to_file(result, arguments.result_format)
+            return ExecuteAQueryResults(query_result=None, output_path=filepath)
+        return ExecuteAQueryResults(query_result=result, output_path=None)

@@ -11,10 +11,17 @@
         "title": "Name",
         "type": "string",
         "description": "Name of the dataset to delete."
-      }
+      },
+      "uuid": {
+        "title": "UUID",
+        "type": "string",
+        "format": "uuid",
+        "description": "Identifier of the dataset to delete."
+  }
     },
-    "required": [
-      "name"
+    "oneOf": [
+      {"required": "name"},
+      {"required": "uuid"}
     ]
   },
   "results": {}

@@ -31,6 +31,11 @@
         ],
         "type": "string",
         "description": "Format of the query result to download. Supported formats are 'jsonl' and 'csv'."
+      },
+      "to_file": {
+        "title": "To file",
+        "type": "boolean",
+        "description": "Whether the query result should be saved in a file or sent directly."
       }
     },
     "required": [
@@ -57,10 +62,12 @@
         "title": "Query Result",
         "type": "string",
         "description": "The result of the query execution."
+      },
+      "output_path": {
+        "description": "Path to the file with the content",
+        "type": "object"
       }
     },
-    "required": [
-      "query_result"
-    ]
+    "required": []
   }
 }
