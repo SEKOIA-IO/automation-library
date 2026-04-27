@@ -24,14 +24,14 @@ class OktaDeviceDisplayName(BaseModel):
 class OktaDeviceLinkHints(BaseModel):
     """HTTP method hints attached to an Okta device link."""
 
-    allow: list[str]
+    allow: Optional[list[str]] = None
 
 
 class OktaDeviceLink(BaseModel):
     """Hypermedia link returned by the Okta device API."""
 
     href: str
-    hints: OktaDeviceLinkHints
+    hints: Optional[OktaDeviceLinkHints] = None
 
 
 class OktaDeviceEmbeddedResources(BaseModel):
@@ -70,5 +70,5 @@ class OktaDevice(BaseModel):
     resourceDisplayName: Optional[OktaDeviceDisplayName] = None
     resourceAlternateId: Optional[str] = None
     resourceId: Optional[str] = None
-    links: Optional[dict[str, OktaDeviceLink]] = Field(default=None, alias="_links")
+    links: Optional[dict[str, OktaDeviceLink | list[OktaDeviceLink]]] = Field(default=None, alias="_links")
     embedded: Optional[OktaDeviceEmbeddedResources] = Field(default=None, alias="_embedded")
