@@ -217,19 +217,9 @@ class UbikaCloudProtectorNextGenConnector(Connector):
         start_timestamp = int(start.timestamp() * 1000)
         end_timestamp = int(end.timestamp() * 1000)
 
-        most_recent_event_timestamp: int | None = None
-
         # Fetch next batch
         for events in self.__fetch_next_events(start_timestamp, end_timestamp):
             filtered_events = self.filter_processed_events(events)
-
-            if filtered_events:
-                last_event = max(filtered_events, key=lambda x: int(x["timestamp"]))
-                last_event_timestamp = int(last_event["timestamp"])
-
-                if most_recent_event_timestamp is None or last_event_timestamp > most_recent_event_timestamp:
-                    most_recent_event_timestamp = last_event_timestamp
-
             batch_of_events = [orjson.dumps(event).decode("utf-8") for event in filtered_events]
 
             # if the batch is full, push it
