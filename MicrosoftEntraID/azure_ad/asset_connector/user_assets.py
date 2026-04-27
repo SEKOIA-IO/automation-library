@@ -211,7 +211,6 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         groups: list[UserOCSFGroup] = []
         try:
             user_groups = await self.client.users.by_user_id(user_id).member_of.get()
-
             if user_groups and user_groups.value:
                 for group in user_groups.value:
                     if isinstance(group, Group):
