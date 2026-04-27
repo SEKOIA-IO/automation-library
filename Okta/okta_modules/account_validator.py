@@ -27,9 +27,15 @@ class OktaAccountValidator(AccountValidator):
     def validate(self) -> bool:
         try:
             loop = asyncio.get_event_loop()
-            loop.run_until_complete(self.client.list_users())
+            _, _, err = loop.run_until_complete(self.client.list_users())
+            if err:
+                message = getattr(err, "message", str(err))
+                self.log(f"Error while validating account. Authentication failed: {message}", level="error")
+
+                return False
         except Exception as e:
             self.log(f"Error while validating account: {e}", level="error")
+
             return False
 
         return True

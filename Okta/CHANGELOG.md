@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-24 - 2.10.2
+
+### Fixed
+
+- Fix account validator to detect authentication failures.
+
 ## 2026-03-29 - 2.10.1
 
 ### Changed
