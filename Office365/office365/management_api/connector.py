@@ -31,8 +31,7 @@ class Office365Connector(AsyncConnector):
         """
         Shutdown the connector
         """
-        # Call Trigger.stop() to set stop event and stop logs timer
-        # Skip Connector/AsyncConnector.stop() as they have sync issues in async context
+        # Stop the connector
         super().stop()
 
         # Close client if it exists (cached_property stores in __dict__)
@@ -167,8 +166,25 @@ class Office365Connector(AsyncConnector):
                 # Continue the loop to retry after logging
                 await asyncio.sleep(self._frequency)
 
+    def _handle_stop_signal(self):
+        """
+        Handle gracefully the shutdown
+        """
+        self.log(message="Received stop signal", level="info")
+        loop.create_task(self.shutdown())
+
     async def collect_events(self):
+        """
+        Fetch and forward the events
+        """
         checkpoint = Checkpoint(self._data_path, self.configuration.intake_key)
+
+        # Get the current asyncio loop
+        loop = asyncio.get_running_loop()
+
+        # Register shutdown handler
+        loop.add_signal_handler(signal.SIGTERM, self._handle_stop_signal)
+        loop.add_signal_handler(signal.SIGINT, self._handle_stop_signal)
 
         try:
             await self.activate_subscriptions()
@@ -187,18 +203,8 @@ class Office365Connector(AsyncConnector):
         """
         self.log(message="Office365 Trigger has started", level="info")
 
-        loop = asyncio.get_event_loop()
-
-        # Set up signal handlers to stop gracefully
-        def handle_stop_signal():
-            self.log(message="Received stop signal", level="info")
-            loop.create_task(self.shutdown())
-
-        loop.add_signal_handler(signal.SIGTERM, handle_stop_signal)
-        loop.add_signal_handler(signal.SIGINT, handle_stop_signal)
-
         try:
-            loop.run_until_complete(self.collect_events())
+            asyncio.run(self.collect_events())
 
         except ApplicationAuthenticationFailed as auth_error:
             message = "Authentication failed. Please check your client ID, client secret and tenant ID."
