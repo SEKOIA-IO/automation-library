@@ -491,7 +491,7 @@
       "updated_at": {
         "type": "integer",
         "format": "int32",
-        "description": "Unix timestamp (seconds, may include fractional seconds) of the last update to the alert."
+        "description": "Unix timestamp (whole seconds) of the last update to the alert."
       },
       "comments": {
         "type": "array",
@@ -541,7 +541,7 @@
       },
       "ttps": {
         "type": "array",
-        "description": "MITRE ATT&CK techniques, tactics and procedures (TTPs) associated with the alert, as minimal STIX SCO objects.",
+        "description": "MITRE ATT&CK techniques, tactics and procedures (TTPs) associated with the alert, as minimal STIX objects.",
         "items": {
           "type": "object",
           "properties": {
@@ -684,7 +684,7 @@
       },
       "adversaries": {
         "type": "array",
-        "description": "Threat actors or adversary groups attributed to the alert, as minimal STIX SCO objects.",
+        "description": "Threat actors or adversary groups attributed to the alert, as minimal STIX Domain Objects (for example, `threat-actor`).",
         "items": {
           "type": "object",
           "properties": {
@@ -731,7 +731,7 @@
       },
       "kill_chain_short_id": {
         "type": "string",
-        "description": "Short identifier of the MITRE ATT&CK kill-chain phase associated with the alert (e.g. `TA0001`)."
+        "description": "Short identifier of the MITRE ATT&CK tactic associated with the alert (e.g. `TA0001` for Initial Access)."
       },
       "similar": {
         "type": "integer",
@@ -782,7 +782,7 @@
       "created_at": {
         "type": "integer",
         "format": "int32",
-        "description": "Unix timestamp (seconds, may include fractional seconds) when the alert was created."
+        "description": "Unix timestamp in whole seconds when the alert was created."
       },
       "updated_by_type": {
         "type": "string",
