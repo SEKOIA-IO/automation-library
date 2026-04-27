@@ -209,7 +209,6 @@ def test_next_batch_sleep_until_next_round(respx_mock: MockRouter, trigger, mess
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time, end_time]
 
-
         trigger.next_batch(start, end)
 
         assert trigger.push_events_to_intakes.call_count == 1
