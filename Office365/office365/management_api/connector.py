@@ -65,7 +65,7 @@ class Office365Connector(AsyncConnector):
             end_date (datetime): End date of the interval
 
         Returns:
-            list[dict]: List of events recevied for the interval
+            AsyncGenerator[list[str], None]: Batches of events received for the interval
         """
         pulled_events: list[str] = []
 
