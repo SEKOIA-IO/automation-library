@@ -33,7 +33,7 @@ class UbikaCloudProtectorNextGenConnectorConfiguration(DefaultConnectorConfigura
 
     chunk_size: int = 200
     # Time stepper settings
-    timedelta: int = 1
+    timedelta: int = 5
     start_time: int = 1
 
 
