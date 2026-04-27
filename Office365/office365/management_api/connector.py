@@ -177,14 +177,15 @@ class Office365Connector(AsyncConnector):
         """
         Fetch and forward the events
         """
-        checkpoint = Checkpoint(self._data_path, self.configuration.intake_key)
-
         # Get the current asyncio loop
         loop = asyncio.get_running_loop()
 
         # Register shutdown handler
         loop.add_signal_handler(signal.SIGTERM, self._handle_stop_signal, loop)
         loop.add_signal_handler(signal.SIGINT, self._handle_stop_signal, loop)
+
+        # Initialize the checkpoint
+        checkpoint = Checkpoint(self._data_path, self.configuration.intake_key)
 
         try:
             await self.activate_subscriptions()
