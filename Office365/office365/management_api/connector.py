@@ -166,7 +166,7 @@ class Office365Connector(AsyncConnector):
                 # Continue the loop to retry after logging
                 await asyncio.sleep(self._frequency)
 
-    def _handle_stop_signal(self):
+    def _handle_stop_signal(self, loop):
         """
         Handle gracefully the shutdown
         """
@@ -183,8 +183,8 @@ class Office365Connector(AsyncConnector):
         loop = asyncio.get_running_loop()
 
         # Register shutdown handler
-        loop.add_signal_handler(signal.SIGTERM, self._handle_stop_signal)
-        loop.add_signal_handler(signal.SIGINT, self._handle_stop_signal)
+        loop.add_signal_handler(signal.SIGTERM, self._handle_stop_signal, loop)
+        loop.add_signal_handler(signal.SIGINT, self._handle_stop_signal, loop)
 
         try:
             await self.activate_subscriptions()
