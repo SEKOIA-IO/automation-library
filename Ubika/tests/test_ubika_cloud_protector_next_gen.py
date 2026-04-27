@@ -143,6 +143,7 @@ def test_fetch_events_with_pagination(respx_mock: MockRouter, trigger, message1,
             "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events",
             params={
                 "filters.fromDate": "1747326567845",
+                "filters.toDate": "1747326667845",
                 "pagination.realtime": "true",
                 "pagination.pageSize": "100",
             },
