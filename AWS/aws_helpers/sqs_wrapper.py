@@ -6,10 +6,10 @@ from contextlib import asynccontextmanager
 from async_lru import alru_cache
 from loguru import logger
 from pydantic.v1 import Field
-from sekoia_automation.aio.helpers.aws.client import AwsClient, AwsConfiguration
+from aws_helpers.client import AwsClient, AwsClientConfiguration
 
 
-class SqsConfiguration(AwsConfiguration):
+class SqsConfiguration(AwsClientConfiguration):
     """AWS SQS wrapper configuration."""
 
     frequency: int = Field(default=10, description="AWS SQS queue polling frequency in seconds")
@@ -20,6 +20,8 @@ class SqsConfiguration(AwsConfiguration):
 
 class SqsWrapper(AwsClient[SqsConfiguration]):
     """Aws SQS wrapper."""
+
+    _configuration: SqsConfiguration  # always set by __init__, narrows Optional from base class
 
     def __init__(self, configuration: SqsConfiguration) -> None:
         """
