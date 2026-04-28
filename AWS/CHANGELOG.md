@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-20 - 1.35.2
+
+### Changed
+
+- update aws asset connector (#2478)
+
+## 2026-03-29 - 1.35.1
+
+### Changed
+
+- Update the yaml file for asset connector
+
 ## 2026-03-26 - 1.35.0
 
 ### Added

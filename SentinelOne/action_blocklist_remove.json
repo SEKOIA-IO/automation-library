@@ -1,0 +1,43 @@
+{
+  "name": "Remove item from Blocklist",
+  "description": "Remove item from Blocklist",
+  "uuid": "1e91ba77-19c7-5bcb-8dfa-3842932974c9",
+  "docker_parameters": "sentinelone_blocklist_delete_item",
+  "arguments": {
+    "title": "DeleteBlocklistItemActionArguments",
+    "type": "object",
+    "properties": {
+      "ids": {
+        "title": "Ids",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "ids"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "required": ["data"],
+    "properties": {
+      "errors": {
+        "type": "array",
+        "description": "Errors",
+        "items": { "type": "object" }
+      },
+      "data": {
+        "description": "Response data",
+        "type": "object",
+        "properties": {
+          "affected": {
+            "type": "integer",
+            "description": "Number of entities affected by the requested operation"
+          }
+        }
+      }
+    }
+  }
+}

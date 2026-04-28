@@ -102,6 +102,27 @@ Authentication failed. Please check your credentials.
 
 
 @pytest.fixture
+def vault_activity_list():
+    return b"""<?xml version="1.0" encoding="UTF-8"?>
+        <vault_account_activity_list xmlns="http://www.beyondtrust.com/sra/namespaces/API/reporting">
+           <start_time timestamp="986204380">2001-04-02T09:39:40+00:00</start_time>
+           <end_time timestamp="1775127348">2026-04-02T10:55:48+00:00</end_time>
+           <vault_account_activity timestamp="1773671926" event_type="Account Created" account="1">
+              <performed_by id="2" type="User">John Doe</performed_by>
+              <data></data>
+           </vault_account_activity>
+           <vault_account_activity timestamp="1773672020" event_type="Password Changed" account="1">
+              <performed_by id="2" type="User">John Doe</performed_by>
+              <data>Manually Edited</data>
+           </vault_account_activity>
+           <vault_account_activity timestamp="1773672107" event_type="Account Deleted" account="1">
+              <performed_by id="2" type="User">John Doe</performed_by>
+              <data></data>
+           </vault_account_activity>
+        </vault_account_activity_list>"""
+
+
+@pytest.fixture
 def team_xml():
     return b"""<?xml version="1.0" encoding="UTF-8"?>
 <team_activity_list xmlns="http://www.beyondtrust.com/sra/namespaces/API/reporting">

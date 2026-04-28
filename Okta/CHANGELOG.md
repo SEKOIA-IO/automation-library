@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-21 - 2.10.2
+
+### Changed
+
+- Upgrade `sekoia-automation-sdk` to 1.22.5 and add Okta device models for full API responses
+
+## 2026-03-29 - 2.10.1
+
+### Changed
+
+- Update the yaml file for asset connector
+
 ## 2026-03-12 - 2.10.0
 
 ### Added
@@ -24,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove OS version from `get_device_os` to avoid errors on missing version data
 - Fix `type_uid` value in user OCSF model
 - Improve disk encryption type handling with `BITLOCKER` and `FILEVAULT` support
+
 
 ## 2026-02-20 - 2.9.0
 

@@ -71,6 +71,13 @@ class SophosApiClient(ApiClient):
         )
 
     @retry()
+    def list_endpoints(self, parameters: dict[str, Any] | None = None) -> requests.Response:
+        return self.get(
+            url=f"{self.auth.get_credentials().api_url}/endpoint/v1/endpoints",
+            params=parameters,
+        )
+
+    @retry()
     def get_query_results(self, run_id: str | None, page_size: int, from_key: str | None = None) -> requests.Response:
         if run_id is None:
             raise ValueError("run_id is required")
