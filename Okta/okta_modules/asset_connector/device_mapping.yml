@@ -1,0 +1,409 @@
+mapping:
+  ocsf_class: "Device Inventory Info"
+  class_uid: 5001
+  version: "1.6.0"
+  description: "Okta device information"
+  source_name: "Okta"
+
+  samples:
+    - name: "Okta Managed Device"
+      description: "Okta managed device with active compliance status"
+      data: |
+        {
+          "id": "gooabc123defGHIJKL",
+          "status": "ACTIVE",
+          "created": "2023-06-04T10:00:00.000Z",
+          "lastUpdated": "2025-08-26T09:30:00.000Z",
+          "lastSeen": "2025-08-26T09:30:00.000Z",
+          "profile": {
+            "displayName": "LAPTOP-MARY-001",
+            "platform": "Windows",
+            "osVersion": "10.0.22621",
+            "serialNumber": "ABC123DEF456",
+            "imei": null,
+            "manufacturer": "Dell",
+            "model": "Latitude 5540",
+            "udid": null,
+            "registered": true,
+            "secureHardwarePresent": true,
+            "diskEncryptionType": "BitLocker",
+            "sid": "S-1-5-21-3623811015-3361044348-30300820-1013"
+          },
+          "_links": {
+            "self": [...]
+          }
+        }
+
+    - name: "Okta iOS Device"
+      description: "Okta managed iOS device"
+      data: |
+        {
+          "id": "goodef456ghiJKLMNO",
+          "status": "ACTIVE",
+          "created": "2023-04-15T08:00:00.000Z",
+          "lastUpdated": "2025-08-26T09:30:00.000Z",
+          "lastSeen": "2025-08-26T09:30:00.000Z",
+          "profile": {
+            "displayName": "iPhone-ROBERT-001",
+            "platform": "iOS",
+            "osVersion": "17.5.1",
+            "serialNumber": "A2R4P7B9C1D2E3F4G5",
+            "imei": "356938035643809",
+            "manufacturer": "Apple",
+            "model": "iPhone 14 Pro",
+            "udid": "00008120-0015E40A2E59801E",
+            "registered": true,
+            "secureHardwarePresent": true,
+            "diskEncryptionType": "FileVault"
+          },
+          "_links": {
+            "self": [...]
+          }
+        }
+
+  fields:
+    # OCSF EVENT CLASSIFICATION
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      logic: "Always 2 for 'Collect' activity"
+      description: "OCSF activity ID for inventory collection"
+
+    - source: "static: Collect"
+      target: "activity_name"
+      type: "string"
+      logic: "Always 'Collect'"
+      description: "OCSF activity name"
+
+    - source: "static: Discovery"
+      target: "category_name"
+      type: "string"
+      logic: "Always 'Discovery'"
+      description: "OCSF category name"
+
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      logic: "Always 5 for Discovery category"
+      description: "OCSF category UID"
+
+    - source: "static: Device Inventory Info"
+      target: "class_name"
+      type: "string"
+      logic: "Always 'Device Inventory Info'"
+      description: "OCSF class name"
+
+    - source: "static: 5001"
+      target: "class_uid"
+      type: "integer"
+      logic: "Always 5001 for Device Inventory Info"
+      description: "OCSF class UID"
+
+    - source: "static: 500102"
+      target: "type_uid"
+      type: "integer"
+      logic: "Always 500102 for Device Inventory Info: Collect type"
+      description: "OCSF type UID"
+
+    - source: "static: Device Inventory Info: Collect"
+      target: "type_name"
+      type: "string"
+      logic: "Always 'Device Inventory Info: Collect'"
+      description: "OCSF type name"
+
+    - source: "static: Informational"
+      target: "severity"
+      type: "string"
+      logic: "Always 'Informational' for inventory events"
+      description: "Event severity level"
+
+    - source: "static: 1"
+      target: "severity_id"
+      type: "integer"
+      logic: "Always 1 for Informational severity"
+      description: "OCSF severity ID"
+
+    # TIMESTAMP INFORMATION
+    - source: "created"
+      target: "time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp"
+      description: "OCSF event timestamp (device discovery time)"
+
+    # METADATA
+    - source: "static: Okta"
+      target: "metadata.product.name"
+      type: "string"
+      logic: "Always 'Okta'"
+      description: "Source product name"
+
+    - source: "static: Okta"
+      target: "metadata.product.vendor_name"
+      type: "string"
+      logic: "Always 'Okta'"
+      description: "Source product vendor name"
+
+    - source: "static: N/A"
+      target: "metadata.product.version"
+      type: "string"
+      logic: "Always 'N/A' since Okta device info is not tied to a specific product version"
+      description: "Source product version"
+
+    - source: "static: 1.6.0"
+      target: "metadata.version"
+      type: "string"
+      logic: "Fixed OCSF schema version"
+      description: "OCSF schema version"
+
+    # DEVICE IDENTIFICATION
+    - source: "profile.displayName"
+      target: "device.hostname"
+      type: "string"
+      logic: "Direct mapping of display name as hostname"
+      description: "Device hostname (from display name)"
+
+    - source: "id"
+      target: "device.uid"
+      type: "string"
+      logic: "Direct mapping of Okta device ID"
+      description: "Okta device unique identifier"
+
+    - source: "profile.displayName"
+      target: "device.name"
+      type: "string"
+      logic: "Direct mapping of display name"
+      description: "Device display name"
+
+    - source: "calculated: profile.platform"
+      target: "device.type"
+      type: "string"
+      logic: "Calculate device type ID based on platform"
+      description: "Device type"
+
+    - source: "calculated: profile.platform"
+      target: "device.type_id"
+      type: "integer"
+      logic: "Calculate device type ID based on platform"
+      description: "Device type ID"
+
+    - source: "profile.platform"
+      target: "device.os.name"
+      type: "string"
+      logic: "Direct mapping of platform (Windows, iOS, Android, MacOS)"
+      description: "Operating system platform"
+
+    - source: "profile.platform"
+      target: "device.os.type"
+      type: "string"
+      logic: "Map platform to OS type"
+      description: "Operating system type"
+
+    - source: "profile.platform"
+      target: "device.os.type_id"
+      type: "integer"
+      logic: "Map platform to OS type ID"
+      description: "Operating system type ID"
+
+    - source: "profile.manufacturer"
+      target: "device.vendor_name"
+      type: "string"
+      logic: "Direct mapping of device vendor name"
+      description: "Device vendor name"
+
+    - source: "profile.model"
+      target: "device.model"
+      type: "string"
+      logic: "Direct mapping of device model"
+      description: "Device model"
+
+    - source: "profile.udid"
+      target: "device.udid"
+      type: "string"
+      logic: "Direct mapping of UDID for applicable devices (e.g., iOS)"
+      description: "Device UDID (applicable for certain platforms like iOS)"
+
+    - source: "profile.imei"
+      target: "device.imei_list"
+      type: "array[string]"
+      logic: "Wrap single IMEI string in a list if not null"
+      description: "International Mobile Equipment Identity list (mobile devices only)"
+
+    - source: "created"
+      target: "device.created_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "Device creation timestamp (Unix epoch)"
+
+    - source: "lastSeen"
+      target: "device.last_seen_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch; null if never seen"
+      description: "Last seen timestamp (Unix epoch)"
+
+    - source: "calculated: profile.registered"
+      target: "device.is_managed"
+      type: "boolean"
+      logic: "Direct mapping of managed status"
+      description: "Whether device is managed by Okta"
+
+    - source: "calculated: status"
+      target: "device.is_compliant"
+      type: "boolean"
+      logic: "Calculate compliance boolean based on status (true if ACTIVE and COMPLIANT, false otherwise)"
+      description: "Whether device is compliant"
+
+    - source: "profile.secureHardwarePresent"
+      target: "device.is_trusted"
+      type: "boolean"
+      logic: "Use secure hardware presence as a proxy for device trustworthiness (true if secure hardware is present, false otherwise)"
+      description: "Whether device is considered trusted based on secure hardware presence"
+
+    - source: "profile.serialNumber"
+      target: "device.uid_alt"
+      type: "string"
+      logic: "Serial number used as an alternative device identifier"
+      description: "Device serial number (alternative UID)"
+
+    # OCSF ENRICHMENTS FIELDS
+    - source: "static: device_info"
+      target: "enrichments[].name"
+      type: "string"
+      logic: "Always 'device_info' to indicate enrichment type for Okta device details"
+      description: "Name of the enrichment containing Okta device details"
+
+    - source: "static: hardware_and_security"
+      target: "enrichments[].value"
+      type: "string"
+      logic: "Always 'hardware_and_security' to indicate enrichment category for device hardware and security posture"
+      description: "Value of the enrichment indicating hardware and security posture details"
+
+    - source: "calculated: diskEncryptionType, serialNumber, secureHardwarePresent and Sid"
+      target: "enrichments[].data"
+      type: "string"
+      logic: "Calculate enrichment data with key Okta device details such as encryption type, serial number, secure hardware presence, and compliance status to provide additional context on device security posture"
+      description: "Data field of the enrichment containing key Okta device details for additional context on device security posture"
+
+
+  ocsf_samples:
+    - name: "Device Inventory Info: Collect (Windows)"
+      description: "Transformed Okta Windows device to OCSF Device Inventory Info event"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "Device Inventory Info",
+          "class_uid": 5001,
+          "type_name": "Device Inventory Info: Collect",
+          "type_uid": 500102,
+          "severity": "Informational",
+          "severity_id": 1,
+          "time": 1685854800,
+          "metadata": {
+            "product": {
+              "name": "Okta",
+              "vendor_name": "Okta",
+              "version": "N/A"
+            },
+            "version": "1.6.0"
+          },
+          "device": {
+            "uid": "gooabc123defGHIJKL",
+            "uid_alt": "ABC123DEF456",
+            "name": "LAPTOP-MARY-001",
+            "hostname": "LAPTOP-MARY-001",
+            "type": "Desktop",
+            "type_id": 2,
+            "vendor_name": "Dell",
+            "model": "Latitude 5540",
+            "udid": null,
+            "imei_list": null,
+            "is_managed": true,
+            "is_compliant": true,
+            "is_trusted": true,
+            "created_time": 1685854800,
+            "first_seen_time": 1685854800,
+            "last_seen_time": 1725184200,
+            "os": {
+              "name": "Windows",
+              "type": "windows",
+              "type_id": 100
+            }
+          },
+          "enrichments": [
+            {
+              "name": "device_info",
+              "value": "hardware_and_security",
+              "data": {
+                "Storage_encryption": {
+                  "partitions": {
+                    "full": "Enabled"
+                  }
+                },
+                "Users": ["windows_sid:S-1-5-21-3623811015-3361044348-30300820-1013"]
+              }
+            }
+          ]
+        }
+
+    - name: "Device Inventory Info: Collect (iOS)"
+      description: "Transformed Okta iOS device to OCSF Device Inventory Info event"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "Device Inventory Info",
+          "class_uid": 5001,
+          "type_name": "Device Inventory Info: Collect",
+          "type_uid": 500102,
+          "severity": "Informational",
+          "severity_id": 1,
+          "time": 1681545600,
+          "metadata": {
+            "product": {
+              "name": "Okta",
+              "vendor_name": "Okta",
+              "version": "N/A"
+            },
+            "version": "1.6.0"
+          },
+          "device": {
+            "uid": "goodef456ghiJKLMNO",
+            "uid_alt": "A2R4P7B9C1D2E3F4G5",
+            "name": "iPhone-ROBERT-001",
+            "hostname": "iPhone-ROBERT-001",
+            "type": "Mobile",
+            "type_id": 5,
+            "vendor_name": "Apple",
+            "model": "iPhone 14 Pro",
+            "udid": "00008120-0015E40A2E59801E",
+            "imei_list": ["356938035643809"],
+            "is_managed": true,
+            "is_compliant": true,
+            "is_trusted": true,
+            "created_time": 1681545600,
+            "first_seen_time": 1681545600,
+            "last_seen_time": 1725184200,
+            "os": {
+              "name": "iOS",
+              "type": "ios",
+              "type_id": 301
+            }
+          },
+          "enrichments": [
+            {
+              "name": "device_info",
+              "value": "hardware_and_security",
+              "data": {
+                "Storage_encryption": {
+                  "partitions": {
+                    "full": "Enabled"
+                  }
+                }
+              }
+            }
+          ]
+        }

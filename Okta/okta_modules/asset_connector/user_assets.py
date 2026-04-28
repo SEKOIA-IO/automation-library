@@ -5,7 +5,7 @@ and format them according to OCSF standards.
 """
 
 import asyncio
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from functools import cached_property
 from typing import Any, Optional
 
@@ -14,14 +14,18 @@ from okta.client import Client as OktaClient
 from okta.models.user import User as OktaUser
 from okta.models.role import Role as OktaRole
 from okta.models.role_status import RoleStatus as OktaRoleStatus
-from sekoia_automation.asset_connector import AssetConnector
+from okta.models.user_status import UserStatus as OktaUserStatus
+from sekoia_automation.asset_connector import AsyncAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
+from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.asset_connector.models.ocsf.user import (
     Account,
     AccountTypeId,
     AccountTypeStr,
     Group,
     User,
+    UserDataObject,
+    UserEnrichmentObject,
     UserOCSFModel,
     UserTypeId,
     UserTypeStr,
@@ -31,7 +35,7 @@ from sekoia_automation.storage import PersistentJSON
 from okta_modules import OktaModule
 
 
-class OktaUserAssetConnector(AssetConnector):
+class OktaUserAssetConnector(AsyncAssetConnector):
     """Asset connector for collecting user data from Okta.
 
     This connector fetches user information from Okta and formats it
@@ -63,7 +67,7 @@ class OktaUserAssetConnector(AssetConnector):
 
         return result
 
-    def update_checkpoint(self) -> None:
+    async def update_checkpoint(self) -> None:
         """Update the checkpoint with the most recent date seen.
 
         Raises:
@@ -206,64 +210,43 @@ class OktaUserAssetConnector(AssetConnector):
 
         return list(roles)
 
-    async def next_list_users(self) -> list[OktaUser]:
+    async def next_list_users(self) -> AsyncGenerator[OktaUser, None]:
         """Fetch all users from Okta.
 
-        Returns:
-            List of user objects from Okta.
+        Yields:
+            OktaUser objects from Okta, one user at a time.
         """
-        all_users = []
         try:
             query_params = {}
             if self.most_recent_date_seen:
-                query_params = {"search": f'created gt "{self.most_recent_date_seen}"'}
+                query_params = {
+                    "search": f'created gt "{self.most_recent_date_seen}"',
+                    "sortBy": "created",
+                    "sortOrder": "asc",
+                }
 
             users, resp, err = await self.client.list_users(query_params)
             if err:
                 self.log(f"Error while listing users: {err}", level="error")
-                return []
+                return
 
-            if not users:
-                self.log("No users found", level="warning")
-                return []
-
-            all_users.extend(users)
+            for user in users:
+                yield user
+                self.new_most_recent_date = user.created
 
             while resp.has_next():
                 users, resp, err = await resp.next()
                 if err:
                     self.log(f"Error while listing users: {err}", level="error")
-                    return all_users
-                all_users.extend(users)
+                    return
+                for user in users:
+                    yield user
+                    self.new_most_recent_date = user.created
 
-            # Only update checkpoint if we have users
-            if all_users:
-                self.new_most_recent_date = self.get_last_created_date(all_users)
         except Exception as e:
             self.log(f"Exception while listing users: {e}", level="error")
             self.log_exception(e)
-            return []
-
-        return all_users
-
-    def get_last_created_date(self, users: list[OktaUser]) -> str:
-        """Get the last created date from the list of users.
-
-        Args:
-            users: List of Okta users.
-
-        Returns:
-            The last created date as a string.
-
-        Raises:
-            ValueError: If the users list is empty.
-        """
-        if not users:
-            raise ValueError("Cannot get last created date from empty users list")
-
-        result: str = max(user.created for user in users)
-
-        return result
+            return
 
     async def map_fields(self, okta_user: OktaUser) -> UserOCSFModel:
         """Map Okta user data to OCSF format.
@@ -283,9 +266,9 @@ class OktaUserAssetConnector(AssetConnector):
         if not okta_user.profile or not okta_user.profile.login:
             raise ValueError("User profile and login are required")
 
-        # Handle None values in name fields
-        first_name = okta_user.profile.firstName or "None"
-        last_name = okta_user.profile.lastName or "None"
+        # Handle None values in name fields (Okta SDK uses snake_case attributes)
+        first_name = okta_user.profile.first_name or "None"
+        last_name = okta_user.profile.last_name or "None"
         full_name = f"{first_name} {last_name}".strip()
 
         account = Account(
@@ -309,14 +292,13 @@ class OktaUserAssetConnector(AssetConnector):
         if okta_user.profile.email and "@" in okta_user.profile.email:
             domain = okta_user.profile.email.split("@")[1]
 
-        # Get display name if available
+        # Get display name if available (Okta SDK uses snake_case)
         display_name = None
-        if hasattr(okta_user.profile, "displayName"):
-            display_name_value = okta_user.profile.displayName
-            if display_name_value and isinstance(display_name_value, str):
-                display_name = display_name_value
+        display_name_value = okta_user.profile.display_name
+        if display_name_value and isinstance(display_name_value, str):
+            display_name = display_name_value
 
-        # Determine user type based on userType field if available
+        # Determine user type based on roles
         user_type_id = None
         user_type = None
         for role in roles:
@@ -324,6 +306,40 @@ class OktaUserAssetConnector(AssetConnector):
                 user_type_id = UserTypeId.ADMIN
                 user_type = UserTypeStr.ADMIN
                 break
+
+        # Build organization from profile fields
+        org = None
+        org_name_value = okta_user.profile.organization
+        department = okta_user.profile.department
+        org_name = org_name_value if org_name_value and isinstance(org_name_value, str) else None
+        dept_str = department if department and isinstance(department, str) else None
+        if org_name or domain or dept_str:
+            org = Organization(
+                name=org_name or domain or "Unknown",
+                ou_name=dept_str,
+            )
+
+        # Build enrichment data
+        is_enabled = (okta_user.status == OktaUserStatus.ACTIVE) if okta_user.status is not None else None
+        last_logon = str(okta_user.last_login) if okta_user.last_login else None
+        last_time_password_change = None
+        if okta_user.password_changed:
+            try:
+                last_time_password_change = isoparse(str(okta_user.password_changed)).timestamp()
+            except (ValueError, TypeError):
+                pass
+
+        enrichments = [
+            UserEnrichmentObject(
+                name="access_control",
+                value="okta",
+                data=UserDataObject(
+                    is_enabled=is_enabled,
+                    last_logon=last_logon,
+                    last_time_password_change=last_time_password_change,
+                ),
+            )
+        ]
 
         user = User(
             uid=okta_user.id,
@@ -338,6 +354,7 @@ class OktaUserAssetConnector(AssetConnector):
             uid_alt=okta_user.profile.login,
             type_id=user_type_id,
             type=user_type,
+            org=org,
         )
 
         return UserOCSFModel(
@@ -348,7 +365,7 @@ class OktaUserAssetConnector(AssetConnector):
             class_name="User Inventory Info",
             class_uid=5003,
             type_name="User Inventory Info: Collect",
-            type_uid=5003002,
+            type_uid=500302,
             severity="Informational",
             severity_id=1,
             time=isoparse(okta_user.created).timestamp(),
@@ -361,9 +378,10 @@ class OktaUserAssetConnector(AssetConnector):
                 version="1.6.0",
             ),
             user=user,
+            enrichments=enrichments,
         )
 
-    def get_assets(self) -> Generator[UserOCSFModel, None, None]:
+    async def get_assets(self) -> AsyncGenerator[UserOCSFModel, None]:
         """Generate user assets from Okta.
 
         Yields:
@@ -372,12 +390,9 @@ class OktaUserAssetConnector(AssetConnector):
         self.log("Starting Okta user assets generator", level="info")
         self.log(f"Data path: {self._data_path.absolute()}", level="info")
 
-        loop = asyncio.get_event_loop()
-        users = loop.run_until_complete(self.next_list_users())
-
-        for user in users:
+        async for user in self.next_list_users():
             try:
-                yield loop.run_until_complete(self.map_fields(user))
+                yield await self.map_fields(user)
             except Exception as e:
                 user_id = getattr(user, "id", "unknown")
                 self.log(f"Error while mapping user {user_id}: {e}", level="error")
