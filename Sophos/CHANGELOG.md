@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-27 - 1.18.1
+
+### Fixed
+
+- Fix how we register the Sophos account validator in the main module
+
 ## 2026-04-23 - 1.18.0
 
 ### Added
