@@ -326,3 +326,33 @@ class HarfanglabAgentPage(BaseModel):
 
     class Config:
         extra = "allow"
+
+
+class HarfanglabApplication(BaseModel):
+    id: str
+    name: str
+    active: Optional[bool] = None
+    installation_date: Optional[str] = None
+    first_seen: Optional[str] = None
+    last_seen: Optional[str] = None
+    first_version: Optional[str] = None
+    last_version: Optional[str] = None
+    installation_count: Optional[int] = None
+    publisher: Optional[str] = None
+    ostype: Optional[str] = None
+    cpe_prefix: Optional[str] = None
+    app_type: Optional[str] = None
+    description: Optional[str] = None
+
+    class Config:
+        extra = "allow"
+
+
+class HarfanglabApplicationPage(BaseModel):
+    count: int = 0
+    next: Optional[str] = None
+    previous: Optional[str] = None
+    results: List[HarfanglabApplication] = []
+
+    class Config:
+        extra = "allow"
