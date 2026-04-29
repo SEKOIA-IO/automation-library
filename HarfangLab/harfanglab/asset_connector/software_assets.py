@@ -145,9 +145,7 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
             SoftwarePackage: Mapped OCSF SoftwarePackage.
         """
         app_type = (app.app_type or "").lower()
-        pkg_type, pkg_type_id = self.APP_TYPE_MAP.get(
-            app_type, (PackageTypeStr.UNKNOWN, PackageTypeId.UNKNOWN)
-        )
+        pkg_type, pkg_type_id = self.APP_TYPE_MAP.get(app_type, (PackageTypeStr.UNKNOWN, PackageTypeId.UNKNOWN))
 
         return SoftwarePackage(
             name=app.name,
@@ -245,9 +243,7 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
             self.log(f"API request failed - URL: {current_url}, Error: {str(e)}", level="error")
             raise
 
-    def _fetch_applications(
-        self, agent_uid: str
-    ) -> Generator[list[HarfanglabApplication], None, None]:
+    def _fetch_applications(self, agent_uid: str) -> Generator[list[HarfanglabApplication], None, None]:
         """
         Fetch applications installed on a specific agent.
         Args:
@@ -276,8 +272,7 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
                         apps.append(HarfanglabApplication.parse_obj(item))
                     except ValidationError as e:
                         self.log(
-                            f"Skipping application (ID: {item.get('id', 'unknown')}) "
-                            f"due to validation error: {e}",
+                            f"Skipping application (ID: {item.get('id', 'unknown')}) " f"due to validation error: {e}",
                             level="warning",
                         )
 

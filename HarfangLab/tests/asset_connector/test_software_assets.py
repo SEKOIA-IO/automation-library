@@ -241,9 +241,7 @@ def test_map_software_fields(test_software_connector, sample_agent, sample_appli
     assert software.metadata.version == "1.5.0"
 
 
-def test_map_software_fields_json_serializable(
-    test_software_connector, sample_agent, sample_application
-):
+def test_map_software_fields_json_serializable(test_software_connector, sample_agent, sample_application):
     device = test_software_connector.build_device(sample_agent)
     software = test_software_connector.map_software_fields(sample_agent, sample_application, device)
     json_data = software.model_dump()
