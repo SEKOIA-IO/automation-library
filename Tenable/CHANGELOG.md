@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-20 - 1.0.16
+
+### Changed
+
+- Introduce Pydantic models (`AssetInfo`, `Vulnerability`, `Plugin`, `VulnAsset`, and related sub-models) in `model.py` to strongly type Tenable API responses
+- Upgrade `sekoia-automation-sdk` to version 1.22.5 to leverage the latest features and improvements
+
 ## 2026-04-10 - 1.0.15
 
 ### Fixed
