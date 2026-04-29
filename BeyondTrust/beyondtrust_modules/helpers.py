@@ -104,10 +104,11 @@ def parse_vault_activity(raw: bytes) -> list[dict[str, Any]]:
     return result
 
 
-def parse_team(raw: bytes) -> list[dict, Any]:
+def parse_team(raw: bytes) -> list[dict[str, Any]]:
+    parser = etree.XMLParser(resolve_entities=False)
     namespace = {"ns": "http://www.beyondtrust.com/sra/namespaces/API/reporting"}
 
-    root = etree.fromstring(raw)
+    root = etree.fromstring(raw, parser=parser)
 
     result = []
     team_activities = root.xpath("/ns:team_activity_list/ns:team_activity", namespaces=namespace)
@@ -135,9 +136,10 @@ def parse_team(raw: bytes) -> list[dict, Any]:
                     "name": performed_by_elem.text,
                 }
 
-            data = event.xpath("./ns:data/ns:value", namespaces=namespace)
-            for item in data:
-                event_record["data"][item.attrib["name"]] = item.attrib["value"]
+            data_elem = event.xpath("./ns:data/ns:value", namespaces=namespace)
+            if data_elem is not None:
+                for item in data_elem:
+                    event_record["data"][item.attrib["name"]] = item.attrib["value"]
 
             result.append(event_record)
 

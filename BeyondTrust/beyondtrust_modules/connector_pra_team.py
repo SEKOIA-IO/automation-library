@@ -41,7 +41,7 @@ class BeyondTrustPRATeamConnector(BeyondTrustBaseConnector):
         if self._handle_response_error(response):
             return
 
-        if response.ok and "<error " in response.text:
+        if response.ok and "<error" in response.text:
             if "No Support Team report information matching your chosen criteria is available." in response.text:
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
                 # Just no new events

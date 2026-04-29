@@ -4,6 +4,7 @@
   "uuid": "fe9469f9-975e-48ae-af86-596273e5e51b",
   "docker_parameters": "connector_beyondtrust_pra_team",
   "arguments": {
+    "title": "BeyondTrustPRATeamConfiguration",
     "type": "object",
     "properties": {
       "intake_server": {
