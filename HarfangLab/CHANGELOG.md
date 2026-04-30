@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-30 - 1.30.1
+
+### Added
+
+- Add gateway MAC address to device network interface information
+
 ## 2026-04-29 - 1.30.0
 
 ### Added
