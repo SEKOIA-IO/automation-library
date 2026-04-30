@@ -119,7 +119,7 @@ def parse_team(raw: bytes) -> list[dict[str, Any]]:
         events = team_activity.xpath("./ns:events/ns:event", namespaces=namespace)
         for event in events:
             event_record = {
-                "timestamp": event.attrib.get("timestamp"),
+                "timestamp": event.attrib["timestamp"],
                 "team": {
                     "id": team_id,
                     "name": team_name,
