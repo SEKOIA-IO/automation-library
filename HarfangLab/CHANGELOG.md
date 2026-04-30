@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-29 - 1.30.0
+
+### Added
+
+- Add software asset connector to fetch application inventory from HarfangLab agents
+
 ## 2026-04-20 - 1.29.8
 
 ### Changed
