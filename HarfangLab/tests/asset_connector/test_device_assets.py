@@ -1084,7 +1084,9 @@ def test_fetch_devices_skips_invalid_item(test_harfanglab_asset_connector):
             status_code=200,
             json=response,
         )
-        with patch("harfanglab.asset_connector.device_assets.HarfanglabAgent.parse_obj", side_effect=Exception("invalid")):
+        with patch(
+            "harfanglab.asset_connector.device_assets.HarfanglabAgent.parse_obj", side_effect=Exception("invalid")
+        ):
             # Should not raise; the item is skipped via ValidationError handler
             pass
 
@@ -1124,9 +1126,7 @@ def test_iterate_devices_no_checkpoint(test_harfanglab_asset_connector, agent_en
             assert test_harfanglab_asset_connector._latest_time is not None
 
 
-def test_iterate_devices_no_checkpoint_update_when_older(
-    test_harfanglab_asset_connector, agent_endpoint_response
-):
+def test_iterate_devices_no_checkpoint_update_when_older(test_harfanglab_asset_connector, agent_endpoint_response):
     with requests_mock.Mocker() as agent_request:
         agent_request.get(
             f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&firstseen=2030-01-01T00%3A00%3A00%2B00%3A00&limit=1000",
@@ -1140,7 +1140,10 @@ def test_iterate_devices_no_checkpoint_update_when_older(
             new_callable=lambda: property(lambda self: "2030-01-01T00:00:00+00:00"),
         ):
             list(test_harfanglab_asset_connector.iterate_devices())
-            assert not hasattr(test_harfanglab_asset_connector, "_latest_time") or test_harfanglab_asset_connector._latest_time is None
+            assert (
+                not hasattr(test_harfanglab_asset_connector, "_latest_time")
+                or test_harfanglab_asset_connector._latest_time is None
+            )
 
 
 def test_update_checkpoint(test_harfanglab_asset_connector):
