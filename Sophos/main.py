@@ -15,6 +15,6 @@ if __name__ == "__main__":
     module.register(ActionSophosEDRDeIsolateEndpoint, "sophos_edr_deisolate_endpoint")
     module.register(ActionSophosEDRScan, "sophos_edr_run_scan")
     module.register(SophosDeviceAssetConnector, "sophos_device_asset_connector")
-    module.register(SophosAccountValidator, "sophos_account_validator")
+    module.register_account_validator(SophosAccountValidator)
 
     module.run()

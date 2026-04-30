@@ -7,11 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-04-24 - 2.10.2
+## 2026-04-24 - 2.10.3
 
 ### Fixed
 
 - Fix account validator to detect authentication failures.
+## 2026-04-21 - 2.10.2
+
+### Changed
+
+- Upgrade `sekoia-automation-sdk` to 1.22.5 and add Okta device models for full API responses
 
 ## 2026-03-29 - 2.10.1
 

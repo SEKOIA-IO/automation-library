@@ -16,7 +16,7 @@ class MicrosoftADModule(Module):
 
 
 class MicrosoftADConnectorConfiguration(DefaultAssetConnectorConfiguration):
-    basedn: str | None = Field(None, description="Active directory basedn")
+    basedn: str | None = None
 
 
 class LDAPUserAttributes(BaseModel):
