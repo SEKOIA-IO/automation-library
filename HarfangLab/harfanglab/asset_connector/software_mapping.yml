@@ -250,7 +250,7 @@ mapping:
             "last_seen_time": 1749317226,
             "os": {
               "name": "Windows 11 Enterprise Evaluation",
-              "type": "Windows",
+              "type": "windows",
               "type_id": 100
             }
           },
