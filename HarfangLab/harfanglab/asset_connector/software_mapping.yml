@@ -96,10 +96,10 @@ mapping:
       description: "OCSF event timestamp"
 
     # METADATA
-    - source: "static: HarfangLab EDR"
+    - source: "static: Harfanglab EDR"
       target: "metadata.product.name"
       type: "string"
-      logic: "Always 'HarfangLab EDR'"
+      logic: "Always 'Harfanglab EDR'"
       description: "Source product name"
 
     - source: "static: 24.12"
