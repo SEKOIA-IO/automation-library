@@ -137,9 +137,8 @@ def parse_team(raw: bytes) -> list[dict[str, Any]]:
                 }
 
             data_elem = event.xpath("./ns:data/ns:value", namespaces=namespace)
-            if data_elem is not None:
-                for item in data_elem:
-                    event_record["data"][item.attrib["name"]] = item.attrib["value"]
+            for item in data_elem:
+                event_record["data"][item.attrib["name"]] = item.attrib["value"]
 
             result.append(event_record)
 
