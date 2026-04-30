@@ -208,8 +208,6 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
             device_response = self.client.get(current_url, params=params)
             device_response.raise_for_status()
 
-            page_number = 1
-
             while self.running:
                 raw_page = device_response.json()
                 count = raw_page.get("count", 0)
@@ -234,7 +232,6 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
                 if not next_page:
                     return
 
-                page_number += 1
                 current_url = urljoin(self.base_url, next_page)
                 device_response = self.client.get(current_url)
                 device_response.raise_for_status()
