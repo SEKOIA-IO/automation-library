@@ -11,16 +11,15 @@ from google.cloud.pubsub_v1 import SubscriberClient, types
 from google_module.base import GoogleTrigger
 from google_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 from pydantic import BaseModel
+from sekoia_automation.connector import DefaultConnectorConfiguration
 
 max_chunk_size: int = 1000
 
 
-class PubSubConfig(BaseModel):
-    intake_key: str
+class PubSubConfig(DefaultConnectorConfiguration):
     subject_id: str
     project_id: str
     frequency: int = 20
-    intake_server: str = "https://intake.sekoia.io"
     chunk_size: int = 1000
 
 
