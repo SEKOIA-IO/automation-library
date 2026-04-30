@@ -5,9 +5,9 @@ from typing import Any
 
 from pydantic.v1 import BaseModel
 
-import urllib3
+from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
 
-import requests
+from requests.exceptions import Timeout, HTTPError
 
 from tenacity import (
     retry,
@@ -16,8 +16,6 @@ from tenacity import (
     retry_if_exception_type,
 )
 
-from sekoia_automation.action import Action
-from sekoiaio.utils import user_agent
 from .base_sol import BaseSolAction
 
 
@@ -54,8 +52,8 @@ class ListQueries(BaseSolAction):
         reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
-        retry=retry_if_exception_type(requests.exceptions.Timeout)
-        | retry_if_exception_type(urllib3.exceptions.TimeoutError),
+        retry=retry_if_exception_type(Timeout)
+        | retry_if_exception_type(Urllib3TimeoutError),
     )
     def get_queries(self, argument: ListQueriesArguments) -> list[dict[str, Any]]:
         """Retrieve all SOL queries, with pagination.
@@ -84,7 +82,7 @@ class ListQueries(BaseSolAction):
             )
             try:
                 response_list_query.raise_for_status()
-            except requests.exceptions.HTTPError as e:
+            except HTTPError as e:
                 self.log(
                     f"HTTP error when retrieving existing queries: {e}. Response status: {response_list_query.status_code}, Response text: {response_list_query.text}",
                     level="error",

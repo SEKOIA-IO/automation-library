@@ -1,16 +1,18 @@
-from typing import Literal
 from uuid import UUID, uuid4
-from requests import Session
-from posixpath import join as urljoin
-import time
 
-from typing import Any, Callable
+from posixpath import join as urljoin
+
+from time import sleep, time
+
+from typing import Any, Callable, Literal
 
 from pydantic.v1 import BaseModel
 
-import urllib3
+from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
 
-import requests
+from requests import Session
+from requests.exceptions import Timeout, HTTPError
+
 from tenacity import (
     retry,
     wait_exponential,
@@ -18,7 +20,6 @@ from tenacity import (
     retry_if_exception_type,
 )
 
-from sekoiaio.utils import user_agent
 from .base_sol import BaseSolAction
 
 
@@ -69,8 +70,8 @@ class ExecuteAQuery(BaseSolAction):
         reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
-        retry=retry_if_exception_type(requests.exceptions.Timeout)
-        | retry_if_exception_type(urllib3.exceptions.TimeoutError),
+        retry=retry_if_exception_type(Timeout)
+        | retry_if_exception_type(Urllib3TimeoutError),
     )
     def trigger_query_execution(self, query_uuid: UUID, query_definition: str, query_parameters: dict | None) -> UUID:
         """Trigger the asynchronous execution of a SOL query and return the run UUID.
@@ -91,7 +92,7 @@ class ExecuteAQuery(BaseSolAction):
         )
         try:
             response_execute_query.raise_for_status()
-        except requests.exceptions.HTTPError as e:
+        except HTTPError as e:
             self.log(
                 f"HTTP error when triggering query execution for query_uuid '{query_uuid}': {e}. Response status: {response_execute_query.status_code}, Response text: {response_execute_query.text}",
                 level="error",
@@ -104,8 +105,8 @@ class ExecuteAQuery(BaseSolAction):
         reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
-        retry=retry_if_exception_type(requests.exceptions.Timeout)
-        | retry_if_exception_type(urllib3.exceptions.TimeoutError),
+        retry=retry_if_exception_type(Timeout)
+        | retry_if_exception_type(Urllib3TimeoutError),
     )
     def get_query_by_name(self, query_name: str) -> dict[str, Any]:
         """Retrieve a query definition by its name, optionally scoped to a community.
@@ -130,7 +131,7 @@ class ExecuteAQuery(BaseSolAction):
         )
         try:
             response_list_query.raise_for_status()
-        except requests.exceptions.HTTPError as e:
+        except HTTPError as e:
             self.log(
                 f"HTTP error when retrieving existing queries matching '{query_name}': {e}. Response status: {response_list_query.status_code}, Response text: {response_list_query.text}",
                 level="error",
@@ -175,8 +176,8 @@ class ExecuteAQuery(BaseSolAction):
         reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
-        retry=retry_if_exception_type(requests.exceptions.Timeout)
-        | retry_if_exception_type(urllib3.exceptions.TimeoutError),
+        retry=retry_if_exception_type(Timeout)
+        | retry_if_exception_type(Urllib3TimeoutError),
     )
     def get_query_by_uuid(self, query_uuid: UUID) -> dict[str, Any]:
         """Retrieve a query definition by its UUID.
@@ -190,7 +191,7 @@ class ExecuteAQuery(BaseSolAction):
         )
         try:
             response_get_query.raise_for_status()
-        except requests.exceptions.HTTPError as e:
+        except HTTPError as e:
             self.log(
                 f"HTTP error when retrieving query definition for query_uuid '{query_uuid}': {e}. Response status: {response_get_query.status_code}, Response text: {response_get_query.text}",
                 level="error",
@@ -203,8 +204,8 @@ class ExecuteAQuery(BaseSolAction):
         reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
-        retry=retry_if_exception_type(requests.exceptions.Timeout)
-        | retry_if_exception_type(urllib3.exceptions.TimeoutError),
+        retry=retry_if_exception_type(Timeout)
+        | retry_if_exception_type(Urllib3TimeoutError),
     )
     def download_query_result(self, run_uuid: str, result_format: str) -> str:
         """Download the result of a completed query run.
@@ -220,7 +221,7 @@ class ExecuteAQuery(BaseSolAction):
         )
         try:
             response_download_result.raise_for_status()
-        except requests.exceptions.HTTPError as e:
+        except HTTPError as e:
             self.log(
                 f"HTTP error when downloading query result for run_uuid '{run_uuid}': {e}. Response status: {response_download_result.status_code}, Response text: {response_download_result.text}",
                 level="error",
@@ -233,8 +234,8 @@ class ExecuteAQuery(BaseSolAction):
         reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
-        retry=retry_if_exception_type(requests.exceptions.Timeout)
-        | retry_if_exception_type(urllib3.exceptions.TimeoutError),
+        retry=retry_if_exception_type(Timeout)
+        | retry_if_exception_type(Urllib3TimeoutError),
     )
     def _wait_for_query_completion_step(
         self, run_uuid: str, should_we_wait: Callable[[str], bool], timeout: int
@@ -247,7 +248,7 @@ class ExecuteAQuery(BaseSolAction):
         :raises QueryExecutionError: If the run status is "error" or the status cannot be retrieved
         :raises TimeoutError: If the run does not reach the expected state within the timeout
         """
-        start_wait = time.time()
+        start_wait = time()
 
         response_get_run = self.http_session.get(
             url=urljoin(self.query_runs_api_path, run_uuid),
@@ -255,7 +256,7 @@ class ExecuteAQuery(BaseSolAction):
         )
         try:
             response_get_run.raise_for_status()
-        except requests.exceptions.HTTPError as e:
+        except HTTPError as e:
             self.log(
                 f"HTTP error when retrieving query run status for run_uuid '{run_uuid}': {e}. Response status: {response_get_run.status_code}, Response text: {response_get_run.text}",
                 level="error",
@@ -273,7 +274,7 @@ class ExecuteAQuery(BaseSolAction):
             raise QueryExecutionError
 
         while should_we_wait(status):
-            time.sleep(1)
+            sleep(1)
 
             response_get_run = self.http_session.get(
                 url=urljoin(self.query_runs_api_path, run_uuid),
@@ -281,7 +282,7 @@ class ExecuteAQuery(BaseSolAction):
             )
             try:
                 response_get_run.raise_for_status()
-            except requests.exceptions.HTTPError as e:
+            except HTTPError as e:
                 self.log(
                     f"HTTP error when retrieving query run status for run_uuid '{run_uuid}': {e}. Response status: {response_get_run.status_code}, Response text: {response_get_run.text}",
                     level="error",
@@ -298,7 +299,7 @@ class ExecuteAQuery(BaseSolAction):
                 )
                 raise QueryExecutionError
 
-            if time.time() - start_wait > timeout:
+            if time() - start_wait > timeout:
                 raise TimeoutError(f"Timeout while waiting for query run '{run_uuid}' to complete.")
 
     def wait_for_query_completion(self, run_uuid: str) -> None:
@@ -331,6 +332,7 @@ class ExecuteAQuery(BaseSolAction):
         :return: Action result containing the raw query output
         """
         self.configure_http_session()
+        self.configure_urls()
 
         # Resolve the query definition by UUID if provided, otherwise fall back to name lookup
         if arguments.query_uuid:

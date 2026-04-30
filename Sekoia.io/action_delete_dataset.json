@@ -20,8 +20,8 @@
   }
     },
     "oneOf": [
-      {"required": "name"},
-      {"required": "uuid"}
+      {"required": ["name"]},
+      {"required": ["uuid"]}
     ]
   },
   "results": {}

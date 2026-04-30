@@ -41,32 +41,6 @@ class CreateDataset(BaseSolAction):
         """Set up the dataset API base path."""
         self.dataset_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/datasets")
 
-    @retry(
-        reraise=True,
-        wait=wait_exponential(multiplier=1, min=1, max=10),
-        stop=stop_after_attempt(10),
-        retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
-    )
-    def validate_dataset(self, dataset: bytes, name: str) -> None:
-        """Send the dataset to the validation endpoint before creation.
-
-        :param dataset: Raw CSV content as bytes
-        :param name: Name to assign to the dataset
-        :raises requests.exceptions.HTTPError: If the API rejects the dataset
-        """
-        response_validate = self.http_session.post(
-            f"{self.dataset_api_path}/validate",
-            data={"name": name},
-            files={"file": ("dataset.csv", dataset, "text/csv")},
-        )
-        try:
-            response_validate.raise_for_status()
-        except HTTPError as e:
-            self.log(
-                f"HTTP error when validating dataset: {e}. Response status: {response_validate.status_code}, Response text: {response_validate.text}",
-                level="error",
-            )
-            raise
 
     @retry(
         reraise=True,
@@ -122,8 +96,7 @@ class CreateDataset(BaseSolAction):
 
         # Encode the dataset string to bytes for multipart upload
         encoded_dataset = self.encode_dataset(arguments.dataset)
-        # Validate the dataset before uploading
-        self.validate_dataset(encoded_dataset, arguments.name)
-        # Create the dataset
+
+        # Create the dataset, the validation is build-in in the API and will return an error if the dataset is not valid
         self.create_dataset(encoded_dataset, arguments.name)
         return CreateDatasetResults()

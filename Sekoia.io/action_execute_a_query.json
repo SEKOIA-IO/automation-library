@@ -65,7 +65,7 @@
       },
       "output_path": {
         "description": "Path to the file with the content",
-        "type": "object"
+        "type": "string"
       }
     },
     "required": []
