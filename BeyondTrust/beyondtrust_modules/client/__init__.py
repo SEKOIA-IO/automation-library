@@ -23,6 +23,22 @@ class ApiClient(requests.Session):
             ),
         )
 
+    def get_team(self, end_time: int) -> requests.Response:
+        return self.post(
+            f"{self._base_url}/api/reporting",
+            data={"generate_report": "Team", "duration": 0, "end_time": end_time},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=60,
+        )
+
+    def get_vault_activity(self, end_time: int) -> requests.Response:
+        return self.post(
+            f"{self._base_url}/api/reporting",
+            data={"generate_report": "VaultAccountActivity", "duration": 0, "end_time": end_time},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=60,
+        )
+
     def get_session_listing(self, end_time: int) -> requests.Response:
         return self.post(
             f"{self._base_url}/api/reporting",

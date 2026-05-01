@@ -35,6 +35,16 @@
       "refresh_token": {
         "description": "Refresh API token",
         "type": "string"
+      },
+      "timedelta": {
+        "type": "integer",
+        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events (default to 5 minutes ago)",
+        "default": 5
+      },
+      "start_time": {
+        "type": "integer",
+        "description": "The number of hours from which events should be queried.",
+        "default": 1
       }
     },
     "required": [

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-27 - 1.25.14
+
+### Fixed
+
+- Fix `Organization` model validation error when `service_provider` is `None` by using a fallback value `"Unknown"`
+
+## 2026-04-14 - 1.25.13
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.5
+
 ## 2026-02-23 - 1.25.12
 
 ### Changed

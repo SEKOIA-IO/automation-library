@@ -36,6 +36,58 @@ def test_okta_device_asset_connector(data_storage):
     return connector
 
 
+def test_okta_device_parses_full_api_response():
+    payload = {
+        "id": "guo4a5u7YAHhjXrMK0g4",
+        "status": "CREATED",
+        "created": "2019-10-02T18:03:07.000Z",
+        "lastUpdated": "2019-10-02T18:03:07.000Z",
+        "profile": {
+            "displayName": "Example device name 1",
+            "platform": "WINDOWS",
+            "serialNumber": "XXDDRFCFRGF3M8MD6D",
+            "sid": "S-1-11-111",
+            "registered": True,
+            "secureHardwarePresent": False,
+            "diskEncryptionType": "ALL_INTERNAL_VOLUMES",
+        },
+        "resourceType": "UDDevice",
+        "resourceDisplayName": {
+            "value": "Example device name 1",
+            "sensitive": False,
+        },
+        "resourceAlternateId": None,
+        "resourceId": "guo4a5u7YAHhjXrMK0g4",
+        "_links": {
+            "activate": {
+                "href": "https://example.okta.com/api/v1/devices/guo4a5u7YAHhjXrMK0g4/lifecycle/activate",
+                "hints": {"allow": ["POST"]},
+            },
+            "self": {
+                "href": "https://example.okta.com/api/v1/devices/guo4a5u7YAHhjXrMK0g4",
+                "hints": {"allow": ["GET", "PATCH", "PUT"]},
+            },
+            "users": {
+                "href": "https://example.okta.com/api/v1/devices/guo4a5u7YAHhjXrMK0g4/users",
+                "hints": {"allow": ["GET"]},
+            },
+        },
+        "_embedded": {"users": []},
+    }
+
+    device = OktaDevice.model_validate(payload)
+
+    assert device.resourceType == "UDDevice"
+    assert device.resourceDisplayName is not None
+    assert device.resourceDisplayName.value == "Example device name 1"
+    assert device.resourceId == "guo4a5u7YAHhjXrMK0g4"
+    assert device.links is not None
+    assert device.links["self"].hints.allow == ["GET", "PATCH", "PUT"]
+    assert device.links["users"].href.endswith("/users")
+    assert device.embedded is not None
+    assert device.embedded.users == []
+
+
 # ========================================
 # Tests: fetch_next_devices method
 # ========================================

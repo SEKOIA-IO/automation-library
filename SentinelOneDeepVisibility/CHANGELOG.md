@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-27 - 1.1.8
+
+### Changed
+
+- Change the default message visibility timeout to 5 minutes
+
 ## 2026-02-18 - 1.1.7
 
 ### Changed
