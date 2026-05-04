@@ -1,0 +1,59 @@
+{
+  "description": "Ubika Cloud Protector Next Generation Traffic Logs",
+  "docker_parameters": "ubika_cloud_protector_next_gen_traffic_logs",
+  "name": "Fetch new traffic logs events from Ubika Cloud Protector Next Generation",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "The configuration to fetch new traffic logs",
+    "type": "object",
+    "properties": {
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing",
+        "default": 1000,
+        "minimum": 1,
+        "maximum": 1000
+      },
+      "frequency": {
+        "description": "Batch frequency in seconds",
+        "type": "integer",
+        "default": 60,
+        "minimum": 10,
+        "maximum": 60
+        
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "type": "string",
+        "default": "https://intake.sekoia.io"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending traffic-log events",
+        "type": "string"
+      },
+      "namespace": {
+        "description": "Namespace",
+        "type": "string"
+      },
+      "refresh_token": {
+        "description": "Refresh API token",
+        "type": "string"
+      },
+      "start_time": {
+        "type": "integer",
+        "description": "The number of hours from which events should be queried",
+        "default": 1,
+        "minimum": 0
+      }
+    },
+    "required": [
+      "intake_key",
+      "namespace",
+      "refresh_token"
+    ],
+    "secrets": [
+      "refresh_token"
+    ]
+  },
+  "uuid": "d36f495c-8b09-4a5c-9f69-1cfb9eebee7a"
+}

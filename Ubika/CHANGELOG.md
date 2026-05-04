@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-04 - 1.1.0
+
+### Added
+
+- Add new connector_ubika_cloud_protector_next_gen_traffic_logs connector
+
 ## 2026-02-09 - 1.0.8
 
 ### Added
