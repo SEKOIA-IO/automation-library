@@ -1,5 +1,5 @@
-from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
