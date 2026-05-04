@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-04-27 - 1.1.8
+## 2026-05-04 - 1.1.9
+
+### Fixed
+
+- manifest with OIDC fields
+
+## 2026-05-04 - 1.1.8
 
 ### Changed
 
