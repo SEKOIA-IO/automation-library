@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-04 - 1.18.2
+
+### Fixed
+
+- Fix the samples in the asset connector YAML file (`device_mapping.yml`)
+
 ## 2026-04-27 - 1.18.1
 
 ### Fixed
