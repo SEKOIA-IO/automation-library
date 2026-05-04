@@ -56,8 +56,9 @@ class SynchronizeAssetsWithAD(Action):
         try:
             return response.json()
 
-        except requests.exceptions.JSONDecodeError:
+        except requests.exceptions.JSONDecodeError as e:
             self.error(f"Expected JSON, got: {response.text}")
+            raise e
 
     def post_request(self, endpoint: str, json_data: str) -> Any:
         api_path = urljoin(self.base_url + "/", endpoint)
@@ -71,8 +72,9 @@ class SynchronizeAssetsWithAD(Action):
         try:
             return response.json()
 
-        except requests.exceptions.JSONDecodeError:
+        except requests.exceptions.JSONDecodeError as e:
             self.error(f"Expected JSON, got: {response.text}")
+            raise e
 
     def put_request(self, endpoint: str, json_data: str) -> None:
         api_path = urljoin(self.base_url + "/", endpoint)
