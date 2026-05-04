@@ -27,6 +27,7 @@ def test_ilert_postalert_default():
         "source": "172.16.0.5",
         "target": "example.org.fake",
         "details": "some details here",
+        "status": {"name": "Acknowledged"},
     }
     with requests_mock.Mocker() as mock:
         mock.get(
@@ -43,4 +44,4 @@ def test_ilert_postalert_default():
         assert history[0].method == "GET"
         assert history[1].method == "POST"
         assert history[1].url == hook_url
-        assert history[1].json() == alert_info
+        assert history[1].json() == {**alert_info, "status": "acknowledged"}
