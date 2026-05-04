@@ -21,7 +21,7 @@ class IlertTriggerAlertAction(Action):
         Returns the definition of an alert
         """
 
-        url = f"{base_url}v1/sic/alerts/{alert_uuid}"
+        url = f"{base_url.rstrip('/')}/v1/sic/alerts/{alert_uuid}"
 
         response: Response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
         response.raise_for_status()
