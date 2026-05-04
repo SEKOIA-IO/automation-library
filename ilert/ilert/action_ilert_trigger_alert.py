@@ -1,5 +1,4 @@
 # third parties
-import requests
 from requests import Response
 from sekoia_automation.action import Action
 
@@ -23,7 +22,7 @@ class IlertTriggerAlertAction(Action):
 
         url = f"{base_url.rstrip('/')}/v1/sic/alerts/{alert_uuid}"
 
-        response: Response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        response: Response = requests_retry_session().get(url, headers={"Authorization": f"Bearer {api_key}"})
         response.raise_for_status()
         return response.json()
 
