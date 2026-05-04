@@ -10,7 +10,6 @@ from google.api_core import exceptions, retry
 from google.cloud.pubsub_v1 import SubscriberClient, types
 from google_module.base import GoogleTrigger
 from google_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
-from pydantic import BaseModel
 from sekoia_automation.connector import DefaultConnectorConfiguration
 
 max_chunk_size: int = 1000
