@@ -238,7 +238,7 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         if cid:
             return Organization(
                 uid=cid,
-                name=device.service_provider,
+                name=device.service_provider or "Unknown",
             )
         return None
 
