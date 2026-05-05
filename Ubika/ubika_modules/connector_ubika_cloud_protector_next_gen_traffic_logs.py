@@ -83,8 +83,8 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(Connector):
             self.log(f"Request failure on initial fetch: {e}", level="error")
             raise
 
-        # Loop as long as the connector is running
-        while self.running:
+        # Loop until the connector is asked to stop
+        while not self._stop_event.is_set():
             # Centralized HTTP error handling
             self._handle_response_error(response)
 
