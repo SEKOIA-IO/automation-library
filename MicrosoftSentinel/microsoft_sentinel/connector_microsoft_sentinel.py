@@ -49,6 +49,17 @@ class MicrosoftSentineldConnector(Connector):
         return max(self.configuration.chunk_size, 1000)
 
     @cached_property
+    def scalability_labels(self) -> Dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
+    @cached_property
     def client(self) -> SecurityInsights:
         credential = ClientSecretCredential(
             tenant_id=self.module.configuration.tenant_id,
@@ -98,7 +109,9 @@ class MicrosoftSentineldConnector(Connector):
 
         if first_item is None:
             self.log(message="No messages to forward", level="info")
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+            EVENTS_LAG.labels(
+                intake_key=self.configuration.intake_key, **self.scalability_labels
+            ).set(0)
             return
 
         alerts_batch = []
@@ -118,8 +131,12 @@ class MicrosoftSentineldConnector(Connector):
 
             if (incoming_events_sum + 1) % self.batch_limit == 0:
                 alerts_len: int = len(alerts_batch)
-                self.log(message=f"Sending batch of {alerts_len} messages", level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(alerts_len)
+                self.log(
+                    message=f"Sending batch of {alerts_len} messages", level="info"
+                )
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).inc(alerts_len)
                 self.push_events_to_intakes(events=alerts_batch)
                 alerts_batch = []
 
@@ -127,22 +144,33 @@ class MicrosoftSentineldConnector(Connector):
 
         if alerts_batch:
             last_alerts_len: int = len(alerts_batch)
-            self.log(message=f"Sending batch of {last_alerts_len} messages", level="info")
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(last_alerts_len)
+            self.log(
+                message=f"Sending batch of {last_alerts_len} messages", level="info"
+            )
+            OUTCOMING_EVENTS.labels(
+                intake_key=self.configuration.intake_key, **self.scalability_labels
+            ).inc(last_alerts_len)
             self.push_events_to_intakes(events=alerts_batch)
 
-        INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(incoming_events_sum)
+        INCOMING_EVENTS.labels(
+            intake_key=self.configuration.intake_key, **self.scalability_labels
+        ).inc(incoming_events_sum)
 
         if stored_time:
             self.from_date = stored_time
 
             most_recent_timestamp = stored_time.timestamp()
             events_lag = int(time.time() - most_recent_timestamp)
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
+            EVENTS_LAG.labels(
+                intake_key=self.configuration.intake_key, **self.scalability_labels
+            ).set(events_lag)
 
     def run(self) -> None:
         trigger_start_time = datetime.now().isoformat()
-        self.log(message=f"Microsoft Sentinel Trigger process initiated at {trigger_start_time}", level="info")
+        self.log(
+            message=f"Microsoft Sentinel Trigger process initiated at {trigger_start_time}",
+            level="info",
+        )
 
         try:
             while self.running:
@@ -151,17 +179,24 @@ class MicrosoftSentineldConnector(Connector):
                     self.get_incidents()
 
                 except (HTTPError, BaseHTTPError) as ex:
-                    self.log_exception(ex, message="Failed to fetch next batch of events")
+                    self.log_exception(
+                        ex, message="Failed to fetch next batch of events"
+                    )
                 except Exception as ex:
                     self.log_exception(ex, message="An unknown exception occurred")
                     raise
 
                 duration = int(time.time() - start)
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
+                FORWARD_EVENTS_DURATION.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).observe(duration)
 
                 delta_sleep = self.configuration.frequency - duration
                 if delta_sleep > 0:
                     time.sleep(delta_sleep)
         finally:
             trigger_end_time = datetime.now().isoformat()
-            self.log(message=f"Microsoft Sentinel Trigger process has stopped at {trigger_end_time}", level="info")
+            self.log(
+                message=f"Microsoft Sentinel Trigger process has stopped at {trigger_end_time}",
+                level="info",
+            )

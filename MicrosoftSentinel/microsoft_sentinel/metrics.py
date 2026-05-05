@@ -3,6 +3,7 @@ from prometheus_client import Counter, Gauge, Histogram
 # Declare prometheus metrics
 prom_namespace_sophos = "symphony_module_microsoft_sentinel"
 
+
 INCOMING_EVENTS = Counter(
     name="collected_events",
     documentation="Number of events collected from Microsoft Sentinel",
