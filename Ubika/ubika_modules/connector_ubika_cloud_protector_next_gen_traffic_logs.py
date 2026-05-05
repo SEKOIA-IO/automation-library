@@ -129,73 +129,72 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(Connector):
                 self.log(f"Authorization error: {err.args[1] if len(err.args) > 1 else str(err)}", level="critical")
                 raise
 
+    def run(self) -> None:
+        """
+        Main loop:
+        1) Load last checkpoint (milliseconds since epoch)
+        2) Fetch pages of new logs via _fetch_pages()
+        3) For each page:
+            - publish to intake
+            - track highest timestamp seen
+        4) Save new checkpoint
+        5) Sleep for `frequency` seconds and repeat
+        """
+        self.log(f"Start fetching {self.NAME} events", level="info")
 
-def run(self) -> None:
-    """
-    Main loop:
-      1) Load last checkpoint (milliseconds since epoch)
-      2) Fetch pages of new logs via _fetch_pages()
-      3) For each page:
-           - publish to intake
-           - track highest timestamp seen
-      4) Save new checkpoint
-      5) Sleep for `frequency` seconds and repeat
-    """
-    self.log(f"Start fetching {self.NAME} events", level="info")
+        # Initialize or load checkpoint
+        with self.context as cache:
+            # Read the last checkpoint (ms since epoch)
+            # from the <self.data_path>/context.json file (PersistentJSON)
+            last_ts = cache.get("most_recent_timestamp_seen")
+        if not last_ts or last_ts <= 0:
+            # If no valid checkpoint is found, back-fill X hours on first run
+            now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+            backfill_ms = self.configuration.start_time * 3600 * 1000
+            last_ts = now_ms - backfill_ms
+        self.log(f"Initial start timestamp: {last_ts}", level="debug")
 
-    # Initialize or load checkpoint
-    with self.context as cache:
-        # Read the last checkpoint (ms since epoch)
-        # from the <self.data_path>/context.json file (PersistentJSON)
-        last_ts = cache.get("most_recent_timestamp_seen")
-    if not last_ts or last_ts <= 0:
-        # If no valid checkpoint is found, back-fill X hours on first run
-        now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
-        backfill_ms = self.configuration.start_time * 3600 * 1000
-        last_ts = now_ms - backfill_ms
-    self.log(f"Initial start timestamp: {last_ts}", level="debug")
+        # Polling loop
+        while not self._stop_event.is_set():
+            start_time = time.time()
+            max_ts = last_ts
 
-    # Polling loop
-    while not self._stop_event.is_set():
-        start_time = time.time()
-        max_ts = last_ts
+            try:
+                for page in self._fetch_pages(last_ts):
+                    # Serialize and publish each page
+                    payloads = [orjson.dumps(evt).decode("utf-8") for evt in page]
+                    if payloads:
+                        self.log(f"Publishing {len(payloads)} traffic-log events", level="info")
+                        self.publish_events_to_intake(events=payloads)
 
-        try:
-            for page in self._fetch_pages(last_ts):
-                # Serialize and publish each page
-                payloads = [orjson.dumps(evt).decode("utf-8") for evt in page]
-                if payloads:
-                    self.log(f"Publishing {len(payloads)} traffic-log events", level="info")
-                    self.publish_events_to_intake(events=payloads)
+                    # Update the highest timestamp seen
+                    # This way we never re-consume older logs (we always move "forward" in time)
+                    # and we survive restarts because the last-seen timestamp is persisted on disk
+                    for evt in page:
+                        try:
+                            ts = int(evt.get("timestamp", 0))
+                        except (TypeError, ValueError):
+                            ts = 0
+                        if ts > max_ts:
+                            max_ts = ts
 
-                # Update the highest timestamp seen
-                # This way we never re-consume older logs (we always move "forward" in time)
-                # and we survive restarts because the last-seen timestamp is persisted on disk
-                for evt in page:
-                    try:
-                        ts = int(evt.get("timestamp", 0))
-                    except (TypeError, ValueError):
-                        ts = 0
-                    if ts > max_ts:
-                        max_ts = ts
+                # Persist new checkpoint after exhausting all pages of new logs
+                with self.context as cache:
+                    cache["most_recent_timestamp_seen"] = max_ts
+                last_ts = max_ts
 
-            # Persist new checkpoint after exhausting all pages of new logs
-            with self.context as cache:
-                cache["most_recent_timestamp_seen"] = max_ts
-            last_ts = max_ts
+            except Exception as e:
+                self.log_exception(e, message="Error fetching traffic logs")
 
-        except Exception as e:
-            self.log_exception(e, message="Error fetching traffic logs")
+            finally:
+                # Sleep before next poll
+                elapsed = time.time() - start_time
+                self.log(f"Iteration took {elapsed:.2f}s, sleeping {self.configuration.frequency}s", level="debug")
+                time.sleep(self.configuration.frequency)
 
-        finally:
-            # Sleep before next poll
-            elapsed = time.time() - start_time
-            self.log(f"Iteration took {elapsed:.2f}s, sleeping {self.configuration.frequency}s", level="debug")
-            time.sleep(self.configuration.frequency)
-
-    # Cleanup on stop
-    if hasattr(self, "client"):
-        self.client.close()
-    with self.context as cache:
-        cache["most_recent_timestamp_seen"] = last_ts
-    self.log(f"Stopped fetching {self.NAME} events", level="info")
+        # Cleanup on stop
+        if hasattr(self, "client"):
+            self.client.close()
+        with self.context as cache:
+            cache["most_recent_timestamp_seen"] = last_ts
+        self.log(f"Stopped fetching {self.NAME} events", level="info")
