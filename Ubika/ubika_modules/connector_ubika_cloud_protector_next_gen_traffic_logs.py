@@ -1,6 +1,7 @@
 import time
 from collections.abc import Generator
 from datetime import datetime, timezone
+from functools import cached_property
 
 import httpx
 import orjson
@@ -8,6 +9,7 @@ from pydantic.v1 import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
+from . import UbikaModule
 from .client import UbikaCloudProtectorNextGenApiClient
 from .client.auth import AuthorizationError, AuthorizationTimeoutError
 
@@ -36,28 +38,37 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(Connector):
     traffic-logs endpoint and forwards them to the configured intake.
     """
 
+    module: UbikaModule
+    configuration: UbikaCloudProtectorNextGenTrafficLogsConnectorConfiguration
+
     NAME = "Ubika Cloud Protector NextGen Traffic Logs"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Where we persist the last‐seen timestamp
         self.context = PersistentJSON("context.json", self.data_path)
+
+    @cached_property
+    def client(self) -> UbikaCloudProtectorNextGenApiClient:
         # HTTP client that handles authentication and token refresh
-        self.client = UbikaCloudProtectorNextGenApiClient(refresh_token=self.configuration.refresh_token)
+        return UbikaCloudProtectorNextGenApiClient(refresh_token=self.configuration.refresh_token)
 
     def _handle_response_error(self, response: httpx.Response) -> None:
-        """
-        Raise if the HTTP response status is not 2xx.
-        """
         if not response.is_success:
             try:
-                err = response.json()
-            except ValueError:
-                err = response.text
-            msg = f"[{self.NAME}] HTTP {response.status_code} error: " f"{err} for {response.request.url}"
-            raise FetchEventsException(msg)
+                error_data = response.json()
+                message = (
+                    f"Request on {self.NAME} API to fetch events failed with status "
+                    f"{response.status_code} - {error_data} on {response.request.url}"
+                )
+            except (ValueError, KeyError):
+                message = (
+                    f"Request on {self.NAME} API to fetch events failed with status "
+                    f"{response.status_code} - {response.text} on {response.request.url}"
+                )
+            raise FetchEventsException(message)
 
-    def _fetch_pages(self, start_timestamp: int) -> Generator[list[dict], None, None]:
+    def __fetch_pages(self, start_timestamp: int) -> Generator[list[dict], None, None]:
         """
         Yield pages of traffic logs from `filters.fromDate = start_timestamp`
         until no more pages are returned.
@@ -134,11 +145,40 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(Connector):
                 self.log(f"Authorization timeout error: {err.args[1]}", level="error")
                 raise
 
+    def process_batch(self, start_ts: int) -> int:
+        """
+        Fetch pages from start_ts, publish each, update and persist the max timestamp.
+        Returns the new max timestamp to use for the next iteration.
+        """
+        max_ts = start_ts
+        for page in self.__fetch_pages(start_ts):
+            # Serialize and publish each page
+            payloads = [orjson.dumps(evt).decode() for evt in page]
+            if payloads:
+                self.log(f"Publishing {len(payloads)} traffic-log events", level="info")
+                self.push_events_to_intakes(events=payloads)
+
+            # Update the highest timestamp seen
+            # This way we never re-consume older logs (we always move "forward" in time)
+            # and we survive restarts because the last-seen timestamp is persisted on disk
+            for evt in page:
+                try:
+                    ts = int(evt.get("timestamp", 0))
+                except (TypeError, ValueError):
+                    ts = 0
+                if ts > max_ts:
+                    max_ts = ts
+        # Persist new checkpoint after exhausting all pages of new logs
+        with self.context as cache:
+            cache["most_recent_timestamp_seen"] = max_ts
+
+        return max_ts
+
     def run(self) -> None:
         """
         Main loop:
         1) Load last checkpoint (milliseconds since epoch)
-        2) Fetch pages of new logs via _fetch_pages()
+        2) Fetch pages of new logs via __fetch_pages()
         3) For each page:
             - publish to intake
             - track highest timestamp seen
@@ -162,35 +202,11 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(Connector):
         # Polling loop
         while not self._stop_event.is_set():
             start_time = time.time()
-            max_ts = last_ts
-
+            # Process one batch of pages and get updated checkpoint
             try:
-                for page in self._fetch_pages(last_ts):
-                    # Serialize and publish each page
-                    payloads = [orjson.dumps(evt).decode("utf-8") for evt in page]
-                    if payloads:
-                        self.log(f"Publishing {len(payloads)} traffic-log events", level="info")
-                        self.publish_events_to_intake(events=payloads)
-
-                    # Update the highest timestamp seen
-                    # This way we never re-consume older logs (we always move "forward" in time)
-                    # and we survive restarts because the last-seen timestamp is persisted on disk
-                    for evt in page:
-                        try:
-                            ts = int(evt.get("timestamp", 0))
-                        except (TypeError, ValueError):
-                            ts = 0
-                        if ts > max_ts:
-                            max_ts = ts
-
-                # Persist new checkpoint after exhausting all pages of new logs
-                with self.context as cache:
-                    cache["most_recent_timestamp_seen"] = max_ts
-                last_ts = max_ts
-
+                last_ts = self.process_batch(start_ts=last_ts)
             except Exception as e:
                 self.log_exception(e, message="Error fetching traffic logs")
-
             finally:
                 # Sleep before next poll
                 elapsed = time.time() - start_time
