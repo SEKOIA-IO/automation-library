@@ -76,11 +76,16 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(Connector):
         # First request using UbikaCloudProtectorNextGenApiClient
         try:
             response = self.client.get(url, params=params, headers=headers, timeout=60)
-        except AuthorizationError as e:
-            self.log(f"Authorization error on initial fetch: {e}", level="critical")
+        except AuthorizationError as err:
+            # Handle general authorization failures
+            self.log(f"Authorization error on initial fetch: {err}", level="critical")
             raise
-        except Exception as e:
-            self.log(f"Request failure on initial fetch: {e}", level="error")
+        except AuthorizationTimeoutError as err:
+            # Handle token-refresh timeouts
+            self.log(f"Authorization timeout error on initial fetch: {err}", level="error")
+            raise
+        except Exception as err:
+            self.log(f"Request failure on initial fetch: {err}", level="error")
             raise
 
         # Loop until the connector is asked to stop
@@ -120,13 +125,13 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(Connector):
                     headers=headers,
                     timeout=60,
                 )
-            except AuthorizationTimeoutError as err:
-                # Handle token-refresh timeouts
-                self.log(f"Authorization timeout error: {err.args[1]}", level="error")
-                raise
             except AuthorizationError as err:
                 # Handle general authorization failures
                 self.log(f"Authorization error: {err.args[1] if len(err.args) > 1 else str(err)}", level="critical")
+                raise
+            except AuthorizationTimeoutError as err:
+                # Handle token-refresh timeouts
+                self.log(f"Authorization timeout error: {err.args[1]}", level="error")
                 raise
 
     def run(self) -> None:
