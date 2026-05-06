@@ -88,16 +88,12 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
         headers = {"Content-Type": "application/json"}
 
         # First request using UbikaCloudProtectorNextGenApiClient
-        try:
-            response = self.client.get(base_url, params=params, headers=headers, timeout=60)
-        except AuthorizationError:
-            # Handle general authorization failures
-            self.log("Authorization error on initial fetch", level="critical")
-            raise
-        except AuthorizationTimeoutError:
-            # Handle token-refresh timeouts
-            self.log("Authorization timeout on initial fetch", level="error")
-            raise
+        response = self._safe_get(
+            url=base_url,
+            params=params,
+            headers=headers,
+            initial=True
+        )
 
         # Loop until the connector is asked to stop
         while not self._stop_event.is_set():
@@ -128,22 +124,34 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
                 return
 
             # Fetch the next page using the pageToken
-            try:
-                response = self.client.get(
-                    base_url,
-                    params={
-                        "pagination.pageToken": token,
-                        "pagination.pageSize": self.configuration.chunk_size,
-                        "pagination.realtime": "true",
-                    },
-                    headers=headers,
-                    timeout=60,
-                )
-            except AuthorizationError as err:
-                # Handle general authorization failures
-                self.log(f"Authorization error: {err.args[1] if len(err.args) > 1 else str(err)}", level="critical")
-                raise
-            except AuthorizationTimeoutError as err:
-                # Handle token-refresh timeouts
-                self.log(f"Authorization timeout error: {err.args[1]}", level="error")
-                raise
+            response = self._safe_get(
+                url=base_url,
+                params={
+                    "pagination.pageToken": token,
+                    "pagination.pageSize": self.configuration.chunk_size,
+                    "pagination.realtime": "true",
+                },
+                headers=headers,
+                initial=False
+            )
+
+    def _safe_get(self, url: str, *, params, headers, initial: bool) -> httpx.Response:
+        """
+        Wrap client.get and centralize the AuthorizationError / Timeout logging.
+        initial=True means “on initial fetch”, otherwise “on next page”.
+        """
+        phase = "initial fetch" if initial else "next page"
+        try:
+            return self.client.get(url, params=params, headers=headers, timeout=60)
+
+        except AuthorizationError as err:
+            # Handle general authorization failures
+            msg = err.args[1] if len(err.args) > 1 else str(err)
+            self.log(f"Authorization error on {phase}: {msg}", level="critical")
+            raise
+
+        except AuthorizationTimeoutError as err:
+            # Handle token-refresh timeouts
+            msg = err.args[1] if len(err.args) > 1 else str(err)
+            self.log(f"Authorization timeout on {phase}: {msg}", level="error")
+            raise

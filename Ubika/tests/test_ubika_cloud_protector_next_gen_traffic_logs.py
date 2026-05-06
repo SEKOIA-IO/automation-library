@@ -162,7 +162,7 @@ def test_process_batch(trigger):
     assert new_ts == 250
 
 
-def test_run_calls_process_batch_and_updates_checkpoint(trigger, monkeypatch, data_storage):
+def test_run_calls_process_batch_and_updates_checkpoint(trigger, monkeypatch):
     """
     Ensure run():
      - reads the existing checkpoint from context.json
@@ -182,7 +182,7 @@ def test_run_calls_process_batch_and_updates_checkpoint(trigger, monkeypatch, da
     # Ensure run only loops once: first False, then True
     trigger._stop_event.is_set = MagicMock(side_effect=[False, True])
 
-    # 4) Avoid real sleeping
+    # Avoid real sleeping
     monkeypatch.setattr(time, "sleep", lambda s: None)
 
     # Call run()
@@ -194,3 +194,56 @@ def test_run_calls_process_batch_and_updates_checkpoint(trigger, monkeypatch, da
     # Verify context.json was updated to new_ts
     with trigger.context as cache:
         assert cache["most_recent_timestamp_seen"] == new_ts
+
+
+def test_process_batch_invalid_timestamps_are_zeroed(trigger):
+    """
+    If an event has a non-int timestamp or missing key, ts parsing raises and we fall back to 0.
+    The max_ts should remain at least the original start_ts until a good value appears.
+    """
+    # Prepare 2 pages: first all invalid, second with one valid
+    pages = [
+        [{"timestamp": "not-a-number"}, {"no_timestamp": "here"}],
+        [{"timestamp": "30"}, {"timestamp": "20"}],
+    ]
+    trigger._get_pages = MagicMock(return_value=pages)
+
+    # Run with initial start_ts=10
+    new_ts = trigger.process_batch(start_ts=10)
+
+    # The bad page should not crash and yields ts=0 for each
+    # The second page has valid ints → max_ts becomes 30
+    assert new_ts == 30
+
+    # And it still published both pages
+    assert trigger.push_events_to_intakes.call_count == 2
+
+
+def test_run_logs_exception_on_process_error(trigger, monkeypatch):
+    """
+    If process_batch raises, run() should catch it,
+    call log_exception(e, message="Error fetching traffic logs"),
+    then continue (and break on next stop_event).
+    """
+    # Seed a valid checkpoint so we take the "no backfill" branch
+    with trigger.context as ctx:
+        ctx["most_recent_timestamp_seen"] = 12345
+
+    # Stub process_batch to throw
+    exc = RuntimeError("oops")
+    trigger.process_batch = MagicMock(side_effect=exc)
+
+    # Spy on log_exception
+    trigger.log_exception = MagicMock()
+
+    # Make exactly one loop iteration: False → True
+    trigger._stop_event.is_set = MagicMock(side_effect=[False, True])
+
+    # Avoid real sleep
+    monkeypatch.setattr(time, "sleep", lambda s: None)
+
+    # Call run()
+    trigger.run()
+
+    # Assert we caught & logged the exception
+    trigger.log_exception.assert_called_once_with(exc, message="Error fetching traffic logs")

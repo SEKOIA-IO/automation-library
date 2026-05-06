@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
+import time
 
 import httpx
 import pytest
+from cachetools import LRUCache
 from respx import MockRouter
 
 from ubika_modules import UbikaModule
@@ -346,3 +348,89 @@ def test_stepper_clamps_dates_older_than_one_month(monkeypatch, trigger):
     # And create_from_time got the right config args
     assert called["freq"] == trigger.configuration.frequency
     assert called["delta"] == trigger.configuration.timedelta
+
+
+def test_load_events_cache_and_filter(trigger):
+    """
+    load_events_cache should read the list of hashes from cache.json,
+    dedupe them into an in-memory cache, and filter_processed_events
+    should skip already-seen IDs.
+    """
+    # Seed the persisted cache list with duplicates
+    with trigger.cache_context as cache:
+        cache["events_cache"] = ["h1", "h2", "h1"]
+
+    # Call load_events_cache() and verify deduplication
+    loaded_cache: LRUCache = trigger.load_events_cache()
+    # keys of loaded cache must be exactly {"h1","h2"}
+    assert set(loaded_cache.keys()) == {"h1", "h2"}
+
+    # Give the connector that deduped cache
+    trigger.events_cache = loaded_cache
+
+    # Now test filter_processed_events
+    # If we send events with h1 (already seen) and h3 (new),
+    # only the h3 event should pass through.
+    events = [{"logAlertUid": "h1"}, {"logAlertUid": "h3"}]
+    filtered = trigger.filter_processed_events(events)
+    assert filtered == [{"logAlertUid": "h3"}]
+
+
+def test_run_stops_immediately_if_stop_event_set(monkeypatch, trigger):
+    """
+    If _stop_event.is_set() is True at the start, run() must break
+    out of the loop without calling next_batch.
+    """
+    # Stub the stepper to yield some windows (they will never run)
+    fake_windows = [
+        (datetime.now(timezone.utc), datetime.now(timezone.utc))
+    ]
+    trigger.stepper = MagicMock(ranges=MagicMock(return_value=fake_windows))
+
+    # Spy on next_batch
+    trigger.next_batch = MagicMock()
+
+    # Make stop_event return True immediately
+    trigger._stop_event.is_set = MagicMock(return_value=True)
+
+    # Prevent any real sleep
+    monkeypatch.setattr("time.sleep", lambda s: None)
+
+    # Call run()
+    trigger.run()
+
+    # next_batch should never have been called
+    assert trigger.next_batch.call_count == 0
+
+
+def test_run_breaks_on_next_batch_exception(monkeypatch, trigger):
+    """
+    If next_batch raises, run() should catch it, call log_exception once,
+    and break the loop (no second call).
+    """
+    # Prepare 2 windows (second should never run)
+    now = datetime.now(timezone.utc)
+    w1 = (now, now + timedelta(minutes=1))
+    w2 = (w1[1], w1[1] + timedelta(minutes=1))
+    trigger.stepper = MagicMock(ranges=MagicMock(return_value=[w1, w2]))
+
+    # Stub next_batch to throw on first call
+    exc = RuntimeError("boom")
+    trigger.next_batch = MagicMock(side_effect=exc)
+
+    # Spy on log_exception
+    trigger.log_exception = MagicMock()
+
+    # Prevent any real sleep
+    monkeypatch.setattr(time, "sleep", lambda s: None)
+
+    # Run
+    trigger.run()
+
+    # next_batch should have been called exactly once
+    trigger.next_batch.assert_called_once_with(*w1)
+    # log_exception should have been called once with our exception
+    trigger.log_exception.assert_called_once()
+    args, kwargs = trigger.log_exception.call_args
+    assert args[0] is exc
+    assert kwargs.get("message") == "Failed to forward events"
