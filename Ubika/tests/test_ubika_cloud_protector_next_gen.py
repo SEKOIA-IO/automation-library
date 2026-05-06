@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import httpx
@@ -22,7 +22,10 @@ def trigger(data_storage):
         "namespace": "sekoia",
         "refresh_token": "some_token_here",
         "intake_key": "intake_key",
+        "frequency": 60,
         "chunk_size": 100,
+        "timedelta": 5,
+        "start_time": 1,
     }
     yield trigger
 
@@ -277,27 +280,15 @@ def test_authorization_timeout_error(respx_mock: MockRouter, trigger):
     assert route.call_count == 5
 
 
-def test_stepper_initializes_with_backfill(monkeypatch, data_storage):
+def test_stepper_initializes_with_backfill(monkeypatch, trigger):
     """
     If no checkpoint in context, stepper should call TimeStepper.create(...)
     with the configured start_time hours back.
     """
-    # Stub load_config & instantiate connector
-    cfg = {
-        "namespace": "ns",
-        "refresh_token": "t",
-        "intake_key": "k",
-        "frequency": 60,
-        "chunk_size": 100,
-        "timedelta": 5,
-        "start_time": 2,
-    }
-    module = UbikaModule()
-    monkeypatch.setattr(module, "load_config", lambda *a, **k: cfg)
-    conn = UbikaCloudProtectorNextGenConnector(module=module, data_path=data_storage)
-
+    # Override some configuration parameters for the test
+    trigger.configuration.start_time = 2
     # Make context.json empty
-    with conn.context as c:
+    with trigger.context as c:
         c.clear()
 
     # Intercept create(...)
@@ -311,8 +302,47 @@ def test_stepper_initializes_with_backfill(monkeypatch, data_storage):
     monkeypatch.setattr(TimeStepper, "create", fake_create)
 
     # Access the cached property
-    stepper = conn.stepper
+    stepper = trigger.stepper
 
     # It must be our sentinel, and args match your config
     assert stepper is sentinel
-    assert called["args"] == (cfg["frequency"], cfg["timedelta"], cfg["start_time"])
+    assert called["args"] == (
+        trigger.configuration.frequency,
+        trigger.configuration.timedelta,
+        trigger.configuration.start_time,
+    )
+
+
+def test_stepper_clamps_dates_older_than_one_month(monkeypatch, trigger):
+    # Override some configuration parameters for the test
+    trigger.configuration.frequency = 42
+    old_dt = datetime.now(timezone.utc) - timedelta(days=60)
+    with trigger.context as cache:
+        cache["most_recent_date_seen"] = old_dt.isoformat()
+
+    # Monkey‐patch create_from_time to capture args and return sentinel
+    sentinel = object()
+    called = {}
+
+    def fake_create_from_time(self, date_arg, freq_arg, delta_arg):
+        called["date"], called["freq"], called["delta"] = (date_arg, freq_arg, delta_arg)
+        return sentinel
+
+    monkeypatch.setattr(TimeStepper, "create_from_time", fake_create_from_time)
+
+    # Access the cached property
+    stepper = trigger.stepper
+
+    # It must have returned our sentinel
+    assert stepper is sentinel
+
+    # And the date passed in was clamped to one_month_ago
+    now = datetime.now(timezone.utc)
+    one_month_ago = now - timedelta(days=30)
+    passed = called["date"]
+    # allow 2s slack for test timing
+    assert abs((passed - one_month_ago).total_seconds()) < 2
+
+    # And create_from_time got the right config args
+    assert called["freq"] == trigger.configuration.frequency
+    assert called["delta"] == trigger.configuration.timedelta
