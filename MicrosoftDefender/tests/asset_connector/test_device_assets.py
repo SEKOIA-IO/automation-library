@@ -411,8 +411,9 @@ class TestGetAssets:
         mock_device_management = MagicMock()
         mock_device_management.managed_devices = mock_managed_devices
 
-        with patch.object(connector, "defender_client", create=True) as mock_def_client, \
-             patch.object(connector, "graph_client", create=True) as mock_graph_client:
+        with patch.object(connector, "defender_client", create=True) as mock_def_client, patch.object(
+            connector, "graph_client", create=True
+        ) as mock_graph_client:
             mock_def_client.base_url = "https://api.securitycenter.microsoft.com"
             mock_def_client.get = Mock(return_value=mock_response)
             mock_graph_client.device_management = mock_device_management

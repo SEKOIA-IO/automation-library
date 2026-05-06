@@ -291,9 +291,13 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
 
         if managed_device:
             if managed_device.user_principal_name:
-                enrichments.append(DeviceEnrichmentObject(name="user_principal_name", value=managed_device.user_principal_name))
+                enrichments.append(
+                    DeviceEnrichmentObject(name="user_principal_name", value=managed_device.user_principal_name)
+                )
             if managed_device.management_agent:
-                enrichments.append(DeviceEnrichmentObject(name="management_agent", value=managed_device.management_agent.value))
+                enrichments.append(
+                    DeviceEnrichmentObject(name="management_agent", value=managed_device.management_agent.value)
+                )
 
         return enrichments if enrichments else None
 
@@ -333,7 +337,9 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
         machines: list[DefenderMachine] = []
         endpoint = self.MACHINES_ENDPOINT
         if self.most_recent_date_seen:
-            endpoint = f"{endpoint}?$filter=firstSeen+ge+{self.most_recent_date_seen}"
+            endpoint = f"{endpoint}?$filter=firstSeen+ge+{self.most_recent_date_seen}&$orderby=firstSeen+asc"
+        else:
+            endpoint = f"{endpoint}?$orderby=firstSeen+asc"
         url = urljoin(self.defender_client.base_url, endpoint)
 
         while url and self.running:
