@@ -224,15 +224,14 @@ class TestSearchUserdnQuery:
 
         assert len(result) == 2
 
-    def test_search_uses_override_domain_controller(self):
+    def test_search_uses_shared_client(self):
         action = object.__new__(ConcreteMicrosoftADAction)
         action.log = Mock()
 
         mock_client = Mock()
         mock_client.response = []
-        action.get_client = Mock(return_value=mock_client)
+        action.client = mock_client
 
-        action.search_userdn_query("testuser", "DC=example,DC=com", servername="child.example.com")
+        action.search_userdn_query("testuser", "DC=example,DC=com")
 
-        action.get_client.assert_called_once_with("child.example.com")
         assert mock_client.search.call_count >= 1

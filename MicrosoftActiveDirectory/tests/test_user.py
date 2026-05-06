@@ -289,7 +289,7 @@ def test_disable_display_name_passed_to_search(one_user_dn):
                 }
             )
 
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "test@example.com", None)
+            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "test@example.com")
 
 
 def test_enable_display_name_passed_to_search(one_user_dn):
@@ -311,7 +311,7 @@ def test_enable_display_name_passed_to_search(one_user_dn):
                 }
             )
 
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "test@example.com", None)
+            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "test@example.com")
 
 
 def test_reset_password_display_name_passed_to_search(one_user_dn):
@@ -333,19 +333,17 @@ def test_reset_password_display_name_passed_to_search(one_user_dn):
                 }
             )
 
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "test@example.com", None)
+            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "test@example.com")
 
 
-def test_disable_domain_controller_passed_to_search_and_client(one_user_dn):
+def test_disable_domain_controller_uses_shared_client(one_user_dn):
     action = configured_action(DisableUserAction)
 
     with patch(
         "microsoft_ad.actions_base.MicrosoftADAction.search_userdn_query",
         return_value=one_user_dn,
     ) as mock_search:
-        mock_client = Mock()
-
-        with patch.object(action, "get_client", return_value=mock_client) as mock_get_client:
+        with patch("microsoft_ad.actions_base.MicrosoftADAction.client") as mock_client:
             mock_client.modify.return_value = True
             mock_client.result.get.return_value = "success"
 
@@ -357,20 +355,17 @@ def test_disable_domain_controller_passed_to_search_and_client(one_user_dn):
                 }
             )
 
-            mock_get_client.assert_called_once_with("child.lab.test.com")
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", None, "child.lab.test.com")
+            mock_search.assert_called_once_with("test_username", "cn=test_basedn", None)
 
 
-def test_enable_domain_controller_passed_to_search_and_client(one_user_dn):
+def test_enable_domain_controller_uses_shared_client(one_user_dn):
     action = configured_action(EnableUserAction)
 
     with patch(
         "microsoft_ad.actions_base.MicrosoftADAction.search_userdn_query",
         return_value=one_user_dn,
     ) as mock_search:
-        mock_client = Mock()
-
-        with patch.object(action, "get_client", return_value=mock_client) as mock_get_client:
+        with patch("microsoft_ad.actions_base.MicrosoftADAction.client") as mock_client:
             mock_client.modify.return_value = True
             mock_client.result.get.return_value = "success"
 
@@ -382,20 +377,17 @@ def test_enable_domain_controller_passed_to_search_and_client(one_user_dn):
                 }
             )
 
-            mock_get_client.assert_called_once_with("child.lab.test.com")
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", None, "child.lab.test.com")
+            mock_search.assert_called_once_with("test_username", "cn=test_basedn", None)
 
 
-def test_reset_password_domain_controller_passed_to_search_and_client(one_user_dn):
+def test_reset_password_domain_controller_uses_shared_client(one_user_dn):
     action = configured_action(ResetUserPasswordAction)
 
     with patch(
         "microsoft_ad.actions_base.MicrosoftADAction.search_userdn_query",
         return_value=one_user_dn,
     ) as mock_search:
-        mock_client = Mock()
-
-        with patch.object(action, "get_client", return_value=mock_client) as mock_get_client:
+        with patch("microsoft_ad.actions_base.MicrosoftADAction.client") as mock_client:
             mock_client.result.get.return_value = "success"
 
             action.run(
@@ -407,8 +399,7 @@ def test_reset_password_domain_controller_passed_to_search_and_client(one_user_d
                 }
             )
 
-            mock_get_client.assert_called_once_with("child.lab.test.com")
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", None, "child.lab.test.com")
+            mock_search.assert_called_once_with("test_username", "cn=test_basedn", None)
 
 
 def test_enable_apply_to_all_total_failure(two_users_dn):

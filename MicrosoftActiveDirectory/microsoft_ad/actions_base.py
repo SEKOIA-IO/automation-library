@@ -26,31 +26,15 @@ class MicrosoftADAction(Action):
 
         return conn
 
-    def get_client(self, servername: str | None = None) -> Connection:
-        if not servername or servername == self.module.configuration.servername:
-            return self.client
-
-        server = Server(
-            host=servername,
-            port=636,
-            use_ssl=True,
-        )
-        return Connection(
-            server,
-            auto_bind=True,
-            user=self.module.configuration.admin_username,
-            password=self.module.configuration.admin_password,
-        )
-
-    def _get_forest_root_dn(self, client: Connection) -> str | None:
+    def _get_forest_root_dn(self, basedn: str) -> str | None:
         """Extract the forest root DN from RootDSE."""
         try:
-            client.search(
-                search_base="",
+            self.client.search(
+                search_base=basedn,
                 search_filter="(objectClass=*)",
                 attributes=["rootDomainNamingContext"],
             )
-            for entry in client.response:
+            for entry in self.client.response:
                 if isinstance(entry, dict) and entry.get("type") == "searchResEntry":
                     root_dn = entry.get("attributes", {}).get("rootDomainNamingContext")
                     if root_dn:
@@ -61,19 +45,19 @@ class MicrosoftADAction(Action):
             self.log(f"Failed to get forest root DN: {e}", level="debug")
         return None
 
-    def _get_child_domains(self, client: Connection, forest_root_dn: str) -> list[str]:
+    def _get_child_domains(self, forest_root_dn: str) -> list[str]:
         """Discover child domains in the forest."""
         child_domains = []
         try:
             # Search for domain objects under the forest root
-            client.search(
+            self.client.search(
                 search_base=forest_root_dn,
                 search_filter="(objectClass=domain)",
                 attributes=["distinguishedName"],
                 search_scope="SUBTREE",
             )
             
-            for entry in client.response:
+            for entry in self.client.response:
                 if isinstance(entry, dict) and entry.get("type") == "searchResEntry":
                     dn = entry.get("dn")
                     if dn and dn != forest_root_dn:
@@ -87,17 +71,15 @@ class MicrosoftADAction(Action):
 
     def _perform_search(
         self,
-        client: Connection,
         search_filter: str,
         basedn: str,
-        username: str | None = None,
         raise_on_error: bool = False,
     ) -> list[list]:
         """Perform a single LDAP search and return results."""
         users_query = []
         
         try:
-            client.search(
+            self.client.search(
                 search_base=basedn,
                 search_filter=search_filter,
                 attributes=["cn", "mail", "userAccountControl"],
@@ -109,7 +91,7 @@ class MicrosoftADAction(Action):
                 self.log(f"LDAP search failed in base {basedn}: {e}", level="debug")
                 return users_query
 
-        for entry in client.response:
+        for entry in self.client.response:
             if isinstance(entry, dict) and entry.get("type") == "searchResEntry":
                 dn = entry.get("dn")
                 user_attributes = entry.get("attributes", {})
@@ -129,7 +111,7 @@ class MicrosoftADAction(Action):
 
         return users_query
 
-    def search_userdn_query(self, username, basedn, email=None, servername=None, search_child_domains=True):
+    def search_userdn_query(self, username, basedn, email=None, search_child_domains=True):
         has_username = bool(username)
         has_email = bool(email)
 
@@ -151,22 +133,20 @@ class MicrosoftADAction(Action):
 
         self.log(f"Starting search in {basedn} for {username}", level="debug")
 
-        client = self.get_client(servername)
-        
         # First, try searching in the specified basedn (raise exceptions on error)
-        users_query = self._perform_search(client, search_filter, basedn, username, raise_on_error=True)
+        users_query = self._perform_search(search_filter, basedn, raise_on_error=True)
         
         # If no users found and search_child_domains is enabled, try child domains (silently ignore errors)
         if not users_query and search_child_domains:
             self.log(f"No users found in {basedn}, searching child domains", level="debug")
             
-            forest_root_dn = self._get_forest_root_dn(client)
+            forest_root_dn = self._get_forest_root_dn(basedn)
             if forest_root_dn:
-                child_domains = self._get_child_domains(client, forest_root_dn)
+                child_domains = self._get_child_domains(forest_root_dn)
                 
                 for child_domain in child_domains:
                     self.log(f"Searching in child domain: {child_domain}", level="debug")
-                    child_results = self._perform_search(client, search_filter, child_domain, username, raise_on_error=False)
+                    child_results = self._perform_search(search_filter, child_domain, raise_on_error=False)
                     users_query.extend(child_results)
                     
                     if users_query:
