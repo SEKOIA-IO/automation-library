@@ -1,50 +1,32 @@
 import time
-from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from typing import Any
 
-import httpx
 import orjson
 from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
-from pydantic.v1 import Field
-from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
-from . import UbikaModule
-from .client import UbikaCloudProtectorNextGenApiClient
-from .client.auth import AuthorizationError, AuthorizationTimeoutError
-from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .connector_ubika_cloud_protector_next_gen_base import (
+    UbikaCloudProtectorNextGenBaseConnector,
+    UbikaCloudProtectorNextGenBaseConnectorConfiguration,
+)
+from .metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 from .timestepper import TimeStepper
 
 
-class FetchEventsException(Exception):
-    pass
-
-
-class UbikaCloudProtectorNextGenConnectorConfiguration(DefaultConnectorConfiguration):
-    namespace: str = Field(..., description="Namespace")
-    refresh_token: str = Field(..., description="API refresh token", secret=True)
-
-    frequency: int = 60
-
-    chunk_size: int = 200
+class UbikaCloudProtectorNextGenConnectorConfiguration(UbikaCloudProtectorNextGenBaseConnectorConfiguration):
     # Time stepper settings
     timedelta: int = 5
     start_time: int = 1
 
 
-class UbikaCloudProtectorNextGenConnector(Connector):
-    module: UbikaModule
+class UbikaCloudProtectorNextGenConnector(UbikaCloudProtectorNextGenBaseConnector):
+    NAME: str = "Ubika Cloud Protector Next"
     configuration: UbikaCloudProtectorNextGenConnectorConfiguration
-
-    NAME = "Ubika Cloud Protector Next"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.context = PersistentJSON("context.json", self.data_path)
         self.cache_context = PersistentJSON("cache.json", self.data_path)
         self.cache_size = 1000
         self.events_cache: Cache = self.load_events_cache()
@@ -125,90 +107,6 @@ class UbikaCloudProtectorNextGenConnector(Connector):
 
         return filtered_events
 
-    @cached_property
-    def client(self) -> UbikaCloudProtectorNextGenApiClient:
-        return UbikaCloudProtectorNextGenApiClient(refresh_token=self.configuration.refresh_token)
-
-    def _handle_response_error(self, response: httpx.Response) -> None:
-        if not response.is_success:
-            try:
-                error_data = response.json()
-                message = (
-                    f"Request on {self.NAME} API to fetch events failed with status "
-                    f"{response.status_code} - {error_data} on {response.request.url}"
-                )
-            except (ValueError, KeyError):
-                message = (
-                    f"Request on {self.NAME} API to fetch events failed with status "
-                    f"{response.status_code} - {response.text} on {response.request.url}"
-                )
-
-            raise FetchEventsException(message)
-
-    def __fetch_next_events(
-        self, start_timestamp: int, end_timestamp: int
-    ) -> Generator[list[dict[str, Any]], None, None]:
-        # get the first page of events
-        headers = {"Content-Type": "application/json"}
-        url = f"https://api.ubika.io/rest/logs.ubika.io/v1/ns/{self.configuration.namespace}/security-events"
-        params = {
-            "filters.fromDate": start_timestamp,
-            "filters.toDate": end_timestamp,
-            "pagination.realtime": True,
-            "pagination.pageSize": self.configuration.chunk_size,
-        }
-
-        try:
-            response = self.client.get(url, params=params, headers=headers, timeout=60)
-
-        except AuthorizationError as err:
-            self.log(f"Authorization error: {err.args[1]}", level="critical")
-            raise
-
-        while self.running:
-            # manage the last response
-            self._handle_response_error(response)
-
-            # get events from the response
-            data = response.json()
-
-            events = data.get("spec", {}).get("items", [])
-
-            # yielding events if defined
-            if len(events) > 0:
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
-                yield events
-
-            else:
-                self.log(
-                    message="The last page of events was empty.",
-                    level="info",
-                )  # pragma: no cover
-                return
-
-            cursor = data.get("spec", {}).get("nextPageToken")
-            if cursor is None:
-                return
-
-            try:
-                response = self.client.get(
-                    url,
-                    params={
-                        "pagination.pageToken": cursor,
-                        "pagination.pageSize": self.configuration.chunk_size,
-                        "pagination.realtime": True,
-                    },
-                    headers=headers,
-                    timeout=60,
-                )
-            except AuthorizationTimeoutError as err:
-                self.log(f"Authorization timeout error: {err.args[1]}", level="error")
-                raise
-
-            except AuthorizationError as err:
-                self.log(f"Authorization error: {err.args[1] if len(err.args) > 1 else str(err)}", level="critical")
-                raise
-
     def next_batch(self, start: datetime, end: datetime) -> None:
         # save the starting time
         batch_start_time = time.time()
@@ -216,7 +114,15 @@ class UbikaCloudProtectorNextGenConnector(Connector):
         end_timestamp = int(end.timestamp() * 1000)
 
         # Fetch next batch
-        for events in self.__fetch_next_events(start_timestamp, end_timestamp):
+        for events in self._get_pages(
+            endpoint="security-events",
+            params={
+                "filters.fromDate": start_timestamp,
+                "filters.toDate": end_timestamp,
+                "pagination.realtime": True,
+                "pagination.pageSize": self.configuration.chunk_size,
+            },
+        ):
             filtered_events = self.filter_processed_events(events)
             batch_of_events = [orjson.dumps(event).decode("utf-8") for event in filtered_events]
 

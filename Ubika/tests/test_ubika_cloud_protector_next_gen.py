@@ -159,7 +159,15 @@ def test_fetch_events_with_pagination(respx_mock: MockRouter, trigger, message1,
         ).mock(return_value=httpx.Response(200, json=message2))
 
         trigger.from_timestamp = 1747326567845
-        events = trigger._UbikaCloudProtectorNextGenConnector__fetch_next_events(1747326567845, 1747326667845)
+        events = trigger._get_pages(
+            endpoint="security-events",
+            params={
+                "filters.fromDate": 1747326567845,
+                "filters.toDate": 1747326667845,
+                "pagination.realtime": True,
+                "pagination.pageSize": 100,
+            },
+        )
 
         assert list(events) == [message1["spec"]["items"]]
 

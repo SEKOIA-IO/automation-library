@@ -12,13 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add new connector_ubika_cloud_protector_next_gen_traffic_logs connector
+- Add new `connector_ubika_cloud_protector_next_gen_traffic_logs` connector
+
+### Changed
+
+- Refactor `next_gen` connectors and reduce code duplication by creating the `connector_ubika_cloud_protector_next_gen_base` connector
 
 ## 2026-02-09 - 1.0.8
 
 ### Added
 
 - Add timestepper to avoid timeouts on large data fetches
+
 ## 2026-02-03 - 1.0.7
 
 ### Fixed

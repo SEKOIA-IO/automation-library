@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import httpx
@@ -7,7 +6,6 @@ from respx import MockRouter
 
 from ubika_modules import UbikaModule
 from ubika_modules.connector_ubika_cloud_protector_next_gen_traffic_logs import (
-    FetchEventsException,
     UbikaCloudProtectorNextGenTrafficLogsConnector,
 )
 
@@ -104,7 +102,7 @@ def message2():
 
 
 @pytest.mark.respx(base_url="https://login.ubika.io")
-def test_fetch_pages(respx_mock: MockRouter, trigger, message1, message2):
+def test_get_pages(respx_mock: MockRouter, trigger, message1, message2):
     with patch("ubika_modules.connector_ubika_cloud_protector_base.time") as mock_time:
         mock_time.sleep = MagicMock()
 
@@ -136,36 +134,24 @@ def test_fetch_pages(respx_mock: MockRouter, trigger, message1, message2):
         ).mock(return_value=httpx.Response(200, json=message2))
 
         trigger.from_timestamp = 1747326567845
-        events = trigger._UbikaCloudProtectorNextGenTrafficLogsConnector__fetch_pages(1747326567845)
+        events = trigger._get_pages(
+            endpoint="traffic-logs",
+            params={
+                "filters.fromDate": 1747326567845,
+                "pagination.pageSize": 100,
+            },
+        )
 
         assert list(events) == [message1["spec"]["items"]]
 
 
-def test_handle_response_error(trigger):
-    request = httpx.Request("GET", "https://sekoia.io")
-    # Handle response error with text
-    response = httpx.Response(status_code=500, request=request, text="Internal Error")
-    with pytest.raises(FetchEventsException) as m:
-        trigger._handle_response_error(response)
-    assert "Internal Error" in str(m.value)
-    assert "500" in str(m.value)
-    # Handle response error with JSON
-    response = httpx.Response(status_code=500, request=request, json={"error": "Internal Error"})
-    with pytest.raises(FetchEventsException) as m:
-        trigger._handle_response_error(response)
-    assert "Internal Error" in str(m.value)
-    # Should not raise
-    response = httpx.Response(status_code=200, request=request, json={"spec": {"items": [], "nextPageToken": None}})
-    trigger._handle_response_error(response)
-
-
 def test_process_batch(trigger):
-    # stub two pages
+    # Stub 2 pages
     pages = [
         [{"timestamp": "100"}, {"timestamp": "200"}],
         [{"timestamp": "150"}, {"timestamp": "250"}],
     ]
-    trigger._UbikaCloudProtectorNextGenTrafficLogsConnector__fetch_pages = MagicMock(return_value=pages)
+    trigger._get_pages = MagicMock(return_value=pages)
 
     new_ts = trigger.process_batch(start_ts=50)
 
