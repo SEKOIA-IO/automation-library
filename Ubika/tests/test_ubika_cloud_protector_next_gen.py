@@ -8,6 +8,7 @@ from respx import MockRouter
 from ubika_modules import UbikaModule
 from ubika_modules.client.auth import AuthorizationError, AuthorizationTimeoutError
 from ubika_modules.connector_ubika_cloud_protector_next_gen import UbikaCloudProtectorNextGenConnector
+from ubika_modules.timestepper import TimeStepper
 
 
 @pytest.fixture
@@ -274,3 +275,36 @@ def test_authorization_timeout_error(respx_mock: MockRouter, trigger):
         trigger.next_batch(start=start, end=end)
 
     assert route.call_count == 5
+
+
+def test_stepper_initializes_with_backfill(monkeypatch, data_storage):
+    """
+    If no checkpoint in context, stepper should call TimeStepper.create(...)
+    with the configured start_time hours back.
+    """
+    # Stub load_config & instantiate connector
+    cfg = {"namespace":"ns","refresh_token":"t","intake_key":"k","frequency":60,
+           "chunk_size":100,"timedelta":5,"start_time":2}
+    module = UbikaModule()
+    monkeypatch.setattr(module, "load_config", lambda *a, **k: cfg)
+    conn = UbikaCloudProtectorNextGenConnector(module=module, data_path=data_storage)
+
+    # Make context.json empty
+    with conn.context as c: c.clear()
+
+    # Intercept create(...)
+    sentinel = object()
+    called = {}
+    def fake_create(self, freq, delta, start_h):
+        called['args'] = (freq, delta, start_h)
+        return sentinel
+    monkeypatch.setattr(TimeStepper, "create", fake_create)
+
+    # Access the cached property
+    stepper = conn.stepper
+
+    # It must be our sentinel, and args match your config
+    assert stepper is sentinel
+    assert called['args'] == (
+        cfg['frequency'], cfg['timedelta'], cfg['start_time']
+    )

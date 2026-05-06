@@ -1,3 +1,4 @@
+import time
 from unittest.mock import MagicMock, patch
 
 import httpx
@@ -159,3 +160,38 @@ def test_process_batch(trigger):
     assert trigger.push_events_to_intakes.call_count == 2
     # Verify returned timestamp is the max seen = 250
     assert new_ts == 250
+
+
+def test_run_calls_process_batch_and_updates_checkpoint(trigger, monkeypatch, data_storage):
+    """
+    Ensure run():
+     - reads the existing checkpoint from context.json
+     - calls process_batch(start_ts) exactly once
+     - writes the returned value back to context.json
+     - stops when _stop_event.is_set() becomes True
+    """
+    # Pre‐seed the context with a known checkpoint
+    initial_ts = 1234
+    with trigger.context as cache:
+        cache["most_recent_timestamp_seen"] = initial_ts
+
+    # Stub out process_batch to return a new checkpoint
+    new_ts = 5678
+    trigger.process_batch = MagicMock(return_value=new_ts)
+
+    # Ensure run only loops once: first False, then True
+    trigger._stop_event.is_set = MagicMock(side_effect=[False, True])
+
+    # 4) Avoid real sleeping
+    monkeypatch.setattr(time, "sleep", lambda s: None)
+
+    # Call run()
+    trigger.run()
+
+    # Verify process_batch was invoked with the initial timestamp
+    trigger.process_batch.assert_called_once_with(start_ts=initial_ts)
+
+    # Verify context.json was updated to new_ts
+    with trigger.context as cache:
+        assert cache["most_recent_timestamp_seen"] == new_ts
+
