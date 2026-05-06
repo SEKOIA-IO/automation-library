@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from functools import cached_property
+from typing import Any
 
 import httpx
 from pydantic.v1 import Field
@@ -71,7 +72,7 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
                 )
             raise FetchEventsException(message)
 
-    def _get_pages(self, endpoint: str, params: dict[str, any]) -> Generator[list[dict], None, None]:
+    def _get_pages(self, endpoint: str, params: dict[str, Any]) -> Generator[list[dict], None, None]:
         """
         Generic paginator against the Ubika NextGen API.
 

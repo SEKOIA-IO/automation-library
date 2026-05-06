@@ -283,21 +283,31 @@ def test_stepper_initializes_with_backfill(monkeypatch, data_storage):
     with the configured start_time hours back.
     """
     # Stub load_config & instantiate connector
-    cfg = {"namespace":"ns","refresh_token":"t","intake_key":"k","frequency":60,
-           "chunk_size":100,"timedelta":5,"start_time":2}
+    cfg = {
+        "namespace": "ns",
+        "refresh_token": "t",
+        "intake_key": "k",
+        "frequency": 60,
+        "chunk_size": 100,
+        "timedelta": 5,
+        "start_time": 2,
+    }
     module = UbikaModule()
     monkeypatch.setattr(module, "load_config", lambda *a, **k: cfg)
     conn = UbikaCloudProtectorNextGenConnector(module=module, data_path=data_storage)
 
     # Make context.json empty
-    with conn.context as c: c.clear()
+    with conn.context as c:
+        c.clear()
 
     # Intercept create(...)
     sentinel = object()
     called = {}
+
     def fake_create(self, freq, delta, start_h):
-        called['args'] = (freq, delta, start_h)
+        called["args"] = (freq, delta, start_h)
         return sentinel
+
     monkeypatch.setattr(TimeStepper, "create", fake_create)
 
     # Access the cached property
@@ -305,6 +315,4 @@ def test_stepper_initializes_with_backfill(monkeypatch, data_storage):
 
     # It must be our sentinel, and args match your config
     assert stepper is sentinel
-    assert called['args'] == (
-        cfg['frequency'], cfg['timedelta'], cfg['start_time']
-    )
+    assert called["args"] == (cfg["frequency"], cfg["timedelta"], cfg["start_time"])

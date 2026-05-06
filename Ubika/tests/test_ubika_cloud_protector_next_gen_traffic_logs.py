@@ -194,4 +194,3 @@ def test_run_calls_process_batch_and_updates_checkpoint(trigger, monkeypatch, da
     # Verify context.json was updated to new_ts
     with trigger.context as cache:
         assert cache["most_recent_timestamp_seen"] == new_ts
-
