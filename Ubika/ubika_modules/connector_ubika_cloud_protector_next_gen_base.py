@@ -88,12 +88,7 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
         headers = {"Content-Type": "application/json"}
 
         # First request using UbikaCloudProtectorNextGenApiClient
-        response = self._safe_get(
-            url=base_url,
-            params=params,
-            headers=headers,
-            initial=True
-        )
+        response = self._safe_get(url=base_url, params=params, headers=headers, initial=True)
 
         # Loop until the connector is asked to stop
         while not self._stop_event.is_set():
@@ -132,7 +127,7 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
                     "pagination.realtime": "true",
                 },
                 headers=headers,
-                initial=False
+                initial=False,
             )
 
     def _safe_get(self, url: str, *, params, headers, initial: bool) -> httpx.Response:

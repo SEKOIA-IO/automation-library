@@ -1,6 +1,6 @@
+import time
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
-import time
 
 import httpx
 import pytest
@@ -382,9 +382,7 @@ def test_run_stops_immediately_if_stop_event_set(monkeypatch, trigger):
     out of the loop without calling next_batch.
     """
     # Stub the stepper to yield some windows (they will never run)
-    fake_windows = [
-        (datetime.now(timezone.utc), datetime.now(timezone.utc))
-    ]
+    fake_windows = [(datetime.now(timezone.utc), datetime.now(timezone.utc))]
     trigger.stepper = MagicMock(ranges=MagicMock(return_value=fake_windows))
 
     # Spy on next_batch
