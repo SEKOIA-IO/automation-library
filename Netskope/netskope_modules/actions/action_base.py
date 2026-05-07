@@ -1,9 +1,9 @@
-from functools import cached_property
 import json
+from functools import cached_property
 
-from sekoia_automation.action import Action
 import requests
 from requests import Response
+from sekoia_automation.action import Action
 
 from netskope_modules.logging import get_logger
 

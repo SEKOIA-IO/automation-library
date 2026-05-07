@@ -1,6 +1,7 @@
+from unittest.mock import MagicMock
+
 import pytest
 import requests_mock
-from unittest.mock import MagicMock
 
 from netskope_modules import NetskopeModule
 from netskope_modules.actions.action_replace_blocklist import ReplaceBlocklistAction
