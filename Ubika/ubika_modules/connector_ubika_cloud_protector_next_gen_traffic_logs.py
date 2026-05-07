@@ -89,22 +89,27 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(UbikaCloudProtectorNextGenB
                 "pagination.realtime": True,
             },
         ):
-            # Serialize and publish each page
-            payloads = [orjson.dumps(evt).decode() for evt in page]
-            if payloads:
-                self.log(f"Publishing {len(payloads)} traffic-log events", level="info")
-                self.push_events_to_intakes(events=payloads)
-
-            # Update the highest timestamp seen
-            # This way we never re-consume older logs (we always move "forward" in time)
-            # and we survive restarts because the last-seen timestamp is persisted on disk
+            out_payloads: list[str] = []
             for evt in page:
+                # Serialize each page
+                serialized = orjson.dumps(evt).decode()
+                out_payloads.append(serialized)
+
+                # Update the highest timestamp seen
+                # This way we never re-consume older logs (we always move "forward" in time)
+                # and we survive restarts because the last-seen timestamp is persisted on disk
                 try:
                     ts = int(evt.get("timestamp", 0))
                 except (TypeError, ValueError):
                     ts = 0
                 if ts > max_ts:
                     max_ts = ts
+
+            # Publish if we saw anything
+            if out_payloads:
+                self.log(f"Publishing {len(out_payloads)} traffic-log events", level="info")
+                self.push_events_to_intakes(events=out_payloads)
+
         # Persist new checkpoint after exhausting all pages of new logs
         with self.context as cache:
             cache["most_recent_timestamp_seen"] = max_ts
