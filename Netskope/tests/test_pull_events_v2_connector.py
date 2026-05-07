@@ -221,6 +221,7 @@ def test_next_batch_with_error(trigger):
 def test_next_batch_no_consume_service(trigger):
     with (
         patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time,
+        patch("netskope_api.iterator.netskope_iterator_client.time"),
         requests_mock.Mocker() as mock_requests,
     ):
         mock_requests.get(
@@ -241,7 +242,7 @@ def test_next_batch_no_consume_service(trigger):
 
 
 def test_next_batch_invalid_api_token(trigger):
-    with patch("netskope_modules.connector_pull_events_v2.time") as mock_time:
+    with patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time:
         iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
         iterator.client.get = MagicMock(
             side_effect=ValueError(
@@ -262,6 +263,7 @@ def test_next_batch_invalid_api_token(trigger):
 def test_next_batch_403_service(trigger):
     with (
         patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time,
+        patch("netskope_api.iterator.netskope_iterator_client.time"),
         requests_mock.Mocker() as mock_requests,
     ):
         mock_requests.get(
