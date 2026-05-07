@@ -82,5 +82,4 @@ dmypy.json
 
 # Specific
 .reviews/
-*/.github/skills/*
-*/.github/agents/*
+*/.github/*

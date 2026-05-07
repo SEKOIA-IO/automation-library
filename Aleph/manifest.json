@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Aleph",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Aleph Networks is a European leader in OSINT (Open Source Intelligence), providing advanced web monitoring and cyber-security services across all layers of the web, including the Deep and Dark Web.\n\nAleph detects and alerts organizations about strategic data leaks, compromised credentials, and exposure of sensitive assets, helping them anticipate risks, minimize impact, and protect their reputation.",
+  "name": "Aleph",
+  "uuid": "611322dd-3b59-4114-8e0c-1f75c716731f",
+  "version": "1.0.0",
+  "slug": "aleph",
+  "categories": [
+    "Network"
+  ]
+}
