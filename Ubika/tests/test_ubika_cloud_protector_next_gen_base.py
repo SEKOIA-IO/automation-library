@@ -9,6 +9,7 @@ from ubika_modules.connector_ubika_cloud_protector_next_gen_base import (
     AuthorizationTimeoutError,
     FetchEventsException,
     UbikaCloudProtectorNextGenBaseConnector,
+    UbikaCloudProtectorNextGenBaseConnectorConfiguration,
 )
 
 
@@ -19,12 +20,12 @@ def trigger(data_storage):
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
-    trigger.configuration = {
-        "namespace": "sekoia",
-        "refresh_token": "some_token_here",
-        "intake_key": "intake_key",
-        "chunk_size": 100,
-    }
+    trigger.configuration = UbikaCloudProtectorNextGenBaseConnectorConfiguration(
+        namespace="sekoia",
+        refresh_token="some_token_here",
+        intake_key="intake_key",
+        chunk_size=100,
+    )
     # Make client.get a MagicMock so we can stub pagination calls
     trigger.client = MagicMock()
     yield trigger

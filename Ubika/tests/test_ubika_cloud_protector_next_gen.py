@@ -9,7 +9,10 @@ from respx import MockRouter
 
 from ubika_modules import UbikaModule
 from ubika_modules.client.auth import AuthorizationError, AuthorizationTimeoutError
-from ubika_modules.connector_ubika_cloud_protector_next_gen import UbikaCloudProtectorNextGenConnector
+from ubika_modules.connector_ubika_cloud_protector_next_gen import (
+    UbikaCloudProtectorNextGenConnector,
+    UbikaCloudProtectorNextGenConnectorConfiguration,
+)
 from ubika_modules.timestepper import TimeStepper
 
 
@@ -20,15 +23,15 @@ def trigger(data_storage):
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
-    trigger.configuration = {
-        "namespace": "sekoia",
-        "refresh_token": "some_token_here",
-        "intake_key": "intake_key",
-        "frequency": 60,
-        "chunk_size": 100,
-        "timedelta": 5,
-        "start_time": 1,
-    }
+    trigger.configuration = UbikaCloudProtectorNextGenConnectorConfiguration(
+        namespace="sekoia",
+        refresh_token="some_token_here",
+        intake_key="intake_key",
+        frequency=60,
+        chunk_size=100,
+        timedelta=5,
+        start_time=1,
+    )
     yield trigger
 
 
