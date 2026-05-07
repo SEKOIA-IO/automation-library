@@ -104,46 +104,43 @@ def message2():
 
 @pytest.mark.respx(base_url="https://login.ubika.io")
 def test_get_pages(respx_mock: MockRouter, trigger, message1, message2):
-    with patch("ubika_modules.connector_ubika_cloud_protector_base.time") as mock_time:
-        mock_time.sleep = MagicMock()
-
-        respx_mock.post("/auth/realms/main/protocol/openid-connect/token").mock(
-            return_value=httpx.Response(
-                200,
-                json={
-                    "access_token": "foo-token",
-                    "token_type": "bearer",
-                    "expires_in": 1799,
-                },
-            )
-        )
-
-        respx_mock.get(
-            "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/traffic-logs",
-            params={
-                "filters.fromDate": "1747326567845",
-                "pagination.pageSize": "100",
-            },
-        ).mock(return_value=httpx.Response(200, json=message1))
-
-        respx_mock.get(
-            "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/traffic-logs",
-            params={
-                "pagination.pageToken": "token123",
-                "pagination.pageSize": "100",
-            },
-        ).mock(return_value=httpx.Response(200, json=message2))
-
-        trigger.from_timestamp = 1747326567845
-        events = trigger._get_pages(
-            endpoint="traffic-logs",
-            params={
-                "filters.fromDate": 1747326567845,
-                "pagination.pageSize": 100,
+    respx_mock.post("/auth/realms/main/protocol/openid-connect/token").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
             },
         )
+    )
 
-        assert list(events) == [message1["spec"]["items"]]
+    respx_mock.get(
+        "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/traffic-logs",
+        params={
+            "filters.fromDate": "1747326567845",
+            "pagination.pageSize": "100",
+        },
+    ).mock(return_value=httpx.Response(200, json=message1))
+
+    respx_mock.get(
+        "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/traffic-logs",
+        params={
+            "pagination.pageToken": "token123",
+            "pagination.pageSize": "100",
+        },
+    ).mock(return_value=httpx.Response(200, json=message2))
+
+    trigger.from_timestamp = 1747326567845
+    events = trigger._get_pages(
+        endpoint="traffic-logs",
+        params={
+            "filters.fromDate": 1747326567845,
+            "pagination.pageSize": 100,
+        },
+    )
+
+    assert list(events) == [message1["spec"]["items"]]
 
 
 def test_process_batch(trigger):
@@ -181,9 +178,6 @@ def test_run_calls_process_batch_and_updates_checkpoint(trigger, monkeypatch):
 
     # Ensure run only loops once: first False, then True
     trigger._stop_event.is_set = MagicMock(side_effect=[False, True])
-
-    # Avoid real sleeping
-    monkeypatch.setattr(time, "sleep", lambda s: None)
 
     # Call run()
     trigger.run()
@@ -238,9 +232,6 @@ def test_run_logs_exception_on_process_error(trigger, monkeypatch):
 
     # Make exactly one loop iteration: False → True
     trigger._stop_event.is_set = MagicMock(side_effect=[False, True])
-
-    # Avoid real sleep
-    monkeypatch.setattr(time, "sleep", lambda s: None)
 
     # Call run()
     trigger.run()
