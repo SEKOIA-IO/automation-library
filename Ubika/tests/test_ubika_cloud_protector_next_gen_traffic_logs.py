@@ -120,7 +120,7 @@ def test_get_pages(respx_mock: MockRouter, trigger, message1, message2):
         "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/traffic-logs",
         params={
             "filters.fromDate": "1747326567845",
-            "pagination.pageSize": "100",
+            "pagination.pageSize": 100,
         },
     ).mock(return_value=httpx.Response(200, json=message1))
 
@@ -128,7 +128,7 @@ def test_get_pages(respx_mock: MockRouter, trigger, message1, message2):
         "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/traffic-logs",
         params={
             "pagination.pageToken": "token123",
-            "pagination.pageSize": "100",
+            "pagination.pageSize": 100,
         },
     ).mock(return_value=httpx.Response(200, json=message2))
 

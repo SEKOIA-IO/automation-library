@@ -150,8 +150,8 @@ def test_fetch_events_with_pagination(respx_mock: MockRouter, trigger, message1,
         params={
             "filters.fromDate": "1747326567845",
             "filters.toDate": "1747326667845",
-            "pagination.realtime": "true",
-            "pagination.pageSize": "100",
+            "pagination.realtime": True,
+            "pagination.pageSize": 100,
         },
     ).mock(return_value=httpx.Response(200, json=message1))
 
@@ -159,8 +159,8 @@ def test_fetch_events_with_pagination(respx_mock: MockRouter, trigger, message1,
         "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events",
         params={
             "pagination.pageToken": "token123",
-            "pagination.pageSize": "100",
-            "pagination.realtime": "true",
+            "pagination.pageSize": 100,
+            "pagination.realtime": True,
         },
     ).mock(return_value=httpx.Response(200, json=message2))
 
@@ -202,8 +202,8 @@ def test_next_batch_sleep_until_next_round(respx_mock: MockRouter, trigger, mess
         params={
             "filters.fromDate": str(start_ms),
             "filters.toDate": str(end_ms),
-            "pagination.realtime": "true",
-            "pagination.pageSize": "100",
+            "pagination.realtime": True,
+            "pagination.pageSize": 100,
         },
     ).mock(return_value=httpx.Response(200, json=message1))
 
@@ -211,8 +211,8 @@ def test_next_batch_sleep_until_next_round(respx_mock: MockRouter, trigger, mess
         "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events",
         params={
             "pagination.pageToken": "token123",
-            "pagination.pageSize": "100",
-            "pagination.realtime": "true",
+            "pagination.pageSize": 100,
+            "pagination.realtime": True,
         },
     ).mock(return_value=httpx.Response(200, json=message2))
 

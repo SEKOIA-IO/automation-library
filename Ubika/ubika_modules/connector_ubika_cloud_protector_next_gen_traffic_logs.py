@@ -8,7 +8,7 @@ Specifications & Implementation Notes:
      with query:
        - filters.fromDate=<last_seen_timestamp_ms>
        - pagination.pageSize=<chunk_size>
-       - pagination.realtime=true
+       - pagination.realtime=True
    - Use `nextPageToken` to page until items list is empty.
 
 2. Checkpoint strategy (cursor-based):
