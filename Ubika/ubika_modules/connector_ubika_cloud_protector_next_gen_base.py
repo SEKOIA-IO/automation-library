@@ -21,12 +21,11 @@ class UbikaCloudProtectorNextGenBaseConnectorConfiguration(DefaultConnectorConfi
     """
     Common configuration for all NextGen connectors.
     """
-    api_key: str = Field(..., description="API key for authentication", secret=True)
-    base_url: str = Field(..., description="API base URL")
 
     namespace: str = Field(..., description="Ubika namespace")
     refresh_token: str = Field(..., description="API refresh token", secret=True)
 
+    base_url: str = Field("https://api.ubika.io/", description="API base URL")
     frequency: int = Field(60, description="Polling interval in seconds", ge=1)
     chunk_size: int = Field(200, description="Page size for API calls", ge=1)
 
@@ -87,9 +86,7 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
         """
         # Build URL using the configured namespace
         base_url = (
-            self.configuration.base_url
-            + f"rest/logs.ubika.io/v1"
-            + f"/ns/{self.configuration.namespace}/{endpoint}"
+            self.configuration.base_url + f"rest/logs.ubika.io/v1" + f"/ns/{self.configuration.namespace}/{endpoint}"
         )
         headers = {"Content-Type": "application/json"}
 

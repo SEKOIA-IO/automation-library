@@ -19,7 +19,6 @@ def trigger(data_storage):
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
     trigger.configuration = UbikaCloudProtectorNextGenTrafficLogsConnectorConfiguration(
-        api_key="some_api_key_here",
         base_url="https://api.ubika.io/",
         namespace="sekoia",
         refresh_token="some_token_here",

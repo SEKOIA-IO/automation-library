@@ -7,10 +7,6 @@
     "title": "The configuration to fetch new traffic logs",
     "type": "object",
     "properties": {
-      "api_key": {
-        "type": "string",
-        "description": "API key for authentification"
-      },
       "base_url": {
         "type": "string",
         "description": "API base URL",
@@ -57,14 +53,11 @@
       }
     },
     "required": [
-      "api_key",
-      "base_url",
       "intake_key",
       "namespace",
       "refresh_token"
     ],
     "secrets": [
-      "api_key",
       "refresh_token"
     ]
   },
