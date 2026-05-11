@@ -180,39 +180,19 @@ def test_get_incident_entities_coverage(trigger):
     from azure.core.exceptions import AzureError
     from unittest.mock import MagicMock
 
-    # Case 1: as_dict
     class EntityAsDict:
         def as_dict(self):
             return {"type": "as_dict"}
 
-    # Case 2: serialize
-    class EntitySerialize:
-        def serialize(self):
-            return {"type": "serialize"}
-
-    # Case 3: dict parse
-    class EntityDictParse:
-        def __iter__(self):
-            yield "type", "dict_parse"
-
-    # Case 4: Exception type
-    class EntityDictError:
-        pass
-
-    entity_dict = {"type": "dict"}
-
     mock_response = MagicMock()
-    mock_response.entities = [EntityAsDict(), EntitySerialize(), entity_dict, EntityDictParse(), EntityDictError()]
+    mock_response.entities = [EntityAsDict()]
 
     trigger.client = MagicMock()
     trigger.client.incidents.list_entities.return_value = mock_response
 
     res = trigger._get_incident_entities("inc1")
-    assert len(res) == 4
+    assert len(res) == 1
     assert res[0] == {"type": "as_dict"}
-    assert res[1] == {"type": "serialize"}
-    assert res[2] == {"type": "dict"}
-    assert res[3] == {"type": "dict_parse"}
 
     # Test exceptions
     trigger.client.incidents.list_entities.side_effect = AzureError("azure_err")
@@ -228,9 +208,9 @@ def test_get_incident_entities_coverage(trigger):
     # Test when response has no entities attribute at all
     mock_response_no_entities = MagicMock()
     del mock_response_no_entities.entities
+    trigger.client.incidents.list_entities.side_effect = None
     trigger.client.incidents.list_entities.return_value = mock_response_no_entities
     assert trigger._get_incident_entities("inc1") == []
-    trigger.client.incidents.list_entities.side_effect = None
     trigger.client.incidents.list_entities.return_value = mock_response_empty
     assert trigger._get_incident_entities("inc1") == []
 

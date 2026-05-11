@@ -81,25 +81,13 @@ class MicrosoftSentineldConnector(Connector):
                 workspace_name=self.module.configuration.workspace_name,
                 incident_id=incident_id,
             )
-            entities: Any = getattr(response, "entities", response)
+            entities: Any = getattr(response, "entities", None)
             if not entities:
                 return []
 
             parsed_entities = []
             for entity in entities:
-                if hasattr(entity, "as_dict"):
-                    parsed_entities.append(entity.as_dict())
-                elif hasattr(entity, "serialize"):
-                    parsed_entities.append(entity.serialize())
-                elif isinstance(entity, dict):
-                    parsed_entities.append(entity)
-                else:
-                    try:
-                        parsed_entities.append(dict(entity))
-                    except (TypeError, ValueError):
-                        self.log(
-                            level="warning", message=f"Could not reliably parse entity for incident {incident_id}"
-                        )
+                parsed_entities.append(entity.as_dict())
 
             return parsed_entities
 
@@ -146,15 +134,14 @@ class MicrosoftSentineldConnector(Connector):
         incoming_events_sum = 0
         for item in response:
             created_time = item.created_time_utc
-            serialezed_incident = self._serialize_incident(item)
+            serialized_incident = self._serialize_incident(item)
 
             incident_id = getattr(item, "name", None)
             if incident_id:
                 entities = self._get_incident_entities(incident_id)
-                if entities:
-                    serialezed_incident["entities"] = entities
+                serialized_incident["entities"] = entities
 
-            jsonify_item = orjson.dumps(serialezed_incident).decode("utf-8")
+            jsonify_item = orjson.dumps(serialized_incident).decode("utf-8")
             alerts_batch.append(jsonify_item)
 
             if stored_time is None:
