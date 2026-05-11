@@ -2,9 +2,9 @@ import asyncio
 from datetime import datetime
 from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 
+import pytest
 from google.cloud.pubsub_v1.subscriber.message import Message
 from pytest import fixture
-import pytest
 
 from netskope_modules.connector_pubsub_lite import PubSubLite
 
