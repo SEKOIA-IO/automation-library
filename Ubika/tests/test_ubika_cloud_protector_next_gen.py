@@ -24,6 +24,8 @@ def trigger(data_storage):
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
     trigger.configuration = UbikaCloudProtectorNextGenConnectorConfiguration(
+        api_key="some_api_key_here",
+        base_url="https://api.ubika.io/",
         namespace="sekoia",
         refresh_token="some_token_here",
         intake_key="intake_key",
@@ -146,7 +148,7 @@ def test_fetch_events_with_pagination(respx_mock: MockRouter, trigger, message1,
     )
 
     respx_mock.get(
-        "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events",
+        f"{trigger.configuration.base_url}rest/logs.ubika.io/v1/ns/sekoia/security-events",
         params={
             "filters.fromDate": "1747326567845",
             "filters.toDate": "1747326667845",
@@ -156,7 +158,7 @@ def test_fetch_events_with_pagination(respx_mock: MockRouter, trigger, message1,
     ).mock(return_value=httpx.Response(200, json=message1))
 
     respx_mock.get(
-        "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events",
+        f"{trigger.configuration.base_url}rest/logs.ubika.io/v1/ns/sekoia/security-events",
         params={
             "pagination.pageToken": "token123",
             "pagination.pageSize": 100,
@@ -198,7 +200,7 @@ def test_next_batch_sleep_until_next_round(respx_mock: MockRouter, trigger, mess
     end_ms = int(end.timestamp() * 1000)
 
     respx_mock.get(
-        "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events",
+        f"{trigger.configuration.base_url}rest/logs.ubika.io/v1/ns/sekoia/security-events",
         params={
             "filters.fromDate": str(start_ms),
             "filters.toDate": str(end_ms),
@@ -208,7 +210,7 @@ def test_next_batch_sleep_until_next_round(respx_mock: MockRouter, trigger, mess
     ).mock(return_value=httpx.Response(200, json=message1))
 
     respx_mock.get(
-        "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events",
+        f"{trigger.configuration.base_url}rest/logs.ubika.io/v1/ns/sekoia/security-events",
         params={
             "pagination.pageToken": "token123",
             "pagination.pageSize": 100,

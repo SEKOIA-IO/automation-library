@@ -1,5 +1,4 @@
-import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import httpx
 import pytest
@@ -20,6 +19,8 @@ def trigger(data_storage):
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
     trigger.configuration = UbikaCloudProtectorNextGenTrafficLogsConnectorConfiguration(
+        api_key="some_api_key_here",
+        base_url="https://api.ubika.io/",
         namespace="sekoia",
         refresh_token="some_token_here",
         intake_key="intake_key",
@@ -117,7 +118,7 @@ def test_get_pages(respx_mock: MockRouter, trigger, message1, message2):
     )
 
     respx_mock.get(
-        "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/traffic-logs",
+        f"{trigger.configuration.base_url}rest/logs.ubika.io/v1/ns/sekoia/traffic-logs",
         params={
             "filters.fromDate": "1747326567845",
             "pagination.pageSize": 100,
@@ -125,7 +126,7 @@ def test_get_pages(respx_mock: MockRouter, trigger, message1, message2):
     ).mock(return_value=httpx.Response(200, json=message1))
 
     respx_mock.get(
-        "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/traffic-logs",
+        f"{trigger.configuration.base_url}rest/logs.ubika.io/v1/ns/sekoia/traffic-logs",
         params={
             "pagination.pageToken": "token123",
             "pagination.pageSize": 100,
