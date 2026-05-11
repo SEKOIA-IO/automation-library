@@ -6,7 +6,7 @@ from threading import Event, Thread
 import orjson
 from netskope_api.iterator.const import Const
 from netskope_api.iterator.netskope_iterator import NetskopeIterator
-from pydantic import Field
+from pydantic.v1 import Field
 from requests.exceptions import ConnectionError
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.exceptions import ModuleConfigurationError
@@ -45,11 +45,23 @@ class NetskopeEventConsumer(Thread):
         # Fetch next events
         try:
             response = self.iterator.next()
+
         except ConnectionError as error:
             if "connection aborted" in str(error).lower():
                 return
 
             raise error
+
+        except ValueError as error:
+            if "invalid api token" in str(error).lower():
+                self.connector.log(
+                    message=f"Invalid API token for the service {self.name}. The consumer will be stopped.",
+                    level="warning",
+                )
+                self.stop()
+                return
+
+            raise
 
         if response.status_code == 204:
             self.connector.log(message=f"No events to forward for {self.name}", level="info")

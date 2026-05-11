@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-23 - 1.12.0
+
+### Fixed
+
+- Stop consumer when Netskope SDK throws Incorrect Token error
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
 ## 2024-12-13 - 1.11.1
 
 ### Fixed
