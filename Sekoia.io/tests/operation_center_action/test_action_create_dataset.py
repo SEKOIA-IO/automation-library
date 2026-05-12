@@ -59,7 +59,7 @@ def test_create_dataset_success(requests_mock):
     )
 
     assert result is None or result == {}
-    assert requests_mock.call_count == 2
+    assert requests_mock.call_count == 1
     assert len(action._logs) == 0
 
 

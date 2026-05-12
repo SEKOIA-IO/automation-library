@@ -39,16 +39,13 @@ class DeleteDataset(BaseSolAction):
 
     def configure_urls(self) -> None:
         """Set up the dataset API base path."""
-        self.dataset_api_path = urljoin(
-            self.module.configuration["base_url"], "api/v1/notebooks/datasets"
-        )
+        self.dataset_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/datasets")
 
     @retry(
         reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
-        retry=retry_if_exception_type(Timeout)
-        | retry_if_exception_type(Urllib3TimeoutError),
+        retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
     )
     def get_dataset_uuid(self, dataset_name: str) -> UUID:
         """Resolve a dataset UUID from its name within a community.
@@ -97,8 +94,7 @@ class DeleteDataset(BaseSolAction):
         reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
-        retry=retry_if_exception_type(Timeout)
-        | retry_if_exception_type(Urllib3TimeoutError),
+        retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
     )
     def delete_dataset(self, dataset_uuid: UUID) -> None:
         """Delete a dataset by its UUID via the notebooks API.
@@ -106,9 +102,7 @@ class DeleteDataset(BaseSolAction):
         :param dataset_uuid: UUID of the dataset to delete
         :raises requests.exceptions.HTTPError: If the API returns an error response
         """
-        response_delete = self.http_session.delete(
-            f"{self.dataset_api_path}/{str(dataset_uuid)}"
-        )
+        response_delete = self.http_session.delete(f"{self.dataset_api_path}/{str(dataset_uuid)}", timeout=60)
         try:
             response_delete.raise_for_status()
         except HTTPError as e:
