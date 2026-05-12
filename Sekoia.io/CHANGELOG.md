@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-01 - 2.71.5
+
+### Changed
+
+- Refactor action to synchronize asset with Active Directory (AD)
+- Log non-JSON responses while trying to synchronize asset with AD
+
+## 2026-04-27 - 2.71.4
+
+- Add missing documentation of `Get Alert`  action.
+
+### Fixed
+
 ## 2026-03-27 - 2.71.3
 
 ### Fixed
