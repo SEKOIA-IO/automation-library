@@ -63,8 +63,12 @@ class ExecuteAQuery(BaseSolAction):
 
     def configure_urls(self) -> None:
         """Set up API base paths and configure the HTTP session with retry and auth headers."""
-        self.query_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/queries")
-        self.query_runs_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/queries/runs")
+        self.query_api_path = urljoin(
+            self.module.configuration["base_url"], "api/v1/notebooks/queries"
+        )
+        self.query_runs_api_path = urljoin(
+            self.module.configuration["base_url"], "api/v1/notebooks/queries/runs"
+        )
 
     @retry(
         reraise=True,
@@ -73,7 +77,9 @@ class ExecuteAQuery(BaseSolAction):
         retry=retry_if_exception_type(Timeout)
         | retry_if_exception_type(Urllib3TimeoutError),
     )
-    def trigger_query_execution(self, query_uuid: UUID, query_definition: str, query_parameters: dict | None) -> UUID:
+    def trigger_query_execution(
+        self, query_uuid: UUID, query_definition: str, query_parameters: dict | None
+    ) -> UUID:
         """Trigger the asynchronous execution of a SOL query and return the run UUID.
 
         :param query_uuid: UUID of the query to execute
@@ -88,7 +94,7 @@ class ExecuteAQuery(BaseSolAction):
                 "query_definition": query_definition,
                 "query_parameters": query_parameters,
             },
-            timeout=20,
+            timeout=60,
         )
         try:
             response_execute_query.raise_for_status()
@@ -127,7 +133,7 @@ class ExecuteAQuery(BaseSolAction):
                 "limit": 100,
                 "offset": 0,
             },
-            timeout=20,
+            timeout=60,
         )
         try:
             response_list_query.raise_for_status()
@@ -187,7 +193,7 @@ class ExecuteAQuery(BaseSolAction):
         """
         response_get_query = self.http_session.get(
             url=urljoin(self.query_api_path, str(query_uuid)),
-            timeout=20,
+            timeout=60,
         )
         try:
             response_get_query.raise_for_status()
@@ -216,7 +222,7 @@ class ExecuteAQuery(BaseSolAction):
         """
         response_download_result = self.http_session.get(
             url=urljoin(self.query_runs_api_path, f"{run_uuid}/download"),
-            timeout=20,
+            timeout=60,
             params={"download_format": result_format},
         )
         try:
@@ -252,7 +258,7 @@ class ExecuteAQuery(BaseSolAction):
 
         response_get_run = self.http_session.get(
             url=urljoin(self.query_runs_api_path, run_uuid),
-            timeout=20,
+            timeout=60,
         )
         try:
             response_get_run.raise_for_status()
@@ -278,7 +284,7 @@ class ExecuteAQuery(BaseSolAction):
 
             response_get_run = self.http_session.get(
                 url=urljoin(self.query_runs_api_path, run_uuid),
-                timeout=20,
+                timeout=60,
             )
             try:
                 response_get_run.raise_for_status()
@@ -300,7 +306,9 @@ class ExecuteAQuery(BaseSolAction):
                 raise QueryExecutionError
 
             if time() - start_wait > timeout:
-                raise TimeoutError(f"Timeout while waiting for query run '{run_uuid}' to complete.")
+                raise TimeoutError(
+                    f"Timeout while waiting for query run '{run_uuid}' to complete."
+                )
 
     def wait_for_query_completion(self, run_uuid: str) -> None:
         """Wait for a query run to transition from pending to running, then to a terminal state.
@@ -309,13 +317,17 @@ class ExecuteAQuery(BaseSolAction):
         :raises QueryExecutionError: If the run ends in error at either phase
         :raises TimeoutError: If the run does not complete within the allowed time windows
         """
-        self._wait_for_query_completion_step(run_uuid, lambda status: status == "pending", timeout=1200)
+        self._wait_for_query_completion_step(
+            run_uuid, lambda status: status == "pending", timeout=1200
+        )
         self.log(
             f"Query run '{run_uuid}' is now running. Waiting for it to complete...",
             run_uuid=run_uuid,
         )
 
-        self._wait_for_query_completion_step(run_uuid, lambda status: status == "running", timeout=1800)
+        self._wait_for_query_completion_step(
+            run_uuid, lambda status: status == "running", timeout=1800
+        )
         self.log(f"Query run '{run_uuid}' has completed.", run_uuid=run_uuid)
 
     def save_to_file(self, result: str, format: str) -> str:
@@ -351,7 +363,9 @@ class ExecuteAQuery(BaseSolAction):
         self.wait_for_query_completion(run_uuid=run_uuid)
 
         # Download the result in the requested format
-        result = self.download_query_result(run_uuid=run_uuid, result_format=arguments.result_format)
+        result = self.download_query_result(
+            run_uuid=run_uuid, result_format=arguments.result_format
+        )
 
         self.log(
             f"Query execution completed successfully for query_uuid '{query['uuid']}' and run_uuid '{run_uuid}'.",

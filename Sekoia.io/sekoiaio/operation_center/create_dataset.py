@@ -39,14 +39,16 @@ class CreateDataset(BaseSolAction):
 
     def configure_urls(self) -> None:
         """Set up the dataset API base path."""
-        self.dataset_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/datasets")
-
+        self.dataset_api_path = urljoin(
+            self.module.configuration["base_url"], "api/v1/notebooks/datasets"
+        )
 
     @retry(
         reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
-        retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
+        retry=retry_if_exception_type(Timeout)
+        | retry_if_exception_type(Urllib3TimeoutError),
     )
     def create_dataset(self, dataset: bytes, name: str) -> None:
         """Upload and create the dataset via the notebooks API.
@@ -59,6 +61,7 @@ class CreateDataset(BaseSolAction):
             self.dataset_api_path,
             data={"name": name},
             files={"file": ("dataset.csv", dataset, "text/csv")},
+            timeout=60,
         )
         try:
             response_create.raise_for_status()

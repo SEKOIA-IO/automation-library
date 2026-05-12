@@ -46,7 +46,9 @@ class ListQueries(BaseSolAction):
 
     def configure_urls(self) -> None:
         """Set up the query API base path."""
-        self.query_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/queries")
+        self.query_api_path = urljoin(
+            self.module.configuration["base_url"], "api/v1/notebooks/queries"
+        )
 
     @retry(
         reraise=True,
@@ -78,7 +80,7 @@ class ListQueries(BaseSolAction):
                     "match[created_by]": argument.match_created_by,
                     "parameters": argument.parameters,
                 },
-                timeout=20,
+                timeout=60,
             )
             try:
                 response_list_query.raise_for_status()
@@ -113,6 +115,7 @@ class ListQueries(BaseSolAction):
         :return: Action result containing the list of queries
         """
         self.configure_http_session()
+        self.configure_urls()
         # Retrieve all queries.
         queries = self.get_queries(arguments)
         return ListQueriesResults(queries=queries)

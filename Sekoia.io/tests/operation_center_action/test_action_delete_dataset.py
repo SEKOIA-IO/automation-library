@@ -3,7 +3,11 @@ from uuid import UUID, uuid4
 import pytest
 import requests
 
-from sekoiaio.operation_center.delete_dataset import DeleteDataset, DeleteDatasetArguments, DeleteDatasetResults
+from sekoiaio.operation_center.delete_dataset import (
+    DeleteDataset,
+    DeleteDatasetArguments,
+    DeleteDatasetResults,
+)
 
 BASE_URL = "https://fake.url/"
 API_KEY = "fake_api_key"
@@ -211,7 +215,9 @@ def test_delete_dataset_not_found(requests_mock):
     action = make_action()
     action.configure_http_session()
     action.configure_urls()
-    mock_not_found_response = {"detail": {"message": "Dataset does not exist", "code": "DATASET_NOT_FOUND"}}
+    mock_not_found_response = {
+        "detail": {"message": "Dataset does not exist", "code": "DATASET_NOT_FOUND"}
+    }
 
     requests_mock.delete(
         f"{DATASETS_URL}/{DATASET_UUID}",

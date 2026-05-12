@@ -49,7 +49,6 @@ def test_create_dataset_success(requests_mock):
             },
         ],
     }
-    requests_mock.post(VALIDATE_URL, status_code=200, json=mock_created_response)
     requests_mock.post(DATASETS_URL, status_code=201, json=mock_created_response)
 
     result = action.run(
@@ -62,46 +61,6 @@ def test_create_dataset_success(requests_mock):
     assert result is None or result == {}
     assert requests_mock.call_count == 2
     assert len(action._logs) == 0
-
-
-# ---------------------------------------------------------------------------
-# validate_dataset() — HTTP error
-# ---------------------------------------------------------------------------
-
-
-def test_validate_dataset_http_error(requests_mock):
-    action = make_action()
-    action.configure_http_session()
-    action.configure_urls()
-
-    mock_validate_response = {
-        "detail": {"message": "Row has 1 columns but expected 2 columns", "code": "DATASET_VALIDATION_ERROR"}
-    }
-
-    requests_mock.post(VALIDATE_URL, status_code=422, json=mock_validate_response)
-
-    with pytest.raises(requests.exceptions.HTTPError):
-        action.validate_dataset(b"col1\nval1", "my_dataset")
-
-    assert len(action._logs) == 1
-    assert action._logs[0]["level"] == "error"
-    assert "HTTP error when validating dataset" in action._logs[0]["message"]
-    assert "Response status: 422" in action._logs[0]["message"]
-    assert "Row has 1 columns but expected 2 columns" in action._logs[0]["message"]
-
-
-def test_validate_dataset_server_error(requests_mock):
-    action = make_action()
-    action.configure_http_session()
-    action.configure_urls()
-
-    requests_mock.post(VALIDATE_URL, status_code=500, text="Internal Server Error")
-
-    with pytest.raises(requests.exceptions.HTTPError):
-        action.validate_dataset(b"col1\nval1", "my_dataset")
-
-    assert action._logs[0]["level"] == "error"
-    assert "Response status: 500" in action._logs[0]["message"]
 
 
 # ---------------------------------------------------------------------------
@@ -131,21 +90,6 @@ def test_create_dataset_http_error(requests_mock):
     assert "HTTP error when creating dataset" in action._logs[0]["message"]
     assert "Response status: 422" in action._logs[0]["message"]
     assert "A dataset with this name already exists" in action._logs[0]["message"]
-
-
-def test_run_stops_on_validate_error(requests_mock):
-    """If validate fails, create should never be called."""
-    action = make_action()
-    action.configure_http_session()
-    action.configure_urls()
-
-    requests_mock.post(VALIDATE_URL, status_code=422, text="Unprocessable entity")
-    create_mock = requests_mock.post(DATASETS_URL, status_code=201)
-
-    with pytest.raises(requests.exceptions.HTTPError):
-        action.run({"name": "my_dataset", "dataset": "col1\nval1"})
-
-    assert not create_mock.called
 
 
 # ---------------------------------------------------------------------------
