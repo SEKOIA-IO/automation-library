@@ -45,7 +45,23 @@ from misp.misp2stix2_mapping import (
     urlMapping,
     x509mapping,
 )
+import stix2
 from stix2 import exceptions
+
+
+@stix2.CustomObject(
+    "x-misp-attribute",
+    [
+        ("x_misp_type", stix2.properties.StringProperty(required=True)),
+        ("x_misp_category", stix2.properties.StringProperty(required=True)),
+        ("x_misp_value", stix2.properties.StringProperty(required=True)),
+        ("x_misp_comment", stix2.properties.StringProperty()),
+    ],
+)
+class XMISPAttribute:
+    pass
+
+
 from stix2.base import STIXJSONEncoder
 from stix2.v21 import (
     AttackPattern,
@@ -181,10 +197,12 @@ class STIXConverter:
 
     def initialize_misp_types(self):
         describe_types_filename = os.path.join(pymisp.__path__[0], "data/describeTypes.json")
-        describe_types = open(describe_types_filename)
-        categories_mapping = json.loads(describe_types.read())["result"]["category_type_mappings"]
+        with open(describe_types_filename) as describe_types:
+            categories_mapping = json.loads(describe_types.read())["result"]["category_type_mappings"]
+        self.types_mapping = dict(mispTypesMapping)
         for category in categories_mapping:
-            mispTypesMapping[category] = {"to_call": "handle_person"}
+            if category not in self.types_mapping:
+                self.types_mapping[category] = {"to_call": "handle_person"}
 
     def handler(self, event):
         self.misp_event = event
@@ -196,12 +214,15 @@ class STIXConverter:
         self.__set_identity()
         if self.misp_event.get("Attribute"):
             for attribute in self.misp_event["Attribute"]:
+                attribute_type = attribute["type"]
+                if attribute_type not in self.types_mapping:
+                    self._logger.error("Impossible to convert item of type '%s'", attribute_type)
+                    continue
                 try:
-                    getattr(self, mispTypesMapping[attribute["type"]]["to_call"])(attribute)
-                except KeyError:
+                    getattr(self, self.types_mapping[attribute_type]["to_call"])(attribute)
+                except Exception:
                     self._logger.error("Impossible to convert item")
                     self._logger.error(event)
-                    pass
         if self.misp_event.get("Object"):
             self.load_objects_mapping()
             self.objects_to_parse = defaultdict(dict)
@@ -570,7 +591,7 @@ class STIXConverter:
             "type": "indicator",
             "labels": labels,
             "kill_chain_phases": killchain,
-            "valid_from": self.misp_event["date"],
+            "valid_from": "{}T00:00:00Z".format(self.misp_event["date"]),
             "created_by_ref": self.identity_id,
             "pattern": pattern,
             "indicator_types": ["malicious-activity"],
@@ -687,6 +708,25 @@ class STIXConverter:
         vulnerability = Vulnerability(**vulnerability_args)
         self.append_object(vulnerability, vulnerability_id)
 
+    def add_custom(self, attribute):
+        custom_id = "x-misp-attribute--{}".format(attribute["uuid"])
+        labels, markings = self.create_labels(attribute)
+        custom_args = {
+            "id": custom_id,
+            "type": "x-misp-attribute",
+            "created_by_ref": self.identity_id,
+            "labels": labels,
+            "x_misp_type": attribute["type"],
+            "x_misp_category": attribute["category"],
+            "x_misp_value": attribute["value"],
+        }
+        if attribute.get("comment"):
+            custom_args["x_misp_comment"] = attribute["comment"]
+        if markings:
+            custom_args["object_marking_refs"] = self.handle_tags(markings)
+        custom_object = XMISPAttribute(**custom_args)
+        self.append_object(custom_object, custom_id)
+
     def add_object_indicator(self, misp_object, pattern_arg=None):
         indicator_id = "indicator--{}".format(misp_object["uuid"])
         if pattern_arg:
@@ -700,7 +740,7 @@ class STIXConverter:
         labels = self.create_object_labels(name, category, True)
         indicator_args = {
             "id": indicator_id,
-            "valid_from": self.misp_event["date"],
+            "valid_from": "{}T00:00:00Z".format(self.misp_event["date"]),
             "type": "indicator",
             "labels": labels,
             "pattern": pattern,
@@ -796,7 +836,7 @@ class STIXConverter:
         if attribute.get("Tag"):
             for tag in attribute["Tag"]:
                 name = tag["name"]
-                markings.append(name) if name.startswith("tlp:") else labels.append(name)
+                (markings.append(name) if name.startswith("tlp:") else labels.append(name))
         return labels, markings
 
     @staticmethod
@@ -871,7 +911,7 @@ class STIXConverter:
         return "Undefined name"
 
     def handle_tags(self, tags):
-        return [self.markings[tag]["id"] if tag in self.markings else self.create_marking(tag) for tag in tags]
+        return [(self.markings[tag]["id"] if tag in self.markings else self.create_marking(tag)) for tag in tags]
 
     def resolve_asn_observable(self, attributes, object_id):
         asn = objectsMapping["asn"]["observable"]
