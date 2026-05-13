@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2026-05-07 - 2.71.5
 
+### Changed
+
+- Refactor action to synchronize asset with Active Directory (AD)
+- Log non-JSON responses while trying to synchronize asset with AD
+
+## 2026-04-27 - 2.71.4
+
 ### Fixed
 
 - Add checking ips for add iocs action.
@@ -692,3 +699,4 @@ Support for file input - action synchronize asset
 ### Added
 
 - Add the action that let us get reports from a specific term
+

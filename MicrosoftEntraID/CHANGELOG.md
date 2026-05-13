@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-05 - 2.10.21
+
+### Fixed
+
+- Fix HTTP transport resource leak in `EntraIDAssetConnector` by persisting `ClientSecretCredential` and closing it after each run
+
 ## 2026-04-21 - 2.10.20
 
 ### Changed
