@@ -49,13 +49,6 @@
         "minimum": 1,
         "type": "integer"
       },
-      "query_window_minutes": {
-        "title": "Query Window Minutes",
-        "description": "Size of each API polling window in minutes",
-        "default": 60,
-        "minimum": 1,
-        "type": "integer"
-      },
       "threat_levels": {
         "title": "Threat Levels",
         "description": "Threat levels filter applied to MokN login attempts",
