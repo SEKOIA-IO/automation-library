@@ -183,9 +183,11 @@ class MoknLoginAttemptsTrigger(Connector):
 
         for events, _ in self.iterate(cursor):
             if events:
-                serialized_events = [json.dumps(event) for event in events]
-                self.push_events_to_intakes(events=serialized_events)
-                total_number_of_events += len(events)
+                chunk_size = self.configuration.chunk_size
+                for i in range(0, len(events), chunk_size):
+                    chunk = events[i : i + chunk_size]
+                    self.push_events_to_intakes(events=[json.dumps(e) for e in chunk])
+                    total_number_of_events += len(chunk)
                 next_cursor = self._next_cursor
                 if next_cursor.second != cursor.second or next_cursor.seen_ids != cursor.seen_ids:
                     self._set_cursor(next_cursor)

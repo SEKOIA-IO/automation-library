@@ -38,6 +38,7 @@ def make_trigger(data_storage, **configuration_overrides):
     configuration = {
         "intake_key": "test-intake",
         "frequency": 60,
+        "chunk_size": 100,
         "page_size": 100,
         "initial_lookback_minutes": 5,
         "statuses": [5, 9],
@@ -359,6 +360,87 @@ def test_next_run_pushes_events_and_updates_checkpoint(data_storage):
         ]
     )
     trigger._set_cursor.assert_called_once_with(next_cursor)
+
+
+def test_next_run_chunks_events_according_to_chunk_size(data_storage):
+    trigger = make_trigger(data_storage, chunk_size=2)
+    cursor = AttemptCursor(
+        second=datetime(2026, 4, 23, 8, 9, 10, tzinfo=UTC),
+        seen_ids=set(),
+    )
+    trigger._get_cursor = Mock(return_value=cursor)
+    trigger._set_cursor = Mock()
+
+    def make_summary(attempt_id: int):
+        return {
+            "id": attempt_id,
+            "updated_time": "2026-04-23T08:09:11+00:00",
+            "username": f"user-{attempt_id}",
+            "status": 5,
+            "is_targeted": False,
+            "ip": "1.2.3.4",
+            "country": "France",
+            "country_code": "FR",
+            "date": "2026-04-23T08:09:11+00:00",
+            "bait_name": "App Portal",
+            "password": "pw",
+            "comment": "",
+            "type": "Bots",
+            "identification": "",
+            "threat_level": "LOW",
+        }
+
+    detail_response = {
+        "status": "success",
+        "message": "ok",
+        "data": {
+            "attack": {
+                "ip": "1.2.3.4",
+                "country": "France",
+                "country_code": "FR",
+                "username": "u",
+                "password": "p",
+                "ja4h": "",
+                "user_agent": "Bot/1.0",
+                "headers": [],
+                "date": "2026-04-23T08:09:11+00:00",
+                "bait": "App Portal",
+                "threat_level": "LOW",
+                "opportunistic_patterns": [],
+            },
+            "credential_checks": [],
+            "leaks": [],
+            "comment": None,
+            "attacker_profile": {"reputation": "Unknown", "total_attempts": 1, "total_targeted_attempts": 0},
+        },
+    }
+
+    client = Mock()
+    client.base_url = "https://mokn.example"
+    client.request = Mock(
+        side_effect=[
+            FakeResponse(
+                {
+                    "status": "success",
+                    "message": "ok",
+                    "data": {"results": [make_summary(i) for i in range(1, 4)]},
+                }
+            ),
+            FakeResponse(detail_response),
+            FakeResponse(detail_response),
+            FakeResponse(detail_response),
+            FakeResponse({"status": "success", "message": "ok", "data": {"results": []}}),
+        ]
+    )
+    trigger.__dict__["client"] = client
+
+    trigger.next_run()
+
+    assert trigger.push_events_to_intakes.call_count == 2
+    first_call_events = trigger.push_events_to_intakes.call_args_list[0].kwargs["events"]
+    second_call_events = trigger.push_events_to_intakes.call_args_list[1].kwargs["events"]
+    assert len(first_call_events) == 2
+    assert len(second_call_events) == 1
 
 
 def test_next_run_waits_when_no_events_are_fetched(data_storage):

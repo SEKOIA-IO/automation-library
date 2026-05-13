@@ -6,6 +6,12 @@ from mokn.domain import MoknThreatLevel
 
 class MoknLoginAttemptsTriggerConfiguration(DefaultConnectorConfiguration):
     frequency: int = Field(60, ge=1, description="Polling interval in seconds")
+    chunk_size: int = Field(
+        100,
+        ge=1,
+        le=1000,
+        description="Maximum number of events forwarded to the intake in a single batch",
+    )
     page_size: int = Field(
         100,
         ge=1,
