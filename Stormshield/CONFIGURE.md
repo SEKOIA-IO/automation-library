@@ -14,7 +14,7 @@ Stormshield Network Security is a range of network security appliances.
 
 1. **Access the administration interface:**
 
-      - Open your web browser and go to the firewall administration URL (e.g., `api.stormshield.lab`).
+      - Open your web browser and go to the firewall administration URL (e.g., `https://api.stormshield.lab`).
 
       - Enter your username and password to log in.
 
