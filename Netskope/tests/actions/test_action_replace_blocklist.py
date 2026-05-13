@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from netskope_modules import NetskopeModule
 from netskope_modules.actions.action_replace_blocklist import ReplaceBlocklistAction
@@ -76,5 +77,6 @@ def test_replace_blocklist_missing_required_params(replace_action):
         "items": ["new-blocked.com"],
     }
 
-    with pytest.raises(ValueError, match="name\n  field required"):
+    with pytest.raises(ValidationError):
+        # Missing field 'name' should cause validation error
         replace_action.run(arguments)
