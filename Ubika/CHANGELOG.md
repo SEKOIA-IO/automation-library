@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-15 - 1.0.9
+
+### Added
+
+- Added another waiting strategy for the retrying due to network errors
+
 ## 2026-02-09 - 1.0.8
 
 ### Added

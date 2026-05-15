@@ -4,18 +4,16 @@ from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from typing import Any
 
-from dateutil.parser import isoparse
-
 import httpx
 import orjson
 from cachetools import Cache, LRUCache
+from dateutil.parser import isoparse
 from pydantic.v1 import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from . import UbikaModule
 from .client import UbikaCloudProtectorNextGenApiClient
-
 from .client.auth import AuthorizationError, AuthorizationTimeoutError
 from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 from .timestepper import TimeStepper
