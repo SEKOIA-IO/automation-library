@@ -47,7 +47,7 @@ class ExponentialBackoffTransport(httpx.BaseTransport):
         return wait_strategy
 
     def custom_wait(self, retry_state: RetryCallState):
-        if retry_state.outcome.failed:
+        if retry_state.outcome and retry_state.outcome.failed:
             # Use another wait strategy for the network issues
             exc = retry_state.outcome.exception()
             if issubclass(exc.__class__, httpx.TransportError):
