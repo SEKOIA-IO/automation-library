@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-15 - 1.25.15
+
+### Fixed
+
+- Prevent stream offset from regressing in cache when a batch with a lower offset is written after a higher one
+
 ## 2026-04-27 - 1.25.14
 
 ### Fixed
