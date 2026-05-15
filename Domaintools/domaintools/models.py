@@ -108,13 +108,11 @@ class DomainToolsClient:
     def _validate_domain(self, domain: str) -> str:
         """Validate domain format"""
         if not domain or not isinstance(domain, str):
-            self.error(f"Domain must be a non-empty string")
             raise DomainToolsError("Domain must be a non-empty string")
 
         domain = domain.strip().lower()
 
         if not domain or "." not in domain:
-            self.error(f"Invalid domain format: {domain}")
             raise DomainToolsError(f"Invalid domain format: {domain}")
 
         if domain.startswith(("http://", "https://")):
@@ -128,7 +126,6 @@ class DomainToolsClient:
             ipaddress.ip_address(ip.strip())
             return ip.strip()
         except ValueError:
-            self.error(f"Invalid IP address format: {ip}")
             raise DomainToolsError(f"Invalid IP address format: {ip}")
 
     def _validate_email(self, email: str) -> str:
@@ -142,7 +139,6 @@ class DomainToolsClient:
         - TLD: at least 2 characters
         """
         if not email or not isinstance(email, str):
-            self.error(f"Email must be a non-empty string")
             raise DomainToolsError("Email must be a non-empty string")
 
         email = email.strip().lower()
@@ -151,7 +147,6 @@ class DomainToolsClient:
         email_pattern = re.compile(r"^[a-z0-9][a-z0-9._+-]*@[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$", re.IGNORECASE)
 
         if not email_pattern.match(email):
-            self.error(f"Invalid email format: {email}")
             raise DomainToolsError(f"Invalid email format: {email}")
 
         return email
@@ -197,7 +192,6 @@ class DomainToolsClient:
                         time.sleep(retry_after)
                         continue  # Retry the request
                     else:
-                        self.error(f"Rate limit exceeded after {max_429_retries} retries")
                         raise DomainToolsError(f"Rate limit exceeded after {max_429_retries} retries", status_code=429)
 
                 # Check for errors
@@ -260,7 +254,6 @@ class DomainToolsClient:
         self.log(f"Performing pivot action: {search_type} -> {search_term}")
 
         if not search_term:
-            self.error(f"Search term cannot be empty")
             raise DomainToolsError("Search term cannot be empty")
 
         # Validate search term based on type
