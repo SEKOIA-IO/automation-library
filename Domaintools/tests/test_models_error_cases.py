@@ -11,7 +11,6 @@ from domaintools.models import (
     DomainToolsConfig,
     DomainToolsError,
     BaseDomaintoolsAction,
-    DomaintoolsrunAction,
 )
 
 
@@ -219,8 +218,9 @@ class TestDispatchErrors:
         """Test dispatch with unknown action"""
         config = DomainToolsConfig(api_username="test", api_key="test")
         arguments = {"domain": "example.com", "domaintools_action": "unknown_action"}
-
-        result = DomaintoolsrunAction(config, arguments)
+        action = BaseDomaintoolsAction()
+        action.action_name = "unknown_action"
+        result = action.DomaintoolsrunAction(config, arguments)
         data = result  # Response is already a dict, no need for json.loads()
         assert "error" in data
         assert "Unknown action" in data["error"]
@@ -246,8 +246,9 @@ class TestResponseProcessing:
             m.get(requests_mock.ANY, json={"error": "API error message"})
 
             arguments = {"domain": "example.com", "domaintools_action": "domain_reputation"}
-
-            result = DomaintoolsrunAction(config, arguments)
+            action = BaseDomaintoolsAction()
+            action.action_name = "domain_reputation"
+            result = action.DomaintoolsrunAction(config, arguments)
             data = result  # Response is already a dict, no need for json.loads()
             assert "error" in data
 
@@ -260,7 +261,9 @@ class TestResponseProcessing:
 
             arguments = {"domain": "example.com", "domaintools_action": "domain_reputation"}
 
-            result = DomaintoolsrunAction(config, arguments)
+            action = BaseDomaintoolsAction()
+            action.action_name = "domain_reputation"
+            result = action.DomaintoolsrunAction(config, arguments)
             data = result  # Response is already a dict, no need for json.loads()
             assert "error" in data
 
@@ -398,7 +401,9 @@ class TestCallMethodErrors:
             MockClient.return_value = mock_client
 
             arguments = {"domain": "example.com", "domaintools_action": "domain_reputation"}
-            result = DomaintoolsrunAction(config, arguments)
+            action = BaseDomaintoolsAction()
+            action.action_name = "domain_reputation"
+            result = action.DomaintoolsrunAction(config, arguments)
 
             assert "error" in result
             assert "Client has no method" in result["error"]
@@ -413,7 +418,9 @@ class TestCallMethodErrors:
             MockClient.return_value = mock_client
 
             arguments = {"domain": "example.com", "domaintools_action": "domain_reputation"}
-            result = DomaintoolsrunAction(config, arguments)
+            action = BaseDomaintoolsAction()
+            action.action_name = "domain_reputation"
+            result = action.DomaintoolsrunAction(config, arguments)
 
             assert "error" in result
             assert "Unexpected error" in result["error"]
@@ -432,7 +439,9 @@ class TestResponsePayloadProcessing:
             MockClient.return_value = mock_client
 
             arguments = {"domain": "example.com", "domaintools_action": "domain_reputation"}
-            result = DomaintoolsrunAction(config, arguments)
+            action = BaseDomaintoolsAction()
+            action.action_name = "domain_reputation"
+            result = action.DomaintoolsrunAction(config, arguments)
 
             assert "error" in result
             assert "No response returned" in result["error"]
@@ -447,7 +456,9 @@ class TestResponsePayloadProcessing:
             MockClient.return_value = mock_client
 
             arguments = {"domain": "example.com", "domaintools_action": "domain_reputation"}
-            result = DomaintoolsrunAction(config, arguments)
+            action = BaseDomaintoolsAction()
+            action.action_name = "domain_reputation"
+            result = action.DomaintoolsrunAction(config, arguments)
 
             assert "error" in result
             assert "Some string response" in result["error"]
@@ -462,7 +473,9 @@ class TestResponsePayloadProcessing:
             MockClient.return_value = mock_client
 
             arguments = {"domain": "example.com", "domaintools_action": "domain_reputation"}
-            result = DomaintoolsrunAction(config, arguments)
+            action = BaseDomaintoolsAction()
+            action.action_name = "domain_reputation"
+            result = action.DomaintoolsrunAction(config, arguments)
 
             assert isinstance(result, list)
             assert result[0]["domain"] == "example.com"
@@ -477,7 +490,9 @@ class TestResponsePayloadProcessing:
             MockClient.return_value = mock_client
 
             arguments = {"domain": "example.com", "domaintools_action": "domain_reputation"}
-            result = DomaintoolsrunAction(config, arguments)
+            action = BaseDomaintoolsAction()
+            action.action_name = "domain_reputation"
+            result = action.DomaintoolsrunAction(config, arguments)
 
             assert result["data"] == "some_data"
             assert result["status"] == "ok"
@@ -497,7 +512,9 @@ class TestResponsePayloadProcessing:
             MockClient.return_value = mock_client
 
             arguments = {"domain": "example.com", "domaintools_action": "domain_reputation"}
-            result = DomaintoolsrunAction(config, arguments)
+            action = BaseDomaintoolsAction()
+            action.action_name = "domain_reputation"
+            result = action.DomaintoolsrunAction(config, arguments)
 
             # The payload will be returned as-is since it's not None, not a string, not a dict
             # The code returns it directly at line 520
@@ -513,7 +530,8 @@ class TestNoActionSpecified:
 
         arguments = {"domain": "example.com"}  # No domaintools_action
 
-        result = DomaintoolsrunAction(config, arguments)
+        action = BaseDomaintoolsAction()
+        result = action.DomaintoolsrunAction(config, arguments)
         assert "error" in result
         assert "No action specified" in result["error"]
 
@@ -527,7 +545,9 @@ class TestDomaintoolsrunActionExceptions:
 
         arguments = {"domain": "example.com", "domaintools_action": "domain_reputation"}
 
-        result = DomaintoolsrunAction(config, arguments)
+        action = BaseDomaintoolsAction()
+        action.action_name = "domain_reputation"
+        result = action.DomaintoolsrunAction(config, arguments)
         assert "error" in result
         assert "DomainTools client initialization error" in result["error"]
 
@@ -539,7 +559,9 @@ class TestDomaintoolsrunActionExceptions:
             MockClient.side_effect = RuntimeError("Unexpected error during init")
 
             arguments = {"domain": "example.com", "domaintools_action": "domain_reputation"}
-            result = DomaintoolsrunAction(config, arguments)
+            action = BaseDomaintoolsAction()
+            action.action_name = "domain_reputation"
+            result = action.DomaintoolsrunAction(config, arguments)
 
             assert "error" in result
             assert "Unexpected initialization error" in result["error"]
