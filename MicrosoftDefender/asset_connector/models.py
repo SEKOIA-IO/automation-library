@@ -1,10 +1,12 @@
 from typing import Any, Optional
 
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DefenderMachine(BaseModel):
     """Model for a machine from the Defender for Endpoint API."""
+
+    model_config = ConfigDict(extra="allow")
 
     id: str
     computerDnsName: Optional[str] = None
@@ -28,16 +30,11 @@ class DefenderMachine(BaseModel):
     ipAddresses: list[dict[str, Any]] = []
     osArchitecture: Optional[str] = None
 
-    class Config:
-        extra = "allow"
-
 
 class DefenderMachineListResponse(BaseModel):
     """Paginated response from GET /api/machines."""
 
-    value: list[DefenderMachine] = []
-    odata_next_link: Optional[str] = None
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
 
-    class Config:
-        extra = "allow"
-        fields = {"odata_next_link": {"alias": "@odata.nextLink"}}
+    value: list[DefenderMachine] = []
+    odata_next_link: Optional[str] = Field(None, alias="@odata.nextLink")

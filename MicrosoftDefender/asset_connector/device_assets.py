@@ -351,7 +351,7 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
                 break
 
             data = response.json()
-            page = DefenderMachineListResponse(**data)
+            page = DefenderMachineListResponse.model_validate(data)
             machines.extend(page.value)
             url = page.odata_next_link
 
