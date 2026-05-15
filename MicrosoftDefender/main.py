@@ -1,4 +1,5 @@
 from microsoftdefender_modules import MicrosoftDefenderModule
+from microsoftdefender_modules.account_validator import MicrosoftDefenderAccountValidator
 from microsoftdefender_modules.action_cancel_machine_action import CancelMachineAction
 from microsoftdefender_modules.action_get_machine_action import GetMachineAction
 from microsoftdefender_modules.action_isolate_machine import IsolateMachineAction
@@ -13,6 +14,7 @@ from asset_connector.device_assets import MicrosoftDefenderDeviceAssetConnector
 
 if __name__ == "__main__":
     module = MicrosoftDefenderModule()
+    module.register_account_validator(MicrosoftDefenderAccountValidator)
     module.register(UpdateAlertAction, "UpdateAlertAction")
     module.register(UpdateAlertAction, "AddCommentToAlert")
     module.register(GetMachineAction, "GetMachineAction")
