@@ -340,7 +340,7 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
             endpoint = f"{endpoint}?$filter=firstSeen+ge+{self.most_recent_date_seen}&$orderby=firstSeen+asc"
         else:
             endpoint = f"{endpoint}?$orderby=firstSeen+asc"
-        url = urljoin(self.defender_client.base_url, endpoint)
+        url: str | None = urljoin(self.defender_client.base_url, endpoint)
 
         while url and self.running:
             try:
