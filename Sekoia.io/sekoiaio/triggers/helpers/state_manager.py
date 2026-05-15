@@ -2,7 +2,8 @@
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 class AlertStateManager:
@@ -38,7 +39,7 @@ class AlertStateManager:
 
     VERSION = "1.1"
 
-    def __init__(self, state_file_path: Path, logger: Optional[Callable] = None):
+    def __init__(self, state_file_path: Path, logger: Callable | None = None):
         """
         Initialize state manager.
 
@@ -161,25 +162,8 @@ class AlertStateManager:
             }
 
     def _save_state(self):
-        """Save state to S3."""
-        self._log("Saving state to S3", level="debug", file_path=str(self.state_file_path))
-        try:
-            self._save_state_to_s3()
-            self._log(
-                "State saved successfully",
-                level="debug",
-                file_path=str(self.state_file_path),
-                alert_count=len(self._state.get("alerts", {})),
-            )
-        except Exception as e:
-            self._log(
-                "Failed to save state to S3",
-                level="error",
-                error=str(e),
-                error_type=type(e).__name__,
-                file_path=str(self.state_file_path),
-            )
-            raise
+        """Save state to S3. Logging is handled by _save_state_to_s3."""
+        self._save_state_to_s3()
 
     def _migrate_state(self, old_state: dict[str, Any]) -> dict[str, Any]:
         """
@@ -221,28 +205,9 @@ class AlertStateManager:
 
         return old_state
 
-    def get_alert_state(self, alert_uuid: str) -> Optional[dict[str, Any]]:
-        """
-        Get state for a specific alert.
-
-        Args:
-            alert_uuid: UUID of the alert
-
-        Returns:
-            Alert state dictionary or None if not found
-        """
-        state = self._state["alerts"].get(alert_uuid)
-        if state:
-            self._log(
-                f"Retrieved state for alert {alert_uuid}",
-                level="debug",
-                alert_uuid=alert_uuid,
-                last_triggered_count=state.get("last_triggered_event_count"),
-                total_triggers=state.get("total_triggers"),
-            )
-        else:
-            self._log(f"No state found for alert {alert_uuid}", level="debug", alert_uuid=alert_uuid)
-        return state
+    def get_alert_state(self, alert_uuid: str) -> dict[str, Any] | None:
+        """Get state for a specific alert, or None if not found."""
+        return self._state["alerts"].get(alert_uuid)
 
     def update_alert_state(
         self,
@@ -251,10 +216,12 @@ class AlertStateManager:
         rule_uuid: str,
         rule_name: str,
         event_count: int,
-        previous_version: Optional[int] = None,
     ):
         """
-        Update the state for a specific alert.
+        Update the state for a specific alert and persist to storage.
+
+        The caller is responsible for calling reload_state() beforehand
+        if fresh state from S3 is needed.
 
         Args:
             alert_uuid: UUID of the alert
@@ -262,19 +229,8 @@ class AlertStateManager:
             rule_uuid: UUID of the rule
             rule_name: Name of the rule
             event_count: Current event count
-            previous_version: Expected version for optimistic locking (unused for now)
         """
-        self._log(
-            f"Updating state for alert {alert_short_id}",
-            level="debug",
-            alert_uuid=alert_uuid,
-            alert_short_id=alert_short_id,
-            event_count=event_count,
-        )
         now = datetime.now(timezone.utc).isoformat()
-
-        # Reload state from S3 to get latest version (use _load_state for consistent error handling)
-        self._state = self._load_state()
 
         existing = self._state["alerts"].get(alert_uuid)
 
@@ -292,13 +248,6 @@ class AlertStateManager:
                     "version": current_version + 1,
                 }
             )
-            self._log(
-                f"Updated existing state for alert {alert_short_id}",
-                level="debug",
-                alert_uuid=alert_uuid,
-                new_version=current_version + 1,
-                total_triggers=existing["total_triggers"],
-            )
         else:
             self._state["alerts"][alert_uuid] = {
                 "alert_uuid": alert_uuid,
@@ -312,7 +261,6 @@ class AlertStateManager:
                 "updated_at": now,
                 "version": 1,
             }
-            self._log(f"Created new state for alert {alert_short_id}", level="debug", alert_uuid=alert_uuid)
 
         # Save back to S3
         self._save_state_to_s3()
@@ -335,16 +283,16 @@ class AlertStateManager:
         )
 
         try:
-            # Reload state from S3 to get latest version (use _load_state for consistent error handling)
-            self._state = self._load_state()
-
             cutoff_iso = cutoff_date.isoformat()
             to_remove = []
 
-            # FIX: Compare using string comparison (ISO format is lexicographically sortable)
+            # Compare using string comparison (ISO format is lexicographically sortable)
             for alert_uuid, state in list(self._state["alerts"].items()):
-                last_triggered = state.get("last_triggered_at", "")
-                # If last_triggered is earlier than cutoff, remove it
+                last_triggered = state.get("last_triggered_at")
+                # For never-triggered alerts, use created_at or updated_at as reference
+                if not last_triggered:
+                    last_triggered = state.get("created_at") or state.get("updated_at")
+                # If reference timestamp is earlier than cutoff, remove it
                 if last_triggered and last_triggered < cutoff_iso:
                     to_remove.append(alert_uuid)
                     self._log(
@@ -403,10 +351,8 @@ class AlertStateManager:
         Update cached alert info and current event count (without triggering).
         Used to store alert data from notifications to avoid API calls.
 
-        Note: This method reloads state from S3 on each call to ensure consistency.
-        While this adds latency per notification, it ensures we don't lose updates
-        from other processes. For high-volume scenarios, consider implementing
-        a write-through cache or batching updates.
+        The caller is responsible for calling reload_state() beforehand
+        if fresh state from S3 is needed.
 
         Args:
             alert_uuid: UUID of the alert
@@ -414,10 +360,6 @@ class AlertStateManager:
             event_count: Current event count from notification
         """
         now = datetime.now(timezone.utc).isoformat()
-
-        # Reload state from S3 to get latest version before updating
-        # This ensures consistency when multiple processes may be updating
-        self._state = self._load_state()
 
         existing = self._state["alerts"].get(alert_uuid)
 
@@ -429,12 +371,6 @@ class AlertStateManager:
                     "last_event_at": now,
                     "updated_at": now,
                 }
-            )
-            self._log(
-                f"Updated alert info cache for {alert_uuid}",
-                level="debug",
-                alert_uuid=alert_uuid,
-                event_count=event_count,
             )
         else:
             # Create new state entry with alert info but no trigger yet
@@ -453,33 +389,12 @@ class AlertStateManager:
                 "current_event_count": event_count,
                 "last_event_at": now,
             }
-            self._log(
-                f"Created new alert info cache for {alert_uuid}",
-                level="debug",
-                alert_uuid=alert_uuid,
-                event_count=event_count,
-            )
-
-        # Save back to S3
         self._save_state_to_s3()
 
-    def get_alert_info(self, alert_uuid: str) -> Optional[dict[str, Any]]:
-        """
-        Get cached alert info for a specific alert.
-
-        Args:
-            alert_uuid: UUID of the alert
-
-        Returns:
-            Cached alert info dictionary or None if not found
-        """
+    def get_alert_info(self, alert_uuid: str) -> dict[str, Any] | None:
+        """Get cached alert info for a specific alert, or None if not found."""
         state = self._state["alerts"].get(alert_uuid)
-        if state and state.get("alert_info"):
-            self._log(
-                f"Retrieved cached alert info for {alert_uuid}",
-                level="debug",
-                alert_uuid=alert_uuid,
-            )
+        if state:
             return state.get("alert_info")
         return None
 
@@ -502,74 +417,31 @@ class AlertStateManager:
         from datetime import timedelta
 
         now = datetime.now(timezone.utc)
+        required_duration = timedelta(hours=time_window_hours)
+        pending_alerts: list[dict[str, Any]] = []
 
-        pending_alerts = []
         for alert_uuid, state in self._state["alerts"].items():
-            last_event_at_str = state.get("last_event_at")
-            last_triggered_at_str = state.get("last_triggered_at")
-            created_at_str = state.get("created_at")
-            current_count = state.get("current_event_count", 0)
-            last_triggered_count = state.get("last_triggered_event_count", 0)
-
             # Skip if no events received yet
-            if not last_event_at_str:
+            if not state.get("last_event_at"):
                 continue
 
-            # Check if there are pending events (current > last triggered)
-            pending_events = current_count - last_triggered_count
-            if pending_events <= 0:
+            # Skip if no pending events
+            pending = state.get("current_event_count", 0) - state.get("last_triggered_event_count", 0)
+            if pending <= 0:
                 continue
 
-            # Determine the reference time for the time window check:
-            # - If previously triggered: use last_triggered_at
-            # - If never triggered: use created_at (first time we saw this alert)
-            if last_triggered_at_str is not None:
-                reference_time_str = last_triggered_at_str
-            elif created_at_str is not None:
-                reference_time_str = created_at_str
-            else:
-                # Fallback to last_event_at if no other timestamp available
-                reference_time_str = last_event_at_str
-
-            # Parse reference timestamp
+            # Determine reference time: last trigger or creation
+            reference_str = state.get("last_triggered_at") or state.get("created_at") or state.get("last_event_at")
             try:
-                reference_time = datetime.fromisoformat(reference_time_str.replace("Z", "+00:00"))
+                reference_time = datetime.fromisoformat(reference_str.replace("Z", "+00:00"))
                 if reference_time.tzinfo is None:
                     reference_time = reference_time.replace(tzinfo=timezone.utc)
-            except (ValueError, AttributeError):
-                self._log(
-                    f"Invalid reference timestamp for alert {alert_uuid}",
-                    level="warning",
-                    alert_uuid=alert_uuid,
-                    reference_time=reference_time_str,
-                )
+            except (ValueError, AttributeError, TypeError):
+                self._log(f"Invalid timestamp for alert {alert_uuid}", level="warning")
                 continue
 
-            # Check if time_window_hours has elapsed since reference time
-            time_since_reference = now - reference_time
-            required_duration = timedelta(hours=time_window_hours)
-
-            if time_since_reference < required_duration:
-                # Not enough time has passed yet
-                self._log(
-                    f"Alert {state.get('alert_short_id')} not ready yet (time remaining: {required_duration - time_since_reference})",
-                    level="debug",
-                    alert_uuid=alert_uuid,
-                    pending_events=pending_events,
-                    time_since_reference_hours=time_since_reference.total_seconds() / 3600,
-                    required_hours=time_window_hours,
-                )
-                continue
-
-            pending_alerts.append(state)
-            self._log(
-                f"Alert {state.get('alert_short_id')} ready for time threshold trigger",
-                level="debug",
-                alert_uuid=alert_uuid,
-                pending_events=pending_events,
-                time_since_reference_hours=time_since_reference.total_seconds() / 3600,
-                required_hours=time_window_hours,
-            )
+            if (now - reference_time) >= required_duration:
+                pending_alerts.append(state)
 
         return pending_alerts
 

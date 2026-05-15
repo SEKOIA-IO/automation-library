@@ -318,185 +318,6 @@ mapping:
         }
 
   fields:
-    # DEVICE IDENTIFICATION
-    - source: "id"
-      target: "device.uid"
-      type: "string"
-      logic: "Direct mapping of HarfangLab agent unique ID"
-      description: "Device unique identifier"
-
-    - source: "hostname"
-      target: "device.name"
-      type: "string"
-      logic: "Direct mapping of hostname"
-      description: "Device hostname"
-
-    - source: "hostname"
-      target: "device.hostname"
-      type: "string"
-      logic: "Direct mapping of hostname"
-      description: "Device fully qualified hostname"
-
-    # OPERATING SYSTEM
-    - source: "osproducttype"
-      target: "device.os.name"
-      type: "string"
-      logic: "Direct mapping of OS product type (e.g., 'Windows 10 Professional', 'Ubuntu 20.04')"
-      description: "Operating system name and version"
-
-    - source: "ostype"
-      target: "device.os.type"
-      type: "string"
-      logic: "Normalize ostype to OCSF OSTypeStr: WINDOWS→'Windows', LINUX→'Linux', MACOS→'macOS', OTHER→'Other', UNKNOWN→'Unknown'"
-      description: "Operating system type"
-
-    - source: "ostype"
-      target: "device.os.type_id"
-      type: "integer"
-      logic: "Map ostype to OCSF OSTypeId: WINDOWS→100, LINUX→200, MACOS→300, OTHER→99, UNKNOWN→0"
-      description: "OCSF operating system type ID"
-
-    # DEVICE CLASSIFICATION
-    - source: "producttype"
-      target: "device.type"
-      type: "string"
-      logic: "Map producttype: 'Workstation'→'Desktop', 'Server'→'Server', 'Laptop'→'Laptop', else→'Other'"
-      description: "Device type"
-
-    - source: "producttype"
-      target: "device.type_id"
-      type: "integer"
-      logic: "Map device type to OCSF DeviceTypeId: Desktop→1, Laptop→2, Server→8, Other→99"
-      description: "OCSF device type ID"
-
-    # NETWORK INTERFACES - PRIMARY
-    - source: "ipaddress"
-      target: "device.network_interfaces[0].ip"
-      type: "string"
-      logic: "Direct mapping of IP address"
-      description: "Primary network interface IP address"
-
-    - source: "subnet.name || 'eth0'"
-      target: "device.network_interfaces[0].name"
-      type: "string"
-      logic: "Direct mapping of subnet name; default to 'eth0' if missing"
-      description: "Network interface name"
-
-    - source: "subnet.id"
-      target: "device.network_interfaces[0].uid"
-      type: "string"
-      logic: "Direct mapping of subnet ID"
-      description: "Network interface unique identifier"
-
-    - source: "hostname"
-      target: "device.network_interfaces[0].hostname"
-      type: "string"
-      logic: "Direct mapping of hostname for network interface"
-      description: "Network interface hostname"
-
-    - source: "static: Wired"
-      target: "device.network_interfaces[0].type"
-      type: "string"
-      logic: "Default to 'Wired'; can be enhanced with interface type detection logic"
-      description: "Network interface type"
-
-    - source: "static: 1"
-      target: "device.network_interfaces[0].type_id"
-      type: "integer"
-      logic: "OCSF NetworkInterfaceTypeId for Wired = 1"
-      description: "OCSF network interface type ID"
-
-    # PRIMARY IP ADDRESS
-    - source: "ipaddress"
-      target: "device.ip"
-      type: "string"
-      logic: "Direct mapping of primary IP address"
-      description: "Device primary IP address"
-
-    # NETWORK LOCATION
-    - source: "domainname"
-      target: "device.domain"
-      type: "string"
-      logic: "Direct mapping of domain name"
-      description: "Device domain or realm"
-
-    - source: "ipmask"
-      target: "device.subnet"
-      type: "string"
-      logic: "Direct mapping of subnet mask/CIDR"
-      description: "Device subnet mask"
-
-    # DEVICE MANAGEMENT & TRUST
-    - source: "policy"
-      target: "device.is_managed"
-      type: "boolean"
-      logic: "If policy object exists and is not empty, is_managed=true; else false"
-      description: "Whether device is managed by policy"
-
-    - source: "has_valid_password"
-      target: "device.is_trusted"
-      type: "boolean"
-      logic: "Direct mapping of password validity; indicates trust status"
-      description: "Whether device has valid credentials/password"
-
-    # DEVICE MODEL & VENDOR
-    - source: "static: HarfangLab"
-      target: "device.vendor_name"
-      type: "string"
-      logic: "Always 'HarfangLab' as agent vendor"
-      description: "Device vendor/manufacturer"
-
-    # TIMESTAMPS
-    - source: "firstseen"
-      target: "device.created_time"
-      type: "timestamp"
-      logic: "Convert ISO 8601 to Unix epoch"
-      description: "Device first seen timestamp"
-
-    - source: "machine_boottime"
-      target: "device.boot_time"
-      type: "timestamp"
-      logic: "Convert ISO 8601 to Unix epoch"
-      description: "Device boot time"
-
-    - source: "lastseen"
-      target: "device.updated_time"
-      type: "timestamp"
-      logic: "Convert ISO 8601 to Unix epoch"
-      description: "Device last seen timestamp"
-
-    - source: "firstseen"
-      target: "time"
-      type: "timestamp"
-      logic: "Convert ISO 8601 to Unix epoch; use for OCSF event timestamp"
-      description: "OCSF event timestamp"
-
-    # DESCRIPTION
-    - source: "description || producttype + ' - ' + osproducttype"
-      target: "device.desc"
-      type: "string"
-      logic: "Use description if provided; fallback to '<producttype> - <osproducttype>' (e.g., 'Workstation - Windows 10')"
-      description: "Device description"
-
-    # METADATA
-    - source: "static: HarfangLab EDR"
-      target: "metadata.product.name"
-      type: "string"
-      logic: "Always 'HarfangLab EDR'"
-      description: "Source product name"
-
-    - source: "static: 24.12"
-      target: "metadata.product.version"
-      type: "string"
-      logic: "Fixed HarfangLab product version"
-      description: "Product version"
-
-    - source: "static: 1.5.0"
-      target: "metadata.version"
-      type: "string"
-      logic: "Fixed OCSF schema version"
-      description: "OCSF schema version"
-
     # OCSF EVENT CLASSIFICATION
     - source: "static: 2"
       target: "activity_id"
@@ -534,29 +355,182 @@ mapping:
       logic: "Always 5001 for Device Inventory Info"
       description: "OCSF class UID"
 
-    - source: "computed: 500100 + activity_id"
+    - source: "static: 500102"
       target: "type_uid"
       type: "integer"
-      logic: "Base 500100 + activity_id (2 = 500102)"
+      logic: "Always 500102 for Device Inventory Info: Collect"
       description: "OCSF type UID"
 
-    - source: "computed: class_name + ': ' + activity_name"
+    - source: "static: Device Inventory Info: Collect"
       target: "type_name"
       type: "string"
-      logic: "Concatenate 'Device Inventory Info: Collect'"
+      logic: "Always 'Device Inventory Info: Collect' for this event type"
       description: "OCSF type name"
 
-    - source: "static: Informational"
-      target: "severity"
-      type: "string"
-      logic: "Always 'Informational' for inventory events"
-      description: "Event severity"
+    # TIMESTAMPS
+    - source: "firstseen"
+      target: "time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch; use for OCSF event timestamp"
+      description: "OCSF event timestamp"
 
-    - source: "static: 1"
-      target: "severity_id"
+    # METADATA
+    - source: "static: HarfangLab EDR"
+      target: "metadata.product.name"
+      type: "string"
+      logic: "Always 'HarfangLab EDR'"
+      description: "Source product name"
+
+    - source: "static: 24.12"
+      target: "metadata.product.version"
+      type: "string"
+      logic: "Fixed HarfangLab product version"
+      description: "Product version"
+
+    - source: "static: 1.5.0"
+      target: "metadata.version"
+      type: "string"
+      logic: "Fixed OCSF schema version"
+      description: "OCSF schema version"
+
+    # DEVICE ATTRIBUTES
+    - source: "static: 2"
+      target: "device.type_id"
       type: "integer"
-      logic: "Always 1 for Informational severity"
-      description: "OCSF severity ID"
+      logic: "Direct mapping of type to desktop type ID"
+      description: "Device type ID"
+
+    - source: "static: Desktop"
+      target: "device.type"
+      type: "string"
+      logic: "Direct mapping of type to desktop type"
+      description: "OCSF device type ID"
+
+    - source: "id"
+      target: "device.uid"
+      type: "string"
+      logic: "Direct mapping of HarfangLab agent unique ID"
+      description: "Device unique identifier"
+
+    - source: "osproducttype"
+      target: "device.os.name"
+      type: "string"
+      logic: "Direct mapping of OS product type (e.g., 'Windows 10 Professional', 'Ubuntu 20.04')"
+      description: "Operating system name and version"
+
+    - source: "ostype"
+      target: "device.os.type"
+      type: "string"
+      logic: "Normalize ostype to OCSF OSTypeStr: WINDOWS→'Windows', LINUX→'Linux', MACOS→'macOS', OTHER→'Other', UNKNOWN→'Unknown'"
+      description: "Operating system type"
+
+    - source: "ostype"
+      target: "device.os.type_id"
+      type: "integer"
+      logic: "Map ostype to OCSF OSTypeId: WINDOWS→100, LINUX→200, MACOS→300, OTHER→99, UNKNOWN→0"
+      description: "OCSF operating system type ID"
+
+    - source: "hostname"
+      target: "device.hostname"
+      type: "string"
+      logic: "Direct mapping of hostname"
+      description: "Device hostname"
+
+    - source: "domainname"
+      target: "device.domain"
+      type: "string"
+      logic: "Direct mapping of domain name"
+      description: "Device domain or realm"
+
+    - source: "ipaddress"
+      target: "device.network_interfaces[0].ip"
+      type: "string"
+      logic: "Direct mapping of IP address"
+      description: "Primary network interface IP address"
+
+    - source: "ipmask"
+      target: "device.subnet"
+      type: "string"
+      logic: "Direct mapping of subnet mask/CIDR"
+      description: "Device subnet mask"
+
+    - source: "subnet.name"
+      target: "device.network_interfaces[0].name"
+      type: "string"
+      logic: "Direct mapping of subnet name; default to 'eth0' if missing"
+      description: "Network interface name"
+
+    - source: "subnet.id"
+      target: "device.network_interfaces[0].uid"
+      type: "string"
+      logic: "Direct mapping of subnet ID"
+      description: "Network interface unique identifier"
+
+    - source: "hostname"
+      target: "device.network_interfaces[0].hostname"
+      type: "string"
+      logic: "Direct mapping of hostname for network interface"
+      description: "Network interface hostname"
+
+    - source: "calculated: subnet"
+      target: "device.network_interfaces[0].type"
+      type: "string"
+      logic: "Extracted based on subnet field"
+      description: "Network interface type"
+
+    - source: "calculated: subnet"
+      target: "device.network_interfaces[0].type_id"
+      type: "integer"
+      logic: "Extracted based on subnet field"
+      description: "OCSF network interface type ID"
+
+    - source: "firstseen"
+      target: "device.first_seen_time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "Device first seen timestamp"
+
+    - source: "lastseen"
+      target: "device.last_seen_time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "Device last seen timestamp"
+
+    - source: "machine_boottime"
+      target: "device.boot_time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "Device boot time"
+
+    - source: "installdate"
+      target: "device.created_time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "Device creation timestamp"
+
+    - source: "description"
+      target: "device.desc"
+      type: "string"
+      logic: "Direct mapping to description field"
+      description: "Device description"
+
+    - source: "policy"
+      target: "device.is_managed"
+      type: "boolean"
+      logic: "Depends on policy existance"
+      description: "Is device managed"
+
+    - source: "has_valid_password"
+      target: "device.is_trusted"
+      type: "boolean"
+      logic: "Direct mapping of password validity; indicates trust status"
+      description: "Whether device has valid credentials/password"
+
+    - source: "producttype"
+      target: "device.model"
+      type: "string"
+      logic: "Direct mapping of device model"
+      description: "Model of the device"
 
     # OCSF ENRICHMENT - DEVICE COMPLIANCE & HYGIENE
     - source: "policy.windows_self_protection_feature_firewall"

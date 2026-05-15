@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-26 - 1.120.4
+
+### Fixed
+
+- Move URL field validation to the module
+
 ## 2026-03-19 - 1.120.3
 
 ### Changed

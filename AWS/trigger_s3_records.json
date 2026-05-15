@@ -27,6 +27,11 @@
       "intake_key": {
         "description": "Intake key to use when sending events",
         "type": "string"
+      },
+      "prefix_filter": {
+        "description": "If set, only S3 objects whose key starts with this prefix will be processed. Use this when the S3 bucket contains multiple log types and you want to collect only specific ones (e.g. 'AWSLogs/123456789/CloudTrail/')",
+        "type": "string",
+        "default": null
       }
     },
     "required": [

@@ -5,7 +5,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "SEKOIA's automation module for Github"
+name = "Automation module for GitHub"
 version = "0.0"
 description = ""
 authors = []
@@ -34,10 +34,10 @@ exclude = ["tests/*"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-sekoia-automation-sdk = "^1.22.2"
+sekoia-automation-sdk = "^1.22.5"
 structlog = "^25.5.0"
-orjson = "^3.11.7"
-aiohttp = "^3.13.3"
+orjson = "^3.11.8"
+aiohttp = "^3.13.5"
 aiolimiter = "^1.2.1"
 jwt = "^1.4.0"
 
@@ -87,7 +87,7 @@ pytest-xdist = "*"
 pytest-env = "*"
 pytest-flake8 = "*"
 requests = "*"
-aioresponses = "^0.7.4"
+aioresponses = "^0.7.8"
 Faker = "^13.12.0"
 autoflake = "*"
 isort = "*"

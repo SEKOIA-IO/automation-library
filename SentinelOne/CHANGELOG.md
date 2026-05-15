@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-20 - 1.23.0
+
+### Added
+
+- Add action to add hash to the Blocklist
+- Add action to remove hash from the Blocklist
+
+### Changed
+
+- Updated dependencies
+
+## 2026-04-10 - 1.22.1
+
+### Fixed
+
+- Fix field mappings in `device_mapping.yml` to align with the actual OCSF models
+
+## 2026-03-12 - 1.22.0
+
+### Added
+
+- Add risk level determination based on infection state and active threats to device asset connector
+- Add organization data from SentinelOne account to device asset connector
+- Add domain enrichment to device asset connector
+
+### Changed
+
+- Update sekoia-automation-library SDK dependency to ^1.22.4
+
+### Fixed
+
+- Fix device type mapping for laptop (now correctly mapped to desktop) and tablet (now correctly mapped to mobile)
+
 ## 2026-02-20 - 1.21.8
 
 ### Fixed

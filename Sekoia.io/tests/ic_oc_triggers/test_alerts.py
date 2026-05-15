@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+import requests
 import requests_mock
 
 from sekoiaio.triggers.alerts import (
@@ -602,15 +603,10 @@ class TestAlertEventsThresholdTrigger:
             sample_threshold_alert, previous_state=None, event_count_from_notification=5
         )
 
-        # Should NOT trigger - time threshold evaluation is deferred
+        # Should NOT trigger - time threshold evaluation is deferred to background thread
         assert should_trigger is False
         assert context["reason"] == "no_threshold_met"
         assert context["new_events"] == 5
-
-        # Verify that a log was made about deferring to background thread
-        # (checked via the log mock call_args_list)
-        log_calls = [str(call) for call in threshold_trigger.log.call_args_list]
-        assert any("deferred to background" in call.lower() for call in log_calls)
 
     def test_volume_threshold_triggers(self, threshold_trigger, sample_threshold_alert):
         """Test that volume threshold triggers correctly."""
@@ -726,63 +722,14 @@ class TestAlertLockManagement:
         lock2 = threshold_trigger._get_alert_lock("alert-1")
         assert lock1 is lock2
 
-    def test_alert_locks_bounded_cache(self, threshold_trigger):
-        """Test that alert locks cache is bounded to max_locks."""
+    def test_alert_locks_creates_distinct_locks(self, threshold_trigger):
+        """Test that different alert UUIDs get different locks."""
         threshold_trigger._ensure_initialized()
-        threshold_trigger._max_locks = 10
 
-        # Create 20 locks
-        for i in range(20):
-            threshold_trigger._get_alert_lock(f"alert-{i}")
-
-        # Cache should be pruned to stay under max_locks
-        assert len(threshold_trigger._alert_locks) <= 10
-
-    def test_alert_locks_prunes_unlocked_entries(self, threshold_trigger):
-        """Test that cache pruning removes only unlocked entries."""
-        threshold_trigger._ensure_initialized()
-        threshold_trigger._max_locks = 5
-
-        # Create and acquire some locks
-        locks = []
-        for i in range(3):
-            lock = threshold_trigger._get_alert_lock(f"alert-{i}")
-            lock.acquire()
-            locks.append(lock)
-
-        # Create unlocked locks to exceed max
-        for i in range(3, 10):
-            threshold_trigger._get_alert_lock(f"alert-{i}")
-
-        # Locked entries should remain
-        for i in range(3):
-            assert f"alert-{i}" in threshold_trigger._alert_locks
-
-        # Release locks
-        for lock in locks:
-            lock.release()
-
-    def test_alert_locks_logs_warning_at_capacity(self, threshold_trigger):
-        """Test that a warning is logged when cache is at capacity."""
-        threshold_trigger._ensure_initialized()
-        threshold_trigger._max_locks = 5
-
-        # Create and acquire all locks to prevent pruning
-        locks = []
-        for i in range(5):
-            lock = threshold_trigger._get_alert_lock(f"alert-{i}")
-            lock.acquire()
-            locks.append(lock)
-
-        # Try to add one more
-        threshold_trigger._get_alert_lock("alert-extra")
-
-        # Check warning was logged
-        assert any("Alert locks cache at capacity" in str(call) for call in threshold_trigger.log.call_args_list)
-
-        # Release locks
-        for lock in locks:
-            lock.release()
+        lock1 = threshold_trigger._get_alert_lock("alert-1")
+        lock2 = threshold_trigger._get_alert_lock("alert-2")
+        assert lock1 is not lock2
+        assert len(threshold_trigger._alert_locks) == 2
 
 
 @pytest.fixture
@@ -1038,10 +985,51 @@ class TestAlertStateManager:
 
     def test_cleanup_with_exception_propagates(self, state_manager):
         """Test that exceptions during cleanup are propagated."""
-        # Mock _load_state to raise exception
-        with patch.object(state_manager, "_load_state", side_effect=Exception("Load failed")):
-            with pytest.raises(Exception, match="Load failed"):
+        # Add an old alert so cleanup tries to save
+        old_time = (datetime.now(timezone.utc) - timedelta(days=60)).isoformat()
+        state_manager._state["alerts"]["old-alert"] = {
+            "alert_uuid": "old-alert",
+            "last_triggered_at": old_time,
+        }
+        # Mock save to raise exception
+        with patch.object(state_manager, "_save_state_to_s3", side_effect=Exception("Save failed")):
+            with pytest.raises(Exception, match="Save failed"):
                 state_manager.cleanup_old_states(datetime.now(timezone.utc))
+
+    def test_cleanup_preserves_never_triggered_alerts_within_cutoff(self, state_manager):
+        """Test that never-triggered alerts are NOT removed if created recently (within cutoff).
+
+        Regression test for bug where last_triggered_at=None was treated as an empty string,
+        making all never-triggered alerts appear older than the cutoff.
+        """
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(days=30)
+
+        # Alert created 5 days ago, never triggered — should be kept
+        state_manager._state["alerts"]["new-never-triggered"] = {
+            "alert_uuid": "new-never-triggered",
+            "alert_short_id": "ALT-NEW",
+            "last_triggered_at": None,
+            "created_at": (now - timedelta(days=5)).isoformat(),
+            "current_event_count": 10,
+            "last_triggered_event_count": 0,
+        }
+        # Alert created 60 days ago, never triggered — should be removed
+        state_manager._state["alerts"]["old-never-triggered"] = {
+            "alert_uuid": "old-never-triggered",
+            "alert_short_id": "ALT-OLD",
+            "last_triggered_at": None,
+            "created_at": (now - timedelta(days=60)).isoformat(),
+            "current_event_count": 5,
+            "last_triggered_event_count": 0,
+        }
+        state_manager._save_state()
+
+        removed = state_manager.cleanup_old_states(cutoff)
+
+        assert removed == 1
+        assert "new-never-triggered" in state_manager._state["alerts"]
+        assert "old-never-triggered" not in state_manager._state["alerts"]
 
 
 # ==============================================================================
@@ -1146,7 +1134,7 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         assert payload["visible"] is False
 
     def test_trigger_event_search_job_failure(self, threshold_trigger, requests_mock):
-        """Test event search job triggering failure."""
+        """Test event search job raises HTTPError on failure after retries."""
         threshold_trigger._ensure_initialized()
 
         requests_mock.post(
@@ -1156,15 +1144,13 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         )
 
         with patch("tenacity.nap.time"):
-            result = threshold_trigger._trigger_event_search_job(
-                alert_short_id="ALT-12345",
-                earliest_time="2025-11-14T08:00:00.000000Z",
-                latest_time="2025-11-14T10:30:00.000000Z",
-                limit=1000,
-            )
-
-        assert result is None
-        assert threshold_trigger.log_exception.called
+            with pytest.raises(requests.exceptions.HTTPError):
+                threshold_trigger._trigger_event_search_job(
+                    alert_short_id="ALT-12345",
+                    earliest_time="2025-11-14T08:00:00.000000Z",
+                    latest_time="2025-11-14T10:30:00.000000Z",
+                    limit=1000,
+                )
 
     def test_wait_for_search_job_success(self, threshold_trigger, requests_mock):
         """Test waiting for search job completion."""
@@ -1200,8 +1186,18 @@ class TestAlertEventsThresholdTrigger_EventFetching:
             json={"status": 0},
         )
 
-        with patch("time.time", side_effect=[0, 1, 2, 400]):  # Simulate timeout
-            result = threshold_trigger._wait_for_search_job(job_uuid, timeout=10)
+        call_count = 0
+        time_values = [0, 1, 400]
+
+        def mock_time():
+            nonlocal call_count
+            idx = min(call_count, len(time_values) - 1)
+            call_count += 1
+            return time_values[idx]
+
+        with patch("time.time", side_effect=mock_time):
+            with patch("time.sleep"):
+                result = threshold_trigger._wait_for_search_job(job_uuid, timeout=10)
 
         assert result is False
 
@@ -1217,7 +1213,7 @@ class TestAlertEventsThresholdTrigger_EventFetching:
             json={"items": sample_events, "total": 3},
         )
 
-        results = threshold_trigger._get_search_job_results(job_uuid, limit=100)
+        results = threshold_trigger._get_search_job_results(job_uuid, page_size=100)
 
         assert results is not None
         assert len(results) == 3
@@ -1233,7 +1229,7 @@ class TestAlertEventsThresholdTrigger_EventFetching:
             json={"items": [], "total": 0},
         )
 
-        results = threshold_trigger._get_search_job_results(job_uuid, limit=100)
+        results = threshold_trigger._get_search_job_results(job_uuid, page_size=100)
 
         assert results is not None
         assert len(results) == 0
@@ -1259,7 +1255,7 @@ class TestAlertEventsThresholdTrigger_EventFetching:
             ],
         )
 
-        results = threshold_trigger._get_search_job_results(job_uuid, limit=100)
+        results = threshold_trigger._get_search_job_results(job_uuid, page_size=100)
 
         assert results is not None
         assert len(results) == 250
@@ -1362,7 +1358,7 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         assert payload["earliest_time"] == previous_state["last_triggered_at"]
 
     def test_fetch_alert_events_api_failure(self, threshold_trigger, sample_threshold_alert, requests_mock):
-        """Test event fetching when API fails."""
+        """Test event fetching raises when API fails."""
         threshold_trigger._ensure_initialized()
 
         requests_mock.post(
@@ -1371,14 +1367,13 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         )
 
         with patch("tenacity.nap.time"):
-            events = threshold_trigger._fetch_alert_events(
-                alert=sample_threshold_alert,
-                fetch_all=True,
-                previous_state=None,
-                max_events=1000,
-            )
-
-        assert events is None
+            with pytest.raises(requests.exceptions.HTTPError):
+                threshold_trigger._fetch_alert_events(
+                    alert=sample_threshold_alert,
+                    fetch_all=True,
+                    previous_state=None,
+                    max_events=1000,
+                )
 
     def test_send_threshold_event_with_events(self, threshold_trigger, sample_threshold_alert, sample_events):
         """Test sending threshold event with events included."""
@@ -1396,7 +1391,6 @@ class TestAlertEventsThresholdTrigger_EventFetching:
             event_type="alert",
             context=context,
             events=sample_events,
-            previous_state=None,
         )
 
         # Verify send_event was called
@@ -1441,7 +1435,6 @@ class TestAlertEventsThresholdTrigger_EventFetching:
             event_type="alert",
             context=context,
             events=None,
-            previous_state=None,
         )
 
         # Verify send_event was called
@@ -1550,14 +1543,14 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         }
 
         with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=sample_threshold_alert):
-            with patch.object(threshold_trigger, "_fetch_alert_events", return_value=None):
+            with patch.object(threshold_trigger, "_fetch_alert_events", side_effect=Exception("Fetch error")):
                 threshold_trigger.handle_event(message)
 
                 # Verify send_event was still called despite fetch failure (volume threshold met)
                 assert threshold_trigger.send_event.called
 
-                # Verify warning was logged
-                assert any("Failed to fetch events" in str(call) for call in threshold_trigger.log.call_args_list)
+                # Verify exception was logged
+                assert threshold_trigger.log_exception.called
 
     def test_get_alert_lock_creates_new_lock(self, threshold_trigger):
         """Test that _get_alert_lock creates a new lock for unknown alert."""
@@ -1573,20 +1566,6 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         # Getting the same lock again should return the same instance
         lock2 = threshold_trigger._get_alert_lock(alert_uuid)
         assert lock1 is lock2
-
-    def test_get_alert_lock_bounded_cache(self, threshold_trigger):
-        """Test that _get_alert_lock implements bounded cache with cleanup."""
-        # Fill cache to max capacity
-        for i in range(threshold_trigger._max_locks):
-            threshold_trigger._get_alert_lock(f"alert-{i}")
-
-        assert len(threshold_trigger._alert_locks) == threshold_trigger._max_locks
-
-        # Adding one more should trigger cleanup
-        threshold_trigger._get_alert_lock("alert-overflow")
-
-        # Cache should still be at or below max capacity
-        assert len(threshold_trigger._alert_locks) <= threshold_trigger._max_locks
 
     def test_get_alert_lock_concurrent_access(self, threshold_trigger):
         """Test that _get_alert_lock is thread-safe."""
@@ -1724,37 +1703,37 @@ class TestAlertEventsThresholdTrigger_EventFetching:
             assert not threshold_trigger.send_event.called
 
     def test_state_cleanup_periodic(self, threshold_trigger, sample_threshold_alert):
-        """Test that state cleanup runs periodically when volume threshold is met."""
-        # Configure BEFORE initialization so validated_config picks it up
+        """Test that state cleanup runs during background time threshold check."""
         threshold_trigger.configuration["state_cleanup_days"] = 30
-        threshold_trigger.configuration["enable_volume_threshold"] = True
-        threshold_trigger.configuration["event_count_threshold"] = 10
-        threshold_trigger._validated_config = None  # Clear cached config
-        threshold_trigger._ensure_initialized()
+        threshold_trigger.configuration["enable_time_threshold"] = True
+        threshold_trigger.configuration["time_window_hours"] = 1
+        threshold_trigger._validated_config = None
+        with patch("sekoiaio.triggers.alerts.Thread"):
+            threshold_trigger._ensure_initialized()
 
         threshold_trigger._last_cleanup = None  # Force cleanup to run
 
-        # Set up alert with events that will trigger
-        alert = {
-            **sample_threshold_alert,
-            "events_count": 15,
+        now = datetime.now(timezone.utc)
+        # Add a pending alert so _check_pending_time_thresholds has work to do
+        threshold_trigger.state_manager._state["alerts"]["alert-cleanup-test"] = {
+            "alert_uuid": "alert-cleanup-test",
+            "alert_short_id": "ALT-CLN",
+            "current_event_count": 10,
+            "last_triggered_event_count": 5,
+            "last_event_at": now.isoformat(),
+            "last_triggered_at": (now - timedelta(hours=2)).isoformat(),
+            "alert_info": sample_threshold_alert,
+            "rule_uuid": "rule-uuid",
+            "rule_name": "Test Rule",
+            "version": 1,
         }
+        threshold_trigger.state_manager._save_state_to_s3()
 
-        message = {
-            "type": "alert",
-            "action": "updated",
-            "attributes": {
-                "uuid": "alert-cleanup-test",
-                "updated": {"similar": 15},  # 15 events exceeds threshold of 10
-            },
-        }
+        with patch.object(threshold_trigger.state_manager, "cleanup_old_states", return_value=2) as mock_cleanup:
+            threshold_trigger._check_pending_time_thresholds()
 
-        with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
-            with patch.object(threshold_trigger.state_manager, "cleanup_old_states", return_value=2) as mock_cleanup:
-                threshold_trigger.handle_event(message)
-
-                # Verify cleanup was called during handle_event
-                assert mock_cleanup.called
+            # Verify cleanup was called during background check
+            assert mock_cleanup.called
 
     def test_initialization_with_custom_config(self, module_configuration, symphony_storage):
         """Test trigger initialization with custom configuration."""
@@ -1856,41 +1835,39 @@ class TestAlertEventsThresholdTrigger_EventFetching:
                 assert threshold_trigger.send_event.called
 
     def test_error_handling_cleanup_failure(self, threshold_trigger, sample_threshold_alert):
-        """Test error handling when cleanup fails - should continue and send event."""
-        # Configure BEFORE initialization so validated_config picks it up
-        threshold_trigger.configuration["enable_volume_threshold"] = True
-        threshold_trigger.configuration["event_count_threshold"] = 10
-        threshold_trigger._validated_config = None  # Clear cached config
-        threshold_trigger._ensure_initialized()
+        """Test error handling when cleanup fails during background check - should not crash."""
+        threshold_trigger.configuration["enable_time_threshold"] = True
+        threshold_trigger.configuration["time_window_hours"] = 1
+        threshold_trigger._validated_config = None
+        with patch("sekoiaio.triggers.alerts.Thread"):
+            threshold_trigger._ensure_initialized()
 
         threshold_trigger._last_cleanup = None  # Force cleanup to run
 
-        # Set up alert that should trigger
-        alert = {
-            **sample_threshold_alert,
-            "events_count": 15,
+        now = datetime.now(timezone.utc)
+        # Add a pending alert
+        threshold_trigger.state_manager._state["alerts"]["alert-cleanup-error"] = {
+            "alert_uuid": "alert-cleanup-error",
+            "alert_short_id": "ALT-ERR",
+            "current_event_count": 10,
+            "last_triggered_event_count": 5,
+            "last_event_at": now.isoformat(),
+            "last_triggered_at": (now - timedelta(hours=2)).isoformat(),
+            "alert_info": sample_threshold_alert,
+            "rule_uuid": "rule-uuid",
+            "rule_name": "Test Rule",
+            "version": 1,
         }
+        threshold_trigger.state_manager._save_state_to_s3()
 
-        message = {
-            "type": "alert",
-            "action": "updated",
-            "attributes": {
-                "uuid": "alert-cleanup-error",
-                "updated": {"similar": 15},  # 15 events exceeds threshold of 10
-            },
-        }
+        with patch.object(
+            threshold_trigger.state_manager, "cleanup_old_states", side_effect=Exception("Cleanup error")
+        ):
+            # Should continue despite cleanup error (not raise)
+            threshold_trigger._check_pending_time_thresholds()
 
-        with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
-            with patch.object(
-                threshold_trigger.state_manager, "cleanup_old_states", side_effect=Exception("Cleanup error")
-            ):
-                # Should continue despite cleanup error (not raise)
-                threshold_trigger.handle_event(message)
-
-                # Should log the cleanup exception
-                assert threshold_trigger.log_exception.called
-                # Event should still be sent despite cleanup failure
-                assert threshold_trigger.send_event.called
+            # Should still send event for the pending alert
+            assert threshold_trigger.send_event.called
 
     def test_send_threshold_event_with_context(self, threshold_trigger, sample_threshold_alert):
         """Test that send_threshold_event includes threshold context in event."""
@@ -1907,7 +1884,6 @@ class TestAlertEventsThresholdTrigger_EventFetching:
             event_type="alert",
             context=context,
             events=None,
-            previous_state=None,
         )
 
         # Verify send_event was called
@@ -1989,7 +1965,7 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         assert config1 is config2
 
     def test_initialization_failure_handling(self, module_configuration, symphony_storage):
-        """Test handling of initialization failure - should log and raise."""
+        """Test handling of initialization failure - should raise."""
         trigger = AlertEventsThresholdTrigger()
         trigger._data_path = symphony_storage
         trigger.module.configuration = module_configuration
@@ -1997,16 +1973,11 @@ class TestAlertEventsThresholdTrigger_EventFetching:
             "enable_volume_threshold": True,
             "event_count_threshold": 10,
         }
-        trigger.log_exception = Mock()
 
         # Mock AlertStateManager to raise exception during initialization
         with patch("sekoiaio.triggers.alerts.AlertStateManager", side_effect=Exception("Initialization error")):
-            # Should raise the exception (wrapped or original)
-            with pytest.raises(Exception):
+            with pytest.raises(Exception, match="Initialization error"):
                 trigger._ensure_initialized()
-
-            # Should have logged the exception
-            assert trigger.log_exception.called
 
 
 # ==============================================================================
@@ -2066,48 +2037,28 @@ class TestAlertEventsThresholdTrigger_KafkaNotification:
         assert context["current_count"] == 1
         assert context["new_events"] == 1
 
-    def test_evaluate_thresholds_fallback_to_api_when_no_notification_count(
+    def test_evaluate_thresholds_defaults_to_zero_when_no_notification_count(
         self, threshold_trigger, sample_threshold_alert
     ):
-        """Test that _evaluate_thresholds falls back to API when event_count_from_notification is None."""
-        # Set threshold before initialization so validated_config picks it up
-        threshold_trigger.configuration["event_count_threshold"] = 50  # Set threshold to 50
-        threshold_trigger._validated_config = None  # Clear cached config
+        """Test that _evaluate_thresholds defaults to 0 when event_count_from_notification is None.
+
+        When the notification doesn't include an event count (e.g. alert:created without
+        'similar' field), the trigger defaults to 0 instead of launching an expensive
+        async search job. The alert will be picked up by the time threshold background
+        thread later.
+        """
+        threshold_trigger.configuration["event_count_threshold"] = 50
+        threshold_trigger._validated_config = None
         threshold_trigger._ensure_initialized()
 
-        # Mock _get_total_event_count to return 75 (above threshold of 50)
-        with patch.object(threshold_trigger, "_get_total_event_count", return_value=75) as mock_api:
-            should_trigger, context = threshold_trigger._evaluate_thresholds(
-                sample_threshold_alert, previous_state=None, event_count_from_notification=None
-            )
+        should_trigger, context = threshold_trigger._evaluate_thresholds(
+            sample_threshold_alert, previous_state=None, event_count_from_notification=None
+        )
 
-            # Should have called the API fallback
-            mock_api.assert_called_once_with(sample_threshold_alert)
-
-            # Should trigger because volume threshold is met (75 >= 50)
-            assert should_trigger is True
-            assert "volume_threshold" in context["reason"]
-            assert "first_occurrence" in context["reason"]
-            assert context["current_count"] == 75
-            assert context["new_events"] == 75
-
-    def test_evaluate_thresholds_fallback_api_failure(self, threshold_trigger, sample_threshold_alert):
-        """Test that _evaluate_thresholds handles API failure gracefully when fallback is needed."""
-        threshold_trigger._ensure_initialized()
-
-        # Mock _get_total_event_count to return None (simulating API failure)
-        with patch.object(threshold_trigger, "_get_total_event_count", return_value=None) as mock_api:
-            should_trigger, context = threshold_trigger._evaluate_thresholds(
-                sample_threshold_alert, previous_state=None, event_count_from_notification=None
-            )
-
-            # Should have called the API fallback
-            mock_api.assert_called_once_with(sample_threshold_alert)
-
-            # When API returns None (failure), current_event_count defaults to 0
-            # which means no new events, so should not trigger
-            assert should_trigger is False
-            assert context["reason"] == "no_new_events"
+        # Should NOT trigger — defaults to 0 events (no_new_events early-exit path)
+        # current_count is not included in the context for no_new_events
+        assert should_trigger is False
+        assert context["reason"] == "no_new_events"
 
 
 class TestAlertEventsThresholdTrigger_AlertInfoOptimization:
@@ -2409,54 +2360,39 @@ class TestAlertEventsThresholdTrigger_ConfigValidation:
         trigger = AlertEventsThresholdTrigger()
         trigger._data_path = symphony_storage
         trigger.module.configuration = module_configuration
-        # Invalid config - both thresholds disabled
         trigger.configuration = {
             "enable_volume_threshold": False,
             "enable_time_threshold": False,
         }
-        trigger.log = MagicMock()
-        trigger.log_exception = MagicMock()
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="At least one threshold must be enabled"):
             _ = trigger.validated_config
-
-        trigger.log_exception.assert_called()
 
     def test_config_validation_failure_both_filters(self, module_configuration, symphony_storage):
         """Test that configuration validation fails when both rule filters are set."""
         trigger = AlertEventsThresholdTrigger()
         trigger._data_path = symphony_storage
         trigger.module.configuration = module_configuration
-        # Invalid config - both filters set
         trigger.configuration = {
             "rule_filter": "some-rule",
             "rule_names_filter": ["Rule1", "Rule2"],
         }
-        trigger.log = MagicMock()
-        trigger.log_exception = MagicMock()
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="Use either rule_filter OR rule_names_filter"):
             _ = trigger.validated_config
-
-        trigger.log_exception.assert_called()
 
     def test_config_validation_failure_cleanup_too_short(self, module_configuration, symphony_storage):
         """Test that configuration validation fails when cleanup is shorter than time window."""
         trigger = AlertEventsThresholdTrigger()
         trigger._data_path = symphony_storage
         trigger.module.configuration = module_configuration
-        # Invalid config - cleanup shorter than time window
         trigger.configuration = {
             "state_cleanup_days": 1,  # 24 hours
             "time_window_hours": 48,  # Longer than cleanup
         }
-        trigger.log = MagicMock()
-        trigger.log_exception = MagicMock()
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="state_cleanup_days must be longer than time_window_hours"):
             _ = trigger.validated_config
-
-        trigger.log_exception.assert_called()
 
 
 class TestAlertEventsThresholdTrigger_CheckPendingExceptionHandling:
@@ -2618,7 +2554,7 @@ class TestAlertEventsThresholdTrigger_TimeThresholdThread:
         mock_thread.join.assert_called_once_with(timeout=10)
 
     def test_start_thread_when_already_running(self, threshold_trigger):
-        """Test that _start_time_threshold_thread logs when thread already running."""
+        """Test that _start_time_threshold_thread does not start a new thread when already running."""
         threshold_trigger._ensure_initialized()
 
         # Create a mock thread that is alive
@@ -2627,10 +2563,13 @@ class TestAlertEventsThresholdTrigger_TimeThresholdThread:
         threshold_trigger._time_threshold_thread = mock_thread
 
         # Try to start again
-        threshold_trigger._start_time_threshold_thread()
+        with patch("sekoiaio.triggers.alerts.Thread") as new_thread:
+            threshold_trigger._start_time_threshold_thread()
+            # Should not create a new thread
+            new_thread.assert_not_called()
 
-        # Should log debug message about thread already running
-        threshold_trigger.log.assert_any_call(message="Time threshold thread already running", level="debug")
+        # Should still reference the original thread
+        assert threshold_trigger._time_threshold_thread is mock_thread
 
     def test_stop_thread_when_not_running(self, threshold_trigger):
         """Test that _stop_time_threshold_thread handles None thread gracefully."""
@@ -2689,35 +2628,31 @@ class TestAlertEventsThresholdTrigger_TriggerTimeThreshold:
         """Test _trigger_time_threshold_for_alert with invalid alert_uuid."""
         threshold_trigger._ensure_initialized()
 
-        # alert_uuid is None
         alert_state = {
             "alert_uuid": None,
             "alert_short_id": "ALT-123",
         }
         threshold_trigger._trigger_time_threshold_for_alert(alert_state)
         threshold_trigger.log.assert_any_call(
-            message="Invalid alert state: missing alert_uuid or alert_short_id",
+            message="Invalid alert state: missing uuid or short_id",
             level="error",
-            alert_uuid=None,
-            alert_short_id="ALT-123",
         )
+        assert not threshold_trigger.send_event.called
 
     def test_trigger_with_invalid_alert_short_id(self, threshold_trigger):
         """Test _trigger_time_threshold_for_alert with invalid alert_short_id."""
         threshold_trigger._ensure_initialized()
 
-        # alert_short_id is None
         alert_state = {
             "alert_uuid": "valid-uuid",
             "alert_short_id": None,
         }
         threshold_trigger._trigger_time_threshold_for_alert(alert_state)
         threshold_trigger.log.assert_any_call(
-            message="Invalid alert state: missing alert_uuid or alert_short_id",
+            message="Invalid alert state: missing uuid or short_id",
             level="error",
-            alert_uuid="valid-uuid",
-            alert_short_id=None,
         )
+        assert not threshold_trigger.send_event.called
 
     def test_trigger_with_state_manager_none(self, threshold_trigger):
         """Test _trigger_time_threshold_for_alert when state_manager is None."""
@@ -2729,7 +2664,8 @@ class TestAlertEventsThresholdTrigger_TriggerTimeThreshold:
             "alert_short_id": "ALT-123",
         }
         threshold_trigger._trigger_time_threshold_for_alert(alert_state)
-        threshold_trigger.log.assert_any_call(message="State manager not initialized", level="error")
+        # Should return early without sending event
+        assert not threshold_trigger.send_event.called
 
     def test_trigger_with_no_cached_alert_info(self, threshold_trigger):
         """Test _trigger_time_threshold_for_alert when alert_info is not cached."""
@@ -2743,10 +2679,11 @@ class TestAlertEventsThresholdTrigger_TriggerTimeThreshold:
         }
         threshold_trigger._trigger_time_threshold_for_alert(alert_state)
         threshold_trigger.log.assert_any_call(
-            message="No cached alert info for ALT-123, skipping time threshold trigger",
+            message="No cached alert info for ALT-123, skipping time threshold",
             level="warning",
             alert_uuid="valid-uuid",
         )
+        assert not threshold_trigger.send_event.called
 
     def test_trigger_when_state_becomes_none_after_lock(self, threshold_trigger, sample_threshold_alert):
         """Test _trigger_time_threshold_for_alert when state becomes None after lock."""
@@ -2786,11 +2723,7 @@ class TestAlertEventsThresholdTrigger_TriggerTimeThreshold:
         }
         with patch.object(threshold_trigger.state_manager, "get_alert_state", return_value=updated_state):
             threshold_trigger._trigger_time_threshold_for_alert(alert_state)
-            threshold_trigger.log.assert_any_call(
-                message="No new events for alert ALT-123 after lock (already triggered)",
-                level="debug",
-                alert_uuid="valid-uuid",
-            )
+            # Should return early without sending event
             assert not threshold_trigger.send_event.called
 
     def test_trigger_when_state_update_fails(self, threshold_trigger, sample_threshold_alert):
@@ -2888,13 +2821,10 @@ class TestAlertEventsThresholdTrigger_Cleanup:
         # Set last cleanup to recent time
         threshold_trigger._last_cleanup = datetime.now(timezone.utc) - timedelta(hours=1)
 
-        # Should skip cleanup
-        threshold_trigger._cleanup_old_states()
-        threshold_trigger.log.assert_any_call(
-            message=f"Cleanup not needed yet (last run {3600:.0f}s ago)",
-            level="debug",
-            seconds_since_last_cleanup=pytest.approx(3600, abs=10),
-        )
+        # Should skip cleanup (no state_manager interaction)
+        with patch.object(threshold_trigger.state_manager, "cleanup_old_states") as mock_cleanup:
+            threshold_trigger._cleanup_old_states()
+            mock_cleanup.assert_not_called()
 
     def test_cleanup_when_state_manager_none(self, threshold_trigger):
         """Test _cleanup_old_states when state_manager is None."""
@@ -2902,10 +2832,8 @@ class TestAlertEventsThresholdTrigger_Cleanup:
         threshold_trigger._last_cleanup = None  # Force cleanup to run
         threshold_trigger.state_manager = None
 
+        # Should return early without error
         threshold_trigger._cleanup_old_states()
-        threshold_trigger.log.assert_any_call(
-            message="State manager not initialized, skipping cleanup", level="warning"
-        )
 
 
 class TestAlertEventsThresholdTrigger_RaceConditionFix:

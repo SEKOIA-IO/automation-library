@@ -6,11 +6,13 @@ on:
     branches: [production]
     types: [opened, synchronize, reopened]
 
+permissions: {}
+
 jobs:
   auto-approve:
-    runs-on: ubuntu-latest
     permissions:
-      pull-requests: write
+      pull-requests: write  # for run step (declared via comment)
+    runs-on: ubuntu-latest
     if: |
       github.event.pull_request.user.login == 'integration-release-to-production' &&
       github.event.pull_request.user.type == 'Bot'
@@ -19,4 +21,4 @@ jobs:
         run: gh pr review --repo "${{ github.repository }}" --approve "$PR_NUMBER"
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # gha-perms:permissions=pull-requests:write

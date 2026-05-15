@@ -29,7 +29,7 @@
         "type": "string"
       },
       "tenant_id": {
-        "title": "Directory (tenant) IDd",
+        "title": "Directory (tenant) ID",
         "description": "The identifier of the Azure Directory",
         "type": "string"
       }
@@ -43,12 +43,12 @@
       "app_secret"
     ]
   },
-  "description": " Microsoft Defender for Endpoint is an Endpoint Detection and Response (EDR) product that monitors the security of endpoints. The module required, at least, the Microsoft Defender for Endpoint plan 1",
+  "description": "Microsoft Defender for Endpoint is an Endpoint Detection and Response (EDR) product that monitors the security of endpoints. The module required, at least, the Microsoft Defender for Endpoint plan 1",
   "name": "MicrosoftDefenderXDR",
   "slug": "microsoft-defender",
   "uuid": "ce491d8d-87a8-45af-a7c5-ede98c4a4ba3",
   "categories": [
     "Endpoint"
   ],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

@@ -17,7 +17,7 @@
       },
       "tlp": {
         "description": "Case's TLP: 0, 1, 2, 3, 4",
-        "anyOf": [ 
+        "anyOf": [
           {
             "type": "integer",
             "enum": [
@@ -36,7 +36,7 @@
       },
       "pap": {
         "description": "Case's PAP: 0, 1, 2, 3",
-        "anyOf": [ 
+        "anyOf": [
           {
             "type": "integer",
             "enum": [

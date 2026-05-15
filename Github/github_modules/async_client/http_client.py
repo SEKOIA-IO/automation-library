@@ -153,12 +153,12 @@ class AsyncGithubClient(object):
 
             async with session.get(request_url, params=params, headers=headers) as response:
                 if response.status != 200:
-                    if response.status == 401:
-                        raise BadCredentialsError("Bad credentials")
-
                     headers = await self.get_auth_headers(refresh_token=True)
 
                     async with session.get(request_url, params=params, headers=headers) as refreshed_response:
+                        if refreshed_response.status == 401:
+                            raise BadCredentialsError("Bad credentials")
+
                         result = await refreshed_response.json()
                         links = refreshed_response.links.get("next", {})
                         next_link = str(links.get("url")) if links.get("url") else None

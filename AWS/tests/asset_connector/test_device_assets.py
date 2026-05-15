@@ -1,3 +1,4 @@
+from asset_connector.aws_api_models import AwsApiInstance
 from datetime import datetime
 from unittest import mock
 
@@ -20,7 +21,8 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 from sekoia_automation.asset_connector.models.ocsf.group import Group
 
 from asset_connector.device_assets import AwsDevice, AwsDeviceAssetConnector
-from connectors import AwsModule, AwsModuleConfiguration
+from aws_helpers.base import AwsModuleConfiguration
+from connectors import AwsModule
 
 
 @pytest.fixture
@@ -30,6 +32,7 @@ def test_aws_device_asset_connector(symphony_storage):
         aws_access_key="fakeKey",
         aws_secret_access_key="fakeSecret",
         aws_region_name="eu-north-1",
+        base_url="https://test.sekoia.io",
     )
     aws_device_connector = AwsDeviceAssetConnector(module=module, data_path=symphony_storage)
     aws_device_connector.configuration = {
@@ -297,7 +300,17 @@ def test_extract_organization_from_owner_id_invalid(test_aws_device_asset_connec
 
 def test_client_success(test_aws_device_asset_connector):
     """Test successful AWS client creation."""
-    with mock.patch("boto3.Session") as mock_session:
+    test_aws_device_asset_connector.module.configuration.aws_role_arn = "arn:aws:iam::123456789012:role/test-role"
+    mock_assume_role = mock.MagicMock()
+    mock_assume_role.aws_access_key_id = "test_key_id"
+    mock_assume_role.aws_secret_access_key = "test_secret"
+    mock_assume_role.aws_session_token = "test_token"
+    mock_assume_role.aws_region = "eu-north-1"
+
+    with (
+        mock.patch.object(test_aws_device_asset_connector, "get_assume_role", return_value=mock_assume_role),
+        mock.patch("asset_connector.aws_assets.boto3.Session") as mock_session,
+    ):
         mock_client = mock.MagicMock()
         mock_session_instance = mock.MagicMock()
         mock_session_instance.client.return_value = mock_client
@@ -306,7 +319,10 @@ def test_client_success(test_aws_device_asset_connector):
         result = test_aws_device_asset_connector.client()
 
         mock_session.assert_called_once_with(
-            aws_access_key_id="fakeKey", aws_secret_access_key="fakeSecret", region_name="eu-north-1"
+            aws_access_key_id="test_key_id",
+            aws_secret_access_key="test_secret",
+            region_name="eu-north-1",
+            aws_session_token="test_token",
         )
         mock_session_instance.client.assert_called_once_with("ec2")
         assert result == mock_client
@@ -314,9 +330,8 @@ def test_client_success(test_aws_device_asset_connector):
 
 def test_client_no_credentials_error(test_aws_device_asset_connector):
     """Test client creation with no credentials."""
-    with mock.patch("boto3.Session") as mock_session:
-        mock_session.side_effect = NoCredentialsError()
-
+    test_aws_device_asset_connector.module.configuration.aws_role_arn = "arn:aws:iam::123456789012:role/test-role"
+    with mock.patch.object(test_aws_device_asset_connector, "get_assume_role", side_effect=NoCredentialsError()):
         with pytest.raises(NoCredentialsError):
             test_aws_device_asset_connector.client()
 
@@ -326,14 +341,15 @@ def test_client_no_credentials_error(test_aws_device_asset_connector):
 
 def test_client_general_exception(test_aws_device_asset_connector):
     """Test client creation with general exception."""
-    with mock.patch("boto3.Session") as mock_session:
-        mock_session.side_effect = Exception("Connection failed")
-
+    test_aws_device_asset_connector.module.configuration.aws_role_arn = "arn:aws:iam::123456789012:role/test-role"
+    with mock.patch.object(
+        test_aws_device_asset_connector, "get_assume_role", side_effect=Exception("Connection failed")
+    ):
         with pytest.raises(Exception, match="Connection failed"):
             test_aws_device_asset_connector.client()
 
         test_aws_device_asset_connector.log.assert_called_with(
-            "Failed to create AWS client: Connection failed", level="error"
+            "Failed to create AWS client for ec2: Connection failed", level="error"
         )
         test_aws_device_asset_connector.log_exception.assert_called_once()
 
@@ -425,7 +441,9 @@ def test_extract_device_from_instance_success(test_aws_device_asset_connector):
     }
     owner_id = "516755368338"
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None, owner_id)
+    result = test_aws_device_asset_connector._extract_device_from_instance(
+        AwsApiInstance(**instance_data), None, owner_id
+    )
 
     assert isinstance(result, AwsDevice)
     assert result.device.uid == "i-1234567890abcdef0"
@@ -445,7 +463,7 @@ def test_extract_device_from_instance_no_instance_id(test_aws_device_asset_conne
         "LaunchTime": isoparse("2023-10-01T12:00:00Z"),
     }
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert result is None
     test_aws_device_asset_connector.log.assert_called_with("Instance missing InstanceId, skipping", level="warning")
@@ -459,7 +477,7 @@ def test_extract_device_from_instance_no_creation_time(test_aws_device_asset_con
         "PlatformDetails": "Linux/UNIX",
     }
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert result is None
     test_aws_device_asset_connector.log.assert_called_with(
@@ -477,7 +495,7 @@ def test_extract_device_from_instance_with_launch_time(test_aws_device_asset_con
         "PublicDnsName": "ec2-203-0-113-25.compute-1.amazonaws.com",
     }
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert isinstance(result, AwsDevice)
     assert result.device.uid == "i-1234567890abcdef0"
@@ -495,7 +513,7 @@ def test_extract_device_from_instance_with_private_dns(test_aws_device_asset_con
         "PrivateDnsName": "ip-10-0-1-1.ec2.internal",
     }
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert isinstance(result, AwsDevice)
     assert result.device.hostname == "ip-10-0-1-1.ec2.internal"
@@ -510,7 +528,7 @@ def test_extract_device_from_instance_with_instance_id_hostname(test_aws_device_
         "LaunchTime": isoparse("2023-10-01T12:00:00Z"),
     }
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert isinstance(result, AwsDevice)
     assert result.device.hostname == "i-1234567890abcdef0"
@@ -543,7 +561,7 @@ def test_extract_device_from_instance_timezone_handling(test_aws_device_asset_co
         "LaunchTime": naive_datetime,
     }
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert isinstance(result, AwsDevice)
     # The date should be converted to UTC
@@ -558,7 +576,7 @@ def test_extract_device_from_instance_exception_handling(test_aws_device_asset_c
         "LaunchTime": "invalid_date",  # This will cause an exception during parsing
     }
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert result is None
     # Verify that an error was logged (error message may vary depending on parsing implementation)
@@ -725,7 +743,7 @@ def test_get_aws_devices_client_error(test_aws_device_asset_connector):
         list(test_aws_device_asset_connector.get_aws_devices())
 
     test_aws_device_asset_connector.log.assert_called_with(
-        "AWS API error (UnauthorizedOperation): An error occurred (UnauthorizedOperation) when calling the DescribeInstances operation: Access denied",
+        "AWS API error collecting AWS devices (UnauthorizedOperation): An error occurred (UnauthorizedOperation) when calling the DescribeInstances operation: Access denied",
         level="error",
     )
 

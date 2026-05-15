@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-03-16 - 1.1.0
+
+### Added
+
+- Add connector for Microsoft Defender XDR Alerts (Graph API)
+
 ## 2024-11-15 - 1.0.0
 
 ### Added
