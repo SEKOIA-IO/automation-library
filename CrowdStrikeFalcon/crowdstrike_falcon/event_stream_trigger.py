@@ -497,8 +497,10 @@ class EventForwarder(threading.Thread):
 
                             last_event_offset = metadata.get("offset")
                             if last_event_offset:
-                                # update the offset in the cache file
-                                cache[stream_root_url] = last_event_offset
+                                current_offset = cache.get(stream_root_url, 0)
+                                if last_event_offset > current_offset:
+                                    # update the offset in the cache file
+                                    cache[stream_root_url] = last_event_offset
 
                             creation_time = metadata.get("eventCreationTime")
                             if creation_time:
