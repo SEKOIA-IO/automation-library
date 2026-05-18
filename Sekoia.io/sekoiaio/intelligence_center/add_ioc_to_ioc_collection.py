@@ -30,14 +30,7 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
                 result.extend(self.flatten_and_validate(indicator))
             return result
 
-        ip_str = str(indicators)
-
-        try:
-            ipaddress.ip_address(ip_str)
-            return [ip_str]
-        except ValueError:
-            raise ValueError(f"'{ip_str}' is not a valid IP address")
-
+        return [str(indicators)]
 
     def add_IP_action(self, indicators, ioc_collection_id, valid_for):
         ipv4 = []

@@ -19,12 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Add checking ips for add iocs action.
-
-## 2026-04-27 - 2.71.4
-
-### Fixed
-
-- Add missing documentation of `Get Alert`  action.
+- Add missing documentation of `Get Alert` action.
 
 ## 2026-03-27 - 2.71.3
 
