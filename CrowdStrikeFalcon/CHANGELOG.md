@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-19 - 1.25.16
+
+### Fixed
+
+- Set EVENTS_LAG metric to zero when there are no events to forward
+
 ## 2026-05-15 - 1.25.15
 
 ### Fixed
