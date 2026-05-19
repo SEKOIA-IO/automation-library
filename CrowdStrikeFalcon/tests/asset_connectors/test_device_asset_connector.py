@@ -1,9 +1,11 @@
 import pytest
+import requests_mock
 from unittest.mock import Mock
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.asset_connectors.crowdstrike_device_model import CrowdStrikeDevice, PolicyEntry
 from crowdstrike_falcon.asset_connectors.device_assets import CrowdstrikeDeviceAssetConnector
+from crowdstrike_falcon.client.auth import AuthenticationError
 from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeId,
     OSTypeStr,
@@ -353,3 +355,37 @@ def test_is_device_compliant(connector):
     assert connector.is_device_compliant(compliant) is True
     assert connector.is_device_compliant(non_compliant) is False
     assert connector.is_device_compliant(CrowdStrikeDevice()) is None
+
+
+def test_authentication_error_unauthorized(connector):
+    """Test that AuthenticationError is raised when authentication fails with 401."""
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            f"{connector.module.configuration.base_url}/oauth2/token",
+            status_code=401,
+            json={
+                "meta": {"trace_id": "test-trace-id"},
+                "errors": [{"code": 401, "message": "Invalid credentials provided"}],
+            },
+        )
+
+        with pytest.raises(AuthenticationError, match="Unauthorized: Invalid credentials provided"):
+            list(connector.next_devices())
+
+
+def test_authentication_error_forbidden(connector):
+    """Test that AuthenticationError is raised when authentication fails with 403."""
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            f"{connector.module.configuration.base_url}/oauth2/token",
+            status_code=403,
+            json={
+                "meta": {"trace_id": "test-trace-id"},
+                "errors": [{"code": 403, "message": "Insufficient permissions for API access"}],
+            },
+        )
+
+        with pytest.raises(AuthenticationError, match="Forbidden: Insufficient permissions for API access"):
+            list(connector.next_devices())

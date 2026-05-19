@@ -1,4 +1,5 @@
 import pytest
+import requests_mock
 from datetime import datetime
 from unittest.mock import Mock
 
@@ -10,6 +11,7 @@ from crowdstrike_falcon.asset_connectors.crowdstrike_user_model import (
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.asset_connectors.user_assets import CrowdstrikeUserAssetConnector
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
+from crowdstrike_falcon.client.auth import AuthenticationError
 from sekoia_automation.asset_connector.models.ocsf.user import (
     UserOCSFModel,
     AccountTypeId,
@@ -450,3 +452,48 @@ class TestListIdentityEntities:
             query="query { test }",
             data_path=["entities", "nodes"],
         )
+
+
+class TestAuthenticationErrors:
+    """Test authentication error handling for user asset connector."""
+
+    def test_authentication_error_unauthorized(self, connector):
+        """Test that AuthenticationError is raised when authentication fails with 401."""
+
+        with requests_mock.Mocker() as mock:
+            mock.register_uri(
+                "POST",
+                f"{connector.module.configuration.base_url}/oauth2/token",
+                status_code=401,
+                json={
+                    "meta": {"trace_id": "test-trace-id"},
+                    "errors": [{"code": 401, "message": "Invalid API credentials"}],
+                },
+            )
+
+            with pytest.raises(AuthenticationError, match="Unauthorized: Invalid API credentials"):
+                list(connector._fetch_identity_entities())
+
+    def test_authentication_error_forbidden(self, connector):
+        """Test that AuthenticationError is raised when authentication fails with 403."""
+
+        with requests_mock.Mocker() as mock:
+            mock.register_uri(
+                "POST",
+                f"{connector.module.configuration.base_url}/oauth2/token",
+                status_code=403,
+                json={
+                    "meta": {"trace_id": "test-trace-id"},
+                    "errors": [
+                        {
+                            "code": 403,
+                            "message": "Client authentication failed - insufficient permissions",
+                        }
+                    ],
+                },
+            )
+
+            with pytest.raises(
+                AuthenticationError, match="Forbidden: Client authentication failed - insufficient permissions"
+            ):
+                list(connector._fetch_identity_entities())

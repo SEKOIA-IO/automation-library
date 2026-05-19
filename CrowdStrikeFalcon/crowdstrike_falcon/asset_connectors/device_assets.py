@@ -28,6 +28,7 @@ from sekoia_automation.storage import PersistentJSON
 
 from crowdstrike_falcon.asset_connectors.crowdstrike_device_model import CrowdStrikeDevice
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
+from crowdstrike_falcon.client.auth import AuthenticationError
 
 
 class CrowdstrikeDeviceAssetConnector(AssetConnector):
@@ -426,7 +427,14 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         Main generator that yields OCSF-formatted device assets.
         """
         self.log("Start the getting assets generator !!", level="info")
-        for device in self.next_devices():
-            mapped = self.map_device_fields(device)
-            if mapped is not None:  # pragma: no branch
-                yield mapped
+
+        try:
+            for device in self.next_devices():
+                mapped = self.map_device_fields(device)
+                if mapped is not None:  # pragma: no branch
+                    yield mapped
+        except AuthenticationError as error:
+            self.log(
+                message=str(error),
+                level="critical",
+            )

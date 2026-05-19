@@ -20,6 +20,7 @@ from sekoia_automation.storage import PersistentJSON
 
 from crowdstrike_falcon.asset_connectors.crowdstrike_user_model import CrowdStrikeUser, CrowdStrikeUserAccount
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
+from crowdstrike_falcon.client.auth import AuthenticationError
 
 IDENTITY_ENTITIES_QUERY = """
 {
@@ -277,5 +278,12 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
         """Retrieve user assets from Crowdstrike and map them to OCSF models."""
         self.log("Fetching users from Identity Protection GraphQL endpoint", level="info")
-        for entity in self._fetch_identity_entities():
-            yield self.map_identity_entity_fields(entity)
+
+        try:
+            for entity in self._fetch_identity_entities():
+                yield self.map_identity_entity_fields(entity)
+        except AuthenticationError as error:
+            self.log(
+                message=str(error),
+                level="critical",
+            )
