@@ -58,7 +58,7 @@ def test_get_credentials_unauthorized():
 
         with pytest.raises(
             AuthenticationError,
-            match="Unauthorized: Unauthorized: Please provide trace-id='00000000-0000-0000-0000-000000000000' to support",
+            match="Unauthorized: Please provide trace-id='00000000-0000-0000-0000-000000000000' to support",
         ):
             auth.get_credentials()
 

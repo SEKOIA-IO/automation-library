@@ -15,11 +15,20 @@ class AuthenticationError(Exception):
         self.message = message
         self.reason = reason
 
+    @staticmethod
+    def _normalize_reason(message: str, reason: str) -> str:
+        prefix = f"{message}:"
+        if reason.startswith(prefix):
+            return reason[len(prefix) :].lstrip()
+
+        return reason
+
     def __str__(self) -> str:
         message = self.message
 
         if self.reason:
-            message = f"{message}: {self.reason}"
+            reason = self._normalize_reason(message, self.reason)
+            message = f"{message}: {reason}"
 
         return message
 
