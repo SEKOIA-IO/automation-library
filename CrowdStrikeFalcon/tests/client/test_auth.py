@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
-import requests_mock
 import pytest
+import requests_mock
 
 from crowdstrike_falcon.client.auth import CrowdStrikeFalconApiAuthentication, AuthenticationError
 

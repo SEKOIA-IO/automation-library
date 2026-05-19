@@ -1,7 +1,8 @@
-import pytest
-import requests_mock
 from datetime import datetime
 from unittest.mock import Mock
+
+import pytest
+import requests_mock
 
 from crowdstrike_falcon.asset_connectors.crowdstrike_user_model import (
     CrowdStrikeUser,
