@@ -52,6 +52,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._client: GraphServiceClient | None = None
+        self._credentials: ClientSecretCredential | None = None
         self._latest_time: float | None = None
 
     @property
@@ -64,12 +65,12 @@ class EntraIDAssetConnector(AsyncAssetConnector):
     @property
     def client(self) -> GraphServiceClient:
         if self._client is None:
-            credentials = ClientSecretCredential(
+            self._credentials = ClientSecretCredential(
                 tenant_id=self.module.configuration.tenant_id,
                 client_id=self.module.configuration.client_id,
                 client_secret=self.module.configuration.client_secret,
             )
-            auth_provider = AzureIdentityAuthenticationProvider(credentials)
+            auth_provider = AzureIdentityAuthenticationProvider(self._credentials)
             adapter = GraphRequestAdapter(auth_provider)
             self._client = GraphServiceClient(request_adapter=adapter)
 
@@ -78,6 +79,13 @@ class EntraIDAssetConnector(AsyncAssetConnector):
     @client.setter
     def client(self, value: GraphServiceClient) -> None:
         self._client = value
+
+    async def close_client(self) -> None:
+        """Close the Graph client and credentials to release HTTP transport resources."""
+        if self._credentials is not None:
+            await self._credentials.close()
+            self._credentials = None
+        self._client = None
 
     async def update_checkpoint(self) -> None:
         if self._latest_time is None:
@@ -347,5 +355,8 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         """
         # Fetch users from Microsoft Graph API
         last_run_date: str | None = self.most_recent_date_seen
-        async for user in self.fetch_new_users(last_run_date=last_run_date):
-            yield user
+        try:
+            async for user in self.fetch_new_users(last_run_date=last_run_date):
+                yield user
+        finally:
+            await self.close_client()
