@@ -8,10 +8,7 @@ from microsoftdefender_modules.action_scan_machine import ScanMachineAction
 from microsoftdefender_modules.action_unisolate_machine import UnIsolateMachineAction
 from microsoftdefender_modules.action_unrestrict_code_execution import UnRestrictCodeExecutionAction
 from microsoftdefender_modules.action_update_alert import UpdateAlertAction
-from microsoftdefender_modules.connector_defender_odata import (
-    MicrosoftDefenderAlertsConnector,
-    MicrosoftDefenderIncidentsConnector,
-)
+from microsoftdefender_modules.connector_defender_incidents import MicrosoftDefenderGraphAPIIncidents
 from microsoftdefender_modules.connector_microsoft_defender_xdr import MicrosoftDefenderGraphAPIAlerts
 
 if __name__ == "__main__":
@@ -27,6 +24,5 @@ if __name__ == "__main__":
     module.register(IsolateMachineAction, "IsolateMachineAction")
     module.register(CancelMachineAction, "CancelMachineAction")
     module.register(MicrosoftDefenderGraphAPIAlerts, "connector_microsoft_defender_xdr")
-    module.register(MicrosoftDefenderAlertsConnector, "connector_defender_alerts")
-    module.register(MicrosoftDefenderIncidentsConnector, "connector_defender_incidents")
+    module.register(MicrosoftDefenderGraphAPIIncidents, "connector_defender_incidents")
     module.run()

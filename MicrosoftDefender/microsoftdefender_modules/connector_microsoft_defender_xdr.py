@@ -20,17 +20,30 @@ from .timestepper import TimeStepper
 logger = get_logger(__name__)
 
 
-class MicrosoftDefenderGraphAPIAlertsConfiguration(DefaultConnectorConfiguration):
+class BaseGraphAPIConfiguration(DefaultConnectorConfiguration):
     frequency: int = 60
     timedelta: int = 5
     start_time: int = 1
 
 
-class MicrosoftDefenderGraphAPIAlerts(Connector):
+class BaseMicrosoftDefenderGraphAPIConnector(Connector):
+    """Base connector for fetching security events from Microsoft Graph API.
+
+    Subclasses must set `endpoint_url`. Override `extra_query_params` to add
+    request-specific OData params (e.g. `$expand=alerts`) and `process_events`
+    to apply per-resource flattening or dedup logic.
+    """
+
     module: MicrosoftDefenderModule
-    configuration: MicrosoftDefenderGraphAPIAlertsConfiguration
+    configuration: BaseGraphAPIConfiguration
 
     RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+    endpoint_url: str = ""
+    timestamp_field: str = "createdDateTime"
+    id_field: str = "id"
+    context_cursor_key: str = "most_recent_date_requested"
+    events_cache_context_key: str = "events_cache"
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -42,27 +55,19 @@ class MicrosoftDefenderGraphAPIAlerts(Connector):
         self.events_cache: Cache[str, bool] = self.load_events_cache()
 
     def load_events_cache(self) -> Cache[str, bool]:
-        """
-        Load the events cache.
-        """
         cache: Cache[str, bool] = LRUCache(maxsize=self.cache_size)
 
         with self.context as context:
-            # load the cache from the context
-            events_cache = context.get("events_cache", [])
+            events_cache = context.get(self.events_cache_context_key, [])
 
-        for uuid in events_cache:
-            cache[uuid] = True
+        for uid in events_cache:
+            cache[uid] = True
 
         return cache
 
     def save_events_cache(self) -> None:
-        """
-        Save the events cache.
-        """
         with self.context as context:
-            # save the events cache to the context
-            context["events_cache"] = list(self.events_cache.keys())
+            context[self.events_cache_context_key] = list(self.events_cache.keys())
 
     @cached_property
     def client(self) -> GraphApiClient:
@@ -74,9 +79,9 @@ class MicrosoftDefenderGraphAPIAlerts(Connector):
         )
 
     @cached_property
-    def stepper(self):
+    def stepper(self) -> TimeStepper:
         with self.context as cache:
-            most_recent_date_requested_str = cache.get("most_recent_date_requested")
+            most_recent_date_requested_str = cache.get(self.context_cursor_key)
 
             if most_recent_date_requested_str is None:
                 return TimeStepper.create(
@@ -86,7 +91,6 @@ class MicrosoftDefenderGraphAPIAlerts(Connector):
                     self.configuration.start_time,
                 )
 
-            # parse the most recent requested date
             most_recent_date_requested = isoparse(most_recent_date_requested_str)
 
             now = datetime.now(timezone.utc)
@@ -121,18 +125,29 @@ class MicrosoftDefenderGraphAPIAlerts(Connector):
 
             response.raise_for_status()
 
+    def extra_query_params(self) -> dict[str, Any]:
+        """Override to add resource-specific OData query parameters."""
+        return {}
+
+    def build_query_params(self, start: datetime, end: datetime) -> dict[str, Any]:
+        params: dict[str, Any] = {
+            "$format": "json",
+            "$orderby": f"{self.timestamp_field} asc",
+            "$filter": (
+                f"{self.timestamp_field} gt {start.strftime(self.RFC3339_STRICT_FORMAT)}"
+                f" and {self.timestamp_field} le {end.strftime(self.RFC3339_STRICT_FORMAT)}"
+            ),
+            "$top": 1000,
+        }
+        params.update(self.extra_query_params())
+        return params
+
     def fetch_events(self, start: datetime, end: datetime) -> Generator[list, None, None]:
         self.log(message=f"Querying timerange {start} to {end}.", level="info")
 
-        url = "https://graph.microsoft.com/v1.0/security/alerts_v2"
-
+        url = self.endpoint_url
         # Note: even with `gt` we can get the same event for very specific time twice. Thus, we're using cache.
-        params: dict[str, Any] | None = {
-            "$format": "json",
-            "$orderby": "createdDateTime asc",
-            "$filter": f"createdDateTime gt {start.strftime(self.RFC3339_STRICT_FORMAT)} and createdDateTime le {end.strftime(self.RFC3339_STRICT_FORMAT)}",
-            "$top": 1000,
-        }
+        params: dict[str, Any] | None = self.build_query_params(start, end)
 
         # iterate through pages
         while self.running:
@@ -157,23 +172,15 @@ class MicrosoftDefenderGraphAPIAlerts(Connector):
                 break
 
     def process_events(self, batch: list[dict]) -> Generator[dict, None, None]:
-        # Expand evidence to separate events
+        """Default: yield events not already in the cache, untouched."""
         for event in batch:
-            alert_id = event["id"]
-
-            # Ignore already seen
-            if alert_id in self.events_cache:
+            event_id = event.get(self.id_field)
+            if event_id is None or event_id in self.events_cache:
                 continue
-
-            evidences = event.pop("evidence", [])
             yield event
 
-            for evidence in evidences:
-                evidence["alertId"] = alert_id
-                yield evidence
-
     def run(self):  # pragma: no cover
-        self.log(message="Microsoft Defender XDR connector has started.", level="info")
+        self.log(message=f"{self.__class__.__name__} has started.", level="info")
 
         for start, end in self.stepper.ranges():
             # check if the trigger should stop
@@ -194,7 +201,9 @@ class MicrosoftDefenderGraphAPIAlerts(Connector):
 
                         # mark sent events as processed
                         for event in events:
-                            self.events_cache[event["id"]] = True
+                            event_id = event.get(self.id_field)
+                            if event_id is not None:
+                                self.events_cache[event_id] = True
 
                         self.save_events_cache()
 
@@ -220,4 +229,34 @@ class MicrosoftDefenderGraphAPIAlerts(Connector):
             finally:
                 # save in context the most recent date seen
                 with self.context as cache:
-                    cache["most_recent_date_requested"] = end.isoformat()
+                    cache[self.context_cursor_key] = end.isoformat()
+
+
+class MicrosoftDefenderGraphAPIAlertsConfiguration(BaseGraphAPIConfiguration):
+    pass
+
+
+class MicrosoftDefenderGraphAPIAlerts(BaseMicrosoftDefenderGraphAPIConnector):
+    configuration: MicrosoftDefenderGraphAPIAlertsConfiguration
+
+    endpoint_url = "https://graph.microsoft.com/v1.0/security/alerts_v2"
+    timestamp_field = "createdDateTime"
+    id_field = "id"
+    context_cursor_key = "most_recent_date_requested"
+    events_cache_context_key = "events_cache"
+
+    def process_events(self, batch: list[dict]) -> Generator[dict, None, None]:
+        # Expand evidence to separate events
+        for event in batch:
+            alert_id = event["id"]
+
+            # Ignore already seen
+            if alert_id in self.events_cache:
+                continue
+
+            evidences = event.pop("evidence", [])
+            yield event
+
+            for evidence in evidences:
+                evidence["alertId"] = alert_id
+                yield evidence

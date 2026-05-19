@@ -1,13 +1,14 @@
 {
-  "description": "Fetch incidents from the Microsoft Defender XDR API (OData /api/incidents)",
+  "description": "Fetch incidents from Microsoft Defender XDR via the Microsoft Graph Security API (/security/incidents). Requires the Graph application permission `SecurityIncident.Read.All`.",
   "docker_parameters": "connector_defender_incidents",
-  "name": "Fetch incidents from Microsoft Defender XDR",
+  "name": "Fetch incidents from Microsoft Defender XDR (Graph API)",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "base_url": {
-        "description": "Base URL of the Defender XDR API hosting /api/incidents (e.g. 'https://api-eu.security.microsoft.com'). If empty, the module-level base_url is used.",
-        "type": "string"
+      "timedelta": {
+        "type": "integer",
+        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching incidents (default 5 minutes).",
+        "default": 5
       },
       "start_time": {
         "type": "integer",
@@ -18,6 +19,11 @@
         "type": "integer",
         "description": "Polling frequency in seconds",
         "default": 60
+      },
+      "expand_alerts": {
+        "type": "boolean",
+        "description": "Include each incident's nested alerts via $expand=alerts. Disable if you also run the alerts connector to avoid duplicated alert data.",
+        "default": false
       },
       "intake_server": {
         "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",

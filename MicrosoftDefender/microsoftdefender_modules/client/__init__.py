@@ -18,11 +18,7 @@ class ApiClient(requests.Session):
         super().__init__()
         self.base_url = base_url
         self.auth = ApiKeyAuthentication(
-            app_id=app_id,
-            app_secret=app_secret,
-            tenant_id=tenant_id,
-            ratelimit_per_minute=ratelimit_per_minute,
-            base_url=base_url,
+            app_id=app_id, app_secret=app_secret, tenant_id=tenant_id, ratelimit_per_minute=ratelimit_per_minute
         )
         self.mount(
             "https://",
