@@ -7,6 +7,7 @@ from crowdstrike_falcon.asset_connectors.crowdstrike_user_model import (
     CrowdStrikeUserAccount,
     CrowdStrikeUserRole,
 )
+from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.asset_connectors.user_assets import CrowdstrikeUserAssetConnector
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
 from sekoia_automation.asset_connector.models.ocsf.user import (
@@ -29,19 +30,23 @@ class _DummyContext(dict):
 
 @pytest.fixture
 def connector():
-    class FakeModule:
-        class configuration:
-            base_url = "https://api.crowdstrike.com"
-            client_id = "fake_client_id"
-            client_secret = "fake_client_secret"
+    module = CrowdStrikeFalconModule()
+    module.configuration = {
+        "client_id": "fake_client_id",
+        "client_secret": "fake_client_secret",
+        "base_url": "https://api.fake",
+    }
+    connector = CrowdstrikeUserAssetConnector(module=module)
+    connector.configuration = {
+        "sekoia_base_url": "https://api.fake.sekoia.io/",
+        "frequency": 60,
+        "sekoia_api_key": "fake_api_key",
+        "batch_size": 100,
+    }
 
-        manifest = {"slug": "crowdstrike-falcon", "version": "1.0.0"}
-
-    c = CrowdstrikeUserAssetConnector(module=FakeModule())
-    c.context = _DummyContext()
-    c.log = Mock()
-    c.log_exception = Mock()
-    return c
+    connector.context = _DummyContext()
+    connector.log = Mock()
+    return connector
 
 
 @pytest.fixture

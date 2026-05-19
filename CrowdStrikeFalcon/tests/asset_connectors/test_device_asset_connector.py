@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import Mock
 
+from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.asset_connectors.crowdstrike_device_model import CrowdStrikeDevice, PolicyEntry
 from crowdstrike_falcon.asset_connectors.device_assets import CrowdstrikeDeviceAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.device import (
@@ -24,23 +25,23 @@ class _DummyContext:
 
 @pytest.fixture
 def connector():
-    class FakeCrowdStrikeDeviceModule:
-        configuration = {
-            "sekoia_base_url": "https://api.fake.sekoia.io/",
-            "frequency": 60,
-            "sekoia_api_key": "fake_api_key",
-            "batch_size": 100,
-        }
-        manifest = {
-            "client_id": "fake_client_id",
-            "client_secret": "fake_client_secret",
-            "base_url": "https://api.fake",
-        }
+    module = CrowdStrikeFalconModule()
+    module.configuration = {
+        "client_id": "fake_client_id",
+        "client_secret": "fake_client_secret",
+        "base_url": "https://api.fake",
+    }
+    connector = CrowdstrikeDeviceAssetConnector(module=module)
+    connector.configuration = {
+        "sekoia_base_url": "https://api.fake.sekoia.io/",
+        "frequency": 60,
+        "sekoia_api_key": "fake_api_key",
+        "batch_size": 100,
+    }
 
-    c = CrowdstrikeDeviceAssetConnector(module=FakeCrowdStrikeDeviceModule())
-    c.context = _DummyContext()
-    c.log = Mock()
-    return c
+    connector.context = _DummyContext()
+    connector.log = Mock()
+    return connector
 
 
 @pytest.mark.parametrize(
