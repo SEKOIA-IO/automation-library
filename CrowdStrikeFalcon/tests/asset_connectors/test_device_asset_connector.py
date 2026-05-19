@@ -1,17 +1,18 @@
+from unittest.mock import Mock
+
 import pytest
 import requests_mock
-from unittest.mock import Mock
+from sekoia_automation.asset_connector.models.ocsf.device import (
+    DeviceTypeId,
+    DeviceTypeStr,
+    OSTypeId,
+    OSTypeStr,
+)
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.asset_connectors.crowdstrike_device_model import CrowdStrikeDevice, PolicyEntry
 from crowdstrike_falcon.asset_connectors.device_assets import CrowdstrikeDeviceAssetConnector
 from crowdstrike_falcon.client.auth import AuthenticationError
-from sekoia_automation.asset_connector.models.ocsf.device import (
-    OSTypeId,
-    OSTypeStr,
-    DeviceTypeId,
-    DeviceTypeStr,
-)
 
 
 class _DummyContext:
