@@ -511,6 +511,10 @@ class EventForwarder(threading.Thread):
                                     intake_key=self.connector.configuration.intake_key, stream=stream_root_url
                                 ).set(lag)
             except queue.Empty:
+                for stream_root_url in self.stream_root_urls:
+                    EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, stream=stream_root_url).set(
+                        0
+                    )
                 pass
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
