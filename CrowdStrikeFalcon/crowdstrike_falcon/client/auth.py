@@ -11,6 +11,7 @@ from crowdstrike_falcon.client.retry import Retry
 
 class AuthenticationError(Exception):
     def __init__(self, message: str, reason: str | None = None):
+        super().__init__(message)
         self.message = message
         self.reason = reason
 
