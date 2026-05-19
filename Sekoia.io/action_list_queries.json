@@ -102,8 +102,8 @@
               "type": "string",
               "description": "Description of the query."
             },
-            "descibed_by_ai": {
-              "title": "Descibed By AI",
+            "described_by_ai": {
+              "title": "Described By AI",
               "type": "boolean",
               "description": "Indicates if the query is described by AI."
             },
