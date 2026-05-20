@@ -1,1 +1,0 @@
-"""MokN automation package."""
