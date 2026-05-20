@@ -5,27 +5,33 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
+      "base_url": {
+        "description": "API base URL",
+        "type": "string",
+        "default": "https://api.ubika.io/",
+        "format": "uri"
+      },
       "chunk_size": {
-        "description": "The size of chunks for the batch processing",
         "type": "integer",
+        "description": "The size of chunks for the batch processing",
         "default": 1000,
-        "maximum": 1000,
-        "minimum": 1
+        "minimum": 1,
+        "maximum": 1000
       },
       "frequency": {
         "description": "Batch frequency in seconds",
         "type": "integer",
         "default": 60,
-        "maximum": 60,
-        "minimum": 10
+        "minimum": 10,
+        "maximum": 60
       },
       "intake_server": {
-        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "description": "Server of the intake server",
         "type": "string",
         "default": "https://intake.sekoia.io"
       },
       "intake_key": {
-        "description": "Intake key to use when sending events",
+        "description": "Intake key to use when sending traffic-log events",
         "type": "string"
       },
       "namespace": {
@@ -51,7 +57,7 @@
     "secrets": [
       "refresh_token"
     ],
-    "title": "The configuration to fetch new events",
+    "title": "The configuration to fetch new traffic logs",
     "type": "object"
   },
   "results": {

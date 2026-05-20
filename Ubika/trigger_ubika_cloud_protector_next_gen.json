@@ -5,24 +5,30 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "frequency": {
-        "type": "integer",
-        "description": "Batch frequency in seconds",
-        "minimum": 10,
-        "maximum": 60,
-        "default": 60
+      "base_url": {
+        "description": "API base URL",
+        "type": "string",
+        "default": "https://api.ubika.io/",
+        "format": "uri"
       },
       "chunk_size": {
-        "type": "integer",
         "description": "The size of chunks for the batch processing",
+        "type": "integer",
         "default": 1000,
         "minimum": 1,
         "maximum": 1000
       },
+      "frequency": {
+        "description": "Batch frequency in seconds",
+        "type": "integer",
+        "minimum": 10,
+        "maximum": 60,
+        "default": 60
+      },
       "intake_server": {
-        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
-        "default": "https://intake.sekoia.io",
-        "type": "string"
+        "description": "Server of the intake server",
+        "type": "string",
+        "default": "https://intake.sekoia.io"
       },
       "intake_key": {
         "description": "Intake key to use when sending events",
@@ -36,15 +42,15 @@
         "description": "Refresh API token",
         "type": "string"
       },
-      "timedelta": {
-        "type": "integer",
-        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events (default to 5 minutes ago)",
-        "default": 5
-      },
       "start_time": {
+        "description": "The number of hours from which events should be queried",
         "type": "integer",
-        "description": "The number of hours from which events should be queried.",
         "default": 1
+      },
+      "timedelta": {
+        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events (default to 5 minutes ago)",
+        "type": "integer",
+        "default": 5
       }
     },
     "required": [

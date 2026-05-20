@@ -1,52 +1,3 @@
-"""
-Connector for Ubika Cloud Protector NextGen Traffic Logs
-
-Specifications & Implementation Notes:
-
-1. Polling endpoint:
-   - GET https://api.ubika.io/rest/logs.ubika.io/v1/ns/{namespace}/traffic-logs
-     with query:
-       - filters.fromDate=<last_seen_timestamp_ms>
-       - pagination.pageSize=<chunk_size>
-       - pagination.realtime=True
-   - Use `nextPageToken` to page until items list is empty.
-
-2. Checkpoint strategy (cursor-based):
-   - On startup, read `most_recent_timestamp_seen` from context.json.
-   - If none, backfill `start_time` hours by calling from (now - start_time * 3600 * 1000).
-   - After fetching all pages, persist the maximum timestamp seen.
-   - Next poll uses that timestamp as new `filters.fromDate`.
-
-3. Infinite loop (`run()`):
-   - Calls `process_batch(start_ts)` to page, serialize & push events.
-   - Sleeps `frequency` seconds between iterations.
-   - Stops when `_stop_event` is set, then saves final checkpoint.
-
-4. Publishing:
-   - Events are serialized with `orjson` and forwarded via
-     `self.push_events_to_intakes(events=...)`.
-
-5. Error handling:
-   - `_handle_response_error()` raises `FetchEventsException` on non-2xx status codes.
-   - AuthorizationError and AuthorizationTimeoutError bubble up.
-
-6. Configuration (`Pydantic` model):
-   - namespace: Ubika namespace
-   - refresh_token: API refresh token
-   - frequency: polling interval in seconds
-   - chunk_size: max items per page
-   - start_time: hours to backfill on first run
-
-7. HTTP client:
-   - Provided by `UbikaCloudProtectorNextGenApiClient` in a `@cached_property`.
-   - Manages token refresh and rate limits under the hood.
-
-This design follows the initial requirements:
-- to use a single `fromDate` cursor
-- and `nextPageToken` pagination
-- in a continuous collection loop
-"""
-
 import time
 from datetime import datetime, timezone
 
@@ -145,7 +96,7 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(UbikaCloudProtectorNextGenB
 
         try:
             # Polling loop
-            while not self._stop_event.is_set():
+            while self.running:
                 start_time = time.time()
                 # Process one batch of pages and get updated checkpoint
                 try:
@@ -162,9 +113,7 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(UbikaCloudProtectorNextGenB
                     self._stop_event.wait(self.configuration.frequency)
         finally:
             # Cleanup on stop or fatal error
-            client = self.__dict__.get("client")
-            if client is not None:
-                client.close()
+            self.client.close()
             with self.context as cache:
                 cache["most_recent_timestamp_seen"] = last_ts
             self.log(f"Stopped fetching {self.NAME} events", level="info")

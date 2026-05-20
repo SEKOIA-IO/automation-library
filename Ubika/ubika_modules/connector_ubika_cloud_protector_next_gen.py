@@ -170,7 +170,6 @@ class UbikaCloudProtectorNextGenConnector(UbikaCloudProtectorNextGenBaseConnecto
                 break
 
         # Close the client connection
-        if "client" in self.__dict__:
-            self.client.close()
+        self.client.close()
 
         self.save_events_cache()
