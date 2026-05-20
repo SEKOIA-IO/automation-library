@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Update asset connector name to "Tenable vulnerability management"
+- Update asset connector name to "Tenable Vulnerability Management"
 - Skip vulnerabilities with no CVE IDs to avoid creating assets with incomplete information
 - Increment the frequency of the connector
 
