@@ -13,7 +13,7 @@ Specifications & Implementation Notes:
 
 2. Checkpoint strategy (cursor-based):
    - On startup, read `most_recent_timestamp_seen` from context.json.
-   - If none, backfill `start_time` hours by calling from (now - start_timex3600x1000).
+   - If none, backfill `start_time` hours by calling from (now - start_time * 3600 * 1000).
    - After fetching all pages, persist the maximum timestamp seen.
    - Next poll uses that timestamp as new `filters.fromDate`.
 
@@ -52,6 +52,8 @@ from datetime import datetime, timezone
 
 import orjson
 from pydantic.v1 import Field
+
+from ubika_modules.client.auth import AuthorizationError, AuthorizationTimeoutError
 
 from .connector_ubika_cloud_protector_next_gen_base import (
     UbikaCloudProtectorNextGenBaseConnector,
@@ -141,23 +143,28 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(UbikaCloudProtectorNextGenB
             last_ts = now_ms - backfill_ms
         self.log(f"Initial start timestamp: {last_ts}", level="debug")
 
-        # Polling loop
-        while not self._stop_event.is_set():
-            start_time = time.time()
-            # Process one batch of pages and get updated checkpoint
-            try:
-                last_ts = self.process_batch(start_ts=last_ts)
-            except Exception as e:
-                self.log_exception(e, message="Error fetching traffic logs")
-            finally:
-                # Sleep before next poll
-                elapsed = time.time() - start_time
-                self.log(f"Iteration took {elapsed:.2f}s, sleeping {self.configuration.frequency}s", level="debug")
-                time.sleep(self.configuration.frequency)
-
-        # Cleanup on stop
-        if hasattr(self, "client"):
-            self.client.close()
-        with self.context as cache:
-            cache["most_recent_timestamp_seen"] = last_ts
-        self.log(f"Stopped fetching {self.NAME} events", level="info")
+        try:
+            # Polling loop
+            while not self._stop_event.is_set():
+                start_time = time.time()
+                # Process one batch of pages and get updated checkpoint
+                try:
+                    last_ts = self.process_batch(start_ts=last_ts)
+                except (AuthorizationError, AuthorizationTimeoutError):
+                    # Let authorization errors bubble up to trigger connector disablement and alerting
+                    raise
+                except Exception as e:
+                    self.log_exception(e, message="Error fetching traffic logs")
+                finally:
+                    # Sleep before next poll, but wake immediately if stop is requested
+                    elapsed = time.time() - start_time
+                    self.log(f"Iteration took {elapsed:.2f}s, sleeping {self.configuration.frequency}s", level="debug")
+                    self._stop_event.wait(self.configuration.frequency)
+        finally:
+            # Cleanup on stop or fatal error
+            client = self.__dict__.get("client")
+            if client is not None:
+                client.close()
+            with self.context as cache:
+                cache["most_recent_timestamp_seen"] = last_ts
+            self.log(f"Stopped fetching {self.NAME} events", level="info")

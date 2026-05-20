@@ -129,6 +129,7 @@ def test_get_pages(respx_mock: MockRouter, trigger, message1, message2):
         params={
             "pagination.pageToken": "token123",
             "pagination.pageSize": 100,
+            "pagination.realtime": True,
         },
     ).mock(return_value=httpx.Response(200, json=message2))
 

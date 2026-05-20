@@ -6,6 +6,7 @@ import httpx
 from pydantic.v1 import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
+from urllib.parse import urljoin
 
 from . import UbikaModule
 from .client import UbikaCloudProtectorNextGenApiClient
@@ -27,7 +28,7 @@ class UbikaCloudProtectorNextGenBaseConnectorConfiguration(DefaultConnectorConfi
 
     base_url: str = Field("https://api.ubika.io/", description="API base URL")
     frequency: int = Field(60, description="Polling interval in seconds", ge=1)
-    chunk_size: int = Field(200, description="Page size for API calls", ge=1)
+    chunk_size: int = Field(1000, description="Page size for API calls", ge=1)
 
 
 class UbikaCloudProtectorNextGenBaseConnector(Connector):
@@ -85,13 +86,14 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
             one page = list of dicts under spec.items
         """
         # Build URL using the configured namespace
-        base_url = (
-            self.configuration.base_url + f"rest/logs.ubika.io/v1" + f"/ns/{self.configuration.namespace}/{endpoint}"
-        )
+        # Guarantee the overall prefix ends in a slash so join() can drop extra slashes but never smash paths
+        prefix = self.configuration.base_url.rstrip("/") + "/"
+        path = f"rest/logs.ubika.io/v1/ns/{self.configuration.namespace}/{endpoint}"
+        url = urljoin(prefix, path)
         headers = {"Content-Type": "application/json"}
 
         # First request using UbikaCloudProtectorNextGenApiClient
-        response = self._safe_get_page(url=base_url, params=params, headers=headers, initial=True)
+        response = self._safe_get_page(url=url, params=params, headers=headers, initial=True)
 
         # Loop until the connector is asked to stop
         while not self._stop_event.is_set():
@@ -123,7 +125,7 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
 
             # Fetch the next page using the pageToken
             response = self._safe_get_page(
-                url=base_url,
+                url=url,
                 params={
                     "pagination.pageToken": token,
                     "pagination.pageSize": self.configuration.chunk_size,
