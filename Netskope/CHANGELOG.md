@@ -34,9 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add blocklist management actions:
-    - append to blocklist
-    - delete blocklist
-    - replace blocklist
+    - `append_to_blocklist`
+    - `delete_blocklist`
+    - `replace_blocklist`
 
 ## 2026-04-23 - 1.12.0
 
