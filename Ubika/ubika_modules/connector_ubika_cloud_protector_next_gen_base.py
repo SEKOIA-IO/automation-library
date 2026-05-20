@@ -1,12 +1,12 @@
 from collections.abc import Generator
 from functools import cached_property
 from typing import Any
+from urllib.parse import urljoin
 
 import httpx
 from pydantic.v1 import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
-from urllib.parse import urljoin
 
 from . import UbikaModule
 from .client import UbikaCloudProtectorNextGenApiClient
