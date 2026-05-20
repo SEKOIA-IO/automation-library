@@ -1,10 +1,8 @@
 import time
-from datetime import UTC, datetime, timedelta
-from functools import cached_property
+from datetime import datetime
 
 import orjson
 from cachetools import Cache, LRUCache
-from dateutil.parser import isoparse
 from sekoia_automation.storage import PersistentJSON
 
 from .connector_ubika_cloud_protector_next_gen_base import (
@@ -12,13 +10,10 @@ from .connector_ubika_cloud_protector_next_gen_base import (
     UbikaCloudProtectorNextGenBaseConnectorConfiguration,
 )
 from .metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
-from .timestepper import TimeStepper
 
 
 class UbikaCloudProtectorNextGenConnectorConfiguration(UbikaCloudProtectorNextGenBaseConnectorConfiguration):
-    # Time stepper settings
-    timedelta: int = 5
-    start_time: int = 1
+    pass
 
 
 class UbikaCloudProtectorNextGenConnector(UbikaCloudProtectorNextGenBaseConnector):
@@ -30,39 +25,6 @@ class UbikaCloudProtectorNextGenConnector(UbikaCloudProtectorNextGenBaseConnecto
         self.cache_context = PersistentJSON("cache.json", self.data_path)
         self.cache_size = 1000
         self.events_cache: Cache = self.load_events_cache()
-
-    @cached_property
-    def stepper(self):
-        # Read the most recent date seen from the context
-        with self.context as cache:
-            most_recent_date_str = cache.get("most_recent_date_seen")
-
-            # if not defined, create a new time stepper from the configuration
-            if most_recent_date_str is None:
-                return TimeStepper.create(
-                    self,
-                    self.configuration.frequency,
-                    self.configuration.timedelta,
-                    self.configuration.start_time,
-                )
-
-            # parse the most recent requested date
-            most_recent_date = isoparse(most_recent_date_str)
-
-            # Ensure we don't go back more than one month
-            now = datetime.now(UTC)
-            one_month_ago = now - timedelta(days=30)
-            # if the most recent date is older than one month, set it to one month ago
-            if most_recent_date < one_month_ago:
-                most_recent_date = one_month_ago
-
-            # create a time stepper from the most recent date seen
-            return TimeStepper.create_from_time(
-                self,
-                most_recent_date,
-                self.configuration.frequency,
-                self.configuration.timedelta,
-            )
 
     def load_events_cache(self) -> Cache:
         """

@@ -47,6 +47,12 @@
         "type": "integer",
         "default": 1,
         "minimum": 0
+      },
+      "timedelta": {
+        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events",
+        "type": "integer",
+        "default": 5,
+        "minimum": 1
       }
     },
     "required": [

@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import httpx
@@ -24,6 +25,9 @@ def trigger(data_storage):
         refresh_token="some_token_here",
         intake_key="intake_key",
         chunk_size=100,
+        frequency=60,
+        timedelta=5,
+        start_time=1,
     )
     yield trigger
 
@@ -145,98 +149,96 @@ def test_get_pages(respx_mock: MockRouter, trigger, message1, message2):
     assert list(events) == [message1["spec"]["items"]]
 
 
-def test_process_batch(trigger):
-    # Stub 2 pages
+def test_next_batch(trigger):
+    """
+    Test that next_batch() fetches pages, serializes events, and pushes them to intakes.
+    """
+    # Stub 2 pages of events
     pages = [
-        [{"timestamp": "100"}, {"timestamp": "200"}],
-        [{"timestamp": "150"}, {"timestamp": "250"}],
+        [{"timestamp": 100}, {"timestamp": 200}],
+        [{"timestamp": 150}, {"timestamp": 250}],
     ]
     trigger._get_pages = MagicMock(return_value=pages)
 
-    new_ts = trigger.process_batch(start_ts=50)
+    # Call next_batch with a time range
+    start = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
+    end = datetime(2025, 1, 1, 1, 0, 0, tzinfo=UTC)
 
-    # Verify it pushed both pages
+    trigger.next_batch(start=start, end=end)
+
+    # Verify it pushed both pages (2 calls, once per page)
     assert trigger.push_events_to_intakes.call_count == 2
-    # Verify returned timestamp is the max seen = 250
-    assert new_ts == 250
+
+    # Verify the context was updated with the end time
+    with trigger.context as cache:
+        assert cache["most_recent_date_seen"] == end.isoformat()
 
 
-def test_run_calls_process_batch_and_updates_checkpoint(trigger, monkeypatch):
+def test_run_calls_next_batch_and_updates_checkpoint(trigger, monkeypatch):
     """
     Ensure run():
-     - reads the existing checkpoint from context.json
-     - calls process_batch(start_ts) exactly once
-     - writes the returned value back to context.json
+     - uses stepper.ranges() to generate time windows
+     - calls next_batch() for each window
+     - writes the end time to context.json
      - stops when _stop_event.is_set() becomes True
     """
-    # Pre‐seed the context with a known checkpoint
-    initial_ts = 1234
-    with trigger.context as cache:
-        cache["most_recent_timestamp_seen"] = initial_ts
+    # Create mock time ranges
+    start = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
+    end = datetime(2025, 1, 1, 1, 0, 0, tzinfo=UTC)
+    ranges = [(start, end)]
 
-    # Stub out process_batch to return a new checkpoint
-    new_ts = 5678
-    trigger.process_batch = MagicMock(return_value=new_ts)
+    # Mock the stepper to return our controlled ranges
+    mock_stepper = MagicMock()
+    mock_stepper.ranges.return_value = iter(ranges)  # Use iter() to create a generator
+    monkeypatch.setattr(trigger, "stepper", mock_stepper)
 
-    # Ensure run only loops once: first False, then True
-    trigger._stop_event.is_set = MagicMock(side_effect=[False, True])
+    # Mock _stop_event.is_set() to return False to allow processing
+    trigger._stop_event.is_set = MagicMock(return_value=False)
+
+    # Mock _get_pages to return an empty list (no events)
+    trigger._get_pages = MagicMock(return_value=[])
 
     # Call run()
     trigger.run()
 
-    # Verify process_batch was invoked with the initial timestamp
-    trigger.process_batch.assert_called_once_with(start_ts=initial_ts)
-
-    # Verify context.json was updated to new_ts
+    # Verify context.json was updated with the end time
     with trigger.context as cache:
-        assert cache["most_recent_timestamp_seen"] == new_ts
-
-
-def test_process_batch_invalid_timestamps_are_zeroed(trigger):
-    """
-    If an event has a non-int timestamp or missing key, ts parsing raises and we fall back to 0.
-    The max_ts should remain at least the original start_ts until a good value appears.
-    """
-    # Prepare 2 pages: first all invalid, second with one valid
-    pages = [
-        [{"timestamp": "not-a-number"}, {"no_timestamp": "here"}],
-        [{"timestamp": "30"}, {"timestamp": "20"}],
-    ]
-    trigger._get_pages = MagicMock(return_value=pages)
-
-    # Run with initial start_ts=10
-    new_ts = trigger.process_batch(start_ts=10)
-
-    # The bad page should not crash and yields ts=0 for each
-    # The second page has valid ints → max_ts becomes 30
-    assert new_ts == 30
-
-    # And it still published both pages
-    assert trigger.push_events_to_intakes.call_count == 2
+        assert cache.get("most_recent_date_seen") == end.isoformat()
 
 
 def test_run_logs_exception_on_process_error(trigger, monkeypatch):
     """
-    If process_batch raises, run() should catch it,
+    If next_batch raises an exception, run() should catch it,
     call log_exception(e, message="Error fetching traffic logs"),
-    then continue (and break on next stop_event).
+    then break and stop the connector.
     """
-    # Seed a valid checkpoint so we take the "no backfill" branch
-    with trigger.context as ctx:
-        ctx["most_recent_timestamp_seen"] = 12345
+    # Create mock time ranges
+    start = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
+    end = datetime(2025, 1, 1, 1, 0, 0, tzinfo=UTC)
+    ranges = [(start, end)]
 
-    # Stub process_batch to throw
+    # Mock the stepper
+    mock_stepper = MagicMock()
+    mock_stepper.ranges.return_value = iter(ranges)  # Use iter() to create a generator
+    monkeypatch.setattr(trigger, "stepper", mock_stepper)
+
+    # Stub next_batch to throw
     exc = RuntimeError("oops")
-    trigger.process_batch = MagicMock(side_effect=exc)
+    trigger.next_batch = MagicMock(side_effect=exc)
 
     # Spy on log_exception
     trigger.log_exception = MagicMock()
 
-    # Make exactly one loop iteration: False → True
-    trigger._stop_event.is_set = MagicMock(side_effect=[False, True])
-
     # Call run()
     trigger.run()
+
+    # Verify next_batch was called
+    trigger.next_batch.assert_called_once_with(start, end)
+
+    # Verify log_exception was called with the error and message
+    trigger.log_exception.assert_called_once()
+    args = trigger.log_exception.call_args
+    assert args.kwargs["message"] == "Error fetching traffic logs"
 
     # Assert we caught & logged the exception
     trigger.log_exception.assert_called_once_with(exc, message="Error fetching traffic logs")

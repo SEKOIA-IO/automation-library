@@ -1,9 +1,11 @@
 from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from typing import Any
 from urllib.parse import urljoin
 
 import httpx
+from dateutil.parser import isoparse
 from pydantic.v1 import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
@@ -12,6 +14,7 @@ from . import UbikaModule
 from .client import UbikaCloudProtectorNextGenApiClient
 from .client.auth import AuthorizationError, AuthorizationTimeoutError
 from .metrics import INCOMING_MESSAGES
+from .timestepper import TimeStepper
 
 
 class FetchEventsException(Exception):
@@ -23,12 +26,18 @@ class UbikaCloudProtectorNextGenBaseConnectorConfiguration(DefaultConnectorConfi
     Common configuration for all NextGen connectors.
     """
 
-    namespace: str = Field(..., description="Ubika namespace")
-    refresh_token: str = Field(..., description="API refresh token", secret=True)
+    namespace: str = Field(..., description="Namespace")
+    refresh_token: str = Field(..., description="Refresh API token", secret=True)
 
     base_url: str = Field("https://api.ubika.io/", description="API base URL")
-    frequency: int = Field(60, description="Polling interval in seconds", ge=1)
-    chunk_size: int = Field(1000, description="Page size for API calls", ge=1)
+    frequency: int = Field(60, description="Batch frequency in seconds", ge=1)
+    chunk_size: int = Field(1000, description="The size of chunks for the batch processing", ge=1)
+    timedelta: int = Field(
+        5,
+        description="The temporal shift, in the past, in minutes, the connector applies when fetching the events",
+        ge=1,
+    )
+    start_time: int = Field(1, description="The number of hours from which events should be queried", ge=0)
 
 
 class UbikaCloudProtectorNextGenBaseConnector(Connector):
@@ -49,7 +58,7 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # single file to store our checkpoint
+        # Single file to store our checkpoint
         self.context = PersistentJSON("context.json", self.data_path)
 
     @cached_property
@@ -58,6 +67,42 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
         HTTP client that automatically injects tokens and handles rate‐limits.
         """
         return UbikaCloudProtectorNextGenApiClient(refresh_token=self.configuration.refresh_token)
+
+    @cached_property
+    def stepper(self) -> TimeStepper:
+        """
+        Create a TimeStepper instance to manage time ranges for event collection.
+        Reads the most recent date from context, or creates a new one if not found.
+        """
+        with self.context as cache:
+            most_recent_date_str = cache.get("most_recent_date_seen")
+
+            # If not defined, create a new time stepper from the configuration
+            if most_recent_date_str is None:
+                return TimeStepper.create(
+                    self,
+                    self.configuration.frequency,
+                    self.configuration.timedelta,
+                    self.configuration.start_time,
+                )
+
+            # Parse the most recent requested date
+            most_recent_date = isoparse(most_recent_date_str)
+
+            # Ensure we do not go back more than one month
+            now = datetime.now(UTC)
+            one_month_ago = now - timedelta(days=30)
+            # If the most recent date is older than one month, set it to one month ago
+            if most_recent_date < one_month_ago:
+                most_recent_date = one_month_ago
+
+            # Create a time stepper from the most recent date seen
+            return TimeStepper.create_from_time(
+                self,
+                most_recent_date,
+                self.configuration.frequency,
+                self.configuration.timedelta,
+            )
 
     def _handle_response_error(self, response: httpx.Response) -> None:
         if not response.is_success:

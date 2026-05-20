@@ -48,7 +48,7 @@
         "default": 1
       },
       "timedelta": {
-        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events (default to 5 minutes ago)",
+        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events",
         "type": "integer",
         "default": 5
       }
