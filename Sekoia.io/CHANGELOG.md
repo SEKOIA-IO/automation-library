@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-07 - 2.71.6
+
+### Changed
+
+- Flatten nested IOC IP lists in the action `add_ioc_to_ioc_collection`.
+
 ## 2026-05-01 - 2.71.5
 
 ### Changed
@@ -16,9 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2026-04-27 - 2.71.4
 
-- Add missing documentation of `Get Alert`  action.
-
 ### Fixed
+
+- Add checking ips for add iocs action.
+- Add missing documentation of `Get Alert` action.
 
 ## 2026-03-27 - 2.71.3
 
