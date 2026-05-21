@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-05-07 - 2.71.5
+## 2026-05-07 - 2.71.6
+
+### Changed
+
+- Flatten nested IOC IP lists in the action `add_ioc_to_ioc_collection`.
+
+## 2026-05-01 - 2.71.5
 
 ### Changed
 
