@@ -25,6 +25,7 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(UbikaCloudProtectorNextGenB
 
     NAME: str = "Ubika Cloud Protector NextGen Traffic Logs"
     configuration: UbikaCloudProtectorNextGenTrafficLogsConnectorConfiguration
+    cache_size: int = 10000
 
     def next_batch(self, start: datetime, end: datetime) -> None:
         """
@@ -62,29 +63,3 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(UbikaCloudProtectorNextGenB
         # Update checkpoint with the end time of this batch
         with self.context as cache:
             cache["most_recent_date_seen"] = end.isoformat()
-
-    def run(self) -> None:
-        """
-        Main loop using TimeStepper to manage time ranges:
-        1) Use stepper.ranges() to get successive time windows
-        2) For each window, call next_batch() to fetch and push events
-        3) Stepper manages sleep timing and lag handling
-        """
-        self.log(message=f"Start fetching {self.NAME} events", level="info")
-
-        try:
-            for start, end in self.stepper.ranges():
-                # Check if we need to stop
-                if self._stop_event.is_set():
-                    break
-
-                try:
-                    self.next_batch(start, end)
-                except Exception as error:
-                    self.log_exception(error, message="Error fetching traffic logs")
-                    break
-
-        finally:
-            # Cleanup on stop or fatal error
-            self.client.close()
-            self.log(message=f"Stopped fetching {self.NAME} events", level="info")

@@ -425,4 +425,4 @@ def test_run_breaks_on_next_batch_exception(monkeypatch, trigger):
     trigger.log_exception.assert_called_once()
     args, kwargs = trigger.log_exception.call_args
     assert args[0] is exc
-    assert kwargs.get("message") == "Failed to forward events"
+    assert kwargs.get("message") == "Failed to fetch events"

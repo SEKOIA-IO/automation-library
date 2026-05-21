@@ -2,8 +2,6 @@ import time
 from datetime import datetime
 
 import orjson
-from cachetools import Cache, LRUCache
-from sekoia_automation.storage import PersistentJSON
 
 from .connector_ubika_cloud_protector_next_gen_base import (
     UbikaCloudProtectorNextGenBaseConnector,
@@ -19,35 +17,7 @@ class UbikaCloudProtectorNextGenAlertsConnectorConfiguration(UbikaCloudProtector
 class UbikaCloudProtectorNextGenAlertsConnector(UbikaCloudProtectorNextGenBaseConnector):
     NAME: str = "Ubika Cloud Protector NextGen Alerts"
     configuration: UbikaCloudProtectorNextGenAlertsConnectorConfiguration
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.cache_context = PersistentJSON("cache.json", self.data_path)
-        self.cache_size = 1000
-        self.events_cache: Cache = self.load_events_cache()
-
-    def load_events_cache(self) -> Cache:
-        """
-        Load the events cache.
-        """
-        cache: Cache = LRUCache(maxsize=self.cache_size)
-
-        with self.cache_context as context:
-            # load the cache from the context
-            events_cache = context.get("events_cache", [])
-
-        for event_hash in events_cache:
-            cache[event_hash] = True
-
-        return cache
-
-    def save_events_cache(self) -> None:
-        """
-        Save the events cache.
-        """
-        with self.cache_context as context:
-            # save the events cache to the context
-            context["events_cache"] = list(self.events_cache.keys())
+    cache_size: int = 1000
 
     def filter_processed_events(self, events: list[dict]) -> list[dict]:
         """
@@ -116,22 +86,3 @@ class UbikaCloudProtectorNextGenAlertsConnector(UbikaCloudProtectorNextGenBaseCo
             level="debug",
         )  # pragma: no cover
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
-
-    def run(self) -> None:
-        self.log(message=f"Start fetching {self.NAME} events", level="info")  # pragma: no cover
-
-        for start, end in self.stepper.ranges():
-            # Check if we need to stop
-            if self._stop_event.is_set():
-                break
-
-            try:
-                self.next_batch(start, end)
-            except Exception as error:
-                self.log_exception(error, message="Failed to forward events")  # pragma: no cover
-                break
-
-        # Close the client connection
-        self.client.close()
-
-        self.save_events_cache()

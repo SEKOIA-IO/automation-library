@@ -5,6 +5,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 import httpx
+from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
 from pydantic.v1 import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
@@ -56,10 +57,38 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
     NAME: str = "Ubika Cloud Protector NextGen Base"
     configuration: UbikaCloudProtectorNextGenBaseConnectorConfiguration
 
+    cache_size: int = 1000  # Default cache size, can be overridden in subclasses
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Single file to store our checkpoint
         self.context = PersistentJSON("context.json", self.data_path)
+        # Cache context for storing event hashes
+        self.cache_context = PersistentJSON("cache.json", self.data_path)
+        self.events_cache: Cache = self.load_events_cache()
+
+    def load_events_cache(self) -> Cache:
+        """
+        Load the events cache.
+        """
+        cache: Cache = LRUCache(maxsize=self.cache_size)
+
+        with self.cache_context as context:
+            # load the cache from the context
+            events_cache = context.get("events_cache", [])
+
+        for event_hash in events_cache:
+            cache[event_hash] = True
+
+        return cache
+
+    def save_events_cache(self) -> None:
+        """
+        Save the events cache.
+        """
+        with self.cache_context as context:
+            # save the events cache to the context
+            context["events_cache"] = list(self.events_cache.keys())
 
     @cached_property
     def client(self) -> UbikaCloudProtectorNextGenApiClient:
@@ -200,3 +229,37 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
             msg = err.args[1] if len(err.args) > 1 else str(err)
             self.log(f"Authorization timeout on {phase}: {msg}", level="error")
             raise
+
+    def next_batch(self, start: datetime, end: datetime) -> None:
+        """
+        Fetch and process events for a given time range.
+        Must be implemented by subclasses.
+        """
+        raise NotImplementedError("Subclasses must implement next_batch()")
+
+    def run(self) -> None:
+        """
+        Main loop using TimeStepper to manage time ranges:
+        1) Use stepper.ranges() to get successive time windows
+        2) For each window, call next_batch() to fetch and push events
+        3) Stepper manages sleep timing and lag handling
+        """
+        self.log(message=f"Start fetching {self.NAME} events", level="info")
+
+        try:
+            for start, end in self.stepper.ranges():
+                # Check if we need to stop
+                if self._stop_event.is_set():
+                    break
+
+                try:
+                    self.next_batch(start, end)
+                except Exception as error:
+                    self.log_exception(error, message="Failed to fetch events")
+                    break
+
+        finally:
+            # Cleanup on stop or fatal error
+            self.client.close()
+            self.save_events_cache()
+            self.log(message=f"Stopped fetching {self.NAME} events", level="info")

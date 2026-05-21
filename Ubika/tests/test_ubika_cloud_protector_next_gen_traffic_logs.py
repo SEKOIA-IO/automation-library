@@ -209,7 +209,7 @@ def test_run_calls_next_batch_and_updates_checkpoint(trigger, monkeypatch):
 def test_run_logs_exception_on_process_error(trigger, monkeypatch):
     """
     If next_batch raises an exception, run() should catch it,
-    call log_exception(e, message="Error fetching traffic logs"),
+    call log_exception(e, message="Failed to fetch events"),
     then break and stop the connector.
     """
     # Create mock time ranges
@@ -238,7 +238,7 @@ def test_run_logs_exception_on_process_error(trigger, monkeypatch):
     # Verify log_exception was called with the error and message
     trigger.log_exception.assert_called_once()
     args = trigger.log_exception.call_args
-    assert args.kwargs["message"] == "Error fetching traffic logs"
+    assert args.kwargs["message"] == "Failed to fetch events"
 
     # Assert we caught & logged the exception
-    trigger.log_exception.assert_called_once_with(exc, message="Error fetching traffic logs")
+    trigger.log_exception.assert_called_once_with(exc, message="Failed to fetch events")
