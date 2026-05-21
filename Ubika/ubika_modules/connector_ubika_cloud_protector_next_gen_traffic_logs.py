@@ -1,9 +1,5 @@
 from datetime import datetime
 
-import orjson
-
-from ubika_modules.client.auth import AuthorizationError, AuthorizationTimeoutError
-
 from .connector_ubika_cloud_protector_next_gen_base import (
     UbikaCloudProtectorNextGenBaseConnector,
     UbikaCloudProtectorNextGenBaseConnectorConfiguration,
@@ -26,40 +22,12 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(UbikaCloudProtectorNextGenB
     NAME: str = "Ubika Cloud Protector NextGen Traffic Logs"
     configuration: UbikaCloudProtectorNextGenTrafficLogsConnectorConfiguration
     cache_size: int = 10000
+    endpoint: str = "traffic-logs"
 
-    def next_batch(self, start: datetime, end: datetime) -> None:
-        """
-        Fetch pages for the given time range, serialize and push events to intake.
-        Updates the checkpoint with the end time.
-        """
-        start_timestamp = int(start.timestamp() * 1000)
-        end_timestamp = int(end.timestamp() * 1000)
-
-        # Fetch all pages for this time range
-        for events in self._get_pages(
-            endpoint="traffic-logs",
-            params={
-                "filters.fromDate": start_timestamp,
-                "filters.toDate": end_timestamp,
-                "pagination.pageSize": self.configuration.chunk_size,
-                "pagination.realtime": True,
-            },
-        ):
-            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
-
-            # if the batch is not empty, push it
-            if len(batch_of_events) > 0:
-                self.log(
-                    message=f"Forwarded {len(batch_of_events)} traffic-log events to the intake",
-                    level="info",
-                )
-                self.push_events_to_intakes(events=batch_of_events)
-            else:
-                self.log(
-                    message="No events to forward",
-                    level="info",
-                )
-
-        # Update checkpoint with the end time of this batch
-        with self.context as cache:
-            cache["most_recent_date_seen"] = end.isoformat()
+    def get_event_id(self, event: dict) -> str | None:
+        """Extract the unique event ID from a traffic log event."""
+        request = event.get("request") or {}
+        uid = request.get("uid")
+        if uid is None:
+            return None
+        return str(uid)

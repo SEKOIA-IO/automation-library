@@ -155,8 +155,14 @@ def test_next_batch(trigger):
     """
     # Stub 2 pages of events
     pages = [
-        [{"timestamp": 100}, {"timestamp": 200}],
-        [{"timestamp": 150}, {"timestamp": 250}],
+        [
+            {"timestamp": 100, "request": {"uid": "uid-100"}},
+            {"timestamp": 200, "request": {"uid": "uid-200"}},
+        ],
+        [
+            {"timestamp": 150, "request": {"uid": "uid-150"}},
+            {"timestamp": 250, "request": {"uid": "uid-250"}},
+        ],
     ]
     trigger._get_pages = MagicMock(return_value=pages)
 
@@ -172,6 +178,28 @@ def test_next_batch(trigger):
     # Verify the context was updated with the end time
     with trigger.context as cache:
         assert cache["most_recent_date_seen"] == end.isoformat()
+
+
+def test_next_batch_keeps_processing_corrupted_events_without_id(trigger):
+    """
+    Events missing request.uid are forwarded but not deduplicated.
+    """
+    pages = [
+        [
+            {"timestamp": 100, "request": {"uid": "uid-100"}},
+            {"timestamp": 200},
+            {"timestamp": 200},
+        ]
+    ]
+    trigger._get_pages = MagicMock(return_value=pages)
+
+    start = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
+    end = datetime(2025, 1, 1, 1, 0, 0, tzinfo=UTC)
+    trigger.next_batch(start=start, end=end)
+
+    trigger.push_events_to_intakes.assert_called_once()
+    pushed_events = trigger.push_events_to_intakes.call_args.kwargs["events"]
+    assert len(pushed_events) == 3
 
 
 def test_run_calls_next_batch_and_updates_checkpoint(trigger, monkeypatch):

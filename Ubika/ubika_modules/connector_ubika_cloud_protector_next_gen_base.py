@@ -1,3 +1,4 @@
+import time
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
@@ -5,6 +6,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 import httpx
+import orjson
 from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
 from pydantic.v1 import Field
@@ -14,7 +16,7 @@ from sekoia_automation.storage import PersistentJSON
 from . import UbikaModule
 from .client import UbikaCloudProtectorNextGenApiClient
 from .client.auth import AuthorizationError, AuthorizationTimeoutError
-from .metrics import INCOMING_MESSAGES
+from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 from .timestepper import TimeStepper
 
 
@@ -50,6 +52,7 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
       • `_get_pages(endpoint, params)` for cursor+token pagination
       • `self.context` (PersistentJSON) to store a checkpoint
       • common config in UbikaCloudProtectorNextGenBaseConnectorConfiguration
+      • Generic `next_batch()` and `filter_processed_events()` for subclasses
     """
 
     module: UbikaModule
@@ -58,6 +61,7 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
     configuration: UbikaCloudProtectorNextGenBaseConnectorConfiguration
 
     cache_size: int = 1000  # Default cache size, can be overridden in subclasses
+    endpoint: str = ""  # Must be set by subclasses (e.g., "security-events", "traffic-logs")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -230,12 +234,106 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
             self.log(f"Authorization timeout on {phase}: {msg}", level="error")
             raise
 
+    def get_event_id(self, event: dict) -> str | None:
+        """
+        Extract the unique event ID from an event dict.
+        Must be implemented by subclasses.
+
+        Args:
+            event: event dictionary
+
+        Returns:
+            unique event identifier, or None if not available
+        """
+        raise NotImplementedError("Subclasses must implement get_event_id()")
+
+    def filter_processed_events(self, events: list[dict]) -> list[dict]:
+        """
+        Filter out events that have already been processed using the events cache.
+
+        Args:
+            events: list of event dictionaries
+
+        Returns:
+            filtered list containing only new events
+        """
+        filtered_events = []
+
+        for event in events:
+            event_id = self.get_event_id(event)
+
+            # Corrupted or partial events without identifier are still forwarded,
+            # but cannot be deduplicated.
+            if event_id is None:
+                filtered_events.append(event)
+                continue
+
+            # Check if the event id is already in the cache
+            if event_id not in self.events_cache:
+                # If not, add the event to the filtered list
+                filtered_events.append(event)
+
+                # Add the event id to the cache
+                self.events_cache[event_id] = True
+
+        return filtered_events
+
     def next_batch(self, start: datetime, end: datetime) -> None:
         """
-        Fetch and process events for a given time range.
-        Must be implemented by subclasses.
+        Fetch pages for the given time range, serialize and push events to intake.
+        Updates the checkpoint with the end time.
+
+        Args:
+            start: start time of the batch window
+            end: end time of the batch window
         """
-        raise NotImplementedError("Subclasses must implement next_batch()")
+        # Save the starting time
+        batch_start_time = time.time()
+        start_timestamp = int(start.timestamp() * 1000)
+        end_timestamp = int(end.timestamp() * 1000)
+
+        # Fetch all pages for this time range
+        for events in self._get_pages(
+            endpoint=self.endpoint,
+            params={
+                "filters.fromDate": start_timestamp,
+                "filters.toDate": end_timestamp,
+                "pagination.pageSize": self.configuration.chunk_size,
+                "pagination.realtime": True,
+            },
+        ):
+            filtered_events = self.filter_processed_events(events)
+            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in filtered_events]
+
+            # If the batch is not empty, push it
+            if len(batch_of_events) > 0:
+                self.log(
+                    message=f"Forwarded {len(batch_of_events)} events to the intake",
+                    level="info",
+                )
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                self.push_events_to_intakes(events=batch_of_events)
+            else:
+                self.log(
+                    message="No events to forward",
+                    level="info",
+                )
+
+        # Just in case
+        self.save_events_cache()
+
+        # Update checkpoint with the end time of this batch
+        with self.context as cache:
+            cache["most_recent_date_seen"] = end.isoformat()
+
+        # Get the ending time and compute the duration to fetch the events
+        batch_end_time = time.time()
+        batch_duration = int(batch_end_time - batch_start_time)
+        self.log(
+            message=f"Fetched and forwarded events in {batch_duration} seconds",
+            level="debug",
+        )
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
     def run(self) -> None:
         """

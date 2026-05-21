@@ -83,3 +83,25 @@ def test_get_pages_raises_on_next_page_auth_errors(trigger, exc_cls):
 
     # 2 calls: initial + follow-up
     assert trigger.client.get.call_count == 2
+
+
+def test_filter_processed_events_skips_dedup_when_event_id_is_none(trigger):
+    trigger.events_cache.clear()
+    trigger.get_event_id = MagicMock(side_effect=[None, None])
+
+    events = [{"bad": 1}, {"bad": 1}]
+    filtered = trigger.filter_processed_events(events)
+
+    assert filtered == events
+    assert len(trigger.events_cache) == 0
+
+
+def test_filter_processed_events_deduplicates_when_event_id_exists(trigger):
+    trigger.events_cache.clear()
+    trigger.get_event_id = MagicMock(side_effect=["evt-1", "evt-1"])
+
+    events = [{"a": 1}, {"a": 1}]
+    filtered = trigger.filter_processed_events(events)
+
+    assert filtered == [events[0]]
+    assert "evt-1" in trigger.events_cache
