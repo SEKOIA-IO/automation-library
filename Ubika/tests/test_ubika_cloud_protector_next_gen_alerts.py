@@ -8,9 +8,9 @@ from respx import MockRouter
 
 from ubika_modules import UbikaModule
 from ubika_modules.client.auth import AuthorizationError, AuthorizationTimeoutError
-from ubika_modules.connector_ubika_cloud_protector_next_gen import (
-    UbikaCloudProtectorNextGenConnector,
-    UbikaCloudProtectorNextGenConnectorConfiguration,
+from ubika_modules.connector_ubika_cloud_protector_next_gen_alerts import (
+    UbikaCloudProtectorNextGenAlertsConnector,
+    UbikaCloudProtectorNextGenAlertsConnectorConfiguration,
 )
 from ubika_modules.timestepper import TimeStepper
 
@@ -18,11 +18,11 @@ from ubika_modules.timestepper import TimeStepper
 @pytest.fixture
 def trigger(data_storage):
     module = UbikaModule()
-    trigger = UbikaCloudProtectorNextGenConnector(module=module, data_path=data_storage)
+    trigger = UbikaCloudProtectorNextGenAlertsConnector(module=module, data_path=data_storage)
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
-    trigger.configuration = UbikaCloudProtectorNextGenConnectorConfiguration(
+    trigger.configuration = UbikaCloudProtectorNextGenAlertsConnectorConfiguration(
         base_url="https://api.ubika.io/",
         namespace="sekoia",
         refresh_token="some_token_here",

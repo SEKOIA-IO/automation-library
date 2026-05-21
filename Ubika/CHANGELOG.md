@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-05-20 - 1.1.0
+## 2026-05-21 - 1.1.0
 
 ### Added
 
@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Refactor `next_gen` connectors and reduce code duplication by creating the `connector_ubika_cloud_protector_next_gen_base` connector
+- Rename `connector_ubika_cloud_protector_next_gen` -> `connector_ubika_cloud_protector_next_gen_alerts`
 
 ## 2026-02-09 - 1.0.8
 

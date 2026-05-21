@@ -12,13 +12,13 @@ from .connector_ubika_cloud_protector_next_gen_base import (
 from .metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
-class UbikaCloudProtectorNextGenConnectorConfiguration(UbikaCloudProtectorNextGenBaseConnectorConfiguration):
+class UbikaCloudProtectorNextGenAlertsConnectorConfiguration(UbikaCloudProtectorNextGenBaseConnectorConfiguration):
     pass
 
 
-class UbikaCloudProtectorNextGenConnector(UbikaCloudProtectorNextGenBaseConnector):
+class UbikaCloudProtectorNextGenAlertsConnector(UbikaCloudProtectorNextGenBaseConnector):
     NAME: str = "Ubika Cloud Protector Next"
-    configuration: UbikaCloudProtectorNextGenConnectorConfiguration
+    configuration: UbikaCloudProtectorNextGenAlertsConnectorConfiguration
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
