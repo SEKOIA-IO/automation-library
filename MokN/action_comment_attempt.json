@@ -1,0 +1,33 @@
+{
+  "name": "Comment Attempt",
+  "description": "Add or update the comment of a specific MokN login attempt",
+  "uuid": "4bf97f3b-3f32-11f1-aba4-83c075f006bf",
+  "slug": "comment_attempt",
+  "docker_parameters": "comment_attempt",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "CommentAttemptArguments",
+    "type": "object",
+    "properties": {
+      "attempt_id": {
+        "title": "Attempt Id",
+        "description": "Identifier of the MokN login attempt",
+        "type": "integer"
+      },
+      "comment": {
+        "title": "Comment",
+        "description": "Comment to add to the login attempt",
+        "type": "string"
+      }
+    },
+    "required": [
+      "attempt_id",
+      "comment"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "MokNAttemptUpdateResult",
+    "type": "object"
+  }
+}
