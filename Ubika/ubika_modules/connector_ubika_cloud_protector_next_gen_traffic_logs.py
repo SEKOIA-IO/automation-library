@@ -80,9 +80,6 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(UbikaCloudProtectorNextGenB
 
                 try:
                     self.next_batch(start, end)
-                except (AuthorizationError, AuthorizationTimeoutError):
-                    # Let authorization errors bubble up to trigger connector disablement and alerting
-                    raise
                 except Exception as error:
                     self.log_exception(error, message="Error fetching traffic logs")
                     break
