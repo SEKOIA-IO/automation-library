@@ -17,7 +17,7 @@ class UbikaCloudProtectorNextGenAlertsConnectorConfiguration(UbikaCloudProtector
 
 
 class UbikaCloudProtectorNextGenAlertsConnector(UbikaCloudProtectorNextGenBaseConnector):
-    NAME: str = "Ubika Cloud Protector Next"
+    NAME: str = "Ubika Cloud Protector NextGen Alerts"
     configuration: UbikaCloudProtectorNextGenAlertsConnectorConfiguration
 
     def __init__(self, *args, **kwargs):
