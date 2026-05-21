@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Flatten ioc ips for nested lists in the action `add_ioc_to_ioc_collection`.
+- Flatten nested IOC IP lists in the action `add_ioc_to_ioc_collection`.
 
 ## 2026-05-01 - 2.71.5
 
