@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-22 - 0.1.24
+
+### Fixed
+
+- Fixed a behavior where indicators payload arguments sent by the Trigger leads to errors   
+
 ## 2025-01-30 - 0.1.14
 
 ### Fixed
