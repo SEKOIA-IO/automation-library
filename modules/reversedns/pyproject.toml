@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "reversedns-automation-module"
-version = "0.1.0"
+version = "0.1.2"
 description = "Reverse DNS Lookup"
 authors = ["Khadim Dieng <khadimkd004@gmail.com>"]
 readme = "README.md"
