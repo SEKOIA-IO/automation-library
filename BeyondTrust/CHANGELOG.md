@@ -7,11 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-05-22 - 1.0.3
+## 2026-05-22 - 1.3.1
 
 ### Changed
 
 - Add scalability labels to Prometheus metrics
+
+## 2026-04-30 - 1.3.0
+
+### Added
+
+- Add Team connector for BeyondTrust PRA
+
+## 2026-04-28 - 1.2.0
+
+### Added
+
+- Add Vault Account Activity connector for BeyondTrust PRA
+
+## 2026-03-26 - 1.1.0
+
+### Added
+
+- Add syslog connector for BeyondTrust PRA
 
 ## 2026-01-16 - 1.0.2
 

@@ -1,4 +1,6 @@
+import os
 from collections.abc import AsyncGenerator
+from typing import Any, Optional
 from functools import cached_property
 
 import orjson
@@ -21,6 +23,12 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector, AwsAccountProvider):
 
     configuration: AwsS3QueuedConfiguration
     name = "DeepVisibility AWS S3 Logs"
+
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+        """Init DeepVisibilityConnector."""
+
+        super().__init__(*args, **kwargs)
+        self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 300))
 
     @cached_property
     def scalability_labels(self) -> dict[str, str]:

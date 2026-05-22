@@ -371,17 +371,284 @@ async def test_update_checkpoint_with_different_timestamp(test_entra_id_asset_co
     assert most_recent_date == "2023-01-01T00:00:01+00:00"
 
 
-def test_update_checkpoint_with_none_timestamp(test_entra_id_asset_connector):
+@pytest.mark.asyncio
+async def test_update_checkpoint_with_none_timestamp(test_entra_id_asset_connector):
     """Test that update_checkpoint returns early when _latest_time is None."""
     # Arrange
     test_entra_id_asset_connector._latest_time = None
 
     # Act
-    test_entra_id_asset_connector.update_checkpoint()
+    await test_entra_id_asset_connector.update_checkpoint()
 
     # Assert
     most_recent_date = test_entra_id_asset_connector.most_recent_date_seen
     assert most_recent_date is None
+
+
+@pytest.mark.asyncio
+async def test_close_client_with_credentials(test_entra_id_asset_connector):
+    """Test that close_client closes credentials and clears client when credentials exist."""
+    # Arrange
+    mock_credentials = AsyncMock()
+    test_entra_id_asset_connector._credentials = mock_credentials
+    test_entra_id_asset_connector._client = MagicMock()
+
+    # Act
+    await test_entra_id_asset_connector.close_client()
+
+    # Assert
+    mock_credentials.close.assert_awaited_once()
+    assert test_entra_id_asset_connector._credentials is None
+    assert test_entra_id_asset_connector._client is None
+
+
+@pytest.mark.asyncio
+async def test_close_client_without_credentials(test_entra_id_asset_connector):
+    """Test that close_client works correctly when credentials are not set."""
+    # Arrange
+    test_entra_id_asset_connector._credentials = None
+    test_entra_id_asset_connector._client = MagicMock()
+
+    # Act
+    await test_entra_id_asset_connector.close_client()
+
+    # Assert
+    assert test_entra_id_asset_connector._credentials is None
+    assert test_entra_id_asset_connector._client is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_user_admin_roles_returns_true(test_entra_id_asset_connector):
+    """Test that fetch_user_admin_roles returns True when user has admin roles."""
+    # Arrange
+    user_id = "test-user-id"
+    mock_role = MagicMock()
+    mock_roles_response = MagicMock()
+    mock_roles_response.value = [mock_role]
+    mock_client = mock_graph_service_client()
+    mock_client.users.by_user_id.return_value.transitive_member_of.graph_directory_role.get = AsyncMock(
+        return_value=mock_roles_response
+    )
+    test_entra_id_asset_connector._client = mock_client
+
+    # Act
+    is_admin = await test_entra_id_asset_connector.fetch_user_admin_roles(user_id)
+
+    # Assert
+    assert is_admin is True
+
+
+@pytest.mark.asyncio
+async def test_fetch_user_admin_roles_returns_false(test_entra_id_asset_connector):
+    """Test that fetch_user_admin_roles returns False when user has no admin roles."""
+    # Arrange
+    user_id = "test-user-id"
+    mock_roles_response = MagicMock()
+    mock_roles_response.value = []
+    mock_client = mock_graph_service_client()
+    mock_client.users.by_user_id.return_value.transitive_member_of.graph_directory_role.get = AsyncMock(
+        return_value=mock_roles_response
+    )
+    test_entra_id_asset_connector._client = mock_client
+
+    # Act
+    is_admin = await test_entra_id_asset_connector.fetch_user_admin_roles(user_id)
+
+    # Assert
+    assert is_admin is False
+
+
+@pytest.mark.asyncio
+async def test_fetch_user_admin_roles_error_handling(test_entra_id_asset_connector):
+    """Test that fetch_user_admin_roles raises ValueError when API call fails."""
+    # Arrange
+    user_id = "test-user-id"
+    mock_client = mock_graph_service_client()
+    mock_client.users.by_user_id.return_value.transitive_member_of.graph_directory_role.get = AsyncMock(
+        side_effect=Exception("API Error")
+    )
+    test_entra_id_asset_connector._client = mock_client
+
+    # Act & Assert
+    with pytest.raises(ValueError, match="Error fetching user admin roles"):
+        await test_entra_id_asset_connector.fetch_user_admin_roles(user_id)
+
+
+@pytest.mark.asyncio
+async def test_fetch_user_with_user_id(test_entra_id_asset_connector):
+    """Test that fetch_user calls all sub-methods when user.id is set."""
+    from msgraph.generated.models.user import User
+
+    # Arrange
+    mock_user = User(id="user-id", user_principal_name="user@example.com")
+    test_entra_id_asset_connector.fetch_user_mfa = AsyncMock(return_value=True)
+    test_entra_id_asset_connector.fetch_user_groups = AsyncMock(return_value=[])
+    test_entra_id_asset_connector.fetch_user_admin_roles = AsyncMock(return_value=False)
+    test_entra_id_asset_connector.map_fields = MagicMock(return_value=MagicMock())
+
+    # Act
+    await test_entra_id_asset_connector.fetch_user(mock_user)
+
+    # Assert
+    test_entra_id_asset_connector.fetch_user_mfa.assert_awaited_once_with("user-id")
+    test_entra_id_asset_connector.fetch_user_groups.assert_awaited_once_with("user-id")
+    test_entra_id_asset_connector.fetch_user_admin_roles.assert_awaited_once_with("user-id")
+    test_entra_id_asset_connector.map_fields.assert_called_once_with(mock_user, True, [], False)
+
+
+@pytest.mark.asyncio
+async def test_fetch_user_without_user_id(test_entra_id_asset_connector):
+    """Test that fetch_user skips sub-methods when user.id is None."""
+    from msgraph.generated.models.user import User
+
+    # Arrange
+    mock_user = User(id=None, user_principal_name="user@example.com")
+    test_entra_id_asset_connector.fetch_user_mfa = AsyncMock(return_value=True)
+    test_entra_id_asset_connector.fetch_user_groups = AsyncMock(return_value=[])
+    test_entra_id_asset_connector.fetch_user_admin_roles = AsyncMock(return_value=False)
+    test_entra_id_asset_connector.map_fields = MagicMock(return_value=MagicMock())
+
+    # Act
+    await test_entra_id_asset_connector.fetch_user(mock_user)
+
+    # Assert: no sub-methods should be called when id is None
+    test_entra_id_asset_connector.fetch_user_mfa.assert_not_called()
+    test_entra_id_asset_connector.fetch_user_groups.assert_not_called()
+    test_entra_id_asset_connector.fetch_user_admin_roles.assert_not_called()
+    test_entra_id_asset_connector.map_fields.assert_called_once_with(mock_user, False, [], False)
+
+
+@pytest.mark.asyncio
+async def test_fetch_user_groups_empty_response(test_entra_id_asset_connector):
+    """Test that fetch_user_groups returns empty list when API response has no groups."""
+    # Arrange
+    user_id = "test-user-id"
+    mock_response = MagicMock()
+    mock_response.value = []
+    mock_response.odata_next_link = None
+    mock_client = mock_graph_service_client()
+    mock_client.users.by_user_id.return_value.member_of.get = AsyncMock(return_value=mock_response)
+    test_entra_id_asset_connector._client = mock_client
+
+    # Act
+    groups = await test_entra_id_asset_connector.fetch_user_groups(user_id)
+
+    # Assert
+    assert groups == []
+
+
+@pytest.mark.asyncio
+async def test_fetch_user_groups_filters_non_group_items(test_entra_id_asset_connector):
+    """Test that fetch_user_groups filters out non-Group items from the response."""
+    from msgraph.generated.models.group import Group
+
+    user_id = "test-user-id"
+    mock_group = MagicMock()
+    mock_group.__class__ = Group
+    mock_group.display_name = "Real Group"
+    mock_group.id = "group-id"
+
+    non_group_item = MagicMock()  # Not a Group instance
+
+    mock_response = MagicMock()
+    mock_response.value = [mock_group, non_group_item]
+    mock_response.odata_next_link = None
+    mock_client = mock_graph_service_client()
+    mock_client.users.by_user_id.return_value.member_of.get = AsyncMock(return_value=mock_response)
+    test_entra_id_asset_connector._client = mock_client
+
+    # Act
+    groups = await test_entra_id_asset_connector.fetch_user_groups(user_id)
+
+    # Assert: only the real Group should be returned
+    assert len(groups) == 1
+    assert groups[0].name == "Real Group"
+
+
+@pytest.mark.asyncio
+async def test_fetch_user_mfa_none_response(test_entra_id_asset_connector):
+    """Test that fetch_user_mfa returns False when API returns None."""
+    # Arrange
+    user_id = "test-user-id"
+    mock_client = mock_graph_service_client()
+    mock_client.users.by_user_id.return_value.authentication.methods.get = AsyncMock(return_value=None)
+    test_entra_id_asset_connector._client = mock_client
+
+    # Act
+    has_mfa = await test_entra_id_asset_connector.fetch_user_mfa(user_id)
+
+    # Assert
+    assert has_mfa is False
+
+
+@pytest.mark.asyncio
+async def test_fetch_new_users_empty_response(test_entra_id_asset_connector):
+    """Test that fetch_new_users yields nothing when API returns empty users list."""
+    # Arrange
+    mock_users_response = MagicMock()
+    mock_users_response.value = []
+    mock_users_response.odata_next_link = None
+    test_entra_id_asset_connector.client = mock_graph_service_client()
+    test_entra_id_asset_connector.client.users.get = AsyncMock(return_value=mock_users_response)
+
+    # Act
+    result = [user async for user in test_entra_id_asset_connector.fetch_new_users()]
+
+    # Assert
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_fetch_new_users_with_last_run_date(test_entra_id_asset_connector):
+    """Test that fetch_new_users passes last_run_date as filter parameter."""
+    from msgraph.generated.models.user import User
+
+    last_run_date = "2025-01-01T00:00:00+00:00"
+    mock_user = User(
+        id="user1",
+        user_principal_name="user1@example.com",
+        display_name="User One",
+        mail="user1@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+    )
+    mock_users_response = MagicMock()
+    mock_users_response.value = [mock_user]
+    mock_users_response.odata_next_link = None
+    test_entra_id_asset_connector.client = mock_graph_service_client()
+    test_entra_id_asset_connector.client.users.get = AsyncMock(return_value=mock_users_response)
+
+    mock_user_ocsf_model = MagicMock()
+    mock_user_ocsf_model.time = datetime.datetime.now().timestamp()
+    test_entra_id_asset_connector.fetch_user = AsyncMock(return_value=mock_user_ocsf_model)
+
+    # Act
+    result = [user async for user in test_entra_id_asset_connector.fetch_new_users(last_run_date=last_run_date)]
+
+    # Assert
+    assert len(result) == 1
+    call_kwargs = test_entra_id_asset_connector.client.users.get.call_args
+    config = call_kwargs.kwargs["request_configuration"]
+    assert config.query_parameters.filter == f"createdDateTime ge {last_run_date}"
+
+
+@pytest.mark.asyncio
+async def test_get_assets_calls_close_client_on_error(test_entra_id_asset_connector):
+    """Test that get_assets always calls close_client even when fetch_new_users raises."""
+
+    # Arrange
+    async def mock_fetch_new_users_error(last_run_date=None):
+        raise ValueError("Fetch error")
+        yield  # make it an async generator
+
+    test_entra_id_asset_connector.fetch_new_users = mock_fetch_new_users_error
+    test_entra_id_asset_connector.close_client = AsyncMock()
+
+    # Act & Assert
+    with pytest.raises(ValueError, match="Fetch error"):
+        async for _ in test_entra_id_asset_connector.get_assets():
+            pass
+
+    test_entra_id_asset_connector.close_client.assert_awaited_once()
 
 
 @pytest.mark.asyncio

@@ -7,11 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-05-22 - 1.22.1
+## 2026-05-22 - 1.23.1
 
 ### Changed
 
 - Add scalability labels to Prometheus metrics
+
+## 2026-03-20 - 1.23.0
+
+### Added
+
+- Add action to add hash to the Blocklist
+- Add action to remove hash from the Blocklist
+
+### Changed
+
+- Updated dependencies
+
+## 2026-04-10 - 1.22.1
+
+### Fixed
+
+- Fix field mappings in `device_mapping.yml` to align with the actual OCSF models
 
 ## 2026-03-12 - 1.22.0
 

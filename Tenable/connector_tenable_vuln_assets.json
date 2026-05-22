@@ -1,4 +1,4 @@
-{
+  {
   "name": "Tenable Vulnerabilities",
   "description": "Fetch tenable vulnerability asset",
   "uuid": "8e200af8-9e2b-4255-8487-786849ae6309",
@@ -24,10 +24,10 @@
         "type": "string"
       },
       "batch_size": {
-        "type": "integer",
-        "description": "Number of assets to fetch by batch",
-        "minimum": 1,
-        "default": 100
+          "type": "integer",
+          "description": "Number of assets to fetch by batch",
+          "minimum": 1,
+          "default": 50
       }
     },
     "required": [
@@ -47,4 +47,4 @@
     "scalable-horizontally": false,
     "scalable-vertically": false
   }
-}
+  }

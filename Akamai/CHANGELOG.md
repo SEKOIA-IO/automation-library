@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2026-05-22 - 1.0.1
+## 2026-05-22 - 1.0.2
 
 ### Changed
 
 - Add scalability labels to Prometheus metrics
+
+## 2026-04-16 - 1.0.1
+
+### Changed
+
+- Optimize Akamai WAF event fetching by streaming events in chunks instead of accumulating a full page in memory.
 
 ## 2026-01-07 - 1.0.0
 

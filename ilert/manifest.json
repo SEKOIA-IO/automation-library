@@ -1,0 +1,32 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "integration_key": {
+        "description": "The integration key of your ilert alert source",
+        "type": "string"
+      },
+      "integration_url": {
+        "description": "URL of the ilert Events API endpoint",
+        "type": "string",
+        "format": "uri"
+      }
+    },
+    "required": [
+      "integration_key"
+    ],
+    "secrets": [
+      "integration_key"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "ilert is an incident management platform. This module triggers alerts and manages incidents.",
+  "name": "ilert",
+  "uuid": "1cb62622-c4ee-4b5c-9e42-bd9845f25909",
+  "slug": "ilert",
+  "version": "1.0.0",
+  "categories": [
+    "Applicative"
+  ]
+}

@@ -39,10 +39,11 @@ def trigger(symphony_storage):
 
 
 def test_read_queue(trigger):
-    trigger.events_queue.put(("fake-stream-url", '{"metadata": {"offset": 10}, "foo": "bar"}'))
+    stream_root_url = "fake-stream-url"
+    trigger.events_queue.put((stream_root_url, '{"metadata": {"offset": 10}, "foo": "bar"}'))
 
     trigger.push_events_to_intakes = MagicMock()
-    t = EventForwarder(trigger)
+    t = EventForwarder(trigger, {stream_root_url})
     t.start()
 
     time.sleep(2)

@@ -30,19 +30,6 @@ class AkamaiWAFLogsConnector(Connector):
     module: AkamaiModule
     configuration: AkamaiWAFLogsConnectorConfiguration
 
-    PAGE_SIZE = 60_000  # default 1000, maximum 60000
-
-    @cached_property
-    def scalability_labels(self) -> dict[str, str]:
-        """Get scalability labels from module manifest."""
-        labels = self.module.manifest.get("labels", {})
-        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
-        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
-        return {
-            "scalable-horizontally": scalable_horizontally,
-            "scalable-vertically": scalable_vertically,
-        }
-
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
@@ -57,6 +44,13 @@ class AkamaiWAFLogsConnector(Connector):
         # This cache should be big enough to cover all events within 1 second.
         self.cache_size = 10_000
         self.events_cache: Cache = self.load_events_cache()
+
+        self.page_size = max(
+            1000, min(60_000, int(os.environ.get("AKAMAI_PAGE_SIZE", 60_000)))
+        )  # default 1000, maximum 60000
+        self.chunk_size = max(
+            1, min(1000, int(os.environ.get("AKAMAI_CHUNK_SIZE", 1_000)))
+        )  # number of events to accumulate before yielding to limit memory usage
 
     def load_events_cache(self) -> Cache:
         result: LRUCache = LRUCache(maxsize=self.cache_size)
@@ -81,6 +75,17 @@ class AkamaiWAFLogsConnector(Connector):
             access_token=self.module.configuration.access_token,
         )
 
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
     @staticmethod
     def extract_attack_data(event: dict[str, Any]) -> dict[str, Any]:
         attack_section = event["attackData"]
@@ -95,7 +100,7 @@ class AkamaiWAFLogsConnector(Connector):
             # Alternate field name converted from plural:
             member_as_singular = re.sub("s$", "", member)
             url_decoded = urllib.parse.unquote(attack_section[member])
-            member_array = [member for member in url_decoded.split(";")]
+            member_array = [item for item in url_decoded.split(";")]
             if not len(rules_array):
                 for i in range(len(member_array)):
                     rules_array.append({})
@@ -144,38 +149,51 @@ class AkamaiWAFLogsConnector(Connector):
     def __fetch_next_events(self, from_date: int) -> Generator[list, None, None]:
         url = f"{self.module.configuration.base_url}/siem/v1/configs/{self.configuration.config_id}"
         response = self.client.get(
-            url=url, params={"from": from_date, "limit": self.PAGE_SIZE}, timeout=60, stream=True
+            url=url, params={"from": from_date, "limit": self.page_size}, timeout=60, stream=True
         )
 
         while self.running:
             self.__handle_response_error(response)
 
-            page = []
+            chunk: list = []
             offset = None
+            events_in_page = 0
 
             for line in response.iter_lines():
                 if line:
                     item: dict = orjson.loads(line)
                     if item.get("type") == "akamai_siem":
                         self.process_event(item)
-                        page.append(item)
+                        chunk.append(item)
+                        events_in_page += 1
+
+                        if len(chunk) >= self.chunk_size:
+                            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
+                            yield chunk
+                            chunk = []
 
                     else:
                         offset = item["offset"]
                         # response context - last JSON line
-                        if len(page) > 0:
-                            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(page))
-                            yield page
+                        if events_in_page > 0:
+                            # Yield remaining events that didn't fill a full chunk
+                            if chunk:
+                                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
+                                yield chunk
+                                chunk = []
 
                         else:
                             EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
                             return
 
             if offset is None:
+                if chunk:
+                    INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(chunk))
+                    yield chunk
                 return
 
             response = self.client.get(
-                url=url, params={"offset": offset, "limit": self.PAGE_SIZE}, timeout=60, stream=True
+                url=url, params={"offset": offset, "limit": self.page_size}, timeout=60, stream=True
             )
 
     def fetch_events(self) -> Generator[list, None, None]:
@@ -277,7 +295,7 @@ class AkamaiWAFLogsConnector(Connector):
             self.log(f"Next batch in the future. Waiting {delta_sleep} seconds", level="debug")
             time.sleep(delta_sleep)
 
-    def run(self):
+    def run(self):  # pragma: no cover
         self.log(message="Start fetching Akamai WAF system logs", level="info")
 
         while self.running:

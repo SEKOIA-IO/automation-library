@@ -79,4 +79,7 @@ dmypy.json
 .vscode/
 */.devcontainer/*
 */test_end_to_end*
-*/.github/skills/*
+
+# Specific
+.reviews/
+*/.github/*

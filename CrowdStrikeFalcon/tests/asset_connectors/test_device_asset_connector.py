@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import Mock
 
+from crowdstrike_falcon.asset_connectors.crowdstrike_device_model import CrowdStrikeDevice, PolicyEntry
 from crowdstrike_falcon.asset_connectors.device_assets import CrowdstrikeDeviceAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeId,
@@ -46,25 +47,45 @@ def connector():
     "device_data,expected_name,expected_type,expected_type_id",
     [
         (
-            {"platform_name": "Windows", "os_version": "Windows 11 Pro"},
+            CrowdStrikeDevice(platform_name="Windows", os_version="Windows 11 Pro"),
             "Windows 11 Pro",
             OSTypeStr.WINDOWS,
             OSTypeId.WINDOWS,
         ),
-        ({"platform_name": "Linux", "os_version": "Ubuntu 22.04"}, "Ubuntu 22.04", OSTypeStr.LINUX, OSTypeId.LINUX),
-        ({"platform_name": "Mac", "os_version": "macOS Ventura"}, "macOS Ventura", OSTypeStr.MACOS, OSTypeId.MACOS),
-        ({"platform_name": "macOS", "os_version": "macOS Sonoma"}, "macOS Sonoma", OSTypeStr.MACOS, OSTypeId.MACOS),
-        ({"platform_name": "iOS", "os_version": "iOS 17"}, "iOS 17", OSTypeStr.IOS, OSTypeId.IOS),
-        ({"platform_name": "Android", "os_version": "Android 14"}, "Android 14", OSTypeStr.ANDROID, OSTypeId.ANDROID),
-        ({"platform_name": "Windows"}, "Windows", OSTypeStr.WINDOWS, OSTypeId.WINDOWS),
         (
-            {"platform_name": "CustomOS", "os_version": "CustomOS 1.0"},
+            CrowdStrikeDevice(platform_name="Linux", os_version="Ubuntu 22.04"),
+            "Ubuntu 22.04",
+            OSTypeStr.LINUX,
+            OSTypeId.LINUX,
+        ),
+        (
+            CrowdStrikeDevice(platform_name="Mac", os_version="macOS Ventura"),
+            "macOS Ventura",
+            OSTypeStr.MACOS,
+            OSTypeId.MACOS,
+        ),
+        (
+            CrowdStrikeDevice(platform_name="macOS", os_version="macOS Sonoma"),
+            "macOS Sonoma",
+            OSTypeStr.MACOS,
+            OSTypeId.MACOS,
+        ),
+        (CrowdStrikeDevice(platform_name="iOS", os_version="iOS 17"), "iOS 17", OSTypeStr.IOS, OSTypeId.IOS),
+        (
+            CrowdStrikeDevice(platform_name="Android", os_version="Android 14"),
+            "Android 14",
+            OSTypeStr.ANDROID,
+            OSTypeId.ANDROID,
+        ),
+        (CrowdStrikeDevice(platform_name="Windows"), "Windows", OSTypeStr.WINDOWS, OSTypeId.WINDOWS),
+        (
+            CrowdStrikeDevice(platform_name="CustomOS", os_version="CustomOS 1.0"),
             "CustomOS 1.0",
             OSTypeStr.UNKNOWN,
             OSTypeId.UNKNOWN,
         ),
-        ({"os_version": "Unknown OS"}, "Unknown OS", OSTypeStr.UNKNOWN, OSTypeId.UNKNOWN),
-        ({}, "Unknown", OSTypeStr.UNKNOWN, OSTypeId.UNKNOWN),
+        (CrowdStrikeDevice(os_version="Unknown OS"), "Unknown OS", OSTypeStr.UNKNOWN, OSTypeId.UNKNOWN),
+        (CrowdStrikeDevice(), "Unknown", OSTypeStr.UNKNOWN, OSTypeId.UNKNOWN),
     ],
 )
 def test_device_os_detection(device_data, expected_name, expected_type, expected_type_id, connector):
@@ -77,17 +98,17 @@ def test_device_os_detection(device_data, expected_name, expected_type, expected
 @pytest.mark.parametrize(
     "device_data,expected_type_id,expected_type_str",
     [
-        ({"product_type_desc": "Desktop"}, DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP),
-        ({"product_type_desc": "Workstation"}, DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP),
-        ({"product_type_desc": "Laptop"}, DeviceTypeId.LAPTOP, DeviceTypeStr.LAPTOP),
-        ({"product_type_desc": "Server"}, DeviceTypeId.SERVER, DeviceTypeStr.SERVER),
-        ({"product_type_desc": "Mobile"}, DeviceTypeId.MOBILE, DeviceTypeStr.MOBILE),
-        ({"product_type_desc": "Phone"}, DeviceTypeId.MOBILE, DeviceTypeStr.MOBILE),
-        ({"product_type_desc": "Tablet"}, DeviceTypeId.TABLET, DeviceTypeStr.TABLET),
-        ({"product_type_desc": "Virtual"}, DeviceTypeId.VIRTUAL, DeviceTypeStr.VIRTUAL),
-        ({"product_type_desc": "Appliance"}, DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN),
-        ({"product_type_desc": ""}, DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN),
-        ({}, DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN),
+        (CrowdStrikeDevice(product_type_desc="Desktop"), DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP),
+        (CrowdStrikeDevice(product_type_desc="Workstation"), DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP),
+        (CrowdStrikeDevice(product_type_desc="Laptop"), DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP),
+        (CrowdStrikeDevice(product_type_desc="Server"), DeviceTypeId.SERVER, DeviceTypeStr.SERVER),
+        (CrowdStrikeDevice(product_type_desc="Mobile"), DeviceTypeId.MOBILE, DeviceTypeStr.MOBILE),
+        (CrowdStrikeDevice(product_type_desc="Phone"), DeviceTypeId.MOBILE, DeviceTypeStr.MOBILE),
+        (CrowdStrikeDevice(product_type_desc="Tablet"), DeviceTypeId.MOBILE, DeviceTypeStr.MOBILE),
+        (CrowdStrikeDevice(product_type_desc="Virtual"), DeviceTypeId.VIRTUAL, DeviceTypeStr.VIRTUAL),
+        (CrowdStrikeDevice(product_type_desc="Appliance"), DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN),
+        (CrowdStrikeDevice(product_type_desc=""), DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN),
+        (CrowdStrikeDevice(), DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN),
     ],
 )
 def test_device_type_mapping(device_data, expected_type_id, expected_type_str, connector):
@@ -97,32 +118,32 @@ def test_device_type_mapping(device_data, expected_type_id, expected_type_str, c
 
 
 def test_get_firewall_status_enabled(connector):
-    device = {"device_policies": {"firewall": {"applied": True}}}
+    device = CrowdStrikeDevice(device_policies={"firewall": PolicyEntry(applied=True)})
     status = connector.get_firewall_status(device)
     assert status == "Enabled"
 
 
 def test_get_firewall_status_disabled(connector):
-    device = {"device_policies": {"firewall": {"applied": False}}}
+    device = CrowdStrikeDevice(device_policies={"firewall": PolicyEntry(applied=False)})
     status = connector.get_firewall_status(device)
     assert status == "Disabled"
 
 
 def test_get_firewall_status_missing(connector):
-    device = {"device_policies": {}}
+    device = CrowdStrikeDevice()
     status = connector.get_firewall_status(device)
     assert status == "Disabled"
 
 
 def test_map_device_fields_firewall_enabled(connector):
-    device = {
-        "device_id": "dev1",
-        "hostname": "host1",
-        "platform_name": "Windows",
-        "os_version": "Windows 10",
-        "product_type_desc": "Desktop",
-        "device_policies": {"firewall": {"applied": True}},
-    }
+    device = CrowdStrikeDevice(
+        device_id="dev1",
+        hostname="host1",
+        platform_name="Windows",
+        os_version="Windows 10",
+        product_type_desc="Desktop",
+        device_policies={"firewall": PolicyEntry(applied=True)},
+    )
     model = connector.map_device_fields(device)
     assert model.device.uid == "dev1"
     assert model.device.os.type_id == OSTypeId.WINDOWS
@@ -131,13 +152,13 @@ def test_map_device_fields_firewall_enabled(connector):
 
 
 def test_map_device_fields_firewall_disabled_and_unknown_type(connector):
-    device = {
-        "device_id": "dev2",
-        "hostname": "host2",
-        "platform_name": "AlienOS",
-        "product_type_desc": "Blender",
-        "device_policies": {"firewall": {"applied": False}},
-    }
+    device = CrowdStrikeDevice(
+        device_id="dev2",
+        hostname="host2",
+        platform_name="AlienOS",
+        product_type_desc="Blender",
+        device_policies={"firewall": PolicyEntry(applied=False)},
+    )
     model = connector.map_device_fields(device)
     assert model.device.os.type_id == OSTypeId.UNKNOWN
     assert model.device.type_id == DeviceTypeId.UNKNOWN
@@ -180,7 +201,7 @@ def test_next_devices_batches_and_stops_on_checkpoint(connector):
     client.get_devices_infos.side_effect = get_infos
     connector.client = client
     collected = list(connector.next_devices())
-    assert [d["device_id"] for d in collected] == ["u5", "u4"]
+    assert [d.device_id for d in collected] == ["u5", "u4"]
     client.get_devices_infos.assert_called_once_with(["u5", "u4"])
     assert connector._latest_id == "u5"
 
@@ -196,7 +217,7 @@ def test_next_devices_multiple_batches_and_flush_last(connector):
     client.get_devices_infos.side_effect = get_infos
     connector.client = client
     collected = list(connector.next_devices())
-    assert [d["device_id"] for d in collected] == ["u5", "u4", "u3"]
+    assert [d.device_id for d in collected] == ["u5", "u4", "u3"]
     assert client.get_devices_infos.call_count == 2
     client.get_devices_infos.assert_any_call(["u5", "u4"])
     client.get_devices_infos.assert_any_call(["u3"])
@@ -205,20 +226,20 @@ def test_next_devices_multiple_batches_and_flush_last(connector):
 
 def test_get_assets_yields_mapped_models(monkeypatch, connector):
     sample_devices = [
-        {
-            "device_id": "d1",
-            "hostname": "h1",
-            "platform_name": "Linux",
-            "product_type_desc": "Server",
-            "device_policies": {"firewall": {"applied": True}},
-        },
-        {
-            "device_id": "d2",
-            "hostname": "h2",
-            "platform_name": "Mac",
-            "product_type_desc": "Laptop",
-            "device_policies": {"firewall": {"applied": False}},
-        },
+        CrowdStrikeDevice(
+            device_id="d1",
+            hostname="h1",
+            platform_name="Linux",
+            product_type_desc="Server",
+            device_policies={"firewall": PolicyEntry(applied=True)},
+        ),
+        CrowdStrikeDevice(
+            device_id="d2",
+            hostname="h2",
+            platform_name="Mac",
+            product_type_desc="Laptop",
+            device_policies={"firewall": PolicyEntry(applied=False)},
+        ),
     ]
     monkeypatch.setattr(connector, "next_devices", lambda: iter(sample_devices))
     results = list(connector.get_assets())
@@ -260,12 +281,12 @@ def test_normalize_mac_address(mac, expected, connector):
 
 
 def test_get_network_interfaces(connector):
-    device = {
-        "local_ip": "192.168.1.10",
-        "mac_address": "00-1a-2b-3c-4d-5e",
-        "hostname": "host1",
-        "connection_ip": "10.0.0.1",
-    }
+    device = CrowdStrikeDevice(
+        local_ip="192.168.1.10",
+        mac_address="00-1a-2b-3c-4d-5e",
+        hostname="host1",
+        connection_ip="10.0.0.1",
+    )
     interfaces = connector.get_network_interfaces(device)
     assert len(interfaces) == 2
     assert interfaces[0].ip == "192.168.1.10"
@@ -273,19 +294,19 @@ def test_get_network_interfaces(connector):
 
 
 def test_get_organization(connector):
-    device = {"cid": "org-123", "service_provider": "Acme Corp"}
+    device = CrowdStrikeDevice(cid="org-123", service_provider="Acme Corp")
     org = connector.get_organization(device)
     assert org.uid == "org-123"
     assert org.name == "Acme Corp"
 
 
 def test_get_organization_missing_cid(connector):
-    device = {"service_provider": "Acme Corp"}
+    device = CrowdStrikeDevice(service_provider="Acme Corp")
     assert connector.get_organization(device) is None
 
 
 def test_get_groups(connector):
-    device = {"groups": ["group1", "group2"]}
+    device = CrowdStrikeDevice(groups=["group1", "group2"])
 
     mock_client = Mock()
     mock_client.get_host_groups.return_value = [
@@ -305,7 +326,7 @@ def test_get_groups(connector):
 
 
 def test_get_groups_api_failure_fallback(connector):
-    device = {"groups": ["group1"]}
+    device = CrowdStrikeDevice(groups=["group1"])
 
     mock_client = Mock()
     mock_client.get_host_groups.side_effect = Exception("API error")
@@ -319,13 +340,15 @@ def test_get_groups_api_failure_fallback(connector):
 
 
 def test_is_device_compliant(connector):
-    compliant = {"status": "normal", "reduced_functionality_mode": "no", "filesystem_containment_status": "normal"}
-    non_compliant = {
-        "status": "contained",
-        "reduced_functionality_mode": "yes",
-        "filesystem_containment_status": "contained",
-    }
+    compliant = CrowdStrikeDevice(
+        status="normal", reduced_functionality_mode="no", filesystem_containment_status="normal"
+    )
+    non_compliant = CrowdStrikeDevice(
+        status="contained",
+        reduced_functionality_mode="yes",
+        filesystem_containment_status="contained",
+    )
 
     assert connector.is_device_compliant(compliant) is True
     assert connector.is_device_compliant(non_compliant) is False
-    assert connector.is_device_compliant({}) is None
+    assert connector.is_device_compliant(CrowdStrikeDevice()) is None

@@ -7,11 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-05-22 - 1.1.8
+## 2026-05-22 - 1.1.10
 
 ### Changed
 
 - Add scalability labels to Prometheus metrics
+
+## 2026-05-04 - 1.1.9
+
+### Fixed
+
+- manifest with OIDC fields
+
+## 2026-05-04 - 1.1.8
+
+### Changed
+
+- Change the default message visibility timeout to 5 minutes
 
 ## 2026-02-18 - 1.1.7
 

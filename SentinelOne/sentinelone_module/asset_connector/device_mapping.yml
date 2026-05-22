@@ -103,274 +103,6 @@ mapping:
         }
 
   fields:
-    # DEVICE IDENTIFICATION
-    - source: "uuid"
-      target: "device.uid"
-      type: "string"
-      logic: "Primary unique identifier; falls back to id when uuid is absent"
-      description: "SentinelOne device UUID (primary unique identifier)"
-
-    - source: "id"
-      target: "device.uid_alt"
-      type: "string"
-      logic: "Set as alternate UID when uuid is used as primary uid"
-      description: "SentinelOne numeric device ID (alternate unique identifier)"
-
-    - source: "externalId"
-      target: "device.eid"
-      type: "string"
-      logic: "Direct mapping of external/third-party identifier"
-      description: "External identifier for the device"
-
-    - source: "name"
-      target: "device.name"
-      type: "string"
-      logic: "Direct mapping of device name"
-      description: "Device display name"
-
-    - source: "computerName"
-      target: "device.hostname"
-      type: "string"
-      logic: "Direct mapping of computer name"
-      description: "Device hostname"
-
-    - source: "domain"
-      target: "device.domain"
-      type: "string"
-      logic: "Direct mapping of domain"
-      description: "Network domain name"
-
-    - source: "accountName / accountId"
-      target: "device.org"
-      type: "object"
-      logic: "Build Organization(name=accountName or accountId, uid=accountId) when either field is present"
-      description: "SentinelOne account mapped as the device's organization"
-
-    # OPERATING SYSTEM INFORMATION
-    - source: "osType"
-      target: "device.os.name"
-      type: "string"
-      logic: "Direct mapping of OS type (windows, linux, macos)"
-      description: "Operating system type"
-
-    - source: "osType"
-      target: "device.os.type"
-      type: "string"
-      logic: "Map osType to OCSF OS type enum (Windows, AppleOS, Linux)"
-      description: "Operating system type enumeration"
-
-    - source: "osVersion"
-      target: "device.os.version"
-      type: "string"
-      logic: "Direct mapping of OS version"
-      description: "Operating system version"
-
-    - source: "osRevision"
-      target: "device.os.build"
-      type: "string"
-      logic: "Direct mapping of OS revision/build number"
-      description: "Operating system build/revision number"
-
-    # DEVICE HARDWARE INFORMATION
-    - source: "serialNumber"
-      target: "device.serial_number"
-      type: "string"
-      logic: "Direct mapping of device serial number"
-      description: "Device serial number"
-
-    - source: "manufacturer"
-      target: "device.manufacturer"
-      type: "string"
-      logic: "Direct mapping of device manufacturer"
-      description: "Device manufacturer"
-
-    - source: "modelName"
-      target: "device.model"
-      type: "string"
-      logic: "Direct mapping of device model"
-      description: "Device model name"
-
-    - source: "processorCount"
-      target: "device.cpu_count"
-      type: "integer"
-      logic: "Direct mapping of processor count"
-      description: "Number of processors"
-
-    - source: "coreCount"
-      target: "device.core_count"
-      type: "integer"
-      logic: "Direct mapping of core count"
-      description: "Number of CPU cores"
-
-    - source: "memorySize"
-      target: "device.memory_size"
-      type: "integer"
-      logic: "Direct mapping of memory size in MB"
-      description: "Total memory size in megabytes"
-
-    # NETWORK INFORMATION
-    - source: "ipv4Addresses | first"
-      target: "device.ip"
-      type: "string"
-      logic: "Extract first IPv4 address"
-      description: "Primary IPv4 address"
-
-    - source: "ipv4Addresses"
-      target: "device.ipv4_addresses"
-      type: "array[string]"
-      logic: "Direct mapping of all IPv4 addresses"
-      description: "All IPv4 addresses associated with device"
-
-    - source: "ipv6Addresses"
-      target: "device.ipv6_addresses"
-      type: "array[string]"
-      logic: "Direct mapping of all IPv6 addresses"
-      description: "All IPv6 addresses associated with device"
-
-    - source: "macAddresses | first"
-      target: "device.mac_address"
-      type: "string"
-      logic: "Extract first MAC address"
-      description: "Primary MAC address"
-
-    - source: "macAddresses"
-      target: "device.mac_addresses"
-      type: "array[string]"
-      logic: "Direct mapping of all MAC addresses"
-      description: "All MAC addresses associated with device"
-
-    # DEVICE TYPE & STATUS
-    - source: "machineType"
-      target: "device.type / device.type_id"
-      type: "string / integer"
-      logic: |
-        Mapped to OCSF DeviceTypeStr / DeviceTypeId enums:
-        desktop → Desktop (2), laptop → Desktop (2),
-        server → Server (1),
-        tablet → Mobile (5), mobile → Mobile (5),
-        virtual → Virtual (6), other/unknown → Other (99)
-      description: "Device type enum; laptop remaps to Desktop, tablet remaps to Mobile"
-
-    - source: "isActive"
-      target: "device.is_enabled"
-      type: "boolean"
-      logic: "Direct mapping of active status"
-      description: "Whether device is active in SentinelOne"
-
-    - source: "isOnline"
-      target: "device.is_online"
-      type: "boolean"
-      logic: "Direct mapping of online status"
-      description: "Whether device is currently online"
-
-    - source: "agentStatus"
-      target: "device.agent_status"
-      type: "string"
-      logic: "Direct mapping of agent status (active, inactive, uninstalled)"
-      description: "SentinelOne agent status"
-
-    - source: "agentVersion"
-      target: "device.agent_version"
-      type: "string"
-      logic: "Direct mapping of agent version"
-      description: "SentinelOne agent version"
-
-    # DEVICE SECURITY & COMPLIANCE
-    - source: "threatLevel"
-      target: "device.threat_level"
-      type: "string"
-      logic: "Direct mapping of threat level (good, suspicious, bad, unknown)"
-      description: "Device threat level"
-
-    - source: "threatCount"
-      target: "device.threat_count"
-      type: "integer"
-      logic: "Direct mapping of threat count"
-      description: "Number of threats detected on device"
-
-    - source: "lastIncidentDate"
-      target: "device.last_incident_time"
-      type: "integer"
-      logic: "Convert ISO 8601 to Unix epoch; null if no incidents"
-      description: "Last incident timestamp (Unix epoch)"
-
-    - source: "encryptionEnabled"
-      target: "device.is_encrypted"
-      type: "boolean"
-      logic: "Direct mapping of encryption status"
-      description: "Whether disk encryption is enabled"
-
-    - source: "isFirewallEnabled"
-      target: "device.is_firewall_enabled"
-      type: "boolean"
-      logic: "Direct mapping of firewall status"
-      description: "Whether firewall is enabled"
-
-    - source: "isTamperProtectionEnabled"
-      target: "device.is_tamper_protected"
-      type: "boolean"
-      logic: "Direct mapping of tamper protection status"
-      description: "Whether tamper protection is enabled"
-
-    # RISK LEVEL (derived)
-    - source: "infected + activeThreats"
-      target: "device.risk_level / device.risk_level_id"
-      type: "string / integer"
-      logic: |
-        Derived: infected=True → Critical (4);
-        activeThreats > 0 → High (3); otherwise → Info (0)
-      description: "Risk level derived from infection state and active threat count"
-
-    - source: "activeThreats"
-      target: "device.risk_score"
-      type: "integer"
-      logic: "Direct mapping of active threat count as raw risk score"
-      description: "Raw risk score (number of active threats)"
-
-    # USER ASSOCIATION
-    - source: "userId"
-      target: "device.user_uid"
-      type: "string"
-      logic: "Direct mapping of associated user ID; null if not applicable"
-      description: "Associated user ID"
-
-    - source: "userName"
-      target: "device.user_name"
-      type: "string"
-      logic: "Direct mapping of associated user name"
-      description: "Associated user name"
-
-    - source: "userFullName"
-      target: "device.user_full_name"
-      type: "string"
-      logic: "Direct mapping of associated user full name"
-      description: "Associated user full name"
-
-    # TEMPORAL INFORMATION
-    - source: "createdDate"
-      target: "device.created_time"
-      type: "integer"
-      logic: "Convert ISO 8601 to Unix epoch"
-      description: "Device creation timestamp (Unix epoch)"
-
-    - source: "updatedDate"
-      target: "device.updated_time"
-      type: "integer"
-      logic: "Convert ISO 8601 to Unix epoch"
-      description: "Last updated timestamp (Unix epoch)"
-
-    - source: "lastActiveDate"
-      target: "device.last_seen_time"
-      type: "integer"
-      logic: "Convert ISO 8601 to Unix epoch; null if never active"
-      description: "Last active timestamp (Unix epoch)"
-
-    - source: "createdDate"
-      target: "time"
-      type: "integer"
-      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp"
-      description: "OCSF event timestamp (device discovery time)"
-
     # OCSF EVENT CLASSIFICATION
     - source: "static: 2"
       target: "activity_id"
@@ -408,16 +140,16 @@ mapping:
       logic: "Always 5001 for Device Inventory Info"
       description: "OCSF class UID"
 
-    - source: "computed: 500100 + activity_id"
+    - source: "static: 500102"
       target: "type_uid"
       type: "integer"
-      logic: "Base 500100 + activity_id (2 = 500102)"
+      logic: "Always 500102 for Device Inventory Info: Collect"
       description: "OCSF type UID"
 
-    - source: "computed: class_name + ': ' + activity_name"
+    - source: "static: Device Inventory Info: Collect"
       target: "type_name"
       type: "string"
-      logic: "Concatenate 'Device Inventory Info: Collect'"
+      logic: "Always 'Device Inventory Info: Collect'"
       description: "OCSF type name"
 
     - source: "static: Informational"
@@ -432,6 +164,13 @@ mapping:
       logic: "Always 1 for Informational severity"
       description: "OCSF severity ID"
 
+    # TIMESTAMP
+    - source: "createdAt"
+      target: "time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp"
+      description: "OCSF event timestamp (device creation time)"
+
     # METADATA
     - source: "static: SentinelOne"
       target: "metadata.product.name"
@@ -439,48 +178,287 @@ mapping:
       logic: "Always 'SentinelOne'"
       description: "Source product name"
 
+    - source: "static: SentinelOne"
+      target: "metadata.product.vendor_name"
+      type: "string"
+      logic: "Always 'SentinelOne'"
+      description: "Source product vendor name"
+
+    - source: "agentVersion"
+      target: "metadata.product.version"
+      type: "string"
+      logic: "Direct mapping of agent version; fallback to 'N/A' if absent"
+      description: "SentinelOne agent version stored in metadata.product.version"
+
     - source: "static: 1.6.0"
       target: "metadata.version"
       type: "string"
       logic: "Fixed OCSF schema version"
       description: "OCSF schema version"
 
-    # OCSF ENRICHMENTS
-    - source: "firewallEnabled"
-      target: "enrichments[Firewall]"
-      type: "object"
-      logic: "Present when firewallEnabled is not null; Firewall_status set to 'Enabled' or 'Disabled'"
-      description: "Firewall status enrichment (DeviceDataObject.Firewall_status)"
+    # DEVICE IDENTIFICATION
+    # NOTE: uuid is the primary UID when available; id is used as uid_alt in that case.
+    - source: "uuid || id"
+      target: "device.uid"
+      type: "string"
+      logic: "Use uuid as primary UID if present, otherwise fall back to id"
+      description: "Device unique identifier (UUID preferred, id as fallback)"
+
+    - source: "id"
+      target: "device.uid_alt"
+      type: "string"
+      logic: "Set to id only when uuid is used as primary uid; null otherwise"
+      description: "Alternate device identifier (SentinelOne agent id)"
+
+    - source: "externalId"
+      target: "device.eid"
+      type: "string"
+      logic: "Direct mapping of external/third-party identifier"
+      description: "External identifier for the device"
+
+    - source: "computerName"
+      target: "device.hostname"
+      type: "string"
+      logic: "Direct mapping of computer name"
+      description: "Device hostname"
+
+    - source: "computerName"
+      target: "device.name"
+      type: "string"
+      logic: "Direct mapping of computer name"
+      description: "Device name"
 
     - source: "domain"
-      target: "enrichments[Domain]"
-      type: "object"
-      logic: "Present when domain is not null; Full_qualified_domain_name set to domain value"
-      description: "Domain enrichment (DeviceDataObject.Full_qualified_domain_name)"
+      target: "device.domain"
+      type: "string"
+      logic: "Direct mapping of domain"
+      description: "Network domain name"
 
-    - source: "lastLoggedInUserName + osUsername"
-      target: "enrichments[Users]"
-      type: "object"
-      logic: "Present when at least one user field is not null; Users list contains unique non-null values"
-      description: "User association enrichment (DeviceDataObject.Users)"
+    # DEVICE TYPE
+    # NOTE: type/type_id are derived from machineType using get_device_type() mapping.
+    - source: "machineType"
+      target: "device.type"
+      type: "string"
+      logic: "Map machineType to DeviceTypeStr: 'desktop'->Desktop, 'laptop'->Laptop, 'server'->Server, 'tablet'->Tablet, 'mobile'->Mobile, 'virtual'->Virtual, else->Other"
+      description: "Device type (DeviceTypeStr)"
+
+    - source: "machineType"
+      target: "device.type_id"
+      type: "integer"
+      logic: "Map machineType to DeviceTypeId: Desktop=2, Laptop=3, Server=1, Tablet=4, Mobile=5, Virtual=6, Other=99"
+      description: "OCSF device type ID (DeviceTypeId)"
+
+    # OPERATING SYSTEM
+    # NOTE: OperatingSystem model has only name, type, type_id — no version or build fields.
+    # os.name is a combined string built from osName + osRevision.
+    - source: "osName + ' ' + osRevision"
+      target: "device.os.name"
+      type: "string"
+      logic: "Combine osName and osRevision into display string; fallback chain: osName only, osRevision only, osType, 'Unknown'"
+      description: "Operating system display name (combined from osName and osRevision)"
+
+    - source: "osType"
+      target: "device.os.type"
+      type: "string"
+      logic: "Map osType to OSTypeStr: 'windows'->windows, 'macos'->macos, 'linux'->linux, 'ios'->ios, 'android'->android, else->other"
+      description: "Operating system type (OSTypeStr)"
+
+    - source: "osType"
+      target: "device.os.type_id"
+      type: "integer"
+      logic: "Map osType to OSTypeId: Windows=100, macOS=300, Linux=200, iOS=301, Android=201, Other=99"
+      description: "OCSF operating system type ID (OSTypeId)"
+
+    # NETWORK
+    - source: "externalIp"
+      target: "device.ip"
+      type: "string"
+      logic: "Direct mapping of external IP address"
+      description: "Primary device IP (external IP from SentinelOne)"
+
+    - source: "groupIp"
+      target: "device.subnet"
+      type: "string"
+      logic: "Direct mapping of group IP range as subnet reference (e.g., '31.155.5.x')"
+      description: "Network subnet/range (Device.subnet)"
+
+    - source: "networkInterfaces"
+      target: "device.network_interfaces"
+      type: "array[object]"
+      logic: "Map each NetworkInterface: name=name, mac=physical, ip=inet[0] if inet exists, uid=id"
+      description: "Network interfaces (NetworkInterface objects)"
+
+    # DEVICE HARDWARE
+    - source: "modelName"
+      target: "device.model"
+      type: "string"
+      logic: "Direct mapping of device model name"
+      description: "Device model name"
+
+    - source: "modelName"
+      target: "device.vendor_name"
+      type: "string"
+      logic: "Direct mapping of modelName as vendor_name (Device.vendor_name)"
+      description: "Device vendor name (mapped from modelName)"
+
+    # DEVICE TIMESTAMPS
+    - source: "createdAt"
+      target: "device.created_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "Device creation timestamp (Unix epoch)"
+
+    - source: "registeredAt"
+      target: "device.first_seen_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch; null if absent"
+      description: "Device first seen timestamp from registeredAt (Unix epoch)"
+
+    - source: "lastActiveDate"
+      target: "device.last_seen_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch; null if never active"
+      description: "Device last active timestamp (Unix epoch)"
+
+    - source: "osStartTime"
+      target: "device.boot_time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch; null if absent"
+      description: "Device boot time from osStartTime (Unix epoch)"
+
+    # DEVICE STATUS & COMPLIANCE
+    - source: "static: True"
+      target: "device.is_managed"
+      type: "boolean"
+      logic: "Always true — SentinelOne agents are managed by definition"
+      description: "Whether device is under active management"
 
     - source: "isUpToDate"
-      target: "enrichments[Update Status]"
+      target: "device.is_compliant"
+      type: "boolean"
+      logic: "Direct mapping of isUpToDate as compliance status; null if absent"
+      description: "Whether device agent is up to date (compliance proxy)"
+
+    - source: "siteName"
+      target: "device.region"
+      type: "string"
+      logic: "Direct mapping of site name as region"
+      description: "Device region (mapped from siteName)"
+
+    # GROUPS & LOCATION
+    - source: "groupName"
+      target: "device.groups[].name"
+      type: "string"
+      logic: "Create a single Group with name=groupName; omit if both groupName and groupId are absent"
+      description: "Device group name (Group.name)"
+
+    - source: "groupId || groupName"
+      target: "device.groups[].uid"
+      type: "string"
+      logic: "Use groupId as uid; fallback to groupName if groupId absent"
+      description: "Device group UID (Group.uid)"
+
+    - source: "locations[0].name"
+      target: "device.location.city"
+      type: "string"
+      logic: "Use first location name as GeoLocation.city; null if locations list is absent or empty"
+      description: "Device location city (GeoLocation.city from locations[0].name)"
+
+    - source: "accountName / accountId"
+      target: "device.org"
       type: "object"
-      logic: "Present when isUpToDate is not null; value is 'Up to Date' or 'Update Required'"
-      description: "Agent update status enrichment"
+      logic: "Build Organization(name=accountName or accountId, uid=accountId) when either field is present"
+      description: "SentinelOne account mapped as the device's organization"
+
+    # RISK LEVEL (derived)
+    - source: "infected + activeThreats"
+      target: "device.risk_level / device.risk_level_id"
+      type: "string / integer"
+      logic: |
+        Derived: infected=True → Critical (4);
+        activeThreats > 0 → High (3); otherwise → Info (0)
+      description: "Risk level derived from infection state and active threat count"
 
     - source: "activeThreats"
-      target: "enrichments[Active Threats]"
-      type: "object"
-      logic: "Present when activeThreats is not null; value is the string representation of the count"
-      description: "Active threat count enrichment"
+      target: "device.risk_score"
+      type: "integer"
+      logic: "Direct mapping of active threat count as raw risk score"
+      description: "Raw risk score (number of active threats)"
+
+    # OCSF ENRICHMENT
+    # NOTE: The code creates up to 5 separate DeviceEnrichmentObject entries depending on data availability.
+    # DeviceDataObject model fields: Firewall_status (Literal["Disabled","Enabled"]), Users (list[str]).
+    - source: "static: Firewall"
+      target: "enrichments[0].name"
+      type: "string"
+      logic: "Always 'Firewall' for firewall enrichment; only created if firewallEnabled is not null"
+      description: "Firewall enrichment name"
+
+    - source: "firewallEnabled"
+      target: "enrichments[0].value"
+      type: "string"
+      logic: "'Enabled' if firewallEnabled is true, 'Disabled' if false"
+      description: "Firewall status string value"
+
+    - source: "firewallEnabled"
+      target: "enrichments[0].data.Firewall_status"
+      type: "string"
+      logic: "'Enabled' if firewallEnabled is true, 'Disabled' if false (DeviceDataObject.Firewall_status)"
+      description: "Firewall status in enrichment data (DeviceDataObject.Firewall_status)"
+
+    - source: "static: Users"
+      target: "enrichments[1].name"
+      type: "string"
+      logic: "Always 'Users'; only created if lastLoggedInUserName or osUsername is present"
+      description: "Users enrichment name"
+
+    - source: "lastLoggedInUserName + osUsername"
+      target: "enrichments[1].value"
+      type: "string"
+      logic: "Comma-joined list of lastLoggedInUserName and osUsername (deduplicated)"
+      description: "Users enrichment value (comma-joined user list)"
+
+    - source: "lastLoggedInUserName + osUsername"
+      target: "enrichments[1].data.Users"
+      type: "array[string]"
+      logic: "Deduplicated list of [lastLoggedInUserName, osUsername] (DeviceDataObject.Users)"
+      description: "User list in enrichment data (DeviceDataObject.Users)"
+
+    - source: "static: Update Status"
+      target: "enrichments[2].name"
+      type: "string"
+      logic: "Always 'Update Status'; only created if isUpToDate is not null"
+      description: "Update status enrichment name"
+
+    - source: "isUpToDate"
+      target: "enrichments[2].value"
+      type: "string"
+      logic: "'Up to Date' if isUpToDate is true, 'Update Required' if false"
+      description: "Update status value"
+
+    - source: "static: Active Threats"
+      target: "enrichments[3].name"
+      type: "string"
+      logic: "Always 'Active Threats'; only created if activeThreats is not null"
+      description: "Active threats enrichment name"
+
+    - source: "activeThreats"
+      target: "enrichments[3].value"
+      type: "string"
+      logic: "String representation of activeThreats count"
+      description: "Active threats count as string value"
+
+    - source: "static: Infection Status"
+      target: "enrichments[4].name"
+      type: "string"
+      logic: "Always 'Infection Status'; only created if infected is not null"
+      description: "Infection status enrichment name"
 
     - source: "infected"
-      target: "enrichments[Infection Status]"
-      type: "object"
-      logic: "Present when infected is not null; value is 'Infected' or 'Clean'"
-      description: "Device infection status enrichment"
+      target: "enrichments[4].value"
+      type: "string"
+      logic: "'Infected' if infected is true, 'Clean' if false"
+      description: "Infection status value"
 
   ocsf_samples:
     - name: "Device Inventory Info: Collect"

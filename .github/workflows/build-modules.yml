@@ -127,7 +127,7 @@ jobs:
     name: Build ${{ matrix.module }} docker image
     runs-on: ubuntu-latest
     needs: find-modules
-    if: needs.find-modules.outputs.matrix != '[]'
+    if: needs.find-modules.outputs.matrix != '[]' && github.actor != 'dependabot[bot]'
     strategy:
       matrix:
         module: ${{fromJSON(needs.find-modules.outputs.matrix)}}
@@ -218,7 +218,7 @@ jobs:
     steps:
       - name: my-app-install token
         id: my-app
-        uses: getsentry/action-github-app-token@d4b5da6c5e37703f8c3b3e43abb5705b46e159cc # v3.0.0
+        uses: getsentry/action-github-app-token@5c1e90706fe007857338ac1bfbd7a4177db2f789 # v4.0.0
         with:
           app_id: ${{ secrets.APP_ID }}
           private_key: ${{ secrets.APP_PRIVATE_KEY }}

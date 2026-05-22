@@ -7,11 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-05-22 - 1.11.4
+## 2026-05-22 - 1.11.5
 
 ### Changed
 
 - Add scalability labels to Prometheus metrics
+
+## 2026-04-14 - 1.11.4
+
+### Changed
+
+- Throw a Bad Credentials exception after retry
+- Upgrade sekoia-automation-sdk to 1.22.5
 
 ## 2026-02-24 - 1.11.3
 

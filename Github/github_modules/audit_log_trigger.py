@@ -181,7 +181,7 @@ class AuditLogConnector(AsyncConnector):
         else:
             self.log(
                 message=str(audit_events),
-                level="warn",
+                level="warning",
             )
 
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)

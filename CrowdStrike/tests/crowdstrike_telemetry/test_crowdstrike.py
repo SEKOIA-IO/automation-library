@@ -7,7 +7,7 @@ from concurrent.futures import Executor
 from contextlib import asynccontextmanager
 from functools import partial
 from typing import Any, AsyncIterable
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import aiofiles
 import orjson
@@ -161,14 +161,18 @@ async def test_crowdstrike_next_batch(
 
     connector.limit_of_events_to_push = 1  # to test multiple iterations of the loop
 
-    connector.sqs_wrapper = MagicMock()
-    connector.sqs_wrapper.receive_messages = MagicMock()
-    connector.sqs_wrapper.receive_messages.return_value.__aenter__.return_value = messages
+    mock_sqs = MagicMock()
+    mock_sqs.receive_messages = MagicMock()
+    mock_sqs.receive_messages.return_value.__aenter__.return_value = messages
 
-    connector.s3_wrapper = MagicMock()
-    connector.s3_wrapper.read_key = MagicMock()
-    connector.s3_wrapper.read_key.return_value.__aenter__.side_effect = read_key
+    mock_s3 = MagicMock()
+    mock_s3.read_key = MagicMock()
+    mock_s3.read_key.return_value.__aenter__.side_effect = read_key
 
-    total_events, times_to_log = await connector.next_batch()
+    with (
+        patch.object(CrowdStrikeTelemetryConnector, "sqs_wrapper", new_callable=PropertyMock, return_value=mock_sqs),
+        patch.object(CrowdStrikeTelemetryConnector, "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3),
+    ):
+        total_events, times_to_log = await connector.next_batch()
 
     assert total_events == amount_of_messages * 2  # 2 events in test_data

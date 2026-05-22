@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-24 - 1.5.4
+
+### Fixed
+
+- Fix `AttributeError` on `basedn` field due to Pydantic v1/v2 mismatch in `MicrosoftADConnectorConfiguration`
+
+## 2026-04-10 - 1.5.3
+
+### Fixed
+
+- Fix field mappings in `user_mapping.yml` to align with the actual OCSF models
+
+## 2026-04-14 - 1.5.2
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.5
+- Update asset connector to use typed `LDAPUserAttributes` model instead of raw `dict[str, Any]`
+
 ## 2026-03-04 - 1.5.1
 
 ### Changed

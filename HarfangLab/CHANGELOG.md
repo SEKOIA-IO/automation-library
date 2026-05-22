@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-30 - 1.30.1
+
+### Added
+
+- Add gateway MAC address to device network interface information
+
+## 2026-04-29 - 1.30.0
+
+### Added
+
+- Add software asset connector to fetch application inventory from HarfangLab agents
+
+## 2026-04-20 - 1.29.8
+
+### Changed
+
+- Update sekoia-automation-sdk to 1.22.5
+
+## 2026-04-03 - 1.29.7
+
+### Changed
+
+- Update the yaml file for asset connector
+
 ## 2026-03-26 - 1.29.6
 
 ### Added

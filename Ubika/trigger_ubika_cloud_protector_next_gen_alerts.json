@@ -1,28 +1,34 @@
 {
-  "description": "Ubika Cloud Protector Next Generation",
-  "docker_parameters": "ubika_cloud_protector_next_gen",
-  "name": "Fetch new events from Ubika Cloud Protector Next Generation",
+  "description": "Ubika Cloud Protector Next Generation Alerts",
+  "docker_parameters": "ubika_cloud_protector_next_gen_alerts",
+  "name": "Fetch new alerts events from Ubika Cloud Protector Next Generation",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "frequency": {
-        "type": "integer",
-        "description": "Batch frequency in seconds",
-        "minimum": 10,
-        "maximum": 60,
-        "default": 60
+      "base_url": {
+        "description": "API base URL",
+        "type": "string",
+        "default": "https://api.ubika.io/",
+        "format": "uri"
       },
       "chunk_size": {
-        "type": "integer",
         "description": "The size of chunks for the batch processing",
+        "type": "integer",
         "default": 1000,
         "minimum": 1,
         "maximum": 1000
       },
+      "frequency": {
+        "description": "Batch frequency in seconds",
+        "type": "integer",
+        "minimum": 10,
+        "maximum": 60,
+        "default": 60
+      },
       "intake_server": {
-        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
-        "default": "https://intake.sekoia.io",
-        "type": "string"
+        "description": "Server of the intake server",
+        "type": "string",
+        "default": "https://intake.sekoia.io"
       },
       "intake_key": {
         "description": "Intake key to use when sending events",
@@ -35,6 +41,16 @@
       "refresh_token": {
         "description": "Refresh API token",
         "type": "string"
+      },
+      "start_time": {
+        "description": "The number of hours from which events should be queried",
+        "type": "integer",
+        "default": 1
+      },
+      "timedelta": {
+        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events",
+        "type": "integer",
+        "default": 5
       }
     },
     "required": [

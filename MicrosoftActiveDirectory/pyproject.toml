@@ -21,7 +21,7 @@ line_length = 119
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 ldap3 = "^2.9.1"
-sekoia-automation-sdk = "^1.22.2"
+sekoia-automation-sdk = "^1.22.5"
 pytest = "^7.4.3"
 aiolimiter = "^1.2.1"
 
@@ -41,5 +41,5 @@ flake8 = "^4.0.1"
 pytest-clarity = "*"
 
 [tool.poetry.group.dev.dependencies.black]
-version = "^22.6.0"
+version = "^25.11.0"
 allow-prereleases = true
