@@ -1,0 +1,38 @@
+{
+  "name": "Reverse DNS Lookup",
+  "description": "Resolve an IP address to its corresponding domain name",
+  "slug": "reversedns_lookup",
+  "arguments": {
+    "properties": {
+      "ip_address": {
+        "title": "IP Address",
+        "type": "string",
+        "description": "The IP address to resolve (e.g. 8.8.8.8)"
+      }
+    },
+    "required": [
+      "ip_address"
+    ],
+    "type": "object"
+  },
+  "results": {
+    "properties": {
+      "ip_address": {
+        "title": "IP Address",
+        "type": "string"
+      },
+      "hostname": {
+        "title": "Resolved Hostname",
+        "type": "string"
+      },
+      "aliases": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "title": "Aliases"
+      }
+    },
+    "type": "object"
+  }
+}

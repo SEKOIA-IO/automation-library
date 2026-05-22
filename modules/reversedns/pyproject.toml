@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "reversedns-automation-module"
+version = "0.1.0"
+description = "Reverse DNS Lookup"
+authors = ["Khadim Dieng <khadimkd004@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.12,<4"
+sekoia-automation-sdk = "^1.23.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
