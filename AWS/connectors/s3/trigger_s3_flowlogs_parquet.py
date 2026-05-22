@@ -18,6 +18,7 @@ class BaseAwsS3FlowLogsParquetRecordsTrigger:
     """Implementation of AwsS3ParquetRecordsTrigger."""
 
     configuration: AwsS3QueuedConfiguration
+    scalability_labels: dict[str, str]
     name = "AWS S3 Parquet records"
 
     def check_all_ips_are_private(self, record: dict[str, Any], names: Sequence[str]) -> bool:

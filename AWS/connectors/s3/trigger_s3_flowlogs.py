@@ -25,6 +25,7 @@ class BaseAwsS3FlowLogsTrigger:
 
     configuration: AwsS3FlowLogsConfiguration
     name = "AWS S3 Flow Logs"
+    scalability_labels: dict[str, str]
 
     @staticmethod
     def check_all_ips_are_private(input_str: str) -> bool:
