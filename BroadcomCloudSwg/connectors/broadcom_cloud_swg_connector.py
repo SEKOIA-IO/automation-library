@@ -436,17 +436,13 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                 ) = await self.broadcom_cloud_swg_client.get_near_realtime_report(_date_to_process)
 
         except Exception as e:
-            logger.error(
-                """
+            logger.error("""
                     Error while getting file:
                      Date: {0}
                      File id: {1}
                      Offsets: {2}
                      Exception: {3}
-                """.format(
-                    date_to_process, file_id, _date_range, e
-                )
-            )
+                """.format(date_to_process, file_id, _date_range, e))
 
         if local_file_name is not None:
             logger.info("File {0}: Start to decompress and process zip file".format(local_file_name))
