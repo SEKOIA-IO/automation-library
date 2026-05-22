@@ -1,18 +1,12 @@
-from datetime import datetime
-
 from .connector_ubika_cloud_protector_next_gen_base import (
     UbikaCloudProtectorNextGenBaseConnector,
     UbikaCloudProtectorNextGenBaseConnectorConfiguration,
 )
 
 
-class UbikaCloudProtectorNextGenAlertsConnectorConfiguration(UbikaCloudProtectorNextGenBaseConnectorConfiguration):
-    pass
-
-
 class UbikaCloudProtectorNextGenAlertsConnector(UbikaCloudProtectorNextGenBaseConnector):
     NAME: str = "Ubika Cloud Protector NextGen Alerts"
-    configuration: UbikaCloudProtectorNextGenAlertsConnectorConfiguration
+    configuration: UbikaCloudProtectorNextGenBaseConnectorConfiguration
     cache_size: int = 1000
     endpoint: str = "security-events"
 

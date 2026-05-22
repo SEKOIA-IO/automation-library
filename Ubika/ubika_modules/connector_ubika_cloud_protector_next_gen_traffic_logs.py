@@ -1,15 +1,7 @@
-from datetime import datetime
-
 from .connector_ubika_cloud_protector_next_gen_base import (
     UbikaCloudProtectorNextGenBaseConnector,
     UbikaCloudProtectorNextGenBaseConnectorConfiguration,
 )
-
-
-class UbikaCloudProtectorNextGenTrafficLogsConnectorConfiguration(
-    UbikaCloudProtectorNextGenBaseConnectorConfiguration
-):
-    pass
 
 
 class UbikaCloudProtectorNextGenTrafficLogsConnector(UbikaCloudProtectorNextGenBaseConnector):
@@ -20,7 +12,7 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(UbikaCloudProtectorNextGenB
     """
 
     NAME: str = "Ubika Cloud Protector NextGen Traffic Logs"
-    configuration: UbikaCloudProtectorNextGenTrafficLogsConnectorConfiguration
+    configuration: UbikaCloudProtectorNextGenBaseConnectorConfiguration
     cache_size: int = 10000
     endpoint: str = "traffic-logs"
 

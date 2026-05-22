@@ -10,7 +10,9 @@ from ubika_modules import UbikaModule
 from ubika_modules.client.auth import AuthorizationError, AuthorizationTimeoutError
 from ubika_modules.connector_ubika_cloud_protector_next_gen_alerts import (
     UbikaCloudProtectorNextGenAlertsConnector,
-    UbikaCloudProtectorNextGenAlertsConnectorConfiguration,
+)
+from ubika_modules.connector_ubika_cloud_protector_next_gen_base import (
+    UbikaCloudProtectorNextGenBaseConnectorConfiguration,
 )
 from ubika_modules.timestepper import TimeStepper
 
@@ -22,7 +24,7 @@ def trigger(data_storage):
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
-    trigger.configuration = UbikaCloudProtectorNextGenAlertsConnectorConfiguration(
+    trigger.configuration = UbikaCloudProtectorNextGenBaseConnectorConfiguration(
         base_url="https://api.ubika.io/",
         namespace="sekoia",
         refresh_token="some_token_here",
