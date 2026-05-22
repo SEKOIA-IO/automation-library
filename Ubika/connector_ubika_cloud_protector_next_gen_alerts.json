@@ -1,16 +1,15 @@
 {
-  "description": "Ubika Cloud Protector Next Generation",
-  "docker_parameters": "ubika_cloud_protector_next_gen",
-  "name": "Fetch new events from Ubika Cloud Protector Next Generation",
+  "description": "Ubika Cloud Protector Next Generation Alerts",
+  "docker_parameters": "ubika_cloud_protector_next_gen_alerts",
+  "name": "Fetch new alerts events from Ubika Cloud Protector Next Generation",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "frequency": {
-        "type": "integer",
-        "description": "Batch frequency in seconds",
-        "minimum": 10,
-        "maximum": 60,
-        "default": 60
+      "base_url": {
+        "description": "API base URL",
+        "type": "string",
+        "default": "https://api.ubika.io/",
+        "format": "uri"
       },
       "chunk_size": {
         "type": "integer",
@@ -19,10 +18,17 @@
         "minimum": 1,
         "maximum": 1000
       },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60,
+        "minimum": 10,
+        "maximum": 60
+      },
       "intake_server": {
-        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
-        "default": "https://intake.sekoia.io",
-        "type": "string"
+        "description": "Server of the intake server",
+        "type": "string",
+        "default": "https://intake.sekoia.io"
       },
       "intake_key": {
         "description": "Intake key to use when sending events",
@@ -36,15 +42,15 @@
         "description": "Refresh API token",
         "type": "string"
       },
-      "timedelta": {
-        "type": "integer",
-        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events (default to 5 minutes ago)",
-        "default": 5
-      },
       "start_time": {
+        "description": "The number of hours from which events should be queried",
         "type": "integer",
-        "description": "The number of hours from which events should be queried.",
         "default": 1
+      },
+      "timedelta": {
+        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events",
+        "type": "integer",
+        "default": 5
       }
     },
     "required": [
@@ -57,11 +63,6 @@
     ],
     "title": "The configuration to fetch new events",
     "type": "object"
-  },
-  "results": {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "properties": {},
-    "title": "The events"
   },
   "uuid": "eca1ea3b-fd50-4145-8eb5-60d22b2fa584"
 }
