@@ -1,0 +1,14 @@
+{
+  "name": "Nutanix",
+  "slug": "nutanix-prism",
+  "description": "Ingest Nutanix Prism Central syslog events (API Audit, Audit, Security Policy Hit Logs, Flow Service Logs).",
+  "version": "0.1.0",
+  "datasources": [
+    "api_audit",
+    "consolidated_audit",
+    "flow-hitCount",
+    "security_policy_hits"
+  ],
+  "maintainer": "automation-library",
+  "tags": ["endpoint", "intake", "nutanix", "prism"]
+}
