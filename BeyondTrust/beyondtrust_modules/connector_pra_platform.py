@@ -27,6 +27,17 @@ class BeyondTrustPRAPlatformConnector(Connector):
     module: BeyondTrustModule
     configuration: BeyondTrustPRAPlatformConfiguration
 
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
@@ -102,7 +113,7 @@ class BeyondTrustPRAPlatformConnector(Connector):
 
         if "<error" in response.text and response.status_code == 200:
             self.log(f"An error occurred. response: {response.text}", level="error")
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
             return
 
         sessions_ids = parse_session_list(response.content)
@@ -127,7 +138,7 @@ class BeyondTrustPRAPlatformConnector(Connector):
                 most_recent_date_seen = session_end_time
 
             parsed_events = parse_session(response.content)
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(parsed_events))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(parsed_events))
 
             self.sessions_cache[session_id] = 1
             yield parsed_events
@@ -141,7 +152,7 @@ class BeyondTrustPRAPlatformConnector(Connector):
 
             now = int(datetime.now(timezone.utc).timestamp())
             current_lag = now - most_recent_date_seen
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
     def next_batch(self):
         # save the starting time
@@ -157,7 +168,7 @@ class BeyondTrustPRAPlatformConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -169,7 +180,7 @@ class BeyondTrustPRAPlatformConnector(Connector):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         self.log(message=f"Fetched and forwarded events in {batch_duration} seconds", level="info")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

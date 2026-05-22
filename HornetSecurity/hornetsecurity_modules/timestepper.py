@@ -50,7 +50,7 @@ class TimeStepper:
                 level="info",
             )
 
-            EVENTS_LAG.labels(intake_key=self.trigger.configuration.intake_key).set(int(current_lag.total_seconds()))
+            EVENTS_LAG.labels(intake_key=self.trigger.configuration.intake_key, **self.trigger.scalability_labels).set(int(current_lag.total_seconds()))
 
             # return the current time range
             yield self.start, self.end

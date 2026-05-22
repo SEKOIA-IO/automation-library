@@ -116,7 +116,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                 if not message_records:
                     continue_receiving = False
 
-                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_records))
+                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(message_records))
                 for record in message_records:
                     try:
                         s3_bucket, s3_key = self._get_object_from_notification(record)

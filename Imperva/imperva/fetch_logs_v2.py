@@ -57,6 +57,17 @@ class ImpervaLogsConnector(Connector):
         )  # all logs that we tried to download and process (both successful and failed)
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
+    @cached_property
     def connector_user_agent(self) -> str:
         return f"sekoiaio-connector-{self.configuration.intake_key}"
 
@@ -133,7 +144,7 @@ class ImpervaLogsConnector(Connector):
         if events_list[-1] == "":
             del events_list[-1]
 
-        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events_list))
+        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(events_list))
 
         self.push_events_to_intakes(events_list)
 
@@ -253,12 +264,12 @@ class ImpervaLogsConnector(Connector):
             self.log("%d logs in index file, %d new" % (len(logs_in_index), len(additions)), level="info")
             if len(additions) == 0:
                 self.log("No new logs to download", level="info")
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
 
                 time.sleep(self.configuration.frequency)
                 continue
 
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(additions))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(additions))
             self.log("%d new logs to download" % len(additions), level="info")
 
             self.in_progress.extend(additions)
@@ -275,7 +286,7 @@ class ImpervaLogsConnector(Connector):
                     if last_timestamp:
                         now = datetime.now(tz=timezone.utc).timestamp()
                         current_lag = now - last_timestamp / 1000.0
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
                     self.last_seen_log = max(self.processed)
                     self.cursor.offset = self.last_seen_log.get_filename()
@@ -284,7 +295,7 @@ class ImpervaLogsConnector(Connector):
                 batch_end_time = time.time()
                 batch_duration = int(batch_end_time - batch_start_time)
                 self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="info")
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
             except Exception as e:
                 self.log_exception(e)
 

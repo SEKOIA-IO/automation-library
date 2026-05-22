@@ -53,6 +53,17 @@ class SophosEDREventsTrigger(SophosConnector):
             cache["cursor"] = cursor
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
+    @cached_property
     def pagination_limit(self) -> int:
         return max(self.configuration.chunk_size, 1000)
 
@@ -89,7 +100,7 @@ class SophosEDREventsTrigger(SophosConnector):
 
                 # compute the duration of the last events fetching
                 duration = int(time.time() - start)
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(duration)
 
                 # Compute the remaining sleeping time
                 delta_sleep = self.configuration.frequency - duration
@@ -178,8 +189,8 @@ class SophosEDREventsTrigger(SophosConnector):
             if len(items) > 0:
                 most_recent_timestamp_seen = self._get_most_recent_timestamp_from_items(items)
                 events_lag = int(time.time() - most_recent_timestamp_seen)
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
-                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(events_lag)
+                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(items))
 
             for message in items:
                 normalized_message = normalize_message(message)
@@ -187,7 +198,7 @@ class SophosEDREventsTrigger(SophosConnector):
 
             if len(messages) > self.pagination_limit:
                 self.log(message=f"Sending a batch of {len(messages)} messages", level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(messages))
                 self.push_events_to_intakes(events=messages)
                 messages = []
 
@@ -195,8 +206,8 @@ class SophosEDREventsTrigger(SophosConnector):
 
         if messages:
             self.log(message=f"Sending a batch of {len(messages)} messages", level="info")
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(messages))
             self.push_events_to_intakes(events=messages)
         else:
             self.log(message="No messages to forward", level="info")
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)

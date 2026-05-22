@@ -58,6 +58,17 @@ class CyberArkAuditLogsConnector(Connector):
             cache["events_cache"] = list(events_cache.keys())
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
+    @cached_property
     def client(self) -> ApiClient:
         return ApiClient(
             auth=CyberArkApiAuthentication(
@@ -140,7 +151,7 @@ class CyberArkAuditLogsConnector(Connector):
                 yield items
 
             else:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
                 return
 
     def fetch_events(self) -> Generator[list, None, None]:
@@ -151,7 +162,7 @@ class CyberArkAuditLogsConnector(Connector):
                 continue
 
             filtered_events = [event for event in next_events if event["uuid"] not in self.events_cache]
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(filtered_events))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(filtered_events))
 
             if not filtered_events:
                 continue
@@ -178,7 +189,7 @@ class CyberArkAuditLogsConnector(Connector):
 
             now = int(time.time())
             current_lag = now - most_recent_date_seen // 1000
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
     def next_batch(self) -> None:
         # save the starting time
@@ -194,7 +205,7 @@ class CyberArkAuditLogsConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -206,7 +217,7 @@ class CyberArkAuditLogsConnector(Connector):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         self.log(message=f"Fetched and forwarded events in {batch_duration} seconds", level="debug")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

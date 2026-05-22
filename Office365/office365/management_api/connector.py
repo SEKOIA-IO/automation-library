@@ -44,6 +44,17 @@ class Office365Connector(AsyncConnector):
             await self._session.close()
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
+    @cached_property
     def client(self) -> Office365API:
         """Office365 API client
 
@@ -106,7 +117,7 @@ class Office365Connector(AsyncConnector):
             events (list[dict]): Events to forward to intake
         """
         self.log(f"Pushing {len(events)} event(s) to intake", level="info")
-        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
+        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(events))
 
         await self.push_data_to_intakes(events=events)
 
@@ -136,7 +147,7 @@ class Office365Connector(AsyncConnector):
             # get the ending time and compute the duration to forward the events
             intermediate_end_time = time.time()
             intermediate_batch_duration = intermediate_end_time - intermediate_start_time
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
                 intermediate_batch_duration
             )
 

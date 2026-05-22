@@ -60,7 +60,7 @@ class BaseAwsS3FlowLogsTrigger:
                 if not self.check_all_ips_are_private(record):
                     records.append(record)
                 else:
-                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc()
 
         if self.configuration.ignore_comments:  # pragma: no cover
             records = [record for record in records if not record.strip().startswith("#")]

@@ -118,7 +118,7 @@ class VerticlesCollector:
                         for vertex in self.falcon_client.get_verticles_details(
                             list(verticles_links.keys()), verticle_type
                         ):
-                            INCOMING_VERTICLES.labels(intake_key=self.connector.configuration.intake_key).inc()
+                            INCOMING_VERTICLES.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).inc()
                             yield (verticles_links[vertex["id"]], edge_type, vertex)
                 except HTTPError as error:
                     self.log_exception(
@@ -323,7 +323,8 @@ class EventStreamReader(threading.Thread):
                                     # store the new event in the queue along with it stream root url
                                     self.events_queue.put((self.stream_root_url, decoded_line))
                                     INCOMING_DETECTIONS.labels(
-                                        intake_key=self.connector.configuration.intake_key
+                                        intake_key=self.connector.configuration.intake_key,
+                                        **self.connector.scalability_labels,
                                     ).inc()
 
                                     if self.connector.use_alert_api:
@@ -480,7 +481,7 @@ class EventForwarder(threading.Thread):
                         message=f"Forward {len(batch_of_events)} events to the intake",
                         level="info",
                     )
-                    OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(
+                    OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).inc(
                         len(batch_of_events)
                     )
                     self.connector.push_events_to_intakes(events=batch_of_events)
@@ -504,7 +505,8 @@ class EventForwarder(threading.Thread):
                             if creation_time:
                                 lag = now - (creation_time / 1000)
                                 EVENTS_LAG.labels(
-                                    intake_key=self.connector.configuration.intake_key, stream=stream_root_url
+                                    intake_key=self.connector.configuration.intake_key, stream=stream_root_url,
+                                    **self.connector.scalability_labels,
                                 ).set(lag)
             except queue.Empty:
                 pass
@@ -538,6 +540,17 @@ class EventStreamTrigger(Connector):
 
     def generate_app_id(self):
         return f"sio-{time.time()}"
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
 
     @cached_property
     def _http_default_headers(self) -> dict[str, str]:

@@ -102,7 +102,7 @@ class FastlyWAFConsumer(Thread):
 
             events = response_content["data"]
             if events:
-                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
+                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).inc(len(events))
                 yield events
 
             else:
@@ -155,7 +155,7 @@ class FastlyWAFConsumer(Thread):
                     message=f"{self.name}: Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
 
                 # Compute the current lag from the date of the most recent event seen
@@ -167,7 +167,7 @@ class FastlyWAFConsumer(Thread):
                 )
 
         # Monitor the lag
-        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(current_lag)
+        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).set(current_lag)
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
@@ -176,7 +176,7 @@ class FastlyWAFConsumer(Thread):
             message=f"{self.name}: Fetched and forwarded events in {batch_duration} seconds",
             level="debug",
         )
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.connector.configuration.frequency - batch_duration
@@ -208,6 +208,17 @@ class FastlyWAFBaseConnector(Connector):
     @cached_property
     def client(self) -> ApiClient:
         return ApiClient(email=self.configuration.email, token=self.configuration.token)
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
 
     def get_sites(self):
         result = []

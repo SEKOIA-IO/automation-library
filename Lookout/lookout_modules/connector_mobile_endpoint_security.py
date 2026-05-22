@@ -152,7 +152,7 @@ class MobileEndpointSecurityThread(Thread):
                             message=f"Forwarded {len(batch_of_events)} events to the intake",
                             level="info",
                         )
-                        OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(
+                        OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).inc(
                             len(batch_of_events)
                         )
                         self.connector.push_events_to_intakes(events=batch_of_events)
@@ -162,13 +162,13 @@ class MobileEndpointSecurityThread(Thread):
 
                         now = datetime.now(timezone.utc)
                         current_lag = now - most_recent_date_seen
-                        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(
+                        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).set(
                             current_lag.total_seconds()
                         )
 
                 elif event.event == "heartbeat":
                     logger.debug("Received heartbeat")
-                    EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(0)
+                    EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).set(0)
 
 
 class MobileEndpointSecurityConnector(Connector):
@@ -177,6 +177,17 @@ class MobileEndpointSecurityConnector(Connector):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
 
     def run(self) -> None:
         self.log("Starting collecting Lookout MES events", level="info")

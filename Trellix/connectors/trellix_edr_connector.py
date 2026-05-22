@@ -3,6 +3,7 @@
 import asyncio
 import time
 from datetime import datetime, timedelta, timezone
+from functools import cached_property
 from typing import Any, Optional, Tuple
 
 import orjson
@@ -42,6 +43,17 @@ class TrellixEdrConnector(AsyncConnector):
 
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
 
     def last_event_date(self, name: str) -> datetime:
         """
@@ -283,15 +295,15 @@ class TrellixEdrConnector(AsyncConnector):
 
                 message_ids = message_alerts_ids + message_threats_ids
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats", **self.scalability_labels).set(
                     processing_end - most_recent_threat_date.timestamp()
                 )
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="alerts").set(
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="alerts", **self.scalability_labels).set(
                     processing_end - most_recent_alert_date.timestamp()
                 )
 
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(message_ids))
 
                 log_message = "No records to forward"
                 if len(message_ids) > 0:
@@ -305,7 +317,7 @@ class TrellixEdrConnector(AsyncConnector):
                     processing_time=processing_time,
                 )
 
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(processing_time)
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(processing_time)
 
                 # compute the remaining sleeping time. If greater than 0 and no messages where fetched, pause the connector
                 delta_sleep = self.configuration.frequency - processing_time

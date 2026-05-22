@@ -127,7 +127,7 @@ class ThreatVisualizerLogConsumer(Thread):
             response = self.request_events()
             response = response.json()
             logger.debug(f"Response from API: {response}")
-            INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(response))
+            INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).inc(len(response))
         except ValueError:  # pragma: no cover
             self.connector.log(
                 message="The server response is not a json: " + str(response),
@@ -144,7 +144,7 @@ class ThreatVisualizerLogConsumer(Thread):
                     event["log_type"] = self.endpoint.value
                 batch_of_events = [orjson.dumps(event).decode("utf-8") for event in response]
 
-                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
                 self.update_last_ts(response)
                 self.connector.log(
@@ -170,10 +170,10 @@ class ThreatVisualizerLogConsumer(Thread):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).observe(batch_duration)
 
         # report the current lag
-        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(current_lag)
+        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).set(current_lag)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.connector.configuration.frequency - batch_duration
@@ -203,6 +203,17 @@ class ThreatVisualizerLogConnector(Connector):
 
     module: DarktraceModule
     configuration: ThreatVisualizerLogConnectorConfiguration
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
 
     def start_consumers(self):
         consumers = {}

@@ -128,6 +128,17 @@ class BroadcomCloudSwgConnector(AsyncConnector):
     _broadcom_cloud_swg_client: BroadcomCloudSwgClient | None = None
     _rate_limiter: AsyncLimiter | None = None
 
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         """Init BroadcomCloudSwgConnector."""
 
@@ -527,13 +538,13 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                     result_count, last_event_date = loop.run_until_complete(self.get_events())
                     processing_end = time.time()
 
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
                         processing_end - last_event_date.timestamp()
                     )
 
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result_count)
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(result_count)
 
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
                         last_event_date.timestamp() - processing_start
                     )
 

@@ -198,7 +198,7 @@ class TrendMicroWorker(Thread):
                     message=f"{self.log_type}: Forwarded {events_len} events to the intake",
                     level="info",
                 )
-                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).inc(
+                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type, **self.connector.scalability_labels).inc(
                     events_len
                 )
 
@@ -211,13 +211,13 @@ class TrendMicroWorker(Thread):
                 if last_event_timestamp > most_recent_timestamp_seen:
                     self.set_last_timestamp(last_event_timestamp)
                 events_lag = int(time.time()) - most_recent_timestamp_seen
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).set(
+                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type, **self.connector.scalability_labels).set(
                     events_lag
                 )
                 # We should cache the list of events that we pushed as well
                 self.set_recent_pushed_events(events)
 
-                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).inc(
+                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type, **self.connector.scalability_labels).inc(
                     len(batch_of_events)
                 )
 
@@ -235,7 +235,7 @@ class TrendMicroWorker(Thread):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
 
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).observe(
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type, **self.connector.scalability_labels).observe(
             batch_duration
         )
 
@@ -275,6 +275,17 @@ class TrendMicroEmailSecurityConnector(Connector):
         self.context_lock = Lock()
 
         self.consumers = {}
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
 
     def start_consumers(self) -> dict[str, TrendMicroWorker]:
         consumers = {}

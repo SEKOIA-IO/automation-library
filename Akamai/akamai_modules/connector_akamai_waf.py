@@ -32,6 +32,17 @@ class AkamaiWAFLogsConnector(Connector):
 
     PAGE_SIZE = 60_000  # default 1000, maximum 60000
 
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
@@ -153,11 +164,11 @@ class AkamaiWAFLogsConnector(Connector):
                         offset = item["offset"]
                         # response context - last JSON line
                         if len(page) > 0:
-                            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(page))
+                            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(page))
                             yield page
 
                         else:
-                            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+                            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
                             return
 
             if offset is None:
@@ -188,7 +199,7 @@ class AkamaiWAFLogsConnector(Connector):
 
             delta_time = datetime.now(timezone.utc).timestamp() - most_recent_date_seen
             current_lag = int(delta_time)
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
     def __handle_response_error(self, response: requests.Response):
         if not response.ok:
@@ -243,7 +254,7 @@ class AkamaiWAFLogsConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
 
                 self.push_events_to_intakes(events=batch_of_events)
                 self.save_events_cache()
@@ -258,7 +269,7 @@ class AkamaiWAFLogsConnector(Connector):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="debug")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

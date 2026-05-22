@@ -103,7 +103,7 @@ class EventCollector(Thread):
             message=f"Current lag {int(current_lag.total_seconds())} seconds.",
             level="info",
         )
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).set(int(current_lag.total_seconds()))
 
         if self.end_date >= now:
             difference = self.end_date - now
@@ -140,7 +140,7 @@ class EventCollector(Thread):
             "Skyhigh API response received",
             time_elapsed_seconds=int(time_elapsed.total_seconds()),
         )
-        COLLECT_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+        COLLECT_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).observe(
             int(time_elapsed.total_seconds())
         )
 
@@ -242,7 +242,7 @@ class Transformer(Worker):
                     for messages in batched(self._transform(response), self.max_batch_size):
                         if len(messages) > 0:
                             nb_events = len(messages)
-                            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(nb_events)
+                            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).inc(nb_events)
                             logger.info("Transformed events", nb_events=nb_events)
                             self.output_queue.put(list(messages))
 
@@ -287,7 +287,7 @@ class EventsForwarder(Worker):
         try:
             while self.is_running or self.queue.qsize() > 0:
                 events = self.next_batch(self.max_batch_size)
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).inc(len(events))
 
                 if len(events) > 0:
                     self.connector.log(
@@ -309,6 +309,17 @@ class SkyhighSecuritySWGTrigger(Connector):
 
         self.context = PersistentJSON("context.json", self._data_path)
         self.context_lock = Lock()
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
 
     def run(self):  # pragma: no cover
         self.log(message="SkyhighSWG Trigger has started", level="info")

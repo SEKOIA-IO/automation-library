@@ -1,6 +1,7 @@
 import asyncio
 import time
 from datetime import timedelta
+from functools import cached_property
 from typing import Any, Optional
 
 from cachetools import Cache, LRUCache
@@ -68,6 +69,17 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
 
         with context as ctx:
             ctx[key] = list(cache.keys())
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
 
     @property
     def client(self) -> GraphApi:  # pragma: no cover
@@ -174,7 +186,7 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
                 last_event_date = max(last_event_date_signin, last_event_date_directory)
                 processing_end = time.time()
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
                     processing_end - last_event_date.timestamp()
                 )
 
@@ -183,10 +195,10 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
                     log_message = "Pushed {0} records".format(result)
 
                 self.log(message=log_message, level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result)
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(result)
 
                 processing_time = processing_end - processing_start
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(processing_time)
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(processing_time)
                 logger.info(
                     "Processing took {processing_time} seconds",
                     processing_time=processing_time,

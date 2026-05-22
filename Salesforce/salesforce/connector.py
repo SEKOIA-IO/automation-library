@@ -4,6 +4,7 @@ import asyncio
 import os
 import time
 from datetime import datetime, timedelta, timezone
+from functools import cached_property
 from typing import Any, Optional
 
 import orjson
@@ -160,6 +161,17 @@ class SalesforceConnector(AsyncConnector):
         """
         self.log_file_cache[log_file_id] = True
 
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
     @property
     def salesforce_client(self) -> SalesforceHttpClient:
         """
@@ -260,7 +272,7 @@ class SalesforceConnector(AsyncConnector):
                     message_ids: list[str] = loop.run_until_complete(self.get_salesforce_events(start, end))
 
                     processing_end = time.time()
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(message_ids))
 
                     log_message = "No records to forward"
                     if len(message_ids) > 0:
@@ -270,7 +282,7 @@ class SalesforceConnector(AsyncConnector):
                     self.log(message=log_message, level="info")
 
                     batch_duration = processing_end - processing_start
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
 
                     # Save progress after each window
                     self.update_stepper(end)

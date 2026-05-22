@@ -42,6 +42,17 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
     configuration: AbstractAwsConnectorConfiguration
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
+    @cached_property
     def aws_client(self) -> AwsClient:
         """
         Base implementation of AWS client.
@@ -87,8 +98,8 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
                     processing_end = time.time()
                     batch_duration = processing_end - processing_start
 
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(message_count)
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(message_count)
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
                         processing_end - processing_start
                     )
 
@@ -103,13 +114,13 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
                         current_lag = min(messages_age)
 
                         for age in messages_age:
-                            MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).observe(age)
+                            MESSAGES_AGE.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(age)
                     else:
                         self.log(message="No records to forward", level="info")
-                        MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).observe(0)
+                        MESSAGES_AGE.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(0)
 
                     # report the current lag
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
                     # compute the remaining sleeping time. If greater than 0 and no messages were fetched, sleep
                     delta_sleep = self.configuration.frequency - batch_duration

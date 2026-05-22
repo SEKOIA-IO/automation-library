@@ -58,12 +58,12 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
 
             if events:
                 INCOMING_MESSAGES.labels(
-                    intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL
+                    intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL, **self.scalability_labels
                 ).inc(len(events))
                 yield events
 
             else:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL).set(0)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL, **self.scalability_labels).set(0)
                 return
 
             url = message.get("nextLink")
@@ -92,6 +92,6 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
 
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL).set(
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL, **self.scalability_labels).set(
             int(current_lag.total_seconds())
         )

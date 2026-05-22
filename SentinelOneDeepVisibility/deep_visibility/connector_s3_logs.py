@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from functools import cached_property
 
 import orjson
 from aws_helpers.utils import AsyncReader
@@ -21,6 +22,17 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector, AwsAccountProvider):
     configuration: AwsS3QueuedConfiguration
     name = "DeepVisibility AWS S3 Logs"
 
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
     async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """
         Parse content from S3 bucket.
@@ -40,11 +52,11 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector, AwsAccountProvider):
                     json_record = orjson.loads(record)
                     # Exclude events with no category defined or a group category
                     if "event.category" not in json_record or json_record["event.category"] == "group":
-                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc()
                         continue
                     # Exclude specific event types
                     if "event.type" in json_record and json_record["event.type"] in EXCLUDED_EVENT_TYPES:
-                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc()
                         continue
 
                     yield record.decode("utf-8")

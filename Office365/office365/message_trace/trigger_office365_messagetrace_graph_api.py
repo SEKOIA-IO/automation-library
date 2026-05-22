@@ -41,6 +41,17 @@ class Office365MessageTraceTriggerGraphAPI(Connector):
         self.cache_size = 2000
         self.events_cache: Cache[str, bool] = self.load_events_cache()
 
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
     def load_events_cache(self) -> Cache[str, bool]:
         """
         Load the events cache.
@@ -161,7 +172,7 @@ class Office365MessageTraceTriggerGraphAPI(Connector):
                     if len(batch_of_events) > 0:
                         self.log(message=f"Forwarding {len(batch_of_events)} records", level="info")
                         self.push_events_to_intakes(events=batch_of_events)
-                        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
 
                         # mark sent events as processed
                         for event in events:
@@ -172,7 +183,7 @@ class Office365MessageTraceTriggerGraphAPI(Connector):
                     else:
                         self.log(message="No records to forward", level="info")
 
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
                     time.time() - duration_start
                 )
 

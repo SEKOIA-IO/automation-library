@@ -90,7 +90,7 @@ class MessagesConsumer(Worker):
                     ):
                         most_recent_date_seen = message_date
 
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(messages))
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).inc(len(messages))
 
                 # ack the messages if defined
                 if len(ack_ids) > 0:
@@ -103,14 +103,14 @@ class MessagesConsumer(Worker):
                     else:
                         now = datetime.now(timezone.utc)
                         current_lag = now - most_recent_date_seen
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).set(
                             int(current_lag.total_seconds())
                         )
 
                     yield messages
                 else:
                     batch_duration = time.time() - batch_start_time
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).observe(batch_duration)
                     delta_sleep = self.configuration.frequency - batch_duration
                     if delta_sleep > 0:
                         time.sleep(delta_sleep)
@@ -163,7 +163,7 @@ class EventsForwarder(Worker):
                         message=f"Forward {len(events)} events to the intake",
                         level="info",
                     )
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).inc(len(events))
                     self.connector.push_events_to_intakes(events=events)
         except Exception as ex:
             self.connector.log_exception(ex, message="Failed to forward events")
@@ -186,6 +186,17 @@ class PubSub(GoogleTrigger):
         Return the subscription name
         """
         return SubscriberClient.subscription_path(self.configuration.project_id, self.configuration.subject_id)
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
 
     def stop(self, *args, **kwargs):
         self.log(message="Stopping Google Cloud PubSub connector", level="info")

@@ -147,7 +147,7 @@ class SentinelOneLogsConsumer(Thread):
             batch_end_time = time()
             batch_duration = int(batch_end_time - batch_start_time)
             logger.debug(f"Fetched and forwarded events", duration=batch_duration, nb_events=len(events_id))
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).observe(batch_duration)
 
             # log the number of forwarded events
             log_message = "No events to forward"
@@ -226,10 +226,10 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             nb_activities = len(activities)
             logger.debug("Collected activities", nb=nb_activities)
             if nb_activities == 0:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(0)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities", **self.connector.scalability_labels).set(0)
                 break
 
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(nb_activities)
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).inc(nb_activities)
 
             # discard already collected events
             selected_events = filter_collected_events(
@@ -241,7 +241,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
                 events_ids.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
 
             # Send Prometheus metrics
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(selected_events))
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).inc(len(selected_events))
 
             # Update context with latest event date
             current_lag: int = 0
@@ -251,7 +251,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
                 self.from_date = latest_event_timestamp
                 current_lag = int((datetime.now(UTC) - latest_event_timestamp).total_seconds())
 
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(current_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities", **self.connector.scalability_labels).set(current_lag)
 
             if activities_response.pagination["nextCursor"] is None:
                 break
@@ -296,7 +296,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             nb_threats = len(threats)
             logger.debug("Collected nb_threats", nb=nb_threats)
             if nb_threats == 0:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(0)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats", **self.connector.scalability_labels).set(0)
                 break
 
             # discard already collected events
@@ -307,7 +307,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
                 events_ids.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
 
             # Send Prometheus metrics
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(selected_events))
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).inc(len(selected_events))
 
             # Update context with the latest event date
             current_lag: int = 0
@@ -317,7 +317,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
                 self.from_date = latest_event_timestamp
                 current_lag = int((datetime.now(UTC) - latest_event_timestamp).total_seconds())
 
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(current_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats", **self.connector.scalability_labels).set(current_lag)
 
             if threat_response.pagination["nextCursor"] is None:
                 break
@@ -337,6 +337,17 @@ class SentinelOneLogsConnector(Connector):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.context_lock = Lock()
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
 
     @property
     def data_path(self) -> Path:

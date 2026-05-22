@@ -81,6 +81,17 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
         self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
+    @cached_property
     def sqs_wrapper(self) -> SqsWrapper:  # pragma: no cover
         """
         Get SQS wrapper.
@@ -185,7 +196,7 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
                 if not message_records:
                     continue_receiving = False
 
-                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_records))
+                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(message_records))
                 for record in message_records:
                     try:
                         # This is only one difference between this connector and the base S3 one
@@ -240,14 +251,14 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
                         self.log(
                             message=f"Record is not a dict, got {type(json_record).__name__}, skipping", level="error"
                         )
-                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc()
                         continue
 
                     if (
                         json_record.get("event_simpleName") is None
                         or json_record.get("event_simpleName") in EXCLUDED_EVENT_ACTIONS
                     ):
-                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc()
                         continue
 
                     yield record.decode("utf-8")

@@ -65,6 +65,17 @@ class MicrosoftDefenderGraphAPIAlerts(Connector):
             context["events_cache"] = list(self.events_cache.keys())
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
+    @cached_property
     def client(self) -> GraphApiClient:
         return GraphApiClient(
             tenant_id=self.module.configuration.tenant_id,
@@ -190,7 +201,7 @@ class MicrosoftDefenderGraphAPIAlerts(Connector):
 
                         batch_of_events = [orjson.dumps(event).decode("utf-8") for event in batch_of_events]
                         self.push_events_to_intakes(events=batch_of_events)
-                        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
 
                         # mark sent events as processed
                         for event in events:
@@ -201,7 +212,7 @@ class MicrosoftDefenderGraphAPIAlerts(Connector):
                     else:
                         self.log(message="No records to forward", level="info")
 
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
                     time.time() - duration_start
                 )
 

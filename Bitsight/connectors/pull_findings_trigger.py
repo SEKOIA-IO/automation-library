@@ -2,7 +2,7 @@ import asyncio
 import time
 from asyncio import Queue
 from datetime import datetime, timedelta, timezone
-from functools import reduce
+from functools import cached_property, reduce
 from typing import Annotated, Any, Optional, TypeAlias, cast
 
 import orjson
@@ -121,6 +121,17 @@ class PullFindingsConnector(AsyncConnector):
 
     module: BitsightModule
     configuration: PullFindingsConnectorConfiguration
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
 
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         """Init PullFindingsConnector."""
@@ -288,14 +299,14 @@ class PullFindingsConnector(AsyncConnector):
                         logger.info("No new events to forward")
 
                     # report the lag
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
                     # report the number of forwarded events
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result_count)
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(result_count)
 
                     # compute and report the duration to fetch the events
                     batch_duration = int(processing_end - processing_start)
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
 
                     # compute the remaining sleeping time. If greater than 0, sleep
                     delta_sleep = self.configuration.frequency - batch_duration

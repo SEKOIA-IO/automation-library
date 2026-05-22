@@ -41,6 +41,17 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
         self.events_cache: Cache = LRUCache(maxsize=10000)
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
+    @cached_property
     def client(self) -> SingularityClient:
         return SingularityClient(
             hostname=self.module.configuration.hostname,
@@ -109,7 +120,7 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
                 last_event_date = self.last_event_date.offset
                 processing_end = time.time()
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.product_name).set(
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.product_name, **self.scalability_labels).set(
                     processing_end - last_event_date.timestamp()
                 )
 
@@ -118,10 +129,10 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
                     log_message = "Pushed {0} records".format(result)
 
                 self.log(message=log_message, level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result)
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(result)
 
                 processing_time = processing_end - processing_start
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(processing_time)
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(processing_time)
                 logger.info(
                     "Processing took {processing_time} seconds",
                     processing_time=processing_time,

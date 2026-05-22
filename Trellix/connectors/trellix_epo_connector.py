@@ -3,6 +3,7 @@
 import asyncio
 import time
 from datetime import datetime, timedelta, timezone
+from functools import cached_property
 from typing import Any, Optional
 
 import orjson
@@ -42,6 +43,17 @@ class TrellixEpoConnector(AsyncConnector):
 
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
 
     @property
     def last_event_date(self) -> datetime:
@@ -121,13 +133,13 @@ class TrellixEpoConnector(AsyncConnector):
             try:
                 processing_start = time.time()
                 if previous_processing_end is not None:
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
                         processing_start - previous_processing_end
                     )
 
                 message_ids: list[str] = await self.get_trellix_epo_events()
                 processing_end = time.time()
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(message_ids))
 
                 log_message = "No records to forward"
                 if len(message_ids) > 0:
@@ -141,7 +153,7 @@ class TrellixEpoConnector(AsyncConnector):
                     processing_time=processing_time,
                 )
 
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(processing_time)
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(processing_time)
 
                 # compute the remaining sleeping time. If greater than 0 and no messages where fetched, pause the connector
                 delta_sleep = self.configuration.frequency - processing_time

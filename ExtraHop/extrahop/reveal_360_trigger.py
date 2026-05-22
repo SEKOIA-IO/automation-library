@@ -28,6 +28,17 @@ class ExtraHopReveal360Connector(Connector):
         self.from_date = self.get_last_timestamp()
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
+    @cached_property
     def client(self) -> ApiClient:
         return ApiClient(
             auth=ExtraHopApiAuthentication(
@@ -104,7 +115,7 @@ class ExtraHopReveal360Connector(Connector):
             if next_events:
                 # Filter out old, but ongoing detections
                 next_events = [event for event in next_events if event["start_time"] >= most_recent_timestamp_seen]
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(next_events))
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(next_events))
 
                 if len(next_events) > 0:
                     last_event = max(next_events, key=lambda x: x["start_time"])
@@ -122,7 +133,7 @@ class ExtraHopReveal360Connector(Connector):
             self.set_last_timestamp(last_timestamp=self.from_date)
 
         # Report the current lag
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
     def next_batch(self) -> None:
         batch_start_time = time.time()
@@ -132,7 +143,7 @@ class ExtraHopReveal360Connector(Connector):
 
             # if the batch is full, push it
             if len(batch_of_events) > 0:
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(events))
                 self.push_events_to_intakes(events=batch_of_events)
                 self.log(
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
@@ -142,7 +153,7 @@ class ExtraHopReveal360Connector(Connector):
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

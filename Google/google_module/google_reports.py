@@ -126,6 +126,17 @@ class GoogleReports(GoogleTrigger):
             cache[app_key_name_in_cache] = self.from_date
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
+    @cached_property
     def pagination_limit(self):
         return max(self.configuration.chunk_size, 1000)
 
@@ -176,7 +187,7 @@ class GoogleReports(GoogleTrigger):
 
                 # compute the duration of the last events fetching
                 duration = int(time.time() - duration_start)
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(duration)
 
         finally:
             self.log(
@@ -218,12 +229,12 @@ class GoogleReports(GoogleTrigger):
         while const_next_key:
             response_next_page = self.get_activities(start, end, const_next_key) or {}
             next_page_items = response_next_page.get("items", [])
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(next_page_items))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(next_page_items))
 
             if next_page_items:
                 next_messages = [orjson.dumps(message).decode("utf-8") for message in next_page_items]
                 self.log(message=f"Sending other batches of {len(next_messages)} messages", level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(next_messages))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(next_messages))
                 self.push_events_to_intakes(events=next_messages)
 
                 const_next_key = response_next_page.get("nextPageToken", "")
@@ -243,12 +254,12 @@ class GoogleReports(GoogleTrigger):
         items, next_key = activities.get("items", []), activities.get("nextPageToken")
 
         self.log(message=f"Getting activities with {len(items)} elements", level="info")
-        INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(items))
+        INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(items))
 
         if len(items) > 0:
             messages = [orjson.dumps(message).decode("utf-8") for message in items]
             self.log(message=f"Sending the first batch of {len(messages)} messages", level="info")
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(messages))
             self.push_events_to_intakes(events=messages)
 
             if next_key:

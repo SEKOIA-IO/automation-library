@@ -160,7 +160,7 @@ class VadeCloudConsumer(Thread):
 
                 if last_event_timestamp:  # pragma: no cover
                     event_lag = int(time.time()) - last_event_timestamp // 1000
-                    EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(
+                    EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels).set(
                         event_lag
                     )
 
@@ -190,13 +190,13 @@ class VadeCloudConsumer(Thread):
                     level="info",
                 )
 
-                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.name).inc(
+                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels).inc(
                     len(batch_of_events)
                 )
 
                 self.connector.push_events_to_intakes(events=batch_of_events)
 
-                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.name).inc(
+                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels).inc(
                     len(events)
                 )
 
@@ -210,7 +210,7 @@ class VadeCloudConsumer(Thread):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
 
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.name).observe(
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels).observe(
             batch_duration
         )
 
@@ -276,6 +276,17 @@ class VadeCloudLogsConnector(Connector):
         self.context = PersistentJSON("context.json", self._data_path)
         self.context_lock = Lock()
         self.consumers: dict[str, VadeCloudConsumer] = {}
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
 
     def create_client(self) -> ApiClient:
         try:

@@ -54,6 +54,17 @@ class BaseConnector(Connector):
         self.events_cache: Cache[str, Any] = load_events_cache(self.cursor._context, maxsize=1000)
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
+    @cached_property
     def time_stepper(self) -> TimeStepper:
         """
         Create a TimeStepper instance for managing time ranges.
@@ -110,7 +121,7 @@ class BaseConnector(Connector):
             nb_events = 0
             for fetched_events in self._fetch_events(start_date, end_date):
                 # fetch events from the current context
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(fetched_events))
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(fetched_events))
 
                 if next_events := remove_duplicates(fetched_events, self.events_cache, self.ID_FIELD):
                     nb_events += len(next_events)
@@ -128,7 +139,7 @@ class BaseConnector(Connector):
                 message=f"Fetched {nb_events} events in {batch_duration} seconds",
                 level="info",
             )
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
 
     def next_batch(self) -> None:
         # Fetch next batch
@@ -146,7 +157,7 @@ class BaseConnector(Connector):
                         message=f"Forward {len(batch_of_events)} events to the intake",
                         level="info",
                     )
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
                     self.push_events_to_intakes(events=batch_of_events)
                     batch_of_events = []
 
@@ -156,7 +167,7 @@ class BaseConnector(Connector):
                     message=f"Forward {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
 
     def run(self) -> None:  # pragma: no cover

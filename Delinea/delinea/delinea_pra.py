@@ -59,6 +59,17 @@ class DelineaPraConnector(AsyncConnector):
             cache["cached_events"] = list(self.events_cache.keys())
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        return {
+            "scalable-horizontally": scalable_horizontally,
+            "scalable-vertically": scalable_vertically,
+        }
+
+    @cached_property
     def client(self) -> DelineaClient:
         if not self._client:
             self._client = DelineaClient(
@@ -119,11 +130,11 @@ class DelineaPraConnector(AsyncConnector):
                 duration_start = time.time()
 
                 results = await self.get_events()
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(results)
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(results)
 
                 # compute the duration of the last events fetching
                 duration = int(time.time() - duration_start)
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(duration)
 
                 # sleep if no events were fetched
                 data_sleep = max(0, self.configuration.frequency - duration)
