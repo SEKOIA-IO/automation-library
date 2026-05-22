@@ -21,9 +21,7 @@ version account-id interface-id srcaddr dstaddr srcport dstport protocol packets
 2 111111111111 eni-0a479835a7588c9ca 188.114.116.1 172.31.39.167 123 44789 17 1 76 1645469669 1645469724 ACCEPT OK
 # 2 111111111111 eni-0a479835a7588c9ca 188.114.116.1 172.31.39.167 123 44789 17 1 76 1645469669 1645469724 ACCEPT OK
 
-""".encode(
-        "utf-8"
-    )
+""".encode("utf-8")
 
 
 @pytest.fixture
