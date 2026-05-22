@@ -19,7 +19,12 @@ from okta_modules import OktaModule
 from okta_modules.client import ApiClient
 from okta_modules.helpers import get_upper_second
 from okta_modules.logging import get_logger
-from okta_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from okta_modules.metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 logger = get_logger()
 
@@ -111,9 +116,7 @@ class SystemLogConnector(Connector):
 
     def _handle_response_error(self, response: requests.Response) -> None:
         if not response.ok:
-            message = (
-                f"Request on Okta API to fetch events failed with status {response.status_code} - {response.reason}"
-            )
+            message = f"Request on Okta API to fetch events failed with status {response.status_code} - {response.reason}"
 
             # enrich error logs with detail from the Okta API
             try:
@@ -124,7 +127,9 @@ class SystemLogConnector(Connector):
 
             raise FetchEventsException(message)
 
-    def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
+    def __fetch_next_events(
+        self, from_date: datetime
+    ) -> Generator[list[dict[str, Any]], None, None]:
         # set parameters
         params: dict[str, str | int] = {
             "since": from_date.isoformat(),
@@ -157,12 +162,17 @@ class SystemLogConnector(Connector):
             events = response.json()
 
             filtered_events = [
-                event for event in events if event.get("uuid") is not None and event["uuid"] not in self.events_cache
+                event
+                for event in events
+                if event.get("uuid") is not None
+                and event["uuid"] not in self.events_cache
             ]
 
             # yielding events if defined
             if filtered_events:
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(filtered_events))
+                INCOMING_MESSAGES.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).inc(len(filtered_events))
 
                 yield filtered_events
             else:
@@ -185,7 +195,9 @@ class SystemLogConnector(Connector):
                 if next_events:
                     # get the greater date seen in this list of events
                     events_date: list[str] = sorted(
-                        x["published"] for x in next_events if x.get("published") is not None
+                        x["published"]
+                        for x in next_events
+                        if x.get("published") is not None
                     )
 
                     last_event_date = isoparse(events_date[-1])
@@ -205,7 +217,9 @@ class SystemLogConnector(Connector):
 
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(int(current_lag.total_seconds()))
+        EVENTS_LAG.labels(
+            intake_key=self.configuration.intake_key, **self.scalability_labels
+        ).set(int(current_lag.total_seconds()))
 
     def next_batch(self) -> None:
         # save the starting time
@@ -221,7 +235,9 @@ class SystemLogConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
 
                 # Persist cache of event UUIDs after pushing to intake
@@ -239,7 +255,9 @@ class SystemLogConnector(Connector):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.configuration.intake_key, **self.scalability_labels
+        ).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

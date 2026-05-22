@@ -16,7 +16,12 @@ from sekoia_automation.storage import PersistentJSON
 
 from gateway_cloud_services.client import ApiClient
 from gateway_cloud_services.logging import get_logger
-from gateway_cloud_services.metrics import COLLECT_EVENTS_DURATION, EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
+from gateway_cloud_services.metrics import (
+    COLLECT_EVENTS_DURATION,
+    EVENTS_LAG,
+    INCOMING_EVENTS,
+    OUTCOMING_EVENTS,
+)
 
 logger = get_logger()
 
@@ -26,13 +31,17 @@ class SkyhighSWGConfig(DefaultConnectorConfiguration):
     account_name: str
     account_password: str
     frequency: int = 20
-    timedelta: int = 5  # custom lag of the trigger (ex. fetch events from 5 minutes ago)
+    timedelta: int = (
+        5  # custom lag of the trigger (ex. fetch events from 5 minutes ago)
+    )
     start_time: int = 1
     api_domain_name: str = "msg.mcafeesaas.com"
 
 
 class EventCollector(Thread):
-    def __init__(self, connector: "SkyhighSecuritySWGTrigger", events_queue: queue.Queue):
+    def __init__(
+        self, connector: "SkyhighSecuritySWGTrigger", events_queue: queue.Queue
+    ):
         super().__init__()
         self.connector = connector
         self.events_queue = events_queue
@@ -69,7 +78,9 @@ class EventCollector(Thread):
         self.save_most_recent_date_seen(self.end_date)
 
         self.start_date: datetime = self.end_date
-        self.end_date: datetime = self.end_date + timedelta(seconds=self.configuration.frequency)
+        self.end_date: datetime = self.end_date + timedelta(
+            seconds=self.configuration.frequency
+        )
 
     def _init_time_range(self):
         self.connector.context_lock.acquire()
@@ -78,17 +89,25 @@ class EventCollector(Thread):
         self.connector.context_lock.release()
 
         if most_recent_date_seen_str is None:
-            self.end_date = self.trigger_activation - timedelta(hours=self.configuration.start_time)
+            self.end_date = self.trigger_activation - timedelta(
+                hours=self.configuration.start_time
+            )
 
             # Only apply timedelta if start_time is set to 0
             if self.configuration.start_time == 0:
-                self.end_date = self.end_date - timedelta(minutes=self.configuration.timedelta)
+                self.end_date = self.end_date - timedelta(
+                    minutes=self.configuration.timedelta
+                )
 
-            self.start_date = self.end_date - timedelta(seconds=self.configuration.frequency)
+            self.start_date = self.end_date - timedelta(
+                seconds=self.configuration.frequency
+            )
 
         else:
             self.start_date = isoparse(most_recent_date_seen_str)
-            self.end_date: datetime = self.start_date + timedelta(seconds=self.configuration.frequency)
+            self.end_date: datetime = self.start_date + timedelta(
+                seconds=self.configuration.frequency
+            )
 
     def _sleep_until_next_batch(self):
         """
@@ -96,14 +115,19 @@ class EventCollector(Thread):
         - taking some lag
         - querying events for a timeframe in the future
         """
-        now = datetime.now(timezone.utc) - timedelta(minutes=self.configuration.timedelta)
+        now = datetime.now(timezone.utc) - timedelta(
+            minutes=self.configuration.timedelta
+        )
 
         current_lag = now - self.end_date
         self.log(
             message=f"Current lag {int(current_lag.total_seconds())} seconds.",
             level="info",
         )
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).set(int(current_lag.total_seconds()))
+        EVENTS_LAG.labels(
+            intake_key=self.configuration.intake_key,
+            **self.connector.scalability_labels,
+        ).set(int(current_lag.total_seconds()))
 
         if self.end_date >= now:
             difference = self.end_date - now
@@ -126,23 +150,29 @@ class EventCollector(Thread):
         )
 
         self.url = (
-            "https://" + self.configuration.api_domain_name + self.endpoint + str(self.configuration.customer_id)
+            "https://"
+            + self.configuration.api_domain_name
+            + self.endpoint
+            + str(self.configuration.customer_id)
         )
         params = {
             "filter.requestTimestampFrom": int(self.start_date.timestamp()),
             "filter.requestTimestampTo": int(self.end_date.timestamp()),
         }
         request_start_time = datetime.now(timezone.utc)
-        response: Response = self.client.get(url=self.url, headers=self.headers, params=params, timeout=30)
+        response: Response = self.client.get(
+            url=self.url, headers=self.headers, params=params, timeout=30
+        )
 
         time_elapsed = datetime.now(timezone.utc) - request_start_time
         logger.info(
             "Skyhigh API response received",
             time_elapsed_seconds=int(time_elapsed.total_seconds()),
         )
-        COLLECT_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).observe(
-            int(time_elapsed.total_seconds())
-        )
+        COLLECT_EVENTS_DURATION.labels(
+            intake_key=self.configuration.intake_key,
+            **self.connector.scalability_labels,
+        ).observe(int(time_elapsed.total_seconds()))
 
         if not response.ok:
             level = "critical" if response.status_code in [401, 403] else "error"
@@ -239,17 +269,24 @@ class Transformer(Worker):
                     response = self.queue.get(block=True, timeout=0.5)
 
                     # The transformation is done in batches to avoid filling the memory if we have a lot of events
-                    for messages in batched(self._transform(response), self.max_batch_size):
+                    for messages in batched(
+                        self._transform(response), self.max_batch_size
+                    ):
                         if len(messages) > 0:
                             nb_events = len(messages)
-                            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).inc(nb_events)
+                            INCOMING_EVENTS.labels(
+                                intake_key=self.configuration.intake_key,
+                                **self.connector.scalability_labels,
+                            ).inc(nb_events)
                             logger.info("Transformed events", nb_events=nb_events)
                             self.output_queue.put(list(messages))
 
                 except queue.Empty:
                     pass
         except Exception as ex:
-            self.connector.log_exception(ex, message="Unexpected error when converting data")
+            self.connector.log_exception(
+                ex, message="Unexpected error when converting data"
+            )
 
         logger.info("Transformer worker thread has stopped.")
 
@@ -257,7 +294,12 @@ class Transformer(Worker):
 class EventsForwarder(Worker):
     KIND = "forwarder"
 
-    def __init__(self, connector: "SkyhighSecuritySWGTrigger", queue: queue.Queue, max_batch_size: int = 20000):
+    def __init__(
+        self,
+        connector: "SkyhighSecuritySWGTrigger",
+        queue: queue.Queue,
+        max_batch_size: int = 20000,
+    ):
         super().__init__()
         self.connector = connector
         self.configuration = connector.configuration
@@ -287,7 +329,10 @@ class EventsForwarder(Worker):
         try:
             while self.is_running or self.queue.qsize() > 0:
                 events = self.next_batch(self.max_batch_size)
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).inc(len(events))
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key,
+                    **self.connector.scalability_labels,
+                ).inc(len(events))
 
                 if len(events) > 0:
                     self.connector.log(
@@ -333,13 +378,22 @@ class SkyhighSecuritySWGTrigger(Connector):
         # start the event forwarder
         batch_size = int(os.environ.get("BATCH_SIZE", 10000))
         forwarders = Workers.create(
-            int(os.environ.get("NB_FORWARDERS", 1)), EventsForwarder, self, forwarding_queue, batch_size
+            int(os.environ.get("NB_FORWARDERS", 1)),
+            EventsForwarder,
+            self,
+            forwarding_queue,
+            batch_size,
         )
         forwarders.start()
 
         # start the transformers
         transformers = Workers.create(
-            int(os.environ.get("NB_TRANSFORMERS", 1)), Transformer, self, collect_queue, forwarding_queue, batch_size
+            int(os.environ.get("NB_TRANSFORMERS", 1)),
+            Transformer,
+            self,
+            collect_queue,
+            forwarding_queue,
+            batch_size,
         )
         transformers.start()
 

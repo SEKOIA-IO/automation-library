@@ -7,8 +7,12 @@ from respx import MockRouter
 from sekoia_automation.storage import PersistentJSON
 
 from ubika_modules import UbikaModule
-from ubika_modules.connector_ubika_cloud_protector_base import UbikaCloudProtectorConnectorConfiguration
-from ubika_modules.connector_ubika_cloud_protector_traffic import UbikaCloudProtectorTrafficConnector
+from ubika_modules.connector_ubika_cloud_protector_base import (
+    UbikaCloudProtectorConnectorConfiguration,
+)
+from ubika_modules.connector_ubika_cloud_protector_traffic import (
+    UbikaCloudProtectorTrafficConnector,
+)
 
 
 @pytest.fixture
@@ -18,7 +22,9 @@ def fake_time():
 
 @pytest.fixture
 def patch_datetime_now(fake_time):
-    with patch("ubika_modules.connector_ubika_cloud_protector_base.datetime") as mock_datetime:
+    with patch(
+        "ubika_modules.connector_ubika_cloud_protector_base.datetime"
+    ) as mock_datetime:
         mock_datetime.now.return_value = fake_time
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
         mock_datetime.fromtimestamp = lambda ts: datetime.fromtimestamp(ts)
@@ -72,7 +78,9 @@ def message2():
 
 
 @pytest.mark.respx(base_url="https://eu-west-2.cloudprotector.com")
-def test_fetch_events_with_pagination(respx_mock: MockRouter, trigger, message1, message2):
+def test_fetch_events_with_pagination(
+    respx_mock: MockRouter, trigger, message1, message2
+):
     with patch("ubika_modules.connector_ubika_cloud_protector_base.time") as mock_time:
         mock_time.sleep = MagicMock()
 

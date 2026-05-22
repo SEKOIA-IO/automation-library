@@ -10,8 +10,18 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from . import DuoModule, LogType
-from .iterators import AdminLogsIterator, AuthLogsIterator, OfflineLogsIterator, TelephonyLogsIterator
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .iterators import (
+    AdminLogsIterator,
+    AuthLogsIterator,
+    OfflineLogsIterator,
+    TelephonyLogsIterator,
+)
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 
 class AdminLogsConnectorConfiguration(DefaultConnectorConfiguration):
@@ -24,7 +34,12 @@ class DuoLogsConsumer(Thread):
     Each endpoint of Duo Admin API is consumed in its own separate thread.
     """
 
-    def __init__(self, connector: "DuoAdminLogsConnector", log_type: LogType, checkpoint: Optional[dict] = None):
+    def __init__(
+        self,
+        connector: "DuoAdminLogsConnector",
+        log_type: LogType,
+        checkpoint: Optional[dict] = None,
+    ):
         super().__init__()
 
         self.connector = connector
@@ -63,13 +78,18 @@ class DuoLogsConsumer(Thread):
         self.connector.context_lock.acquire()
 
         with self.connector.context as cache:
-            default_min_time = int(time.time()) - 5 * 60  # start with events from 5 min ago
+            default_min_time = (
+                int(time.time()) - 5 * 60
+            )  # start with events from 5 min ago
 
             # these are using milliseconds instead of seconds
             if self._log_type in (LogType.AUTHENTICATION, LogType.TELEPHONY):
                 default_min_time *= 1000
 
-            result = cache.get(self._log_type.value, {"min_time": default_min_time, "next_offset": None})
+            result = cache.get(
+                self._log_type.value,
+                {"min_time": default_min_time, "next_offset": None},
+            )
 
         self.connector.context_lock.release()
 
@@ -92,7 +112,10 @@ class DuoLogsConsumer(Thread):
             min_time = last_checkpoint.get("min_time")
 
             return AdminLogsIterator(
-                client=self.client, min_time=min_time, limit=self.chunk_size, callback=self.save_checkpoint
+                client=self.client,
+                min_time=min_time,
+                limit=self.chunk_size,
+                callback=self.save_checkpoint,
             )
 
         elif self._log_type == LogType.AUTHENTICATION:
@@ -123,7 +146,10 @@ class DuoLogsConsumer(Thread):
             min_time = last_checkpoint.get("min_time")
 
             return OfflineLogsIterator(
-                client=self.client, min_time=min_time, limit=self.chunk_size, callback=self.save_checkpoint
+                client=self.client,
+                min_time=min_time,
+                limit=self.chunk_size,
+                callback=self.save_checkpoint,
             )
 
         raise NotImplementedError(f"Unsupported log type {self._log_type}")
@@ -139,16 +165,20 @@ class DuoLogsConsumer(Thread):
                 if self._log_type == LogType.TELEPHONY:
                     # Telephony logs have their datetime represented as "2023-03-21T22:34:49.466370+00:00"
                     most_recent_event = max(events, key=lambda item: item["ts"])
-                    most_recent_timestamp = datetime.datetime.fromisoformat(most_recent_event["ts"]).timestamp()
+                    most_recent_timestamp = datetime.datetime.fromisoformat(
+                        most_recent_event["ts"]
+                    ).timestamp()
                 else:
                     most_recent_event = max(events, key=lambda item: item["timestamp"])
                     most_recent_timestamp = most_recent_event["timestamp"]
 
                 current_timestamp = int(time.time())
                 events_lag = current_timestamp - most_recent_timestamp
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self._log_type.value, **self.connector.scalability_labels).set(
-                    events_lag
-                )
+                EVENTS_LAG.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self._log_type.value,
+                    **self.connector.scalability_labels,
+                ).set(events_lag)
 
             # Add `eventtype` field
             for event in events:
@@ -156,7 +186,9 @@ class DuoLogsConsumer(Thread):
 
             batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
             INCOMING_MESSAGES.labels(
-                intake_key=self.connector.configuration.intake_key, type=self._log_type.value, **self.connector.scalability_labels
+                intake_key=self.connector.configuration.intake_key,
+                type=self._log_type.value,
+                **self.connector.scalability_labels,
             ).inc(len(batch_of_events))
 
             # if the batch is full, push it
@@ -174,26 +206,34 @@ class DuoLogsConsumer(Thread):
                 level="info",
             )
 
-            OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self._log_type.value, **self.connector.scalability_labels).inc(
-                len(events)
-            )
+            OUTCOMING_EVENTS.labels(
+                intake_key=self.connector.configuration.intake_key,
+                type=self._log_type.value,
+                **self.connector.scalability_labels,
+            ).inc(len(events))
 
             FORWARD_EVENTS_DURATION.labels(
-                intake_key=self.connector.configuration.intake_key, type=self._log_type.value, **self.connector.scalability_labels
+                intake_key=self.connector.configuration.intake_key,
+                type=self._log_type.value,
+                **self.connector.scalability_labels,
             ).observe(batch_duration)
 
             # compute the remaining sleeping time. If greater than 0, sleep
             delta_sleep = self.frequency - batch_duration
             if delta_sleep > 0:
                 self.log(
-                    message=f"Next batch of {self.log_label} events in the future. " f"Waiting {delta_sleep} seconds",
+                    message=f"Next batch of {self.log_label} events in the future. "
+                    f"Waiting {delta_sleep} seconds",
                     level="info",
                 )
                 time.sleep(delta_sleep)
 
         if total_num_of_events == 0:
             time_to_sleep = self.frequency
-            self.log(message=f"No new {self.log_label} events. Waiting {time_to_sleep} seconds", level="info")
+            self.log(
+                message=f"No new {self.log_label} events. Waiting {time_to_sleep} seconds",
+                level="info",
+            )
             time.sleep(time_to_sleep)
 
     def run(self):
@@ -202,14 +242,21 @@ class DuoLogsConsumer(Thread):
                 self.fetch_batches()
 
         except Exception as error:
-            self.connector.log_exception(error, message=f"Failed to forward {self.log_label} events")
+            self.connector.log_exception(
+                error, message=f"Failed to forward {self.log_label} events"
+            )
 
 
 class DuoAdminLogsConnector(Connector):
     module: DuoModule
     configuration: AdminLogsConnectorConfiguration
 
-    LOGS_TO_FETCH = (LogType.AUTHENTICATION, LogType.ADMINISTRATION, LogType.TELEPHONY, LogType.OFFLINE)
+    LOGS_TO_FETCH = (
+        LogType.AUTHENTICATION,
+        LogType.ADMINISTRATION,
+        LogType.TELEPHONY,
+        LogType.OFFLINE,
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

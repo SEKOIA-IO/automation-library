@@ -12,7 +12,12 @@ from sekoia_automation.storage import PersistentJSON
 
 from . import VadeCloudModule
 from .client import ApiClient
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 
 class FetchEventException(Exception):
@@ -20,7 +25,6 @@ class FetchEventException(Exception):
 
 
 class APIException(Exception):
-
     def __init__(self, code: int, reason: str, content: str):
         super().__init__(reason)
         self.code = code
@@ -81,7 +85,9 @@ class VadeCloudConsumer(Thread):
 
         self.connector.context_lock.release()
 
-    def request_logs_page(self, start_date: int, period: str, page: int = 0) -> Response:
+    def request_logs_page(
+        self, start_date: int, period: str, page: int = 0
+    ) -> Response:
         params = {
             "userId": self.client.account_id,
             "pageSize": self.connector.configuration.chunk_size,
@@ -93,7 +99,9 @@ class VadeCloudConsumer(Thread):
         params.update(self.params)  # override with custom stuff
 
         response = self.client.post(
-            f"{self.connector.module.configuration.hostname}/rest/v3.0/filteringlog/getReport", json=params, timeout=60
+            f"{self.connector.module.configuration.hostname}/rest/v3.0/filteringlog/getReport",
+            json=params,
+            timeout=60,
         )
 
         return response
@@ -112,15 +120,24 @@ class VadeCloudConsumer(Thread):
                     message = f"{message}: {error['error']}"
 
                 except requests.exceptions.JSONDecodeError as e:  # pragma: no cover
-                    self.log(message="Cannot parse not 200 response as json {0}".format(str(e)), level="debug")
+                    self.log(
+                        message="Cannot parse not 200 response as json {0}".format(
+                            str(e)
+                        ),
+                        level="debug",
+                    )
 
                 raise FetchEventException(message)
 
-    def iterate_through_pages(self, from_timestamp: int) -> Generator[list[dict[str, Any]], None, None]:
+    def iterate_through_pages(
+        self, from_timestamp: int
+    ) -> Generator[list[dict[str, Any]], None, None]:
         page_num = 0
         # long period will allow us to capture events with big time gap between them
         search_period = "DAYS_07"
-        response = self.request_logs_page(start_date=from_timestamp, period=search_period, page=page_num)
+        response = self.request_logs_page(
+            start_date=from_timestamp, period=search_period, page=page_num
+        )
         self._handle_response_error(response)
 
         while self.running:
@@ -133,7 +150,9 @@ class VadeCloudConsumer(Thread):
             else:
                 return
 
-            response = self.request_logs_page(start_date=from_timestamp, period=search_period, page=page_num)
+            response = self.request_logs_page(
+                start_date=from_timestamp, period=search_period, page=page_num
+            )
 
     def fetch_events(self) -> Generator[list[dict[str, Any]], None, None]:
         most_recent_timestamp_seen = self.get_last_timestamp()
@@ -150,7 +169,9 @@ class VadeCloudConsumer(Thread):
                         self.name,
                         last_event_timestamp,
                         (
-                            datetime.fromtimestamp(last_event_timestamp // 1000).isoformat()
+                            datetime.fromtimestamp(
+                                last_event_timestamp // 1000
+                            ).isoformat()
                             if last_event_timestamp
                             else 0
                         ),
@@ -160,9 +181,11 @@ class VadeCloudConsumer(Thread):
 
                 if last_event_timestamp:  # pragma: no cover
                     event_lag = int(time.time()) - last_event_timestamp // 1000
-                    EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels).set(
-                        event_lag
-                    )
+                    EVENTS_LAG.labels(
+                        intake_key=self.connector.configuration.intake_key,
+                        type=self.name,
+                        **self.connector.scalability_labels,
+                    ).set(event_lag)
 
                     # save the greater date ever seen
                     if last_event_timestamp > most_recent_timestamp_seen:
@@ -190,15 +213,19 @@ class VadeCloudConsumer(Thread):
                     level="info",
                 )
 
-                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels).inc(
-                    len(batch_of_events)
-                )
+                INCOMING_MESSAGES.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.name,
+                    **self.connector.scalability_labels,
+                ).inc(len(batch_of_events))
 
                 self.connector.push_events_to_intakes(events=batch_of_events)
 
-                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels).inc(
-                    len(events)
-                )
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.name,
+                    **self.connector.scalability_labels,
+                ).inc(len(events))
 
             else:
                 self.log(
@@ -210,9 +237,11 @@ class VadeCloudConsumer(Thread):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
 
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels).observe(
-            batch_duration
-        )
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.connector.configuration.intake_key,
+            type=self.name,
+            **self.connector.scalability_labels,
+        ).observe(batch_duration)
 
         self.log(
             message=f"{self.name}: Fetched and forwarded events in {batch_duration} seconds",
@@ -234,13 +263,12 @@ class VadeCloudConsumer(Thread):
         if error.code == 401:
             message = "The VadeCloud API raised an authentication issue. Please check our credentials"
         elif error.code == 500:
-            message = (
-                "The VadeCloud API raised an internal error. Please contact the Vade support if the issue persists"
-            )
+            message = "The VadeCloud API raised an internal error. Please contact the Vade support if the issue persists"
 
         self.connector.log(message, level="error")
         self.connector.log(
-            f"WatchGuard: Wait {self.connector.configuration.frequency}s before next attempt", level="info"
+            f"WatchGuard: Wait {self.connector.configuration.frequency}s before next attempt",
+            level="info",
         )
         time.sleep(self.connector.configuration.frequency)
 
@@ -253,7 +281,9 @@ class VadeCloudConsumer(Thread):
                     self.handle_api_exception(error)
 
         except Exception as error:
-            self.connector.log_exception(error, message=f"{self.name}: Failed to forward events")
+            self.connector.log_exception(
+                error, message=f"{self.name}: Failed to forward events"
+            )
 
 
 class VadeCloudConnectorConfiguration(DefaultConnectorConfiguration):
@@ -304,11 +334,19 @@ class VadeCloudLogsConnector(Connector):
 
             http_error_code = error_response.status_code
             if http_error_code in [401, 403, 404]:
-                self.log(message=f"Wrong login or password. Please check our credentials", level="critical")
-
-            if http_error_code == 400 and error_response.json().get("error", {}).get("trKey", "") == "INVALID_USER":
                 self.log(
-                    message=f"Invalid account type. It must be User, not Admin. Please change it", level="critical"
+                    message=f"Wrong login or password. Please check our credentials",
+                    level="critical",
+                )
+
+            if (
+                http_error_code == 400
+                and error_response.json().get("error", {}).get("trKey", "")
+                == "INVALID_USER"
+            ):
+                self.log(
+                    message=f"Invalid account type. It must be User, not Admin. Please change it",
+                    level="critical",
                 )
 
             raise error
@@ -330,10 +368,15 @@ class VadeCloudLogsConnector(Connector):
 
         return consumers
 
-    def supervise_consumers(self, consumers: dict[str, VadeCloudConsumer], client: ApiClient) -> None:
+    def supervise_consumers(
+        self, consumers: dict[str, VadeCloudConsumer], client: ApiClient
+    ) -> None:
         for consumer_name, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
-                self.log(message=f"Restart consuming logs of `{consumer_name}` emails", level="info")
+                self.log(
+                    message=f"Restart consuming logs of `{consumer_name}` emails",
+                    level="info",
+                )
 
                 consumers[consumer_name] = VadeCloudConsumer(
                     connector=self,
@@ -346,7 +389,10 @@ class VadeCloudLogsConnector(Connector):
     def stop_consumers(self, consumers: dict[str, VadeCloudConsumer]) -> None:
         for consumer_name, consumer in consumers.items():
             if consumer is not None and consumer.is_alive():
-                self.log(message=f"Stop consuming logs of `{consumer_name}` emails", level="info")
+                self.log(
+                    message=f"Stop consuming logs of `{consumer_name}` emails",
+                    level="info",
+                )
                 consumer.stop()
 
     def run(self) -> None:  # pragma: no cover

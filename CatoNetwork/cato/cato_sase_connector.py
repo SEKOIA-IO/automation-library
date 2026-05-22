@@ -149,13 +149,19 @@ class CatoSaseConnector(Connector):
                 while self.running:
                     processing_start = time.time()
                     if previous_processing_end is not None:
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
-                            processing_start - previous_processing_end
-                        )
+                        EVENTS_LAG.labels(
+                            intake_key=self.configuration.intake_key,
+                            **self.scalability_labels
+                        ).set(processing_start - previous_processing_end)
 
-                    message_ids: list[str] = loop.run_until_complete(self.get_cato_events())
+                    message_ids: list[str] = loop.run_until_complete(
+                        self.get_cato_events()
+                    )
                     processing_end = time.time()
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(message_ids))
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels
+                    ).inc(len(message_ids))
 
                     log_message = "No records to forward"
                     if len(message_ids) > 0:
@@ -169,9 +175,10 @@ class CatoSaseConnector(Connector):
                         processing_time=(processing_end - processing_start),
                     )
 
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
-                        processing_end - processing_start
-                    )
+                    FORWARD_EVENTS_DURATION.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels
+                    ).observe(processing_end - processing_start)
 
                     previous_processing_end = processing_end
 

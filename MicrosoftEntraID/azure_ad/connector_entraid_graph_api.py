@@ -50,7 +50,11 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
         self._client: Optional[GraphApi] = None
 
     def load_cache(self, key: str, maxsize: int) -> Cache[str | None, bool]:
-        context = self.last_event_date_signin._context if key == "signin" else self.last_event_date_directory._context
+        context = (
+            self.last_event_date_signin._context
+            if key == "signin"
+            else self.last_event_date_directory._context
+        )
 
         # Optional only because stubs in graph api are bad
         result: LRUCache[str | None, bool] = LRUCache(maxsize=maxsize)
@@ -64,7 +68,11 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
         return result
 
     def persist_cache(self, key: str) -> None:
-        context = self.last_event_date_signin._context if key == "signin" else self.last_event_date_directory._context
+        context = (
+            self.last_event_date_signin._context
+            if key == "signin"
+            else self.last_event_date_directory._context
+        )
         cache = self.signin_cache if key == "signin" else self.directory_alerts_cache
 
         with context as ctx:
@@ -104,7 +112,9 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
         events: list[DirectoryAudit] = []
         total_events = 0
         new_offset = self.last_event_date_directory.offset
-        async for event in self.client.get_directory_audit_logs(start_date=self.last_event_date_directory.offset):
+        async for event in self.client.get_directory_audit_logs(
+            start_date=self.last_event_date_directory.offset
+        ):
             if not self.running:  # pragma: no cover
                 break
 
@@ -113,7 +123,11 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
 
             events.append(event)
             if len(events) >= self.configuration.chunk_size:
-                total_events += len(await self.push_data_to_intakes([GraphApi.encode_log(event) for event in events]))
+                total_events += len(
+                    await self.push_data_to_intakes(
+                        [GraphApi.encode_log(event) for event in events]
+                    )
+                )
 
                 for data in events:
                     new_offset = max(new_offset, data.activity_date_time)
@@ -124,7 +138,11 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
                 events = []
 
         if events:
-            total_events += len(await self.push_data_to_intakes([GraphApi.encode_log(event) for event in events]))
+            total_events += len(
+                await self.push_data_to_intakes(
+                    [GraphApi.encode_log(event) for event in events]
+                )
+            )
 
             for data in events:
                 new_offset = max(new_offset, data.activity_date_time)
@@ -139,7 +157,9 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
         events: list[SignIn] = []
         total_events = 0
         new_offset = self.last_event_date_directory.offset
-        async for event in self.client.get_signin_logs(start_date=self.last_event_date_directory.offset):
+        async for event in self.client.get_signin_logs(
+            start_date=self.last_event_date_directory.offset
+        ):
             if not self.running:  # pragma: no cover
                 break
 
@@ -148,7 +168,11 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
 
             events.append(event)
             if len(events) >= self.configuration.chunk_size:
-                total_events += len(await self.push_data_to_intakes([GraphApi.encode_log(event) for event in events]))
+                total_events += len(
+                    await self.push_data_to_intakes(
+                        [GraphApi.encode_log(event) for event in events]
+                    )
+                )
 
                 for data in events:
                     new_offset = max(new_offset, data.created_date_time)
@@ -159,7 +183,11 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
                 events = []
 
         if events:
-            total_events += len(await self.push_data_to_intakes([GraphApi.encode_log(event) for event in events]))
+            total_events += len(
+                await self.push_data_to_intakes(
+                    [GraphApi.encode_log(event) for event in events]
+                )
+            )
 
             for data in events:
                 new_offset = max(new_offset, data.created_date_time)
@@ -186,19 +214,23 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
                 last_event_date = max(last_event_date_signin, last_event_date_directory)
                 processing_end = time.time()
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
-                    processing_end - last_event_date.timestamp()
-                )
+                EVENTS_LAG.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).set(processing_end - last_event_date.timestamp())
 
                 log_message = "No records to forward"
                 if result > 0:
                     log_message = "Pushed {0} records".format(result)
 
                 self.log(message=log_message, level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(result)
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).inc(result)
 
                 processing_time = processing_end - processing_start
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(processing_time)
+                FORWARD_EVENTS_DURATION.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).observe(processing_time)
                 logger.info(
                     "Processing took {processing_time} seconds",
                     processing_time=processing_time,
@@ -215,8 +247,14 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
                 self.log_exception(error)
 
                 # Reset client if HTTP transport is closed
-                if "HTTP transport has already been closed" in str(error) or "transport" in str(error).lower():
-                    self.log(message="Looks like http transport closed, resetting client....", level="warning")
+                if (
+                    "HTTP transport has already been closed" in str(error)
+                    or "transport" in str(error).lower()
+                ):
+                    self.log(
+                        message="Looks like http transport closed, resetting client....",
+                        level="warning",
+                    )
                     if self._client:
                         await self._client.close()
                         self._client = None

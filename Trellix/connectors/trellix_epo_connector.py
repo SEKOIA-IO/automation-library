@@ -133,13 +133,16 @@ class TrellixEpoConnector(AsyncConnector):
             try:
                 processing_start = time.time()
                 if previous_processing_end is not None:
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
-                        processing_start - previous_processing_end
-                    )
+                    EVENTS_LAG.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).set(processing_start - previous_processing_end)
 
                 message_ids: list[str] = await self.get_trellix_epo_events()
                 processing_end = time.time()
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(message_ids))
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).inc(len(message_ids))
 
                 log_message = "No records to forward"
                 if len(message_ids) > 0:
@@ -153,12 +156,17 @@ class TrellixEpoConnector(AsyncConnector):
                     processing_time=processing_time,
                 )
 
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(processing_time)
+                FORWARD_EVENTS_DURATION.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).observe(processing_time)
 
                 # compute the remaining sleeping time. If greater than 0 and no messages where fetched, pause the connector
                 delta_sleep = self.configuration.frequency - processing_time
                 if len(message_ids) == 0 and delta_sleep > 0:
-                    self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
+                    self.log(
+                        message=f"Next batch in the future. Waiting {delta_sleep} seconds",
+                        level="info",
+                    )
                     await asyncio.sleep(delta_sleep)
 
             except Exception as e:

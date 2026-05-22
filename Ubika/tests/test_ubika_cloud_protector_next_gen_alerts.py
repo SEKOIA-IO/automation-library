@@ -20,7 +20,9 @@ from ubika_modules.timestepper import TimeStepper
 @pytest.fixture
 def trigger(data_storage):
     module = UbikaModule()
-    trigger = UbikaCloudProtectorNextGenAlertsConnector(module=module, data_path=data_storage)
+    trigger = UbikaCloudProtectorNextGenAlertsConnector(
+        module=module, data_path=data_storage
+    )
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
@@ -42,7 +44,13 @@ def message1():
     return {
         "apiVersion": "logs.ubika.io/v1beta",
         "kind": "SecurityEvents",
-        "metadata": {"name": "", "namespace": "", "created": None, "updated": None, "version": "0"},
+        "metadata": {
+            "name": "",
+            "namespace": "",
+            "created": None,
+            "updated": None,
+            "version": "0",
+        },
         "spec": {
             "items": [
                 {
@@ -55,7 +63,10 @@ def message1():
                         "method": "GET",
                         "path": "/api/.env",
                         "headers": [
-                            {"key": "x-request-id", "value": "4d1c331e-14af-4ce1-97a8-99c495ff6b18"},
+                            {
+                                "key": "x-request-id",
+                                "value": "4d1c331e-14af-4ce1-97a8-99c495ff6b18",
+                            },
                             {"key": "x-real-ip", "value": "176.98.186.48"},
                             {"key": "x-ubika-data", "value": "1"},
                             {"key": "host", "value": "ubika.integration.sekoia.cloud"},
@@ -70,7 +81,11 @@ def message1():
                         "ipSource": "1.2.3.4",
                         "query": "",
                     },
-                    "context": {"assetName": "testAsset", "assetNamespace": "sekoia", "reaction": "BLOCKED"},
+                    "context": {
+                        "assetName": "testAsset",
+                        "assetNamespace": "sekoia",
+                        "reaction": "BLOCKED",
+                    },
                     "uid": "5a105e8b9d40e1329780d62ea2265d8a",
                     "tokens": {
                         "openapi3Name": "",
@@ -129,13 +144,21 @@ def message2():
     return {
         "apiVersion": "logs.ubika.io/v1beta",
         "kind": "SecurityEvents",
-        "metadata": {"name": "", "namespace": "", "created": None, "updated": None, "version": "0"},
+        "metadata": {
+            "name": "",
+            "namespace": "",
+            "created": None,
+            "updated": None,
+            "version": "0",
+        },
         "spec": {"items": [], "nextPageToken": "tokenEnd"},
     }
 
 
 @pytest.mark.respx(base_url="https://login.ubika.io")
-def test_fetch_events_with_pagination(respx_mock: MockRouter, trigger, message1, message2):
+def test_fetch_events_with_pagination(
+    respx_mock: MockRouter, trigger, message1, message2
+):
     respx_mock.post("/auth/realms/main/protocol/openid-connect/token").mock(
         return_value=httpx.Response(
             200,
@@ -181,7 +204,9 @@ def test_fetch_events_with_pagination(respx_mock: MockRouter, trigger, message1,
 
 
 @pytest.mark.respx(base_url="https://login.ubika.io")
-def test_next_batch_sleep_until_next_round(respx_mock: MockRouter, trigger, message1, message2, sleep_spy):
+def test_next_batch_sleep_until_next_round(
+    respx_mock: MockRouter, trigger, message1, message2, sleep_spy
+):
     respx_mock.post("/auth/realms/main/protocol/openid-connect/token").mock(
         return_value=httpx.Response(
             200,
@@ -235,7 +260,10 @@ def test_authorization_http_error_without_retry(respx_mock: MockRouter, trigger)
     route.mock(
         return_value=httpx.Response(
             400,
-            json={"error": "invalid_grant", "error_description": "Invalid refresh token"},
+            json={
+                "error": "invalid_grant",
+                "error_description": "Invalid refresh token",
+            },
         )
     )
 
@@ -326,7 +354,11 @@ def test_stepper_clamps_dates_older_than_one_month(monkeypatch, trigger):
     called = {}
 
     def fake_create_from_time(self, date_arg, freq_arg, delta_arg):
-        called["date"], called["freq"], called["delta"] = (date_arg, freq_arg, delta_arg)
+        called["date"], called["freq"], called["delta"] = (
+            date_arg,
+            freq_arg,
+            delta_arg,
+        )
         return sentinel
 
     monkeypatch.setattr(TimeStepper, "create_from_time", fake_create_from_time)

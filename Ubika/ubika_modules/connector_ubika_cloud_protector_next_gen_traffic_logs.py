@@ -4,7 +4,9 @@ from .connector_ubika_cloud_protector_next_gen_base import (
 )
 
 
-class UbikaCloudProtectorNextGenTrafficLogsConnector(UbikaCloudProtectorNextGenBaseConnector):
+class UbikaCloudProtectorNextGenTrafficLogsConnector(
+    UbikaCloudProtectorNextGenBaseConnector
+):
     """
     Connector that continuously polls the Ubika Cloud Protector NextGen
     traffic-logs endpoint and forwards them to the configured intake.

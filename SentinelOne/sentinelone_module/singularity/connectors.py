@@ -15,8 +15,15 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.helpers import filter_collected_events
-from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
-from sentinelone_module.singularity.client import SentinelOneServerError, SingularityClient
+from sentinelone_module.logs.metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    OUTCOMING_EVENTS,
+)
+from sentinelone_module.singularity.client import (
+    SentinelOneServerError,
+    SingularityClient,
+)
 
 
 class SingularityConnectorConfig(DefaultConnectorConfiguration):
@@ -71,7 +78,9 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
 
         # Set up parameters
         last_event_date = self.last_event_date.offset
-        start_time = int(last_event_date.timestamp() * 1000)  # convert the event date into a timestamp in millisecond
+        start_time = int(
+            last_event_date.timestamp() * 1000
+        )  # convert the event date into a timestamp in millisecond
         cursor: str | None = None
         has_more_items: bool = True
 
@@ -84,7 +93,9 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
                 after=cursor,
             )
 
-            alerts = filter_collected_events(data.alerts, lambda alert: alert["id"], self.events_cache)
+            alerts = filter_collected_events(
+                data.alerts, lambda alert: alert["id"], self.events_cache
+            )
 
             detailed_alerts = []
             for alert in alerts:
@@ -120,19 +131,25 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
                 last_event_date = self.last_event_date.offset
                 processing_end = time.time()
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.product_name, **self.scalability_labels).set(
-                    processing_end - last_event_date.timestamp()
-                )
+                EVENTS_LAG.labels(
+                    intake_key=self.configuration.intake_key,
+                    type=self.product_name,
+                    **self.scalability_labels
+                ).set(processing_end - last_event_date.timestamp())
 
                 log_message = "No records to forward"
                 if result > 0:
                     log_message = "Pushed {0} records".format(result)
 
                 self.log(message=log_message, level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(result)
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).inc(result)
 
                 processing_time = processing_end - processing_start
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(processing_time)
+                FORWARD_EVENTS_DURATION.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).observe(processing_time)
                 logger.info(
                     "Processing took {processing_time} seconds",
                     processing_time=processing_time,

@@ -13,7 +13,11 @@ from dateutil.parser import isoparse
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from websocket import WebSocketApp, WebSocketTimeoutException
 
-from proofpoint_modules.helpers import format_datetime, normalize_since_time, split_message
+from proofpoint_modules.helpers import (
+    format_datetime,
+    normalize_since_time,
+    split_message,
+)
 from proofpoint_modules.metrics import EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
 from proofpoint_modules.pod.checkpoint import Checkpoint
 
@@ -32,7 +36,9 @@ class PODConfig(DefaultConnectorConfiguration):
 
 
 class PoDEventsConsumer(Thread):
-    def __init__(self, connector: "PoDEventsTrigger", queue: queue.Queue, checkpoint: Checkpoint):
+    def __init__(
+        self, connector: "PoDEventsTrigger", queue: queue.Queue, checkpoint: Checkpoint
+    ):
         super().__init__()
         self.connector = connector
         self.queue = queue
@@ -101,11 +107,18 @@ class PoDEventsConsumer(Thread):
             else:
                 self.most_recent_date_seen = timestamp
 
-            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).inc()
+            INCOMING_EVENTS.labels(
+                intake_key=self.configuration.intake_key,
+                **self.connector.scalability_labels,
+            ).inc()
 
             # we put the message in the queue with the most recent date seen as timestamp,
             # so the forwarder can update the checkpoint and compute the lag
-            timestamp_iso = self.most_recent_date_seen.isoformat() if self.most_recent_date_seen else None
+            timestamp_iso = (
+                self.most_recent_date_seen.isoformat()
+                if self.most_recent_date_seen
+                else None
+            )
             self.queue.put((timestamp_iso, message))
         except Exception as ex:
             self.connector.log_exception(ex, message="Failed to consume event")
@@ -122,14 +135,20 @@ class PoDEventsConsumer(Thread):
                 return
 
             if not teardown:
-                self.connector.log("Websocket event loop stopped for an unknwon reason", level="error")
+                self.connector.log(
+                    "Websocket event loop stopped for an unknwon reason", level="error"
+                )
 
             self.connector.log("Failure in the websocket event loop", level="warning")
 
 
 class EventsForwarder(Thread):
     def __init__(
-        self, connector: "PoDEventsTrigger", queue: queue.Queue, checkpoint: Checkpoint, max_batch_size: int = 20000
+        self,
+        connector: "PoDEventsTrigger",
+        queue: queue.Queue,
+        checkpoint: Checkpoint,
+        max_batch_size: int = 20000,
     ):
         super().__init__()
         self.connector = connector
@@ -153,12 +172,19 @@ class EventsForwarder(Thread):
             try:
                 timestamp_str, message = self.queue.get(block=True, timeout=0.5)
 
-                if message.get("type") == "message" and "msgParts" in message and "guid" in message:
+                if (
+                    message.get("type") == "message"
+                    and "msgParts" in message
+                    and "guid" in message
+                ):
                     events.extend(split_message(message))
                 else:
                     events.append(orjson.dumps(message).decode("utf-8"))
 
-                if most_recent_date_seen_str is None or timestamp_str > most_recent_date_seen_str:
+                if (
+                    most_recent_date_seen_str is None
+                    or timestamp_str > most_recent_date_seen_str
+                ):
                     most_recent_date_seen_str = timestamp_str
 
                 if len(events) >= max_batch_size:
@@ -174,7 +200,10 @@ class EventsForwarder(Thread):
             # compute the lag
             now = datetime.now(timezone.utc)
             current_lag = now - most_recent_date_seen
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).set(int(current_lag.total_seconds()))
+            EVENTS_LAG.labels(
+                intake_key=self.configuration.intake_key,
+                **self.connector.scalability_labels,
+            ).set(int(current_lag.total_seconds()))
 
         return events
 
@@ -188,7 +217,10 @@ class EventsForwarder(Thread):
                         message=f"Forward {len(events)} events to the intake",
                         level="info",
                     )
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).inc(len(events))
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.connector.scalability_labels,
+                    ).inc(len(events))
                     self.connector.push_events_to_intakes(events=events)
             except Exception as ex:
                 self.connector.log_exception(ex, message="Failed to forward event")
@@ -235,7 +267,9 @@ class PoDEventsTrigger(Connector):
 
         # start the event forwarder
         batch_size = int(os.environ.get("BATCH_SIZE", 10000))
-        forwarder = EventsForwarder(self, events_queue, checkpoint, max_batch_size=batch_size)
+        forwarder = EventsForwarder(
+            self, events_queue, checkpoint, max_batch_size=batch_size
+        )
         forwarder.start()
 
         while self.running:
@@ -245,7 +279,9 @@ class PoDEventsTrigger(Connector):
             # if the read queue thread is down, we spawn a new one
             if not forwarder.is_alive() and forwarder.is_running:
                 self.log(message="Restart event forwarder", level="warning")
-                forwarder = EventsForwarder(self, events_queue, checkpoint, max_batch_size=batch_size)
+                forwarder = EventsForwarder(
+                    self, events_queue, checkpoint, max_batch_size=batch_size
+                )
                 forwarder.start()
 
             # if the consumer is dead, we spawn a new one

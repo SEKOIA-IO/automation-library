@@ -13,13 +13,27 @@ from requests.exceptions import HTTPError
 from azure.identity import ClientSecretCredential
 from azure.mgmt.securityinsight import SecurityInsights
 from azure.core.paging import ItemPaged
-from azure.mgmt.securityinsight.models import IncidentAdditionalData, IncidentOwnerInfo, Incident, IncidentLabel
+from azure.mgmt.securityinsight.models import (
+    IncidentAdditionalData,
+    IncidentOwnerInfo,
+    Incident,
+    IncidentLabel,
+)
 
 from sekoia_automation.connector import Connector
 from sekoia_automation.checkpoint import CheckpointDatetime
 
-from microsoft_sentinel.utils import additional_data_to_dict, owner_data_to_dict, labels_data_to_dict
-from microsoft_sentinel.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+from microsoft_sentinel.utils import (
+    additional_data_to_dict,
+    owner_data_to_dict,
+    labels_data_to_dict,
+)
+from microsoft_sentinel.metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_EVENTS,
+    OUTCOMING_EVENTS,
+)
 from microsoft_sentinel import (
     MicrosoftSentinelModule,
     MicrosoftSentinelResponseModel,
@@ -35,7 +49,9 @@ class MicrosoftSentineldConnector(Connector):
         super().__init__(*args, **kwargs)
 
         self.cursor = CheckpointDatetime(
-            path=self._data_path, start_at=timedelta(days=1), ignore_older_than=timedelta(days=30)
+            path=self._data_path,
+            start_at=timedelta(days=1),
+            ignore_older_than=timedelta(days=30),
         )
         self.from_date = self.cursor.offset
 
@@ -92,7 +108,9 @@ class MicrosoftSentineldConnector(Connector):
 
         for key in keys_to_extract:
             value = getattr(incident, key)
-            if isinstance(value, list) and all(isinstance(item, IncidentLabel) for item in value):
+            if isinstance(value, list) and all(
+                isinstance(item, IncidentLabel) for item in value
+            ):
                 new_dict[key] = [labels_data_to_dict(item) for item in value]
             elif type(value) in conversion_map:
                 new_dict[key] = conversion_map[type(value)](value)

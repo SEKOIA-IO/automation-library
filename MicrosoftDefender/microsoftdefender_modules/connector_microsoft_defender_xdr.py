@@ -132,7 +132,9 @@ class MicrosoftDefenderGraphAPIAlerts(Connector):
 
             response.raise_for_status()
 
-    def fetch_events(self, start: datetime, end: datetime) -> Generator[list, None, None]:
+    def fetch_events(
+        self, start: datetime, end: datetime
+    ) -> Generator[list, None, None]:
         self.log(message=f"Querying timerange {start} to {end}.", level="info")
 
         url = "https://graph.microsoft.com/v1.0/security/alerts_v2"
@@ -147,7 +149,9 @@ class MicrosoftDefenderGraphAPIAlerts(Connector):
 
         # iterate through pages
         while self.running:
-            response: requests.Response = self.client.get(url=url, params=params, timeout=60)
+            response: requests.Response = self.client.get(
+                url=url, params=params, timeout=60
+            )
             self.handle_response_error(response)
 
             raw = response.json()
@@ -197,11 +201,20 @@ class MicrosoftDefenderGraphAPIAlerts(Connector):
                     batch_of_events = [event for event in self.process_events(events)]
 
                     if len(batch_of_events) > 0:
-                        self.log(message=f"Forwarding {len(batch_of_events)} records", level="info")
+                        self.log(
+                            message=f"Forwarding {len(batch_of_events)} records",
+                            level="info",
+                        )
 
-                        batch_of_events = [orjson.dumps(event).decode("utf-8") for event in batch_of_events]
+                        batch_of_events = [
+                            orjson.dumps(event).decode("utf-8")
+                            for event in batch_of_events
+                        ]
                         self.push_events_to_intakes(events=batch_of_events)
-                        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
+                        OUTCOMING_EVENTS.labels(
+                            intake_key=self.configuration.intake_key,
+                            **self.scalability_labels,
+                        ).inc(len(batch_of_events))
 
                         # mark sent events as processed
                         for event in events:
@@ -212,15 +225,28 @@ class MicrosoftDefenderGraphAPIAlerts(Connector):
                     else:
                         self.log(message="No records to forward", level="info")
 
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
-                    time.time() - duration_start
-                )
+                FORWARD_EVENTS_DURATION.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).observe(time.time() - duration_start)
 
             except AuthenticationError as e:
                 if e.result:
-                    self.log(message="Error: {0}".format(e.result.get("error")), level="error")
-                    self.log(message="Error description: {0}".format(e.result.get("error_description")), level="error")
-                    self.log(message="Correlation ID: {0}".format(e.result.get("correlation_id")), level="error")
+                    self.log(
+                        message="Error: {0}".format(e.result.get("error")),
+                        level="error",
+                    )
+                    self.log(
+                        message="Error description: {0}".format(
+                            e.result.get("error_description")
+                        ),
+                        level="error",
+                    )
+                    self.log(
+                        message="Correlation ID: {0}".format(
+                            e.result.get("correlation_id")
+                        ),
+                        level="error",
+                    )
 
                 self.log(str(e), level="critical")
 

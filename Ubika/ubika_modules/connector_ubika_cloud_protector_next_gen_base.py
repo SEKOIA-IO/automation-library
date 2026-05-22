@@ -24,7 +24,9 @@ class FetchEventsException(Exception):
     """Raised on non-2xx responses from the Ubika API."""
 
 
-class UbikaCloudProtectorNextGenBaseConnectorConfiguration(DefaultConnectorConfiguration):
+class UbikaCloudProtectorNextGenBaseConnectorConfiguration(
+    DefaultConnectorConfiguration
+):
     """
     Common configuration for all NextGen connectors.
     """
@@ -34,13 +36,17 @@ class UbikaCloudProtectorNextGenBaseConnectorConfiguration(DefaultConnectorConfi
 
     base_url: str = Field("https://api.ubika.io/", description="API base URL")
     frequency: int = Field(60, description="Batch frequency in seconds", ge=1)
-    chunk_size: int = Field(1000, description="The size of chunks for the batch processing", ge=1)
+    chunk_size: int = Field(
+        1000, description="The size of chunks for the batch processing", ge=1
+    )
     timedelta: int = Field(
         5,
         description="The temporal shift, in the past, in minutes, the connector applies when fetching the events",
         ge=1,
     )
-    start_time: int = Field(1, description="The number of hours from which events should be queried", ge=0)
+    start_time: int = Field(
+        1, description="The number of hours from which events should be queried", ge=0
+    )
 
 
 class UbikaCloudProtectorNextGenBaseConnector(Connector):
@@ -61,7 +67,9 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
     configuration: UbikaCloudProtectorNextGenBaseConnectorConfiguration
 
     cache_size: int = 1000  # Default cache size, can be overridden in subclasses
-    endpoint: str = ""  # Must be set by subclasses (e.g., "security-events", "traffic-logs")
+    endpoint: str = (
+        ""  # Must be set by subclasses (e.g., "security-events", "traffic-logs")
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -99,7 +107,9 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
         """
         HTTP client that automatically injects tokens and handles rate‐limits.
         """
-        return UbikaCloudProtectorNextGenApiClient(refresh_token=self.configuration.refresh_token)
+        return UbikaCloudProtectorNextGenApiClient(
+            refresh_token=self.configuration.refresh_token
+        )
 
     @cached_property
     def stepper(self) -> TimeStepper:
@@ -152,7 +162,9 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
                 )
             raise FetchEventsException(message)
 
-    def _get_pages(self, endpoint: str, params: dict[str, Any]) -> Generator[list[dict], None, None]:
+    def _get_pages(
+        self, endpoint: str, params: dict[str, Any]
+    ) -> Generator[list[dict], None, None]:
         """
         Generic paginator against the Ubika NextGen API.
 
@@ -171,7 +183,9 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
         headers = {"Content-Type": "application/json"}
 
         # First request using UbikaCloudProtectorNextGenApiClient
-        response = self._safe_get_page(url=url, params=params, headers=headers, initial=True)
+        response = self._safe_get_page(
+            url=url, params=params, headers=headers, initial=True
+        )
 
         # Loop until the connector is asked to stop
         while not self._stop_event.is_set():
@@ -189,7 +203,9 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
                 return
 
             # Yield the current batch of items
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(items))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(
+                len(items)
+            )
             yield items
 
             # Look for a nextPageToken to fetch further pages
@@ -213,7 +229,9 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
                 initial=False,
             )
 
-    def _safe_get_page(self, url: str, *, params, headers, initial: bool) -> httpx.Response:
+    def _safe_get_page(
+        self, url: str, *, params, headers, initial: bool
+    ) -> httpx.Response:
         """
         Wrap client.get and centralize the AuthorizationError / Timeout logging.
         initial=True means "on initial fetch", otherwise "on next page".
@@ -303,7 +321,9 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
             },
         ):
             filtered_events = self.filter_processed_events(events)
-            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in filtered_events]
+            batch_of_events = [
+                orjson.dumps(event).decode("utf-8") for event in filtered_events
+            ]
 
             # If the batch is not empty, push it
             if len(batch_of_events) > 0:
@@ -311,7 +331,9 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(
+                    len(batch_of_events)
+                )
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -333,7 +355,9 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
             message=f"Fetched and forwarded events in {batch_duration} seconds",
             level="debug",
         )
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.configuration.intake_key
+        ).observe(batch_duration)
 
     def run(self) -> None:
         """

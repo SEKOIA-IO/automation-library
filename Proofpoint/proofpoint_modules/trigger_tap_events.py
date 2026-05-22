@@ -36,7 +36,9 @@ class TAPEventsTrigger(Connector):
         super().__init__(*args, **kwargs)
 
         self.http_session = requests.Session()
-        self.last_retrieval_date: datetime = datetime.now(timezone.utc) - timedelta(minutes=5)
+        self.last_retrieval_date: datetime = datetime.now(timezone.utc) - timedelta(
+            minutes=5
+        )
 
     @cached_property
     def scalability_labels(self) -> dict[str, str]:
@@ -51,7 +53,9 @@ class TAPEventsTrigger(Connector):
 
     @cached_property
     def authentication(self):
-        return requests.auth.HTTPBasicAuth(self.configuration.client_principal, self.configuration.client_secret)
+        return requests.auth.HTTPBasicAuth(
+            self.configuration.client_principal, self.configuration.client_secret
+        )
 
     @cached_property
     def frequency(self):
@@ -79,7 +83,10 @@ class TAPEventsTrigger(Connector):
             from_date = one_hour_ago
 
         # set parameters
-        parameters = {"sinceTime": from_date.strftime(RFC3339_STRICT_FORMAT), "format": "json"}
+        parameters = {
+            "sinceTime": from_date.strftime(RFC3339_STRICT_FORMAT),
+            "format": "json",
+        }
 
         # get the events
         response = self.http_session.get(
@@ -144,7 +151,9 @@ class TAPEventsTrigger(Connector):
                 message=(f"forward {len(events)} events"),
                 level="info",
             )
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(events))
+            OUTCOMING_EVENTS.labels(
+                intake_key=self.configuration.intake_key, **self.scalability_labels
+            ).inc(len(events))
             self.push_events_to_intakes(events=events)
         else:
             self.log(
@@ -152,4 +161,6 @@ class TAPEventsTrigger(Connector):
                 level="info",
             )
 
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(time.time() - start)
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.configuration.intake_key, **self.scalability_labels
+        ).observe(time.time() - start)

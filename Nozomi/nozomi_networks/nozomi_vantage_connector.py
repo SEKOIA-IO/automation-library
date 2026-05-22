@@ -15,7 +15,11 @@ from sekoia_automation.storage import PersistentJSON
 from nozomi_networks import NozomiModule
 from nozomi_networks.client.event_type import EventType
 from nozomi_networks.client.http_client import NozomiClient
-from nozomi_networks.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from nozomi_networks.metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    OUTCOMING_EVENTS,
+)
 
 
 def _format_event(record: dict[str, Any]) -> dict[str, Any]:
@@ -32,7 +36,11 @@ def _format_event(record: dict[str, Any]) -> dict[str, Any]:
         datetime: The event date.
     """
     return {
-        **{key: value for key, value in record.items() if key != "attributes" and key != "type"},
+        **{
+            key: value
+            for key, value in record.items()
+            if key != "attributes" and key != "type"
+        },
         **record.get("attributes", {}),
         "id": record.get("id"),
         "event_type": record.get("type"),
@@ -123,7 +131,9 @@ class NozomiVantageConnector(AsyncConnector):
 
         return self._lru_caches[event_type]
 
-    def _add_events_to_cache(self, event_type: EventType, events: list[dict[str, Any]]) -> None:
+    def _add_events_to_cache(
+        self, event_type: EventType, events: list[dict[str, Any]]
+    ) -> None:
         """
         Add an event ID to the cache for the specified event type.
 
@@ -206,7 +216,9 @@ class NozomiVantageConnector(AsyncConnector):
             )
 
             new_last_event_date = last_event_date
-            async for event in self.nozomi_client.fetch_events(event_type, last_event_date):
+            async for event in self.nozomi_client.fetch_events(
+                event_type, last_event_date
+            ):
                 formated_event = _format_event(event)
                 event_id = formated_event["id"]
                 if not self._is_new_event(event_type, event_id):
@@ -222,7 +234,9 @@ class NozomiVantageConnector(AsyncConnector):
                 if len(records) >= self.configuration.batch_size:
                     # If we have enough records, push them to intakes
                     total_pushed = len(
-                        await self.push_data_to_intakes([orjson.dumps(record).decode("utf-8") for record in records])
+                        await self.push_data_to_intakes(
+                            [orjson.dumps(record).decode("utf-8") for record in records]
+                        )
                     )
 
                     logger.info(
@@ -243,7 +257,9 @@ class NozomiVantageConnector(AsyncConnector):
 
             if records:  # pragma: no cover
                 total_pushed = len(
-                    await self.push_data_to_intakes([orjson.dumps(record).decode("utf-8") for record in records])
+                    await self.push_data_to_intakes(
+                        [orjson.dumps(record).decode("utf-8") for record in records]
+                    )
                 )
 
                 logger.info(
@@ -275,13 +291,17 @@ class NozomiVantageConnector(AsyncConnector):
                 while self.running:
                     processing_start = time.time()
                     if previous_processing_end is not None:
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
-                            processing_start - previous_processing_end
-                        )
+                        EVENTS_LAG.labels(
+                            intake_key=self.configuration.intake_key,
+                            **self.scalability_labels,
+                        ).set(processing_start - previous_processing_end)
 
                     events_count = loop.run_until_complete(self.get_events())
                     processing_end = time.time()
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(events_count)
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).inc(events_count)
 
                     log_message = "No records to forward"
                     if events_count > 0:
@@ -291,7 +311,10 @@ class NozomiVantageConnector(AsyncConnector):
                     self.log(message=log_message, level="info")
 
                     batch_duration = processing_end - processing_start
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
+                    FORWARD_EVENTS_DURATION.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).observe(batch_duration)
 
                     # If no records were fetched
                     if events_count == 0:
@@ -299,7 +322,8 @@ class NozomiVantageConnector(AsyncConnector):
                         delta_sleep = self.configuration.frequency - batch_duration
                         if delta_sleep > 0:
                             self.log(
-                                message=f"Next batch of events in the future. " f"Waiting {delta_sleep} seconds",
+                                message=f"Next batch of events in the future. "
+                                f"Waiting {delta_sleep} seconds",
                                 level="info",
                             )
                             time.sleep(delta_sleep)
@@ -307,12 +331,15 @@ class NozomiVantageConnector(AsyncConnector):
                     previous_processing_end = processing_end
 
             except Exception as error:
-                message = "An error occurred while running Nozomi Vantage Connector: {error}"
+                message = (
+                    "An error occurred while running Nozomi Vantage Connector: {error}"
+                )
                 self.log_exception(error, message=message)
 
             with self.context as cache:
                 cache["caches"] = {
-                    event_type.name: list(cache.get(event_type.name, {}).keys()) for event_type in EventType
+                    event_type.name: list(cache.get(event_type.name, {}).keys())
+                    for event_type in EventType
                 }
 
             loop.run_until_complete(self.nozomi_client.close())

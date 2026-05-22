@@ -13,7 +13,12 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from . import OnePasswordModule
 from .client import ApiClient
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 
 class OnePasswordConnectorConfiguration(DefaultConnectorConfiguration):
@@ -78,13 +83,19 @@ class OnePasswordEndpoint(Thread):
             events = page.get("items", [])
 
             if len(events) > 0:
-                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels).inc(
-                    len(events)
-                )
+                INCOMING_MESSAGES.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.name,
+                    **self.connector.scalability_labels,
+                ).inc(len(events))
                 yield events
 
             else:
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels).set(0)
+                EVENTS_LAG.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.name,
+                    **self.connector.scalability_labels,
+                ).set(0)
                 return
 
             data = {"cursor": page["cursor"]}
@@ -113,9 +124,11 @@ class OnePasswordEndpoint(Thread):
 
             now = datetime.now(timezone.utc)
             current_lag = now - most_recent_date_seen
-            EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels).set(
-                int(current_lag.total_seconds())
-            )
+            EVENTS_LAG.labels(
+                intake_key=self.connector.configuration.intake_key,
+                type=self.name,
+                **self.connector.scalability_labels,
+            ).set(int(current_lag.total_seconds()))
 
     def next_batch(self) -> None:
         # save the starting time
@@ -123,7 +136,10 @@ class OnePasswordEndpoint(Thread):
 
         # Fetch next batch
         for events in self.fetch_events():
-            batch_of_events = [orjson.dumps(self.enrich_event(event)).decode("utf-8") for event in events]
+            batch_of_events = [
+                orjson.dumps(self.enrich_event(event)).decode("utf-8")
+                for event in events
+            ]
 
             # if the batch is full, push it
             if len(batch_of_events) > 0:
@@ -131,9 +147,11 @@ class OnePasswordEndpoint(Thread):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels).inc(
-                    len(batch_of_events)
-                )
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.name,
+                    **self.connector.scalability_labels,
+                ).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -146,9 +164,11 @@ class OnePasswordEndpoint(Thread):
         # get the ending time and compute the duration to fetch the events
         batch_duration = int(batch_end_time - batch_start_time)
 
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels).observe(
-            batch_duration
-        )
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.connector.configuration.intake_key,
+            type=self.name,
+            **self.connector.scalability_labels,
+        ).observe(batch_duration)
 
         self.log(
             message=f"{self.name}: Fetched and forwarded events in {batch_duration} seconds",
@@ -169,7 +189,9 @@ class OnePasswordEndpoint(Thread):
                 self.next_batch()
 
         except Exception as error:
-            self.connector.log_exception(error, message=f"{self.name}: Failed to forward events")
+            self.connector.log_exception(
+                error, message=f"{self.name}: Failed to forward events"
+            )
 
 
 class SignInAttemptsEndpoint(OnePasswordEndpoint):
@@ -250,7 +272,9 @@ class OnePasswordConnector(Connector):
     def supervise_consumers(self, consumers: dict[str, OnePasswordEndpoint]) -> None:
         for consumer_name, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
-                self.log(message=f"Restart consuming `{consumer_name}` logs", level="info")
+                self.log(
+                    message=f"Restart consuming `{consumer_name}` logs", level="info"
+                )
 
                 cls = self.FEATURE_TO_CLASS[consumer_name]
                 consumers[consumer_name] = cls(connector=self)

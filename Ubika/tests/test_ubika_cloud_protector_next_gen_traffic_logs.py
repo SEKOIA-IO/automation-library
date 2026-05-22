@@ -17,7 +17,9 @@ from ubika_modules.connector_ubika_cloud_protector_next_gen_traffic_logs import 
 @pytest.fixture
 def trigger(data_storage):
     module = UbikaModule()
-    trigger = UbikaCloudProtectorNextGenTrafficLogsConnector(module=module, data_path=data_storage)
+    trigger = UbikaCloudProtectorNextGenTrafficLogsConnector(
+        module=module, data_path=data_storage
+    )
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
@@ -39,12 +41,22 @@ def message1():
     return {
         "apiVersion": "logs.ubika.io/v1beta",
         "kind": "TrafficLogs",
-        "metadata": {"name": "", "namespace": "", "created": None, "updated": None, "version": "0"},
+        "metadata": {
+            "name": "",
+            "namespace": "",
+            "created": None,
+            "updated": None,
+            "version": "0",
+        },
         "spec": {
             "items": [
                 {
                     "timestamp": "1777383278301",
-                    "context": {"assetName": "testAsset", "assetNamespace": "example", "reaction": "BLOCKED"},
+                    "context": {
+                        "assetName": "testAsset",
+                        "assetNamespace": "example",
+                        "reaction": "BLOCKED",
+                    },
                     "request": {
                         "uid": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
                         "hostname": "example.comm",
@@ -68,7 +80,11 @@ def message1():
                 },
                 {
                     "timestamp": "1777383263946",
-                    "context": {"assetName": "testAsset", "assetNamespace": "example", "reaction": "PASSED"},
+                    "context": {
+                        "assetName": "testAsset",
+                        "assetNamespace": "example",
+                        "reaction": "PASSED",
+                    },
                     "request": {
                         "uid": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
                         "hostname": "example.com",
@@ -104,7 +120,13 @@ def message2():
     return {
         "apiVersion": "logs.ubika.io/v1beta",
         "kind": "TrafficLogs",
-        "metadata": {"name": "", "namespace": "", "created": None, "updated": None, "version": "0"},
+        "metadata": {
+            "name": "",
+            "namespace": "",
+            "created": None,
+            "updated": None,
+            "version": "0",
+        },
         "spec": {"items": [], "nextPageToken": "tokenEnd"},
     }
 

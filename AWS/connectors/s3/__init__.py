@@ -46,10 +46,14 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
         self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
         self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 60))
-        self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
+        self.s3_max_fetch_concurrency = int(
+            os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000)
+        )
         self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
 
-    def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:  # pragma: no cover
+    def _parse_content(
+        self, stream: AsyncReader
+    ) -> AsyncGenerator[str, None]:  # pragma: no cover
         """
         Parse the content of the S3 object and return the records as a generator.
 
@@ -67,15 +71,19 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         """
         return orjson.loads(sqs_message).get("Records") or []
 
-    def _get_object_from_notification(self, notification: dict[str, Any]) -> tuple[str | None, str | None]:
+    def _get_object_from_notification(
+        self, notification: dict[str, Any]
+    ) -> tuple[str | None, str | None]:
         """
         Extract the object information from notificiation
         """
-        return notification.get("s3", {}).get("bucket", {}).get("name"), notification.get("s3", {}).get(
-            "object", {}
-        ).get("key")
+        return notification.get("s3", {}).get("bucket", {}).get(
+            "name"
+        ), notification.get("s3", {}).get("object", {}).get("key")
 
-    async def next_batch(self, previous_processing_end: float | None = None) -> tuple[int, list[int]]:
+    async def next_batch(
+        self, previous_processing_end: float | None = None
+    ) -> tuple[int, list[int]]:
         """
         Get next batch of messages.
 
@@ -96,7 +104,8 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         while continue_receiving:
             messages: list[tuple[str, int]]
             async with self.sqs_wrapper.receive_messages(
-                max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
+                max_messages=self.sqs_max_messages,
+                visibility_timeout=self.sqs_visibility_timeout,
             ) as messages:
                 message_records = []
 
@@ -109,14 +118,21 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                     timestamps_to_log.append(message_timestamp)
                     try:
                         # Records is a list of strings
-                        message_records.extend(self._get_notifs_from_sqs_message(message))
+                        message_records.extend(
+                            self._get_notifs_from_sqs_message(message)
+                        )
                     except ValueError as e:
-                        self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
+                        self.log_exception(
+                            e,
+                            message=f"Invalid JSON in message.\nInvalid message is: {message}",
+                        )
 
                 if not message_records:
                     continue_receiving = False
 
-                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(message_records))
+                INCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).inc(len(message_records))
                 for record in message_records:
                     try:
                         s3_bucket, s3_key = self._get_object_from_notification(record)
@@ -129,8 +145,11 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
                         normalized_key = normalize_s3_key(s3_key)
 
-                        if self.configuration.prefix_filter and not normalized_key.startswith(
+                        if (
                             self.configuration.prefix_filter
+                            and not normalized_key.startswith(
+                                self.configuration.prefix_filter
+                            )
                         ):
                             self.log(
                                 message=f"Skipping S3 object {normalized_key}: does not match prefix filter "
@@ -142,14 +161,18 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                         stream: AsyncReader
                         async with (
                             self.s3_fetch_concurrency_sem,
-                            self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as stream,
+                            self.s3_wrapper.read_key(
+                                bucket=s3_bucket, key=normalized_key
+                            ) as stream,
                         ):
                             async for event in self._parse_content(stream):
                                 records.append(event)
 
                                 if len(records) >= self.limit_of_events_to_push:
                                     continue_receiving = False
-                                    result += len(await self.push_data_to_intakes(events=records))
+                                    result += len(
+                                        await self.push_data_to_intakes(events=records)
+                                    )
                                     records = []
 
                     except Exception as e:

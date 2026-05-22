@@ -115,7 +115,9 @@ class WatchGuardEpdrConnector(AsyncConnector):
                 last_event_date=last_event_date,
             )
             new_last_event_date = last_event_date
-            async for record in self.watchguard_client.fetch_data(security_event, period=1):
+            async for record in self.watchguard_client.fetch_data(
+                security_event, period=1
+            ):
                 event_date = _get_event_date(record)
                 if event_date <= last_event_date:
                     continue
@@ -131,7 +133,9 @@ class WatchGuardEpdrConnector(AsyncConnector):
 
             if records:
                 total_records += len(
-                    await self.push_data_to_intakes([orjson.dumps(record).decode("utf-8") for record in records])
+                    await self.push_data_to_intakes(
+                        [orjson.dumps(record).decode("utf-8") for record in records]
+                    )
                 )
 
             # Update the last event date in the context
@@ -151,13 +155,17 @@ class WatchGuardEpdrConnector(AsyncConnector):
                 while self.running:
                     processing_start = time.time()
                     if previous_processing_end is not None:
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
-                            processing_start - previous_processing_end
-                        )
+                        EVENTS_LAG.labels(
+                            intake_key=self.configuration.intake_key,
+                            **self.scalability_labels,
+                        ).set(processing_start - previous_processing_end)
 
                     events_count = loop.run_until_complete(self.get_watchguard_events())
                     processing_end = time.time()
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(events_count)
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).inc(events_count)
 
                     log_message = "No records to forward"
                     if events_count > 0:
@@ -167,7 +175,10 @@ class WatchGuardEpdrConnector(AsyncConnector):
                     self.log(message=log_message, level="info")
 
                     batch_duration = processing_end - processing_start
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
+                    FORWARD_EVENTS_DURATION.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).observe(batch_duration)
 
                     # If no records were fetched
                     if events_count == 0:
@@ -175,7 +186,8 @@ class WatchGuardEpdrConnector(AsyncConnector):
                         delta_sleep = self.configuration.frequency - batch_duration
                         if delta_sleep > 0:
                             self.log(
-                                message=f"Next batch of events in the future. " f"Waiting {delta_sleep} seconds",
+                                message=f"Next batch of events in the future. "
+                                f"Waiting {delta_sleep} seconds",
                                 level="info",
                             )
                             time.sleep(delta_sleep)
@@ -183,7 +195,9 @@ class WatchGuardEpdrConnector(AsyncConnector):
                     previous_processing_end = processing_end
 
             except Exception as error:
-                logger.error("Error while running Watchguard EPDR: {error}", error=error)
+                logger.error(
+                    "Error while running Watchguard EPDR: {error}", error=error
+                )
                 self.log_exception(error, message="Failed to forward events")
 
             loop.run_until_complete(self.watchguard_client.close())

@@ -4,7 +4,9 @@ from .connector_ubika_cloud_protector_next_gen_base import (
 )
 
 
-class UbikaCloudProtectorNextGenAlertsConnector(UbikaCloudProtectorNextGenBaseConnector):
+class UbikaCloudProtectorNextGenAlertsConnector(
+    UbikaCloudProtectorNextGenBaseConnector
+):
     NAME: str = "Ubika Cloud Protector NextGen Alerts"
     configuration: UbikaCloudProtectorNextGenBaseConnectorConfiguration
     cache_size: int = 1000

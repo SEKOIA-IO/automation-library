@@ -23,7 +23,12 @@ from crowdstrike_falcon.helpers import (
     group_edges_by_verticle_type,
 )
 from crowdstrike_falcon.logging import get_logger
-from crowdstrike_falcon.metrics import EVENTS_LAG, INCOMING_DETECTIONS, INCOMING_VERTICLES, OUTCOMING_EVENTS
+from crowdstrike_falcon.metrics import (
+    EVENTS_LAG,
+    INCOMING_DETECTIONS,
+    INCOMING_VERTICLES,
+    OUTCOMING_EVENTS,
+)
 
 logger = get_logger()
 
@@ -69,7 +74,9 @@ class VerticlesCollector:
                 graph_ids.add(triggering_process_graph_id)
 
             # Get the parent process graph id
-            parent_process_graph_id = behavior.get("parent_details", {}).get("parent_process_graph_id")
+            parent_process_graph_id = behavior.get("parent_details", {}).get(
+                "parent_process_graph_id"
+            )
             if parent_process_graph_id is not None:
                 graph_ids.add(parent_process_graph_id)
 
@@ -92,13 +99,17 @@ class VerticlesCollector:
             graph_ids.add(triggering_process_graph_id)
 
         # Get the parent process graph id
-        parent_process_graph_id = alert_details.get("parent_details", {}).get("process_graph_id")
+        parent_process_graph_id = alert_details.get("parent_details", {}).get(
+            "process_graph_id"
+        )
         if parent_process_graph_id is not None:
             graph_ids.add(parent_process_graph_id)
 
         return graph_ids
 
-    def collect_verticles_from_graph_ids(self, graph_ids: set[str]) -> Generator[tuple[str, str, dict], None, None]:
+    def collect_verticles_from_graph_ids(
+        self, graph_ids: set[str]
+    ) -> Generator[tuple[str, str, dict], None, None]:
         """
         Collect verticles from a list of graph ids
 
@@ -114,11 +125,17 @@ class VerticlesCollector:
 
                     # for each group, get the verticles
                     for verticle_type, list_of_edges in groups:
-                        verticles_links = {edge["id"]: edge["source_vertex_id"] for edge in list_of_edges}
+                        verticles_links = {
+                            edge["id"]: edge["source_vertex_id"]
+                            for edge in list_of_edges
+                        }
                         for vertex in self.falcon_client.get_verticles_details(
                             list(verticles_links.keys()), verticle_type
                         ):
-                            INCOMING_VERTICLES.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).inc()
+                            INCOMING_VERTICLES.labels(
+                                intake_key=self.connector.configuration.intake_key,
+                                **self.connector.scalability_labels,
+                            ).inc()
                             yield (verticles_links[vertex["id"]], edge_type, vertex)
                 except HTTPError as error:
                     self.log_exception(
@@ -127,7 +144,9 @@ class VerticlesCollector:
                         level="warning",
                     )
 
-    def collect_verticles_from_detection(self, detection_id: str) -> Generator[tuple[str, str, dict], None, None]:
+    def collect_verticles_from_detection(
+        self, detection_id: str
+    ) -> Generator[tuple[str, str, dict], None, None]:
         """
         Collect the verticles (events) from a detection
 
@@ -135,7 +154,9 @@ class VerticlesCollector:
         """
         try:
             # get detection details from its identifier
-            detection_details = next(self.falcon_client.get_detection_details(detection_ids=[detection_id]))
+            detection_details = next(
+                self.falcon_client.get_detection_details(detection_ids=[detection_id])
+            )
 
             # get graph ids from detection
             graph_ids = self.get_graph_ids_from_detection(detection_details)
@@ -156,7 +177,9 @@ class VerticlesCollector:
                 message=f"Failed to collect verticles for detection {detection_id}",
             )
 
-    def collect_verticles_from_alert(self, composite_id: str) -> Generator[tuple[str, str, dict], None, None]:
+    def collect_verticles_from_alert(
+        self, composite_id: str
+    ) -> Generator[tuple[str, str, dict], None, None]:
         """
         Collect the verticles (events) from an alert
 
@@ -164,7 +187,9 @@ class VerticlesCollector:
         """
         try:
             # get alert details from its identifier
-            alert_details = next(self.falcon_client.get_alert_details(composite_ids=[composite_id]))
+            alert_details = next(
+                self.falcon_client.get_alert_details(composite_ids=[composite_id])
+            )
 
             # get graph ids from detection
             graph_ids = self.get_graph_ids_from_alert(alert_details)
@@ -177,7 +202,8 @@ class VerticlesCollector:
                 # we don't have proper permissions - roll back to the old API
                 self.connector.use_alert_api = False
                 self.log(
-                    level="warning", message="Not enough permissions to use Alert API - rollback to Detection API"
+                    level="warning",
+                    message="Not enough permissions to use Alert API - rollback to Detection API",
                 )
 
             self.log_exception(
@@ -225,7 +251,9 @@ class EventStreamReader(threading.Thread):
         self.app_id = app_id
         self._stop_event = threading.Event()
         self.events_queue = connector.events_queue
-        self.refresh_timer = RepeatedTimer(self.refresh_interval, self.refresh_stream_timer)
+        self.refresh_timer = RepeatedTimer(
+            self.refresh_interval, self.refresh_stream_timer
+        )
 
     def stop_refresh(self):
         self.refresh_timer.stop()
@@ -253,7 +281,9 @@ class EventStreamReader(threading.Thread):
 
     @property
     def refresh_interval(self) -> int:
-        return compute_refresh_interval(int(self.stream_info["refreshActiveSessionInterval"]))
+        return compute_refresh_interval(
+            int(self.stream_info["refreshActiveSessionInterval"])
+        )
 
     def log(self, *args, **kwargs):
         self.connector.log(*args, **kwargs)
@@ -283,7 +313,9 @@ class EventStreamReader(threading.Thread):
             logger.info("successfully refreshed event stream", refresh_url=refresh_url)
 
     def refresh_stream_timer(self):
-        return self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
+        return self.refresh_stream(
+            refresh_url=self.stream_info["refreshActiveSessionURL"]
+        )
 
     def run(self) -> None:
         """
@@ -321,7 +353,9 @@ class EventStreamReader(threading.Thread):
                                     # check the line is json
                                     event = json.loads(decoded_line)
                                     # store the new event in the queue along with it stream root url
-                                    self.events_queue.put((self.stream_root_url, decoded_line))
+                                    self.events_queue.put(
+                                        (self.stream_root_url, decoded_line)
+                                    )
                                     INCOMING_DETECTIONS.labels(
                                         intake_key=self.connector.configuration.intake_key,
                                         **self.connector.scalability_labels,
@@ -329,7 +363,9 @@ class EventStreamReader(threading.Thread):
 
                                     if self.connector.use_alert_api:
                                         alert_id = get_epp_detection_composite_id(event)
-                                        self.collect_verticles_for_epp_detection(alert_id, event)
+                                        self.collect_verticles_for_epp_detection(
+                                            alert_id, event
+                                        )
 
                                     detection_id = get_detection_id(event)
                                     self.collect_verticles(detection_id, event)
@@ -397,7 +433,9 @@ class EventStreamReader(threading.Thread):
 
         self.log(message=f"Collected {nb_verticles} vertex", level="info")
 
-    def collect_verticles_for_epp_detection(self, composite_id: str | None, detection_event: dict):
+    def collect_verticles_for_epp_detection(
+        self, composite_id: str | None, detection_event: dict
+    ):
         if composite_id is None:
             logger.info("Not a epp detection")
             return
@@ -471,7 +509,9 @@ class EventForwarder(threading.Thread):
 
                 try:
                     while len(batch_of_events) < MAX_EVENTS_PER_BATCH:
-                        stream_root_url, event = self.events_queue.get(block=True, timeout=0.5)
+                        stream_root_url, event = self.events_queue.get(
+                            block=True, timeout=0.5
+                        )
                         last_event_per_stream[stream_root_url] = event
                         batch_of_events.append(event)
 
@@ -483,15 +523,18 @@ class EventForwarder(threading.Thread):
                         message=f"Forward {len(batch_of_events)} events to the intake",
                         level="info",
                     )
-                    OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).inc(
-                        len(batch_of_events)
-                    )
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.connector.configuration.intake_key,
+                        **self.connector.scalability_labels,
+                    ).inc(len(batch_of_events))
                     self.connector.push_events_to_intakes(events=batch_of_events)
 
                     now = time.time()
 
                     # store the last offset for each stream
-                    with PersistentJSON("cache.json", self.connector._data_path) as cache:
+                    with PersistentJSON(
+                        "cache.json", self.connector._data_path
+                    ) as cache:
                         for (
                             stream_root_url,
                             last_event,
@@ -509,14 +552,16 @@ class EventForwarder(threading.Thread):
                             if creation_time:
                                 lag = now - (creation_time / 1000)
                                 EVENTS_LAG.labels(
-                                    intake_key=self.connector.configuration.intake_key, stream=stream_root_url,
+                                    intake_key=self.connector.configuration.intake_key,
+                                    stream=stream_root_url,
                                     **self.connector.scalability_labels,
                                 ).set(lag)
             except queue.Empty:
                 for stream_root_url in self.stream_root_urls:
-                    EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, stream=stream_root_url).set(
-                        0
-                    )
+                    EVENTS_LAG.labels(
+                        intake_key=self.connector.configuration.intake_key,
+                        stream=stream_root_url,
+                    ).set(0)
                 pass
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
@@ -529,7 +574,9 @@ class EventStreamTrigger(Connector):
 
     module: CrowdStrikeFalconModule
 
-    seconds_without_events = 3600 * 24  # Time to wait without events before restarting the pod
+    seconds_without_events = (
+        3600 * 24
+    )  # Time to wait without events before restarting the pod
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -587,13 +634,19 @@ class EventStreamTrigger(Connector):
     def verticles_collector(self) -> VerticlesCollector | None:
         try:
             if os.getenv("ACTIVATE_VERTICLES_COLLECTION", "false").lower() == "false":
-                self.log(message="Verticles collection is disabled by configuration", level="info")
+                self.log(
+                    message="Verticles collection is disabled by configuration",
+                    level="info",
+                )
                 return None
             verticles_collector = VerticlesCollector(self, self.client)
             return verticles_collector
         except HTTPError as error:
             if error.response.status_code == 403:
-                self.log(message="Not enough permissions to use ThreatGraph API", level="warning")
+                self.log(
+                    message="Not enough permissions to use ThreatGraph API",
+                    level="warning",
+                )
                 return None
             self.log_exception(error, message="Failed to create verticles collector")
             return None
@@ -614,7 +667,9 @@ class EventStreamTrigger(Connector):
             stream_root_url = stream_info["dataFeedURL"].split("?")[0]
             streams[stream_root_url] = stream_info
 
-        self.log(message=f"succesfully found {len(streams.keys())} streams", level="info")
+        self.log(
+            message=f"succesfully found {len(streams.keys())} streams", level="info"
+        )
 
         return streams
 
@@ -646,14 +701,20 @@ class EventStreamTrigger(Connector):
         for stream_root_url in streams.keys():
             stream_thread = stream_threads[stream_root_url]
             if not stream_thread.is_alive():
-                logger.warning("Stream reader is down, restarting it", stream_root_url=stream_root_url)
+                logger.warning(
+                    "Stream reader is down, restarting it",
+                    stream_root_url=stream_root_url,
+                )
                 restart_stream_readers = True
 
         if restart_stream_readers:
             app_id = self.generate_app_id()
             streams = self.get_streams(app_id)
             for stream_root_url, stream_info in streams.items():
-                if stream_root_url not in stream_threads or not stream_threads[stream_root_url].is_alive():
+                if (
+                    stream_root_url not in stream_threads
+                    or not stream_threads[stream_root_url].is_alive()
+                ):
                     # read the stream offset
                     with PersistentJSON("cache.json", self._data_path) as cache:
                         stream_offset = cache.get(stream_root_url, 0)
@@ -702,7 +763,10 @@ class EventStreamTrigger(Connector):
 
         except HTTPError as error:
             if error.response is not None and error.response.status_code == 429:
-                self.log(message="The connector was rate-limited, waiting 1 minute before retrying.", level="warning")
+                self.log(
+                    message="The connector was rate-limited, waiting 1 minute before retrying.",
+                    level="warning",
+                )
                 time.sleep(60)  # The authentication faces a ratelimit, sleep 1 minutes
             else:
                 self.log_exception(error, message="Failed to fetch and forward events")

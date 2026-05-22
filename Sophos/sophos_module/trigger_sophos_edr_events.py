@@ -14,7 +14,12 @@ from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
 from sophos_module.client.exceptions import SophosApiAuthenticationError
 from sophos_module.helper import normalize_message
-from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+from sophos_module.metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_EVENTS,
+    OUTCOMING_EVENTS,
+)
 
 
 class SophosEDRConfiguration(DefaultConnectorConfiguration):
@@ -100,7 +105,9 @@ class SophosEDREventsTrigger(SophosConnector):
 
                 # compute the duration of the last events fetching
                 duration = int(time.time() - start)
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(duration)
+                FORWARD_EVENTS_DURATION.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).observe(duration)
 
                 # Compute the remaining sleeping time
                 delta_sleep = self.configuration.frequency - duration
@@ -152,11 +159,15 @@ class SophosEDREventsTrigger(SophosConnector):
 
         return result
 
-    def _get_most_recent_timestamp_from_items(self, items: list[dict[str, Any]]) -> float:
+    def _get_most_recent_timestamp_from_items(
+        self, items: list[dict[str, Any]]
+    ) -> float:
         def _extract_timestamp(item: dict[str, Any]) -> float:
             RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
-            return datetime.datetime.strptime(item["created_at"], RFC3339_STRICT_FORMAT).timestamp()
+            return datetime.datetime.strptime(
+                item["created_at"], RFC3339_STRICT_FORMAT
+            ).timestamp()
 
         latest_message: dict[str, Any] = max(items, key=lambda item: item["created_at"])  # type: ignore
         latest_message_timestamp = _extract_timestamp(latest_message)
@@ -187,27 +198,43 @@ class SophosEDREventsTrigger(SophosConnector):
 
             items = batch.get("items", [])
             if len(items) > 0:
-                most_recent_timestamp_seen = self._get_most_recent_timestamp_from_items(items)
+                most_recent_timestamp_seen = self._get_most_recent_timestamp_from_items(
+                    items
+                )
                 events_lag = int(time.time() - most_recent_timestamp_seen)
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(events_lag)
-                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(items))
+                EVENTS_LAG.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).set(events_lag)
+                INCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).inc(len(items))
 
             for message in items:
                 normalized_message = normalize_message(message)
                 messages.append(orjson.dumps(normalized_message).decode("utf-8"))
 
             if len(messages) > self.pagination_limit:
-                self.log(message=f"Sending a batch of {len(messages)} messages", level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(messages))
+                self.log(
+                    message=f"Sending a batch of {len(messages)} messages", level="info"
+                )
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).inc(len(messages))
                 self.push_events_to_intakes(events=messages)
                 messages = []
 
         self.cursor = cursor
 
         if messages:
-            self.log(message=f"Sending a batch of {len(messages)} messages", level="info")
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(messages))
+            self.log(
+                message=f"Sending a batch of {len(messages)} messages", level="info"
+            )
+            OUTCOMING_EVENTS.labels(
+                intake_key=self.configuration.intake_key, **self.scalability_labels
+            ).inc(len(messages))
             self.push_events_to_intakes(events=messages)
         else:
             self.log(message="No messages to forward", level="info")
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
+            EVENTS_LAG.labels(
+                intake_key=self.configuration.intake_key, **self.scalability_labels
+            ).set(0)

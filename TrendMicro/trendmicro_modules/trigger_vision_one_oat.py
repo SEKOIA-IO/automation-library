@@ -9,12 +9,17 @@ from sekoia_automation.checkpoint import CheckpointDatetime
 from . import TrendMicroModule
 from .logging import get_logger
 from .metrics import EVENTS_LAG, INCOMING_MESSAGES
-from .trigger_vision_one_base import TrendMicroVisionOneBaseConfiguration, TrendMicroVisionOneBaseConnector
+from .trigger_vision_one_base import (
+    TrendMicroVisionOneBaseConfiguration,
+    TrendMicroVisionOneBaseConnector,
+)
 
 logger = get_logger()
 
 
-class TrendMicroVisionOneOATConnectorConfiguration(TrendMicroVisionOneBaseConfiguration):
+class TrendMicroVisionOneOATConnectorConfiguration(
+    TrendMicroVisionOneBaseConfiguration
+):
     filter: str | None = Field(None, description="Filter for events", max_length=4000)
 
 
@@ -29,7 +34,9 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
         super().__init__(*args, **kwargs)
 
         self.cursor = CheckpointDatetime(
-            path=self._data_path, start_at=timedelta(hours=1), ignore_older_than=timedelta(days=14)
+            path=self._data_path,
+            start_at=timedelta(hours=1),
+            ignore_older_than=timedelta(days=14),
         )
         self.from_date = self.cursor.offset
 
@@ -48,7 +55,9 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
             headers = {}
 
         url = urljoin(self.configuration.base_url, "v3.0/oat/detections")
-        response = self.client.get(url, params=query_params, headers=headers, timeout=60)
+        response = self.client.get(
+            url, params=query_params, headers=headers, timeout=60
+        )
 
         while self.running:  # pragma: no cover
             self.handle_response_error(response)
@@ -58,12 +67,18 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
 
             if events:
                 INCOMING_MESSAGES.labels(
-                    intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL, **self.scalability_labels
+                    intake_key=self.configuration.intake_key,
+                    type=self.CONNECTOR_METRICS_LABEL,
+                    **self.scalability_labels
                 ).inc(len(events))
                 yield events
 
             else:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL, **self.scalability_labels).set(0)
+                EVENTS_LAG.labels(
+                    intake_key=self.configuration.intake_key,
+                    type=self.CONNECTOR_METRICS_LABEL,
+                    **self.scalability_labels
+                ).set(0)
                 return
 
             url = message.get("nextLink")
@@ -92,6 +107,8 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
 
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL, **self.scalability_labels).set(
-            int(current_lag.total_seconds())
-        )
+        EVENTS_LAG.labels(
+            intake_key=self.configuration.intake_key,
+            type=self.CONNECTOR_METRICS_LABEL,
+            **self.scalability_labels
+        ).set(int(current_lag.total_seconds()))

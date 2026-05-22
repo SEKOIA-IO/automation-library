@@ -59,14 +59,28 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector, AwsAccountProvider):
                 try:
                     json_record = orjson.loads(record)
                     # Exclude events with no category defined or a group category
-                    if "event.category" not in json_record or json_record["event.category"] == "group":
-                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc()
+                    if (
+                        "event.category" not in json_record
+                        or json_record["event.category"] == "group"
+                    ):
+                        DISCARDED_EVENTS.labels(
+                            intake_key=self.configuration.intake_key,
+                            **self.scalability_labels,
+                        ).inc()
                         continue
                     # Exclude specific event types
-                    if "event.type" in json_record and json_record["event.type"] in EXCLUDED_EVENT_TYPES:
-                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc()
+                    if (
+                        "event.type" in json_record
+                        and json_record["event.type"] in EXCLUDED_EVENT_TYPES
+                    ):
+                        DISCARDED_EVENTS.labels(
+                            intake_key=self.configuration.intake_key,
+                            **self.scalability_labels,
+                        ).inc()
                         continue
 
                     yield record.decode("utf-8")
                 except Exception as e:
-                    self.log(message=f"Failed to parse a record: {str(e)}", level="warning")
+                    self.log(
+                        message=f"Failed to parse a record: {str(e)}", level="warning"
+                    )

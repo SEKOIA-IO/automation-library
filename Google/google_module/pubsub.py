@@ -9,7 +9,12 @@ from threading import Event, Thread
 from google.api_core import exceptions, retry
 from google.cloud.pubsub_v1 import SubscriberClient, types
 from google_module.base import GoogleTrigger
-from google_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from google_module.metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 from sekoia_automation.connector import DefaultConnectorConfiguration
 
 max_chunk_size: int = 1000
@@ -84,31 +89,47 @@ class MessagesConsumer(Worker):
                     # look for the most recent publication date in messages
                     message_date = message.message.publish_time
                     if message_date is not None and (
-                        most_recent_date_seen is None or message_date > most_recent_date_seen
+                        most_recent_date_seen is None
+                        or message_date > most_recent_date_seen
                     ):
                         most_recent_date_seen = message_date
 
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).inc(len(messages))
+                INCOMING_MESSAGES.labels(
+                    intake_key=self.configuration.intake_key,
+                    **self.connector.scalability_labels,
+                ).inc(len(messages))
 
                 # ack the messages if defined
                 if len(ack_ids) > 0:
-                    subscriber.acknowledge(request={"subscription": self.subscription_name, "ack_ids": ack_ids})
+                    subscriber.acknowledge(
+                        request={
+                            "subscription": self.subscription_name,
+                            "ack_ids": ack_ids,
+                        }
+                    )
 
                 if len(messages) > 0:
                     # Compute the current lag
                     if not most_recent_date_seen:
-                        self.connector.log("unable to get publication date from messages", level="warning")
+                        self.connector.log(
+                            "unable to get publication date from messages",
+                            level="warning",
+                        )
                     else:
                         now = datetime.now(timezone.utc)
                         current_lag = now - most_recent_date_seen
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).set(
-                            int(current_lag.total_seconds())
-                        )
+                        EVENTS_LAG.labels(
+                            intake_key=self.configuration.intake_key,
+                            **self.connector.scalability_labels,
+                        ).set(int(current_lag.total_seconds()))
 
                     yield messages
                 else:
                     batch_duration = time.time() - batch_start_time
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).observe(batch_duration)
+                    FORWARD_EVENTS_DURATION.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.connector.scalability_labels,
+                    ).observe(batch_duration)
                     delta_sleep = self.configuration.frequency - batch_duration
                     if delta_sleep > 0:
                         time.sleep(delta_sleep)
@@ -121,13 +142,18 @@ class MessagesConsumer(Worker):
             except exceptions.Cancelled:
                 pass
             except Exception as ex:
-                self.connector.log_exception(ex, message=f"failed to fetch messages from {self.subscription_name}")
+                self.connector.log_exception(
+                    ex,
+                    message=f"failed to fetch messages from {self.subscription_name}",
+                )
 
 
 class EventsForwarder(Worker):
     KIND = "forwarder"
 
-    def __init__(self, connector: "PubSub", queue: queue.Queue, max_batch_size: int = 20000):
+    def __init__(
+        self, connector: "PubSub", queue: queue.Queue, max_batch_size: int = 20000
+    ):
         super().__init__()
         self.connector = connector
         self.configuration = connector.configuration
@@ -161,7 +187,10 @@ class EventsForwarder(Worker):
                         message=f"Forward {len(events)} events to the intake",
                         level="info",
                     )
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.connector.scalability_labels).inc(len(events))
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.connector.scalability_labels,
+                    ).inc(len(events))
                     self.connector.push_events_to_intakes(events=events)
         except Exception as ex:
             self.connector.log_exception(ex, message="Failed to forward events")
@@ -183,7 +212,9 @@ class PubSub(GoogleTrigger):
         """
         Return the subscription name
         """
-        return SubscriberClient.subscription_path(self.configuration.project_id, self.configuration.subject_id)
+        return SubscriberClient.subscription_path(
+            self.configuration.project_id, self.configuration.subject_id
+        )
 
     @cached_property
     def scalability_labels(self) -> dict[str, str]:
@@ -200,10 +231,14 @@ class PubSub(GoogleTrigger):
         self.log(message="Stopping Google Cloud PubSub connector", level="info")
         super().stop(*args, **kwargs)
 
-    def create_workers(self, nb_workers: int, klass: type[Worker], *args, **kwargs) -> list[Worker]:
+    def create_workers(
+        self, nb_workers: int, klass: type[Worker], *args, **kwargs
+    ) -> list[Worker]:
         return [klass(*args, **kwargs) for _ in range(nb_workers)]
 
-    def supervise_workers(self, workers: list[Worker], klass: type[Worker], *args, **kwargs):
+    def supervise_workers(
+        self, workers: list[Worker], klass: type[Worker], *args, **kwargs
+    ):
         for index in range(len(workers)):
             if not workers[index].is_alive() and workers[index].is_running:
                 self.log(message=f"Restart a {klass.KIND}", level="warning")
@@ -237,13 +272,21 @@ class PubSub(GoogleTrigger):
         # start the event forwarders
         batch_size = int(os.environ.get("BATCH_SIZE", 10000))
         forwarders = self.create_workers(
-            int(os.environ.get("NB_FORWARDERS", 1)), EventsForwarder, self, events_queue, max_batch_size=batch_size
+            int(os.environ.get("NB_FORWARDERS", 1)),
+            EventsForwarder,
+            self,
+            events_queue,
+            max_batch_size=batch_size,
         )
         self.start_workers(forwarders)
 
         # start the consumers
         consumers = self.create_workers(
-            int(os.environ.get("NB_CONSUMERS", 1)), MessagesConsumer, self, self.subscription_name, events_queue
+            int(os.environ.get("NB_CONSUMERS", 1)),
+            MessagesConsumer,
+            self,
+            self.subscription_name,
+            events_queue,
         )
         self.start_workers(consumers)
 
@@ -251,15 +294,29 @@ class PubSub(GoogleTrigger):
             # Wait 5 seconds for the next supervision
             time.sleep(5)
 
-            self.supervise_workers(forwarders, EventsForwarder, self, events_queue, max_batch_size=batch_size)
-            self.supervise_workers(consumers, MessagesConsumer, self, self.subscription_name, events_queue)
+            self.supervise_workers(
+                forwarders,
+                EventsForwarder,
+                self,
+                events_queue,
+                max_batch_size=batch_size,
+            )
+            self.supervise_workers(
+                consumers, MessagesConsumer, self, self.subscription_name, events_queue
+            )
 
         # Stop the consumer
         self.stop_workers(consumers, timeout=2)
 
         # Ensure that all events are forwarded
         if events_queue.qsize() > 0:
-            self.supervise_workers(forwarders, EventsForwarder, self, events_queue, max_batch_size=batch_size)
+            self.supervise_workers(
+                forwarders,
+                EventsForwarder,
+                self,
+                events_queue,
+                max_batch_size=batch_size,
+            )
 
         # Stop the forward
         self.stop_workers(forwarders)

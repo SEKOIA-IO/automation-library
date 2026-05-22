@@ -105,20 +105,26 @@ class DelineaPraConnector(AsyncConnector):
 
             events.append(event)
             if len(events) >= self.configuration.chunk_size:
-                await self.push_data_to_intakes([orjson.dumps(value).decode() for value in events])
+                await self.push_data_to_intakes(
+                    [orjson.dumps(value).decode() for value in events]
+                )
                 total_events += len(events)
                 events = []
                 self.save_cache()
                 self.last_event_date.offset = new_start_date
 
         if len(events) > 0:
-            await self.push_data_to_intakes([orjson.dumps(value).decode() for value in events])
+            await self.push_data_to_intakes(
+                [orjson.dumps(value).decode() for value in events]
+            )
             total_events += len(events)
             self.save_cache()
             self.last_event_date.offset = new_start_date
 
         if total_events > 0:
-            self.log(message=f"Fetched {total_events} events from Delinea PRA", level="info")
+            self.log(
+                message=f"Fetched {total_events} events from Delinea PRA", level="info"
+            )
         else:
             self.log(message="No new events fetched from Delinea PRA", level="info")
 
@@ -130,16 +136,22 @@ class DelineaPraConnector(AsyncConnector):
                 duration_start = time.time()
 
                 results = await self.get_events()
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(results)
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).inc(results)
 
                 # compute the duration of the last events fetching
                 duration = int(time.time() - duration_start)
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(duration)
+                FORWARD_EVENTS_DURATION.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).observe(duration)
 
                 # sleep if no events were fetched
                 data_sleep = max(0, self.configuration.frequency - duration)
                 if results == 0 and data_sleep > 0:
-                    logger.info(f"Next batch in the future. Sleeping for {data_sleep} seconds.")
+                    logger.info(
+                        f"Next batch in the future. Sleeping for {data_sleep} seconds."
+                    )
                     await asyncio.sleep(data_sleep)
 
             except Exception as e:

@@ -39,7 +39,10 @@ class TimeStepper:
                 message=f"Current lag {int(current_lag.total_seconds())} seconds.",
                 level="info",
             )
-            EVENTS_LAG.labels(intake_key=self.trigger.configuration.intake_key, **self.trigger.scalability_labels).set(int(current_lag.total_seconds()))
+            EVENTS_LAG.labels(
+                intake_key=self.trigger.configuration.intake_key,
+                **self.trigger.scalability_labels,
+            ).set(int(current_lag.total_seconds()))
 
             # If the next end is in the future
             if next_end > now:
@@ -73,7 +76,9 @@ class TimeStepper:
         if start_time == 0:
             end = datetime.datetime.now(datetime.timezone.utc) - t_timedelta
         else:
-            end = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=start_time)
+            end = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+                hours=start_time
+            )
 
         start = end - t_frequency
 

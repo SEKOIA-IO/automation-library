@@ -77,14 +77,20 @@ class TimeStepper:
                     level="info",
                 )
 
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).set(lag_seconds)
+                EVENTS_LAG.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    **self.connector.scalability_labels,
+                ).set(lag_seconds)
             else:
                 self.connector.log(
                     message=f"Caught up: {abs(lag_seconds)} seconds ahead of real-time window.",
                     level="info",
                 )
 
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).set(0)
+                EVENTS_LAG.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    **self.connector.scalability_labels,
+                ).set(0)
 
             # If the next end is in the future
             if next_end > now:

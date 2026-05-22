@@ -12,7 +12,12 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from .client import ApiClient
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 
 class FastlyWAFBasicConnectorConfiguration(DefaultConnectorConfiguration):
@@ -56,7 +61,10 @@ class FastlyWAFConsumer(Thread):
 
     @cached_property
     def client(self) -> ApiClient:
-        return ApiClient(email=self.connector.configuration.email, token=self.connector.configuration.token)
+        return ApiClient(
+            email=self.connector.configuration.email,
+            token=self.connector.configuration.token,
+        )
 
     @property
     def most_recent_date_seen(self) -> datetime.datetime:
@@ -64,7 +72,9 @@ class FastlyWAFConsumer(Thread):
 
         self.connector.context_lock.acquire()
         with self.connector.context as cache:
-            most_recent_date_seen_str = cache.get(self.name, {}).get("most_recent_date_seen")
+            most_recent_date_seen_str = cache.get(self.name, {}).get(
+                "most_recent_date_seen"
+            )
         self.connector.context_lock.release()
 
         # if undefined, retrieve events from the last minute
@@ -94,7 +104,9 @@ class FastlyWAFConsumer(Thread):
         from_timestamp = int(from_datetime.timestamp())
         return f"{self.url}?sort=asc&limit={self.connector.configuration.chunk_size}&from={from_timestamp}"
 
-    def fetch_next_events(self, from_datetime: datetime.datetime) -> Generator[list, None, None]:
+    def fetch_next_events(
+        self, from_datetime: datetime.datetime
+    ) -> Generator[list, None, None]:
         next_url = self.get_next_url(from_datetime=from_datetime)
         while self.running:
             response = self.client.get(url=next_url, timeout=60)
@@ -102,7 +114,10 @@ class FastlyWAFConsumer(Thread):
 
             events = response_content["data"]
             if events:
-                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).inc(len(events))
+                INCOMING_MESSAGES.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    **self.connector.scalability_labels,
+                ).inc(len(events))
                 yield events
 
             else:
@@ -124,11 +139,13 @@ class FastlyWAFConsumer(Thread):
         try:
             for next_events in self.fetch_next_events(most_recent_date_seen):
                 if next_events:
-                    last_event_datetime = self.connector.get_datetime_from_item(next_events[-1])
+                    last_event_datetime = self.connector.get_datetime_from_item(
+                        next_events[-1]
+                    )
                     if last_event_datetime > most_recent_date_seen:
-                        most_recent_date_seen = (last_event_datetime + datetime.timedelta(seconds=1)).replace(
-                            microsecond=0
-                        )
+                        most_recent_date_seen = (
+                            last_event_datetime + datetime.timedelta(seconds=1)
+                        ).replace(microsecond=0)
 
                     yield next_events
 
@@ -155,11 +172,19 @@ class FastlyWAFConsumer(Thread):
                     message=f"{self.name}: Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    **self.connector.scalability_labels,
+                ).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
 
                 # Compute the current lag from the date of the most recent event seen
-                current_lag = int((datetime.datetime.now(datetime.timezone.utc) - self.from_datetime).total_seconds())
+                current_lag = int(
+                    (
+                        datetime.datetime.now(datetime.timezone.utc)
+                        - self.from_datetime
+                    ).total_seconds()
+                )
             else:
                 self.log(
                     message=f"{self.name}: No events to forward",
@@ -167,7 +192,10 @@ class FastlyWAFConsumer(Thread):
                 )
 
         # Monitor the lag
-        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).set(current_lag)
+        EVENTS_LAG.labels(
+            intake_key=self.connector.configuration.intake_key,
+            **self.connector.scalability_labels,
+        ).set(current_lag)
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
@@ -176,7 +204,10 @@ class FastlyWAFConsumer(Thread):
             message=f"{self.name}: Fetched and forwarded events in {batch_duration} seconds",
             level="debug",
         )
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, **self.connector.scalability_labels).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.connector.configuration.intake_key,
+            **self.connector.scalability_labels,
+        ).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.connector.configuration.frequency - batch_duration
@@ -192,7 +223,9 @@ class FastlyWAFConsumer(Thread):
             try:
                 self.next_batch()
             except Exception as error:
-                self.log_exception(error, message=f"{self.name}: Failed to forward events")
+                self.log_exception(
+                    error, message=f"{self.name}: Failed to forward events"
+                )
 
 
 class FastlyWAFBaseConnector(Connector):
@@ -227,7 +260,8 @@ class FastlyWAFBaseConnector(Connector):
         page_limit = 100
         while True:
             response = self.client.get(
-                f"{self.base_uri}/api/v0/corps/{self.configuration.corp}/sites?" f"page={page_num}&limit={page_limit}",
+                f"{self.base_uri}/api/v0/corps/{self.configuration.corp}/sites?"
+                f"page={page_num}&limit={page_limit}",
                 timeout=60,
             )
             response.raise_for_status()
@@ -266,7 +300,9 @@ class FastlyWAFBaseConnector(Connector):
             )
 
         for consumer_name, consumer in consumers.items():
-            self.log(message=f"Starting {consumer_name} consumer", level="info")  # pragma: no cover
+            self.log(
+                message=f"Starting {consumer_name} consumer", level="info"
+            )  # pragma: no cover
             consumer.start()
 
         return consumers
@@ -296,17 +332,23 @@ class FastlyWAFBaseConnector(Connector):
     def supervise_consumers(self, consumers):
         for consumer_name, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
-                self.log(message=f"Restarting {consumer_name} consumer", level="info")  # pragma: no cover
+                self.log(
+                    message=f"Restarting {consumer_name} consumer", level="info"
+                )  # pragma: no cover
 
                 consumers[consumer_name] = FastlyWAFConsumer(
-                    connector=self, name=consumer_name, url=self.get_url_by_consumer_name(consumer_name)
+                    connector=self,
+                    name=consumer_name,
+                    url=self.get_url_by_consumer_name(consumer_name),
                 )
                 consumers[consumer_name].start()
 
     def stop_consumers(self, consumers):
         for consumer_name, consumer in consumers.items():
             if consumer is not None and consumer.is_alive():
-                self.log(message=f"Stopping {consumer_name} consumer", level="info")  # pragma: no cover
+                self.log(
+                    message=f"Stopping {consumer_name} consumer", level="info"
+                )  # pragma: no cover
                 consumer.stop()  # pragma: no cover
 
     def run(self) -> None:

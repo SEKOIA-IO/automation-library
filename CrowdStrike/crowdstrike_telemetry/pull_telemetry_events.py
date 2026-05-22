@@ -77,7 +77,9 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
         self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
         self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 60))
-        self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
+        self.s3_max_fetch_concurrency = int(
+            os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000)
+        )
         self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
 
     @cached_property
@@ -103,7 +105,9 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
         queue_url = self.configuration.queue_url
 
         if queue_url is None and queue_name == "":
-            raise ValueError("Either queue_name or queue_url must be provided in the configuration.")
+            raise ValueError(
+                "Either queue_name or queue_url must be provided in the configuration."
+            )
 
         delete_consumed_messages = self.configuration.delete_consumed_messages
         if delete_consumed_messages is None:
@@ -138,7 +142,9 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
     #         }
     #     ]
     # }
-    def _get_object_from_notification(self, sqs_message: dict[str, Any]) -> Generator[tuple[str, str], None, None]:
+    def _get_object_from_notification(
+        self, sqs_message: dict[str, Any]
+    ) -> Generator[tuple[str, str], None, None]:
         """
         Extract the file information from message
         """
@@ -156,7 +162,9 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
 
             yield bucket, path
 
-    async def next_batch(self, previous_processing_end: float | None = None) -> tuple[int, list[int]]:
+    async def next_batch(
+        self, previous_processing_end: float | None = None
+    ) -> tuple[int, list[int]]:
         """
         Get next batch of messages.
 
@@ -176,7 +184,8 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
 
         while continue_receiving:
             async with self.sqs_wrapper.receive_messages(
-                max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
+                max_messages=self.sqs_max_messages,
+                visibility_timeout=self.sqs_visibility_timeout,
             ) as messages:
                 message_records = []
 
@@ -191,28 +200,41 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
                         # This are custom CrowdStrike messages, we just parse them as it is
                         message_records.append(orjson.loads(message))
                     except (ValueError, TypeError) as e:  # pragma: no cover
-                        self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
+                        self.log_exception(
+                            e,
+                            message=f"Invalid JSON in message.\nInvalid message is: {message}",
+                        )
 
                 if not message_records:
                     continue_receiving = False
 
-                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(message_records))
+                INCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).inc(len(message_records))
                 for record in message_records:
                     try:
                         # This is only one difference between this connector and the base S3 one
-                        for s3_bucket, s3_key in self._get_object_from_notification(record):
+                        for s3_bucket, s3_key in self._get_object_from_notification(
+                            record
+                        ):
                             normalized_key = normalize_s3_key(s3_key)
 
                             async with (
                                 self.s3_fetch_concurrency_sem,
-                                self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as stream,
+                                self.s3_wrapper.read_key(
+                                    bucket=s3_bucket, key=normalized_key
+                                ) as stream,
                             ):
                                 async for event in self._parse_content(stream):
                                     records.append(event)
 
                                     if len(records) >= self.limit_of_events_to_push:
                                         continue_receiving = False
-                                        result += len(await self.push_data_to_intakes(events=records))
+                                        result += len(
+                                            await self.push_data_to_intakes(
+                                                events=records
+                                            )
+                                        )
                                         records = []
 
                     except Exception as e:  # pragma: no cover
@@ -239,7 +261,9 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
         Returns:
              Generator:
         """
-        records: AsyncGenerator[bytes, None] = (line.rstrip(b"\n") async for line in stream)
+        records: AsyncGenerator[bytes, None] = (
+            line.rstrip(b"\n") async for line in stream
+        )
 
         async for record in records:
             if len(record) > 0:  # pragma: no cover
@@ -249,18 +273,27 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
                     # Validate json_record is a dict before calling .get()
                     if not isinstance(json_record, dict):
                         self.log(
-                            message=f"Record is not a dict, got {type(json_record).__name__}, skipping", level="error"
+                            message=f"Record is not a dict, got {type(json_record).__name__}, skipping",
+                            level="error",
                         )
-                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc()
+                        DISCARDED_EVENTS.labels(
+                            intake_key=self.configuration.intake_key,
+                            **self.scalability_labels,
+                        ).inc()
                         continue
 
                     if (
                         json_record.get("event_simpleName") is None
                         or json_record.get("event_simpleName") in EXCLUDED_EVENT_ACTIONS
                     ):
-                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc()
+                        DISCARDED_EVENTS.labels(
+                            intake_key=self.configuration.intake_key,
+                            **self.scalability_labels,
+                        ).inc()
                         continue
 
                     yield record.decode("utf-8")
                 except Exception as e:
-                    self.log(message=f"Failed to parse a record: {str(e)}", level="warning")
+                    self.log(
+                        message=f"Failed to parse a record: {str(e)}", level="warning"
+                    )

@@ -7,7 +7,12 @@ import orjson
 from sekoia_automation.connector import Connector
 
 from .m365_mixin import EventType, M365Mixin
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 from .models import VadeSecureConnectorConfiguration
 
 
@@ -68,21 +73,31 @@ class M365EventsConnector(Connector, M365Mixin):
                     level="info",
                 )
 
-                INCOMING_MESSAGES.labels(type=event_type, intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
-                    len(message_batch)
-                )
+                INCOMING_MESSAGES.labels(
+                    type=event_type,
+                    intake_key=self.configuration.intake_key,
+                    **self.scalability_labels,
+                ).inc(len(message_batch))
 
                 last_message = message_batch[-1]
                 last_message_date = self._get_last_message_date([last_message])
                 events_lag = int(time.time() - last_message_date.timestamp())
-                EVENTS_LAG.labels(type=event_type, intake_key=self.configuration.intake_key, **self.scalability_labels).set(events_lag)
+                EVENTS_LAG.labels(
+                    type=event_type,
+                    intake_key=self.configuration.intake_key,
+                    **self.scalability_labels,
+                ).set(events_lag)
 
-                batch_of_events = [orjson.dumps(event).decode("utf-8") for event in message_batch]
+                batch_of_events = [
+                    orjson.dumps(event).decode("utf-8") for event in message_batch
+                ]
                 self.push_events_to_intakes(events=batch_of_events)
 
-                OUTCOMING_EVENTS.labels(type=event_type, intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
-                    len(batch_of_events)
-                )
+                OUTCOMING_EVENTS.labels(
+                    type=event_type,
+                    intake_key=self.configuration.intake_key,
+                    **self.scalability_labels,
+                ).inc(len(batch_of_events))
                 self.log(
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
@@ -93,16 +108,24 @@ class M365EventsConnector(Connector, M365Mixin):
                     message=f"No {event_type} events to forward",
                     level="info",
                 )  # pragma: no cover
-                EVENTS_LAG.labels(type=event_type, intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
+                EVENTS_LAG.labels(
+                    type=event_type,
+                    intake_key=self.configuration.intake_key,
+                    **self.scalability_labels,
+                ).set(0)
 
             # get the ending time and compute the duration to fetch the events
             batch_end_time = time.time()
             batch_duration = int(batch_end_time - batch_start_time)
-            FORWARD_EVENTS_DURATION.labels(type=event_type, intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
-                batch_duration
-            )
+            FORWARD_EVENTS_DURATION.labels(
+                type=event_type,
+                intake_key=self.configuration.intake_key,
+                **self.scalability_labels,
+            ).observe(batch_duration)
 
-            self.update_event_type_context(last_message_date, last_message_id, event_type)
+            self.update_event_type_context(
+                last_message_date, last_message_id, event_type
+            )
 
         fetch_end_time = time.time()
         fetch_duration = fetch_end_time - fetch_start_time

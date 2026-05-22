@@ -13,9 +13,18 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from hornetsecurity_modules import HornetsecurityModule
 from hornetsecurity_modules.client import ApiClient
-from hornetsecurity_modules.helpers import load_events_cache, normalize_uri, remove_duplicates, save_events_cache
+from hornetsecurity_modules.helpers import (
+    load_events_cache,
+    normalize_uri,
+    remove_duplicates,
+    save_events_cache,
+)
 from hornetsecurity_modules.logging import get_logger
-from hornetsecurity_modules.metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from hornetsecurity_modules.metrics import (
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 from hornetsecurity_modules.timestepper import TimeStepper
 
 logger = get_logger()
@@ -26,12 +35,16 @@ class BaseConnectorConfiguration(DefaultConnectorConfiguration):
     Base configuration for Hornetsecurity connectors.
     """
 
-    frequency: int = Field(300, description="Batch frequency in seconds (default: 300 seconds)")
+    frequency: int = Field(
+        300, description="Batch frequency in seconds (default: 300 seconds)"
+    )
     chunk_size: int = Field(
         2000,
         description="Max size of chunks for batch processing (default: 2000 items)",
     )
-    timedelta: int = Field(0, description="Time delta in minutes to fetch events (default: 0 minutes)")
+    timedelta: int = Field(
+        0, description="Time delta in minutes to fetch events (default: 0 minutes)"
+    )
     ratelimit_per_second: int = Field(
         20,
         description="Rate limit per second for API requests (default: 20 requests per second)",
@@ -51,7 +64,9 @@ class BaseConnector(Connector):
             start_at=timedelta(hours=24),
             ignore_older_than=timedelta(days=7),
         )
-        self.events_cache: Cache[str, Any] = load_events_cache(self.cursor._context, maxsize=1000)
+        self.events_cache: Cache[str, Any] = load_events_cache(
+            self.cursor._context, maxsize=1000
+        )
 
     @cached_property
     def scalability_labels(self) -> dict[str, str]:
@@ -100,7 +115,9 @@ class BaseConnector(Connector):
         return normalize_uri(self.module.configuration.hostname)
 
     @abstractmethod
-    def _fetch_events(self, from_date: datetime, to_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
+    def _fetch_events(
+        self, from_date: datetime, to_date: datetime
+    ) -> Generator[list[dict[str, Any]], None, None]:
         """
         Fetch events from the current context.
 
@@ -121,9 +138,13 @@ class BaseConnector(Connector):
             nb_events = 0
             for fetched_events in self._fetch_events(start_date, end_date):
                 # fetch events from the current context
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(fetched_events))
+                INCOMING_MESSAGES.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).inc(len(fetched_events))
 
-                if next_events := remove_duplicates(fetched_events, self.events_cache, self.ID_FIELD):
+                if next_events := remove_duplicates(
+                    fetched_events, self.events_cache, self.ID_FIELD
+                ):
                     nb_events += len(next_events)
 
                     # forward current events
@@ -139,12 +160,13 @@ class BaseConnector(Connector):
                 message=f"Fetched {nb_events} events in {batch_duration} seconds",
                 level="info",
             )
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
+            FORWARD_EVENTS_DURATION.labels(
+                intake_key=self.configuration.intake_key, **self.scalability_labels
+            ).observe(batch_duration)
 
     def next_batch(self) -> None:
         # Fetch next batch
         for events in self.fetch_events():
-
             batch_of_events = []
             # for each fetched event
             for event in events:
@@ -157,7 +179,10 @@ class BaseConnector(Connector):
                         message=f"Forward {len(batch_of_events)} events to the intake",
                         level="info",
                     )
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).inc(len(batch_of_events))
                     self.push_events_to_intakes(events=batch_of_events)
                     batch_of_events = []
 
@@ -167,7 +192,9 @@ class BaseConnector(Connector):
                     message=f"Forward {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
 
     def run(self) -> None:  # pragma: no cover

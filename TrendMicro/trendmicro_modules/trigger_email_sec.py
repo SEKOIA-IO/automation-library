@@ -13,7 +13,12 @@ from sekoia_automation.storage import PersistentJSON
 from . import TrendMicroModule
 from .client import ApiClient
 from .helpers import iso8601_to_timestamp, unixtime_to_iso8601
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 
 class TrendMicroConnectorConfiguration(DefaultConnectorConfiguration):
@@ -55,7 +60,10 @@ class TrendMicroWorker(Thread):
 
     @cached_property
     def client(self) -> ApiClient:
-        return ApiClient(username=self.connector.configuration.username, api_key=self.connector.configuration.api_key)
+        return ApiClient(
+            username=self.connector.configuration.username,
+            api_key=self.connector.configuration.api_key,
+        )
 
     def get_last_timestamp(self) -> int:
         now = int(time.time())  # in seconds
@@ -110,7 +118,9 @@ class TrendMicroWorker(Thread):
             if self.log_type not in cache.keys():
                 cache[self.log_type] = {}
 
-            cache[self.log_type]["recent_pushed_events"] = [self.get_event_metadata(event) for event in events]
+            cache[self.log_type]["recent_pushed_events"] = [
+                self.get_event_metadata(event) for event in events
+            ]
 
         self.connector.context_lock.release()
 
@@ -168,7 +178,9 @@ class TrendMicroWorker(Thread):
                 return
 
             if next_token is not None:
-                params["token"] = urllib.parse.unquote(next_token)  # it's provided url-encoded by API
+                params["token"] = urllib.parse.unquote(
+                    next_token
+                )  # it's provided url-encoded by API
 
             else:
                 return
@@ -179,7 +191,11 @@ class TrendMicroWorker(Thread):
         for events in self.iterate_through_pages(self.get_last_timestamp()):
             if events:
                 recent_events = self.get_recent_pushed_events()
-                next_events = [event for event in events if self.get_event_metadata(event) not in recent_events]
+                next_events = [
+                    event
+                    for event in events
+                    if self.get_event_metadata(event) not in recent_events
+                ]
 
                 yield next_events
 
@@ -198,28 +214,36 @@ class TrendMicroWorker(Thread):
                     message=f"{self.log_type}: Forwarded {events_len} events to the intake",
                     level="info",
                 )
-                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type, **self.connector.scalability_labels).inc(
-                    events_len
-                )
+                INCOMING_MESSAGES.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.log_type,
+                    **self.connector.scalability_labels,
+                ).inc(events_len)
 
                 self.connector.push_events_to_intakes(events=batch_of_events)
 
                 # We should persist the last event timestamp only after pushing the events
-                last_event = max(events, key=lambda x: iso8601_to_timestamp(x.get("genTime")))
+                last_event = max(
+                    events, key=lambda x: iso8601_to_timestamp(x.get("genTime"))
+                )
                 last_event_timestamp = iso8601_to_timestamp(last_event.get("genTime"))
                 most_recent_timestamp_seen = self.get_last_timestamp()
                 if last_event_timestamp > most_recent_timestamp_seen:
                     self.set_last_timestamp(last_event_timestamp)
                 events_lag = int(time.time()) - most_recent_timestamp_seen
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type, **self.connector.scalability_labels).set(
-                    events_lag
-                )
+                EVENTS_LAG.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.log_type,
+                    **self.connector.scalability_labels,
+                ).set(events_lag)
                 # We should cache the list of events that we pushed as well
                 self.set_recent_pushed_events(events)
 
-                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type, **self.connector.scalability_labels).inc(
-                    len(batch_of_events)
-                )
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.log_type,
+                    **self.connector.scalability_labels,
+                ).inc(len(batch_of_events))
 
             else:
                 self.log(
@@ -235,9 +259,11 @@ class TrendMicroWorker(Thread):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
 
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type, **self.connector.scalability_labels).observe(
-            batch_duration
-        )
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.connector.configuration.intake_key,
+            type=self.log_type,
+            **self.connector.scalability_labels,
+        ).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.frequency - batch_duration
@@ -292,7 +318,9 @@ class TrendMicroEmailSecurityConnector(Connector):
 
         for consumer_name in self.WORKER_TYPES:
             self.log(message=f"Start `{consumer_name}` consumer", level="info")
-            consumers[consumer_name] = TrendMicroWorker(connector=self, log_type=consumer_name)
+            consumers[consumer_name] = TrendMicroWorker(
+                connector=self, log_type=consumer_name
+            )
             consumers[consumer_name].start()
 
         return consumers
@@ -302,7 +330,9 @@ class TrendMicroEmailSecurityConnector(Connector):
             if consumer is None or (not consumer.is_alive() and consumer.running):
                 self.log(message=f"Restarting `{consumer_name}` consumer", level="info")
 
-                consumers[consumer_name] = TrendMicroWorker(connector=self, log_type=consumer_name)
+                consumers[consumer_name] = TrendMicroWorker(
+                    connector=self, log_type=consumer_name
+                )
                 consumers[consumer_name].start()
 
     def stop_consumers(self, consumers: dict[str, TrendMicroWorker]):
