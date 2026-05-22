@@ -67,7 +67,7 @@ class BeyondTrustPRAPlatformConnector(BeyondTrustBaseConnector):
             return
 
         if self._check_xml_error(response):
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
             return
 
         sessions_ids = parse_session_list(response.content)
