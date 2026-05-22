@@ -11,40 +11,40 @@ INCOMING_EVENTS = Counter(
     name="collected_events",
     documentation="Number of collected events from AWS S3",
     namespace=prom_aws_namespace,
-    labelnames=["intake_key", "scalable-horizontally", "scalable-vertically"],
+    labelnames=["intake_key", "scalable_horizontally", "scalable_vertically"],
 )
 
 OUTCOMING_EVENTS = Counter(
     name="forwarded_events",
     documentation="Number of events forwarded to Sekoia.io",
     namespace=prom_namespace,
-    labelnames=["intake_key", "scalable-horizontally", "scalable-vertically"],
+    labelnames=["intake_key", "scalable_horizontally", "scalable_vertically"],
 )
 
 FORWARD_EVENTS_DURATION = Histogram(
     name="forward_events_duration",
     documentation="Duration to collect and forward events from eventhub",
     namespace=prom_namespace,
-    labelnames=["intake_key", "scalable-horizontally", "scalable-vertically"],
+    labelnames=["intake_key", "scalable_horizontally", "scalable_vertically"],
 )
 
 EVENTS_LAG = Gauge(
     name="events_lags",
     documentation="The delay, in seconds, from the date of the last event",
     namespace=prom_namespace,
-    labelnames=["intake_key", "scalable-horizontally", "scalable-vertically"],
+    labelnames=["intake_key", "scalable_horizontally", "scalable_vertically"],
 )
 
 MESSAGES_AGE = Histogram(
     name="messages_age",
     documentation="The age of messages seen",
     namespace=prom_aws_namespace,
-    labelnames=["intake_key", "scalable-horizontally", "scalable-vertically"],
+    labelnames=["intake_key", "scalable_horizontally", "scalable_vertically"],
 )
 
 DISCARDED_EVENTS = Counter(
     name="discarded_events",
     documentation="Number of events discarded from the collect",
     namespace=prom_aws_namespace,
-    labelnames=["intake_key", "scalable-horizontally", "scalable-vertically"],
+    labelnames=["intake_key", "scalable_horizontally", "scalable_vertically"],
 )

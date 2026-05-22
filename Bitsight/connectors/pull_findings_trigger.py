@@ -130,11 +130,11 @@ class PullFindingsConnector(AsyncConnector):
     def scalability_labels(self) -> dict[str, str]:
         """Get scalability labels from module manifest."""
         labels = self.module.manifest.get("labels", {})
-        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
-        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
         return {
-            "scalable-horizontally": scalable_horizontally,
-            "scalable-vertically": scalable_vertically,
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
         }
 
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:

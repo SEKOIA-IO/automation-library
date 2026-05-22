@@ -7,5 +7,5 @@ OUTGOING_EVENTS = Counter(
     name="forwarded_events",
     documentation="Number of events forwarded to Sekoia.io",
     namespace=prom_namespace,
-    labelnames=["intake_key", "scalable-horizontally", "scalable-vertically"],
+    labelnames=["intake_key", "scalable_horizontally", "scalable_vertically"],
 )

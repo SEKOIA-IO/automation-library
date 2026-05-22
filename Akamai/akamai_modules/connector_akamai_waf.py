@@ -1,4 +1,5 @@
 import base64
+import os
 import re
 import time
 import urllib.parse
@@ -84,11 +85,11 @@ class AkamaiWAFLogsConnector(Connector):
     def scalability_labels(self) -> dict[str, str]:
         """Get scalability labels from module manifest."""
         labels = self.module.manifest.get("labels", {})
-        scalable_horizontally = str(labels.get("scalable-horizontally", False)).lower()
-        scalable_vertically = str(labels.get("scalable-vertically", False)).lower()
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
         return {
-            "scalable-horizontally": scalable_horizontally,
-            "scalable-vertically": scalable_vertically,
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
         }
 
     @staticmethod
@@ -176,7 +177,10 @@ class AkamaiWAFLogsConnector(Connector):
                         events_in_page += 1
 
                         if len(chunk) >= self.chunk_size:
-                            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
+                            INCOMING_MESSAGES.labels(
+                                intake_key=self.configuration.intake_key,
+                                **self.scalability_labels,
+                            ).inc(len(chunk))
                             yield chunk
                             chunk = []
 
@@ -186,7 +190,10 @@ class AkamaiWAFLogsConnector(Connector):
                         if events_in_page > 0:
                             # Yield remaining events that didn't fill a full chunk
                             if chunk:
-                                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
+                                INCOMING_MESSAGES.labels(
+                                    intake_key=self.configuration.intake_key,
+                                    **self.scalability_labels,
+                                ).inc(len(chunk))
                                 yield chunk
                                 chunk = []
 

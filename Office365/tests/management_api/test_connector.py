@@ -91,7 +91,11 @@ async def test_forward_next_batches(connector, symphony_storage, event):
 
         pull_content.assert_called_once_with(now, now)
         send_events.assert_called_once_with(event)
-        prometheus_labels.assert_called_once_with(intake_key=connector.configuration.intake_key)
+        prometheus_labels.assert_called_once_with(
+            intake_key=connector.configuration.intake_key,
+            scalable_horizontally="false",
+            scalable_vertically="false",
+        )
 
 
 @pytest.mark.asyncio

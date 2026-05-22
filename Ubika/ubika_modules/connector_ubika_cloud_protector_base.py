@@ -75,6 +75,17 @@ class UbikaCloudProtectorBaseConnector(Connector):
         return most_recent_date_seen
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
+    @cached_property
     def client(self) -> ApiClient:
         return ApiClient(
             self.configuration.token,
@@ -117,7 +128,9 @@ class UbikaCloudProtectorBaseConnector(Connector):
 
             # yielding events if defined
             if data and len(events) > 0:
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(events)
+                )
                 yield events
 
             else:
@@ -177,7 +190,7 @@ class UbikaCloudProtectorBaseConnector(Connector):
                 delta_time = datetime.now(timezone.utc) - most_recent_date_seen
                 current_lag = int(delta_time.total_seconds())
 
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
     def next_batch(self) -> None:
         # save the starting time
@@ -193,7 +206,9 @@ class UbikaCloudProtectorBaseConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )  # pragma: no cover
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(batch_of_events)
+                )
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -208,7 +223,9 @@ class UbikaCloudProtectorBaseConnector(Connector):
             message=f"Fetched and forwarded events in {batch_duration} seconds",
             level="debug",
         )  # pragma: no cover
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.configuration.intake_key, **self.scalability_labels
+        ).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

@@ -11,6 +11,7 @@ def mock_trigger():
     trigger = MagicMock()
     trigger.log = MagicMock()
     trigger.configuration.intake_key = "test_intake_key"
+    trigger.scalability_labels = {"scalable_horizontally": "false", "scalable_vertically": "false"}
     return trigger
 
 

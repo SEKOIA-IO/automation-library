@@ -8,7 +8,7 @@ INCOMING_EVENTS = Counter(
     name="collected_events",
     documentation="Number of events collected from Microsoft Sentinel",
     namespace=prom_namespace_sophos,
-    labelnames=["intake_key", "scalable-horizontally", "scalable-vertically"],
+    labelnames=["intake_key", "scalable_horizontally", "scalable_vertically"],
 )
 
 # Declare prometheus metrics
@@ -18,19 +18,19 @@ OUTCOMING_EVENTS = Counter(
     name="forwarded_events",
     documentation="Number of events forwarded to Sekoia.io",
     namespace=prom_namespace,
-    labelnames=["intake_key", "scalable-horizontally", "scalable-vertically"],
+    labelnames=["intake_key", "scalable_horizontally", "scalable_vertically"],
 )
 
 FORWARD_EVENTS_DURATION = Histogram(
     name="forward_events_duration",
     documentation="Duration to collect and forward events from Microsoft Sentinel to Sekoia.io",
     namespace=prom_namespace,
-    labelnames=["intake_key", "scalable-horizontally", "scalable-vertically"],
+    labelnames=["intake_key", "scalable_horizontally", "scalable_vertically"],
 )
 
 EVENTS_LAG = Gauge(
     name="events_lags",
     documentation="The delay, in seconds, from the date of the last event",
     namespace=prom_namespace,
-    labelnames=["intake_key", "scalable-horizontally", "scalable-vertically"],
+    labelnames=["intake_key", "scalable_horizontally", "scalable_vertically"],
 )
