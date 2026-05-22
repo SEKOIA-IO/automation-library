@@ -103,9 +103,12 @@ class Office365API:
                 base_url = OFFICE365_URL_BASE.format(tenant_id=self.tenant_id)
                 response = await session.post(f"{base_url}/subscriptions/start", params={"contentType": content_type})
 
-                subscription = await response.json(content_type=None)
+                try:
+                    subscription = await response.json(content_type=None)
+                except Exception:
+                    subscription = None
 
-                if subscription and "error" in subscription:
+                if isinstance(subscription, dict) and "error" in subscription:
                     # AF20024 means the subscription is already enabled, which is fine
                     if subscription["error"].get("code") == "AF20024":
                         continue
