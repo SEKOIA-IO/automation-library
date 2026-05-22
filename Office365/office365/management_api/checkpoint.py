@@ -14,7 +14,6 @@ class Checkpoint:
         now = datetime.now(UTC)
 
         if self._most_recent_date_seen is None:
-
             try:
                 # read the most recent date seen from the context
                 most_recent_date_seen_str = self._context.read_text()

@@ -99,9 +99,7 @@ class WizConnector(AsyncConnector, ABC):
         return self._wiz_gql_client
 
     @abstractmethod
-    async def get_events(
-        self, start_date: datetime, cursor: str | None = None
-    ) -> Result:
+    async def get_events(self, start_date: datetime, cursor: str | None = None) -> Result:
         raise NotImplementedError("Method get_events must be implemented")
 
     async def single_run(self) -> int:
@@ -119,17 +117,13 @@ class WizConnector(AsyncConnector, ABC):
         total_events = 0
 
         while has_next_page:
-            result = await self.get_events(
-                start_date=_previous_last_event_date, cursor=end_cursor
-            )
+            result = await self.get_events(start_date=_previous_last_event_date, cursor=end_cursor)
 
             # Push the collected events
             pushed_events = await self.push_data_to_intakes(
                 [
                     orjson.dumps(event).decode("utf-8")
-                    for event in filter_collected_events(
-                        result.data, lambda event: event["id"], self.events_cache
-                    )
+                    for event in filter_collected_events(result.data, lambda event: event["id"], self.events_cache)
                 ]
             )
 
@@ -158,13 +152,11 @@ class WizConnector(AsyncConnector, ABC):
 
                 self.log(message=log_message, level="info")
 
-                EVENTS_LAG.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).set(events_lag)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(events_lag)
 
-                OUTCOMING_EVENTS.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).inc(result)
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    result
+                )
 
                 processing_time = processing_end - processing_start
                 FORWARD_EVENTS_DURATION.labels(
@@ -211,9 +203,7 @@ class WizConnector(AsyncConnector, ABC):
         loop.run_until_complete(self.async_run())
 
 
-def filter_collected_events(
-    events: Sequence[Any], getter: Callable, cache: Cache
-) -> list[Any]:
+def filter_collected_events(events: Sequence[Any], getter: Callable, cache: Cache) -> list[Any]:
     """
     Filter events that have already been filter_collected_events
 

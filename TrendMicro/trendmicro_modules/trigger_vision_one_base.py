@@ -43,9 +43,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
     def client(self) -> TrendMicroVisionApiClient:
         return TrendMicroVisionApiClient(api_key=self.configuration.api_key)
 
-    def handle_response_error(
-        self, response: requests.Response
-    ) -> None:  # pragma: no cover
+    def handle_response_error(self, response: requests.Response) -> None:  # pragma: no cover
         if not response.ok:
             message = (
                 f"Request on Trend Micro Vision One API to fetch events failed with status "
@@ -112,9 +110,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
-        self.log(
-            f"Fetched and forwarded events in {batch_duration} seconds", level="debug"
-        )
+        self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="debug")
         FORWARD_EVENTS_DURATION.labels(
             intake_key=self.configuration.intake_key,
             type=self.CONNECTOR_METRICS_LABEL,

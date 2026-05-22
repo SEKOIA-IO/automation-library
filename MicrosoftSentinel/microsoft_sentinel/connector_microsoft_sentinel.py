@@ -108,9 +108,7 @@ class MicrosoftSentineldConnector(Connector):
 
         for key in keys_to_extract:
             value = getattr(incident, key)
-            if isinstance(value, list) and all(
-                isinstance(item, IncidentLabel) for item in value
-            ):
+            if isinstance(value, list) and all(isinstance(item, IncidentLabel) for item in value):
                 new_dict[key] = [labels_data_to_dict(item) for item in value]
             elif type(value) in conversion_map:
                 new_dict[key] = conversion_map[type(value)](value)
@@ -127,9 +125,7 @@ class MicrosoftSentineldConnector(Connector):
 
         if first_item is None:
             self.log(message="No messages to forward", level="info")
-            EVENTS_LAG.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
             return
 
         alerts_batch = []
@@ -149,12 +145,10 @@ class MicrosoftSentineldConnector(Connector):
 
             if (incoming_events_sum + 1) % self.batch_limit == 0:
                 alerts_len: int = len(alerts_batch)
-                self.log(
-                    message=f"Sending batch of {alerts_len} messages", level="info"
+                self.log(message=f"Sending batch of {alerts_len} messages", level="info")
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    alerts_len
                 )
-                OUTCOMING_EVENTS.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).inc(alerts_len)
                 self.push_events_to_intakes(events=alerts_batch)
                 alerts_batch = []
 
@@ -162,26 +156,22 @@ class MicrosoftSentineldConnector(Connector):
 
         if alerts_batch:
             last_alerts_len: int = len(alerts_batch)
-            self.log(
-                message=f"Sending batch of {last_alerts_len} messages", level="info"
+            self.log(message=f"Sending batch of {last_alerts_len} messages", level="info")
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                last_alerts_len
             )
-            OUTCOMING_EVENTS.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).inc(last_alerts_len)
             self.push_events_to_intakes(events=alerts_batch)
 
-        INCOMING_EVENTS.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).inc(incoming_events_sum)
+        INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+            incoming_events_sum
+        )
 
         if stored_time:
             self.from_date = stored_time
 
             most_recent_timestamp = stored_time.timestamp()
             events_lag = int(time.time() - most_recent_timestamp)
-            EVENTS_LAG.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).set(events_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(events_lag)
 
     def run(self) -> None:
         trigger_start_time = datetime.now().isoformat()
@@ -197,9 +187,7 @@ class MicrosoftSentineldConnector(Connector):
                     self.get_incidents()
 
                 except (HTTPError, BaseHTTPError) as ex:
-                    self.log_exception(
-                        ex, message="Failed to fetch next batch of events"
-                    )
+                    self.log_exception(ex, message="Failed to fetch next batch of events")
                 except Exception as ex:
                     self.log_exception(ex, message="An unknown exception occurred")
                     raise

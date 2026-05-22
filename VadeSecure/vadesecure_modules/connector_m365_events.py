@@ -88,9 +88,7 @@ class M365EventsConnector(Connector, M365Mixin):
                     **self.scalability_labels,
                 ).set(events_lag)
 
-                batch_of_events = [
-                    orjson.dumps(event).decode("utf-8") for event in message_batch
-                ]
+                batch_of_events = [orjson.dumps(event).decode("utf-8") for event in message_batch]
                 self.push_events_to_intakes(events=batch_of_events)
 
                 OUTCOMING_EVENTS.labels(
@@ -123,9 +121,7 @@ class M365EventsConnector(Connector, M365Mixin):
                 **self.scalability_labels,
             ).observe(batch_duration)
 
-            self.update_event_type_context(
-                last_message_date, last_message_id, event_type
-            )
+            self.update_event_type_context(last_message_date, last_message_id, event_type)
 
         fetch_end_time = time.time()
         fetch_duration = fetch_end_time - fetch_start_time

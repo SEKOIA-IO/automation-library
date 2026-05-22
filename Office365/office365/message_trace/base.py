@@ -33,7 +33,9 @@ class Office365MessageTraceBaseTrigger(Connector):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.headers = {"Accept": "application/json"}
-        self.messagetrace_api_url: str = "https://reports.office365.com/ecp/reportingwebservice/reporting.svc/MessageTrace"
+        self.messagetrace_api_url: str = (
+            "https://reports.office365.com/ecp/reportingwebservice/reporting.svc/MessageTrace"
+        )
         self._stop_event = Event()
         self.context = PersistentJSON("context.json", self._data_path)
 
@@ -144,14 +146,12 @@ class Office365MessageTraceBaseTrigger(Connector):
             try:
                 duration_start = time.time()
                 messages: list[str] = self.query_api(start, end)
-                OUTCOMING_EVENTS.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).inc(len(messages))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(messages)
+                )
 
                 if len(messages) > 0:
-                    self.log(
-                        message=f"Forwarding {len(messages)} records", level="info"
-                    )
+                    self.log(message=f"Forwarding {len(messages)} records", level="info")
                     self.push_events_to_intakes(events=messages)
                 else:
                     self.log(message="No records to forward", level="info")

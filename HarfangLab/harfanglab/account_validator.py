@@ -28,7 +28,6 @@ class HarfanglabCredentialsUnexpectedError(HarfanglabCredentialsError):
 
 
 class HarfanglabAccountValidator(AccountValidator):
-
     TIMEOUT = 30
     AUTHENTICATION_ENDPOINT = "/api/auth/users/me"
 
@@ -45,7 +44,6 @@ class HarfanglabAccountValidator(AccountValidator):
         return urljoin(self.base_url, self.AUTHENTICATION_ENDPOINT)
 
     def _check_credentials_request(self) -> tuple[dict[str, Any], int]:
-
         try:
             check_cred_response = self.client.get(self.auth_url, timeout=self.TIMEOUT)
             return check_cred_response.json(), check_cred_response.status_code

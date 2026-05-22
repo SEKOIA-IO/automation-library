@@ -429,7 +429,6 @@ async def test_map_fields_failure_invalid_device(test_okta_device_asset_connecto
 # ========================================
 @pytest.mark.asyncio
 async def test_get_assets_success(test_okta_device_asset_connector):
-
     mock_device1 = OktaDevice(
         id="dev1",
         status="ACTIVE",

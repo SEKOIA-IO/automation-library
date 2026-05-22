@@ -20,9 +20,7 @@ class BaseAwsS3FlowLogsParquetRecordsTrigger:
     configuration: AwsS3QueuedConfiguration
     name = "AWS S3 Parquet records"
 
-    def check_all_ips_are_private(
-        self, record: dict[str, Any], names: Sequence[str]
-    ) -> bool:
+    def check_all_ips_are_private(self, record: dict[str, Any], names: Sequence[str]) -> bool:
         """
         Check if all IPs in a record are private
 
@@ -64,10 +62,7 @@ class BaseAwsS3FlowLogsParquetRecordsTrigger:
                 if not self.check_all_ips_are_private(record, ("srcaddr", "dstaddr")):
                     yield orjson.dumps(record).decode("utf-8")
                 else:
-                    DISCARDED_EVENTS.labels(
-                        intake_key=self.configuration.intake_key,
-                        **self.scalability_labels
-                    ).inc()
+                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc()
 
 
 class AwsS3FlowLogsParquetRecordsTrigger(

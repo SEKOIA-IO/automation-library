@@ -17,9 +17,7 @@ from ubika_modules.connector_ubika_cloud_protector_next_gen_traffic_logs import 
 @pytest.fixture
 def trigger(data_storage):
     module = UbikaModule()
-    trigger = UbikaCloudProtectorNextGenTrafficLogsConnector(
-        module=module, data_path=data_storage
-    )
+    trigger = UbikaCloudProtectorNextGenTrafficLogsConnector(module=module, data_path=data_storage)
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()

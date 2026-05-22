@@ -16,9 +16,7 @@ from ubika_modules.connector_ubika_cloud_protector_next_gen_base import (
 @pytest.fixture
 def trigger(data_storage):
     module = UbikaModule()
-    trigger = UbikaCloudProtectorNextGenBaseConnector(
-        module=module, data_path=data_storage
-    )
+    trigger = UbikaCloudProtectorNextGenBaseConnector(module=module, data_path=data_storage)
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
@@ -43,9 +41,7 @@ def test_handle_response_error(trigger):
     assert "Internal Error" in str(m.value)
     assert "500" in str(m.value)
     # Handle response error with JSON
-    response = httpx.Response(
-        status_code=500, request=request, json={"error": "Internal Error"}
-    )
+    response = httpx.Response(status_code=500, request=request, json={"error": "Internal Error"})
     with pytest.raises(FetchEventsException) as m:
         trigger._handle_response_error(response)
     assert "Internal Error" in str(m.value)

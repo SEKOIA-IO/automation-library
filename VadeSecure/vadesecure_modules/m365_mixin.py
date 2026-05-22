@@ -18,7 +18,6 @@ from .models import VadeSecureTriggerConfiguration
 
 
 class APIException(Exception):
-
     def __init__(self, code: int, reason: str, content: str):
         super().__init__(reason)
         self.code = code

@@ -51,21 +51,15 @@ class ImpervaLogsConnector(Connector):
 
         # Last known downloaded file id
         self.cursor = CheckpointCursor(path=self.data_path)
-        self.last_seen_log = (
-            LogFileId.from_filename(self.cursor.offset) if self.cursor.offset else None
-        )
+        self.last_seen_log = LogFileId.from_filename(self.cursor.offset) if self.cursor.offset else None
 
         if self.last_seen_log:
             self.log(f"Last seen log is {self.last_seen_log}", level="info")
 
-        self.in_progress: deque[
-            LogFileId
-        ] = deque()  # logs that we are downloading right now
+        self.in_progress: deque[LogFileId] = deque()  # logs that we are downloading right now
         self.processed: deque[
             LogFileId
-        ] = (
-            deque()
-        )  # all logs that we tried to download and process (both successful and failed)
+        ] = deque()  # all logs that we tried to download and process (both successful and failed)
 
     @cached_property
     def scalability_labels(self) -> dict[str, str]:
@@ -91,9 +85,7 @@ class ImpervaLogsConnector(Connector):
 
     def fetch_logs_index(self) -> list[LogFileId]:
         url = urljoin(self.module.configuration.base_url, "logs.index")
-        response = self.client.get(
-            url, timeout=60, headers={"User-Agent": self.connector_user_agent}
-        )
+        response = self.client.get(url, timeout=60, headers={"User-Agent": self.connector_user_agent})
 
         if response.ok:
             if response.text == "":
@@ -101,10 +93,7 @@ class ImpervaLogsConnector(Connector):
                 return []
 
             else:
-                return [
-                    LogFileId.from_filename(filename)
-                    for filename in response.text.split("\n")
-                ]
+                return [LogFileId.from_filename(filename) for filename in response.text.split("\n")]
 
         elif response.status_code == 404:
             self.log(
@@ -126,9 +115,7 @@ class ImpervaLogsConnector(Connector):
     def handle_file(self, log_name: LogFileId) -> HandlingFileResult:
         url = urljoin(self.module.configuration.base_url, log_name.get_filename())
         try:
-            response = self.client.get(
-                url, timeout=60, headers={"User-Agent": self.connector_user_agent}
-            )
+            response = self.client.get(url, timeout=60, headers={"User-Agent": self.connector_user_agent})
             response.raise_for_status()
 
         except requests.HTTPError as e:
@@ -144,9 +131,7 @@ class ImpervaLogsConnector(Connector):
 
         try:
             last_timestamp = extract_last_timestamp(response.content)
-            decrypted_file = self.decrypt_file(
-                response.content, log_name.get_filename()
-            )
+            decrypted_file = self.decrypt_file(response.content, log_name.get_filename())
             self.handle_log_decrypted_content(decrypted_file)
 
             self.log(
@@ -161,9 +146,7 @@ class ImpervaLogsConnector(Connector):
             )
             return HandlingFileResult(log_name=log_name, successful=False)
 
-        return HandlingFileResult(
-            log_name=log_name, successful=True, last_timestamp=last_timestamp
-        )
+        return HandlingFileResult(log_name=log_name, successful=True, last_timestamp=last_timestamp)
 
     def handle_log_decrypted_content(self, decrypted_file: bytes) -> None:
         decrypted_file_text: str = decrypted_file.decode("utf-8")  # many lines
@@ -172,9 +155,9 @@ class ImpervaLogsConnector(Connector):
         if events_list[-1] == "":
             del events_list[-1]
 
-        OUTCOMING_EVENTS.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).inc(len(events_list))
+        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+            len(events_list)
+        )
 
         self.push_events_to_intakes(events_list)
 
@@ -186,8 +169,7 @@ class ImpervaLogsConnector(Connector):
         # These formats also do not require decryption or decompression.
         if len(file_split_content) != 2:
             self.log(
-                "File %s is not encrypted/compressed, returning the content as is."
-                % filename,
+                "File %s is not encrypted/compressed, returning the content as is." % filename,
                 level="info",
             )
             return file_content
@@ -202,18 +184,14 @@ class ImpervaLogsConnector(Connector):
         if file_encryption_key == -1:
             # uncompress the log content
             if is_compressed(file_log_content):
-                uncompressed_and_decrypted_file_content = (
-                    zlib.decompressobj().decompress(file_log_content)
-                )
+                uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(file_log_content)
 
             else:
                 uncompressed_and_decrypted_file_content = file_log_content
 
         # if the file is encrypted
         else:
-            content_encrypted_sym_key = file_header_content.split("key:")[
-                1
-            ].splitlines()[0]
+            content_encrypted_sym_key = file_header_content.split("key:")[1].splitlines()[0]
             # get the public key id from the log file header
             public_key_id = file_header_content.split("publicKeyId:")[1].splitlines()[0]
             keys = self.module.configuration.keys.get(public_key_id)
@@ -233,9 +211,7 @@ class ImpervaLogsConnector(Connector):
             iv = 16 * b"\x00"
 
             try:
-                rsa_private_key = serialization.load_pem_private_key(
-                    private_key, password=None
-                )
+                rsa_private_key = serialization.load_pem_private_key(private_key, password=None)
                 content_decrypted_sym_key = rsa_private_key.decrypt(  # type: ignore
                     base64.b64decode(bytes(content_encrypted_sym_key, "utf-8")),
                     padding.PKCS1v15(),
@@ -245,25 +221,19 @@ class ImpervaLogsConnector(Connector):
                     algorithms.AES(key=base64.decodebytes(content_decrypted_sym_key)),
                     mode=modes.CBC(iv),
                 ).decryptor()
-                padded_content = (
-                    decryptor.update(file_log_content) + decryptor.finalize()
-                )
+                padded_content = decryptor.update(file_log_content) + decryptor.finalize()
 
                 # remove padding
                 unpadder = sym_padding.PKCS7(128).unpadder()
                 content = unpadder.update(padded_content) + unpadder.finalize()
 
                 if is_compressed(content):
-                    uncompressed_and_decrypted_file_content = (
-                        zlib.decompressobj().decompress(content)
-                    )
+                    uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(content)
 
                 else:
                     uncompressed_and_decrypted_file_content = content
 
-                content_is_valid = validate_checksum(
-                    checksum, uncompressed_and_decrypted_file_content
-                )
+                content_is_valid = validate_checksum(checksum, uncompressed_and_decrypted_file_content)
                 if not content_is_valid:
                     self.log(
                         message=f"Checksum verification failed for file {filename}",
@@ -306,9 +276,7 @@ class ImpervaLogsConnector(Connector):
                 first_run = False
 
             additions: list[LogFileId] = [
-                x
-                for x in logs_in_index
-                if x not in self.processed and x not in self.in_progress
+                x for x in logs_in_index if x not in self.processed and x not in self.in_progress
             ]
             self.log(
                 "%d logs in index file, %d new" % (len(logs_in_index), len(additions)),
@@ -316,16 +284,14 @@ class ImpervaLogsConnector(Connector):
             )
             if len(additions) == 0:
                 self.log("No new logs to download", level="info")
-                EVENTS_LAG.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).set(0)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
 
                 time.sleep(self.configuration.frequency)
                 continue
 
-            INCOMING_MESSAGES.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).inc(len(additions))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(additions)
+            )
             self.log("%d new logs to download" % len(additions), level="info")
 
             self.in_progress.extend(additions)
@@ -334,8 +300,7 @@ class ImpervaLogsConnector(Connector):
                 with ThreadPoolExecutor(max_workers=self.NUM_WORKERS) as pool:
                     for item in pool.map(self.process_file, additions, timeout=3600):
                         if item.last_timestamp is not None and (
-                            last_timestamp is None
-                            or item.last_timestamp > last_timestamp
+                            last_timestamp is None or item.last_timestamp > last_timestamp
                         ):
                             last_timestamp = item.last_timestamp
 
@@ -366,9 +331,7 @@ class ImpervaLogsConnector(Connector):
 
                 # Clear failed items - successful ones already removed in process_file
                 additions_set = set(additions)
-                self.in_progress = deque(
-                    item for item in self.in_progress if item not in additions_set
-                )
+                self.in_progress = deque(item for item in self.in_progress if item not in additions_set)
 
             # compute the remaining sleeping time. If greater than 0, sleep
             delta_sleep = self.configuration.frequency - batch_duration

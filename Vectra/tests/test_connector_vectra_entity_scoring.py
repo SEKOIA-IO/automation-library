@@ -149,7 +149,6 @@ def test_next_batch_sleep_until_next_round(trigger, api_client, response_2):
     with requests_mock.Mocker() as mock_requests, patch(
         "vectra_modules.connector_vectra_entity_scoring.time"
     ) as mock_time:
-
         mock_requests.register_uri(
             "POST",
             "https://example.portal.vectra.ai:443/oauth2/token",
@@ -182,7 +181,6 @@ def test_long_next_batch_should_not_sleep(trigger, api_client, response_2):
     with requests_mock.Mocker() as mock_requests, patch(
         "vectra_modules.connector_vectra_entity_scoring.time"
     ) as mock_time:
-
         mock_requests.register_uri(
             "POST",
             "https://example.portal.vectra.ai:443/oauth2/token",

@@ -17,9 +17,7 @@ from .trigger_vision_one_base import (
 logger = get_logger()
 
 
-class TrendMicroVisionOneOATConnectorConfiguration(
-    TrendMicroVisionOneBaseConfiguration
-):
+class TrendMicroVisionOneOATConnectorConfiguration(TrendMicroVisionOneBaseConfiguration):
     filter: str | None = Field(None, description="Filter for events", max_length=4000)
 
 
@@ -55,9 +53,7 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
             headers = {}
 
         url = urljoin(self.configuration.base_url, "v3.0/oat/detections")
-        response = self.client.get(
-            url, params=query_params, headers=headers, timeout=60
-        )
+        response = self.client.get(url, params=query_params, headers=headers, timeout=60)
 
         while self.running:  # pragma: no cover
             self.handle_response_error(response)
@@ -69,7 +65,7 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
                 INCOMING_MESSAGES.labels(
                     intake_key=self.configuration.intake_key,
                     type=self.CONNECTOR_METRICS_LABEL,
-                    **self.scalability_labels
+                    **self.scalability_labels,
                 ).inc(len(events))
                 yield events
 
@@ -77,7 +73,7 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
                 EVENTS_LAG.labels(
                     intake_key=self.configuration.intake_key,
                     type=self.CONNECTOR_METRICS_LABEL,
-                    **self.scalability_labels
+                    **self.scalability_labels,
                 ).set(0)
                 return
 
@@ -108,7 +104,5 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
         EVENTS_LAG.labels(
-            intake_key=self.configuration.intake_key,
-            type=self.CONNECTOR_METRICS_LABEL,
-            **self.scalability_labels
+            intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL, **self.scalability_labels
         ).set(int(current_lag.total_seconds()))

@@ -140,9 +140,9 @@ class TrellixEpoConnector(AsyncConnector):
 
                 message_ids: list[str] = await self.get_trellix_epo_events()
                 processing_end = time.time()
-                OUTCOMING_EVENTS.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).inc(len(message_ids))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(message_ids)
+                )
 
                 log_message = "No records to forward"
                 if len(message_ids) > 0:

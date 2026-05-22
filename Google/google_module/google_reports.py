@@ -86,12 +86,8 @@ class GoogleReports(GoogleTrigger):
         now = datetime.now(timezone.utc)
 
         with self.context as cache:
-            app_key_name_in_cache = (
-                "most_recent_date_seen_" + self.configuration.application_name.value
-            )
-            most_recent_date_seen_str = cache.get(app_key_name_in_cache) or cache.get(
-                "most_recent_date_seen"
-            )
+            app_key_name_in_cache = "most_recent_date_seen_" + self.configuration.application_name.value
+            most_recent_date_seen_str = cache.get(app_key_name_in_cache) or cache.get("most_recent_date_seen")
 
             # if undefined, retrieve events from the last day
             if most_recent_date_seen_str is None:
@@ -113,9 +109,7 @@ class GoogleReports(GoogleTrigger):
             timeshift = timedelta(minutes=self.configuration.timedelta)
 
             start = most_recent_date_seen
-            end = (
-                now - timeshift
-            )  # set the end of the period to the now minus the temporal shift
+            end = now - timeshift  # set the end of the period to the now minus the temporal shift
             if start > end:
                 # this is a case when most_recent_date_seen > now() - timedelta
                 start = most_recent_date_seen - timeshift
@@ -132,9 +126,7 @@ class GoogleReports(GoogleTrigger):
     def stepper(self, recent_date):
         self.from_date = recent_date
         with self.context as cache:
-            app_key_name_in_cache = (
-                "most_recent_date_seen_" + self.configuration.application_name.value
-            )
+            app_key_name_in_cache = "most_recent_date_seen_" + self.configuration.application_name.value
             cache[app_key_name_in_cache] = self.from_date
 
     @cached_property
@@ -213,9 +205,7 @@ class GoogleReports(GoogleTrigger):
             )
 
     def get_activities(self, start: str, end: str, next_key: Optional[str] = None):
-        message_without_nk = (
-            f"Initiating Google reports request using the created credential object."
-        )
+        message_without_nk = f"Initiating Google reports request using the created credential object."
         message_with_nk = f"Initiating Google reports request using the created credential object. Next_key {next_key} included for pagination."
         log_message = message_with_nk if next_key else message_without_nk
         self.log(message=log_message, level="info")
@@ -251,21 +241,19 @@ class GoogleReports(GoogleTrigger):
         while const_next_key:
             response_next_page = self.get_activities(start, end, const_next_key) or {}
             next_page_items = response_next_page.get("items", [])
-            INCOMING_MESSAGES.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).inc(len(next_page_items))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(next_page_items)
+            )
 
             if next_page_items:
-                next_messages = [
-                    orjson.dumps(message).decode("utf-8") for message in next_page_items
-                ]
+                next_messages = [orjson.dumps(message).decode("utf-8") for message in next_page_items]
                 self.log(
                     message=f"Sending other batches of {len(next_messages)} messages",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).inc(len(next_messages))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(next_messages)
+                )
                 self.push_events_to_intakes(events=next_messages)
 
                 const_next_key = response_next_page.get("nextPageToken", "")
@@ -288,9 +276,7 @@ class GoogleReports(GoogleTrigger):
         items, next_key = activities.get("items", []), activities.get("nextPageToken")
 
         self.log(message=f"Getting activities with {len(items)} elements", level="info")
-        INCOMING_MESSAGES.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).inc(len(items))
+        INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(items))
 
         if len(items) > 0:
             messages = [orjson.dumps(message).decode("utf-8") for message in items]
@@ -298,9 +284,9 @@ class GoogleReports(GoogleTrigger):
                 message=f"Sending the first batch of {len(messages)} messages",
                 level="info",
             )
-            OUTCOMING_EVENTS.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).inc(len(messages))
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(messages)
+            )
             self.push_events_to_intakes(events=messages)
 
             if next_key:

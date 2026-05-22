@@ -41,14 +41,12 @@ class CompanyCheckpoint(BaseModel):
         Returns:
             datetime:
         """
-        result = datetime.now(timezone.utc).replace(
-            microsecond=0, second=0, minute=0, hour=0
-        ) - timedelta(days=time_delta)
+        result = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(
+            days=time_delta
+        )
 
         parsed_last_seen = (
-            datetime.fromisoformat(self.last_seen).replace(tzinfo=timezone.utc)
-            if self.last_seen
-            else None
+            datetime.fromisoformat(self.last_seen).replace(tzinfo=timezone.utc) if self.last_seen else None
         )
 
         if parsed_last_seen is not None and parsed_last_seen >= result:
@@ -70,9 +68,7 @@ class Checkpoint(BaseModel):
             if value.company_uuid == company_uuid:
                 return value.with_updated_last_seen(time_delta=self.time_delta)
 
-        return CompanyCheckpoint(company_uuid=company_uuid).with_updated_last_seen(
-            time_delta=self.time_delta
-        )
+        return CompanyCheckpoint(company_uuid=company_uuid).with_updated_last_seen(time_delta=self.time_delta)
 
     def recalculate_company_checkpoint(self, company_uuid: str) -> None:
         company_checkpoint = self.get_company_checkpoint(company_uuid)
@@ -80,31 +76,27 @@ class Checkpoint(BaseModel):
             return
 
         last_seen = (
-            datetime.fromisoformat(
-                company_checkpoint.last_seen or datetime.now(timezone.utc).isoformat()
-            )
+            datetime.fromisoformat(company_checkpoint.last_seen or datetime.now(timezone.utc).isoformat())
             .replace(tzinfo=timezone.utc)
             .replace(microsecond=0, second=0, minute=0, hour=0)
         )
 
         next_day = last_seen + timedelta(days=1)
-        now = datetime.now(timezone.utc).replace(
-            microsecond=0, second=0, minute=0, hour=0
-        ) - timedelta(days=self.time_delta)
+        now = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(
+            days=self.time_delta
+        )
         if next_day <= now:
             company_checkpoint.last_seen = next_day.strftime("%Y-%m-%d")
             company_checkpoint.offset = 1
 
-        self.values = [
-            value for value in self.values if value.company_uuid != company_uuid
-        ] + [company_checkpoint]
+        self.values = [value for value in self.values if value.company_uuid != company_uuid] + [company_checkpoint]
 
     def increment_company_checkpoint(self, company_uuid: str, last_seen: str) -> None:
         company_checkpoint = self.get_company_checkpoint(company_uuid)
 
-        checkpoint_last_seen_datetime = datetime.fromisoformat(
-            company_checkpoint.last_seen or last_seen
-        ).replace(microsecond=0, second=0, minute=0, hour=0)
+        checkpoint_last_seen_datetime = datetime.fromisoformat(company_checkpoint.last_seen or last_seen).replace(
+            microsecond=0, second=0, minute=0, hour=0
+        )
 
         last_seen_datetime = datetime.fromisoformat(last_seen)
 
@@ -115,9 +107,7 @@ class Checkpoint(BaseModel):
         elif last_seen_datetime == checkpoint_last_seen_datetime:
             company_checkpoint.offset = (company_checkpoint.offset or 0) + 1
 
-        self.values = [
-            value for value in self.values if value.company_uuid != company_uuid
-        ] + [company_checkpoint]
+        self.values = [value for value in self.values if value.company_uuid != company_uuid] + [company_checkpoint]
 
 
 class PullFindingsConnectorConfiguration(DefaultConnectorConfiguration):
@@ -223,9 +213,7 @@ class PullFindingsConnector(AsyncConnector):
 
         return result
 
-    async def process_findings_for_company(
-        self, checkpoint: Checkpoint, company_id: str
-    ) -> int:
+    async def process_findings_for_company(self, checkpoint: Checkpoint, company_id: str) -> int:
         company_checkpoint = checkpoint.get_company_checkpoint(company_id)
         last_seen = company_checkpoint.last_seen
         offset = company_checkpoint.offset
@@ -240,16 +228,12 @@ class PullFindingsConnector(AsyncConnector):
         data_to_push = []
         total_pushed_events = 0
 
-        async for finding in self.bitsight_client.findings_result(
-            company_id, last_seen, offset
-        ):
+        async for finding in self.bitsight_client.findings_result(company_id, last_seen, offset):
             checkpoint.increment_company_checkpoint(company_id, finding["last_seen"])
             data_to_push.extend(self.format_finding(finding, company_id))
 
             if len(data_to_push) >= self.configuration.batch_limit:
-                await self.push_data_to_intakes(
-                    [orjson.dumps(event).decode("utf-8") for event in data_to_push]
-                )
+                await self.push_data_to_intakes([orjson.dumps(event).decode("utf-8") for event in data_to_push])
                 pushed_events = len(data_to_push)
                 logger.info("Pushed {0} events to intakes", pushed_events)
                 total_pushed_events += pushed_events
@@ -257,9 +241,7 @@ class PullFindingsConnector(AsyncConnector):
                 self.save_checkpoint(checkpoint)
 
         if len(data_to_push) > 0:
-            await self.push_data_to_intakes(
-                [orjson.dumps(event).decode("utf-8") for event in data_to_push]
-            )
+            await self.push_data_to_intakes([orjson.dumps(event).decode("utf-8") for event in data_to_push])
             pushed_events = len(data_to_push)
             logger.info("Pushed {0} events to intakes", pushed_events)
             total_pushed_events += pushed_events
@@ -285,14 +267,11 @@ class PullFindingsConnector(AsyncConnector):
         company_ids = self.module.configuration.company_uuids
 
         processed_result: Any = [
-            await self.process_findings_for_company(checkpoint, company)
-            for company in company_ids
+            await self.process_findings_for_company(checkpoint, company) for company in company_ids
         ]
 
         pushed_events: int = reduce(lambda x, y: x + y, processed_result)
-        logger.info(
-            "Finished with pushing events intakes. Total count is {0}", pushed_events
-        )
+        logger.info("Finished with pushing events intakes. Total count is {0}", pushed_events)
 
         return pushed_events, self.get_checkpoint()
 
@@ -308,9 +287,7 @@ class PullFindingsConnector(AsyncConnector):
             try:
                 while self.running:
                     processing_start = time.time()
-                    result_count, saved_checkpoint = loop.run_until_complete(
-                        self.next_batch()
-                    )
+                    result_count, saved_checkpoint = loop.run_until_complete(self.next_batch())
                     processing_end = time.time()
 
                     last_event_date = max(

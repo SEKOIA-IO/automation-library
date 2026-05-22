@@ -78,9 +78,7 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
 
         # Set up parameters
         last_event_date = self.last_event_date.offset
-        start_time = int(
-            last_event_date.timestamp() * 1000
-        )  # convert the event date into a timestamp in millisecond
+        start_time = int(last_event_date.timestamp() * 1000)  # convert the event date into a timestamp in millisecond
         cursor: str | None = None
         has_more_items: bool = True
 
@@ -93,9 +91,7 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
                 after=cursor,
             )
 
-            alerts = filter_collected_events(
-                data.alerts, lambda alert: alert["id"], self.events_cache
-            )
+            alerts = filter_collected_events(data.alerts, lambda alert: alert["id"], self.events_cache)
 
             detailed_alerts = []
             for alert in alerts:
@@ -132,9 +128,7 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
                 processing_end = time.time()
 
                 EVENTS_LAG.labels(
-                    intake_key=self.configuration.intake_key,
-                    type=self.product_name,
-                    **self.scalability_labels
+                    intake_key=self.configuration.intake_key, type=self.product_name, **self.scalability_labels
                 ).set(processing_end - last_event_date.timestamp())
 
                 log_message = "No records to forward"
@@ -142,9 +136,9 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
                     log_message = "Pushed {0} records".format(result)
 
                 self.log(message=log_message, level="info")
-                OUTCOMING_EVENTS.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).inc(result)
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    result
+                )
 
                 processing_time = processing_end - processing_start
                 FORWARD_EVENTS_DURATION.labels(

@@ -22,9 +22,7 @@ def fake_time():
 
 @pytest.fixture
 def patch_datetime_now(fake_time):
-    with patch(
-        "ubika_modules.connector_ubika_cloud_protector_base.datetime"
-    ) as mock_datetime:
+    with patch("ubika_modules.connector_ubika_cloud_protector_base.datetime") as mock_datetime:
         mock_datetime.now.return_value = fake_time
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
         mock_datetime.fromtimestamp = lambda ts: datetime.fromtimestamp(ts)
@@ -127,9 +125,7 @@ def message2():
 
 
 @pytest.mark.respx(base_url="https://eu-west-2.cloudprotector.com")
-def test_fetch_events_with_pagination(
-    respx_mock: MockRouter, trigger, message1, message2
-):
+def test_fetch_events_with_pagination(respx_mock: MockRouter, trigger, message1, message2):
     with patch("ubika_modules.connector_ubika_cloud_protector_base.time") as mock_time:
         mock_time.sleep = MagicMock()
 
@@ -150,9 +146,7 @@ def test_fetch_events_with_pagination(
 
 
 @pytest.mark.respx(base_url="https://eu-west-2.cloudprotector.com")
-def test_next_batch_sleep_until_next_round(
-    respx_mock: MockRouter, trigger, message1, message2
-):
+def test_next_batch_sleep_until_next_round(respx_mock: MockRouter, trigger, message1, message2):
     with patch("ubika_modules.connector_ubika_cloud_protector_base.time") as mock_time:
         mock_time.sleep = MagicMock()
 

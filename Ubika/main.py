@@ -15,9 +15,7 @@ from ubika_modules.connector_ubika_cloud_protector_traffic import (
 if __name__ == "__main__":
     module = UbikaModule()
     module.register(UbikaCloudProtectorAlertsConnector, "ubika_cloud_protector_alerts")
-    module.register(
-        UbikaCloudProtectorTrafficConnector, "ubika_cloud_protector_traffic"
-    )
+    module.register(UbikaCloudProtectorTrafficConnector, "ubika_cloud_protector_traffic")
     module.register(
         UbikaCloudProtectorNextGenAlertsConnector,
         "ubika_cloud_protector_next_gen_alerts",

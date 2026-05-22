@@ -118,9 +118,7 @@ class TrendMicroWorker(Thread):
             if self.log_type not in cache.keys():
                 cache[self.log_type] = {}
 
-            cache[self.log_type]["recent_pushed_events"] = [
-                self.get_event_metadata(event) for event in events
-            ]
+            cache[self.log_type]["recent_pushed_events"] = [self.get_event_metadata(event) for event in events]
 
         self.connector.context_lock.release()
 
@@ -178,9 +176,7 @@ class TrendMicroWorker(Thread):
                 return
 
             if next_token is not None:
-                params["token"] = urllib.parse.unquote(
-                    next_token
-                )  # it's provided url-encoded by API
+                params["token"] = urllib.parse.unquote(next_token)  # it's provided url-encoded by API
 
             else:
                 return
@@ -191,11 +187,7 @@ class TrendMicroWorker(Thread):
         for events in self.iterate_through_pages(self.get_last_timestamp()):
             if events:
                 recent_events = self.get_recent_pushed_events()
-                next_events = [
-                    event
-                    for event in events
-                    if self.get_event_metadata(event) not in recent_events
-                ]
+                next_events = [event for event in events if self.get_event_metadata(event) not in recent_events]
 
                 yield next_events
 
@@ -223,9 +215,7 @@ class TrendMicroWorker(Thread):
                 self.connector.push_events_to_intakes(events=batch_of_events)
 
                 # We should persist the last event timestamp only after pushing the events
-                last_event = max(
-                    events, key=lambda x: iso8601_to_timestamp(x.get("genTime"))
-                )
+                last_event = max(events, key=lambda x: iso8601_to_timestamp(x.get("genTime")))
                 last_event_timestamp = iso8601_to_timestamp(last_event.get("genTime"))
                 most_recent_timestamp_seen = self.get_last_timestamp()
                 if last_event_timestamp > most_recent_timestamp_seen:
@@ -318,9 +308,7 @@ class TrendMicroEmailSecurityConnector(Connector):
 
         for consumer_name in self.WORKER_TYPES:
             self.log(message=f"Start `{consumer_name}` consumer", level="info")
-            consumers[consumer_name] = TrendMicroWorker(
-                connector=self, log_type=consumer_name
-            )
+            consumers[consumer_name] = TrendMicroWorker(connector=self, log_type=consumer_name)
             consumers[consumer_name].start()
 
         return consumers
@@ -330,9 +318,7 @@ class TrendMicroEmailSecurityConnector(Connector):
             if consumer is None or (not consumer.is_alive() and consumer.running):
                 self.log(message=f"Restarting `{consumer_name}` consumer", level="info")
 
-                consumers[consumer_name] = TrendMicroWorker(
-                    connector=self, log_type=consumer_name
-                )
+                consumers[consumer_name] = TrendMicroWorker(connector=self, log_type=consumer_name)
                 consumers[consumer_name].start()
 
     def stop_consumers(self, consumers: dict[str, TrendMicroWorker]):

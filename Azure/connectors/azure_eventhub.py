@@ -81,9 +81,7 @@ class AzureEventsHubTrigger(AsyncConnector):
 
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
-        self._consumption_max_wait_time = int(
-            os.environ.get("CONSUMER_MAX_WAIT_TIME", "10"), 10
-        )  # 10 seconds default
+        self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "10"), 10)  # 10 seconds default
         self._frequency = int(os.environ.get("FREQUENCY_MAX_TIME", "10"), 10)
         self._has_more_events = True
 
@@ -113,9 +111,7 @@ class AzureEventsHubTrigger(AsyncConnector):
             )
 
             try:
-                container = service.get_container_client(
-                    self.configuration.storage_container_name
-                )
+                container = service.get_container_client(self.configuration.storage_container_name)
                 await container.create_container()
                 self.log("Created checkpoint storage container")
             except ResourceExistsError:
@@ -127,9 +123,7 @@ class AzureEventsHubTrigger(AsyncConnector):
             # Wrong permissions / invalid conn string / DNS / etc.
             self.log_exception(e, message="Failed to initialize checkpoint store")
 
-    async def handle_messages(
-        self, partition_context: PartitionContext, messages: list[EventData]
-    ) -> None:
+    async def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]) -> None:
         """
         Handle new messages
         """
@@ -142,18 +136,12 @@ class AzureEventsHubTrigger(AsyncConnector):
         else:  # pragma: no cover
             # We reached the max_wait_time, close the current client
             self.log(
-                message=(
-                    f"No new messages received from the last {self._frequency} seconds."
-                ),
+                message=(f"No new messages received from the last {self._frequency} seconds."),
             )
 
             # reset the metrics
-            EVENTS_LAG.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).set(0)
-            MESSAGES_AGE.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
+            MESSAGES_AGE.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
 
     @staticmethod
     def get_records_from_message(message: EventData) -> tuple[list[Any], str]:
@@ -177,9 +165,9 @@ class AzureEventsHubTrigger(AsyncConnector):
             return [body], "str"
 
     async def forward_events(self, messages: list[EventData]) -> None:
-        INCOMING_MESSAGES.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).inc(len(messages))
+        INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+            len(messages)
+        )
         start = time.time()
 
         records = []
@@ -192,8 +180,7 @@ class AzureEventsHubTrigger(AsyncConnector):
                         if (
                             len(self.configuration.categories) > 0
                             and isinstance(record, dict)
-                            and record.get("category")
-                            not in self.configuration.categories
+                            and record.get("category") not in self.configuration.categories
                         ):
                             self.log(
                                 message=f"Skip record as its category {record.get('category')} not in allowed categories {self.configuration.categories}",
@@ -207,46 +194,33 @@ class AzureEventsHubTrigger(AsyncConnector):
 
         if len(records) > 0:
             self.log(f"Forward {len(records)} events")
-            OUTCOMING_EVENTS.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).inc(len(records))
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(records)
+            )
             await self.push_data_to_intakes(events=records)
             self._has_more_events = True
         else:
             self.log("No events to forward")
             self._has_more_events = False
 
-        FORWARD_EVENTS_DURATION.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).observe(time.time() - start)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            time.time() - start
+        )
 
-        enqueued_times = [
-            message.enqueued_time
-            for message in messages
-            if message.enqueued_time is not None
-        ]
+        enqueued_times = [message.enqueued_time for message in messages if message.enqueued_time is not None]
         if len(enqueued_times) > 0:  # pragma: no cover
             now = datetime.now(timezone.utc)
-            messages_age = [
-                int((now - enqueued_time).total_seconds())
-                for enqueued_time in enqueued_times
-            ]
+            messages_age = [int((now - enqueued_time).total_seconds()) for enqueued_time in enqueued_times]
 
             # Compute the distance from the most recent message consumed
             current_lag = min(messages_age)
-            EVENTS_LAG.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).set(current_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
             # Monitor the age of all messages
             for age in messages_age:
-                MESSAGES_AGE.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).set(age)
+                MESSAGES_AGE.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(age)
 
-    async def handle_exception(
-        self, partition_context: PartitionContext, exception: Exception
-    ) -> None:
+    async def handle_exception(self, partition_context: PartitionContext, exception: Exception) -> None:
         self.log_exception(
             exception,
             message="Error raised when consuming messages",

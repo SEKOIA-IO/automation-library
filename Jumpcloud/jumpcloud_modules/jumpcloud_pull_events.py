@@ -55,9 +55,7 @@ class JumpcloudDirectoryInsightsConnector(Connector):
         self.fetch_events_limit = 1000
 
     def stop(self, *args, **kwargs):
-        self.log(
-            message="Stopping Jumpcloud Directory Insights logs connector", level="info"
-        )
+        self.log(message="Stopping Jumpcloud Directory Insights logs connector", level="info")
         # Exit signal received, asking the processor to stop
         self._stop_event.set()
 
@@ -122,9 +120,7 @@ failed with status {response.status_code} - {response.reason}"
 
         # get the first page of events
         headers = {"Accept": "application/json", "Content-type": "application/json"}
-        url = urljoin(
-            self.module.configuration.base_url, "insights/directory/v1/events"
-        )
+        url = urljoin(self.module.configuration.base_url, "insights/directory/v1/events")
         response = self.client.post(url, json=params, headers=headers)
 
         while self.running:
@@ -133,9 +129,9 @@ failed with status {response.status_code} - {response.reason}"
 
             # get events from the response
             events = response.json()
-            INCOMING_MESSAGES.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).inc(len(events or []))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(events or [])
+            )
 
             # yielding events if defined
             if events:
@@ -152,9 +148,7 @@ failed with status {response.status_code} - {response.reason}"
             if (response.headers["X-Result-Count"] == response.headers["X-Limit"]) and (
                 response.headers["X-Search_after"] is not None
             ):
-                params["search_after"] = orjson.loads(
-                    response.headers["X-Search_after"]
-                )
+                params["search_after"] = orjson.loads(response.headers["X-Search_after"])
                 response = self.client.post(url, json=params, headers=headers)
             else:
                 return
@@ -205,9 +199,7 @@ failed with status {response.status_code} - {response.reason}"
                 level="info",
             )
 
-        EVENTS_LAG.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).set(current_lag)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
     def next_batch(self):
         # save the starting time
@@ -223,9 +215,9 @@ failed with status {response.status_code} - {response.reason}"
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).inc(len(events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(events)
+                )
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -237,9 +229,9 @@ failed with status {response.status_code} - {response.reason}"
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
-        FORWARD_EVENTS_DURATION.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            batch_duration
+        )
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
@@ -248,9 +240,7 @@ failed with status {response.status_code} - {response.reason}"
             time.sleep(delta_sleep)
 
     def run(self):
-        self.log(
-            message="Start fetching Jumpcloud Directory Insights logs", level="info"
-        )
+        self.log(message="Start fetching Jumpcloud Directory Insights logs", level="info")
 
         # start the prometheus exporter
         exporter = make_exporter(

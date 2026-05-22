@@ -22,7 +22,6 @@ _fake_artefact_content: bytes = b"\x13\x37"
 
 
 class _fake_response:
-
     # Only the strict necessary for tests are present.
     artefact_info: JSONResponse = {
         "count": 1,

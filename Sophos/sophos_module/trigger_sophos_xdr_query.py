@@ -186,9 +186,7 @@ class SophosXDRQueryTrigger(SophosConnector):
     def _observe_items_events_lag(self, items: list[dict[str, Any]]) -> None:
         def _extract_timestamp(item: dict[str, Any]) -> float:
             RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-            return datetime.strptime(
-                item["calendar_time"], RFC3339_STRICT_FORMAT
-            ).timestamp()
+            return datetime.strptime(item["calendar_time"], RFC3339_STRICT_FORMAT).timestamp()
 
         if len(items) == 0:
             return
@@ -201,9 +199,7 @@ class SophosXDRQueryTrigger(SophosConnector):
         most_recent_timestamp = _extract_timestamp(most_recent_item)
 
         events_lag = int(time.time() - most_recent_timestamp)
-        EVENTS_LAG.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).set(events_lag)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(events_lag)
 
     def getting_results(self, pagination: int) -> None:
         now = datetime.now(timezone.utc)
@@ -216,17 +212,11 @@ class SophosXDRQueryTrigger(SophosConnector):
             )
         else:
             # If the result succeed ==> get the data.
-            response: dict[str, Any] = self.client.get_query_results(
-                query_id, pagination
-            ).json()
+            response: dict[str, Any] = self.client.get_query_results(query_id, pagination).json()
             items = response.get("items", [])
             self._observe_items_events_lag(items)
-            self.log(
-                message=f"Getting results with {len(items)} elements", level="info"
-            )
-            INCOMING_EVENTS.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).inc(len(items))
+            self.log(message=f"Getting results with {len(items)} elements", level="info")
+            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(items))
 
             if len(items) > 0:
                 messages = [orjson.dumps(message).decode("utf-8") for message in items]
@@ -235,9 +225,9 @@ class SophosXDRQueryTrigger(SophosConnector):
                     message=f"Sending the first batch of {len(messages)} messages",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).inc(len(messages))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(messages)
+                )
                 self.push_events_to_intakes(events=messages)
                 self.events_sum += len(messages)
 
@@ -247,10 +237,7 @@ class SophosXDRQueryTrigger(SophosConnector):
                     ).json()
 
                     next_page_items = response_next_page.get("items", [])
-                    next_messages = [
-                        orjson.dumps(message).decode("utf-8")
-                        for message in next_page_items
-                    ]
+                    next_messages = [orjson.dumps(message).decode("utf-8") for message in next_page_items]
                     self._observe_items_events_lag(next_page_items)
                     self.log(
                         message=f"Sending other batches of {len(next_messages)} messages",
@@ -270,9 +257,7 @@ class SophosXDRQueryTrigger(SophosConnector):
 
             else:
                 self.log(message="No messages to forward", level="info")
-                EVENTS_LAG.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).set(0)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
 
 
 class SophosXDRIOCQuery(SophosXDRQueryTrigger):
@@ -282,8 +267,6 @@ class SophosXDRIOCQuery(SophosXDRQueryTrigger):
     @property
     def query(self) -> dict[str, Any]:
         return {
-            "adHocQuery": {
-                "template": "SELECT * FROM xdr_ioc_view WHERE ioc_detection_weight > 3"
-            },
+            "adHocQuery": {"template": "SELECT * FROM xdr_ioc_view WHERE ioc_detection_weight > 3"},
             "from": self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         }

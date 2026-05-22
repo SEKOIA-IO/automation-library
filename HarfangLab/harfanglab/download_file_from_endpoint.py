@@ -98,7 +98,6 @@ class DownloadFileFromEndpointAction(JobExecutor):
         buffer.seek(0)
 
         if verify_digest:
-
             hasher = hashlib.sha256()
 
             while chunk := buffer.read(io.DEFAULT_BUFFER_SIZE):
@@ -115,7 +114,6 @@ class DownloadFileFromEndpointAction(JobExecutor):
         return buffer
 
     def run(self, arguments: dict[str, Any]) -> dict[str, str]:
-
         agent_id: str = arguments["id"]
         path_to_download: str = arguments["path"]
 

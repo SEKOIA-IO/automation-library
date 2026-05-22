@@ -36,7 +36,6 @@ def unauthentified_trigger(symphony_storage):
 
 @pytest.fixture
 def trigger(unauthentified_trigger):
-
     with requests_mock.Mocker() as mock:
         mock.post(
             unauthentified_trigger.module.configuration.oauth2_authorization_url,

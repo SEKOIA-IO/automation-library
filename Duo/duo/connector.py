@@ -78,9 +78,7 @@ class DuoLogsConsumer(Thread):
         self.connector.context_lock.acquire()
 
         with self.connector.context as cache:
-            default_min_time = (
-                int(time.time()) - 5 * 60
-            )  # start with events from 5 min ago
+            default_min_time = int(time.time()) - 5 * 60  # start with events from 5 min ago
 
             # these are using milliseconds instead of seconds
             if self._log_type in (LogType.AUTHENTICATION, LogType.TELEPHONY):
@@ -165,9 +163,7 @@ class DuoLogsConsumer(Thread):
                 if self._log_type == LogType.TELEPHONY:
                     # Telephony logs have their datetime represented as "2023-03-21T22:34:49.466370+00:00"
                     most_recent_event = max(events, key=lambda item: item["ts"])
-                    most_recent_timestamp = datetime.datetime.fromisoformat(
-                        most_recent_event["ts"]
-                    ).timestamp()
+                    most_recent_timestamp = datetime.datetime.fromisoformat(most_recent_event["ts"]).timestamp()
                 else:
                     most_recent_event = max(events, key=lambda item: item["timestamp"])
                     most_recent_timestamp = most_recent_event["timestamp"]
@@ -222,8 +218,7 @@ class DuoLogsConsumer(Thread):
             delta_sleep = self.frequency - batch_duration
             if delta_sleep > 0:
                 self.log(
-                    message=f"Next batch of {self.log_label} events in the future. "
-                    f"Waiting {delta_sleep} seconds",
+                    message=f"Next batch of {self.log_label} events in the future. " f"Waiting {delta_sleep} seconds",
                     level="info",
                 )
                 time.sleep(delta_sleep)
@@ -242,9 +237,7 @@ class DuoLogsConsumer(Thread):
                 self.fetch_batches()
 
         except Exception as error:
-            self.connector.log_exception(
-                error, message=f"Failed to forward {self.log_label} events"
-            )
+            self.connector.log_exception(error, message=f"Failed to forward {self.log_label} events")
 
 
 class DuoAdminLogsConnector(Connector):

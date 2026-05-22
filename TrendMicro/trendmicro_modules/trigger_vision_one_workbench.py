@@ -16,9 +16,7 @@ from .trigger_vision_one_base import (
 logger = get_logger()
 
 
-class TrendMicroVisionOneWorkbenchConnectorConfiguration(
-    TrendMicroVisionOneBaseConfiguration
-):
+class TrendMicroVisionOneWorkbenchConnectorConfiguration(TrendMicroVisionOneBaseConfiguration):
     pass
 
 
@@ -62,7 +60,7 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
                 INCOMING_MESSAGES.labels(
                     intake_key=self.configuration.intake_key,
                     type=self.CONNECTOR_METRICS_LABEL,
-                    **self.scalability_labels
+                    **self.scalability_labels,
                 ).inc(len(events))
                 yield events
 
@@ -70,7 +68,7 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
                 EVENTS_LAG.labels(
                     intake_key=self.configuration.intake_key,
                     type=self.CONNECTOR_METRICS_LABEL,
-                    **self.scalability_labels
+                    **self.scalability_labels,
                 ).set(0)
                 return
 
@@ -101,7 +99,5 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
         EVENTS_LAG.labels(
-            intake_key=self.configuration.intake_key,
-            type=self.CONNECTOR_METRICS_LABEL,
-            **self.scalability_labels
+            intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL, **self.scalability_labels
         ).set(int(current_lag.total_seconds()))

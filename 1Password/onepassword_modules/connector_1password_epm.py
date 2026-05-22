@@ -136,10 +136,7 @@ class OnePasswordEndpoint(Thread):
 
         # Fetch next batch
         for events in self.fetch_events():
-            batch_of_events = [
-                orjson.dumps(self.enrich_event(event)).decode("utf-8")
-                for event in events
-            ]
+            batch_of_events = [orjson.dumps(self.enrich_event(event)).decode("utf-8") for event in events]
 
             # if the batch is full, push it
             if len(batch_of_events) > 0:
@@ -189,9 +186,7 @@ class OnePasswordEndpoint(Thread):
                 self.next_batch()
 
         except Exception as error:
-            self.connector.log_exception(
-                error, message=f"{self.name}: Failed to forward events"
-            )
+            self.connector.log_exception(error, message=f"{self.name}: Failed to forward events")
 
 
 class SignInAttemptsEndpoint(OnePasswordEndpoint):
@@ -272,9 +267,7 @@ class OnePasswordConnector(Connector):
     def supervise_consumers(self, consumers: dict[str, OnePasswordEndpoint]) -> None:
         for consumer_name, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
-                self.log(
-                    message=f"Restart consuming `{consumer_name}` logs", level="info"
-                )
+                self.log(message=f"Restart consuming `{consumer_name}` logs", level="info")
 
                 cls = self.FEATURE_TO_CLASS[consumer_name]
                 consumers[consumer_name] = cls(connector=self)

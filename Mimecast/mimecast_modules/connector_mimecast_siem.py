@@ -41,9 +41,7 @@ class MimecastSIEMConfiguration(DefaultConnectorConfiguration):
 
 
 class MimecastSIEMWorker(Thread):
-    def __init__(
-        self, connector: "MimecastSIEMConnector", log_type: str, client: ApiClient
-    ):
+    def __init__(self, connector: "MimecastSIEMConnector", log_type: str, client: ApiClient):
         super().__init__()
         self.connector = connector
         self.log_type: str = log_type
@@ -122,9 +120,7 @@ class MimecastSIEMWorker(Thread):
         """
         with self.connector.context_lock:
             with self.connector.context as cache:
-                most_recent_date_seen_str = cache.get(self.log_type, {}).get(
-                    "most_recent_date_seen"
-                )
+                most_recent_date_seen_str = cache.get(self.log_type, {}).get("most_recent_date_seen")
 
         if most_recent_date_seen_str is None:
             # there is no datetime cursor
@@ -184,11 +180,7 @@ class MimecastSIEMWorker(Thread):
         if self.old_cursor is not None:
             # The datetime cursor was actually a date, not a full datetime. Thus, we have to download all
             # events from the day's start and then filter out all events with timestamps before saved datetime
-            events = [
-                event
-                for event in events
-                if event["timestamp"] > self.old_cursor.timestamp() * 1000
-            ]
+            events = [event for event in events if event["timestamp"] > self.old_cursor.timestamp() * 1000]
             logger.info("Filtered events", nb_url=len(events), log_type=self.log_type)
 
             # We don't need this anymore - it's for the first page only
@@ -199,15 +191,11 @@ class MimecastSIEMWorker(Thread):
 
         return events
 
-    def __get_next_batch_of_events(
-        self, url: str, params: dict[str, int | str]
-    ) -> requests.Response:
+    def __get_next_batch_of_events(self, url: str, params: dict[str, int | str]) -> requests.Response:
         """
         Get the next batch of events from the API.
         """
-        response = self.client.get(
-            url, params=params, timeout=60, headers={"Accept": "application/json"}
-        )
+        response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
 
         # Check if the response is unauthorized error
         if response.status_code == 401:
@@ -222,9 +210,7 @@ class MimecastSIEMWorker(Thread):
 
             # Re-authenticate and retry the request
             self.client.auth.get_credentials()
-            response = self.client.get(
-                url, params=params, timeout=60, headers={"Accept": "application/json"}
-            )
+            response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
 
         return response
 
@@ -243,9 +229,7 @@ class MimecastSIEMWorker(Thread):
             events_gen = download_batches(urls=batch_urls, loop=self._loop)
 
             for events in batched(events_gen, EVENTS_BATCH_SIZE):
-                logger.debug(
-                    "Collected events", nb_url=len(events), log_type=self.log_type
-                )
+                logger.debug("Collected events", nb_url=len(events), log_type=self.log_type)
                 events = self.__filter_events(events)
 
                 if len(events) > 0:
@@ -273,14 +257,9 @@ class MimecastSIEMWorker(Thread):
                 if next_events:
                     # extract latest timestamp
                     last_event = max(next_events, key=lambda x: x.get("timestamp"))
-                    last_event_date = datetime.fromtimestamp(
-                        last_event["timestamp"] / 1000
-                    ).astimezone(timezone.utc)
+                    last_event_date = datetime.fromtimestamp(last_event["timestamp"] / 1000).astimezone(timezone.utc)
 
-                    if (
-                        most_recent_date_seen is None
-                        or last_event_date > most_recent_date_seen
-                    ):
+                    if most_recent_date_seen is None or last_event_date > most_recent_date_seen:
                         most_recent_date_seen = last_event_date
 
                     yield next_events
@@ -291,9 +270,7 @@ class MimecastSIEMWorker(Thread):
                 raise ValueError("Response does not contain any valid data")
 
             http_error_code = error_response.status_code
-            error_message = ", ".join(
-                map(itemgetter("message"), error_response.json().get("fail", []))
-            )
+            error_message = ", ".join(map(itemgetter("message"), error_response.json().get("fail", [])))
             if http_error_code == 401:
                 message = "Authentication failed"
 
@@ -380,9 +357,7 @@ class MimecastSIEMWorker(Thread):
             try:
                 self.next_batch()
             except Exception as error:
-                self.log_exception(
-                    error, message=f"{self.log_type}: Failed to forward events"
-                )
+                self.log_exception(error, message=f"{self.log_type}: Failed to forward events")
 
                 # In case of exception, pause the thread before the next attempt
                 time.sleep(self.connector.configuration.frequency)
@@ -437,33 +412,23 @@ class MimecastSIEMConnector(Connector):
     def start_consumers(self, client: ApiClient) -> dict[str, MimecastSIEMWorker]:
         consumers = {}
         for consumer_name in self.TYPES_TO_GET:
-            consumers[consumer_name] = MimecastSIEMWorker(
-                connector=self, log_type=consumer_name, client=client
-            )
+            consumers[consumer_name] = MimecastSIEMWorker(connector=self, log_type=consumer_name, client=client)
             consumers[consumer_name].start()
 
         return consumers
 
-    def supervise_consumers(
-        self, consumers: dict[str, MimecastSIEMWorker], client: ApiClient
-    ) -> None:
+    def supervise_consumers(self, consumers: dict[str, MimecastSIEMWorker], client: ApiClient) -> None:
         for consumer_name, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
-                self.log(
-                    message=f"Restarting `{consumer_name}` consumer", level="info"
-                )  # pragma: no cover
+                self.log(message=f"Restarting `{consumer_name}` consumer", level="info")  # pragma: no cover
 
-                consumers[consumer_name] = MimecastSIEMWorker(
-                    connector=self, log_type=consumer_name, client=client
-                )
+                consumers[consumer_name] = MimecastSIEMWorker(connector=self, log_type=consumer_name, client=client)
                 consumers[consumer_name].start()
 
     def stop_consumers(self, consumers: dict[str, MimecastSIEMWorker]):
         for consumer_name, consumer in consumers.items():
             if consumer is not None and consumer.is_alive():
-                self.log(
-                    message=f"Stopping `{consumer_name}` consumer", level="info"
-                )  # pragma: no cover
+                self.log(message=f"Stopping `{consumer_name}` consumer", level="info")  # pragma: no cover
                 consumer.stop()  # pragma: no cover
 
     def run(self) -> None:

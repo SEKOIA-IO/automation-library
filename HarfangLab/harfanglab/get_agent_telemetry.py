@@ -24,7 +24,6 @@ class GetAgentTelemetry(Action):
         return resp
 
     def run(self, arguments) -> dict[str, Any]:
-
         telemetry_urls = {
             "processes": "/api/data/telemetry/Processes/",
             "binary": "/api/data/telemetry/Binary/",

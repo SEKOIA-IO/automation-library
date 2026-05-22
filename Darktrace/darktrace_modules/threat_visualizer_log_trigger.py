@@ -100,9 +100,7 @@ class ThreatVisualizerLogConsumer(Thread):
         }
         url = urljoin(self.connector.module.configuration.api_url, self.endpoint.value)
         # save cert in file to pass to request
-        response = self.client.get(
-            url, params=params, verify=self.connector.configuration.verify_certificate
-        )
+        response = self.client.get(url, params=params, verify=self.connector.configuration.verify_certificate)
         return response
 
     def refine_response(self, response: list) -> list:
@@ -151,9 +149,7 @@ class ThreatVisualizerLogConsumer(Thread):
             if response != []:
                 for event in response:
                     event["log_type"] = self.endpoint.value
-                batch_of_events = [
-                    orjson.dumps(event).decode("utf-8") for event in response
-                ]
+                batch_of_events = [orjson.dumps(event).decode("utf-8") for event in response]
 
                 OUTCOMING_EVENTS.labels(
                     intake_key=self.connector.configuration.intake_key,
@@ -238,13 +234,9 @@ class ThreatVisualizerLogConnector(Connector):
     def start_consumers(self):
         consumers = {}
         for endpoint in Endpoints:
-            self.log(
-                message=f"Start {endpoint.name} consumer", level="info"
-            )  # pragma: no cover
+            self.log(message=f"Start {endpoint.name} consumer", level="info")  # pragma: no cover
 
-            consumers[endpoint] = ThreatVisualizerLogConsumer(
-                connector=self, endpoint=endpoint
-            )
+            consumers[endpoint] = ThreatVisualizerLogConsumer(connector=self, endpoint=endpoint)
             consumers[endpoint].start()
 
         return consumers
@@ -253,27 +245,19 @@ class ThreatVisualizerLogConnector(Connector):
         """Check consumer list and restart consumer if not alive."""
         for endpoint, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
-                self.log(
-                    message=f"Restarting {endpoint.name} consumer", level="info"
-                )  # pragma: no cover
+                self.log(message=f"Restarting {endpoint.name} consumer", level="info")  # pragma: no cover
 
-                consumers[endpoint] = ThreatVisualizerLogConsumer(
-                    connector=self, endpoint=endpoint
-                )
+                consumers[endpoint] = ThreatVisualizerLogConsumer(connector=self, endpoint=endpoint)
                 consumers[endpoint].start()
 
     def stop_consumers(self, consumers):
         for endpoint, consumer in consumers.items():
             if consumer is not None and consumer.is_alive():
-                self.log(
-                    message=f"Stopping {endpoint.name} consumer", level="info"
-                )  # pragma: no cover
+                self.log(message=f"Stopping {endpoint.name} consumer", level="info")  # pragma: no cover
                 consumer.stop()  # pragma: no cover
 
     def run(self):
-        self.log(
-            message="Start fetching Darktrace threat visualizer logs", level="info"
-        )  # pragma: no cover
+        self.log(message="Start fetching Darktrace threat visualizer logs", level="info")  # pragma: no cover
 
         consumers = self.start_consumers()
         while self.running:
@@ -283,8 +267,6 @@ class ThreatVisualizerLogConnector(Connector):
         self.stop_consumers(consumers)
 
     def stop(self, _, __):  # pragma: no cover
-        self.log(
-            message="Stopping Darktrace threat visualizer logs connector", level="info"
-        )
+        self.log(message="Stopping Darktrace threat visualizer logs connector", level="info")
         # Exit signal received, asking the processor to stop
         super().stop()

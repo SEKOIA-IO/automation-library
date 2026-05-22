@@ -68,9 +68,7 @@ class MobileEndpointSecurityThread(Thread):
             api_token=self.connector.module.configuration.api_token,
         )
 
-    def get_sse_stream(
-        self, params: dict | None = None, timeout: float = 60
-    ) -> requests.Response:
+    def get_sse_stream(self, params: dict | None = None, timeout: float = 60) -> requests.Response:
         headers = {"Accept": "text/event-stream", "Cache-Control": "no-cache"}
         base_url = self.connector.module.configuration.base_url
 
@@ -131,9 +129,7 @@ class MobileEndpointSecurityThread(Thread):
                 if ss_event.retry:
                     self.retry_ms = ss_event.retry
 
-                self.log(
-                    f"{ss_event.event} event received, shutting down...", level="info"
-                )
+                self.log(f"{ss_event.event} event received, shutting down...", level="info")
                 if self.retry_ms:
                     wait_time_seconds = round(self.retry_ms / 1000.0, 2)
                     self.log("Waiting %d seconds before reconnect" % wait_time_seconds)
@@ -160,12 +156,8 @@ class MobileEndpointSecurityThread(Thread):
                         )
 
                     if len(mra_events) > 0:
-                        most_recent_date_seen = max(
-                            isoparse(item["created_time"]) for item in mra_events
-                        )
-                        batch_of_events = [
-                            orjson.dumps(event).decode("utf-8") for event in mra_events
-                        ]
+                        most_recent_date_seen = max(isoparse(item["created_time"]) for item in mra_events)
+                        batch_of_events = [orjson.dumps(event).decode("utf-8") for event in mra_events]
 
                         self.log(
                             message=f"Forwarded {len(batch_of_events)} events to the intake",

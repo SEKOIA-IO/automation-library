@@ -9,7 +9,6 @@ from harfanglab.account_validator import HarfanglabAccountValidator
 
 @pytest.fixture
 def harfanglab_account_validator():
-
     module = Module()
     module.configuration = {
         "url": "http://example.com",

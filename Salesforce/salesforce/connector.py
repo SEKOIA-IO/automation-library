@@ -61,9 +61,7 @@ class SalesforceConnector(AsyncConnector):
         self.context = PersistentJSON("context.json", self._data_path)
 
         log_file_cache_size = int(os.getenv("LOG_FILE_CACHE_SIZE", 100))
-        self.log_file_cache: Cache[str, bool] = self._load_log_file_cache(
-            log_file_cache_size
-        )
+        self.log_file_cache: Cache[str, bool] = self._load_log_file_cache(log_file_cache_size)
 
     @property
     def stepper(self) -> TimeStepper:
@@ -237,19 +235,13 @@ class SalesforceConnector(AsyncConnector):
 
             if records is not None:
                 log_file_results.extend(
-                    await self.push_data_to_intakes(
-                        [orjson.dumps(event).decode("utf-8") for event in records]
-                    )
+                    await self.push_data_to_intakes([orjson.dumps(event).decode("utf-8") for event in records])
                 )
 
             # Process csv file row by row to avoid memory issues
             if csv_path is not None:
                 async for row in csv_file_as_rows(csv_path):
-                    log_file_results.extend(
-                        await self.push_data_to_intakes(
-                            [orjson.dumps(row).decode("utf-8")]
-                        )
-                    )
+                    log_file_results.extend(await self.push_data_to_intakes([orjson.dumps(row).decode("utf-8")]))
 
                 await delete_file(csv_path)
 
@@ -277,9 +269,7 @@ class SalesforceConnector(AsyncConnector):
 
                     processing_start = time.time()
 
-                    message_ids: list[str] = loop.run_until_complete(
-                        self.get_salesforce_events(start, end)
-                    )
+                    message_ids: list[str] = loop.run_until_complete(self.get_salesforce_events(start, end))
 
                     processing_end = time.time()
                     OUTCOMING_EVENTS.labels(

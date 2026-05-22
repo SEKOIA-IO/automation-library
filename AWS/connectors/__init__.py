@@ -58,9 +58,7 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
                     processing_start = time.time()
                     current_lag: int = 0
 
-                    batch_result: tuple[int, list[int]] = loop.run_until_complete(
-                        self.next_batch()
-                    )
+                    batch_result: tuple[int, list[int]] = loop.run_until_complete(self.next_batch())
                     message_count, messages_timestamp = batch_result
 
                     # compute the duration of the batch
@@ -85,8 +83,7 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
                         # Identify delay between message timestamp ( when it was pushed to sqs )
                         # and current timestamp ( when it was processed )
                         messages_age = [
-                            int(processing_end - message_timestamp / 1000)
-                            for message_timestamp in messages_timestamp
+                            int(processing_end - message_timestamp / 1000) for message_timestamp in messages_timestamp
                         ]
                         current_lag = min(messages_age)
 

@@ -58,25 +58,13 @@ class DatetimeRange(object):
         if _value.tzinfo != pytz.utc:
             _value.astimezone(pytz.utc)
 
-        if (
-            self.utc_end_date
-            and self.utc_start_date
-            and self.utc_start_date < _value < self.utc_end_date
-        ):
+        if self.utc_end_date and self.utc_start_date and self.utc_start_date < _value < self.utc_end_date:
             return True
 
-        if (
-            self.utc_start_date
-            and self.utc_end_date is None
-            and self.utc_start_date < _value
-        ):
+        if self.utc_start_date and self.utc_end_date is None and self.utc_start_date < _value:
             return True
 
-        if (
-            self.utc_end_date
-            and self.utc_start_date is None
-            and self.utc_end_date > _value
-        ):
+        if self.utc_end_date and self.utc_start_date is None and self.utc_end_date > _value:
             return True
 
         return False
@@ -169,24 +157,14 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                 if last_event_date.tzinfo != pytz.utc:
                     last_event_date = last_event_date.astimezone(pytz.utc)
 
-                file_id = (
-                    int(
-                        last_event_date.replace(
-                            minute=0, second=0, microsecond=0
-                        ).timestamp()
-                    )
-                    * 1000
-                )
+                file_id = int(last_event_date.replace(minute=0, second=0, microsecond=0).timestamp()) * 1000
                 date_range = DatetimeRange(start_date=None, end_date=last_event_date)
                 offsets = {file_id: date_range}
 
             current_offsets: dict[str, dict[str, str]] = cache.get("offsets", {})
             offsets = {
                 **offsets,
-                **{
-                    int(key): DatetimeRange.from_dict(value)
-                    for key, value in current_offsets.items()
-                },
+                **{int(key): DatetimeRange.from_dict(value) for key, value in current_offsets.items()},
             }
 
         return offsets
@@ -194,18 +172,11 @@ class BroadcomCloudSwgConnector(AsyncConnector):
     def update_latest_offsets(self, offsets: dict[int, DatetimeRange]) -> None:
         logger.info("Updating offsets with {0}".format(offsets))
 
-        current_time = (
-            datetime.utcnow().replace(minute=0, second=0, microsecond=0).timestamp()
-            * 1000
-        )
+        current_time = datetime.utcnow().replace(minute=0, second=0, microsecond=0).timestamp() * 1000
         delta = int(timedelta(hours=1).total_seconds()) * 1000
 
         # Save offsets for last 24 hours for debug purposed
-        result = {
-            str(key): value.to_dict()
-            for key, value in offsets.items()
-            if key > current_time - delta * 24
-        }
+        result = {str(key): value.to_dict() for key, value in offsets.items() if key > current_time - delta * 24}
 
         with self.context as cache:
             cache["last_event_date"] = None
@@ -268,9 +239,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
         return self._broadcom_cloud_swg_client
 
-    async def consume_file_events(
-        self, queue: Queue[dict[str, str] | None], tag: str | None = None
-    ) -> int:
+    async def consume_file_events(self, queue: Queue[dict[str, str] | None], tag: str | None = None) -> int:
         """
         Consumer function for specified queue with optional index of consumer.
 
@@ -303,11 +272,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
             if len(data_to_push) >= self.configuration.chunk_size:  # pragma: no cover
                 result += len(
                     await self.push_data_to_intakes(
-                        [
-                            orjson.dumps(event).decode("utf-8")
-                            for event in data_to_push
-                            if event != {}
-                        ]
+                        [orjson.dumps(event).decode("utf-8") for event in data_to_push if event != {}]
                     )
                 )
 
@@ -321,19 +286,11 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
         result += len(
             await self.push_data_to_intakes(
-                [
-                    orjson.dumps(event).decode("utf-8")
-                    for event in data_to_push
-                    if event != {}
-                ]
+                [orjson.dumps(event).decode("utf-8") for event in data_to_push if event != {}]
             )
         )
 
-        logger.info(
-            "{0}: Stop getting new messages. Total events pushed to intake {1}".format(
-                consumer_name, result
-            )
-        )
+        logger.info("{0}: Stop getting new messages. Total events pushed to intake {1}".format(consumer_name, result))
 
         return result
 
@@ -384,39 +341,25 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                     headers = BroadcomCloudSwgClient.parse_string_as_headers(line)
 
                     if headers:  # pragma: no cover
-                        logger.debug(
-                            "File {0}: Headers for current log file: {0}".format(
-                                " ".join(headers)
-                            )
-                        )
+                        logger.debug("File {0}: Headers for current log file: {0}".format(" ".join(headers)))
                 else:
-                    line_as_dict = BroadcomCloudSwgClient.parse_input_string(
-                        line, headers
-                    )
+                    line_as_dict = BroadcomCloudSwgClient.parse_input_string(line, headers)
 
                     # Bug: sometimes it does not have correct direction based on date time
-                    event_date = BroadcomCloudSwgClient.get_date_time_from_data(
-                        line_as_dict
-                    )
+                    event_date = BroadcomCloudSwgClient.get_date_time_from_data(line_as_dict)
 
                     if event_date:
                         if date_range.contains(event_date):
                             total_skipped += 1
                             continue
 
-                        new_date_time_range = new_date_time_range.update_with(
-                            event_date
-                        )
+                        new_date_time_range = new_date_time_range.update_with(event_date)
 
                     await queue.put(line_as_dict)
                     total_produced += 1
 
         except Exception as e:  # pragma: no cover
-            logger.error(
-                "File {0}: Error during zip file processing: {1}".format(
-                    file_path, str(e)
-                )
-            )
+            logger.error("File {0}: Error during zip file processing: {1}".format(file_path, str(e)))
 
         # Before pushing to queue None we should wait until all messages in queue are processed
         await queue.join()
@@ -484,17 +427,13 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                         is_available = True
 
                 if is_available:
-                    local_file_name = (
-                        await self.broadcom_cloud_swg_client.download_file(file_id)
-                    )
+                    local_file_name = await self.broadcom_cloud_swg_client.download_file(file_id)
 
             else:
                 (
                     local_file_name,
                     _,
-                ) = await self.broadcom_cloud_swg_client.get_near_realtime_report(
-                    _date_to_process
-                )
+                ) = await self.broadcom_cloud_swg_client.get_near_realtime_report(_date_to_process)
 
         except Exception as e:
             logger.error(
@@ -510,22 +449,14 @@ class BroadcomCloudSwgConnector(AsyncConnector):
             )
 
         if local_file_name is not None:
-            logger.info(
-                "File {0}: Start to decompress and process zip file".format(
-                    local_file_name
-                )
-            )
+            logger.info("File {0}: Start to decompress and process zip file".format(local_file_name))
 
             queue: Queue[dict[str, str] | None] = Queue()
             consumers_amount = int(os.getenv("BROADCOM_CONSUMERS_COUNT", 4))
             processed_result: Any = await asyncio.gather(
-                self.produce_file_to_queue(
-                    local_file_name, queue, DatetimeRange(), consumers_amount
-                ),
+                self.produce_file_to_queue(local_file_name, queue, DatetimeRange(), consumers_amount),
                 *[
-                    self.consume_file_events(
-                        queue, "{0}: Consumer[{1}]".format(local_file_name, i)
-                    )
+                    self.consume_file_events(queue, "{0}: Consumer[{1}]".format(local_file_name, i))
                     for i in range(1, consumers_amount)
                 ],
             )
@@ -560,10 +491,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
             tuple[int, datetime]:
         """
         current_date = datetime.now(pytz.utc)
-        current_file = (
-            int(current_date.replace(minute=0, second=0, microsecond=0).timestamp())
-            * 1000
-        )
+        current_file = int(current_date.replace(minute=0, second=0, microsecond=0).timestamp()) * 1000
         delta = int(timedelta(hours=1).total_seconds()) * 1000
 
         one_hour_ago = current_file - delta
@@ -579,9 +507,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                 process_result = await self.process_datetime(
                     datetime.fromtimestamp(file_id / 1000, pytz.utc), file_date_range
                 )
-                self.update_latest_offsets(
-                    {**offsets, process_result[0]: process_result[1]}
-                )
+                self.update_latest_offsets({**offsets, process_result[0]: process_result[1]})
                 result.append(process_result)
 
         process_result = await self.process_datetime(
@@ -616,9 +542,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                 while self.running:
                     processing_start = time.time()
 
-                    result_count, last_event_date = loop.run_until_complete(
-                        self.get_events()
-                    )
+                    result_count, last_event_date = loop.run_until_complete(self.get_events())
                     processing_end = time.time()
 
                     EVENTS_LAG.labels(
@@ -646,7 +570,5 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                         time.sleep(self.configuration.frequency)
 
             except Exception as error:
-                self.log_exception(
-                    error, message="Error while running BroadcomCloudSwgConnector"
-                )
+                self.log_exception(error, message="Error while running BroadcomCloudSwgConnector")
                 time.sleep(self.configuration.frequency)

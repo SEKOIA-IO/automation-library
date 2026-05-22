@@ -68,9 +68,7 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
             AzureBlobStorageWrapper:
         """
         if not self._azure_blob_storage_wrapper:
-            config = AzureBlobStorageConfig(
-                **self.configuration.dict(exclude_unset=True, exclude_none=True)
-            )
+            config = AzureBlobStorageConfig(**self.configuration.dict(exclude_unset=True, exclude_none=True))
             self._azure_blob_storage_wrapper = AzureBlobStorageWrapper(config)
 
         return self._azure_blob_storage_wrapper
@@ -114,9 +112,7 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
 
             return last_event_date
 
-    async def get_most_recent_blobs(
-        self, lower_bound: datetime
-    ) -> AsyncGenerator[BlobProperties, None]:
+    async def get_most_recent_blobs(self, lower_bound: datetime) -> AsyncGenerator[BlobProperties, None]:
         """
         Return the list of blobs, more recent than lower_bound.
 
@@ -160,9 +156,7 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
                 _last_modified_date = blob.last_modified
 
             # Get the content of the current blob
-            file, content = await self.azure_blob_wrapper().download_blob(
-                blob.name, download=True
-            )
+            file, content = await self.azure_blob_wrapper().download_blob(blob.name, download=True)
 
             # process the downloaded blob
             if file:
@@ -210,19 +204,15 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
                 while self.running:
                     processing_start = time.time()
                     if previous_processing_end is not None:
-                        EVENTS_LAG.labels(
-                            intake_key=self.configuration.intake_key,
-                            **self.scalability_labels
-                        ).set(processing_start - self.last_event_date.timestamp())
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
+                            processing_start - self.last_event_date.timestamp()
+                        )
 
-                    message_ids: list[str] = loop.run_until_complete(
-                        self.get_azure_blob_data()
-                    )
+                    message_ids: list[str] = loop.run_until_complete(self.get_azure_blob_data())
                     processing_end = time.time()
-                    OUTCOMING_EVENTS.labels(
-                        intake_key=self.configuration.intake_key,
-                        **self.scalability_labels
-                    ).inc(len(message_ids))
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                        len(message_ids)
+                    )
 
                     logger.info(
                         "Processing took {processing_time} seconds",
@@ -230,8 +220,7 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
                     )
 
                     FORWARD_EVENTS_DURATION.labels(
-                        intake_key=self.configuration.intake_key,
-                        **self.scalability_labels
+                        intake_key=self.configuration.intake_key, **self.scalability_labels
                     ).observe(processing_end - processing_start)
 
                     previous_processing_end = processing_end

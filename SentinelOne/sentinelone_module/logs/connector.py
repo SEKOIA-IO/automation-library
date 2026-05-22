@@ -76,9 +76,7 @@ class SentinelOneLogsConsumer(Thread):
         result_path = self.connector.data_path / consumer_type
         new_context = result_path / "context.json"
         if not result_path.exists():
-            logger.info(
-                "Migrating context file for consumer type", consumer_type=consumer_type
-            )
+            logger.info("Migrating context file for consumer type", consumer_type=consumer_type)
             result_path.mkdir(parents=True, exist_ok=True)
             old_context = self.connector.data_path / "context.json"
             if old_context.exists():
@@ -197,9 +195,7 @@ class SentinelOneLogsConsumer(Thread):
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
         if delta_sleep > 0:
-            logger.debug(
-                f"Next batch in the future. Pause the connector", pause=delta_sleep
-            )
+            logger.debug(f"Next batch in the future. Pause the connector", pause=delta_sleep)
             sleep(delta_sleep)
 
     def run(self):
@@ -211,9 +207,7 @@ class SentinelOneLogsConsumer(Thread):
         try:
             self.management_client.system.get_info()
         except UnauthorizedException as unauthorized_exception:
-            self.log(
-                f"Connector is unauthorized to retrieve system info", level="warning"
-            )
+            self.log(f"Connector is unauthorized to retrieve system info", level="warning")
             raise unauthorized_exception
 
         while self.running:
@@ -229,9 +223,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
     def __init__(self, connector: "SentinelOneLogsConnector"):
         super().__init__(connector, "activity")
         self.batch_size = min(
-            max(
-                self.connector.configuration.activities_batch_size, 100
-            ),  # Minimum batch size
+            max(self.connector.configuration.activities_batch_size, 100),  # Minimum batch size
             1000,  # Maximum batch size
         )  # Number of activities to fetch per request
 
@@ -249,9 +241,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
         events_ids = []
         while self.running:
             # Fetch activities
-            activities_response: ManagementResponse | None = (
-                self.management_client.activities.get(query_filter)
-            )
+            activities_response: ManagementResponse | None = self.management_client.activities.get(query_filter)
             if activities_response is None:
                 raise SENTINEL_ONE_EMPTY_RESPONSE
 
@@ -281,11 +271,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
 
             # Push events
             if len(selected_events) > 0:
-                events_ids.extend(
-                    self.connector.push_events_to_intakes(
-                        self._serialize_events(selected_events)
-                    )
-                )
+                events_ids.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
 
             # Send Prometheus metrics
             OUTCOMING_EVENTS.labels(
@@ -299,9 +285,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             if latest_event_timestamp is not None:
                 self.cursor.offset = latest_event_timestamp
                 self.from_date = latest_event_timestamp
-                current_lag = int(
-                    (datetime.now(UTC) - latest_event_timestamp).total_seconds()
-                )
+                current_lag = int((datetime.now(UTC) - latest_event_timestamp).total_seconds())
 
             EVENTS_LAG.labels(
                 intake_key=self.configuration.intake_key,
@@ -312,9 +296,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             if activities_response.pagination["nextCursor"] is None:
                 break
 
-            query_filter.apply(
-                key="cursor", val=activities_response.pagination["nextCursor"]
-            )
+            query_filter.apply(key="cursor", val=activities_response.pagination["nextCursor"])
 
         return events_ids
 
@@ -341,10 +323,8 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
         events_ids = []
         while self.running:
             # Fetch threats
-            threat_response: ManagementResponse | None = (
-                self.management_client.client.get(
-                    endpoint="threats", params=query_filter.filters
-                )
+            threat_response: ManagementResponse | None = self.management_client.client.get(
+                endpoint="threats", params=query_filter.filters
             )
 
             if threat_response is None:
@@ -365,17 +345,11 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
                 break
 
             # discard already collected events
-            selected_events = filter_collected_events(
-                threats, lambda threat: threat["id"], self.session_events_cache
-            )
+            selected_events = filter_collected_events(threats, lambda threat: threat["id"], self.session_events_cache)
 
             # Push events
             if len(selected_events) > 0:
-                events_ids.extend(
-                    self.connector.push_events_to_intakes(
-                        self._serialize_events(selected_events)
-                    )
-                )
+                events_ids.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
 
             # Send Prometheus metrics
             OUTCOMING_EVENTS.labels(
@@ -389,9 +363,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             if latest_event_timestamp is not None:
                 self.cursor.offset = latest_event_timestamp
                 self.from_date = latest_event_timestamp
-                current_lag = int(
-                    (datetime.now(UTC) - latest_event_timestamp).total_seconds()
-                )
+                current_lag = int((datetime.now(UTC) - latest_event_timestamp).total_seconds())
 
             EVENTS_LAG.labels(
                 intake_key=self.configuration.intake_key,
@@ -402,9 +374,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             if threat_response.pagination["nextCursor"] is None:
                 break
 
-            query_filter.apply(
-                key="cursor", val=threat_response.pagination["nextCursor"]
-            )
+            query_filter.apply(key="cursor", val=threat_response.pagination["nextCursor"])
 
         return events_ids
 

@@ -293,15 +293,11 @@ class CybereasonEventConnector(Connector):
 
         return malop_suspicions
 
-    def get_all_suspicions_for_edr_malop(
-        self, malop_uuid: str
-    ) -> dict[tuple[str, str], dict[str, Any] | None] | None:
+    def get_all_suspicions_for_edr_malop(self, malop_uuid: str) -> dict[tuple[str, str], dict[str, Any] | None] | None:
         """
         Retrieve all suspicions and evidences for an EDR malop
         """
-        malop_suspicions: dict[tuple[str, str], dict[str, Any] | None] = defaultdict(
-            lambda: {}
-        )
+        malop_suspicions: dict[tuple[str, str], dict[str, Any] | None] = defaultdict(lambda: {})
 
         # for each requested type
         for requested_type in AI_HUNT_MALOP_TYPES:
@@ -314,9 +310,7 @@ class CybereasonEventConnector(Connector):
 
             # for found suspicions, merge them with ones from others types
             for suspicion_id, suspicion in suspicions.items():
-                malop_suspicions[suspicion_id] = merge_suspicions(
-                    malop_suspicions[suspicion_id], suspicion
-                )
+                malop_suspicions[suspicion_id] = merge_suspicions(malop_suspicions[suspicion_id], suspicion)
 
         # If no suspicions found for any type, log it
         if len(malop_suspicions) == 0:
@@ -328,9 +322,7 @@ class CybereasonEventConnector(Connector):
 
         return malop_suspicions
 
-    def enrich_generic_malop(
-        self, malop: dict[str, Any]
-    ) -> Generator[dict[str, Any], None, None]:
+    def enrich_generic_malop(self, malop: dict[str, Any]) -> Generator[dict[str, Any], None, None]:
         """
         Get and yield details on the malop
         """
@@ -350,12 +342,8 @@ class CybereasonEventConnector(Connector):
             file_suspects = details.pop("fileSuspects", [])
             yield details
             yield from extract_models_from_malop(details, users, ".UserDetailsModel")
-            yield from extract_models_from_malop(
-                details, machines, ".MachineDetailsModel"
-            )
-            yield from extract_models_from_malop(
-                details, file_suspects, ".FileSuspectDetailsModel"
-            )
+            yield from extract_models_from_malop(details, machines, ".MachineDetailsModel")
+            yield from extract_models_from_malop(details, file_suspects, ".FileSuspectDetailsModel")
 
     def fetch_last_events(self) -> Generator[dict[str, Any], None, None]:
         """
@@ -367,9 +355,9 @@ class CybereasonEventConnector(Connector):
 
         # fetch malops for the timerange
         next_malops = self.fetch_malops(from_date, to_date)
-        INCOMING_MALOPS.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).inc(len(next_malops))
+        INCOMING_MALOPS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+            len(next_malops)
+        )
 
         most_recent_date_seen = from_date
         for malop in next_malops:
@@ -382,9 +370,7 @@ class CybereasonEventConnector(Connector):
             # save the greater date ever seen
             event_date = int(malop["lastUpdateTime"])
             if event_date > most_recent_date_seen:
-                most_recent_date_seen = (
-                    event_date + 1
-                )  # add 1 ms to avoid getting the same event again
+                most_recent_date_seen = event_date + 1  # add 1 ms to avoid getting the same event again
 
             # check if the malop is an AI Hunt malop (EDR) or a generic one
             is_edr = malop.get("edr", False)
@@ -395,9 +381,7 @@ class CybereasonEventConnector(Connector):
                 machines = malop.pop("machines", [])
                 yield malop
                 yield from extract_models_from_malop(malop, users, ".UserInboxModel")
-                yield from extract_models_from_malop(
-                    malop, machines, ".MachineInboxModel"
-                )
+                yield from extract_models_from_malop(malop, machines, ".MachineInboxModel")
                 if suspicions:
                     for (
                         suspicion_uuid,
@@ -426,9 +410,7 @@ class CybereasonEventConnector(Connector):
             self.cursor.offset = most_recent_date_seen
             self.from_date = most_recent_date_seen
             current_lag = int(time.time() - (most_recent_date_seen / 1000))
-            EVENTS_LAG.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).set(current_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
     def next_batch(self):
         """
@@ -438,19 +420,15 @@ class CybereasonEventConnector(Connector):
         batch_start_time = time.time()
 
         # Fetch next events
-        batch_of_events = [
-            orjson.dumps(event).decode("utf-8") for event in self.fetch_last_events()
-        ]
+        batch_of_events = [orjson.dumps(event).decode("utf-8") for event in self.fetch_last_events()]
 
         if len(batch_of_events) > 0:
-            OUTCOMING_EVENTS.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).inc(len(batch_of_events))
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(batch_of_events)
+            )
             self.push_events_to_intakes(events=batch_of_events)
         else:
-            EVENTS_LAG.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
@@ -459,9 +437,9 @@ class CybereasonEventConnector(Connector):
             message=f"Fetch and forward {len(batch_of_events)} events in {batch_duration} seconds",
             level="info",
         )
-        FORWARD_EVENTS_DURATION.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            batch_duration
+        )
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
@@ -477,9 +455,7 @@ class CybereasonEventConnector(Connector):
             try:
                 self.next_batch()
             except LoginFailureError as error:
-                self.log(
-                    message=f"Invalid username/password for {error.url}", level="error"
-                )
+                self.log(message=f"Invalid username/password for {error.url}", level="error")
                 time.sleep(self.configuration.frequency)
             except Exception as error:
                 self.log_exception(error, message="Failed to fetch and forward events")

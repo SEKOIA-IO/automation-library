@@ -20,9 +20,7 @@ from ubika_modules.timestepper import TimeStepper
 @pytest.fixture
 def trigger(data_storage):
     module = UbikaModule()
-    trigger = UbikaCloudProtectorNextGenAlertsConnector(
-        module=module, data_path=data_storage
-    )
+    trigger = UbikaCloudProtectorNextGenAlertsConnector(module=module, data_path=data_storage)
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
@@ -156,9 +154,7 @@ def message2():
 
 
 @pytest.mark.respx(base_url="https://login.ubika.io")
-def test_fetch_events_with_pagination(
-    respx_mock: MockRouter, trigger, message1, message2
-):
+def test_fetch_events_with_pagination(respx_mock: MockRouter, trigger, message1, message2):
     respx_mock.post("/auth/realms/main/protocol/openid-connect/token").mock(
         return_value=httpx.Response(
             200,
@@ -204,9 +200,7 @@ def test_fetch_events_with_pagination(
 
 
 @pytest.mark.respx(base_url="https://login.ubika.io")
-def test_next_batch_sleep_until_next_round(
-    respx_mock: MockRouter, trigger, message1, message2, sleep_spy
-):
+def test_next_batch_sleep_until_next_round(respx_mock: MockRouter, trigger, message1, message2, sleep_spy):
     respx_mock.post("/auth/realms/main/protocol/openid-connect/token").mock(
         return_value=httpx.Response(
             200,

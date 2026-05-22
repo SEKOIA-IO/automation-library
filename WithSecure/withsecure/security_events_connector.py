@@ -90,9 +90,7 @@ class SecurityEventsConnector(Connector):
             "scalable-vertically": scalable_vertically,
         }
 
-    def __get_events(
-        self, data: list[tuple[str, Any]], headers: dict[str, str]
-    ) -> requests.Response:
+    def __get_events(self, data: list[tuple[str, Any]], headers: dict[str, str]) -> requests.Response:
         for attempt in Retrying(
             stop=stop_after_attempt(5),
             wait=wait_exponential(multiplier=1, min=1, max=10),
@@ -118,9 +116,7 @@ class SecurityEventsConnector(Connector):
                 flattened_data.append((key, value))
         return flattened_data
 
-    def __fetch_next_events(
-        self, from_date: datetime
-    ) -> Generator[list[dict[str, Any]], None, None]:
+    def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
         """
         Fetch all the events that occurred after the specified from date
         """
@@ -161,9 +157,9 @@ class SecurityEventsConnector(Connector):
 
             # yielding events if defined
             if events:
-                INCOMING_MESSAGES.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).inc(len(events))
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(events)
+                )
                 yield events
             else:
                 logger.info(
@@ -171,9 +167,7 @@ class SecurityEventsConnector(Connector):
                     "before fetching next page"
                 )
                 # if no new events, we are up to date
-                EVENTS_LAG.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).set(0)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
                 time.sleep(self.configuration.frequency)
 
             anchor = payload.get("nextAnchor")
@@ -194,9 +188,7 @@ class SecurityEventsConnector(Connector):
         try:
             for next_events in self.__fetch_next_events(most_recent_date_seen):
                 if next_events:
-                    last_event_date = datetime.fromisoformat(
-                        next_events[-1]["persistenceTimestamp"]
-                    )
+                    last_event_date = datetime.fromisoformat(next_events[-1]["persistenceTimestamp"])
 
                     # save the greater date ever seen
                     if last_event_date > most_recent_date_seen:
@@ -218,9 +210,9 @@ class SecurityEventsConnector(Connector):
             # Update the current lag only if the most_recent_date_seen was updated
             now = datetime.now(timezone.utc)
             current_lag = now - most_recent_date_seen
-            EVENTS_LAG.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).set(int(current_lag.total_seconds()))
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
+                int(current_lag.total_seconds())
+            )
 
     def next_batch(self) -> None:
         # save the starting time
@@ -237,17 +229,17 @@ class SecurityEventsConnector(Connector):
                     level="info",
                 )
                 self.push_events_to_intakes(events=batch_of_events)
-                OUTCOMING_EVENTS.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(batch_of_events)
+                )
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
-        FORWARD_EVENTS_DURATION.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            batch_duration
+        )
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

@@ -31,17 +31,13 @@ class SkyhighSWGConfig(DefaultConnectorConfiguration):
     account_name: str
     account_password: str
     frequency: int = 20
-    timedelta: int = (
-        5  # custom lag of the trigger (ex. fetch events from 5 minutes ago)
-    )
+    timedelta: int = 5  # custom lag of the trigger (ex. fetch events from 5 minutes ago)
     start_time: int = 1
     api_domain_name: str = "msg.mcafeesaas.com"
 
 
 class EventCollector(Thread):
-    def __init__(
-        self, connector: "SkyhighSecuritySWGTrigger", events_queue: queue.Queue
-    ):
+    def __init__(self, connector: "SkyhighSecuritySWGTrigger", events_queue: queue.Queue):
         super().__init__()
         self.connector = connector
         self.events_queue = events_queue
@@ -78,9 +74,7 @@ class EventCollector(Thread):
         self.save_most_recent_date_seen(self.end_date)
 
         self.start_date: datetime = self.end_date
-        self.end_date: datetime = self.end_date + timedelta(
-            seconds=self.configuration.frequency
-        )
+        self.end_date: datetime = self.end_date + timedelta(seconds=self.configuration.frequency)
 
     def _init_time_range(self):
         self.connector.context_lock.acquire()
@@ -89,25 +83,17 @@ class EventCollector(Thread):
         self.connector.context_lock.release()
 
         if most_recent_date_seen_str is None:
-            self.end_date = self.trigger_activation - timedelta(
-                hours=self.configuration.start_time
-            )
+            self.end_date = self.trigger_activation - timedelta(hours=self.configuration.start_time)
 
             # Only apply timedelta if start_time is set to 0
             if self.configuration.start_time == 0:
-                self.end_date = self.end_date - timedelta(
-                    minutes=self.configuration.timedelta
-                )
+                self.end_date = self.end_date - timedelta(minutes=self.configuration.timedelta)
 
-            self.start_date = self.end_date - timedelta(
-                seconds=self.configuration.frequency
-            )
+            self.start_date = self.end_date - timedelta(seconds=self.configuration.frequency)
 
         else:
             self.start_date = isoparse(most_recent_date_seen_str)
-            self.end_date: datetime = self.start_date + timedelta(
-                seconds=self.configuration.frequency
-            )
+            self.end_date: datetime = self.start_date + timedelta(seconds=self.configuration.frequency)
 
     def _sleep_until_next_batch(self):
         """
@@ -115,9 +101,7 @@ class EventCollector(Thread):
         - taking some lag
         - querying events for a timeframe in the future
         """
-        now = datetime.now(timezone.utc) - timedelta(
-            minutes=self.configuration.timedelta
-        )
+        now = datetime.now(timezone.utc) - timedelta(minutes=self.configuration.timedelta)
 
         current_lag = now - self.end_date
         self.log(
@@ -150,19 +134,14 @@ class EventCollector(Thread):
         )
 
         self.url = (
-            "https://"
-            + self.configuration.api_domain_name
-            + self.endpoint
-            + str(self.configuration.customer_id)
+            "https://" + self.configuration.api_domain_name + self.endpoint + str(self.configuration.customer_id)
         )
         params = {
             "filter.requestTimestampFrom": int(self.start_date.timestamp()),
             "filter.requestTimestampTo": int(self.end_date.timestamp()),
         }
         request_start_time = datetime.now(timezone.utc)
-        response: Response = self.client.get(
-            url=self.url, headers=self.headers, params=params, timeout=30
-        )
+        response: Response = self.client.get(url=self.url, headers=self.headers, params=params, timeout=30)
 
         time_elapsed = datetime.now(timezone.utc) - request_start_time
         logger.info(
@@ -269,9 +248,7 @@ class Transformer(Worker):
                     response = self.queue.get(block=True, timeout=0.5)
 
                     # The transformation is done in batches to avoid filling the memory if we have a lot of events
-                    for messages in batched(
-                        self._transform(response), self.max_batch_size
-                    ):
+                    for messages in batched(self._transform(response), self.max_batch_size):
                         if len(messages) > 0:
                             nb_events = len(messages)
                             INCOMING_EVENTS.labels(
@@ -284,9 +261,7 @@ class Transformer(Worker):
                 except queue.Empty:
                     pass
         except Exception as ex:
-            self.connector.log_exception(
-                ex, message="Unexpected error when converting data"
-            )
+            self.connector.log_exception(ex, message="Unexpected error when converting data")
 
         logger.info("Transformer worker thread has stopped.")
 

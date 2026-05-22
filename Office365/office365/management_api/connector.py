@@ -67,9 +67,7 @@ class Office365Connector(AsyncConnector):
         self._client_closed = False
         return client
 
-    async def pull_content(
-        self, start_date: datetime, end_date: datetime
-    ) -> AsyncGenerator[list[str], None]:
+    async def pull_content(self, start_date: datetime, end_date: datetime) -> AsyncGenerator[list[str], None]:
         """Pulls content from Office 365 subscriptions
 
         Args:
@@ -93,9 +91,9 @@ class Office365Connector(AsyncConnector):
 
                     if content_expiration:
                         now = datetime.now(UTC)
-                        parsed_expiration = datetime.strptime(
-                            content_expiration, "%Y-%m-%dT%H:%M:%S.%fZ"
-                        ).replace(tzinfo=UTC)
+                        parsed_expiration = datetime.strptime(content_expiration, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+                            tzinfo=UTC
+                        )
 
                         if now > parsed_expiration:
                             continue
@@ -118,9 +116,7 @@ class Office365Connector(AsyncConnector):
             events (list[dict]): Events to forward to intake
         """
         self.log(f"Pushing {len(events)} event(s) to intake", level="info")
-        OUTCOMING_EVENTS.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).inc(len(events))
+        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(events))
 
         await self.push_data_to_intakes(events=events)
 
@@ -153,9 +149,7 @@ class Office365Connector(AsyncConnector):
 
             # get the ending time and compute the duration to forward the events
             intermediate_end_time = time.time()
-            intermediate_batch_duration = (
-                intermediate_end_time - intermediate_start_time
-            )
+            intermediate_batch_duration = intermediate_end_time - intermediate_start_time
             FORWARD_EVENTS_DURATION.labels(
                 intake_key=self.configuration.intake_key, **self.scalability_labels
             ).observe(intermediate_batch_duration)

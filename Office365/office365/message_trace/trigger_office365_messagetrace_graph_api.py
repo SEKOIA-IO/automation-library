@@ -122,9 +122,7 @@ class Office365MessageTraceTriggerGraphAPI(Connector):
 
             response.raise_for_status()
 
-    def fetch_events(
-        self, start: datetime, end: datetime
-    ) -> Generator[list, None, None]:
+    def fetch_events(self, start: datetime, end: datetime) -> Generator[list, None, None]:
         self.log(message=f"Querying timerange {start} to {end}.", level="info")
 
         url = "https://graph.microsoft.com/v1.0/admin/exchange/tracing/messageTraces"
@@ -137,9 +135,7 @@ class Office365MessageTraceTriggerGraphAPI(Connector):
 
         # iterate through pages
         while self.running:
-            response: requests.Response = self.client.get(
-                url=url, params=params, timeout=60
-            )
+            response: requests.Response = self.client.get(url=url, params=params, timeout=60)
             self.handle_response_error(response)
 
             raw = response.json()
@@ -171,9 +167,7 @@ class Office365MessageTraceTriggerGraphAPI(Connector):
                 duration_start = time.time()
                 for events in self.fetch_events(start, end):
                     batch_of_events = [
-                        orjson.dumps(event).decode("utf-8")
-                        for event in events
-                        if event["id"] not in self.events_cache
+                        orjson.dumps(event).decode("utf-8") for event in events if event["id"] not in self.events_cache
                     ]
                     if len(batch_of_events) > 0:
                         self.log(
@@ -206,15 +200,11 @@ class Office365MessageTraceTriggerGraphAPI(Connector):
                         level="error",
                     )
                     self.log(
-                        message="Error description: {0}".format(
-                            e.result.get("error_description")
-                        ),
+                        message="Error description: {0}".format(e.result.get("error_description")),
                         level="error",
                     )
                     self.log(
-                        message="Correlation ID: {0}".format(
-                            e.result.get("correlation_id")
-                        ),
+                        message="Correlation ID: {0}".format(e.result.get("correlation_id")),
                         level="error",
                     )
 

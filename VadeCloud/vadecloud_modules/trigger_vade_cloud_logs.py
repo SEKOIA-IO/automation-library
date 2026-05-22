@@ -85,9 +85,7 @@ class VadeCloudConsumer(Thread):
 
         self.connector.context_lock.release()
 
-    def request_logs_page(
-        self, start_date: int, period: str, page: int = 0
-    ) -> Response:
+    def request_logs_page(self, start_date: int, period: str, page: int = 0) -> Response:
         params = {
             "userId": self.client.account_id,
             "pageSize": self.connector.configuration.chunk_size,
@@ -121,23 +119,17 @@ class VadeCloudConsumer(Thread):
 
                 except requests.exceptions.JSONDecodeError as e:  # pragma: no cover
                     self.log(
-                        message="Cannot parse not 200 response as json {0}".format(
-                            str(e)
-                        ),
+                        message="Cannot parse not 200 response as json {0}".format(str(e)),
                         level="debug",
                     )
 
                 raise FetchEventException(message)
 
-    def iterate_through_pages(
-        self, from_timestamp: int
-    ) -> Generator[list[dict[str, Any]], None, None]:
+    def iterate_through_pages(self, from_timestamp: int) -> Generator[list[dict[str, Any]], None, None]:
         page_num = 0
         # long period will allow us to capture events with big time gap between them
         search_period = "DAYS_07"
-        response = self.request_logs_page(
-            start_date=from_timestamp, period=search_period, page=page_num
-        )
+        response = self.request_logs_page(start_date=from_timestamp, period=search_period, page=page_num)
         self._handle_response_error(response)
 
         while self.running:
@@ -150,9 +142,7 @@ class VadeCloudConsumer(Thread):
             else:
                 return
 
-            response = self.request_logs_page(
-                start_date=from_timestamp, period=search_period, page=page_num
-            )
+            response = self.request_logs_page(start_date=from_timestamp, period=search_period, page=page_num)
 
     def fetch_events(self) -> Generator[list[dict[str, Any]], None, None]:
         most_recent_timestamp_seen = self.get_last_timestamp()
@@ -169,9 +159,7 @@ class VadeCloudConsumer(Thread):
                         self.name,
                         last_event_timestamp,
                         (
-                            datetime.fromtimestamp(
-                                last_event_timestamp // 1000
-                            ).isoformat()
+                            datetime.fromtimestamp(last_event_timestamp // 1000).isoformat()
                             if last_event_timestamp
                             else 0
                         ),
@@ -263,7 +251,9 @@ class VadeCloudConsumer(Thread):
         if error.code == 401:
             message = "The VadeCloud API raised an authentication issue. Please check our credentials"
         elif error.code == 500:
-            message = "The VadeCloud API raised an internal error. Please contact the Vade support if the issue persists"
+            message = (
+                "The VadeCloud API raised an internal error. Please contact the Vade support if the issue persists"
+            )
 
         self.connector.log(message, level="error")
         self.connector.log(
@@ -281,9 +271,7 @@ class VadeCloudConsumer(Thread):
                     self.handle_api_exception(error)
 
         except Exception as error:
-            self.connector.log_exception(
-                error, message=f"{self.name}: Failed to forward events"
-            )
+            self.connector.log_exception(error, message=f"{self.name}: Failed to forward events")
 
 
 class VadeCloudConnectorConfiguration(DefaultConnectorConfiguration):
@@ -339,11 +327,7 @@ class VadeCloudLogsConnector(Connector):
                     level="critical",
                 )
 
-            if (
-                http_error_code == 400
-                and error_response.json().get("error", {}).get("trKey", "")
-                == "INVALID_USER"
-            ):
+            if http_error_code == 400 and error_response.json().get("error", {}).get("trKey", "") == "INVALID_USER":
                 self.log(
                     message=f"Invalid account type. It must be User, not Admin. Please change it",
                     level="critical",
@@ -368,9 +352,7 @@ class VadeCloudLogsConnector(Connector):
 
         return consumers
 
-    def supervise_consumers(
-        self, consumers: dict[str, VadeCloudConsumer], client: ApiClient
-    ) -> None:
+    def supervise_consumers(self, consumers: dict[str, VadeCloudConsumer], client: ApiClient) -> None:
         for consumer_name, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
                 self.log(

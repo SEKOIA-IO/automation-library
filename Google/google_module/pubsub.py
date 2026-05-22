@@ -89,8 +89,7 @@ class MessagesConsumer(Worker):
                     # look for the most recent publication date in messages
                     message_date = message.message.publish_time
                     if message_date is not None and (
-                        most_recent_date_seen is None
-                        or message_date > most_recent_date_seen
+                        most_recent_date_seen is None or message_date > most_recent_date_seen
                     ):
                         most_recent_date_seen = message_date
 
@@ -151,9 +150,7 @@ class MessagesConsumer(Worker):
 class EventsForwarder(Worker):
     KIND = "forwarder"
 
-    def __init__(
-        self, connector: "PubSub", queue: queue.Queue, max_batch_size: int = 20000
-    ):
+    def __init__(self, connector: "PubSub", queue: queue.Queue, max_batch_size: int = 20000):
         super().__init__()
         self.connector = connector
         self.configuration = connector.configuration
@@ -212,9 +209,7 @@ class PubSub(GoogleTrigger):
         """
         Return the subscription name
         """
-        return SubscriberClient.subscription_path(
-            self.configuration.project_id, self.configuration.subject_id
-        )
+        return SubscriberClient.subscription_path(self.configuration.project_id, self.configuration.subject_id)
 
     @cached_property
     def scalability_labels(self) -> dict[str, str]:
@@ -231,14 +226,10 @@ class PubSub(GoogleTrigger):
         self.log(message="Stopping Google Cloud PubSub connector", level="info")
         super().stop(*args, **kwargs)
 
-    def create_workers(
-        self, nb_workers: int, klass: type[Worker], *args, **kwargs
-    ) -> list[Worker]:
+    def create_workers(self, nb_workers: int, klass: type[Worker], *args, **kwargs) -> list[Worker]:
         return [klass(*args, **kwargs) for _ in range(nb_workers)]
 
-    def supervise_workers(
-        self, workers: list[Worker], klass: type[Worker], *args, **kwargs
-    ):
+    def supervise_workers(self, workers: list[Worker], klass: type[Worker], *args, **kwargs):
         for index in range(len(workers)):
             if not workers[index].is_alive() and workers[index].is_running:
                 self.log(message=f"Restart a {klass.KIND}", level="warning")
@@ -301,9 +292,7 @@ class PubSub(GoogleTrigger):
                 events_queue,
                 max_batch_size=batch_size,
             )
-            self.supervise_workers(
-                consumers, MessagesConsumer, self, self.subscription_name, events_queue
-            )
+            self.supervise_workers(consumers, MessagesConsumer, self, self.subscription_name, events_queue)
 
         # Stop the consumer
         self.stop_workers(consumers, timeout=2)

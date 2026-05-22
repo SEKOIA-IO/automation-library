@@ -253,7 +253,6 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         return user_ocsf_model
 
     def get_users_generator(self) -> Generator[dict[str, Any], None, None]:
-
         self.log("Starting LDAP paged search for users...", level="info")
 
         # Create paged search generator

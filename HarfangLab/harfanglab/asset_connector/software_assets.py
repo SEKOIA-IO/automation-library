@@ -32,7 +32,6 @@ from harfanglab.helpers import handle_uri
 
 
 class HarfanglabSoftwareAssetConnector(AssetConnector):
-
     # Configuration Constants
     AGENT_ENDPOINT: str = "/api/data/endpoint/Agent"
     APPLICATION_ENDPOINT_TEMPLATE: str = "/api/data/endpoint/Agent/{agent_uid}/applications/"

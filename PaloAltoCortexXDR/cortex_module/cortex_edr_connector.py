@@ -34,9 +34,7 @@ class CortexQueryEDRTrigger(CortexConnector):
         self.context = PersistentJSON("context.json", self._data_path)
         self.query: Dict[str, Any] = {
             "request_data": {
-                "filters": [
-                    {"field": "server_creation_time", "operator": "gte", "value": 0}
-                ],
+                "filters": [{"field": "server_creation_time", "operator": "gte", "value": 0}],
                 "search_from": 0,
                 "search_to": 0,
                 "sort": {"field": "creation_time", "keyword": "desc"},
@@ -174,18 +172,16 @@ class CortexQueryEDRTrigger(CortexConnector):
             total_alerts, combined_data = self.get_alerts_events_by_offset(
                 page_number * pagination, self.timestamp_cursor, pagination
             )
-            self.log(
-                message=f"Sending batch of {len(combined_data)} events", level="info"
-            )
+            self.log(message=f"Sending batch of {len(combined_data)} events", level="info")
             has_more_events = total_alerts > (page_number + 1) * pagination
             page_number += 1
             events.extend(combined_data)
 
             # Not push empty data
             if len(combined_data) > 0:
-                OUTCOMING_EVENTS.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).inc(len(combined_data))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(combined_data)
+                )
                 self.push_events_to_intakes(events=combined_data)
                 self.save_alerts_cache()
 
@@ -198,13 +194,9 @@ class CortexQueryEDRTrigger(CortexConnector):
             current_lag = int(time.time() - (most_recent_timestamp / 1000))
 
         else:
-            self.log(
-                message=f"No alerts to forward at {self.timestamp_cursor}", level="info"
-            )
+            self.log(message=f"No alerts to forward at {self.timestamp_cursor}", level="info")
 
-        EVENTS_LAG.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).set(current_lag)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
     def forward_next_batch(self) -> None:
         """
@@ -217,9 +209,7 @@ class CortexQueryEDRTrigger(CortexConnector):
         except (HTTPError, BaseHTTPError) as ex:
             error_response = getattr(ex, "response", None)
             if error_response is None:
-                self.log_exception(
-                    ex, message="Response does not contain any valid data"
-                )
+                self.log_exception(ex, message="Response does not contain any valid data")
             else:
                 http_status_code = error_response.status_code
 
@@ -240,9 +230,9 @@ class CortexQueryEDRTrigger(CortexConnector):
             raise
 
         duration = int(time.time() - start)
-        FORWARD_EVENTS_DURATION.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).observe(duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            duration
+        )
 
         delta_sleep = self.configuration.frequency - duration
         if delta_sleep > 0:

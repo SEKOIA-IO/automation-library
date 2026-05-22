@@ -67,9 +67,7 @@ class LaceworkEventsTrigger(Connector):
         now = datetime.now(timezone.utc)
 
         with self.context as cache:
-            most_recent_date_seen_str = cache.get(
-                "latest_start_event_date_from_previous_run"
-            )
+            most_recent_date_seen_str = cache.get("latest_start_event_date_from_previous_run")
 
             if most_recent_date_seen_str is None:
                 return now - timedelta(days=1)
@@ -155,39 +153,21 @@ class LaceworkEventsTrigger(Connector):
             if latest_alerts_id < start_alerts_id:
                 latest_alerts_id = start_alerts_id
 
-            latest_alerts_date = max(
-                [
-                    LaceworkApiClient.parse_response_time(item["startTime"])
-                    for item in alerts
-                ]
-            )
+            latest_alerts_date = max([LaceworkApiClient.parse_response_time(item["startTime"]) for item in alerts])
 
-            data_to_push.extend(
-                [alert for alert in alerts if alert["alertId"] > start_alerts_id]
-            )
+            data_to_push.extend([alert for alert in alerts if alert["alertId"] > start_alerts_id])
 
             while next_page_url:
                 alerts, next_page_url = self.client.get_alerts_by_page(next_page_url)
                 if alerts:
-                    latest_alerts_id_next_page = max(
-                        [item["alertId"] for item in alerts]
-                    )
+                    latest_alerts_id_next_page = max([item["alertId"] for item in alerts])
                     if latest_alerts_id_next_page > latest_alerts_id:
                         latest_alerts_id = latest_alerts_id_next_page
 
-                    data_to_push.extend(
-                        [
-                            alert
-                            for alert in alerts
-                            if alert["alertId"] > start_alerts_id
-                        ]
-                    )
+                    data_to_push.extend([alert for alert in alerts if alert["alertId"] > start_alerts_id])
 
                     last_date_page_date = max(
-                        [
-                            LaceworkApiClient.parse_response_time(item["startTime"])
-                            for item in alerts
-                        ]
+                        [LaceworkApiClient.parse_response_time(item["startTime"]) for item in alerts]
                     )
 
                     if last_date_page_date > latest_alerts_date:
@@ -203,10 +183,7 @@ class LaceworkEventsTrigger(Connector):
                             **self.scalability_labels,
                         ).inc(len(data_to_push))
                         self.push_events_to_intakes(
-                            events=[
-                                orjson.dumps(item).decode("utf-8")
-                                for item in data_to_push
-                            ]
+                            events=[orjson.dumps(item).decode("utf-8") for item in data_to_push]
                         )
                         current_lag = int(time.time() - latest_alerts_date.timestamp())
                         data_to_push = []
@@ -216,21 +193,15 @@ class LaceworkEventsTrigger(Connector):
                     message=f"Sending a batch of {len(data_to_push)} messages",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).inc(len(data_to_push))
-                self.push_events_to_intakes(
-                    events=[orjson.dumps(item).decode("utf-8") for item in data_to_push]
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(data_to_push)
                 )
+                self.push_events_to_intakes(events=[orjson.dumps(item).decode("utf-8") for item in data_to_push])
                 current_lag = int(time.time() - latest_alerts_date.timestamp())
 
             with self.context as cache:
-                cache[
-                    "latest_start_event_date_from_previous_run"
-                ] = latest_alerts_date.isoformat()
+                cache["latest_start_event_date_from_previous_run"] = latest_alerts_date.isoformat()
                 cache["latest_alert_id_from_previous_run"] = latest_alerts_id
 
         # Monitor the events lag
-        EVENTS_LAG.labels(
-            intake_key=self.configuration.intake_key, **self.scalability_labels
-        ).set(current_lag)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
