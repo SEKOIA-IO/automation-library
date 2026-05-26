@@ -1,6 +1,6 @@
 import json
 import sys
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from importlib import import_module
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -47,7 +47,7 @@ def make_trigger(data_storage, **configuration_overrides):
     }
     configuration.update(configuration_overrides)
     trigger = object.__new__(MoknLoginAttemptsTrigger)
-    trigger._configuration = MoknLoginAttemptsTriggerConfiguration.parse_obj(configuration)
+    trigger._configuration = MoknLoginAttemptsTriggerConfiguration.model_validate(configuration)
     trigger.module = SimpleNamespace(
         configuration=SimpleNamespace(
             base_url="https://mokn.example",
@@ -81,15 +81,17 @@ def test_trigger_query_reflects_configuration(data_storage):
 
 def test_cursor_roundtrip_persists_seen_ids_for_same_second(data_storage):
     trigger = make_trigger(data_storage)
+    now = datetime.now(UTC)
+    recent_time = now - timedelta(days=1)
     cursor = AttemptCursor(
-        second=datetime(2026, 4, 23, 8, 9, 10, 987654, tzinfo=UTC),
+        second=recent_time.replace(microsecond=987654),
         seen_ids={7, 3},
     )
 
     trigger._set_cursor(cursor)
     restored = trigger._get_cursor()
 
-    assert restored.second == datetime(2026, 4, 23, 8, 9, 10, tzinfo=UTC)
+    assert restored.second == recent_time.replace(microsecond=0)
     assert restored.seen_ids == {3, 7}
 
 
