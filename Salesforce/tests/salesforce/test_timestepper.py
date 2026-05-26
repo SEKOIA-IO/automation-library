@@ -15,6 +15,7 @@ def mock_connector():
     connector = MagicMock()
     connector.configuration.intake_key = "test_key"
     connector.log = MagicMock()
+    connector.scalability_labels = {"scalable_horizontally": "false", "scalable_vertically": "false"}
     return connector
 
 
