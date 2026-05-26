@@ -7,7 +7,10 @@ from respx import MockRouter
 
 from ubika_modules import UbikaModule
 from ubika_modules.connector_ubika_cloud_protector_alerts import UbikaCloudProtectorAlertsConnector
-from ubika_modules.connector_ubika_cloud_protector_base import FetchEventsException
+from ubika_modules.connector_ubika_cloud_protector_base import (
+    FetchEventsException,
+    UbikaCloudProtectorConnectorConfiguration,
+)
 
 
 @pytest.fixture
@@ -31,13 +34,13 @@ def trigger(data_storage, patch_datetime_now):
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
-    trigger.configuration = {
-        "provider": "provider1",
-        "tenant": "tenant2",
-        "token": "some_token_here",
-        "intake_key": "intake_key",
-        "chunk_size": 100,
-    }
+    trigger.configuration = UbikaCloudProtectorConnectorConfiguration(
+        provider="provider1",
+        tenant="tenant2",
+        token="some_token_here",
+        intake_key="intake_key",
+        chunk_size=100,
+    )
     yield trigger
 
 
