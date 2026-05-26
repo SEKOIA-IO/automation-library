@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-21 - 2.10.22
+
+### Fixed
+
+- Fix checkpoint for sign-in events
+
 ## 2026-05-05 - 2.10.21
 
 ### Fixed
