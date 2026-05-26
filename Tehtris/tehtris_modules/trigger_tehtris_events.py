@@ -43,6 +43,14 @@ class TehtrisEventConnector(Connector):
         self.fetch_events_limit = 100
         self.events_cache: Cache = LRUCache(maxsize=1000)  # TODO: is it enough to have 1000 event ids in cache?
 
+    @property
+    def scalability_labels(self) -> dict:
+        labels = self.module.manifest.get("labels", {})
+        return {
+            "scalable_horizontally": str(labels.get("scalable_horizontally", "false")).lower(),
+            "scalable_vertically": str(labels.get("scalable_vertically", "false")).lower(),
+        }
+
     @cached_property
     def client(self):
         return ApiClient(self.module.configuration.apikey)
@@ -118,7 +126,7 @@ class TehtrisEventConnector(Connector):
         while has_more_message:
             # fetch events from the current context
             fetched_events = self.__fetch_next_events(self.from_date, offset)
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(fetched_events))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(fetched_events))
 
             # remove duplicates events from previous fetch
             next_events = self._remove_duplicates(fetched_events)
@@ -159,7 +167,7 @@ class TehtrisEventConnector(Connector):
             delta_time = datetime.now(timezone.utc) - most_recent_date_seen
             current_lag = int(delta_time.total_seconds())
 
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
     def next_batch(self):
         # save the starting time
@@ -175,7 +183,7 @@ class TehtrisEventConnector(Connector):
                     message=f"Forward {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
 
             else:
@@ -191,7 +199,7 @@ class TehtrisEventConnector(Connector):
             message=f"Fetch and forward events in {batch_duration} seconds",
             level="info",
         )
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
