@@ -2,69 +2,69 @@
 
 [[package]]
 name = "aiocsv"
-version = "1.4.0"
+version = "1.4.1"
 description = ""
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "aiocsv-1.4.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:34f971a0d20100154affec72c8e4f4191a50a92eea321988e09342cab74c4bfe"},
-    {file = "aiocsv-1.4.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:2395d5608664760ceab402afef5f3ea4978490ce07d90d7bdfe6f9952eb10526"},
-    {file = "aiocsv-1.4.0-cp310-cp310-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:6f5e86d872668eff761f537f1e8168030917358f2e571cd01d360eb360917fce"},
-    {file = "aiocsv-1.4.0-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:b67c6fb3afca5805f464f97067c09b59fff6d19fb805f7a7cb53591b44191703"},
-    {file = "aiocsv-1.4.0-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:c96be3bf9d726d67099c5ade15255337d6b0288e92282ebb93379b076bf46b54"},
-    {file = "aiocsv-1.4.0-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:c9f1caf2414a74a10ef7ab220898a87bbf09f4c6b7c96b6622f55206746d78e6"},
-    {file = "aiocsv-1.4.0-cp310-cp310-win32.whl", hash = "sha256:37caa55e3a72ca0e7b51995749e98a3afc011cea6d86633878cf45e2dc2c82d9"},
-    {file = "aiocsv-1.4.0-cp310-cp310-win_amd64.whl", hash = "sha256:30d21c37bb61825f2ee067b45f0d261da39545517cec995ba18e0bb20670bc62"},
-    {file = "aiocsv-1.4.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:ecdaaf771f8c76076d7c491f7b189f3ff13dea2fbb6cccc020b900dce904e3d3"},
-    {file = "aiocsv-1.4.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:f38933132a22ea5ebb8123f8f72fd72a2f014631e21e205c7bbf4d4a68721d84"},
-    {file = "aiocsv-1.4.0-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:1f0bdddada91ebfe08f12f7631f5b12a1578a82fb61f91bdf0a4a4ff93fe3099"},
-    {file = "aiocsv-1.4.0-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:3ab69a41409ec1731624ed25e39d18544bb1c9cb21283f2eb1d9c02bad56e91c"},
-    {file = "aiocsv-1.4.0-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:e07c3bac73968bd4a676377dfa23027d00270d918115d0faf8ce087df6ab1d83"},
-    {file = "aiocsv-1.4.0-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:bd92976566ecb250301d35096f9334e6aadf987b58b78a3fd6434b44318d98b6"},
-    {file = "aiocsv-1.4.0-cp311-cp311-win32.whl", hash = "sha256:281da9eb23626482fcf47b0c83e7166e9221f143e1a0e64cebd87996a45c6c56"},
-    {file = "aiocsv-1.4.0-cp311-cp311-win_amd64.whl", hash = "sha256:64de35600a125752303a649b0df2edae73e9c6c8b5ba5dee2775f2d1f39a69e7"},
-    {file = "aiocsv-1.4.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:eaf0caa8a951df866cf0b7ff6298a142fa76555c5b338058d372d26619682b93"},
-    {file = "aiocsv-1.4.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:3e587d38cc97a7f2c45316c75995b43c35c8f9d77840ef76226e53d4beeebe94"},
-    {file = "aiocsv-1.4.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:e08fdb3bb6f531f3ce6bc15158368cfe348fa2a483be390e5a4a972c24c5a867"},
-    {file = "aiocsv-1.4.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:97a9db9e073ae1afbfc479dbfdc3764eab1866b7678766d4a7c226b09ee55a05"},
-    {file = "aiocsv-1.4.0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:890f41d90de7e6a5340098e914dae47cd9580e077172b7baa5ba5dbd3c561b29"},
-    {file = "aiocsv-1.4.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:c9b7c2935c585499320ca94d98ed7bc8cd67db770b25fa6c5e6f72bff4782575"},
-    {file = "aiocsv-1.4.0-cp312-cp312-win32.whl", hash = "sha256:736ff2465414d7e047915ddae5fa48f7ed755d125e60b08ff6d59450650ef9b3"},
-    {file = "aiocsv-1.4.0-cp312-cp312-win_amd64.whl", hash = "sha256:d1c727460a4e82cd2aba43db0ed94a310433ec81b55e21ceb9b504053db558f6"},
-    {file = "aiocsv-1.4.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:0fca59ed869218a403496a05f0d4bf99affc4d8191ed930f34df1c5c8240d0e8"},
-    {file = "aiocsv-1.4.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:d14f5fc7e84f5e3e142eb8a9ec57442688532d5f891a5dd86a517e4ccd768907"},
-    {file = "aiocsv-1.4.0-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:6eeed4d5b9fb2d78666ad0b84ef85609ff3da237bff1d39e8c8c9c8e68ee06f9"},
-    {file = "aiocsv-1.4.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:ccf1cb4280476c167aa5f83569f8640e22deff29bd0575076e5f8ebddd5bfc53"},
-    {file = "aiocsv-1.4.0-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:66b5e7ae6388e0cf8928f73a414ae770615c84a47f1c3d959b400fbcb1ff25d6"},
-    {file = "aiocsv-1.4.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:7dc66116ca2856c50f3b00d7577a67b8ab623335b2f397144e7bc4a812c58485"},
-    {file = "aiocsv-1.4.0-cp313-cp313-win32.whl", hash = "sha256:e868eecaae6739658541f4418b095bc94e6f62584f3e2d80777c1335e738e463"},
-    {file = "aiocsv-1.4.0-cp313-cp313-win_amd64.whl", hash = "sha256:a5c20240f59a8a6faa288a56f99b196b1754bc1c8d52233e59c6a6df03c47f86"},
-    {file = "aiocsv-1.4.0-cp314-cp314-macosx_10_13_x86_64.whl", hash = "sha256:03a91aa96c3341277956b95248e818628d36f7218cebcba36262a1bc014a183d"},
-    {file = "aiocsv-1.4.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:b2b95faa180a8e7563a44545a9fb7a0ab535f827729183a7d595c69337f604a5"},
-    {file = "aiocsv-1.4.0-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:e4ee48ddf88e63a27caf6f3a797cc2107113a6cd4a2579a90a0ce7066ecf29fd"},
-    {file = "aiocsv-1.4.0-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:fe2462c5da8387fe594d2905cab096abf2982c6d44c1eb1ee03ccca183ea5338"},
-    {file = "aiocsv-1.4.0-cp314-cp314-musllinux_1_2_aarch64.whl", hash = "sha256:c3147be681208231d53367794cbcde557c461ec2cc6e240f68ce637176bcf172"},
-    {file = "aiocsv-1.4.0-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:ce1cca5da676c55ddda624a4afcb1db9874897cac0d029e680cf114779daef19"},
-    {file = "aiocsv-1.4.0-cp314-cp314-win32.whl", hash = "sha256:c926ac5dd442bd390a2fbae20c5207aabf275374de15359f37bcddaa60bfaedc"},
-    {file = "aiocsv-1.4.0-cp314-cp314-win_amd64.whl", hash = "sha256:e7a703643191b742d67d4e047dcc4b2314d2914f03879732a81139c62784f278"},
-    {file = "aiocsv-1.4.0-cp314-cp314t-macosx_10_13_x86_64.whl", hash = "sha256:b78c992cf58ca1808182490b928261a11028d6b0cf6940a641ddd74ba8acccf2"},
-    {file = "aiocsv-1.4.0-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:4199dc97fbfcc6757c7de3e300f1c9de3736adf7700b009bd8795c6e708f855f"},
-    {file = "aiocsv-1.4.0-cp314-cp314t-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:84c7cf52ec30b7a78beec457c234defb837c970b4fbbcac113ddc769e533891c"},
-    {file = "aiocsv-1.4.0-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c9b3075b482c7f419262b994f25827da5d917fb974b725d75f84b885eb634832"},
-    {file = "aiocsv-1.4.0-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:71756714498cae7775bd2f58b44d66d20d59be99b3c6231ba880282fe0bf0524"},
-    {file = "aiocsv-1.4.0-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:5c72822d9e405bef16a6c9aa06940c8671fc76bea67d13dad8d5766c5d2033dd"},
-    {file = "aiocsv-1.4.0-cp314-cp314t-win32.whl", hash = "sha256:036433ef0e512921c265d5ace346748a60d8bfdd0b09bac558b8682f654f5018"},
-    {file = "aiocsv-1.4.0-cp314-cp314t-win_amd64.whl", hash = "sha256:e5f655da021fb32303f676f22c643d7348788619120e864e22de92c9421c7eaa"},
-    {file = "aiocsv-1.4.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:3863d5d7c988438f5278f99946c346a257648e67fdb813f2b5f32bd14097ad71"},
-    {file = "aiocsv-1.4.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:ca3134e3fa3ea2f062e66d16be796e8796214b81580de8113eef87ff8d124bcd"},
-    {file = "aiocsv-1.4.0-cp39-cp39-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:a18d5e68802557c2cd9ce1cc09dfacc836642f4608ac88fdbe83dbf2ae620503"},
-    {file = "aiocsv-1.4.0-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f586c8e06399944e899d859edab114e967456d576200f2bd749ba9eb37644195"},
-    {file = "aiocsv-1.4.0-cp39-cp39-musllinux_1_2_aarch64.whl", hash = "sha256:cdbbe20e01ad1a338cfcd1c6815cfbdb201a42927cf5bab788b9fa910ad78b8e"},
-    {file = "aiocsv-1.4.0-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:fdbf733223933ae57c3afaf2bb76489058ad5d2bb3dff48f46a004cd18c964c2"},
-    {file = "aiocsv-1.4.0-cp39-cp39-win32.whl", hash = "sha256:1cd4b86b37c9ec99db01acfea1dd614f2feca42aa4ddcfe60ba274345bdbfe96"},
-    {file = "aiocsv-1.4.0-cp39-cp39-win_amd64.whl", hash = "sha256:3d8c7a32c36b813f38847f8c4fa10d8162702a2ebb05cf4be3b3c14d4ef06311"},
-    {file = "aiocsv-1.4.0.tar.gz", hash = "sha256:f3877e5ef493616a1e0c1365744bbff89184b6f84e9a70859fe319d92060079a"},
+    {file = "aiocsv-1.4.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:d98b41e3ad4b0dc543fda3e23bb300410b44b1bedd59c9c7a870d3c19b1c479c"},
+    {file = "aiocsv-1.4.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:a119c89a44b7d5d0759b624b18a699587b1e622426bb38b2da00dfaa9f6ee769"},
+    {file = "aiocsv-1.4.1-cp310-cp310-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:bc70da827392f7f416ac1841c388cc366bf41fcab961adf76e9c887d917609be"},
+    {file = "aiocsv-1.4.1-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:83f59408bccd54128bd0d3faa72b7b8017ab4eb1d874a04b50f0eb7932ce0a66"},
+    {file = "aiocsv-1.4.1-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:360c69ebce412d886c88b42e8ddecbde40de9920dd7d36c21e8dfb25d14a1afc"},
+    {file = "aiocsv-1.4.1-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:915cf08e8647f2e4bf3c56c6670643eca93f3711ede90c0a4dd892370e268378"},
+    {file = "aiocsv-1.4.1-cp310-cp310-win32.whl", hash = "sha256:471fcec28da5f08496496df5784ef347dc8f628b72fd4c944e9478a4638543e7"},
+    {file = "aiocsv-1.4.1-cp310-cp310-win_amd64.whl", hash = "sha256:2b9ce78f4cfe643ae8e1626b4fdc985704e096d7eb48432398f347aa3be7b148"},
+    {file = "aiocsv-1.4.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:fe29e5c0bcc865ef17fbed32485005c7b2ce939eb83268c8dd98d43745d3a8ef"},
+    {file = "aiocsv-1.4.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:fa28c997791163ae441e5b2b83299d90abd22bddd96790022b24720e184f6559"},
+    {file = "aiocsv-1.4.1-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:2282d5297cc1cfd0b078305ce9ae27ca16d38e4c0b2ca62ab35e624c4e7f9e87"},
+    {file = "aiocsv-1.4.1-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:d140a0ca15fbe220444b8fd5f8b2f0730f212a24270e98fc7a34c6f155657255"},
+    {file = "aiocsv-1.4.1-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:9b6132eda455ffaf514cfb560aa68de246c591ec7efddad35735a7a18582e684"},
+    {file = "aiocsv-1.4.1-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:62305d0faace1181fdd5c1a8cba8ed5322c40b945982c7edb474a603e5d8dc20"},
+    {file = "aiocsv-1.4.1-cp311-cp311-win32.whl", hash = "sha256:8526de338d178a9ff83d3177436ad0a736cecc788a9abcfa680741db4110216f"},
+    {file = "aiocsv-1.4.1-cp311-cp311-win_amd64.whl", hash = "sha256:f1138a9c34ef8951177577780c9e2558648b346d5ec8209a714f829d5a1af199"},
+    {file = "aiocsv-1.4.1-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:ccbfbaf7a3743377f8ab1ab5d88fc0c64bc65bd3671b3c18028fb426d9622bd7"},
+    {file = "aiocsv-1.4.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:221f6631bfad2131e9726170843beb3e4e708230c3bdc7a9e1078954c0bcb2f9"},
+    {file = "aiocsv-1.4.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:88e7deafd1846dd689e349db9ddc0a707dc9c0a2fe091213809fdec7790388ad"},
+    {file = "aiocsv-1.4.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f11d5e849e6f0fe9deb2b6a3c1c1433b8fb19745e796ab86cd38894150391b71"},
+    {file = "aiocsv-1.4.1-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:8ebb18d69d261c15ffa6421f6d54ef07847bb2e8f6a0f0f86eca25425d1ec909"},
+    {file = "aiocsv-1.4.1-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:5c3350ecf2cbf9bf43082706ee6b86d1285ae0a345e0e55fb56a3cfc208fded1"},
+    {file = "aiocsv-1.4.1-cp312-cp312-win32.whl", hash = "sha256:b16e67fdbb15b49a8a485360e9543a0b4129f8e644571adaee60c980e7511aed"},
+    {file = "aiocsv-1.4.1-cp312-cp312-win_amd64.whl", hash = "sha256:0b9c9010839bc5fc598e85a2f28ec8f0c29ebfed1cdbedb8cdb9e71845935866"},
+    {file = "aiocsv-1.4.1-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:f98df67c24085f5e1698da4e0e5a415af6825a330ef68602cb44fc1c79a85781"},
+    {file = "aiocsv-1.4.1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:8b1a066c57f15da6cc3bcc9b6fb9b9c57b3b93c3df9c5b27528d2aabd4e5f9fa"},
+    {file = "aiocsv-1.4.1-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:dc76dcb9aa25c75c466b9f55a0c4d0fc88747b35487c2bc36be8de2b863c4a52"},
+    {file = "aiocsv-1.4.1-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:6b83a68aad5bfdda0c74bf2958ec3ba392459f7795c604daf0c8f7be00dab615"},
+    {file = "aiocsv-1.4.1-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:92854e45b67d3277e1675a7066ce2e7d41209ac35f6004b77f5be440518d2c8b"},
+    {file = "aiocsv-1.4.1-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:aa1091de188370578e69c15e8ee5ff502adff44219c4325a724e8fca971d488f"},
+    {file = "aiocsv-1.4.1-cp313-cp313-win32.whl", hash = "sha256:41dff67b95e8ee8e324a95370b8294195e5ee9622a81e848ecdd5e8dc389b92d"},
+    {file = "aiocsv-1.4.1-cp313-cp313-win_amd64.whl", hash = "sha256:b286d5acfcdea4bf6d66acc148e01c0d921ac76c5ef879da5644301026f7142d"},
+    {file = "aiocsv-1.4.1-cp313-cp313t-macosx_10_13_x86_64.whl", hash = "sha256:06788081836acefbbbae64ae8168d3535e2ef9b53e806b36e31e0d811b06cf42"},
+    {file = "aiocsv-1.4.1-cp313-cp313t-macosx_11_0_arm64.whl", hash = "sha256:a3d72a450e2bc95664a1c46cdf7b84c9b337ab8daedd3ed4c86517ae10ad84b0"},
+    {file = "aiocsv-1.4.1-cp313-cp313t-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:330d34a8b63ec8a7bab142e0ffd753a838178398fe295cc661751145a06ed297"},
+    {file = "aiocsv-1.4.1-cp313-cp313t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:a6bbfd63f64810a9c395806950f77eb21ba2ddf8d29fc6ed6bd5be6d6a8419eb"},
+    {file = "aiocsv-1.4.1-cp313-cp313t-musllinux_1_2_aarch64.whl", hash = "sha256:d8321b239cdc41ebfe3506a550d186c019a1f44f19ea74ab7a0d6524be65a609"},
+    {file = "aiocsv-1.4.1-cp313-cp313t-musllinux_1_2_x86_64.whl", hash = "sha256:d3e294fe1a7f47e0b8fbe16965d47f23400ba61612909cd836f2006a29b9d715"},
+    {file = "aiocsv-1.4.1-cp313-cp313t-win32.whl", hash = "sha256:6ff9342c2462e585c93e55e1f5595c97191dd73fb9ffa2300e2dcd660ef9f9ac"},
+    {file = "aiocsv-1.4.1-cp313-cp313t-win_amd64.whl", hash = "sha256:53892cf3754303692d5b884b42378d43790230975cdaf7f1a68d737fcec699d9"},
+    {file = "aiocsv-1.4.1-cp314-cp314-macosx_10_13_x86_64.whl", hash = "sha256:4d0b6b26d44984cfa66b4d24658fbd27b976cd68c6c7dd81d4324ebda99243d0"},
+    {file = "aiocsv-1.4.1-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:1dc2c2046c6362276ca123748895986e296a0305062f5493332c66433137fabf"},
+    {file = "aiocsv-1.4.1-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:49f6ff09009cd98f88f511727654bfc3863ed6cf56c2ac982be9d0639c20cfac"},
+    {file = "aiocsv-1.4.1-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:fc5ecd1ea70e470adbfd705a1f686c8d450f64e419020021947e5f9654aaed65"},
+    {file = "aiocsv-1.4.1-cp314-cp314-musllinux_1_2_aarch64.whl", hash = "sha256:ce9311167531f89752c11fde574d8175bead0070f264e79b1ebb579d8b3add8b"},
+    {file = "aiocsv-1.4.1-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:62f1a52f08e2aa6d5e291bb2f9a85e6caf5cc6d419cd79bbd0a85ff3a73b9b56"},
+    {file = "aiocsv-1.4.1-cp314-cp314-win32.whl", hash = "sha256:4ffef472f783eb78c09b55cda3b298214586c44c3c0b81ef394594303316225f"},
+    {file = "aiocsv-1.4.1-cp314-cp314-win_amd64.whl", hash = "sha256:b30cc29adcc036dfd8ac9ea6a1fd19942ee678b36504517e894fefa4a72432d3"},
+    {file = "aiocsv-1.4.1-cp314-cp314t-macosx_10_13_x86_64.whl", hash = "sha256:8b8c33abdd8f4acffb6f19b9a27ff73d98d39214fb566bff286d2e2f72355993"},
+    {file = "aiocsv-1.4.1-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:8ef4d30e41c83722d0a94ad17b55462d45b013b103e0ab66f86c29a576af7984"},
+    {file = "aiocsv-1.4.1-cp314-cp314t-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:a6dc052092857485987e46d237500fee63da8dd53a9c8053137af69f57beb1e8"},
+    {file = "aiocsv-1.4.1-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:81c3cfdd722658dee1f8a3b8fa031cd65e17eddda8faa37af7f7db82763da754"},
+    {file = "aiocsv-1.4.1-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:a85261c82e0707f43856d9f4a1d6354efae2938454ed00a172d9961539d9a6fa"},
+    {file = "aiocsv-1.4.1-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:400ef1548d3004b32314f0dfbe777c432eb46573b5991eb1b6922c6b2e497bfd"},
+    {file = "aiocsv-1.4.1-cp314-cp314t-win32.whl", hash = "sha256:fe2d9ffb38d4cb4b5de6aa1af39e0e28aab74e5d20be0ecadeaf289a1d6b6a55"},
+    {file = "aiocsv-1.4.1-cp314-cp314t-win_amd64.whl", hash = "sha256:e228c455e156fa1e6d22c53426ebf68c65a45b73bed300a4f45c00f48d40ca6b"},
+    {file = "aiocsv-1.4.1.tar.gz", hash = "sha256:bb663f9eabf88402ca2c325fd0df836eee7da34cf7c5476b5e6cf7d098cdebda"},
 ]
 
 [package.dependencies]
@@ -397,18 +397,18 @@ files = [
 
 [[package]]
 name = "boto3"
-version = "1.43.13"
+version = "1.43.14"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "boto3-1.43.13-py3-none-any.whl", hash = "sha256:c156ba7b35687379c28f6b7216f06b477b033eab318ac70697128e99d4bfd7b7"},
-    {file = "boto3-1.43.13.tar.gz", hash = "sha256:bd909b509c459e784dcfcafb3e130cf2891ab26d2d323003bcddaf15a948c9e8"},
+    {file = "boto3-1.43.14-py3-none-any.whl", hash = "sha256:574335744656cfed0b362a0a0467aaf2eb2bf15526edcd02d31d3c661f4b09e4"},
+    {file = "boto3-1.43.14.tar.gz", hash = "sha256:5c0a994b3182061ee101812e721100717a4d664f9f4ceaf4a86b6d032ce9fc2d"},
 ]
 
 [package.dependencies]
-botocore = ">=1.43.13,<1.44.0"
+botocore = ">=1.43.14,<1.44.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.17.0,<0.18.0"
 
@@ -417,14 +417,14 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.43.13"
+version = "1.43.14"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "botocore-1.43.13-py3-none-any.whl", hash = "sha256:c0fe4ba2d4ee35751f539ae8164da73218e1b8cf3114affd3a5312ba66b9df2e"},
-    {file = "botocore-1.43.13.tar.gz", hash = "sha256:10df003c71847b4f1501b98b1c03e1cb6399583b6cc5136ca7ff849e00c4797f"},
+    {file = "botocore-1.43.14-py3-none-any.whl", hash = "sha256:1f4a2a95ea78c10398e78431e98c1fe47adb54a7b10a32975144c1f541186658"},
+    {file = "botocore-1.43.14.tar.gz", hash = "sha256:b9e500737e43d2f147c9d4e23b54360335e77d4c0ba90a318f51b65e06cb8516"},
 ]
 
 [package.dependencies]
@@ -3031,4 +3031,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "a3337a1cc6ea23957e0347dbdebc5dbc00c435f870a51d59438d8cd42d49cd35"
+content-hash = "373045d3237f252e085a1fe1bded65b5eec35fa1f113345ce1b9abc91c90526d"
