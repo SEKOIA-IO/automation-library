@@ -7,7 +7,7 @@ class MoknModuleConfiguration(BaseModel):
     api_token: str = Field(
         ...,
         description="MokN API key used to authenticate against the tenant API",
-        secret=True,
+        json_schema_extra={"secret": True},
     )
     verify_ssl: bool = Field(
         True,
