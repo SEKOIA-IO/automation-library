@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-05-26 - 1.2.1
+
+### Fixed
+
+- Fix `rbacGroupId` type in DefenderMachine model to accept integer values from the API
+
 ## 2026-05-06 - 1.2.0
 
 ### Added

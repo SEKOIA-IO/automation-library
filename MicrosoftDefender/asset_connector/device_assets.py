@@ -185,7 +185,12 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
         uid_alt = machine.aadDeviceId
         groups: list[Group] | None = None
         if machine.rbacGroupName:
-            groups = [Group(name=machine.rbacGroupName, uid=machine.rbacGroupId)]
+            groups = [
+                Group(
+                    name=machine.rbacGroupName,
+                    uid=str(machine.rbacGroupId) if machine.rbacGroupId is not None else None,
+                )
+            ]
 
         if managed_device:
             if managed_device.wi_fi_mac_address or managed_device.ethernet_mac_address:
