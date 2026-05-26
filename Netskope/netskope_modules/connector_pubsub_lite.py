@@ -49,6 +49,14 @@ class PubSubLite(AsyncConnector):
         )
         self.latest_event_lag: float = -1
 
+    @property
+    def scalability_labels(self) -> dict:
+        labels = self.module.manifest.get("labels", {})
+        return {
+            "scalable_horizontally": str(labels.get("scalable_horizontally", "false")).lower(),
+            "scalable_vertically": str(labels.get("scalable_vertically", "false")).lower(),
+        }
+
     def execute(self) -> None:
         self.set_credentials()
         super().execute()
@@ -130,17 +138,17 @@ class PubSubLite(AsyncConnector):
                 await self.push_data_to_intakes(events=batch)
                 await self.save_checkpoint()
 
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type).inc(
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type, **self.scalability_labels).inc(
                     len(batch)
                 )
 
                 batch_end = time.time()
                 batch_duration = batch_end - batch_start
                 FORWARD_EVENTS_DURATION.labels(
-                    intake_key=self.configuration.intake_key, type=self.metric_label_type
+                    intake_key=self.configuration.intake_key, type=self.metric_label_type, **self.scalability_labels
                 ).observe(batch_duration)
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type).set(
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type, **self.scalability_labels).set(
                     self.latest_event_lag
                 )
 
@@ -182,7 +190,7 @@ class PubSubLite(AsyncConnector):
 
                 # Put events in the forwarding queue
                 if events is not None:
-                    INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                    INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(events))
                     for event in events:
                         await self.events_queue.put(event)
 
