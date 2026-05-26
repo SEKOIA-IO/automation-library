@@ -138,9 +138,9 @@ class PubSubLite(AsyncConnector):
                 await self.push_data_to_intakes(events=batch)
                 await self.save_checkpoint()
 
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type, **self.scalability_labels).inc(
-                    len(batch)
-                )
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key, type=self.metric_label_type, **self.scalability_labels
+                ).inc(len(batch))
 
                 batch_end = time.time()
                 batch_duration = batch_end - batch_start
@@ -148,9 +148,9 @@ class PubSubLite(AsyncConnector):
                     intake_key=self.configuration.intake_key, type=self.metric_label_type, **self.scalability_labels
                 ).observe(batch_duration)
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type, **self.scalability_labels).set(
-                    self.latest_event_lag
-                )
+                EVENTS_LAG.labels(
+                    intake_key=self.configuration.intake_key, type=self.metric_label_type, **self.scalability_labels
+                ).set(self.latest_event_lag)
 
                 batch = []
                 batch_start = time.time()
@@ -190,7 +190,9 @@ class PubSubLite(AsyncConnector):
 
                 # Put events in the forwarding queue
                 if events is not None:
-                    INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(events))
+                    INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                        len(events)
+                    )
                     for event in events:
                         await self.events_queue.put(event)
 
