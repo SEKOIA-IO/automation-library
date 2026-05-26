@@ -73,13 +73,13 @@ def init_logging(log_conf: LoggingConfig = LoggingConfig()) -> None:
         logging.getLogger(name).propagate = True
 
     handler: Any = {
-                "sink": sys.stdout,
-                "serialize": log_conf.json_logs,
-                "format": lambda values: format_record(
-                    values,
-                    log_conf.loguru_format,
-                ),
-            }
+        "sink": sys.stdout,
+        "serialize": log_conf.json_logs,
+        "format": lambda values: format_record(
+            values,
+            log_conf.loguru_format,
+        ),
+    }
     logger.configure(
         handlers=[handler],
     )
