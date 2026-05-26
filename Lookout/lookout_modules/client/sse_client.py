@@ -65,7 +65,7 @@ class SSEClient:
 
                 # NOTE: line is '<field_name>: <value>'
                 #   only split once to preserve `:` characters in value
-                (field, value) = line.split(SSE_FIELD_SEP, 1)
+                field, value = line.split(SSE_FIELD_SEP, 1)
                 try:
                     event.append(field, value.strip())
                 except ValueError as e:

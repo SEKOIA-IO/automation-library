@@ -49,5 +49,5 @@ mypy = "^0.991"
 isort = "^5.10.1"
 
 [tool.poetry.group.dev.dependencies.black]
-version = "^25.1.0"
+version = "^26.3.1"
 extras = ["colorama"]

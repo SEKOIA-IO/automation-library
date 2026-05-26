@@ -44,3 +44,6 @@ filterwarnings = [
   "ignore:.*unclosed.*:ResourceWarning",
 ]
 addopts = "  --strict-markers\n  --tb=short\n  --cov=lookout_modules\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n"
+
+[tool.poetry.dev-dependencies.black]
+version = "^26.3.1"
