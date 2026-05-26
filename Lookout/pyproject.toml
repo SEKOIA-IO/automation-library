@@ -18,6 +18,12 @@ include = "\\.pyi?$"
 profile = "black"
 line_length = 119
 
+[tool.mypy]
+ignore_missing_imports = true
+ignore_errors = false
+disable_error_code = ["import-untyped"]
+exclude = ["tests/*"]
+
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 sekoia-automation-sdk = "^1.18.3"
@@ -31,6 +37,7 @@ pytest = "*"
 pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
+mypy = "^1.8.0"
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]

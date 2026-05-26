@@ -85,7 +85,7 @@ class MobileEndpointSecurityThread(Thread):
             return response
 
         except requests.exceptions.HTTPError as err:
-            if err.response.status_code == 401:
+            if err.response is not None and err.response.status_code == 401:
                 self.log("Unauthorized error", level="critical")
 
                 try:
