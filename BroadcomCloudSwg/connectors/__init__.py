@@ -8,8 +8,8 @@ class BroadcomCloudModuleConfig(BaseModel):
     """Configuration for BroadcomCloudModuleConfig."""
 
     ratelimit_per_minute: int = 60
-    username: str = Field(required=True, description="Broadcom Cloud Username")
-    password: str = Field(required=True, description="Broadcom Cloud Password")
+    username: str = Field(..., description="Broadcom Cloud Username")
+    password: str = Field(..., description="Broadcom Cloud Password")
 
 
 class BroadcomCloudModule(Module):
