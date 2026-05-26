@@ -126,7 +126,9 @@ class TehtrisEventConnector(Connector):
         while has_more_message:
             # fetch events from the current context
             fetched_events = self.__fetch_next_events(self.from_date, offset)
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(fetched_events))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(fetched_events)
+            )
 
             # remove duplicates events from previous fetch
             next_events = self._remove_duplicates(fetched_events)
@@ -183,7 +185,9 @@ class TehtrisEventConnector(Connector):
                     message=f"Forward {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(batch_of_events)
+                )
                 self.push_events_to_intakes(events=batch_of_events)
 
             else:
@@ -199,7 +203,9 @@ class TehtrisEventConnector(Connector):
             message=f"Fetch and forward events in {batch_duration} seconds",
             level="info",
         )
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            batch_duration
+        )
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
