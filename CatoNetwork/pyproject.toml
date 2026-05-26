@@ -62,6 +62,7 @@ filterwarnings = [
   "error",
   "ignore::DeprecationWarning",
   "ignore:.*unclosed.*:ResourceWarning",
+  "ignore:.*AIOHTTPTransport does not verify ssl.*:UserWarning",
 ]
 addopts = "  --strict-markers\n  --tb=short\n  --cov=cato\n  --cov=client\n  --cov=logger\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n  --numprocesses=auto\n  --asyncio-mode=auto\n"
 
