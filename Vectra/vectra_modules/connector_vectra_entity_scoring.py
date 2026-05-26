@@ -133,6 +133,9 @@ class VectraEntityScoringConsumer(Thread):
             return response
 
         except requests.exceptions.HTTPError as err:
+            if err.response is None:
+                raise
+
             level = "critical" if err.response.status_code in [401, 403] else "error"
             message = f"Request to Vectra API failed with status {err.response.status_code} - {err.response.reason}"
 
