@@ -395,7 +395,7 @@ def test_fetch_next_batch_integration(symphony_storage):
         mock_time.time.return_value = 1666711174.0
         consumer.next_batch()
 
-    calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+    calls = [call_arg.kwargs["events"] for call_arg in trigger.push_events_to_intakes.call_args_list]
     assert len(calls) > 0
 
 
@@ -422,5 +422,5 @@ def test_run_integration(symphony_storage):
     time.sleep(5)
     trigger._stop_event.set()
 
-    calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+    calls = [call_arg.kwargs["events"] for call_arg in trigger.push_events_to_intakes.call_args_list]
     assert len(calls) > 0
