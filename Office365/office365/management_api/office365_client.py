@@ -103,17 +103,24 @@ class Office365API:
                 base_url = OFFICE365_URL_BASE.format(tenant_id=self.tenant_id)
                 response = await session.post(f"{base_url}/subscriptions/start", params={"contentType": content_type})
 
-                # check HTTP status code
-                if response.status >= 400:
-                    raise FailedToActivateO365Subscription(status_code=response.status, body=await response.text())
+                try:
+                    subscription = await response.json(content_type=None)
+                except Exception:
+                    subscription = None
 
-                subscription = await response.json()
+                if isinstance(subscription, dict) and "error" in subscription:
+                    # AF20024 means the subscription is already enabled, which is fine
+                    if subscription["error"].get("code") == "AF20024":
+                        continue
 
-                if "error" in subscription:
                     raise FailedToActivateO365Subscription(
                         error_code=subscription["error"].get("code"),
                         error_message=subscription["error"].get("message"),
                     )
+
+                # check HTTP status code
+                if response.status >= 400:
+                    raise FailedToActivateO365Subscription(status_code=response.status, body=await response.text())
 
     async def list_subscriptions(self) -> list[str]:
         """

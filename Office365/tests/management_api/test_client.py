@@ -255,6 +255,45 @@ async def test_get_content(mocked_responses, mock_azure_authentication, tenant_i
 
 
 @pytest.mark.asyncio
+async def test_activate_subscription_should_succeed_when_already_enabled(
+    mocked_responses, mock_azure_authentication, tenant_id
+):
+    # arrange
+    client_id = "client_id"
+    client_secret = "client_secret"
+
+    for content_type in {"Audit.AzureActiveDirectory", "Audit.SharePoint", "Audit.General", "Audit.Exchange"}:
+        mocked_responses.post(
+            f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/start?contentType={content_type}",
+            status=400,
+            body=orjson.dumps(
+                {"error": {"code": "AF20024", "message": "The subscription is already enabled. No property change."}}
+            ),
+        )
+
+    mocked_responses.get(
+        f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/list",
+        status=200,
+        body="[]",
+    )
+
+    client = Office365API(
+        client_id=client_id,
+        client_secret=client_secret,
+        tenant_id=tenant_id,
+    )
+
+    # act
+    result = await client.activate_subscriptions()
+
+    # assert
+    assert result is None
+
+    # finalize
+    await client.close()
+
+
+@pytest.mark.asyncio
 async def test_activate_subscription_should_exception_when_handling_business_error(
     mocked_responses, mock_azure_authentication, tenant_id
 ):
