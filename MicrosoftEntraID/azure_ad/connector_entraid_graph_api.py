@@ -126,8 +126,8 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
     async def run_signin(self) -> int:
         events: list[SignIn] = []
         total_events = 0
-        new_offset = self.last_event_date_directory.offset
-        async for event in self.client.get_signin_logs(start_date=self.last_event_date_directory.offset):
+        new_offset = self.last_event_date_signin.offset
+        async for event in self.client.get_signin_logs(start_date=self.last_event_date_signin.offset):
             if not self.running:  # pragma: no cover
                 break
 
@@ -142,7 +142,7 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
                     new_offset = max(new_offset, data.created_date_time)
                     self.signin_cache[data.id] = True
 
-                self.last_event_date_directory.offset = new_offset
+                self.last_event_date_signin.offset = new_offset
                 self.persist_cache("signin")
                 events = []
 
@@ -153,7 +153,7 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
                 new_offset = max(new_offset, data.created_date_time)
                 self.signin_cache[data.id] = True
 
-            self.last_event_date_directory.offset = new_offset
+            self.last_event_date_signin.offset = new_offset
             self.persist_cache("signin")
 
         return total_events
