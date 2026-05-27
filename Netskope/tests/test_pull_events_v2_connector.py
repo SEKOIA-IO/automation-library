@@ -383,6 +383,7 @@ def test_fetch_next_batch_integration(symphony_storage):
     trigger.push_events_to_intakes = MagicMock()
     trigger.module.configuration = {
         "base_url": os.environ["NETSKOPE_BASE_URL"],
+        "api_token": os.environ["NETSKOPE_API_TOKEN"],
     }
     trigger.configuration = {
         "api_token": os.environ["NETSKOPE_API_TOKEN"],
@@ -410,6 +411,7 @@ def test_run_integration(symphony_storage):
     trigger.push_events_to_intakes = MagicMock()
     trigger.module.configuration = {
         "base_url": os.environ["NETSKOPE_BASE_URL"],
+        "api_token": os.environ["NETSKOPE_API_TOKEN"],
     }
     trigger.configuration = {
         "api_token": os.environ["NETSKOPE_API_TOKEN"],
