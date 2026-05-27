@@ -4,20 +4,15 @@ import pytest
 import requests.exceptions
 import requests_mock
 
-from netskope_modules import NetskopeModule
 from netskope_modules.actions.action_append_to_blocklist import AppendToBlocklistAction
 
 
 @pytest.fixture
-def append_action(symphony_storage):
-    module = NetskopeModule()
-    action = AppendToBlocklistAction(module=module, data_path=symphony_storage)
+def append_action(symphony_storage, trigger):
+    trigger.module.configuration.base_url = "https://my.fake.netskope.com"
+    action = AppendToBlocklistAction(module=trigger.module, data_path=symphony_storage)
     action.log = MagicMock()
     action.log_exception = MagicMock()
-    action.module.configuration = {
-        "base_url": "https://my.fake.netskope.com",
-        "api_token": "fake_api_token",
-    }
     return action
 
 

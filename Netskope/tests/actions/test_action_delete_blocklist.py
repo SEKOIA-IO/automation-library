@@ -3,20 +3,15 @@ from unittest.mock import MagicMock
 import pytest
 import requests_mock
 
-from netskope_modules import NetskopeModule
 from netskope_modules.actions.action_delete_blocklist import DeleteBlocklistAction
 
 
 @pytest.fixture
-def delete_action(symphony_storage):
-    module = NetskopeModule()
-    action = DeleteBlocklistAction(module=module, data_path=symphony_storage)
+def delete_action(symphony_storage, trigger):
+    trigger.module.configuration.base_url = "https://my.fake.netskope.com"
+    action = DeleteBlocklistAction(module=trigger.module, data_path=symphony_storage)
     action.log = MagicMock()
     action.log_exception = MagicMock()
-    action.module.configuration = {
-        "base_url": "https://my.fake.netskope.com",
-        "api_token": "fake_api_token",
-    }
     return action
 
 
