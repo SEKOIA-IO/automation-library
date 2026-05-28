@@ -129,7 +129,7 @@ class SynchronizeAssetsWithAD(Action):
             return
 
     def run(self, arguments: dict) -> Dict[str, List[Dict[str, Any]]]:
-        responses = []
+        responses: List[Dict[str, Any]] = []
         asset_conf = arguments["asset_synchronization_configuration"]
         community_uuid = arguments["community_uuid"]
         user_ad_data = self.json_argument("user_ad_data", arguments)
