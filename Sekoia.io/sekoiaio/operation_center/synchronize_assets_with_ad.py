@@ -56,9 +56,7 @@ class SynchronizeAssetsWithAD(Action):
         """Helper to centralize abort-and-return behavior."""
         return {"data": responses}
 
-    def _safe_get_assets(
-        self, search_query: str, also_search_in_detection_properties: bool = False
-    ) -> Optional[Any]:
+    def _safe_get_assets(self, search_query: str, also_search_in_detection_properties: bool = False) -> Optional[Any]:
         """Wrap get_assets with consistent error checking."""
         previous_error_message = self.error_message
         result = self.get_assets(
