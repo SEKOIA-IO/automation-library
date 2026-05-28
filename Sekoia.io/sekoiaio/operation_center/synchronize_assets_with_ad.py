@@ -43,7 +43,7 @@ class SynchronizeAssetsWithAD(Action):
     def _parse_json_response(self, response: requests.Response, request_name: str) -> Any:
         try:
             return response.json()
-        except requests.exceptions.JSONDecodeError:
+        except ValueError:
             response_text = response.text.strip() or "<empty response>"
             content_type = response.headers.get("Content-Type", "unknown")
             self.error(
@@ -51,6 +51,32 @@ class SynchronizeAssetsWithAD(Action):
                 f"with status code {response.status_code}, content type {content_type}, body: {response_text}"
             )
             return None
+
+    def _abort(self, responses: list) -> Dict[str, List[Dict[str, Any]]]:
+        """Helper to centralize abort-and-return behavior."""
+        return {"data": responses}
+
+    def _safe_get_assets(
+        self, search_query: str, also_search_in_detection_properties: bool = False
+    ) -> Optional[Any]:
+        """Wrap get_assets with consistent error checking."""
+        result = self.get_assets(
+            search_query=search_query,
+            also_search_in_detection_properties=also_search_in_detection_properties,
+        )
+        if result is None or self.error_message:
+            return None
+        return result
+
+    def _safe_merge_assets(self, destination: str, sources: List[str]) -> bool:
+        """Wrap merge_assets with error checking. Returns True if successful."""
+        self.merge_assets(destination=destination, sources=sources)
+        return not bool(self.error_message)
+
+    def _safe_put_request(self, endpoint: str, json_data: str) -> bool:
+        """Wrap put_request with error checking. Returns True if successful."""
+        self.put_request(endpoint=endpoint, json_data=json_data)
+        return not bool(self.error_message)
 
     def get_assets(self, search_query: str, also_search_in_detection_properties: bool = False) -> Any:
         params = {"search": search_query}
@@ -112,12 +138,12 @@ class SynchronizeAssetsWithAD(Action):
 
         if not self.base_url or not self.api_key:
             self.error("Configuration must include base_url and api_key.")
-            return {"data": responses}
+            return self._abort(responses)
 
         asset_name_field = asset_conf.get("asset_name_field")
         if not asset_name_field:
             self.error("Configuration must include asset_name_field.")
-            return {"data": responses}
+            return self._abort(responses)
 
         assert isinstance(asset_name_field, str)
 
@@ -127,13 +153,13 @@ class SynchronizeAssetsWithAD(Action):
             asset_name = single_user_ad_data.get(asset_name_field)
             if not asset_name:
                 self.error(f"User AD data does not contain the asset_name_field: {asset_name_field}.")
-                return {"data": responses}
+                return self._abort(responses)
 
             assert isinstance(asset_name, str)
 
-            asset_name_json = self.get_assets(search_query=asset_name)
+            asset_name_json = self._safe_get_assets(search_query=asset_name)
             if asset_name_json is None:
-                return {"data": responses}
+                return self._abort(responses)
 
             detection_properties_config = asset_conf.get("detection_properties", {})
             found_assets = set()
@@ -142,9 +168,9 @@ class SynchronizeAssetsWithAD(Action):
                 for key in keys:
                     value = single_user_ad_data.get(key)
                     if value:
-                        assets = self.get_assets(search_query=value, also_search_in_detection_properties=True)
+                        assets = self._safe_get_assets(search_query=value, also_search_in_detection_properties=True)
                         if assets is None:
-                            return {"data": responses}
+                            return self._abort(responses)
                         if assets.get("total", 0) > 0:
                             for asset in assets.get("items", []):
                                 found_assets.add(asset["uuid"])
@@ -189,18 +215,16 @@ class SynchronizeAssetsWithAD(Action):
 
                     sources_to_merge = list(found_assets - {destination_asset})
                     if sources_to_merge:
-                        self.merge_assets(destination=destination_asset, sources=sources_to_merge)
-                        if self.error_message:
-                            return {"data": responses}
+                        if not self._safe_merge_assets(destination=destination_asset, sources=sources_to_merge):
+                            return self._abort(responses)
 
                     endpoint = f"v2/asset-management/assets/{destination_asset}"
                     self.log(f"PUT request: {endpoint} and payload asset is {json_payload_asset}")
-                    self.put_request(endpoint=endpoint, json_data=json_payload_asset)
-                    if self.error_message:
-                        return {"data": responses}
+                    if not self._safe_put_request(endpoint=endpoint, json_data=json_payload_asset):
+                        return self._abort(responses)
                 else:
                     self.error(f"Unexpected asset name search response: {asset_name_json}")
-                    return {"data": responses}
+                    return self._abort(responses)
             elif asset_name_json.get("total", 0) == 0:
                 created_asset = True
                 payload_asset["community_uuid"] = community_uuid
@@ -208,21 +232,20 @@ class SynchronizeAssetsWithAD(Action):
                     endpoint="v2/asset-management/assets", json_data=json.dumps(payload_asset)
                 )
                 if create_response is None:
-                    return {"data": responses}
+                    return self._abort(responses)
 
                 destination_asset = create_response.get("uuid", "")
                 if destination_asset == "":
                     self.error("Asset creation response does not contain uuid.")
-                    return {"data": responses}
+                    return self._abort(responses)
 
                 sources_to_merge = list(found_assets)
                 if sources_to_merge:
-                    self.merge_assets(destination=destination_asset, sources=sources_to_merge)
-                    if self.error_message:
-                        return {"data": responses}
+                    if not self._safe_merge_assets(destination=destination_asset, sources=sources_to_merge):
+                        return self._abort(responses)
             else:
                 self.error(f"Unexpected asset name search response: {asset_name_json}")
-                return {"data": responses}
+                return self._abort(responses)
 
             response = {
                 "found_assets": list(found_assets),
@@ -231,4 +254,4 @@ class SynchronizeAssetsWithAD(Action):
             }
             responses.append(response)
 
-        return {"data": responses}
+        return self._abort(responses)
