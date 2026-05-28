@@ -569,13 +569,13 @@ class TestSynchronizeAssetsWithAD:
             additional_matcher=match_asset_name,
             text="Gateway Timeout",
             headers={"Content-Type": "text/html"},
-            status_code=504,
-            reason="Gateway Timeout",
+            status_code=200,
+            reason="OK",
         )
 
         resp = action_instance.run(arguments)
 
         assert resp == {"data": []}
         assert action_instance.error_message is not None
-        assert "HTTP GET request failed" in action_instance.error_message
+        assert "Expected JSON response for GET assets" in action_instance.error_message
         assert "Gateway Timeout" in action_instance.error_message
