@@ -554,3 +554,28 @@ class TestSynchronizeAssetsWithAD:
                 assert (
                     req.json() == expected_payload
                 ), f"POST create request payload mismatch for {expected_payload['name']}."
+
+    def test_get_assets_non_json_response_sets_action_error(self, requests_mock, action_instance, arguments):
+        base_url = action_instance.module.configuration["base_url"]
+        assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
+
+        def match_asset_name(request):
+            search_query = request.qs.get("search", [None])[0]
+            also_search = "also_search_in_detection_properties" in request.qs
+            return search_query == "jdoe" and not also_search
+
+        requests_mock.get(
+            assets_url,
+            additional_matcher=match_asset_name,
+            text="Gateway Timeout",
+            headers={"Content-Type": "text/html"},
+            status_code=504,
+            reason="Gateway Timeout",
+        )
+
+        resp = action_instance.run(arguments)
+
+        assert resp == {"data": []}
+        assert action_instance.error_message is not None
+        assert "HTTP GET request failed" in action_instance.error_message
+        assert "Gateway Timeout" in action_instance.error_message
