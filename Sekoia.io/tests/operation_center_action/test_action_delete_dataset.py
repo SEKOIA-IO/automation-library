@@ -17,10 +17,6 @@ DATASET_UUID = str(uuid4())
 COMMUNITY_UUID = str(uuid4())
 CREATED_BY_UUID = str(uuid4())
 
-# NOTE: DeleteDataset.run() contains a bug: it calls `arguments.dataset` but
-# the DeleteDatasetArguments model only defines `name`. This raises AttributeError
-# at runtime. The tests below exercise the individual methods directly.
-
 
 def make_action() -> DeleteDataset:
     action = DeleteDataset()

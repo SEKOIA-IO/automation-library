@@ -107,8 +107,9 @@ def test_list_queries_pagination(requests_mock):
         ],
     )
 
-    # get_queries caps total at min(total, limit=100), so the while loop
-    # exits after the second page anyway; this verifies the first page is returned.
+    # get_queries uses the API-provided total to drive pagination. In this test,
+    # the first two responses provide all 101 results, and the mocked empty third
+    # page causes the loop to stop.
     result = action.get_queries(ListQueriesArguments())
 
     assert len(result) == 101

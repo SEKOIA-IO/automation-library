@@ -19,6 +19,12 @@ from tenacity import (
 from .base_sol import BaseSolAction
 
 
+def bool_to_param(value):
+    if value is None:
+        return None  # requests will omit the key
+    return str(value).lower()  # True → "true", False → "false"
+
+
 class ListQueriesArguments(BaseModel):
     """Input arguments for the ListQueries action."""
 
@@ -76,7 +82,7 @@ class ListQueries(BaseSolAction):
                     "match[uuid]": argument.match_uuid,
                     "match[name]": argument.match_name,
                     "match[visualization]": argument.match_visualization,
-                    "match[is_shared_run]": argument.match_isshared,
+                    "match[is_shared_run]": bool_to_param(argument.match_isshared),
                     "match[created_by]": argument.match_created_by,
                     "parameters": argument.parameters,
                 },
@@ -94,7 +100,7 @@ class ListQueries(BaseSolAction):
 
             if not response_content["items"]:
                 num_results = len(results)
-                if num_results < response_content["total"] and num_results < limit:
+                if num_results < response_content["total"]:
                     self.log(
                         "Number of fetched results doesn't match total",
                         level="error",

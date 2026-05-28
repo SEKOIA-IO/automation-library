@@ -117,7 +117,7 @@ class ExecuteAQuery(BaseSolAction):
     def get_query_by_name(self, query_name: str) -> dict[str, Any]:
         """Retrieve a query definition by its name, optionally scoped to a community.
 
-        Paginates through all matching results and raises QueryListingError if more
+        Check the first page of results and raises QueryListingError if more
         than one query matches, to avoid ambiguous execution.
 
         :param query_name: Name of the query to look up
@@ -267,7 +267,7 @@ class ExecuteAQuery(BaseSolAction):
                 f"HTTP error when retrieving query run status for run_uuid '{run_uuid}': {e}. Response status: {response_get_run.status_code}, Response text: {response_get_run.text}",
                 level="error",
             )
-            raise QueryExecutionError
+            raise
         status = response_get_run.json()["status"]
         if status == "error":
             error = response_get_run.json()["error"]

@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 
 import pytest
 import requests
+from requests.exceptions import HTTPError
 
 from sekoiaio.operation_center.execute_a_query import (
     ExecuteAQuery,
@@ -333,7 +334,7 @@ def test_wait_for_query_completion_step_http_error_raises(requests_mock):
         text="Server Error",
     )
 
-    with pytest.raises(QueryExecutionError):
+    with pytest.raises(HTTPError):
         action._wait_for_query_completion_step(
             SAMPLE_QUERY_RUN["uuid"], lambda status: status == "pending", timeout=60
         )

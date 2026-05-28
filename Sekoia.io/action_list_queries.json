@@ -141,7 +141,7 @@
               "title": "Parameters",
               "type": "array",
               "items": {
-                "type": "object"
+                "type": "string"
               },
               "description": "The query parameters of the query."
             },

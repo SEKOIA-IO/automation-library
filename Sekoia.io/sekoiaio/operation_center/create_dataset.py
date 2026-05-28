@@ -100,6 +100,6 @@ class CreateDataset(BaseSolAction):
         # Encode the dataset string to bytes for multipart upload
         encoded_dataset = self.encode_dataset(arguments.dataset)
 
-        # Create the dataset, the validation is build-in in the API and will return an error if the dataset is not valid
+        # Create the dataset, the validation is built-in in the API and will return an error if the dataset is not valid
         self.create_dataset(encoded_dataset, arguments.name)
         return CreateDatasetResults()
