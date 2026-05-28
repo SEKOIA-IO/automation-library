@@ -60,23 +60,26 @@ class SynchronizeAssetsWithAD(Action):
         self, search_query: str, also_search_in_detection_properties: bool = False
     ) -> Optional[Any]:
         """Wrap get_assets with consistent error checking."""
+        previous_error_message = self.error_message
         result = self.get_assets(
             search_query=search_query,
             also_search_in_detection_properties=also_search_in_detection_properties,
         )
-        if result is None or self.error_message:
+        if result is None or self.error_message != previous_error_message:
             return None
         return result
 
     def _safe_merge_assets(self, destination: str, sources: List[str]) -> bool:
         """Wrap merge_assets with error checking. Returns True if successful."""
+        previous_error_message = self.error_message
         self.merge_assets(destination=destination, sources=sources)
-        return not bool(self.error_message)
+        return self.error_message == previous_error_message
 
     def _safe_put_request(self, endpoint: str, json_data: str) -> bool:
         """Wrap put_request with error checking. Returns True if successful."""
+        previous_error_message = self.error_message
         self.put_request(endpoint=endpoint, json_data=json_data)
-        return not bool(self.error_message)
+        return self.error_message == previous_error_message
 
     def get_assets(self, search_query: str, also_search_in_detection_properties: bool = False) -> Any:
         params = {"search": search_query}
