@@ -579,3 +579,13 @@ class TestSynchronizeAssetsWithAD:
         assert action_instance.error_message is not None
         assert "Expected JSON response for GET assets" in action_instance.error_message
         assert "Gateway Timeout" in action_instance.error_message
+
+    def test_missing_asset_name_returns_error(self, requests_mock, action_instance, arguments):
+        """Test error when asset_name_field value is missing in user_ad_data."""
+        arguments["user_ad_data"] = {"email": "test@example.com"}  # Missing 'username'
+
+        resp = action_instance.run(arguments)
+
+        assert resp == {"data": []}
+        assert action_instance.error_message is not None
+        assert "does not contain the asset_name_field" in action_instance.error_message
