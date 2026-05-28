@@ -36,7 +36,7 @@
         "title": "To file",
         "type": "boolean",
         "description": "Whether the query result should be saved in a file or sent directly.",
-        default: false
+        "default": false
       }
     },
     "required": [
