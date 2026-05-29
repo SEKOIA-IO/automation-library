@@ -60,7 +60,7 @@ def sample_defender_machine():
         lastExternalIpAddress="167.220.196.71",
         osBuild=18209,
         healthStatus="Active",
-        rbacGroupId="140",
+        rbacGroupId=140,
         rbacGroupName="The-A-Team",
         riskScore="Low",
         exposureLevel="Medium",
