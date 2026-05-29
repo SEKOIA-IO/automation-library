@@ -18,16 +18,21 @@ class LocateRiskScanReportConnector(Connector):
     module: LocateRiskModule
     configuration: LocateRiskScanReportConnectorConfiguration
 
+    def _build_report_url(self) -> str:
+        """Build the CSV report URL for the configured scan."""
+        return f"{self.module.configuration.report_url}/{self.module.configuration.scan_id}/csv"
+
     def run(self):
         self.log(message="Start fetching events", level="info")
 
         while self.running:
             self.log("Polling LocateRisk API...", level="info")
 
+            had_error = False
             batch_of_events = []
             try:
                 response = requests.get(
-                    f"{self.module.configuration.report_url}/{self.module.configuration.scan_id}/csv",
+                    self._build_report_url(),
                     headers={"Authorization": f"Bearer {self.module.configuration.api_key}"},
                     timeout=60,
                 )
@@ -52,14 +57,16 @@ class LocateRiskScanReportConnector(Connector):
                     batch_of_events.append(json.dumps(row))
 
             except requests.RequestException as error:
+                had_error = True
                 self.log_exception(error, message="Error fetching data from LocateRisk API")
             except csv.Error as error:
+                had_error = True
                 self.log_exception(error, message="Error parsing CSV from LocateRisk API")
 
             if batch_of_events:
                 self.log(message=f"{len(batch_of_events)} events collected", level="info")
                 self.push_events_to_intakes(events=batch_of_events)
-            else:
+            elif not had_error:
                 self.log("No events to push this cycle", level="info")
 
             time.sleep(self.configuration.polling_interval * 60)

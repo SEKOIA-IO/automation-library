@@ -12,5 +12,7 @@ def data_storage():
 
     yield constants.DATA_STORAGE
 
-    rmtree(constants.DATA_STORAGE)
-    constants.DATA_STORAGE = original_storage
+    try:
+        rmtree(constants.DATA_STORAGE)
+    finally:
+        constants.DATA_STORAGE = original_storage

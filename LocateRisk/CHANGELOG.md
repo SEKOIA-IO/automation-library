@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Declared connector secrets only in the module manifest (removed the redundant Pydantic `json_schema_extra` flag).
 - Aligned `pyproject.toml` project version with the module manifest version.
 - Added a description for the `report_url` module configuration field.
+- Extracted the report CSV URL construction into a `_build_report_url()` helper for a single source of truth.
+- Guarded the "No events to push this cycle" log behind an error flag so failed polling cycles no longer log as empty successful ones.
+- Consolidated dev dependencies into a single `[dependency-groups]` table in `pyproject.toml` (removed the duplicate `[project.dependency-group.dev]` block).
 
 ### Removed
 
