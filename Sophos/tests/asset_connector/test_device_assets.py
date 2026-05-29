@@ -28,7 +28,6 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
 )
 
-
 COMPUTER_ENDPOINT = SophosEndpoint(
     id="aaaaaaaa-0000-0000-0000-000000000001",
     type="computer",
@@ -641,10 +640,7 @@ class TestLoadSentIds:
         # Override cap to a small value for the test
         connector.MAX_CACHE_SIZE = 3
         recent_base = datetime.now(tz=timezone.utc)
-        entries = {
-            f"id-{i}": (recent_base - timedelta(minutes=i)).isoformat()
-            for i in range(10)
-        }
+        entries = {f"id-{i}": (recent_base - timedelta(minutes=i)).isoformat() for i in range(10)}
         with connector.context as cache:
             cache["sent_ids"] = entries
 
@@ -720,4 +716,3 @@ class TestGetAssetsDeduplication:
             sent = cache.get("sent_ids", {})
         assert "aaaaaaaa-0000-0000-0000-000000000001" in sent
         assert "aaaaaaaa-0000-0000-0000-000000000002" in sent
-
