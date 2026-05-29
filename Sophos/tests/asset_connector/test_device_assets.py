@@ -2,6 +2,7 @@
 Unit tests for SophosDeviceAssetConnector (asset_connector/device_assets.py).
 """
 
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -27,9 +28,6 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
 )
 
-# ---------------------------------------------------------------------------
-# Sample API response payloads (anonymised)
-# ---------------------------------------------------------------------------
 
 COMPUTER_ENDPOINT = SophosEndpoint(
     id="aaaaaaaa-0000-0000-0000-000000000001",
@@ -593,3 +591,133 @@ class TestFullHttpRoundTrip:
         hostnames = {a.device.hostname for a in assets}
         assert "test-computer-01" in hostnames
         assert "test-server-01" in hostnames
+
+
+def _make_response(connector, items, next_key=None):
+    """Helper to build a mocked API response."""
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status = MagicMock()
+    pages = {"size": 50, "maxSize": 500}
+    if next_key:
+        pages["nextKey"] = next_key
+    mock_resp.json.return_value = {"items": items, "pages": pages}
+    connector.client = MagicMock()
+    connector.client.list_endpoints.return_value = mock_resp
+    return mock_resp
+
+
+class TestLoadSentIds:
+    def test_empty_context_gives_empty_cache(self, connector):
+        connector._load_sent_ids()
+        assert connector._sent_ids == {}
+
+    def test_loads_recent_ids(self, connector):
+        recent = datetime.now(tz=timezone.utc).isoformat()
+        with connector.context as cache:
+            cache["sent_ids"] = {"id-1": recent, "id-2": recent}
+
+        connector._load_sent_ids()
+        assert "id-1" in connector._sent_ids
+        assert "id-2" in connector._sent_ids
+
+    def test_prunes_old_ids(self, connector):
+        old = (datetime.now(tz=timezone.utc) - timedelta(days=10)).isoformat()
+        recent = datetime.now(tz=timezone.utc).isoformat()
+        with connector.context as cache:
+            cache["sent_ids"] = {"old-id": old, "new-id": recent}
+
+        connector._load_sent_ids()
+        assert "old-id" not in connector._sent_ids
+        assert "new-id" in connector._sent_ids
+
+    def test_prunes_unparseable_entries(self, connector):
+        with connector.context as cache:
+            cache["sent_ids"] = {"bad-id": "not-a-date"}
+
+        connector._load_sent_ids()
+        assert "bad-id" not in connector._sent_ids
+
+    def test_enforces_max_cache_size(self, connector):
+        # Override cap to a small value for the test
+        connector.MAX_CACHE_SIZE = 3
+        recent_base = datetime.now(tz=timezone.utc)
+        entries = {
+            f"id-{i}": (recent_base - timedelta(minutes=i)).isoformat()
+            for i in range(10)
+        }
+        with connector.context as cache:
+            cache["sent_ids"] = entries
+
+        connector._load_sent_ids()
+        assert len(connector._sent_ids) == 3
+        # Most recent 3 entries should be kept (smallest i = most recent)
+        assert "id-0" in connector._sent_ids
+        assert "id-1" in connector._sent_ids
+        assert "id-2" in connector._sent_ids
+
+
+class TestSaveSentIds:
+    def test_persists_to_context(self, connector):
+        recent = datetime.now(tz=timezone.utc).isoformat()
+        connector._sent_ids = {"id-1": recent}
+        connector._save_sent_ids()
+
+        with connector.context as cache:
+            assert cache.get("sent_ids", {}).get("id-1") == recent
+
+
+class TestGetAssetsDeduplication:
+    def test_deduplicates_already_sent_ids(self, connector):
+        """Second call should not yield already-sent devices."""
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT])
+
+        # First run — both devices should be yielded
+        assets_run1 = list(connector.get_assets())
+        assert len(assets_run1) == 2
+
+        # Reset mock to return the same endpoints
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT])
+
+        # Second run — both IDs are in cache, nothing should be yielded
+        assets_run2 = list(connector.get_assets())
+        assert len(assets_run2) == 0
+
+    def test_new_device_sent_on_second_run(self, connector):
+        """A brand-new device (not in cache) must be yielded on the second run."""
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT])
+        list(connector.get_assets())  # first run: seeds the cache
+
+        new_device = {
+            **SERVER_ENDPOINT_DICT,
+            "id": "aaaaaaaa-ffff-ffff-ffff-000000000099",
+            "hostname": "new-server-99",
+        }
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, new_device])
+        assets_run2 = list(connector.get_assets())
+
+        assert len(assets_run2) == 1
+        assert assets_run2[0].device.hostname == "new-server-99"
+
+    def test_cache_saved_even_on_exception(self, connector):
+        """sent_ids must be persisted even when an exception is raised mid-collection."""
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.side_effect = Exception("HTTP 503")
+        connector.client = MagicMock()
+        connector.client.list_endpoints.return_value = mock_resp
+
+        with pytest.raises(Exception, match="HTTP 503"):
+            list(connector.get_assets())
+
+        # Cache file must still have been written (even if empty)
+        with connector.context as cache:
+            assert "sent_ids" in cache
+
+    def test_ids_added_to_cache_after_run(self, connector):
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT])
+        list(connector.get_assets())
+
+        with connector.context as cache:
+            sent = cache.get("sent_ids", {})
+        assert "aaaaaaaa-0000-0000-0000-000000000001" in sent
+        assert "aaaaaaaa-0000-0000-0000-000000000002" in sent
+

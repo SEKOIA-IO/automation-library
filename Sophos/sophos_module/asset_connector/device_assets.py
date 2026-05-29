@@ -1,5 +1,5 @@
 from collections.abc import Generator
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from typing import Any
 
@@ -41,6 +41,10 @@ class SophosDeviceAssetConnector(AssetConnector):
     OCSF_VERSION: str = "1.6.0"
     PAGE_SIZE: int = 500
 
+    # Cache deduplication constants
+    CACHE_MAX_AGE_DAYS: int = 7
+    MAX_CACHE_SIZE: int = 100_000
+
     # OCSF Constants
     ACTIVITY_ID: int = 2
     ACTIVITY_NAME: str = "Collect"
@@ -55,11 +59,47 @@ class SophosDeviceAssetConnector(AssetConnector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._latest_time: str | None = None
+        self._sent_ids: dict[str, str] = {}
 
     @property
     def last_seen_cursor(self) -> str | None:
         with self.context as cache:
             return cache.get("last_seen_cursor") or None
+
+    def _load_sent_ids(self) -> None:
+        """Load already-sent IDs from persistent context, pruning stale entries."""
+        with self.context as cache:
+            raw: dict[str, str] = cache.get("sent_ids", {})
+
+        cutoff: datetime = datetime.now(tz=timezone.utc) - timedelta(days=self.CACHE_MAX_AGE_DAYS)
+
+        pruned: dict[str, str] = {}
+        for device_id, last_seen in raw.items():
+            try:
+                ts = isoparse(last_seen)
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+                if ts >= cutoff:
+                    pruned[device_id] = last_seen
+            except (ValueError, TypeError):
+                pass
+
+        if len(pruned) > self.MAX_CACHE_SIZE:
+            pruned = dict(
+                sorted(pruned.items(), key=lambda kv: kv[1], reverse=True)[: self.MAX_CACHE_SIZE]
+            )
+
+        self._sent_ids = pruned
+        self.log(
+            f"Dedup cache loaded – entries={len(self._sent_ids)} "
+            f"(evicted={len(raw) - len(self._sent_ids)})",
+            level="debug",
+        )
+
+    def _save_sent_ids(self) -> None:
+        with self.context as cache:
+            cache["sent_ids"] = self._sent_ids
+        self.log(f"Dedup cache saved – entries={len(self._sent_ids)}", level="debug")
 
     @cached_property
     def client(self) -> SophosApiClient:
@@ -340,19 +380,34 @@ class SophosDeviceAssetConnector(AssetConnector):
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
         """Main entry point: yield all Sophos device assets as OCSF models."""
         self.log("Starting Sophos device asset collection", level="info")
+        self._load_sent_ids()
         total = 0
         skipped = 0
+        deduplicated = 0
 
         try:
             for endpoint in self._iter_endpoints():
+                if endpoint.id and endpoint.id in self._sent_ids:
+                    deduplicated += 1
+                    continue
+
                 mapped = self.map_device_fields(endpoint)
                 if mapped is not None:
                     total += 1
+                    if endpoint.id:
+                        # Record the time we sent this device (TTL clock starts now)
+                        self._sent_ids[endpoint.id] = datetime.now(tz=timezone.utc).isoformat()
                     yield mapped
                 else:
                     skipped += 1
         except Exception as exc:
-            self.log(f"Asset collection failed – collected={total}, skipped={skipped}, error={exc}", level="error")
+            self.log(
+                f"Asset collection failed – collected={total}, skipped={skipped}, "
+                f"deduplicated={deduplicated}, error={exc}",
+                level="error",
+            )
             raise
+        finally:
+            self._save_sent_ids()
 
         self.log(f"Sophos device asset collection complete – total={total}, skipped={skipped}", level="info")
