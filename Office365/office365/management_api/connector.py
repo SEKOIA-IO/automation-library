@@ -118,37 +118,37 @@ class Office365Connector(AsyncConnector):
 
         await self.push_data_to_intakes(events=events)
 
-    async def activate_subscriptions(self):
+    async def _activate_subscriptions(self, recover: bool = False):
         """Activates an Office 365 subscriptions"""
         try:
             await self.client.activate_subscriptions()
         except SessionClosedError as exp:
-            if not self.running:
-                self.log(
-                    message="Skipped Office365 subscription activation: client session closed during shutdown.",
-                    level="info",
-                )
-                return
-            # Unexpected closure while still running: rebuild the client and try once more.
-            self.log_exception(
-                exception=exp,
-                message=(
-                    "Office365 client session was closed unexpectedly during subscription activation; "
-                    "rebuilding client."
-                ),
-            )
-            self._reset_client()
-            try:
-                await self.client.activate_subscriptions()
-            except SessionClosedError as retry_exp:
+            if not recover:
                 self.log_exception(
-                    exception=retry_exp,
+                    exception=exp,
                     message=(
                         "Office365 client session was closed again after recovery; "
                         "skipping subscription activation this run."
                     ),
                 )
                 return
+            else:
+                if not self.running:
+                    self.log(
+                        message="Skipped Office365 subscription activation: client session closed during shutdown.",
+                        level="info",
+                    )
+                    return
+                # Unexpected closure while still running: rebuild the client and try once more.
+                self.log_exception(
+                    exception=exp,
+                    message=(
+                        "Office365 client session was closed unexpectedly during subscription activation; "
+                        "rebuilding client."
+                    ),
+                )
+                self._reset_client()
+                await self._activate_subscriptions(False)
         except FailedToActivateO365Subscription as exp:
             self.log_exception(
                 exception=exp,
@@ -158,6 +158,10 @@ class Office365Connector(AsyncConnector):
                 message="Failed to activate Office365 subscriptions. The connector will produce no events.",
                 level="critical",
             )
+
+    async def activate_subscriptions(self):
+        """Activates an Office 365 subscriptions"""
+        await self._activate_subscriptions(True)
 
     async def forward_next_batches(self, checkpoint: Checkpoint):
         start_pull_date = checkpoint.offset
