@@ -330,9 +330,9 @@ class ExecuteAQuery(BaseSolAction):
         )
         self.log(f"Query run '{run_uuid}' has completed.", run_uuid=run_uuid)
 
-    def save_to_file(self, result: str, format: str) -> str:
-        filename = f"query_output-{uuid4()}.{format}"
-        with self._data_path.joinpath(filename).open("w") as f:
+    def save_to_file(self, result: str, file_format: str) -> str:
+        filename = f"query_output-{uuid4()}.{file_format}"
+        with self._data_path.joinpath(filename).open("w", encoding="utf-8") as f:
             if isinstance(result, str):
                 f.write(result)
         return filename
