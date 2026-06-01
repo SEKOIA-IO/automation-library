@@ -209,11 +209,11 @@ class Office365Connector(AsyncConnector):
                     )
                     return
                 self.log_exception(
-                    exp,
                     message="Office365 client session was closed unexpectedly; rebuilding client and continuing.",
                 )
                 self._reset_client()
-                await asyncio.sleep(self._frequency)
+                if self.running:
+                    await asyncio.sleep(self._frequency)
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
                 # Continue the loop to retry after logging
