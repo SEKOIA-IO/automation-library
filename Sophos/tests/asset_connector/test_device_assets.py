@@ -718,82 +718,96 @@ class TestComputeFingerprint:
     def test_last_seen_at_change_does_not_change_fingerprint(self):
         ep_a = COMPUTER_ENDPOINT.model_copy(update={"lastSeenAt": "2026-01-01T00:00:00.000Z"})
         ep_b = COMPUTER_ENDPOINT.model_copy(update={"lastSeenAt": "2026-06-01T12:00:00.000Z"})
-        assert SophosDeviceAssetConnector._compute_fingerprint(ep_a) == \
-               SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) == SophosDeviceAssetConnector._compute_fingerprint(ep_b)
 
     def test_registered_at_change_does_not_change_fingerprint(self):
         """registeredAt is excluded; changing it must not affect the fingerprint."""
         ep_a = COMPUTER_ENDPOINT.model_copy(update={"registeredAt": "2023-01-01T00:00:00.000Z"})
         ep_b = COMPUTER_ENDPOINT.model_copy(update={"registeredAt": "2025-01-01T00:00:00.000Z"})
-        assert SophosDeviceAssetConnector._compute_fingerprint(ep_a) == \
-               SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) == SophosDeviceAssetConnector._compute_fingerprint(ep_b)
 
     def test_hostname_change_changes_fingerprint(self):
         ep_a = COMPUTER_ENDPOINT.model_copy(update={"hostname": "host-a"})
         ep_b = COMPUTER_ENDPOINT.model_copy(update={"hostname": "host-b"})
-        assert SophosDeviceAssetConnector._compute_fingerprint(ep_a) != \
-               SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_b)
 
     def test_health_change_changes_fingerprint(self):
         ep_good = COMPUTER_ENDPOINT.model_copy(update={"health": SophosHealth(overall="good")})
-        ep_bad  = COMPUTER_ENDPOINT.model_copy(update={"health": SophosHealth(overall="bad")})
-        assert SophosDeviceAssetConnector._compute_fingerprint(ep_good) != \
-               SophosDeviceAssetConnector._compute_fingerprint(ep_bad)
+        ep_bad = COMPUTER_ENDPOINT.model_copy(update={"health": SophosHealth(overall="bad")})
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_good
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_bad)
 
     def test_ip_change_changes_fingerprint(self):
         ep_a = COMPUTER_ENDPOINT.model_copy(update={"ipv4Addresses": ["192.0.2.1"]})
         ep_b = COMPUTER_ENDPOINT.model_copy(update={"ipv4Addresses": ["10.0.0.1"]})
-        assert SophosDeviceAssetConnector._compute_fingerprint(ep_a) != \
-               SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_b)
 
     def test_ip_order_does_not_matter(self):
         ep_a = COMPUTER_ENDPOINT.model_copy(update={"ipv4Addresses": ["10.0.0.1", "10.0.0.2"]})
         ep_b = COMPUTER_ENDPOINT.model_copy(update={"ipv4Addresses": ["10.0.0.2", "10.0.0.1"]})
-        assert SophosDeviceAssetConnector._compute_fingerprint(ep_a) == \
-               SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) == SophosDeviceAssetConnector._compute_fingerprint(ep_b)
 
     def test_mac_order_does_not_matter(self):
         ep_a = COMPUTER_ENDPOINT.model_copy(update={"macAddresses": ["AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"]})
         ep_b = COMPUTER_ENDPOINT.model_copy(update={"macAddresses": ["AA:BB:CC:DD:EE:02", "AA:BB:CC:DD:EE:01"]})
-        assert SophosDeviceAssetConnector._compute_fingerprint(ep_a) == \
-               SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) == SophosDeviceAssetConnector._compute_fingerprint(ep_b)
 
     def test_tamper_protection_change_changes_fingerprint(self):
-        ep_on  = COMPUTER_ENDPOINT.model_copy(update={"tamperProtectionEnabled": True})
+        ep_on = COMPUTER_ENDPOINT.model_copy(update={"tamperProtectionEnabled": True})
         ep_off = COMPUTER_ENDPOINT.model_copy(update={"tamperProtectionEnabled": False})
-        assert SophosDeviceAssetConnector._compute_fingerprint(ep_on) != \
-               SophosDeviceAssetConnector._compute_fingerprint(ep_off)
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_on
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_off)
 
     def test_isolation_status_change_changes_fingerprint(self):
-        ep_free     = COMPUTER_ENDPOINT.model_copy(update={"isolation": SophosIsolation(status="notIsolated")})
+        ep_free = COMPUTER_ENDPOINT.model_copy(update={"isolation": SophosIsolation(status="notIsolated")})
         ep_isolated = COMPUTER_ENDPOINT.model_copy(update={"isolation": SophosIsolation(status="isolated")})
-        assert SophosDeviceAssetConnector._compute_fingerprint(ep_free) != \
-               SophosDeviceAssetConnector._compute_fingerprint(ep_isolated)
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_free
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_isolated)
 
     def test_group_change_changes_fingerprint(self):
         from sophos_module.asset_connector.model import SophosGroup
+
         ep_a = COMPUTER_ENDPOINT.model_copy(update={"group": SophosGroup(id="g1", name="Group A")})
         ep_b = COMPUTER_ENDPOINT.model_copy(update={"group": SophosGroup(id="g2", name="Group B")})
-        assert SophosDeviceAssetConnector._compute_fingerprint(ep_a) != \
-               SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_b)
 
     def test_associated_person_change_changes_fingerprint(self):
         ep_a = COMPUTER_ENDPOINT.model_copy(update={"associatedPerson": SophosAssociatedPerson(name="alice")})
         ep_b = COMPUTER_ENDPOINT.model_copy(update={"associatedPerson": SophosAssociatedPerson(name="bob")})
-        assert SophosDeviceAssetConnector._compute_fingerprint(ep_a) != \
-               SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_b)
 
     def test_online_change_changes_fingerprint(self):
-        ep_on  = COMPUTER_ENDPOINT.model_copy(update={"online": True})
+        ep_on = COMPUTER_ENDPOINT.model_copy(update={"online": True})
         ep_off = COMPUTER_ENDPOINT.model_copy(update={"online": False})
-        assert SophosDeviceAssetConnector._compute_fingerprint(ep_on) != \
-               SophosDeviceAssetConnector._compute_fingerprint(ep_off)
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_on
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_off)
 
     def test_os_change_changes_fingerprint(self):
         ep_a = COMPUTER_ENDPOINT.model_copy(update={"os": SophosOS(platform="windows", name="Windows 10")})
         ep_b = COMPUTER_ENDPOINT.model_copy(update={"os": SophosOS(platform="windows", name="Windows 11")})
-        assert SophosDeviceAssetConnector._compute_fingerprint(ep_a) != \
-               SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_b)
 
     def test_none_optional_fields_do_not_crash(self):
         """Fingerprint must work cleanly when optional fields are absent."""
@@ -810,6 +824,7 @@ class TestComputeFingerprint:
 class TestGetGroups:
     def test_valid_group_returned(self, connector):
         from sophos_module.asset_connector.model import SophosGroup
+
         ep = COMPUTER_ENDPOINT.model_copy(update={"group": SophosGroup(id="grp-1", name="Finance")})
         groups = connector._get_groups(ep)
         assert groups is not None
@@ -823,12 +838,14 @@ class TestGetGroups:
 
     def test_group_without_name_returns_none(self, connector):
         from sophos_module.asset_connector.model import SophosGroup
+
         ep = COMPUTER_ENDPOINT.model_copy(update={"group": SophosGroup(id="g1", name=None)})
         assert connector._get_groups(ep) is None
 
     def test_group_reflected_in_mapped_model(self, connector):
         """Group must appear in the OCSF model device.groups field."""
         from sophos_module.asset_connector.model import SophosGroup
+
         ep = COMPUTER_ENDPOINT.model_copy(update={"group": SophosGroup(id="grp-42", name="IT-Ops")})
         result = connector.map_device_fields(ep)
         assert result is not None
@@ -839,7 +856,8 @@ class TestGetGroups:
 class TestIsTrusted:
     def test_good_health_and_tamper_enabled_is_trusted(self):
         ep = SophosEndpoint(
-            id="x", hostname="h",
+            id="x",
+            hostname="h",
             health=SophosHealth(overall="good"),
             tamperProtectionEnabled=True,
             isolation=SophosIsolation(status="notIsolated"),
@@ -848,7 +866,8 @@ class TestIsTrusted:
 
     def test_isolated_is_not_trusted(self):
         ep = SophosEndpoint(
-            id="x", hostname="h",
+            id="x",
+            hostname="h",
             health=SophosHealth(overall="good"),
             tamperProtectionEnabled=True,
             isolation=SophosIsolation(status="isolated"),
@@ -869,7 +888,8 @@ class TestIsTrusted:
 
     def test_good_health_but_tamper_disabled_returns_none(self):
         ep = SophosEndpoint(
-            id="x", hostname="h",
+            id="x",
+            hostname="h",
             health=SophosHealth(overall="good"),
             tamperProtectionEnabled=False,
         )
@@ -992,9 +1012,7 @@ class TestGetAssetsDeduplication:
         list(connector.get_assets())
 
         # Manually expire the cache entry by backdating its cached_at
-        expired_ts = (
-            datetime.now(tz=timezone.utc) - timedelta(days=connector.CACHE_MAX_AGE_DAYS + 1)
-        ).isoformat()
+        expired_ts = (datetime.now(tz=timezone.utc) - timedelta(days=connector.CACHE_MAX_AGE_DAYS + 1)).isoformat()
         with connector.context as cache:
             cache["sent_ids"][COMPUTER_ENDPOINT_DICT["id"]]["cached_at"] = expired_ts
 
@@ -1067,4 +1085,3 @@ class TestGetAssetsDeduplication:
             new_fp = cache["sent_ids"][COMPUTER_ENDPOINT_DICT["id"]]["fingerprint"]
 
         assert new_fp != original_fp
-

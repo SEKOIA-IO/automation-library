@@ -116,15 +116,12 @@ class SophosDeviceAssetConnector(AssetConnector):
 
         if len(pruned) > self.MAX_CACHE_SIZE:
             pruned = dict(
-                sorted(pruned.items(), key=lambda kv: kv[1].get("cached_at", ""), reverse=True)[
-                    : self.MAX_CACHE_SIZE
-                ]
+                sorted(pruned.items(), key=lambda kv: kv[1].get("cached_at", ""), reverse=True)[: self.MAX_CACHE_SIZE]
             )
 
         self._sent_ids = pruned
         self.log(
-            f"Dedup cache loaded – entries={len(self._sent_ids)} "
-            f"(evicted={len(raw) - len(self._sent_ids)})",
+            f"Dedup cache loaded – entries={len(self._sent_ids)} " f"(evicted={len(raw) - len(self._sent_ids)})",
             level="debug",
         )
 
