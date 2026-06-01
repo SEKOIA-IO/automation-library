@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-01 - 1.1.0
+
+### Changes
+
+- Move to python 3.14
+- Move project management to uv
+- upgrade dependencies
+- add mise-en-place
+- Optimize dockerfile
+
 ## 2025-09-16 - 1.0.2
 
 ### Fixed
