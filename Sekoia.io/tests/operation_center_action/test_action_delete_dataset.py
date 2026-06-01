@@ -3,11 +3,7 @@ from uuid import UUID, uuid4
 import pytest
 import requests
 
-from sekoiaio.operation_center.delete_dataset import (
-    DeleteDataset,
-    DeleteDatasetArguments,
-    DeleteDatasetResults,
-)
+from sekoiaio.operation_center.delete_dataset import DeleteDataset, DeleteDatasetArguments
 
 BASE_URL = "https://fake.url/"
 API_KEY = "fake_api_key"

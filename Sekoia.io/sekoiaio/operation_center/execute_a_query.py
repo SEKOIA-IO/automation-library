@@ -79,7 +79,7 @@ class ExecuteAQuery(BaseSolAction):
     )
     def trigger_query_execution(
         self, query_uuid: UUID, query_definition: str, query_parameters: dict | None
-    ) -> UUID:
+    ) -> str:
         """Trigger the asynchronous execution of a SOL query and return the run UUID.
 
         :param query_uuid: UUID of the query to execute
