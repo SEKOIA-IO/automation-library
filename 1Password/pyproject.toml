@@ -1,13 +1,37 @@
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.11.13,<0.12.0"]
+build-backend = "uv_build"
 
-[tool.poetry]
-name = "Automation module for 1Password"
+[project]
+name = "Automation_module_for_1Password"
 version = "0.0"
 description = ""
 authors = []
-package-mode = false
+requires-python = ">=3.11,<3.15"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "sekoia-automation-sdk>=1.23.0,<2",
+    "requests-ratelimiter>=0.7.0,<0.8",
+    "orjson>=3.10.7,<4",
+    "python-dateutil>=2.9.0.post0,<3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "requests",
+    "requests-mock",
+]
+
+[tool.uv]
+package = false
 
 [tool.black]
 line-length = 119
@@ -17,19 +41,6 @@ include = "\\.pyi?$"
 [tool.isort]
 profile = "black"
 line_length = 119
-
-[tool.poetry.dependencies]
-python = ">=3.11,<3.15"
-sekoia-automation-sdk = "^1.23.0"
-requests-ratelimiter = "^0.7.0"
-orjson = "^3.10.7"
-python-dateutil = "^2.9.0.post0"
-
-[tool.poetry.dev-dependencies]
-pytest = "*"
-pytest-cov = "*"
-requests = "*"
-requests-mock = "*"
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]

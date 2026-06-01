@@ -2,11 +2,11 @@ FROM python:3.14
 
 WORKDIR /app
 
-RUN pip install poetry
+RUN pip install uv
 
 # Install dependencies
-COPY poetry.lock pyproject.toml /app/
-RUN poetry config virtualenvs.create false && poetry install --only main
+COPY uv.lock pyproject.toml /app/
+RUN uv sync --frozen --no-dev --compile-bytecode
 
 COPY . .
 
