@@ -1,3 +1,5 @@
+import hashlib
+import json
 from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
@@ -59,41 +61,75 @@ class SophosDeviceAssetConnector(AssetConnector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._latest_time: str | None = None
-        self._sent_ids: dict[str, str] = {}
+        self._sent_ids: dict[str, dict[str, str]] = {}
 
     @property
     def last_seen_cursor(self) -> str | None:
         with self.context as cache:
             return cache.get("last_seen_cursor") or None
 
+    @staticmethod
+    def _compute_fingerprint(endpoint: "SophosEndpoint") -> str:
+        """
+        Compute a SHA-256 fingerprint of inventory-significant fields.
+        Fields that change without a real inventory change (lastSeenAt, registeredAt)
+        are intentionally excluded so that heartbeat-only updates are suppressed.
+        """
+        relevant: dict[str, Any] = {
+            "hostname": endpoint.hostname,
+            "type": endpoint.type,
+            "os": endpoint.os.model_dump() if endpoint.os else None,
+            "ipv4Addresses": sorted(endpoint.ipv4Addresses),
+            "ipv6Addresses": sorted(endpoint.ipv6Addresses),
+            "macAddresses": sorted(endpoint.macAddresses),
+            "health_overall": endpoint.health.overall if endpoint.health else None,
+            "tamperProtectionEnabled": endpoint.tamperProtectionEnabled,
+            "tenant_id": endpoint.tenant.id if endpoint.tenant else None,
+            "isolation_status": endpoint.isolation.status if endpoint.isolation else None,
+            "isolation_adminIsolated": endpoint.isolation.adminIsolated if endpoint.isolation else None,
+            "group_id": endpoint.group.id if endpoint.group else None,
+            "group_name": endpoint.group.name if endpoint.group else None,
+            "cloud_provider": endpoint.cloud.provider if endpoint.cloud else None,
+            "associatedPerson_name": endpoint.associatedPerson.name if endpoint.associatedPerson else None,
+            "online": endpoint.online,
+        }
+        blob = json.dumps(relevant, sort_keys=True, default=str).encode()
+        return hashlib.sha256(blob).hexdigest()
+
     def _load_sent_ids(self) -> None:
-        """Load already-sent IDs from persistent context, pruning stale entries."""
+        """Load the fingerprint cache from persistent context, pruning stale entries."""
         with self.context as cache:
-            raw: dict[str, str] = cache.get("sent_ids", {})
+            raw: dict[str, dict[str, str]] = cache.get("sent_ids", {})
 
         cutoff: datetime = datetime.now(tz=timezone.utc) - timedelta(days=self.CACHE_MAX_AGE_DAYS)
 
-        pruned: dict[str, str] = {}
-        for device_id, last_seen in raw.items():
+        pruned: dict[str, dict[str, str]] = {}
+        for device_id, entry in raw.items():
             try:
-                ts = isoparse(last_seen)
+                ts = isoparse(entry.get("cached_at", ""))
                 if ts.tzinfo is None:
                     ts = ts.replace(tzinfo=timezone.utc)
                 if ts >= cutoff:
-                    pruned[device_id] = last_seen
+                    pruned[device_id] = entry
             except (ValueError, TypeError):
                 pass
 
         if len(pruned) > self.MAX_CACHE_SIZE:
-            pruned = dict(sorted(pruned.items(), key=lambda kv: kv[1], reverse=True)[: self.MAX_CACHE_SIZE])
+            pruned = dict(
+                sorted(pruned.items(), key=lambda kv: kv[1].get("cached_at", ""), reverse=True)[
+                    : self.MAX_CACHE_SIZE
+                ]
+            )
 
         self._sent_ids = pruned
         self.log(
-            f"Dedup cache loaded – entries={len(self._sent_ids)} " f"(evicted={len(raw) - len(self._sent_ids)})",
+            f"Dedup cache loaded – entries={len(self._sent_ids)} "
+            f"(evicted={len(raw) - len(self._sent_ids)})",
             level="debug",
         )
 
     def _save_sent_ids(self) -> None:
+        """Persist the fingerprint cache back to context.json."""
         with self.context as cache:
             cache["sent_ids"] = self._sent_ids
         self.log(f"Dedup cache saved – entries={len(self._sent_ids)}", level="debug")
@@ -385,15 +421,20 @@ class SophosDeviceAssetConnector(AssetConnector):
         try:
             for endpoint in self._iter_endpoints():
                 if endpoint.id and endpoint.id in self._sent_ids:
-                    deduplicated += 1
-                    continue
+                    current_fp = self._compute_fingerprint(endpoint)
+                    if current_fp == self._sent_ids[endpoint.id]["fingerprint"]:
+                        # Inventory unchanged (e.g. only lastSeenAt differs) → skip
+                        deduplicated += 1
+                        continue
 
                 mapped = self.map_device_fields(endpoint)
                 if mapped is not None:
                     total += 1
                     if endpoint.id:
-                        # Record the time we sent this device (TTL clock starts now)
-                        self._sent_ids[endpoint.id] = datetime.now(tz=timezone.utc).isoformat()
+                        self._sent_ids[endpoint.id] = {
+                            "fingerprint": self._compute_fingerprint(endpoint),
+                            "cached_at": datetime.now(tz=timezone.utc).isoformat(),
+                        }
                     yield mapped
                 else:
                     skipped += 1
@@ -407,4 +448,8 @@ class SophosDeviceAssetConnector(AssetConnector):
         finally:
             self._save_sent_ids()
 
-        self.log(f"Sophos device asset collection complete – total={total}, skipped={skipped}", level="info")
+        self.log(
+            f"Sophos device asset collection complete – "
+            f"total={total}, skipped={skipped}, deduplicated={deduplicated}",
+            level="info",
+        )
