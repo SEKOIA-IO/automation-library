@@ -101,7 +101,7 @@ class SynchronizeAssetsWithAD(Action):
             )
             return
 
-    def run(self, arguments: dict) -> Dict[str, List[Dict[str, Any]]]:
+    def run(self, arguments: dict) -> Optional[Dict[str, List[Dict[str, Any]]]]:
         responses: List[Dict[str, Any]] = []
         asset_conf = arguments["asset_synchronization_configuration"]
         community_uuid = arguments["community_uuid"]
@@ -112,12 +112,12 @@ class SynchronizeAssetsWithAD(Action):
 
         if not self.base_url or not self.api_key:
             self.error("Configuration must include base_url and api_key.")
-            return
+            return None
 
         asset_name_field = asset_conf.get("asset_name_field")
         if not asset_name_field:
             self.error("Configuration must include asset_name_field.")
-            return
+            return None
 
         assert isinstance(asset_name_field, str)
 
@@ -127,13 +127,13 @@ class SynchronizeAssetsWithAD(Action):
             asset_name = single_user_ad_data.get(asset_name_field)
             if not asset_name:
                 self.error(f"User AD data does not contain the asset_name_field: {asset_name_field}.")
-                return
+                return None
 
             assert isinstance(asset_name, str)
 
             asset_name_json = self.get_assets(search_query=asset_name)
             if asset_name_json is None:
-                return
+                return None
 
             detection_properties_config = asset_conf.get("detection_properties", {})
             found_assets = set()
@@ -144,7 +144,7 @@ class SynchronizeAssetsWithAD(Action):
                     if value:
                         assets = self.get_assets(search_query=value, also_search_in_detection_properties=True)
                         if assets is None:
-                            return
+                            return None
                         if assets.get("total", 0) > 0:
                             for asset in assets.get("items", []):
                                 found_assets.add(asset["uuid"])
@@ -192,17 +192,17 @@ class SynchronizeAssetsWithAD(Action):
                         previous_error_message = self.error_message
                         self.merge_assets(destination=destination_asset, sources=sources_to_merge)
                         if self.error_message != previous_error_message:
-                            return
+                            return None
 
                     endpoint = f"v2/asset-management/assets/{destination_asset}"
                     self.log(f"PUT request: {endpoint} and payload asset is {json_payload_asset}")
                     previous_error_message = self.error_message
                     self.put_request(endpoint=endpoint, json_data=json_payload_asset)
                     if self.error_message != previous_error_message:
-                        return
+                        return None
                 else:
                     self.error(f"Unexpected asset name search response: {asset_name_json}")
-                    return
+                    return None
             elif asset_name_json.get("total", 0) == 0:
                 created_asset = True
                 payload_asset["community_uuid"] = community_uuid
@@ -210,22 +210,22 @@ class SynchronizeAssetsWithAD(Action):
                     endpoint="v2/asset-management/assets", json_data=json.dumps(payload_asset)
                 )
                 if create_response is None:
-                    return
+                    return None
 
                 destination_asset = create_response.get("uuid", "")
                 if destination_asset == "":
                     self.error("Asset creation response does not contain uuid.")
-                    return
+                    return None
 
                 sources_to_merge = list(found_assets)
                 if sources_to_merge:
                     previous_error_message = self.error_message
                     self.merge_assets(destination=destination_asset, sources=sources_to_merge)
                     if self.error_message != previous_error_message:
-                        return
+                        return None
             else:
                 self.error(f"Unexpected asset name search response: {asset_name_json}")
-                return
+                return None
 
             response = {
                 "found_assets": list(found_assets),
