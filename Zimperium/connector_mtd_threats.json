@@ -1,0 +1,37 @@
+{
+  "name": "Get last threats from Zimperium MTD",
+  "description": "Fetch new threats from Zimperium MTD",
+  "uuid": "378c5c4e-28ce-57b8-b287-1762a4c38c80",
+  "docker_parameters": "MobileThreatDefenceConnector",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "minimum": 1,
+        "maximum": 2000,
+        "default": 1000
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "title": "Zimperium MTD Threats Configuration",
+    "type": "object"
+  }
+}
