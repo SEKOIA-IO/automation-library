@@ -1,6 +1,6 @@
-from typing import List
+from typing import Any, List
 from posixpath import join as urljoin
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 import requests
 from sekoia_automation.action import Action
 
@@ -21,11 +21,13 @@ class MergeAssets(Action):
     Action to merge assets together
     """
 
-    results_model = Response
-
-    def run(self, arguments: Arguments) -> Response:
-        sources = arguments.sources
-        destination = arguments.destination
+    def run(self, arguments: Any) -> Any:
+        if isinstance(arguments, dict):
+            sources = arguments["sources"]
+            destination = arguments["destination"]
+        else:
+            sources = arguments.sources
+            destination = arguments.destination
         self.log(
             message=f"Merge assets module started. Mergings Asset UUID(s) {sources} into Asset UUID: {destination}",
             level="info",
@@ -44,8 +46,8 @@ class MergeAssets(Action):
             # Will end action as in error
             self.error(f"HTTP Request failed: {api_path} with {response.status_code}")
 
-        return Response(
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            text=response.text,
-        )
+        return {
+            "status_code": response.status_code,
+            "headers": dict(response.headers),
+            "text": response.text,
+        }
