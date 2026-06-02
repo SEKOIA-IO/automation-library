@@ -1,7 +1,7 @@
 {
   "name": "Comment Attempt",
   "description": "Add or update the comment of a specific MokN login attempt",
-  "uuid": "4bf97f3b-3f32-11f1-aba4-83c075f006bf",
+  "uuid": "c1e730f1-0f5e-47c9-84af-cf8c469efd68",
   "slug": "comment_attempt",
   "docker_parameters": "comment_attempt",
   "arguments": {
