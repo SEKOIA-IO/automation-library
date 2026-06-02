@@ -1,0 +1,40 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "MokN",
+    "type": "object",
+    "properties": {
+      "base_url": {
+        "title": "Base Url",
+        "description": "Base URL of the MokN tenant API",
+        "type": "string"
+      },
+      "api_token": {
+        "title": "Api Token",
+        "description": "MokN API key used to authenticate against the tenant API",
+        "type": "string"
+      },
+      "verify_ssl": {
+        "title": "Verify Ssl",
+        "description": "Whether TLS certificates must be validated",
+        "default": true,
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "base_url",
+      "api_token"
+    ],
+    "secrets": [
+      "api_token"
+    ]
+  },
+  "description": "MokN helps detect malicious authentication activity by exposing login attempts captured on bait services.",
+  "name": "MokN - Baits",
+  "slug": "mokn",
+  "categories": [
+    "Threat Intelligence"
+  ],
+  "uuid": "6a0181cc-5771-40ee-8001-21cc1f088921",
+  "version": "1.0.1"
+}
