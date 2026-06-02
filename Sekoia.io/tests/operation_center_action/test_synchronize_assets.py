@@ -575,7 +575,7 @@ class TestSynchronizeAssetsWithAD:
 
         resp = action_instance.run(arguments)
 
-        assert resp == {"data": []}
+        assert resp is None
         assert action_instance.error_message is not None
         assert "Expected JSON response for GET assets" in action_instance.error_message
         assert "Gateway Timeout" in action_instance.error_message
@@ -586,6 +586,6 @@ class TestSynchronizeAssetsWithAD:
 
         resp = action_instance.run(arguments)
 
-        assert resp == {"data": []}
+        assert resp is None
         assert action_instance.error_message is not None
         assert "does not contain the asset_name_field" in action_instance.error_message
