@@ -1,4 +1,5 @@
 import re
+import time
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
 
@@ -12,6 +13,7 @@ from office365.management_api.errors import (
     FailedToGetO365AuditContent,
     FailedToGetO365SubscriptionContents,
     FailedToListO365Subscriptions,
+    SessionClosedError,
 )
 from office365.management_api.office365_client import Office365API
 
@@ -816,3 +818,58 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
 
     # finalize
     await client.close()
+
+
+@pytest.mark.asyncio
+async def test_list_subscriptions_raises_session_closed_after_close(mock_azure_authentication, tenant_id):
+    """list_subscriptions should raise SessionClosedError once the session has been closed."""
+    client = Office365API(
+        client_id="client_id",
+        client_secret="client_secret",
+        tenant_id=tenant_id,
+    )
+
+    await client.close()
+
+    with pytest.raises(SessionClosedError):
+        await client.list_subscriptions()
+
+
+@pytest.mark.asyncio
+async def test_activate_subscriptions_raises_session_closed_after_close(mock_azure_authentication, tenant_id):
+    """activate_subscriptions should raise SessionClosedError once the session has been closed."""
+    client = Office365API(
+        client_id="client_id",
+        client_secret="client_secret",
+        tenant_id=tenant_id,
+    )
+
+    await client.close()
+
+    with pytest.raises(SessionClosedError):
+        await client.activate_subscriptions()
+
+
+@pytest.mark.asyncio
+async def test_get_content_translates_runtime_error(mock_azure_authentication, tenant_id):
+    """If aiohttp raises RuntimeError('Session is closed') mid-request, it should surface as SessionClosedError."""
+    client = Office365API(
+        client_id="client_id",
+        client_secret="client_secret",
+        tenant_id=tenant_id,
+    )
+
+    # Skip token refresh so we exercise the request path, not _authenticate_client.
+    client._token_expiration = time.time() + 3600
+
+    async def raise_session_closed(*args, **kwargs):
+        raise RuntimeError("Session is closed")
+
+    # Simulate the race: the guard sees an open session, but the underlying call fails.
+    client._session.get = raise_session_closed  # type: ignore[method-assign]
+
+    try:
+        with pytest.raises(SessionClosedError):
+            await client.get_content("https://manage.office.com/api/v1.0/foo")
+    finally:
+        await client.close()
