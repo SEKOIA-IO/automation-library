@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-01 - 2.71.7
+
+### Fixed
+
+- Improve AD asset synchronization action response handling for non-JSON API responses.
+- Stop returning partial success payloads when AD asset synchronization encounters an error.
+
 ## 2026-05-07 - 2.71.6
 
 ### Changed
