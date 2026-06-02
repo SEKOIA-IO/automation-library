@@ -24,11 +24,16 @@ class ResetUserPasswordAction(MicrosoftADAction):
         self.log(f"Starting password reset for user: {arguments.username}", level="info")
 
         client = self.client
-        user_query = self.search_userdn_query(
-            arguments.username,
-            arguments.basedn,
-            arguments.email,
-        )
+        original_client = self.client
+        try:
+            self.client = client
+            user_query = self.search_userdn_query(
+                arguments.username,
+                arguments.basedn,
+                arguments.email,
+            )
+        finally:
+            self.client = original_client
 
         if len(user_query) == 0:
             raise Exception(f"User not found: {arguments.username}")
@@ -87,11 +92,16 @@ class EnableUserAction(MicrosoftADAction):
         self.log(f"Starting enabling user account: {arguments.username}", level="info")
 
         client = self.client
-        user_query = self.search_userdn_query(
-            arguments.username,
-            arguments.basedn,
-            arguments.email,
-        )
+        original_client = self.client
+        try:
+            self.client = client
+            user_query = self.search_userdn_query(
+                arguments.username,
+                arguments.basedn,
+                arguments.email,
+            )
+        finally:
+            self.client = original_client
 
         if len(user_query) == 0:
             raise Exception(f"User not found: {arguments.username}")
@@ -152,11 +162,16 @@ class DisableUserAction(MicrosoftADAction):
         self.log(f"Starting disable action for user: {arguments.username}", level="info")
 
         client = self.client
-        user_query = self.search_userdn_query(
-            arguments.username,
-            arguments.basedn,
-            arguments.email,
-        )
+        original_client = self.client
+        try:
+            self.client = client
+            user_query = self.search_userdn_query(
+                arguments.username,
+                arguments.basedn,
+                arguments.email,
+            )
+        finally:
+            self.client = original_client
 
         if len(user_query) == 0:
             raise Exception(f"User not found: {arguments.username}")

@@ -56,17 +56,17 @@ class MicrosoftADAction(Action):
                 attributes=["distinguishedName"],
                 search_scope="SUBTREE",
             )
-            
+
             for entry in self.client.response:
                 if isinstance(entry, dict) and entry.get("type") == "searchResEntry":
                     dn = entry.get("dn")
                     if dn and dn != forest_root_dn:
                         child_domains.append(dn)
-            
+
             self.log(f"Found {len(child_domains)} child domain(s)", level="debug")
         except Exception as e:
             self.log(f"Failed to discover child domains: {e}", level="debug")
-        
+
         return child_domains
 
     def _perform_search(
@@ -77,7 +77,7 @@ class MicrosoftADAction(Action):
     ) -> list[list]:
         """Perform a single LDAP search and return results."""
         users_query = []
-        
+
         try:
             self.client.search(
                 search_base=basedn,
@@ -135,20 +135,20 @@ class MicrosoftADAction(Action):
 
         # First, try searching in the specified basedn (raise exceptions on error)
         users_query = self._perform_search(search_filter, basedn, raise_on_error=True)
-        
+
         # If no users found and search_child_domains is enabled, try child domains (silently ignore errors)
         if not users_query and search_child_domains:
             self.log(f"No users found in {basedn}, searching child domains", level="debug")
-            
+
             forest_root_dn = self._get_forest_root_dn(basedn)
             if forest_root_dn:
                 child_domains = self._get_child_domains(forest_root_dn)
-                
+
                 for child_domain in child_domains:
                     self.log(f"Searching in child domain: {child_domain}", level="debug")
                     child_results = self._perform_search(search_filter, child_domain, raise_on_error=False)
                     users_query.extend(child_results)
-                    
+
                     if users_query:
                         self.log(f"Found user(s) in child domain {child_domain}", level="debug")
                         break

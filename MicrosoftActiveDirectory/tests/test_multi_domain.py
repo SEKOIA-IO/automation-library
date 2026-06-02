@@ -6,6 +6,7 @@ from microsoft_ad.actions_base import MicrosoftADAction, MicrosoftADModule
 
 class ConcreteMicrosoftADAction(MicrosoftADAction):
     """Concrete implementation for testing."""
+
     def run(self, arguments):
         pass
 
