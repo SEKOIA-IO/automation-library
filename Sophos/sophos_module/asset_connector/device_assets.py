@@ -86,33 +86,33 @@ class SophosDeviceAssetConnector(AssetConnector):
             "tamperProtectionEnabled": endpoint.tamperProtectionEnabled,
             "tenant_id": endpoint.tenant.id if endpoint.tenant else None,
             "isolation_status": endpoint.isolation.status if endpoint.isolation else None,
-            "isolation_adminIsolated": endpoint.isolation.adminIsolated if endpoint.isolation else None,
-            "group_id": endpoint.group.id if endpoint.group else None,
-            "group_name": endpoint.group.name if endpoint.group else None,
-            "cloud_provider": endpoint.cloud.provider if endpoint.cloud else None,
-            "associatedPerson_name": endpoint.associatedPerson.name if endpoint.associatedPerson else None,
-            "online": endpoint.online,
+            "isolation_adminIsolated": endpoint.isolation.adminIsolated if endpoint.isolation else None
         }
-        blob = json.dumps(relevant, sort_keys=True, default=str).encode()
+
+        try :
+            blob = json.dumps(relevant, sort_keys=True).encode()
+        except TypeError as e :
+            raise TypeError(
+            f"Failed to serialize fingerprint for endpoint '{endpoint.id}': {e}. "
+            f"A non-serializable value was found in: {relevant}"
+            ) from e
         return hashlib.sha256(blob).hexdigest()
 
     def _load_sent_ids(self) -> None:
         """Load the fingerprint cache from persistent context, pruning stale entries."""
         with self.context as cache:
-            raw: dict[str, dict[str, str]] = cache.get("sent_ids", {})
+            raw = cache.get("sent_ids") or {}
+
+        if not isinstance(raw, dict):
+            raw = {}
 
         cutoff: datetime = datetime.now(tz=timezone.utc) - timedelta(days=self.CACHE_MAX_AGE_DAYS)
 
         pruned: dict[str, dict[str, str]] = {}
         for device_id, entry in raw.items():
-            try:
-                ts = isoparse(entry.get("cached_at", ""))
-                if ts.tzinfo is None:
-                    ts = ts.replace(tzinfo=timezone.utc)
-                if ts >= cutoff:
-                    pruned[device_id] = entry
-            except (ValueError, TypeError):
-                pass
+            ts = datetime.fromisoformat(entry["cached_at"])
+            if ts >= cutoff:
+                pruned[device_id] = entry
 
         if len(pruned) > self.MAX_CACHE_SIZE:
             pruned = dict(
@@ -127,6 +127,18 @@ class SophosDeviceAssetConnector(AssetConnector):
 
     def _save_sent_ids(self) -> None:
         """Persist the fingerprint cache back to context.json."""
+        if len(self._sent_ids) > self.MAX_CACHE_SIZE:
+            self._sent_ids = dict(
+                sorted(
+                    self._sent_ids.items(),
+                    key=lambda kv: kv[1].get("cached_at", ""),
+                    reverse=True,
+                )[:self.MAX_CACHE_SIZE]
+            )
+            self.log(
+                f"Dedup cache trimmed to {self.MAX_CACHE_SIZE} entries before save",
+                level="debug",
+            )
         with self.context as cache:
             cache["sent_ids"] = self._sent_ids
         self.log(f"Dedup cache saved – entries={len(self._sent_ids)}", level="debug")
@@ -417,10 +429,18 @@ class SophosDeviceAssetConnector(AssetConnector):
 
         try:
             for endpoint in self._iter_endpoints():
+                try:
+                    current_fp = self._compute_fingerprint(endpoint) if endpoint.id else None
+                except TypeError as exc:
+                    self.log(
+                        f"Skipping endpoint '{endpoint.id}': fingerprint serialization failed – {exc}",
+                        level="warning",
+                    )
+                    skipped += 1
+                    continue
+
                 if endpoint.id and endpoint.id in self._sent_ids:
-                    current_fp = self._compute_fingerprint(endpoint)
                     if current_fp == self._sent_ids[endpoint.id]["fingerprint"]:
-                        # Inventory unchanged (e.g. only lastSeenAt differs) → skip
                         deduplicated += 1
                         continue
 
@@ -429,7 +449,7 @@ class SophosDeviceAssetConnector(AssetConnector):
                     total += 1
                     if endpoint.id:
                         self._sent_ids[endpoint.id] = {
-                            "fingerprint": self._compute_fingerprint(endpoint),
+                            "fingerprint": current_fp,
                             "cached_at": datetime.now(tz=timezone.utc).isoformat(),
                         }
                     yield mapped
