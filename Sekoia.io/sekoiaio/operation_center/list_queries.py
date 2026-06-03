@@ -52,16 +52,13 @@ class ListQueries(BaseSolAction):
 
     def configure_urls(self) -> None:
         """Set up the query API base path."""
-        self.query_api_path = urljoin(
-            self.module.configuration["base_url"], "api/v1/notebooks/queries"
-        )
+        self.query_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/queries")
 
     @retry(
         reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
-        retry=retry_if_exception_type(Timeout)
-        | retry_if_exception_type(Urllib3TimeoutError),
+        retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
     )
     def get_queries(self, argument: ListQueriesArguments) -> list[dict[str, Any]]:
         """Retrieve all SOL queries, with pagination.

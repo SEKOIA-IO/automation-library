@@ -74,9 +74,7 @@ def test_execute_query_by_uuid_success(requests_mock):
 
     requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", json=SAMPLE_QUERY)
     requests_mock.post(QUERY_RUNS_URL, json=SAMPLE_QUERY_RUN)
-    requests_mock.get(
-        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "done"}
-    )
+    requests_mock.get(f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "done"})
     requests_mock.get(
         f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
         text='{"event.action": "login"}\n{"event.action": "logout"}\n',
@@ -89,10 +87,7 @@ def test_execute_query_by_uuid_success(requests_mock):
         }
     )
 
-    assert (
-        result["query_result"]
-        == '{"event.action": "login"}\n{"event.action": "logout"}\n'
-    )
+    assert result["query_result"] == '{"event.action": "login"}\n{"event.action": "logout"}\n'
 
 
 def test_execute_query_by_uuid_csv_format(requests_mock):
@@ -102,9 +97,7 @@ def test_execute_query_by_uuid_csv_format(requests_mock):
 
     requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", json=SAMPLE_QUERY)
     requests_mock.post(QUERY_RUNS_URL, json=SAMPLE_QUERY_RUN)
-    requests_mock.get(
-        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "done"}
-    )
+    requests_mock.get(f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "done"})
     requests_mock.get(
         f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
         text="event.action\nlogin\nlogout\n",
@@ -136,9 +129,7 @@ def test_execute_query_by_name_success(requests_mock):
         json={"items": [SAMPLE_QUERY], "total": 1},
     )
     requests_mock.post(QUERY_RUNS_URL, json={"uuid": SAMPLE_QUERY_RUN["uuid"]})
-    requests_mock.get(
-        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "done"}
-    )
+    requests_mock.get(f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "done"})
     requests_mock.get(
         f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
         text="result_data",
@@ -168,16 +159,12 @@ def test_execute_query_save_to_file(requests_mock, tmp_path):
 
     requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", json=SAMPLE_QUERY)
     requests_mock.post(QUERY_RUNS_URL, json=SAMPLE_QUERY_RUN)
-    requests_mock.get(
-        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "done"}
-    )
+    requests_mock.get(f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "done"})
     requests_mock.get(
         f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
         text='{"event.action": "login"}\n{"event.action": "logout"}\n',
     )
-    argument = ExecuteAQueryArguments(
-        query_uuid=SAMPLE_QUERY["uuid"], result_format="csv", to_file=True
-    )
+    argument = ExecuteAQueryArguments(query_uuid=SAMPLE_QUERY["uuid"], result_format="csv", to_file=True)
 
     result = action.run(arguments=argument)
 
@@ -242,10 +229,7 @@ def test_get_query_by_name_http_error(requests_mock):
 
     assert len(action._logs) == 1
     assert action._logs[0]["level"] == "error"
-    assert (
-        "HTTP error when retrieving existing queries matching"
-        in action._logs[0]["message"]
-    )
+    assert "HTTP error when retrieving existing queries matching" in action._logs[0]["message"]
     assert "Response status: 500" in action._logs[0]["message"]
 
 
@@ -259,9 +243,7 @@ def test_get_query_by_uuid_http_error(requests_mock):
     action.configure_http_session()
     action.configure_urls()
 
-    requests_mock.get(
-        f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", status_code=404, text="Not Found"
-    )
+    requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", status_code=404, text="Not Found")
 
     with pytest.raises(requests.exceptions.HTTPError):
         action.get_query_by_uuid(UUID(SAMPLE_QUERY["uuid"]))
@@ -434,18 +416,10 @@ def test_execute_query_full_polling_cycle(requests_mock):
     requests_mock.get(
         f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}",
         [
-            {
-                "json": {"status": "pending"}
-            },  # _wait_for_query_completion_step #1 initial
-            {
-                "json": {"status": "running"}
-            },  # _wait_for_query_completion_step #1 loop exit
-            {
-                "json": {"status": "running"}
-            },  # _wait_for_query_completion_step #2 initial
-            {
-                "json": {"status": "done"}
-            },  # _wait_for_query_completion_step #2 loop exit
+            {"json": {"status": "pending"}},  # _wait_for_query_completion_step #1 initial
+            {"json": {"status": "running"}},  # _wait_for_query_completion_step #1 loop exit
+            {"json": {"status": "running"}},  # _wait_for_query_completion_step #2 initial
+            {"json": {"status": "done"}},  # _wait_for_query_completion_step #2 loop exit
         ],
     )
     requests_mock.get(
