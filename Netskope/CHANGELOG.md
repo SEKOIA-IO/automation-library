@@ -35,8 +35,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add blocklist management actions:
     - `append_to_blocklist`
-    - `delete_blocklist`
+    - `get_blocklist`
+    - `remove_from_blocklist`
     - `replace_blocklist`
+
+### Changed
+
+- Import pydantic v2 and adapt source code and tests
+- Upgrade `sekoia-automation-sdk` package version
+- Regenerate _poetry.lock_ file
 
 ## 2026-04-23 - 1.12.0
 
