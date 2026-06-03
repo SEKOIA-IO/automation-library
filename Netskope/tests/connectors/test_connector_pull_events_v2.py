@@ -1,4 +1,3 @@
-import os
 import time
 from threading import Thread
 from unittest.mock import MagicMock, Mock, patch
@@ -16,7 +15,8 @@ from netskope_modules.types import NetskopeAlertType, NetskopeEventType
 def test_user_agent(trigger):
     user_agent = trigger._user_agent
     assert user_agent is not None
-    assert user_agent.startswith("sekoiaio-connector/netskope-")
+    expected_prefix = f"sekoiaio-connector/{trigger.module.manifest.get('slug')}-"
+    assert user_agent.startswith(expected_prefix)
 
 
 def test_next_batch_sleep_until_next_round(trigger):
