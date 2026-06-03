@@ -33,7 +33,6 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
         """Initialize the HTTP session used to push IOCs to Sekoia."""
         session = requests.Session()
         session.verify = self.verify_ssl
-        session.trust_env = True
         self.http_session = session
 
     @property
@@ -59,7 +58,7 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
     @property
     def sekoia_api_key(self) -> str:
         """Get Sekoia API key."""
-        return str(self.module.configuration.get("sekoia_api_key", ""))
+        return str(self.configuration.get("sekoia_api_key", ""))
 
     @property
     def verify_ssl(self) -> bool:

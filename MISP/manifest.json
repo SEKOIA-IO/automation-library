@@ -12,11 +12,6 @@
         "type": "string",
         "description": "MISP API key"
       },
-      "sekoia_api_key": {
-        "type": "string",
-        "description": "Sekoia.io API key with write permissions to the IOC Collection",
-        "secret": true
-      },
       "http_proxy": {
         "type": "string",
         "description": "HTTP proxy URL (e.g., http://proxy:8080)"
@@ -31,8 +26,7 @@
       "misp_api_key"
     ],
     "secrets": [
-      "misp_api_key",
-      "sekoia_api_key"
+      "misp_api_key"
     ]
   },
   "description": "MISP is a opensource platform to gather, store, share and correlate threat intelligence like cyber security indicators",

@@ -33,7 +33,6 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
         mock_module.configuration = {
             "misp_url": "https://misp.example.com",
             "misp_api_key": "test_misp_api_key",
-            "sekoia_api_key": "test_sekoia_api_key",
         }
 
         trigger = MISPIDSAttributesToIOCCollectionTrigger()
@@ -41,6 +40,7 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
         trigger.configuration = {
             "ioc_collection_server": "https://api.sekoia.io",
             "ioc_collection_uuid": "test-collection-uuid",
+            "sekoia_api_key": "test_sekoia_api_key",
             "lookback_days": "1",
             "sleep_time": "300",
         }
@@ -648,7 +648,7 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
 
     def test_push_to_sekoia_missing_api_key(self, trigger):
         """Test push_to_sekoia returns 0 when sekoia_api_key is missing."""
-        trigger.module.configuration["sekoia_api_key"] = ""
+        trigger.configuration["sekoia_api_key"] = ""
 
         result = trigger.push_to_sekoia(["1.1.1.1", "evil.com"])
 
@@ -940,7 +940,7 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
 
     def test_run_missing_sekoia_api_key(self, trigger):
         """Test run() exits early when sekoia_api_key is missing."""
-        trigger.module.configuration["sekoia_api_key"] = ""
+        trigger.configuration["sekoia_api_key"] = ""
 
         trigger.run()
 
@@ -976,7 +976,7 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
 
     def test_run_missing_multiple_params(self, trigger):
         """Test run() reports all missing parameters."""
-        trigger.module.configuration["sekoia_api_key"] = ""
+        trigger.configuration["sekoia_api_key"] = ""
         trigger.module.configuration["misp_url"] = ""
         trigger.configuration["ioc_collection_uuid"] = ""
 

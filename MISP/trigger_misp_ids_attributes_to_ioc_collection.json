@@ -27,6 +27,11 @@
         "description": "Time in seconds between polling cycles (minimum: 60 seconds)",
         "minimum": 60
       },
+      "sekoia_api_key": {
+        "type": "string",
+        "description": "Sekoia.io API key with write permissions to the IOC Collection",
+        "secret": true
+      },
       "verify_ssl": {
         "type": "boolean",
         "default": true,
@@ -34,7 +39,11 @@
       }
     },
     "required": [
-      "ioc_collection_uuid"
+      "ioc_collection_uuid",
+      "sekoia_api_key"
+    ],
+    "secrets": [
+      "sekoia_api_key"
     ]
   },
   "results": {
