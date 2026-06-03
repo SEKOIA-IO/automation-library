@@ -9,35 +9,45 @@
         "type": "string",
         "description": "API token for authentication"
       },
-      "url_list_id": {
+      "blocklist_id": {
         "type": "string",
-        "description": "The ID of the URL list to replace"
+        "description": "The ID of the blocklist"
+      },
+      "blocklist_name": {
+        "type": "string",
+        "description": "The name of the blocklist"
+      },
+      "blocklist_type": {
+        "type": "string",
+        "default": "exact",
+        "enum": ["exact", "regex"],
+        "description": "The type of the blocklist (exact, regex)"
       },
       "items": {
         "type": "array",
         "items": {
           "type": "string"
         },
-        "description": "List of items to set in the blocklist (IPs, domains, or URLs)"
+        "description": "List of items in the blocklist (IPs, domains, or URLs)"
       },
-      "name": {
-        "type": "string",
-        "description": "Name of the URL list"
-      },
-      "type": {
-        "type": "string",
-        "default": "exact",
-        "enum": ["exact", "regex"],
-        "description": "Type of URL list (exact, regex, etc.)"
+      "sort_items": {
+        "type": "boolean",
+        "default": true,
+        "description": "Sort items alphabetically"
       }
     },
     "required": [
       "api_token",
-      "url_list_id",
       "items",
-      "name"
+      "blocklist_name",
+      "blocklist_id"
     ],
     "title": "Replace blocklist",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Results",
     "type": "object"
   },
   "uuid": "73b83266-604b-466d-b7f5-8f3c17a84173"
