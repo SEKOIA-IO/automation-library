@@ -51,14 +51,15 @@ cmd = "poetry run black ."
 [[tool.poe.tasks.lint.sequence]]
 cmd = "poetry run isort ."
 
-[dependency-groups]
-dev = [
-    "pytest",
-    "pytest-cov",
-    "requests",
-    "requests-mock",
-    "autoflake",
-    "isort",
-    "black[colorama]",
-    "ruff (>=0.15.15,<0.16.0)",
-]
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+requests = "*"
+requests-mock = "*"
+autoflake = "*"
+isort = "*"
+ruff = ">=0.15.15,<0.16.0"
+
+[tool.poetry.group.dev.dependencies.black]
+version = "*"
+extras = ["colorama"]
