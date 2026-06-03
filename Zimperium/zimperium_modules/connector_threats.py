@@ -74,7 +74,7 @@ class MobileThreatDefenceConnector(Connector):
         if not response.ok:
             message = f"Request on Zimperium MTD API to fetch events failed with status {response.status_code} - {response.reason}"
 
-            # enrich error logs with detail from the Okta API
+            # enrich error logs with detail from the Zimperium MTD API
             try:
                 error = response.json()
                 message = f"{message}: {error['detail']}"
@@ -150,7 +150,7 @@ class MobileThreatDefenceConnector(Connector):
         # Fetch next batch
         for events in self.fetch_events():
             batch_of_events = [
-                orjson.dumps(event).decode("utf-8") for event in events if event.get("id") not in self.events_cache
+                orjson.dumps(event).decode("utf-8") for event in events if event["id"] not in self.events_cache
             ]
 
             # if the batch is full, push it
