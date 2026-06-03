@@ -9,7 +9,7 @@ API_KEY = "fake_api_key"
 QUERIES_URL = "https://fake.url/api/v1/notebooks/queries"
 
 
-SAMPLE_QUERY : dict = {
+SAMPLE_QUERY: dict = {
     "uuid": str(uuid4()),
     "community_uuid": str(uuid4()),
     "shared_with": None,

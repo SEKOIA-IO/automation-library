@@ -23,7 +23,7 @@ SAMPLE_QUERY_RUN = {
     "uuid": str(uuid4()),
 }
 
-SAMPLE_QUERY : dict = {
+SAMPLE_QUERY: dict = {
     "uuid": str(uuid4()),
     "community_uuid": str(uuid4()),
     "shared_with": None,
