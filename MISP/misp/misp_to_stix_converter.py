@@ -234,7 +234,7 @@ class STIXConverter:
                 to_ids = self.fetch_ids_flag(misp_object["Attribute"])
                 try:
                     getattr(self, objectsMapping[name]["to_call"])(misp_object, to_ids)
-                except KeyError:
+                except Exception:
                     self._logger.error("Impossible to convert object")
                     self._logger.error(misp_object)
                     pass
