@@ -358,10 +358,9 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
 
         finally:
             # Cleanup on stop or fatal error
-            self.client.close()
-            # Invalidate the cached client so a fresh one is created on the next run,
-            # preventing "Cannot send a request, as the client has been closed." errors
-            # when the framework restarts run() on the same instance.
-            self.__dict__.pop("client", None)
+            client = self.__dict__.pop("client", None)
+            if client is not None:
+                # Close + invalidate cached client to avoid reusing a closed client across runs.
+                client.close()
             self.save_events_cache()
             self.log(message=f"Stopped fetching {self.NAME} events", level="info")
