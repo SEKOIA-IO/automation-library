@@ -86,15 +86,15 @@ class SophosDeviceAssetConnector(AssetConnector):
             "tamperProtectionEnabled": endpoint.tamperProtectionEnabled,
             "tenant_id": endpoint.tenant.id if endpoint.tenant else None,
             "isolation_status": endpoint.isolation.status if endpoint.isolation else None,
-            "isolation_adminIsolated": endpoint.isolation.adminIsolated if endpoint.isolation else None
+            "isolation_adminIsolated": endpoint.isolation.adminIsolated if endpoint.isolation else None,
         }
 
-        try :
+        try:
             blob = json.dumps(relevant, sort_keys=True).encode()
-        except TypeError as e :
+        except TypeError as e:
             raise TypeError(
-            f"Failed to serialize fingerprint for endpoint '{endpoint.id}': {e}. "
-            f"A non-serializable value was found in: {relevant}"
+                f"Failed to serialize fingerprint for endpoint '{endpoint.id}': {e}. "
+                f"A non-serializable value was found in: {relevant}"
             ) from e
         return hashlib.sha256(blob).hexdigest()
 
@@ -133,7 +133,7 @@ class SophosDeviceAssetConnector(AssetConnector):
                     self._sent_ids.items(),
                     key=lambda kv: kv[1].get("cached_at", ""),
                     reverse=True,
-                )[:self.MAX_CACHE_SIZE]
+                )[: self.MAX_CACHE_SIZE]
             )
             self.log(
                 f"Dedup cache trimmed to {self.MAX_CACHE_SIZE} entries before save",
