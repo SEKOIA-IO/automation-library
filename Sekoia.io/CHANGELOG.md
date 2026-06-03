@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-07 - 2.72.0
+
+### Added
+
+- Added the following `SOL`Actions.
+  - `Execute a Query` : Execute an existing SOL query (by name or UUID) and return the results.
+  - `List Queries` : List all existing SOL queries corresponding to the filter.
+  - `Create a Dataset` : Create a new SOL dataset with a specified name and description.
+  - `Delete a Dataset` : Delete an existing SOL dataset by name or UUID.
+
 ## 2026-05-07 - 2.71.6
 
 ### Changed

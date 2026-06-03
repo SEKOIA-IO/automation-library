@@ -1,0 +1,28 @@
+{
+  "name": "Delete Dataset",
+  "description": "Delete an existing dataset",
+  "uuid": "b795cb14-ccb5-5ebb-bf3c-80d4142cf838",
+  "docker_parameters": "delete-dataset",
+  "arguments": {
+    "title": "DeleteDatasetArguments",
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "description": "Name of the dataset to delete."
+      },
+      "uuid": {
+        "title": "UUID",
+        "type": "string",
+        "format": "uuid",
+        "description": "Identifier of the dataset to delete."
+  }
+    },
+    "oneOf": [
+      {"required": ["name"]},
+      {"required": ["uuid"]}
+    ]
+  },
+  "results": {}
+}
