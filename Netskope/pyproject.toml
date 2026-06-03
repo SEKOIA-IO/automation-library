@@ -33,24 +33,12 @@ google-auth = "^2.22.0"
 googleapis-common-protos = "^1.59.1"
 structlog = "^24.4.0"
 
-[tool.poetry.dev-dependencies]
-pytest = "*"
-pytest-cov = "*"
-requests = "*"
-requests-mock = "*"
-autoflake = "*"
-isort = "*"
-
 [tool.coverage.run]
 omit = ["tests/*", "dev.py", "main.py"]
 
 [tool.poetry.dependencies.sekoia-automation-sdk]
 version = "~1.23.0"
 extras = ["all"]
-
-[tool.poetry.dev-dependencies.black]
-version = "*"
-extras = ["colorama"]
 
 [tool.poe.tasks.lint]
 help = "Make code linting and formatting."
@@ -65,5 +53,12 @@ cmd = "poetry run isort ."
 
 [dependency-groups]
 dev = [
-    "ruff (>=0.15.15,<0.16.0)"
+    "pytest",
+    "pytest-cov",
+    "requests",
+    "requests-mock",
+    "autoflake",
+    "isort",
+    "black[colorama]",
+    "ruff (>=0.15.15,<0.16.0)",
 ]
