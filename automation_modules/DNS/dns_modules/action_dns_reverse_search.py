@@ -1,7 +1,7 @@
 import socket
 from sekoia_automation.action import Action
 
-class ReverseDnsAction(Action):
+class DnsReverseSearchAction(Action):
     def run(self, arguments: dict) -> dict:
         ip_address = arguments.get("ip_address")
 
@@ -10,14 +10,13 @@ class ReverseDnsAction(Action):
             return {"error": "Missing ip_address argument"}
 
         try:
-            # socket.gethostbyaddr returns a tuple (hostname, aliaslist, ipaddrlist)
             hostname, aliases, _ = socket.gethostbyaddr(ip_address)
-
             self.log(f"Successfully resolved: {ip_address} -> {hostname}", level="info")
             return {
                 "ip_address": ip_address,
                 "hostname": hostname,
-                "aliases": aliases
+                "aliases": aliases,
+                "error": None
             }
 
         except socket.herror as e:
@@ -25,6 +24,7 @@ class ReverseDnsAction(Action):
             return {
                 "ip_address": ip_address,
                 "hostname": None,
+                "aliases": [],
                 "error": str(e)
             }
         except Exception as e:
@@ -33,5 +33,6 @@ class ReverseDnsAction(Action):
             return {
                 "ip_address": ip_address,
                 "hostname": None,
+                "aliases": [],
                 "error": f"[{error_class}] {str(e)}"
             }

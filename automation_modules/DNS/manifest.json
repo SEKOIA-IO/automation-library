@@ -1,0 +1,10 @@
+{
+  "name": "DNS",
+  "version": "0.1.0",
+  "description": "Module for DNS-related automations and lookups",
+  "uuid": "7a8b9c0d-1234-5678-90ab-cdef12345678",
+  "slug": "dns",
+  "actions": [
+    "action_dns_reverse_search"
+  ]
+}

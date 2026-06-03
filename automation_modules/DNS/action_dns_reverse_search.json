@@ -1,0 +1,42 @@
+{
+  "name": "Reverse DNS Lookup",
+  "description": "Resolve an IP address into its corresponding hostname using a PTR request",
+  "uuid": "1a2b3c4d-5678-90ab-cdef-1234567890ab",
+  "slug": "action_dns_reverse_search",
+  "docker_parameters": {
+    "command": "python main.py"
+  },
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "ip_address": {
+        "type": "string",
+        "description": "The IP address to resolve"
+      }
+    },
+    "required": ["ip_address"]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "ip_address": {
+        "type": "string"
+      },
+      "hostname": {
+        "type": ["string", "null"]
+      },
+      "aliases": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "error": {
+        "type": ["string", "null"],
+        "description": "Error message if the resolution fails"
+      }
+    }
+  }
+}
