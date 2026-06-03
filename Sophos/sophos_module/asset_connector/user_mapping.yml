@@ -1,0 +1,160 @@
+mapping:
+  ocsf_class: "User Inventory Info"
+  class_uid: 5003
+  ocsf_version: "1.6.0"
+
+  samples:
+    - name: "Named user with email"
+      description: "A Sophos directory user with full name and email address"
+      data: |
+        {
+          "id": "3d925986-d1ae-48cb-b3d2-27f053ea9a2a",
+          "name": "Erwan Chevalier",
+          "firstName": "Erwan",
+          "lastName": "Chevalier",
+          "email": "erwan.chevalier@sekoia.io",
+          "exchangeLogin": "",
+          "groups": { "total": 0, "itemsCount": 0, "items": [] },
+          "tenant": { "id": "4feff6df-7454-4036-923d-7b2444462416" },
+          "source": { "type": "custom" },
+          "createdAt": "2023-06-16T15:00:56.473Z",
+          "updatedAt": "2023-06-16T15:00:56.870Z"
+        }
+    - name: "Windows local account"
+      description: "A Sophos directory user representing a Windows local account (DOMAIN\\username)"
+      data: |
+        {
+          "id": "cd44d7ae-fe79-4e79-8460-d6709640f623",
+          "name": "DESKTOP-2CHL3DH\\volsh",
+          "groups": { "total": 0, "itemsCount": 0, "items": [] },
+          "tenant": { "id": "4feff6df-7454-4036-923d-7b2444462416" },
+          "source": { "type": "custom" },
+          "createdAt": "2025-12-10T12:49:12.371Z",
+          "updatedAt": "2025-12-11T12:22:37.223Z"
+        }
+    - name: "User with groups"
+      description: "A Sophos directory user that belongs to one or more groups"
+      data: |
+        {
+          "id": "98d16f06-d01f-4005-b7bc-9ff2d294063c",
+          "name": "Sebastien",
+          "email": "sebastien.quioc@integrationssekoiaio.onmicrosoft.com",
+          "groups": {
+            "total": 1,
+            "itemsCount": 1,
+            "items": [
+              {
+                "id": "f31870d7-0a28-416a-b67c-911a69c083da",
+                "name": "integrationssekoiaio.onmicrosoft.com",
+                "displayName": "integrationssekoiaio.onmicrosoft.com"
+              }
+            ]
+          },
+          "tenant": { "id": "4feff6df-7454-4036-923d-7b2444462416" },
+          "source": { "type": "custom" },
+          "createdAt": "2023-11-20T09:46:38.886Z"
+        }
+
+  fields:
+    - source: "id"
+      target: "user.uid"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Unique Sophos user identifier → OCSF user.uid"
+
+    - source: "name"
+      target: "user.name"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Display name of the user"
+
+    - source: "firstName + lastName"
+      target: "user.full_name"
+      type: "string"
+      logic: "Concatenate firstName and lastName with a space when either is present"
+      description: "Full name constructed from first and last name fields"
+
+    - source: "email"
+      target: "user.email_addr"
+      type: "string"
+      logic: "Direct mapping; omitted when null or empty"
+      description: "Primary email address of the user"
+
+    - source: "static: User"
+      target: "user.type_id / user.type"
+      type: "integer / string"
+      logic: "All Sophos directory users are classified as UserTypeId.USER (1)"
+      description: "OCSF user type classification"
+
+    - source: "name (presence of backslash and absence of email)"
+      target: "user.account.type_id / user.account.type"
+      type: "integer / string"
+      logic: |
+        If name contains '\' and email is absent → AccountTypeId.WINDOWS_ACCOUNT (2)
+        Otherwise → AccountTypeId.UNKNOWN (0)
+      description: "Account type inferred from the name format"
+
+    - source: "groups.items[].id + groups.items[].name"
+      target: "user.groups[]"
+      type: "array"
+      logic: "Map each group item to an OCSF Group object (uid=id, name=name)"
+      description: "Groups the user belongs to"
+
+    - source: "tenant.id"
+      target: "user.org.uid / user.org.name"
+      type: "string"
+      logic: "Tenant ID is used for both uid and name of the Organization object"
+      description: "Sophos tenant → OCSF organization"
+
+    - source: "updatedAt (fallback: createdAt, then now)"
+      target: "time"
+      type: "timestamp"
+      logic: "Parse ISO-8601 timestamp; convert to Unix epoch float"
+      description: "Event time for the OCSF record"
+
+    - source: "static: Sophos EDR"
+      target: "metadata.product.name"
+      type: "string"
+      logic: "Static constant"
+      description: "Product name in OCSF metadata"
+
+  ocsf_samples:
+    - name: "Named user with email – OCSF output"
+      description: "Transformed OCSF UserOCSFModel for a user with firstName/lastName/email"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "User Inventory Info",
+          "class_uid": 5003,
+          "type_name": "User Inventory Info: Collect",
+          "type_uid": 500302,
+          "severity": "Informational",
+          "severity_id": 1,
+          "time": 1686927656.87,
+          "metadata": {
+            "product": { "name": "Sophos EDR", "version": "N/A" },
+            "version": "1.6.0"
+          },
+          "user": {
+            "uid": "3d925986-d1ae-48cb-b3d2-27f053ea9a2a",
+            "name": "Erwan Chevalier",
+            "full_name": "Erwan Chevalier",
+            "email_addr": "erwan.chevalier@sekoia.io",
+            "type_id": 1,
+            "type": "User",
+            "account": {
+              "name": "Erwan Chevalier",
+              "type_id": 0,
+              "type": "Unknown",
+              "uid": "3d925986-d1ae-48cb-b3d2-27f053ea9a2a"
+            },
+            "groups": null,
+            "org": {
+              "uid": "4feff6df-7454-4036-923d-7b2444462416",
+              "name": "4feff6df-7454-4036-923d-7b2444462416"
+            }
+          }
+        }
