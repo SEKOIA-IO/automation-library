@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-03 - 1.1.1
+
+### Fixed
+
+- Recreate the cached NextGen HTTP client after shutdown to prevent closed-client request failures on connector restart
+
+
 ## 2026-05-22 - 1.1.0
 
 ### Added
