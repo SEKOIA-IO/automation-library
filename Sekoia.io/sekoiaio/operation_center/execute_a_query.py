@@ -106,7 +106,7 @@ class ExecuteAQuery(BaseSolAction):
         stop=stop_after_attempt(10),
         retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
     )
-    def get_query_by_name(self, query_name: str) -> dict[str, Any]:
+    def get_query_by_name(self, query_name: str | None) -> dict[str, Any]:
         """Retrieve a query definition by its name, optionally scoped to a community.
 
         Check the first page of results and raises QueryListingError if more
@@ -176,7 +176,7 @@ class ExecuteAQuery(BaseSolAction):
         stop=stop_after_attempt(10),
         retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
     )
-    def get_query_by_uuid(self, query_uuid: UUID) -> dict[str, Any]:
+    def get_query_by_uuid(self, query_uuid: UUID | None) -> dict[str, Any]:
         """Retrieve a query definition by its UUID.
 
         :param query_uuid: UUID of the query to retrieve

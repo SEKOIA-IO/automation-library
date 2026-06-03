@@ -47,7 +47,7 @@ class DeleteDataset(BaseSolAction):
         stop=stop_after_attempt(10),
         retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
     )
-    def get_dataset_uuid(self, dataset_name: str) -> UUID:
+    def get_dataset_uuid(self, dataset_name: str | None) -> UUID:
         """Resolve a dataset UUID from its name within a community.
 
         :param dataset_name: Name of the dataset to look up
