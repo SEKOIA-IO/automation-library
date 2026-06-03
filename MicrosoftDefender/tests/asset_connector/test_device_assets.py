@@ -325,7 +325,7 @@ class TestFetchMachines:
             connector._fetch_machines()
             called_url = mock_client.get.call_args[0][0]
 
-        assert "$filter=firstSeen+ge+2024-01-01T00:00:00+00:00" in called_url
+        assert "%24filter=lastSeen+ge+2024-01-01T00%3A00%3A00%2B00%3A00" in called_url
 
     def test_no_filter_without_checkpoint(self, connector, sample_defender_machine):
         mock_response = MagicMock()
@@ -339,6 +339,7 @@ class TestFetchMachines:
             connector._fetch_machines()
             called_url = mock_client.get.call_args[0][0]
 
+        assert "%24filter" not in called_url
         assert "$filter" not in called_url
 
 
@@ -459,7 +460,7 @@ class TestUpdateCheckpoint:
         await connector.update_checkpoint()
 
         with connector.context as cache:
-            assert cache["most_recent_date_seen"] == "2025-04-20T14:22:00+00:00"
+            assert cache["most_recent_date_seen"] == "2025-04-20T14:22:00.000Z"
 
     @pytest.mark.asyncio
     async def test_no_update_when_no_latest(self, connector):
