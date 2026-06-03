@@ -19,28 +19,6 @@ def replace_action(symphony_storage, trigger):
 def test_replace_blocklist_success(replace_action):
     """Test successful replacement of blocklist"""
     with requests_mock.Mocker() as mock_requests:
-        mock_requests.get(
-            "https://my.fake.netskope.com/api/v2/policy/urllist/456",
-            [
-                {
-                    "status_code": 200,
-                    "json": {
-                        "data": {"type": "exact", "urls": ["old.com"]},
-                        "id": 456,
-                        "name": "Updated Blocklist",
-                    },
-                },
-                {
-                    "status_code": 200,
-                    "json": {
-                        "data": {"type": "exact", "urls": ["another-blocked.com", "new-blocked.com"]},
-                        "id": 456,
-                        "name": "Updated Blocklist",
-                    },
-                },
-            ],
-        )
-
         mock_requests.patch(
             "https://my.fake.netskope.com/api/v2/policy/urllist/456/replace",
             status_code=200,
@@ -80,7 +58,7 @@ def test_replace_blocklist_success(replace_action):
         }
 
         result = replace_action.run(arguments)
-        replace_request_body = mock_requests.request_history[1].json()
+        replace_request_body = mock_requests.request_history[0].json()
 
         assert result["action_name"] == "replace_blocklist"
         assert result["action_response"]["id"] == 456
@@ -107,24 +85,6 @@ def test_replace_blocklist_missing_required_params(replace_action):
 def test_replace_blocklist_should_not_sort_when_sort_items_false(replace_action):
     """Test replace preserves insertion order when sort_items is false"""
     with requests_mock.Mocker() as mock_requests:
-        mock_requests.get(
-            "https://my.fake.netskope.com/api/v2/policy/urllist/456",
-            [
-                {
-                    "status_code": 200,
-                    "json": {"id": 456, "name": "Updated Blocklist", "data": {"type": "exact", "urls": []}},
-                },
-                {
-                    "status_code": 200,
-                    "json": {
-                        "id": 456,
-                        "name": "Updated Blocklist",
-                        "data": {"type": "exact", "urls": ["www.z.com", "www.a.com"]},
-                    },
-                },
-            ],
-        )
-
         mock_requests.patch(
             "https://my.fake.netskope.com/api/v2/policy/urllist/456/replace",
             status_code=200,
@@ -147,7 +107,7 @@ def test_replace_blocklist_should_not_sort_when_sort_items_false(replace_action)
 
         replace_action.run(arguments)
 
-        replace_request_body = mock_requests.request_history[1].json()
+        replace_request_body = mock_requests.request_history[0].json()
         assert replace_request_body == {
             "data": {"type": "exact", "urls": ["www.z.com", "www.a.com"]},
             "name": "Updated Blocklist",

@@ -22,7 +22,6 @@ class ReplaceBlocklistAction(NetskopeBlocklistAction):
     def run(self, arguments: dict) -> dict:
         args = ReplaceBlocklistArguments(**arguments)
         self.initialize_action_arguments(args)
-        current_blocklist = self.get_blocklist(args.blocklist_id)
         normalized_items = self.normalize_urls(args.items, sort_items=args.sort_items)
 
         # Replace the entire blocklist
