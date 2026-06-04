@@ -54,7 +54,7 @@ class SalesforceConnector(AsyncConnector):
     # 100 is more then enough because we persist log file ids and not event ids itself
     LOG_FILE_CACHE_SIZE = 100
 
-    # Treshold for log processing
+    # Threshold for log processing
     SIZE_TO_PROCESS_DEFAULT = 20 * 1024 * 1024  # 20MB
     CHUNK_SIZE_DEFAULT = 1024 * 1024  # 1MB
 
