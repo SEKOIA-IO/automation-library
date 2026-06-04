@@ -986,18 +986,15 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
         assert mock_session.post.call_count == 2
 
         # Collect payloads by STIX type from default_fields
-        payloads = {}
+        payloads = []
         for call in mock_session.post.call_args_list:
-            p = call[1]["json"]
-            payloads[p["default_fields"]["type"]] = p
+            payloads.append(call[1]["json"]['indicators'])
 
         # IP → ipv4-addr.value, indicators is a list of objects with valid_from
-        ip_payload = payloads["ipv4-addr.value"]
-        assert ip_payload["indicators"] == [{"value": "1.2.3.4", "valid_from": "2024-01-15T00:00:00Z"}]
+        assert [{"value": "1.2.3.4", "valid_from": "2024-01-15T00:00:00Z"}] in payloads
 
         # File → file.hashes, no valid_from (None is excluded)
-        file_payload = payloads["file.hashes"]
-        assert file_payload["indicators"] == [{"value": "abc123"}]
+        assert [{"value": "abc123"}] in payloads
 
         # Uses /indicators endpoint (not /indicators/text)
         url = mock_session.post.call_args_list[0][0][0]

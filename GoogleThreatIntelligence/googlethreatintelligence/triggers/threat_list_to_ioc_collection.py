@@ -600,7 +600,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
                 }
 
                 payload: dict[str, Any] = {
-                    "default_fields": {"type": stix_type},
+                    "default_fields": {},
                     "indicators": [self._build_indicator(ioc) for ioc in batch],
                 }
 
