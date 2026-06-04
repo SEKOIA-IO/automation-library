@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-03 - 2.72.1
+
+### Fixed
+
+- `Search Alerts` action: only forward query parameters the user actually set. Empty filters and untouched booleans (e.g. `match[title]=`, `is_assigned_to_case=false`) injected by the playbook node are now dropped, and kept booleans are serialized as lowercase `true`/`false`. Previously these unset values were sent as active filters, making the search return no results.
+
 ## 2026-05-07 - 2.72.0
 
 ### Added

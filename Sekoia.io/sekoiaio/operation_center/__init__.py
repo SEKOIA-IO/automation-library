@@ -54,67 +54,84 @@ ListIncidents = type(
     },
 )
 
-ListAlerts = type(
-    "ListAlerts",
-    (GenericAPIAction,),
-    {
-        "verb": "get",
-        "endpoint": base_url + "alerts",
-        "query_parameters": [
-            "limit",
-            "offset",
-            "stix",
-            "cases",
-            "match[community_uuid]",
-            "match[entity_name]",
-            "match[entity_uuid]",
-            "match[status_uuid]",
-            "match[status_name]",
-            "match[type_category]",
-            "match[type_value]",
-            "match[source]",
-            "match[target]",
-            "match[node]",
-            "match[stix_object]",
-            "match[rule_uuid]",
-            "match[rule_name]",
-            "match[detection_type]",
-            "match[uuid]",
-            "match[title]",
-            "match[asset_uuid]",
-            "match[urgency_display]",
-            "match[case_short_id]",
-            "match[assignee]",
-            "match[custom_status_uuid]",
-            "match[verdict_uuid]",
-            "match[short_id]",
-            "date[created_at]",
-            "date[updated_at]",
-            "range[urgency]",
-            "range[similar]",
-            "nomatch[asset_uuid]",
-            "nomatch[entity_uuid]",
-            "nomatch[rule_uuid]",
-            "nomatch[rule_name]",
-            "nomatch[detection_type]",
-            "nomatch[source]",
-            "nomatch[target]",
-            "nomatch[status_uuid]",
-            "nomatch[stix_object]",
-            "nomatch[type_value]",
-            "nomatch[urgency_display]",
-            "nomatch[assignee]",
-            "nomatch[custom_status_uuid]",
-            "nomatch[verdict_uuid]",
-            "visible",
-            "is_assigned_to_case",
-            "similar_to",
-            "sort",
-            "direction",
-            "with_count",
-        ],
-    },
-)
+
+class ListAlerts(GenericAPIAction):
+    verb = "get"
+    endpoint = base_url + "alerts"
+    query_parameters = [
+        "limit",
+        "offset",
+        "stix",
+        "cases",
+        "match[community_uuid]",
+        "match[entity_name]",
+        "match[entity_uuid]",
+        "match[status_uuid]",
+        "match[status_name]",
+        "match[type_category]",
+        "match[type_value]",
+        "match[source]",
+        "match[target]",
+        "match[node]",
+        "match[stix_object]",
+        "match[rule_uuid]",
+        "match[rule_name]",
+        "match[detection_type]",
+        "match[uuid]",
+        "match[title]",
+        "match[asset_uuid]",
+        "match[urgency_display]",
+        "match[case_short_id]",
+        "match[assignee]",
+        "match[custom_status_uuid]",
+        "match[verdict_uuid]",
+        "match[short_id]",
+        "date[created_at]",
+        "date[updated_at]",
+        "range[urgency]",
+        "range[similar]",
+        "nomatch[asset_uuid]",
+        "nomatch[entity_uuid]",
+        "nomatch[rule_uuid]",
+        "nomatch[rule_name]",
+        "nomatch[detection_type]",
+        "nomatch[source]",
+        "nomatch[target]",
+        "nomatch[status_uuid]",
+        "nomatch[stix_object]",
+        "nomatch[type_value]",
+        "nomatch[urgency_display]",
+        "nomatch[assignee]",
+        "nomatch[custom_status_uuid]",
+        "nomatch[verdict_uuid]",
+        "visible",
+        "is_assigned_to_case",
+        "similar_to",
+        "sort",
+        "direction",
+        "with_count",
+    ]
+
+    def get_query_parameters(self, arguments: dict) -> dict | None:
+        """Only forward parameters the user actually set, mirroring the API.
+
+        The platform node populates every argument defined in the manifest,
+        including empty strings for untouched ``match[*]`` filters and ``False``
+        for untouched booleans. The API treats any present parameter as an
+        active filter (e.g. ``match[title]=`` matches nothing,
+        ``is_assigned_to_case=false`` excludes assigned alerts), so forwarding
+        these unset values makes the search return no results. Drop them, and
+        serialize kept booleans as lowercase ``true``/``false`` since the API is
+        case-sensitive (``requests`` would otherwise send ``True``/``False``).
+        """
+        for key in list(arguments):
+            value = arguments[key]
+            if value is None or value == "" or value is False:
+                arguments.pop(key)
+            elif value is True:
+                arguments[key] = "true"
+        return super().get_query_parameters(arguments)
+
 
 DenyCountermeasure = type(
     "DenyCountermeasure",
