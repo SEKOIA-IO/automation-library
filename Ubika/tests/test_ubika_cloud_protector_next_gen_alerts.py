@@ -432,17 +432,17 @@ def test_run_breaks_on_next_batch_exception(monkeypatch, trigger):
 
 def test_run_invalidates_client_cache_after_exception(monkeypatch, trigger):
     """
-    After run() exits (via exception), the cached 'client' property must be
-    removed from the instance dict so the next run() call gets a fresh client
-    instead of the already-closed one (prevents "Cannot send a request, as the
-    client has been closed." errors on framework restarts).
+    After run() exits (via exception), the _client should be closed and reset to None
+    so the next run() call gets a fresh client instead of the already-closed one
+    (prevents "Cannot send a request, as the client has been closed." errors on
+    framework restarts).
     """
     now = datetime.now(timezone.utc)
     w1 = (now, now + timedelta(minutes=1))
     trigger.stepper = MagicMock(ranges=MagicMock(return_value=[w1]))
 
     mock_client = MagicMock()
-    trigger.__dict__["client"] = mock_client  # pre-populate the cached property
+    trigger._client = mock_client  # pre-populate the private _client
 
     trigger.next_batch = MagicMock(side_effect=RuntimeError("boom"))
     trigger.log_exception = MagicMock()
@@ -451,24 +451,24 @@ def test_run_invalidates_client_cache_after_exception(monkeypatch, trigger):
 
     # The client should have been closed…
     mock_client.close.assert_called_once()
-    # …and removed from the instance dict so the next run creates a fresh one
-    assert "client" not in trigger.__dict__
+    # …and reset to None so the next run creates a fresh one
+    assert trigger._client is None
 
 
 def test_run_invalidates_client_cache_on_clean_stop(monkeypatch, trigger):
     """
-    After a clean run() (stop event set, no exception), the cached 'client'
-    property must also be removed from the instance dict.
+    After a clean run() (stop event set, no exception), the _client should also
+    be closed and reset to None.
     """
     trigger._stop_event.set()
     trigger.stepper = MagicMock(ranges=MagicMock(return_value=[]))
 
     mock_client = MagicMock()
-    trigger.__dict__["client"] = mock_client
+    trigger._client = mock_client
 
     trigger.next_batch = MagicMock()
 
     trigger.run()
 
     mock_client.close.assert_called_once()
-    assert "client" not in trigger.__dict__
+    assert trigger._client is None
