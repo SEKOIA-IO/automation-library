@@ -3,7 +3,7 @@ name = "dns"
 version = "0.1.0"
 description = "DNS automation module for Sekoia.io"
 authors = ["Khadim Bamba <khadimkd004@gmail.com>"]
-
+package-mode = false
 [tool.poetry.dependencies]
 python = "^3.11"
 sekoia-automation-sdk = "^1.23.0"
