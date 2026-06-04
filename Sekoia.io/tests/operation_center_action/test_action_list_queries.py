@@ -174,7 +174,7 @@ def test_list_queries_filters(requests_mock):
         assert params["match[uuid]"] == ["some-uuid"]
         assert params["match[name]"] == ["some-name"]
         assert params["match[visualization]"] == ["some-vis"]
-        assert params["match[is_shared_run]"] == ["true"]
+        assert params["match[is_shared]"] == ["true"]
         assert params["match[created_by]"] == ["creator-uuid"]
         assert params["parameters"] == ["username"]
         return True

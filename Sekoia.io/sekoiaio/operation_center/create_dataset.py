@@ -56,7 +56,7 @@ class CreateDataset(BaseSolAction):
         """
         response_create = self.http_session.post(
             self.dataset_api_path,
-            data={"name": name},
+            data={"name": name, "community_uuid": self.community_uuid},
             files={"file": ("dataset.csv", dataset, "text/csv")},
             timeout=60,
         )
