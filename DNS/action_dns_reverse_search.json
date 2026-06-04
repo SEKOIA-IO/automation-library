@@ -3,9 +3,7 @@
   "description": "Resolve an IP address into its corresponding hostname using a PTR request",
   "uuid": "1a2b3c4d-5678-90ab-cdef-1234567890ab",
   "slug": "action_dns_reverse_search",
-  "docker_parameters": {
-    "command": "python main.py"
-  },
+  "docker_parameters": "action_dns_reverse_search",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
