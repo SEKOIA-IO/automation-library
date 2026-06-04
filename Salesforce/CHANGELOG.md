@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-04 - 1.8.2
+
+### Changed
+
+- Allow setting file processing thresholds from env variables
+
 ## 2026-02-06 - 1.8.1
 
 ### Fixed
