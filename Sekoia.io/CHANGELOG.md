@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-04 - 2.72.2
+
+### Fixed
+
+- Fix the `Create a Dataset` action to get the community uuid form the module, not the action
+
 ## 2026-06-04 - 2.72.1
 
 ### Fixed
