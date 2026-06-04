@@ -1,7 +1,7 @@
 {
   "name": "Execute a query",
   "description": "Execute a saved query in Sekoia and retrieve the results.",
-  "uuid": "f821c462-028b-5432-b863-109b89c6d2be",
+  "uuid": "50f2774d-e53a-482e-8061-22bc6940ab8f",
   "docker_parameters": "execute-a-query",
   "arguments": {
     "title": "ExecuteAQueryArguments",
