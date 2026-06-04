@@ -1,21 +1,16 @@
-FROM python:3.11-slim
+FROM python:3.11
 
-# Create a non-root user
-RUN useradd -m sekoiaio-runtime
-USER sekoiaio-runtime
-WORKDIR /home/sekoiaio-runtime
+WORKDIR /app
 
-# Install Poetry
-RUN pip install --user poetry
-
-# Copy project files
-COPY --chown=sekoiaio-runtime:sekoiaio-runtime pyproject.toml poetry.lock* ./
-COPY --chown=sekoiaio-runtime:sekoiaio-runtime CHANGELOG.md manifest.json action_dns_reverse_search.json ./
-COPY --chown=sekoiaio-runtime:sekoiaio-runtime main.py ./
-COPY --chown=sekoiaio-runtime:sekoiaio-runtime dns_modules/ ./dns_modules/
+RUN pip install poetry
 
 # Install dependencies
-ENV PATH="/home/sekoiaio-runtime/.local/bin:${PATH}"
-RUN poetry config virtualenvs.create false && poetry install --no-dev --no-interaction --no-ansi
+COPY poetry.lock pyproject.toml /app/
+RUN poetry config virtualenvs.create false && poetry install --only main
 
-ENTRYPOINT ["python", "main.py"]
+COPY . .
+
+RUN useradd -ms /bin/bash sekoiaio-runtime
+USER sekoiaio-runtime
+
+ENTRYPOINT [ "python", "./main.py" ]
