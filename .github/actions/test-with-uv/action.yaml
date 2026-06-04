@@ -10,7 +10,7 @@ runs:
   using: "composite"
   steps:
     - name: Install uv
-      uses: astral-sh/setup-uv@6ee6290f1cbc4156c0bdd66691b2c144ef8df19a # v7.4.0
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       with:
         enable-cache: true
         activate-environment: true
@@ -23,7 +23,7 @@ runs:
       working-directory: ${{ inputs.module }}
 
     - name: Execute Black
-      uses: psf/black@c6755bb741b6481d6b3d3bb563c83fa060db96c9 # 26.3.1
+      uses: psf/black@87928e6d6761a4a6d22250e1fee5601b3998086e # 26.5.1
       with:
         options: "--check --verbose"
         src: ./"${{ inputs.module }}"
