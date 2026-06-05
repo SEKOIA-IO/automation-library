@@ -7,9 +7,7 @@ from unittest.mock import patch
 
 # Adjust the import path according to your project structure
 from sekoiaio.operation_center.synchronize_assets_with_ad import (
-    UnexpectedJSONResponseError,
     SynchronizeAssetsWithAD,
-    Action,
 )
 
 
@@ -574,11 +572,12 @@ class TestSynchronizeAssetsWithAD:
             reason="OK",
         )
 
-        with pytest.raises(UnexpectedJSONResponseError) as excinfo:
-            action_instance.run(arguments)
+        resp = action_instance.run(arguments)
 
-        assert "Expected JSON response for GET assets" in str(excinfo.value)
-        assert "Gateway Timeout" in str(excinfo.value)
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "Expected JSON response for GET assets" in action_instance.error_message
+        assert "Gateway Timeout" in action_instance.error_message
         assert action_instance.logs
         assert any(
             log["level"] == "error" and "Expected JSON response for GET assets" in log["message"]

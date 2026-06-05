@@ -59,7 +59,7 @@ class SynchronizeAssetsWithAD(Action):
     def _parse_json_response(self, response: requests.Response, request_name: str) -> Any:
         try:
             return response.json()
-        except ValueError as exc:
+        except ValueError:
             response_text = response.text.strip() or "<empty response>"
             content_type = response.headers.get("Content-Type", "unknown")
             error_message = UnexpectedJSONResponseError(
@@ -78,7 +78,8 @@ class SynchronizeAssetsWithAD(Action):
                 content_type=content_type,
                 body=response_text,
             )
-            raise error_message from exc
+            self.error(str(error_message))
+            return None
 
     def get_assets(self, search_query: str, also_search_in_detection_properties: bool = False) -> Any:
         params = {"search": search_query}
