@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Any, Generator
+from typing import Any
 
 from sekoia_automation.action import Action
 
@@ -18,14 +18,14 @@ class PaloAltoCortexXDRAction(Action, ABC):
 
     request_uri: str
 
-    def request_payload(self, arguments: dict[str, Any]) -> dict[str, Any] | Generator[dict[str, Any], None, None]:
+    def request_payload(self, arguments: dict[str, Any]) -> Any:
         """
         This method is used to build the request payload.
 
         Args:
             arguments: The arguments passed to the action.
         Returns:
-            dict[str, Any]: The request payload.
+            Any: The request payload.
         """
         raise NotImplementedError("This method should be overridden by the action class.")
 
