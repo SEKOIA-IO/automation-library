@@ -634,7 +634,6 @@ class TestLoadSentIds:
         assert "old-id" not in connector._sent_ids
         assert "new-id" in connector._sent_ids
 
-
     def test_enforces_max_cache_size(self, connector):
         connector.MAX_CACHE_SIZE = 3
         recent_base = datetime.now(tz=timezone.utc)
@@ -652,7 +651,6 @@ class TestLoadSentIds:
         assert "id-0" in connector._sent_ids
         assert "id-1" in connector._sent_ids
         assert "id-2" in connector._sent_ids
-
 
     def test_entry_at_exact_boundary_is_kept(self, connector):
         """Entry exactly at CACHE_MAX_AGE_DAYS old should still be kept (>= cutoff)."""
