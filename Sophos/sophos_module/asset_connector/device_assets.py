@@ -447,7 +447,7 @@ class SophosDeviceAssetConnector(AssetConnector):
                 mapped = self.map_device_fields(endpoint)
                 if mapped is not None:
                     total += 1
-                    if endpoint.id:
+                    if endpoint.id and current_fp is not None:
                         self._sent_ids[endpoint.id] = {
                             "fingerprint": current_fp,
                             "cached_at": datetime.now(tz=timezone.utc).isoformat(),
