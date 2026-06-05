@@ -3,7 +3,7 @@ name = "zimperium-automation-module"
 version = "0.0"
 description = ""
 authors = []
-requires-python = ">=3.11,<4"
+requires-python = ">=3.11,<3.15"
 
 dependencies = [
     "sekoia-automation-sdk>=1.23.0",
