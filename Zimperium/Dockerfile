@@ -1,7 +1,7 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 # Install uv from astral/uv image
-COPY --from=docker.io/astral/uv:python3.11-trixie /uv /uvx /bin/
+COPY --from=docker.io/astral/uv:python3.14-trixie /uv /uvx /bin/
 
 # Create the non-root user
 RUN useradd -ms /bin/bash sekoiaio-runtime
