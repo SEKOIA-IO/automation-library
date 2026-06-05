@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-05 - 2.73.0
+
+### Added
+
+- `Revoke an asset (V2)` action calling `PUT /v2/asset-management/assets/{uuid}/revoke`
+
+### Changed
+
+- `Delete an asset` and `Delete an asset (V2)` actions — the delete endpoints now return 403; use `Revoke an asset (V2)` instead
+
 ## 2026-06-04 - 2.72.3
 
 ### Fixed
