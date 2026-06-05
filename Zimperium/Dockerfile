@@ -1,24 +1,18 @@
 FROM python:3.14-slim-bookworm
 
-# Install uv from astral/uv image
-COPY --from=docker.io/astral/uv:python3.14-trixie /uv /uvx /bin/
-
-# Create the non-root user
-RUN useradd -ms /bin/bash sekoiaio-runtime
-
-# Set working directory
 WORKDIR /app
 
-# Copy dependency files first
-COPY pyproject.toml uv.lock ./
+RUN pip install uv
 
 # Install dependencies
+COPY uv.lock pyproject.toml /app/
 RUN uv sync --frozen --no-install-project --no-dev --compile-bytecode
 
 # Copy application source
 COPY . .
 
 # Switch to non-root user
+RUN useradd -ms /bin/bash sekoiaio-runtime
 USER sekoiaio-runtime
 
 # Set the entrypoint
