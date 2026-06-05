@@ -1,12 +1,14 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Any
+from typing import Any, Generator
 
 from sekoia_automation.action import Action
 
 from cortex_module.base import CortexModule
 from cortex_module.client import ApiClient
 from cortex_module.helper import format_fqdn
+
+RequestPayload = dict[str, Any] | Generator[dict[str, Any], None, None]
 
 
 class PaloAltoCortexXDRAction(Action, ABC):
@@ -18,14 +20,15 @@ class PaloAltoCortexXDRAction(Action, ABC):
 
     request_uri: str
 
-    def request_payload(self, arguments: dict[str, Any]) -> Any:
+    def request_payload(self, arguments: dict[str, Any]) -> RequestPayload:
         """
         This method is used to build the request payload.
 
         Args:
             arguments: The arguments passed to the action.
         Returns:
-            Any: The request payload.
+            RequestPayload: The request payload, either a single mapping or a generator
+            yielding multiple payload mappings.
         """
         raise NotImplementedError("This method should be overridden by the action class.")
 
@@ -54,6 +57,13 @@ class PaloAltoCortexXDRAction(Action, ABC):
 
     def run(self, arguments: dict[str, Any]) -> dict[str, Any]:
         payload = self.request_payload(arguments)
+
+        if not isinstance(payload, dict):
+            raise TypeError(
+                "request_payload() must return a dict when using the default run(); "
+                "override run() for multi-payload actions"
+            )
+
         response = self.client.post(url=self.request_url, json=payload)
 
         result: dict[str, Any] = response.json()

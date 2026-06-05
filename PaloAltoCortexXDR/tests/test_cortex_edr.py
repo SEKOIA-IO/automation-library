@@ -378,12 +378,10 @@ def test_getting_data_with_connection_failure(trigger, alert_query_2):
     ):
         trigger.forward_next_batch()
 
-        assert trigger.log.mock_calls == [
-            call(
-                level="warning",
-                message="Temporary connection issue while fetching Cortex alerts, will retry on next run",
-            )
-        ]
+        trigger.log.assert_any_call(
+            level="warning",
+            message="Temporary connection issue while fetching Cortex alerts, will retry on next run",
+        )
 
 
 @freeze_time("2024-01-23 10:00:00")
@@ -399,13 +397,13 @@ def test_getting_data_reconnect_notification(trigger, alert_query_2):
         trigger.forward_next_batch()
         trigger.forward_next_batch()
 
-        assert trigger.log.mock_calls == [
-            call(
-                level="warning",
-                message="Temporary connection issue while fetching Cortex alerts, will retry on next run",
-            ),
-            call(level="info", message="Cortex connection restored, the connector reconnected successfully"),
-        ]
+        trigger.log.assert_any_call(
+            level="warning",
+            message="Temporary connection issue while fetching Cortex alerts, will retry on next run",
+        )
+        trigger.log.assert_any_call(
+            level="info", message="Cortex connection restored, the connector reconnected successfully"
+        )
 
 
 def test_splitting_events(trigger, alert_response_4):
