@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 # Adjust the import path according to your project structure
 from sekoiaio.operation_center.synchronize_assets_with_ad import (
+    UnexpectedJSONResponseError,
     SynchronizeAssetsWithAD,
     Action,
 )
@@ -573,12 +574,16 @@ class TestSynchronizeAssetsWithAD:
             reason="OK",
         )
 
-        resp = action_instance.run(arguments)
+        with pytest.raises(UnexpectedJSONResponseError) as excinfo:
+            action_instance.run(arguments)
 
-        assert resp is None
-        assert action_instance.error_message is not None
-        assert "Expected JSON response for GET assets" in action_instance.error_message
-        assert "Gateway Timeout" in action_instance.error_message
+        assert "Expected JSON response for GET assets" in str(excinfo.value)
+        assert "Gateway Timeout" in str(excinfo.value)
+        assert action_instance.logs
+        assert any(
+            log["level"] == "error" and "Expected JSON response for GET assets" in log["message"]
+            for log in action_instance.logs
+        )
 
     def test_missing_asset_name_returns_error(self, requests_mock, action_instance, arguments):
         """Test error when asset_name_field value is missing in user_ad_data."""

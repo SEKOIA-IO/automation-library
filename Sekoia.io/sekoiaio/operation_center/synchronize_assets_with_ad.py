@@ -8,6 +8,22 @@ from pydantic.v1 import BaseModel
 from sekoia_automation.action import Action
 
 
+class UnexpectedJSONResponseError(Exception):
+    def __init__(self, request_name: str, url: str, status_code: int, content_type: str, body: str):
+        self.request_name = request_name
+        self.url = url
+        self.status_code = status_code
+        self.content_type = content_type
+        self.body = body
+        super().__init__(str(self))
+
+    def __str__(self) -> str:
+        return (
+            f"Expected JSON response for {self.request_name}: {self.url} "
+            f"with status code {self.status_code}, content type {self.content_type}, body: {self.body}"
+        )
+
+
 class Arguments(BaseModel):
     user_ad_data: Optional[Dict[str, Any]] = None
     asset_synchronization_configuration: Dict[str, Any]
@@ -43,14 +59,26 @@ class SynchronizeAssetsWithAD(Action):
     def _parse_json_response(self, response: requests.Response, request_name: str) -> Any:
         try:
             return response.json()
-        except ValueError:
+        except ValueError as exc:
             response_text = response.text.strip() or "<empty response>"
             content_type = response.headers.get("Content-Type", "unknown")
-            self.error(
-                f"Expected JSON response for {request_name}: {response.url} "
-                f"with status code {response.status_code}, content type {content_type}, body: {response_text}"
+            error_message = UnexpectedJSONResponseError(
+                request_name=request_name,
+                url=response.url,
+                status_code=response.status_code,
+                content_type=content_type,
+                body=response_text,
             )
-            return None
+            self.log(
+                str(error_message),
+                level="error",
+                request_name=request_name,
+                url=response.url,
+                status_code=response.status_code,
+                content_type=content_type,
+                body=response_text,
+            )
+            raise error_message from exc
 
     def get_assets(self, search_query: str, also_search_in_detection_properties: bool = False) -> Any:
         params = {"search": search_query}
