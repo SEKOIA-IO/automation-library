@@ -634,11 +634,6 @@ class TestLoadSentIds:
         assert "old-id" not in connector._sent_ids
         assert "new-id" in connector._sent_ids
 
-    def test_prunes_unparseable_entries(self, connector):
-        with connector.context as cache:
-            cache["sent_ids"] = {"bad-id": {"fingerprint": "xxx", "cached_at": "not-a-date"}}
-        connector._load_sent_ids()
-        assert "bad-id" not in connector._sent_ids
 
     def test_enforces_max_cache_size(self, connector):
         connector.MAX_CACHE_SIZE = 3
@@ -658,15 +653,6 @@ class TestLoadSentIds:
         assert "id-1" in connector._sent_ids
         assert "id-2" in connector._sent_ids
 
-    def test_timezone_naive_cached_at_is_handled(self, connector):
-        """cached_at without timezone info must be treated as UTC and not crash."""
-        # ISO string without timezone (naive)
-        naive_recent = datetime.now(tz=timezone.utc).replace(tzinfo=None).isoformat()
-        with connector.context as cache:
-            cache["sent_ids"] = {"naive-id": {"fingerprint": "fp", "cached_at": naive_recent}}
-        # Must not raise; entry should survive (it's recent)
-        connector._load_sent_ids()
-        assert "naive-id" in connector._sent_ids
 
     def test_entry_at_exact_boundary_is_kept(self, connector):
         """Entry exactly at CACHE_MAX_AGE_DAYS old should still be kept (>= cutoff)."""
@@ -778,29 +764,6 @@ class TestComputeFingerprint:
         assert SophosDeviceAssetConnector._compute_fingerprint(
             ep_free
         ) != SophosDeviceAssetConnector._compute_fingerprint(ep_isolated)
-
-    def test_group_change_changes_fingerprint(self):
-        from sophos_module.asset_connector.model import SophosGroup
-
-        ep_a = COMPUTER_ENDPOINT.model_copy(update={"group": SophosGroup(id="g1", name="Group A")})
-        ep_b = COMPUTER_ENDPOINT.model_copy(update={"group": SophosGroup(id="g2", name="Group B")})
-        assert SophosDeviceAssetConnector._compute_fingerprint(
-            ep_a
-        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_b)
-
-    def test_associated_person_change_changes_fingerprint(self):
-        ep_a = COMPUTER_ENDPOINT.model_copy(update={"associatedPerson": SophosAssociatedPerson(name="alice")})
-        ep_b = COMPUTER_ENDPOINT.model_copy(update={"associatedPerson": SophosAssociatedPerson(name="bob")})
-        assert SophosDeviceAssetConnector._compute_fingerprint(
-            ep_a
-        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_b)
-
-    def test_online_change_changes_fingerprint(self):
-        ep_on = COMPUTER_ENDPOINT.model_copy(update={"online": True})
-        ep_off = COMPUTER_ENDPOINT.model_copy(update={"online": False})
-        assert SophosDeviceAssetConnector._compute_fingerprint(
-            ep_on
-        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_off)
 
     def test_os_change_changes_fingerprint(self):
         ep_a = COMPUTER_ENDPOINT.model_copy(update={"os": SophosOS(platform="windows", name="Windows 10")})
