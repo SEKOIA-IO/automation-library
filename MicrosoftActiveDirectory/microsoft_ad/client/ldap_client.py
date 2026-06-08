@@ -27,7 +27,7 @@ class LDAPClient:
         that require TLS 1.2+. An optional cipher suite can be set via tls_ciphers.
         """
         config = self.module.configuration
-        kwargs: dict[str, Any] = {"version": ssl.PROTOCOL_TLS}
+        kwargs: dict[str, Any] = {"version": ssl.PROTOCOL_TLS_CLIENT}
         if config.tls_ciphers:
             kwargs["ciphers"] = config.tls_ciphers
 

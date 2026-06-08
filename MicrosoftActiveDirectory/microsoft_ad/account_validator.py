@@ -72,7 +72,7 @@ class MicrosoftADAccountValidator(AccountValidator, LDAPClient):
         # Handle any other exceptions
         except Exception as ldap_error:
             self.log(
-                message=f"[validate] Unexpected error ({type(ldap_error).__name__}): {ldap_error}",
+                message=f"[validate] Failed to validate Microsoft AD credentials for unexpected error ({type(ldap_error).__name__}): {ldap_error}",
                 level="error",
             )
             self.error(message=f"Failed to validate Microsoft AD credentials due to unknown error: {ldap_error}")

@@ -33,7 +33,7 @@ class TestClientTlsConfiguration:
 
         _ = action.client
 
-        mock_tls.assert_called_once_with(validate=ssl.CERT_REQUIRED, version=ssl.PROTOCOL_TLS)
+        mock_tls.assert_called_once_with(validate=ssl.CERT_REQUIRED, version=ssl.PROTOCOL_TLS_CLIENT)
         mock_server.assert_called_once_with(
             host="ldap.example.com",
             port=636,
@@ -60,7 +60,7 @@ class TestClientTlsConfiguration:
 
         _ = action.client
 
-        mock_tls.assert_called_once_with(validate=ssl.CERT_NONE, version=ssl.PROTOCOL_TLS)
+        mock_tls.assert_called_once_with(validate=ssl.CERT_NONE, version=ssl.PROTOCOL_TLS_CLIENT)
         assert mock_server.call_args[1]["tls"] == mock_tls.return_value
 
     @patch("microsoft_ad.client.ldap_client.Connection")
