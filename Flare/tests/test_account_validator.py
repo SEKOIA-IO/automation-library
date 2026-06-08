@@ -2,14 +2,12 @@ from unittest.mock import MagicMock, patch
 
 from flareio_modules import FlareIOModule
 from flareio_modules.account_validator import FlareAccountValidator
+from flareio_modules.models import FlareIOModuleConfiguration
 
 
 def _build_validator() -> FlareAccountValidator:
     module = FlareIOModule()
-    module.configuration = {
-        "api_key": "fw_test_key",
-        "tenant_id": 42,
-    }
+    module.configuration = FlareIOModuleConfiguration(api_key="fw_test_key", tenant_id=42)
     validator = FlareAccountValidator(module=module)
     validator.log = MagicMock()
     return validator
