@@ -23,7 +23,8 @@
           "<public key id>": {
             "type": "object",
             "properties": {
-              "private": {
+              "private_key_pem": {
+                "description": "RSA private key in PEM format used to decrypt the AES symmetric key embedded in each log file",
                 "type": "string"
               }
             }
@@ -44,7 +45,7 @@
   "name": "Imperva",
   "uuid": "ee0e5c81-5410-48d4-b155-135679c5ebb8",
   "slug": "imperva",
-  "version": "1.21.3",
+  "version": "1.21.4",
   "categories": [
     "Network"
   ]

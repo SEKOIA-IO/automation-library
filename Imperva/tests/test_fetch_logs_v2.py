@@ -73,7 +73,7 @@ def trigger(data_storage, secret_key_pem):
         "api_id": "123",
         "api_key": "myapikey",
         "base_url": "https://example.com",
-        "keys": {"1": {"private": secret_key_pem}},
+        "keys": {"1": {"private_key_pem": secret_key_pem}},
     }
     trigger.configuration = {
         "intake_key": "intake_key",
