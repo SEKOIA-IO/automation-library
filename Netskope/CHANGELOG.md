@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-11 - 1.13.0
+
+### Added
+
+- New `netskope_security_check_connector` that collects Netskope sandbox / security-check.
+
 ## 2026-04-23 - 1.12.0
 
 ### Fixed

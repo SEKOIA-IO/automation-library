@@ -1,0 +1,35 @@
+{
+  "description": "Get Netskope sandbox/security-check alerts (Cloud Sandbox, malicious sites, DLP) from the Netskope API v2",
+  "docker_parameters": "netskope_security_check_connector",
+  "name": "Fetch Netskope Security Check alerts",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_token": {
+        "type": "string",
+        "description": "The API token"
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "consumer_group": {
+        "description": "A unique name to track event consumption (default empty for auto-generated one)",
+        "type": "string",
+        "default": ""
+      }
+    },
+    "required": [
+      "api_token",
+      "intake_key"
+    ],
+    "title": "The configuration to fetch Netskope security check alerts",
+    "type": "object"
+  },
+  "uuid": "9e292f7e-146f-4839-926e-dac6ba8a6275"
+}
