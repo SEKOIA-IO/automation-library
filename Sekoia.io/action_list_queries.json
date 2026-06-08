@@ -1,0 +1,164 @@
+{
+  "name": "List Queries",
+  "description": "List the existing saved SOL queries.",
+  "uuid": "c3f26fb9-4793-4193-8a2e-85a515f14134",
+  "docker_parameters": "list-queries",
+  "arguments": {
+    "title": "ListQueriesArguments",
+    "type": "object",
+    "properties": {
+      "match_uuid": {
+        "title": "match[uuid]",
+        "type": "string",
+        "description": "Filter queries by UUID."
+      },
+      "match_name": {
+        "title": "match[Name]",
+        "type": "string",
+        "description": "Filter queries by name."
+      },
+      "match_visualization": {
+        "title": "match[Visualization]",
+        "type": "string",
+        "description": "Filter queries by visualization type."
+      },
+      "match_isshared": {
+        "title": "match[IsShared]",
+        "type": "boolean",
+        "description": "Filter queries by shared status."
+      },
+      "match_created_by": {
+        "title": "match[CreatedBy]",
+        "type": "string",
+        "description": "Filter queries by the UUID of the creator."
+      },
+      "parameters": {
+        "title": "parameters",
+        "type": "string",
+        "description": "Filter queries by the parameters they use"
+      } 
+
+    }
+  },
+  "results": {
+    "title": "ListQueriesResults",
+    "type": "object",
+    "properties": {
+      "queries": {
+        "title": "Queries",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "title": "Uuid",
+              "type": "string",
+              "format": "uuid",
+              "description": "The UUID of the query."
+            },
+            "community_uuid": {
+              "title": "Community Uuid",
+              "type": "string",
+              "format": "uuid",
+              "description": "The UUID of the community the query belongs to."
+            },
+            "shared_with": {
+              "title": "Shared With",
+              "type": "array",
+              "description": "List of community UUIDs the query is shared with.",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "created_by": {
+              "title": "Created By",
+              "type": "string",
+              "format": "uuid",
+              "description": "The UUID of the user who created the query."
+            },
+            "created_by_type": {
+              "title": "Created By Type",
+              "type": "string",
+              "description": "Identity type that created the query."
+            },
+            "created_at": {
+              "title": "Created At",
+              "type": "string",
+              "description": "The creation date of the query."
+            },
+            "updated_at": {
+              "title": "Updated At",
+              "type": "string",
+              "description": "The date the query was last updated."
+            },
+            "name": {
+              "title": "Name",
+              "type": "string",
+              "description": "Name of the query."
+            },
+            "description": {
+              "title": "Description",
+              "type": "string",
+              "description": "Description of the query."
+            },
+            "described_by_ai": {
+              "title": "Described By AI",
+              "type": "boolean",
+              "description": "Indicates if the query is described by AI."
+            },
+            "definition": {
+              "title": "Definition",
+              "type": "object",
+              "description": "The definition of the query in SOL language."
+            },
+            "visualization": {
+              "title": "Visualization",
+              "type": "string",
+              "enum": [
+                "number",
+                "boolean",
+                "table",
+                "pie",
+                "horizontal_bar",
+                "vertical_bar",
+                "line"
+              ],
+              "description": "The visualization type for the query results."
+            },
+            "visualization_params": {
+              "title": "Visualization Params",
+              "type": "object",
+              "description": "Additional parameters for the visualization, such as which fields to use for axes in a bar chart."
+            },
+            "last_run_uuid": {
+              "title": "Last Run Uuid",
+              "type": "string",
+              "format": "uuid",
+              "description": "uuid of the query's last run"
+            },
+            "parameters": {
+              "title": "Parameters",
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The query parameters of the query."
+            },
+            "datasets": {
+              "title": "Datasets",
+              "type": "array",
+              "description": "Datasets present in the query",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "required": [
+        "queries"
+      ]
+  }
+}

@@ -1,7 +1,7 @@
 from collections.abc import AsyncGenerator
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import cached_property
-from urllib.parse import urljoin
+from urllib.parse import urlencode, urljoin
 
 from azure.identity.aio import ClientSecretCredential
 from dateutil.parser import isoparse
@@ -185,7 +185,12 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
         uid_alt = machine.aadDeviceId
         groups: list[Group] | None = None
         if machine.rbacGroupName:
-            groups = [Group(name=machine.rbacGroupName, uid=machine.rbacGroupId)]
+            groups = [
+                Group(
+                    name=machine.rbacGroupName,
+                    uid=str(machine.rbacGroupId) if machine.rbacGroupId is not None else None,
+                )
+            ]
 
         if managed_device:
             if managed_device.wi_fi_mac_address or managed_device.ethernet_mac_address:
@@ -337,9 +342,8 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
         machines: list[DefenderMachine] = []
         endpoint = self.MACHINES_ENDPOINT
         if self.most_recent_date_seen:
-            endpoint = f"{endpoint}?$filter=firstSeen+ge+{self.most_recent_date_seen}&$orderby=firstSeen+asc"
-        else:
-            endpoint = f"{endpoint}?$orderby=firstSeen+asc"
+            params = urlencode({"$filter": f"lastSeen ge {self.most_recent_date_seen}"})
+            endpoint = f"{endpoint}?{params}"
         url: str | None = urljoin(self.defender_client.base_url, endpoint)
 
         while url and self.running:
@@ -402,11 +406,11 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
                 )
                 continue
 
-            # Track most recent firstSeen for checkpoint
-            if machine.firstSeen:
-                first_seen_dt = isoparse(machine.firstSeen)
-                if most_recent is None or first_seen_dt > most_recent:
-                    most_recent = first_seen_dt
+            # Track most recent lastSeen for checkpoint
+            if machine.lastSeen:
+                last_seen_dt = isoparse(machine.lastSeen)
+                if most_recent is None or last_seen_dt > most_recent:
+                    most_recent = last_seen_dt
 
             yield ocsf_device
 
@@ -414,5 +418,6 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
 
     async def update_checkpoint(self) -> None:
         if self._latest_time:
+            dt_utc = self._latest_time.astimezone(timezone.utc).replace(tzinfo=None)
             with self.context as cache:
-                cache["most_recent_date_seen"] = self._latest_time.isoformat()
+                cache["most_recent_date_seen"] = dt_utc.isoformat(timespec="milliseconds") + "Z"

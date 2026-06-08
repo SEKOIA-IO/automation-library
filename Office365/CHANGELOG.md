@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-01 - 2.20.5
+
+### Fixed
+
+- Handle unexpected aiohttp session closures by raising `SessionClosedError` and rebuilding the Office365 client when needed.
+
 ## 2026-05-22 - 2.20.4
 
 ### Fixed
