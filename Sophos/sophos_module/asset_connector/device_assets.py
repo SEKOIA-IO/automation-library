@@ -1,5 +1,7 @@
+import hashlib
+import json
 from collections.abc import Generator
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from typing import Any
 
@@ -41,6 +43,10 @@ class SophosDeviceAssetConnector(AssetConnector):
     OCSF_VERSION: str = "1.6.0"
     PAGE_SIZE: int = 500
 
+    # Cache deduplication constants
+    CACHE_MAX_AGE_DAYS: int = 7
+    MAX_CACHE_SIZE: int = 100_000
+
     # OCSF Constants
     ACTIVITY_ID: int = 2
     ACTIVITY_NAME: str = "Collect"
@@ -55,11 +61,87 @@ class SophosDeviceAssetConnector(AssetConnector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._latest_time: str | None = None
+        self._sent_ids: dict[str, dict[str, str]] = {}
 
     @property
     def last_seen_cursor(self) -> str | None:
         with self.context as cache:
             return cache.get("last_seen_cursor") or None
+
+    @staticmethod
+    def _compute_fingerprint(endpoint: "SophosEndpoint") -> str:
+        """
+        Compute a SHA-256 fingerprint of inventory-significant fields.
+        Fields that change without a real inventory change (lastSeenAt, registeredAt)
+        are intentionally excluded so that heartbeat-only updates are suppressed.
+        """
+        relevant: dict[str, Any] = {
+            "hostname": endpoint.hostname,
+            "type": endpoint.type,
+            "os": endpoint.os.model_dump() if endpoint.os else None,
+            "ipv4Addresses": sorted(endpoint.ipv4Addresses),
+            "ipv6Addresses": sorted(endpoint.ipv6Addresses),
+            "macAddresses": sorted(endpoint.macAddresses),
+            "health_overall": endpoint.health.overall if endpoint.health else None,
+            "tamperProtectionEnabled": endpoint.tamperProtectionEnabled,
+            "tenant_id": endpoint.tenant.id if endpoint.tenant else None,
+            "isolation_status": endpoint.isolation.status if endpoint.isolation else None,
+            "isolation_adminIsolated": endpoint.isolation.adminIsolated if endpoint.isolation else None,
+        }
+
+        try:
+            blob = json.dumps(relevant, sort_keys=True).encode()
+        except TypeError as e:
+            raise TypeError(
+                f"Failed to serialize fingerprint for endpoint '{endpoint.id}': {e}. "
+                f"A non-serializable value was found in: {relevant}"
+            ) from e
+        return hashlib.sha256(blob).hexdigest()
+
+    def _load_sent_ids(self) -> None:
+        """Load the fingerprint cache from persistent context, pruning stale entries."""
+        with self.context as cache:
+            raw = cache.get("sent_ids") or {}
+
+        if not isinstance(raw, dict):
+            raw = {}
+
+        cutoff: datetime = datetime.now(tz=timezone.utc) - timedelta(days=self.CACHE_MAX_AGE_DAYS)
+
+        pruned: dict[str, dict[str, str]] = {}
+        for device_id, entry in raw.items():
+            ts = datetime.fromisoformat(entry["cached_at"])
+            if ts >= cutoff:
+                pruned[device_id] = entry
+
+        if len(pruned) > self.MAX_CACHE_SIZE:
+            pruned = dict(
+                sorted(pruned.items(), key=lambda kv: kv[1].get("cached_at", ""), reverse=True)[: self.MAX_CACHE_SIZE]
+            )
+
+        self._sent_ids = pruned
+        self.log(
+            f"Dedup cache loaded – entries={len(self._sent_ids)} " f"(evicted={len(raw) - len(self._sent_ids)})",
+            level="debug",
+        )
+
+    def _save_sent_ids(self) -> None:
+        """Persist the fingerprint cache back to context.json."""
+        if len(self._sent_ids) > self.MAX_CACHE_SIZE:
+            self._sent_ids = dict(
+                sorted(
+                    self._sent_ids.items(),
+                    key=lambda kv: kv[1].get("cached_at", ""),
+                    reverse=True,
+                )[: self.MAX_CACHE_SIZE]
+            )
+            self.log(
+                f"Dedup cache trimmed to {self.MAX_CACHE_SIZE} entries before save",
+                level="debug",
+            )
+        with self.context as cache:
+            cache["sent_ids"] = self._sent_ids
+        self.log(f"Dedup cache saved – entries={len(self._sent_ids)}", level="debug")
 
     @cached_property
     def client(self) -> SophosApiClient:
@@ -340,19 +422,51 @@ class SophosDeviceAssetConnector(AssetConnector):
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
         """Main entry point: yield all Sophos device assets as OCSF models."""
         self.log("Starting Sophos device asset collection", level="info")
+        self._load_sent_ids()
         total = 0
         skipped = 0
+        deduplicated = 0
 
         try:
             for endpoint in self._iter_endpoints():
+                try:
+                    current_fp = self._compute_fingerprint(endpoint) if endpoint.id else None
+                except TypeError as exc:
+                    self.log(
+                        f"Skipping endpoint '{endpoint.id}': fingerprint serialization failed – {exc}",
+                        level="warning",
+                    )
+                    skipped += 1
+                    continue
+
+                if endpoint.id and endpoint.id in self._sent_ids:
+                    if current_fp == self._sent_ids[endpoint.id]["fingerprint"]:
+                        deduplicated += 1
+                        continue
+
                 mapped = self.map_device_fields(endpoint)
                 if mapped is not None:
                     total += 1
+                    if endpoint.id and current_fp is not None:
+                        self._sent_ids[endpoint.id] = {
+                            "fingerprint": current_fp,
+                            "cached_at": datetime.now(tz=timezone.utc).isoformat(),
+                        }
                     yield mapped
                 else:
                     skipped += 1
         except Exception as exc:
-            self.log(f"Asset collection failed – collected={total}, skipped={skipped}, error={exc}", level="error")
+            self.log(
+                f"Asset collection failed – collected={total}, skipped={skipped}, "
+                f"deduplicated={deduplicated}, error={exc}",
+                level="error",
+            )
             raise
+        finally:
+            self._save_sent_ids()
 
-        self.log(f"Sophos device asset collection complete – total={total}, skipped={skipped}", level="info")
+        self.log(
+            f"Sophos device asset collection complete – "
+            f"total={total}, skipped={skipped}, deduplicated={deduplicated}",
+            level="info",
+        )
