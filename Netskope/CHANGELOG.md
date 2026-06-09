@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-09 - 1.13.1
+
+### Fixed
+
+- Added trigger configuration for security check.
+
 ## 2026-05-11 - 1.13.0
 
 ### Added
