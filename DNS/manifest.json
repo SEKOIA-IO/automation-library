@@ -7,7 +7,7 @@
   },
   "description": "Module for DNS-related automations and lookups",
   "name": "DNS",
-  "uuid": "7a8b9c0d-1234-5678-90ab-cdef12345678",
+  "uuid": "33e52bf6-642f-4230-acd5-751699077b84",
   "slug": "dns",
   "version": "0.1.0",
   "categories": [
