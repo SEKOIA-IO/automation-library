@@ -28,7 +28,7 @@ def trigger(data_storage):
         chunk_size=100,
     )
     # Make client.get a MagicMock so we can stub pagination calls
-    trigger.client = MagicMock()
+    trigger._client = MagicMock()
     yield trigger
 
 
