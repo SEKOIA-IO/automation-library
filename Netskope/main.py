@@ -7,6 +7,7 @@ from netskope_modules.actions.action_remove_from_blocklist import RemoveFromBloc
 from netskope_modules.actions.action_replace_blocklist import ReplaceBlocklistAction
 from netskope_modules.connectors.connector_pubsub_lite import PubSubLite
 from netskope_modules.connectors.connector_pull_events_v2 import NetskopeEventConnector
+from netskope_modules.connectors.connector_security_check import NetskopeSecurityCheckConnector
 
 
 if __name__ == "__main__":

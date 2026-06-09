@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-10 - 2.0.0
+
+### Added
+
+- Add blocklist management actions:
+    - `append_to_blocklist`
+    - `get_blocklist`
+    - `remove_from_blocklist`
+    - `replace_blocklist`
+
+### Changed
+
+- Import pydantic v2 and adapt source code and tests
+- Upgrade `sekoia-automation-sdk` package version
+- Regenerate _poetry.lock_ file
+
 ## 2026-06-10 - 1.14.0
 
 ### Added
@@ -25,25 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2026-05-11 - 1.13.0
 
-### Added
-
 - New `netskope_security_check_connector` that collects Netskope sandbox / security-check
-
-## 2026-04-23 - 2.0.0
-
-### Added
-
-- Add blocklist management actions:
-    - `append_to_blocklist`
-    - `get_blocklist`
-    - `remove_from_blocklist`
-    - `replace_blocklist`
-
-### Changed
-
-- Import pydantic v2 and adapt source code and tests
-- Upgrade `sekoia-automation-sdk` package version
-- Regenerate _poetry.lock_ file
 
 ## 2026-04-23 - 1.12.0
 

@@ -5,7 +5,8 @@ import requests_mock
 from netskope_api.iterator.netskope_iterator import NetskopeIterator
 
 from netskope_modules import NetskopeModule
-from netskope_modules.connector_pull_events_v2 import NetskopeEventConnector, NetskopeEventConsumer
+from netskope_modules.connectors.connector_pull_events_v2 import NetskopeEventConnector, NetskopeEventConsumer
+from netskope_modules.connectors.connector_security_check import NetskopeSecurityCheckConnector
 from netskope_modules.types import NetskopeAlertType, NetskopeEventType
 
 
@@ -67,7 +68,10 @@ def test_create_iterators_covers_only_three_endpoints(trigger):
     ],
 )
 def test_next_batch_pushes_events_for_each_alert_type(trigger, alert_type, endpoint):
-    with patch("netskope_modules.connector_pull_events_v2.time") as mock_time, requests_mock.Mocker() as mock_requests:
+    with (
+        patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
         mock_requests.get(
             endpoint,
             status_code=200,
