@@ -17,6 +17,7 @@ CREATED_BY_UUID = str(uuid4())
 def make_action() -> CreateDataset:
     action = CreateDataset()
     action.module.configuration = {"base_url": BASE_URL, "api_key": API_KEY}
+    action.community_uuid = COMMUNITY_UUID
     return action
 
 

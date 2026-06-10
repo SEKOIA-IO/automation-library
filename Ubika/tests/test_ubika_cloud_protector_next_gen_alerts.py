@@ -428,3 +428,47 @@ def test_run_breaks_on_next_batch_exception(monkeypatch, trigger):
     args, kwargs = trigger.log_exception.call_args
     assert args[0] is exc
     assert kwargs.get("message") == "Failed to fetch events"
+
+
+def test_run_invalidates_client_cache_after_exception(monkeypatch, trigger):
+    """
+    After run() exits (via exception), the _client should be closed and reset to None
+    so the next run() call gets a fresh client instead of the already-closed one
+    (prevents "Cannot send a request, as the client has been closed." errors on
+    framework restarts).
+    """
+    now = datetime.now(timezone.utc)
+    w1 = (now, now + timedelta(minutes=1))
+    trigger.stepper = MagicMock(ranges=MagicMock(return_value=[w1]))
+
+    mock_client = MagicMock()
+    trigger._client = mock_client  # pre-populate the private _client
+
+    trigger.next_batch = MagicMock(side_effect=RuntimeError("boom"))
+    trigger.log_exception = MagicMock()
+
+    trigger.run()
+
+    # The client should have been closed…
+    mock_client.close.assert_called_once()
+    # …and reset to None so the next run creates a fresh one
+    assert trigger._client is None
+
+
+def test_run_invalidates_client_cache_on_clean_stop(monkeypatch, trigger):
+    """
+    After a clean run() (stop event set, no exception), the _client should also
+    be closed and reset to None.
+    """
+    trigger._stop_event.set()
+    trigger.stepper = MagicMock(ranges=MagicMock(return_value=[]))
+
+    mock_client = MagicMock()
+    trigger._client = mock_client
+
+    trigger.next_batch = MagicMock()
+
+    trigger.run()
+
+    mock_client.close.assert_called_once()
+    assert trigger._client is None

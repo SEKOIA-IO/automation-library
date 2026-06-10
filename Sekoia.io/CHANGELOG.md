@@ -13,6 +13,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Deprecate `List Assets`
 
+## 2026-06-01 - 2.72.4
+
+### Fixed
+
+- Improve AD asset synchronization action response handling for non-JSON API responses.
+- Stop returning partial success payloads when AD asset synchronization encounters an error.
+
+## 2026-06-04 - 2.72.3
+
+### Fixed
+
+- Fix the uuid for the SOL actions
+
+## 2026-06-04 - 2.72.2
+
+### Fixed
+
+- Fix the `Create a Dataset` action to get the community uuid from the module, not the action
+
+## 2026-06-04 - 2.72.1
+
+### Fixed
+
+- Fixed the `List Queries` action to include the correct `is_shared` parameter in the request parameters rather that the incorrect `is_shared_run` parameter.
+- Fixed the `Create a Dataset` action to include the `community_uuid` parameter in the request data as it is required.
+- The community UUID is taken from the action's `community_uuid` property.
+
 ## 2026-05-07 - 2.72.0
 
 ### Added

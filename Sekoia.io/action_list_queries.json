@@ -1,7 +1,7 @@
 {
   "name": "List Queries",
   "description": "List the existing saved SOL queries.",
-  "uuid": "febc7464-2584-54f6-af5f-2d183cc82385",
+  "uuid": "c3f26fb9-4793-4193-8a2e-85a515f14134",
   "docker_parameters": "list-queries",
   "arguments": {
     "title": "ListQueriesArguments",
