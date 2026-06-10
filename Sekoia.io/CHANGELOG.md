@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-10 - 2.73.0
+
+### Changed
+
+- Deprecate `List Assets`
+
 ## 2026-05-07 - 2.72.0
 
 ### Added
