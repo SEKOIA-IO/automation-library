@@ -5,16 +5,14 @@ import requests_mock
 from netskope_api.iterator.netskope_iterator import NetskopeIterator
 
 from netskope_modules import NetskopeModule
-from netskope_modules.connector_pull_events_v2 import NetskopeEventConsumer
-from netskope_modules.connector_security_check import NetskopeSecurityCheckConnector
+from netskope_modules.connector_pull_events_v2 import NetskopeEventConnector, NetskopeEventConsumer
 from netskope_modules.types import NetskopeAlertType, NetskopeEventType
 
 
-@pytest.fixture
-def trigger(symphony_storage):
+def make_trigger(symphony_storage, security_check_only):
     module = NetskopeModule()
     module._trigger_configuration_uuid = "ec92e51c-d45e-47b1-b820-29b97721623f"
-    trigger = NetskopeSecurityCheckConnector(module=module, data_path=symphony_storage)
+    trigger = NetskopeEventConnector(module=module, data_path=symphony_storage)
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
@@ -25,8 +23,14 @@ def trigger(symphony_storage):
         "api_token": "api_token",
         "intake_key": "intake_key",
         "consumer_group": "",
+        "security_check_only": security_check_only,
     }
     return trigger
+
+
+@pytest.fixture
+def trigger(symphony_storage):
+    return make_trigger(symphony_storage, security_check_only=True)
 
 
 def test_dataexports_only_contains_security_check_alerts(trigger):
@@ -35,6 +39,14 @@ def test_dataexports_only_contains_security_check_alerts(trigger):
         (NetskopeEventType.ALERT, NetskopeAlertType.MALSITE),
         (NetskopeEventType.ALERT, NetskopeAlertType.DLP),
     ]
+
+
+def test_dataexports_default_contains_full_list(symphony_storage):
+    trigger = make_trigger(symphony_storage, security_check_only=False)
+
+    assert len(trigger.dataexports) == 17
+    assert (NetskopeEventType.PAGE, None) in trigger.dataexports
+    assert (NetskopeEventType.ALERT, NetskopeAlertType.UBA) in trigger.dataexports
 
 
 def test_create_iterators_covers_only_three_endpoints(trigger):

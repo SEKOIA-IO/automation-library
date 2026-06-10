@@ -22,7 +22,7 @@ line_length = 119
 exclude = ["tests/*", "dev.py"]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.11,<3.13"
 netskopesdk = "^0.0.41"
 google-cloud-pubsublite = "^1.8.3"
 google-api-python-client = "^2.95.0"

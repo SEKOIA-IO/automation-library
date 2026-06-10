@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-10 - 1.14.0
+
+### Added
+
+- New `security_check_only` option on the Netskope Events connector to collect only security-check alerts (malware, malsite, DLP).
+
+### Changed
+
+- Removed the standalone `netskope_security_check_connector` (UUID `9e292f7e-146f-4839-926e-dac6ba8a6275`). Enable the `security_check_only` option on the Netskope Events connector instead.
+
 ## 2026-06-09 - 1.13.1
 
 ### Fixed
