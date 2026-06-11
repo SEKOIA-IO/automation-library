@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from pathlib import Path
 from threading import Event, Lock, Thread
-from typing import ClassVar
+from typing import Any, ClassVar
 from urllib.parse import urljoin
 
 import orjson
@@ -67,7 +67,7 @@ class OnePasswordEndpoint(Thread):
         to_date = datetime.now().astimezone(UTC)
         url = urljoin(self.connector.base_url, self.METHOD_URI)
 
-        data = {
+        data: dict[str, Any] = {
             "start_time": from_date.isoformat(),
             "end_time": to_date.isoformat(),
             "limit": self.connector.configuration.chunk_size,

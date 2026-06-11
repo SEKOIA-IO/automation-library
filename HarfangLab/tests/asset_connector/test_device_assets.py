@@ -930,8 +930,7 @@ def test_iterate_devices_pagination(test_harfanglab_asset_connector, asset_first
         "&firstseen=2023-10-01T00%3A00%3A00%2B00%3A00&limit=1000&offset=1000"
     )
     _agents_page2_url = (
-        f"{_base}/api/data/endpoint/Agent?ordering=firstseen"
-        "&firstseen=2023-10-01T00%3A00%3A00%2B00%3A00&limit=1000"
+        f"{_base}/api/data/endpoint/Agent?ordering=firstseen&firstseen=2023-10-01T00%3A00%3A00%2B00%3A00&limit=1000"
     )
     agent_endpoint_response_page_1 = {
         "count": 2,
