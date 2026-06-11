@@ -84,7 +84,7 @@ class HarfanglabPolicy(BaseModel):
     hlai_written_executable: Optional[bool] = None
     id: Optional[str] = None
     ioc_mode: Optional[int] = None
-    ioc_ruleset: Optional[int] = None
+    ioc_ruleset: Optional[str] = None
     ioc_scan_libraries: Optional[bool] = None
     ioc_scan_written_executable: Optional[bool] = None
     isolation_exclusions_revision: Optional[int] = None
@@ -122,7 +122,7 @@ class HarfanglabPolicy(BaseModel):
     self_protection_firewall: Optional[bool] = None
     sidewatch_mode: Optional[int] = None
     sigma_mode: Optional[int] = None
-    sigma_ruleset: Optional[int] = None
+    sigma_ruleset: Optional[str] = None
     sleepjitter: Optional[int] = None
     sleeptime: Optional[int] = None
     synchronization_status: Optional[str] = None
@@ -223,7 +223,7 @@ class HarfanglabPolicy(BaseModel):
     windows_self_protection_feature_safe_mode: Optional[bool] = None
     windows_write_watched_paths: Optional[List[str]] = None
     yara_mode: Optional[int] = None
-    yara_ruleset: Optional[int] = None
+    yara_ruleset: Optional[str] = None
     yara_scan_libraries_load: Optional[bool] = None
     yara_scan_written_executable: Optional[bool] = None
     yara_skip_signed_ms: Optional[bool] = None
@@ -323,6 +323,36 @@ class HarfanglabAgentPage(BaseModel):
     next: Optional[str] = None
     previous: Optional[str] = None
     results: List[HarfanglabAgent] = []
+
+    class Config:
+        extra = "allow"
+
+
+class HarfanglabApplication(BaseModel):
+    id: str
+    name: str
+    active: Optional[bool] = None
+    installation_date: Optional[str] = None
+    first_seen: Optional[str] = None
+    last_seen: Optional[str] = None
+    first_version: Optional[str] = None
+    last_version: Optional[str] = None
+    installation_count: Optional[int] = None
+    publisher: Optional[str] = None
+    ostype: Optional[str] = None
+    cpe_prefix: Optional[str] = None
+    app_type: Optional[str] = None
+    description: Optional[str] = None
+
+    class Config:
+        extra = "allow"
+
+
+class HarfanglabApplicationPage(BaseModel):
+    count: int = 0
+    next: Optional[str] = None
+    previous: Optional[str] = None
+    results: List[HarfanglabApplication] = []
 
     class Config:
         extra = "allow"
