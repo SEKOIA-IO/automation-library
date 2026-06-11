@@ -34,8 +34,13 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
             "misp_url": "https://misp.example.com",
             "misp_api_key": "test_misp_api_key",
         }
-
+        # Mock cached processed attributes by mocking the context
+        mock_context = MagicMock()
+        mock_cache = {"cached_processed_attributes": ["759bd8e9-f35b-481f-b12c-7bac3507887b","ed9923fa-d3bf-47cb-9af7-d0957fb11d36"]}
+        mock_context.__enter__.return_value = mock_cache
+        mock_context.__exit__.return_value = None
         trigger = MISPIDSAttributesToIOCCollectionTrigger()
+        trigger.context = mock_context
         trigger.module = mock_module
         trigger.configuration = {
             "ioc_collection_server": "https://api.sekoia.io",

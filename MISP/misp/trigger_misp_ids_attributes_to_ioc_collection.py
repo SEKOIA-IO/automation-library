@@ -10,6 +10,7 @@ import requests
 from cachetools import TTLCache
 from pymisp import MISPAttribute, PyMISP, PyMISPError
 from sekoia_automation.trigger import Trigger
+from sekoia_automation.storage import PersistentJSON
 
 
 class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
@@ -26,6 +27,7 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
         super().__init__(*args, **kwargs)
 
         self.misp_client = None
+        self.context = PersistentJSON("context.json", self._data_path)
         self.processed_attributes = None
         self.http_session = None
 
@@ -174,6 +176,10 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
             # TTL = lookback_days * seconds per day
             cache_ttl = abs(int(self.lookback_days)) * 24 * 3600
             self.processed_attributes = TTLCache(maxsize=100000, ttl=cache_ttl)
+            with self.context as context:
+                cached_processed_attributes = context.get("cached_processed_attributes",{})
+            for uuid in cached_processed_attributes:
+                self.processed_attributes[uuid] = True
             self.log(
                 message=f"Cache initialized with TTL={cache_ttl}s",
                 level="info",
@@ -184,6 +190,11 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
                 level="error",
             )
             raise
+    
+    def save_cache(self) -> None:
+        with self.context as context:
+            # save the events cache to the context
+            context["cached_processed_attributes"] = list(self.processed_attributes.keys())
 
     def fetch_attributes(self, lookback_days: str) -> list[MISPAttribute]:
         """
@@ -655,7 +666,9 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
                     # Mark as processed
                     for attr in new_attributes:
                         self.processed_attributes[attr.uuid] = True
-
+                    self.log(message=f"Before Saving : {self.context}", level="info")
+                    self.save_cache()
+                    self.log(message=f"After Saving : {self.context}", level="info")
                     self.log(
                         message=(
                             f"Cycle complete: {len(new_attributes)} attributes fetched, "
