@@ -399,7 +399,8 @@ class HarfanglabAssetConnector(AssetConnector):
 
             if max_date and (orig_date is None or max_date > orig_date):
                 self.log(
-                    f"Updating checkpoint - New date: {max_date.isoformat()}, Previous date: {orig_date.isoformat() if orig_date else 'None'}",
+                    f"Updating checkpoint - New date: {max_date.isoformat()}, "
+                    f"Previous date: {orig_date.isoformat() if orig_date else 'None'}",
                     level="info",
                 )
                 self._latest_time = max_date.isoformat()

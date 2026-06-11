@@ -924,27 +924,36 @@ def test_iterate_devices_no_results(test_harfanglab_asset_connector):
 
 
 def test_iterate_devices_pagination(test_harfanglab_asset_connector, asset_first_object, asset_second_object):
+    _base = test_harfanglab_asset_connector.base_url
+    _agents_page1_url = (
+        f"{_base}/api/data/endpoint/Agent?ordering=firstseen"
+        "&firstseen=2023-10-01T00%3A00%3A00%2B00%3A00&limit=1000&offset=1000"
+    )
+    _agents_page2_url = (
+        f"{_base}/api/data/endpoint/Agent?ordering=firstseen"
+        "&firstseen=2023-10-01T00%3A00%3A00%2B00%3A00&limit=1000"
+    )
     agent_endpoint_response_page_1 = {
         "count": 2,
-        "next": f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&firstseen=2023-10-01T00%3A00%3A00%2B00%3A00&limit=1000&offset=1000",
+        "next": _agents_page1_url,
         "previous": None,
         "results": [asset_first_object],
     }
     agent_endpoint_response_page_2 = {
         "count": 2,
         "next": None,
-        "previous": f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&firstseen=2023-10-01T00%3A00%3A00%2B00%3A00&limit=1000",
+        "previous": _agents_page2_url,
         "results": [asset_second_object],
     }
 
     with requests_mock.Mocker() as agent_request:
         agent_request.get(
-            f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&firstseen=2023-10-01T00%3A00%3A00%2B00%3A00&limit=1000",
+            _agents_page2_url,
             status_code=200,
             json=agent_endpoint_response_page_1,
         )
         agent_request.get(
-            f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&firstseen=2023-10-01T00%3A00%3A00%2B00%3A00&limit=1000&offset=1000",
+            _agents_page1_url,
             status_code=200,
             json=agent_endpoint_response_page_2,
         )

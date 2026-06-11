@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import urllib.parse
 import uuid
-from typing import Any, TypeAlias
+from typing import Any
 
 import requests
 import tenacity
@@ -14,7 +14,7 @@ from tenacity import retry_if_exception_message, stop_after_delay, wait_exponent
 from .job_executor import JobExecutor
 from .models import JobAction, JobTarget
 
-StrOrUUID4: TypeAlias = str | uuid.UUID
+type StrOrUUID4 = str | uuid.UUID
 
 
 class DownloadFileFromEndpointAction(JobExecutor):

@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import UTC, datetime
 from functools import cached_property
-from typing import Any
+from typing import Any, ClassVar
 from urllib.parse import urljoin
 
 from dateutil.parser import isoparse
@@ -17,7 +17,7 @@ logger = get_logger()
 
 class CreateIOCs(Action):
     DEFAULT_SEKOIA_BASE_URL = "https://app.sekoia.io"
-    SUPPORTED_TYPES_MAP: dict[str, dict[str, str]] = {
+    SUPPORTED_TYPES_MAP: ClassVar[dict[str, dict[str, str]]] = {
         "ipv4-addr": {"value": "ip_both"},
         "ipv6-addr": {"value": "ip_both"},
         "domain-name": {"value": "domain_name"},
@@ -69,14 +69,14 @@ class CreateIOCs(Action):
         )
         return response
 
-    def get_reference_url(self, id) -> str:
-        return urljoin(self.sekoia_base_url, f"intelligence/objects/{id}")
+    def get_reference_url(self, indicator_id: str) -> str:
+        return urljoin(self.sekoia_base_url, f"intelligence/objects/{indicator_id}")
 
     @staticmethod
-    def get_payload(value: Any, type: Any, args: dict[str, Any]):
+    def get_payload(value: Any, ioc_type: Any, args: dict[str, Any]):
         return {
             "source_id": args["source_id"],
-            "type": type,
+            "type": ioc_type,
             "value": value,
             "block_on_agent": args["block_on_agent"],
             "quarantine_on_agent": args["quarantine_on_agent"],
@@ -92,17 +92,17 @@ class CreateIOCs(Action):
         seen_values: defaultdict[str, list[str]] = defaultdict(list)
         results: dict[str, Any] = {"valid": [], "revoked": [], "expired": []}
 
-        for object in stix_objects:
+        for stix_obj in stix_objects:
             # Extract value and type from pattern
-            self.log(message=f"object in stix_objects {object!s}", level="debug")
-            indicators = stix_to_indicators(stix_object=object, supported_types_map=self.SUPPORTED_TYPES_MAP)
+            self.log(message=f"object in stix_objects {stix_obj!s}", level="debug")
+            indicators = stix_to_indicators(stix_object=stix_obj, supported_types_map=self.SUPPORTED_TYPES_MAP)
             for indicator in indicators:
                 ioc_value = indicator["value"]
                 ioc_type = indicator["type"]
-                result = self.get_payload(value=ioc_value, type=ioc_type, args=args)
+                result = self.get_payload(value=ioc_value, ioc_type=ioc_type, args=args)
 
                 # Handle revoked objects
-                if object.get("revoked", False):
+                if stix_obj.get("revoked", False):
                     results["revoked"].append(result)
                     continue
 
@@ -111,11 +111,11 @@ class CreateIOCs(Action):
                     continue
 
                 # Add a direct link in description if the data is originating from Sekoia.io
-                if "x_ic_observable_types" in object.keys():
-                    result["description"] = self.get_reference_url(object["id"])
+                if "x_ic_observable_types" in stix_obj.keys():
+                    result["description"] = self.get_reference_url(stix_obj["id"])
 
                 # Compare expiration data if exists
-                valid_until = object.get("valid_until")
+                valid_until = stix_obj.get("valid_until")
                 if valid_until:
                     current_datetime = datetime.now(UTC)
                     valid_until_datetime = isoparse(valid_until)

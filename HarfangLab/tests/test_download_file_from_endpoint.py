@@ -3,14 +3,14 @@ import os
 import pathlib
 import unittest.mock
 from collections.abc import Iterator
-from typing import Any, TypeAlias
+from typing import Any, ClassVar
 
 import pytest
 import requests_mock
 
 from harfanglab.download_file_from_endpoint import DownloadFileFromEndpointAction
 
-JSONResponse: TypeAlias = dict[str, Any]
+type JSONResponse = dict[str, Any]
 
 _fake_instance_url: str = "http://non-existant.local"
 _fake_api_token: str = "<--the-fake-api-token-->"
@@ -21,9 +21,9 @@ _fake_sha256_digest: str = "<--the-fake-sha256-digest-->"
 _fake_artefact_content: bytes = b"\x13\x37"
 
 
-class _fake_response:
+class _FakeResponse:
     # Only the strict necessary for tests are present.
-    artefact_info: JSONResponse = {
+    artefact_info: ClassVar[JSONResponse] = {
         "count": 1,
         "results": [
             {
@@ -37,15 +37,15 @@ class _fake_response:
         ],
     }
 
-    artefact_info_no_result: JSONResponse = {
+    artefact_info_no_result: ClassVar[JSONResponse] = {
         "count": 0,
     }
 
-    artefact_info_too_many_results: JSONResponse = {
+    artefact_info_too_many_results: ClassVar[JSONResponse] = {
         "count": 1337,
     }
 
-    artefact_info_missmatch_job_id: JSONResponse = {
+    artefact_info_missmatch_job_id: ClassVar[JSONResponse] = {
         "count": 1,
         "results": [
             {
@@ -57,7 +57,7 @@ class _fake_response:
         ],
     }
 
-    artefact_info_missmatch_agent_id: JSONResponse = {
+    artefact_info_missmatch_agent_id: ClassVar[JSONResponse] = {
         "count": 1,
         "results": [
             {
@@ -69,7 +69,7 @@ class _fake_response:
         ],
     }
 
-    artefact_info_download_fail_on_endpoint: JSONResponse = {
+    artefact_info_download_fail_on_endpoint: ClassVar[JSONResponse] = {
         "count": 1,
         "results": [
             {
@@ -82,7 +82,7 @@ class _fake_response:
         ],
     }
 
-    job_batched: JSONResponse = {
+    job_batched: ClassVar[JSONResponse] = {
         "id": _fake_job_id,
         "title": None,
         "description": None,
@@ -96,7 +96,7 @@ class _fake_response:
         "jobs": ["getProcessList"],
     }
 
-    job_status_done: JSONResponse = {
+    job_status_done: ClassVar[JSONResponse] = {
         "id": _fake_job_id,
         "title": None,
         "description": None,
@@ -182,18 +182,18 @@ def test_download_file_from_endpoint_success(symphony_storage) -> None:
     """Test scenario - Successful execution."""
     with requests_mock.Mocker() as requests_mocker, hashlib_sha256_mock():
         requests_mocker.post(
-            f"{_fake_instance_url}/api/data/job/batch/", status_code=201, json=_fake_response.job_batched
+            f"{_fake_instance_url}/api/data/job/batch/", status_code=201, json=_FakeResponse.job_batched
         )
         requests_mocker.get(
             f"{_fake_instance_url}/api/data/job/batch/{_fake_job_id}/",
             status_code=200,
-            json=_fake_response.job_status_done,
+            json=_FakeResponse.job_status_done,
         )
 
         requests_mocker.get(
             f"{_fake_instance_url}/api/data/investigation/artefact/Artefact/?job_id={_fake_job_id}&agent_id={_fake_agent_id}",
             status_code=200,
-            json=_fake_response.artefact_info,
+            json=_FakeResponse.artefact_info,
         )
 
         requests_mocker.get(
@@ -214,27 +214,27 @@ def test_download_file_from_endpoint_success(symphony_storage) -> None:
     "fake_response, error_type, error_msg_pattern",
     [
         (
-            _fake_response.artefact_info_no_result,
+            _FakeResponse.artefact_info_no_result,
             ValueError,
             f"No artefact info available for job {_fake_job_id}",
         ),
         (
-            _fake_response.artefact_info_too_many_results,
+            _FakeResponse.artefact_info_too_many_results,
             ValueError,
             "Expected 1 result maximum",
         ),
         (
-            _fake_response.artefact_info_missmatch_job_id,
+            _FakeResponse.artefact_info_missmatch_job_id,
             ValueError,
             "Given job id and the one in the fetched artefact info missmatch",
         ),
         (
-            _fake_response.artefact_info_missmatch_agent_id,
+            _FakeResponse.artefact_info_missmatch_agent_id,
             ValueError,
             "Given agent id and the one in the fetched artefact info missmatch",
         ),
         (
-            _fake_response.artefact_info_download_fail_on_endpoint,
+            _FakeResponse.artefact_info_download_fail_on_endpoint,
             ValueError,
             "Something went wrong while downloading the file on endpoint",
         ),
@@ -249,12 +249,12 @@ def test_fetch_artefact_info_fail(
 
     with requests_mock.Mocker() as requests_mocker:
         requests_mocker.post(
-            f"{_fake_instance_url}/api/data/job/batch/", status_code=201, json=_fake_response.job_batched
+            f"{_fake_instance_url}/api/data/job/batch/", status_code=201, json=_FakeResponse.job_batched
         )
         requests_mocker.get(
             f"{_fake_instance_url}/api/data/job/batch/{_fake_job_id}/",
             status_code=200,
-            json=_fake_response.job_status_done,
+            json=_FakeResponse.job_status_done,
         )
         requests_mocker.get(
             f"{_fake_instance_url}/api/data/investigation/artefact/Artefact/?job_id={_fake_job_id}&agent_id={_fake_agent_id}",
@@ -270,19 +270,19 @@ def test_fetch_artefact_data_digest_missmatch() -> None:
     """Test scenario - Digest from downloaded file and the one from EDR missmatch."""
     with requests_mock.Mocker() as requests_mocker:
         requests_mocker.post(
-            f"{_fake_instance_url}/api/data/job/batch/", status_code=201, json=_fake_response.job_batched
+            f"{_fake_instance_url}/api/data/job/batch/", status_code=201, json=_FakeResponse.job_batched
         )
 
         requests_mocker.get(
             f"{_fake_instance_url}/api/data/job/batch/{_fake_job_id}/",
             status_code=200,
-            json=_fake_response.job_status_done,
+            json=_FakeResponse.job_status_done,
         )
 
         requests_mocker.get(
             f"{_fake_instance_url}/api/data/investigation/artefact/Artefact/?job_id={_fake_job_id}&agent_id={_fake_agent_id}",
             status_code=200,
-            json=_fake_response.artefact_info,
+            json=_FakeResponse.artefact_info,
         )
 
         requests_mocker.get(

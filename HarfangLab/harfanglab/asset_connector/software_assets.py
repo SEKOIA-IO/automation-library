@@ -1,6 +1,7 @@
 from collections.abc import Generator
 from datetime import datetime, timedelta
 from functools import cached_property
+from typing import ClassVar
 from urllib.parse import urljoin
 
 from dateutil.parser import isoparse
@@ -51,7 +52,7 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
     TYPE_UID: int = 502002
 
     # Application type mapping
-    APP_TYPE_MAP: dict[str, tuple[PackageTypeStr, PackageTypeId]] = {
+    APP_TYPE_MAP: ClassVar[dict[str, tuple[PackageTypeStr, PackageTypeId]]] = {
         "uwp": (PackageTypeStr.APPLICATION, PackageTypeId.APPLICATION),
         "win32": (PackageTypeStr.APPLICATION, PackageTypeId.APPLICATION),
         "macos": (PackageTypeStr.APPLICATION, PackageTypeId.APPLICATION),

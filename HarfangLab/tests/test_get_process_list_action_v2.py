@@ -65,7 +65,7 @@ def test_with_one_target_group(symphony_storage, response_job_status_done):
     action = GetProcessListActionV2(data_path=symphony_storage)
     action.module.configuration = {"url": instance_url, "api_token": api_token}
 
-    with requests_mock.Mocker() as requests_mocker, patch("harfanglab.get_process_list_action_v2.sleep") as sleep_mock:
+    with requests_mock.Mocker() as requests_mocker, patch("harfanglab.get_process_list_action_v2.sleep"):
         # Example from api doc
         mocked_response = {
             "agent_count": "<integer>",

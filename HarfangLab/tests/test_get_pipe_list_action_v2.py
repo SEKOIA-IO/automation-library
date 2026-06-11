@@ -79,7 +79,7 @@ def test_trigger_job(symphony_storage, response_job_batched, response_job_status
     action = GetPipeListActionV2(data_path=symphony_storage)
     action.module.configuration = {"url": instance_url, "api_token": api_token}
 
-    with requests_mock.Mocker() as requests_mocker, patch("harfanglab.get_pipe_list_action_v2.sleep") as sleep_mock:
+    with requests_mock.Mocker() as requests_mocker, patch("harfanglab.get_pipe_list_action_v2.sleep"):
         requests_mocker.post("https://test.hurukau.io/api/data/job/batch/", status_code=201, json=response_job_batched)
 
         requests_mocker.get(
