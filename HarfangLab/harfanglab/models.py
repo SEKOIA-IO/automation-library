@@ -1,10 +1,9 @@
-# coding: utf-8
 """
 Data models of the HarfangLab module
 """
 
 # natives
-from typing import Any, List
+from typing import Any
 
 # third parties
 from pydantic.v1 import BaseModel
@@ -33,7 +32,6 @@ class JobTriggerResult(BaseModel):
 
 
 class JobStatus(BaseModel):
-
     total: int  # number of job actions to be executed
 
     # status when running (in exec-time order)
@@ -63,4 +61,4 @@ class HostnameEntry(BaseModel):
 
 
 class HostnamesResult(BaseModel):
-    hostnames: List[HostnameEntry]
+    hostnames: list[HostnameEntry]

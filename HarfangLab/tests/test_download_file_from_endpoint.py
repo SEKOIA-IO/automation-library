@@ -3,7 +3,7 @@ import os
 import pathlib
 import unittest.mock
 from collections.abc import Iterator
-from typing import Any, Optional, Type, TypeAlias
+from typing import Any, TypeAlias
 
 import pytest
 import requests_mock
@@ -22,7 +22,6 @@ _fake_artefact_content: bytes = b"\x13\x37"
 
 
 class _fake_response:
-
     # Only the strict necessary for tests are present.
     artefact_info: JSONResponse = {
         "count": 1,
@@ -139,10 +138,10 @@ class _fake_response:
 
 def _run_action(
     *,
-    output_directory: Optional[pathlib.Path] = None,
-    url: Optional[str] = None,
-    api_token: Optional[str] = None,
-    agent_id: Optional[str] = None,
+    output_directory: pathlib.Path | None = None,
+    url: str | None = None,
+    api_token: str | None = None,
+    agent_id: str | None = None,
     tenacity_enabled: bool = False,
 ) -> dict[str, Any]:
     """Simple wrapper to easily run the action."""
@@ -243,7 +242,7 @@ def test_download_file_from_endpoint_success(symphony_storage) -> None:
 )
 def test_fetch_artefact_info_fail(
     fake_response: JSONResponse,
-    error_type: Type[BaseException],
+    error_type: type[BaseException],
     error_msg_pattern: str,
 ) -> None:
     """Test scenario - Misc fail scenario on artefact info fetching."""

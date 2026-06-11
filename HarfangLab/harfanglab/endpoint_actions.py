@@ -1,5 +1,3 @@
-# coding: utf-8
-
 from harfanglab.base import HarfanglabAction
 
 base_url = "/api/data"

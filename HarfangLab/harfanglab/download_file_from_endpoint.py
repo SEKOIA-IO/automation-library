@@ -1,4 +1,3 @@
-# coding: utf-8
 import hashlib
 import io
 import pathlib
@@ -98,7 +97,6 @@ class DownloadFileFromEndpointAction(JobExecutor):
         buffer.seek(0)
 
         if verify_digest:
-
             hasher = hashlib.sha256()
 
             while chunk := buffer.read(io.DEFAULT_BUFFER_SIZE):

@@ -669,7 +669,7 @@ def test_base_url(test_harfanglab_asset_connector):
 def test_extract_timestamp(test_harfanglab_asset_connector):
     agent = HarfanglabAgent(id="test-id", hostname="test-host", firstseen="2023-10-01T12:00:00Z")
     timestamp = test_harfanglab_asset_connector.extract_timestamp(agent)
-    assert timestamp == datetime.datetime(2023, 10, 1, 12, 0, tzinfo=datetime.timezone.utc)
+    assert timestamp == datetime.datetime(2023, 10, 1, 12, 0, tzinfo=datetime.UTC)
     assert timestamp.isoformat() == "2023-10-01T12:00:00+00:00"
     assert isinstance(timestamp, datetime.datetime)
 

@@ -1,6 +1,5 @@
-# coding: utf-8
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import cached_property
 from typing import Any
 from urllib.parse import urljoin
@@ -95,7 +94,7 @@ class CreateIOCs(Action):
 
         for object in stix_objects:
             # Extract value and type from pattern
-            self.log(message=f"object in stix_objects {str(object)}", level="debug")
+            self.log(message=f"object in stix_objects {object!s}", level="debug")
             indicators = stix_to_indicators(stix_object=object, supported_types_map=self.SUPPORTED_TYPES_MAP)
             for indicator in indicators:
                 ioc_value = indicator["value"]
@@ -118,7 +117,7 @@ class CreateIOCs(Action):
                 # Compare expiration data if exists
                 valid_until = object.get("valid_until")
                 if valid_until:
-                    current_datetime = datetime.now(timezone.utc)
+                    current_datetime = datetime.now(UTC)
                     valid_until_datetime = isoparse(valid_until)
                     if valid_until_datetime < current_datetime:
                         results["expired"].append(result)

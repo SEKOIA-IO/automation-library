@@ -1,9 +1,9 @@
 import time
+from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from pathlib import Path
 from threading import Event, Lock, Thread
-from typing import Generator
 from urllib.parse import urljoin
 
 import orjson

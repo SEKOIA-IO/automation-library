@@ -1,5 +1,3 @@
-# coding: utf-8
-
 import os
 from typing import Any
 from unittest.mock import patch
@@ -82,18 +80,16 @@ def test_trigger_job(symphony_storage, response_job_batched, response_job_status
     action.module.configuration = {"url": instance_url, "api_token": api_token}
 
     with requests_mock.Mocker() as requests_mocker, patch("harfanglab.get_pipe_list_action_v2.sleep") as sleep_mock:
-        requests_mocker.post(
-            f"https://test.hurukau.io/api/data/job/batch/", status_code=201, json=response_job_batched
-        )
+        requests_mocker.post("https://test.hurukau.io/api/data/job/batch/", status_code=201, json=response_job_batched)
 
         requests_mocker.get(
-            f"https://test.hurukau.io/api/data/job/batch/11111111-1111-1111-1111-111111111111/",
+            "https://test.hurukau.io/api/data/job/batch/11111111-1111-1111-1111-111111111111/",
             status_code=200,
             json=response_job_status_done,
         )
 
         requests_mocker.get(
-            f"https://test.hurukau.io/api/data/investigation/hunting/Pipe/?job_id=11111111-1111-1111-1111-111111111111",
+            "https://test.hurukau.io/api/data/investigation/hunting/Pipe/?job_id=11111111-1111-1111-1111-111111111111",
             status_code=200,
             json={},
         )

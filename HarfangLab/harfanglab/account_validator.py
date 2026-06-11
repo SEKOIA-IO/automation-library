@@ -28,7 +28,6 @@ class HarfanglabCredentialsUnexpectedError(HarfanglabCredentialsError):
 
 
 class HarfanglabAccountValidator(AccountValidator):
-
     TIMEOUT = 30
     AUTHENTICATION_ENDPOINT = "/api/auth/users/me"
 

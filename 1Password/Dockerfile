@@ -1,12 +1,13 @@
-FROM python:3.11
+FROM python:3.14
 
 WORKDIR /app
 
-RUN pip install poetry
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Install dependencies
-COPY poetry.lock pyproject.toml /app/
-RUN poetry config virtualenvs.create false && poetry install --only main
+COPY pyproject.toml uv.lock /app/
+RUN UV_SYSTEM_PYTHON=1 uv sync --frozen --no-dev --no-install-project
 
 COPY . .
 

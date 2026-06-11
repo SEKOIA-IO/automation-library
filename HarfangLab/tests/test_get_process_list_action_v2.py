@@ -1,9 +1,7 @@
-# coding: utf-8
-
 # natives
 import os
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 # third parties
 import pytest
@@ -11,7 +9,6 @@ import requests_mock
 
 # internals
 from harfanglab.get_process_list_action_v2 import GetProcessListActionV2
-from harfanglab.models import JobAction, JobTarget, JobTriggerResult
 
 
 @pytest.fixture
