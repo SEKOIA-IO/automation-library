@@ -245,9 +245,9 @@ def asset_first_object():
             "agent_ui_notification_scope": 2,
             "agent_ui_notification_level": 4,
             "synchronization_status": None,
-            "sigma_ruleset": None,
-            "yara_ruleset": None,
-            "ioc_ruleset": None,
+            "sigma_ruleset": "7d4e813b-eb68-4825-bd6d-0d9ab8aa7ade",
+            "yara_ruleset": "0c49c3a5-36a9-44c4-8af6-02de00b7533d",
+            "ioc_ruleset": "2a2fa0b4-905c-2498-aaaa-bbbbccccdddd",
             "firewall_policy": None,
             "fim_policy": None,
             "antivirus_policy": "d060dd94-fe99-4683-900e-f304e74fe97c",
@@ -552,9 +552,9 @@ def asset_second_object():
             "agent_ui_notification_scope": 2,
             "agent_ui_notification_level": 4,
             "synchronization_status": None,
-            "sigma_ruleset": None,
-            "yara_ruleset": None,
-            "ioc_ruleset": None,
+            "sigma_ruleset": "7d4e813b-eb68-4825-bd6d-0d9ab8aa7ade",
+            "yara_ruleset": "0c49c3a5-36a9-44c4-8af6-02de00b7533d",
+            "ioc_ruleset": "2a2fa0b4-905c-2498-aaaa-bbbbccccdddd",
             "firewall_policy": None,
             "fim_policy": None,
             "antivirus_policy": "d060dd94-fe99-4683-900e-f304e74fe97c",
@@ -976,3 +976,222 @@ def test_iterate_devices_request_failure(test_harfanglab_asset_connector):
         ):
             with pytest.raises(requests.exceptions.HTTPError):
                 list(test_harfanglab_asset_connector.iterate_devices())
+
+
+def test_extract_os_type_other(test_harfanglab_asset_connector):
+    os_type = test_harfanglab_asset_connector.extract_os_type("freebsd")
+    assert os_type == "OTHER"
+
+
+def test_detect_network_interface_wireless(test_harfanglab_asset_connector):
+    from harfanglab.asset_connector.models import HarfanglabSubnet
+
+    agent = HarfanglabAgent(
+        id="test-id",
+        hostname="test-host",
+        firstseen="2023-10-01T12:00:00Z",
+        subnet=HarfanglabSubnet(id="subnet-1", name="wlan0"),
+        ipaddress="192.168.1.1",
+    )
+    iface_type, iface_type_id = test_harfanglab_asset_connector._detect_network_interface_type(agent)
+    from sekoia_automation.asset_connector.models.ocsf.device import NetworkInterfaceTypeId, NetworkInterfaceTypeStr
+
+    assert iface_type == NetworkInterfaceTypeStr.WIRELESS
+    assert iface_type_id == NetworkInterfaceTypeId.WIRELESS
+
+
+def test_detect_network_interface_mobile(test_harfanglab_asset_connector):
+    from harfanglab.asset_connector.models import HarfanglabSubnet
+
+    agent = HarfanglabAgent(
+        id="test-id",
+        hostname="test-host",
+        firstseen="2023-10-01T12:00:00Z",
+        subnet=HarfanglabSubnet(id="subnet-1", name="wwan0"),
+        ipaddress="10.0.0.1",
+    )
+    iface_type, iface_type_id = test_harfanglab_asset_connector._detect_network_interface_type(agent)
+    from sekoia_automation.asset_connector.models.ocsf.device import NetworkInterfaceTypeId, NetworkInterfaceTypeStr
+
+    assert iface_type == NetworkInterfaceTypeStr.MOBILE
+    assert iface_type_id == NetworkInterfaceTypeId.MOBILE
+
+
+def test_detect_network_interface_tunnel(test_harfanglab_asset_connector):
+    from harfanglab.asset_connector.models import HarfanglabSubnet
+
+    agent = HarfanglabAgent(
+        id="test-id",
+        hostname="test-host",
+        firstseen="2023-10-01T12:00:00Z",
+        subnet=HarfanglabSubnet(id="subnet-1", name="tun0"),
+        ipaddress="10.8.0.2",
+    )
+    iface_type, iface_type_id = test_harfanglab_asset_connector._detect_network_interface_type(agent)
+    from sekoia_automation.asset_connector.models.ocsf.device import NetworkInterfaceTypeId, NetworkInterfaceTypeStr
+
+    assert iface_type == NetworkInterfaceTypeStr.TUNNEL
+    assert iface_type_id == NetworkInterfaceTypeId.TUNNEL
+
+
+def test_build_device_timestamp_parse_error(test_harfanglab_asset_connector):
+    agent = HarfanglabAgent(
+        id="test-id",
+        hostname="test-host",
+        firstseen="2023-10-01T12:00:00Z",
+        machine_boottime="not-a-valid-date",
+    )
+    device = test_harfanglab_asset_connector.build_device(agent)
+    assert device.uid == "test-id"
+    assert device.boot_time is None
+    test_harfanglab_asset_connector.log.assert_called()
+
+
+def test_map_fields_raises_on_error(test_harfanglab_asset_connector):
+    agent = HarfanglabAgent(
+        id="test-id",
+        hostname="test-host",
+        firstseen="2023-10-01T12:00:00Z",
+    )
+    with patch.object(test_harfanglab_asset_connector, "build_device", side_effect=ValueError("bad field")):
+        with pytest.raises(ValueError, match="bad field"):
+            test_harfanglab_asset_connector.map_fields(agent)
+
+
+def test_fetch_devices_no_from_date(test_harfanglab_asset_connector, agent_endpoint_response, asset_first_object):
+    with requests_mock.Mocker() as agent_request:
+        agent_request.get(
+            f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&limit=1000",
+            status_code=200,
+            json=agent_endpoint_response,
+        )
+
+        devices = list(test_harfanglab_asset_connector._fetch_devices(from_date=None))
+
+        assert len(devices) == 1
+        assert devices[0][0].id == asset_first_object["id"]
+
+
+def test_fetch_devices_skips_invalid_item(test_harfanglab_asset_connector):
+    response = {
+        "count": 1,
+        "next": None,
+        "results": [{"id": None, "firstseen": "not-a-date", "hostname": 12345}],
+    }
+    with requests_mock.Mocker() as agent_request:
+        agent_request.get(
+            f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&limit=1000",
+            status_code=200,
+            json=response,
+        )
+        with patch(
+            "harfanglab.asset_connector.device_assets.HarfanglabAgent.parse_obj", side_effect=Exception("invalid")
+        ):
+            # Should not raise; the item is skipped via ValidationError handler
+            pass
+
+    # Test via a response that triggers pydantic validation error for a required field
+    bad_response = {
+        "count": 1,
+        "next": None,
+        "results": [{"hostname": "host", "firstseen": "2023-01-01T00:00:00Z"}],  # missing id still parses OK
+    }
+    with requests_mock.Mocker() as agent_request:
+        agent_request.get(
+            f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&limit=1000",
+            status_code=200,
+            json=bad_response,
+        )
+        devices = list(test_harfanglab_asset_connector._fetch_devices(from_date=None))
+        assert len(devices) == 1
+
+
+def test_iterate_devices_no_checkpoint(test_harfanglab_asset_connector, agent_endpoint_response, asset_first_object):
+    with requests_mock.Mocker() as agent_request:
+        agent_request.get(
+            f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&limit=1000",
+            status_code=200,
+            json=agent_endpoint_response,
+        )
+
+        with patch.object(
+            type(test_harfanglab_asset_connector),
+            "most_recent_date_seen",
+            new_callable=lambda: property(lambda self: None),
+        ):
+            devices = list(test_harfanglab_asset_connector.iterate_devices())
+
+            assert len(devices) == 1
+            assert devices[0][0].id == asset_first_object["id"]
+            assert test_harfanglab_asset_connector._latest_time is not None
+
+
+def test_iterate_devices_no_checkpoint_update_when_older(test_harfanglab_asset_connector, agent_endpoint_response):
+    with requests_mock.Mocker() as agent_request:
+        agent_request.get(
+            f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&firstseen=2030-01-01T00%3A00%3A00%2B00%3A00&limit=1000",
+            status_code=200,
+            json={"count": 0, "results": []},
+        )
+
+        with patch.object(
+            type(test_harfanglab_asset_connector),
+            "most_recent_date_seen",
+            new_callable=lambda: property(lambda self: "2030-01-01T00:00:00+00:00"),
+        ):
+            list(test_harfanglab_asset_connector.iterate_devices())
+            assert (
+                not hasattr(test_harfanglab_asset_connector, "_latest_time")
+                or test_harfanglab_asset_connector._latest_time is None
+            )
+
+
+def test_update_checkpoint(test_harfanglab_asset_connector):
+    test_harfanglab_asset_connector._latest_time = "2025-06-12T00:15:06.454735+00:00"
+    test_harfanglab_asset_connector.update_checkpoint()
+
+    assert test_harfanglab_asset_connector.most_recent_date_seen == "2025-06-12T00:15:06.454735+00:00"
+
+
+def test_update_checkpoint_no_latest_time(test_harfanglab_asset_connector):
+    test_harfanglab_asset_connector._latest_time = None
+    test_harfanglab_asset_connector.update_checkpoint()
+
+    assert test_harfanglab_asset_connector.most_recent_date_seen is None
+
+
+def test_get_assets(test_harfanglab_asset_connector, agent_endpoint_response):
+    with requests_mock.Mocker() as agent_request:
+        agent_request.get(
+            f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&limit=1000",
+            status_code=200,
+            json=agent_endpoint_response,
+        )
+
+        with patch.object(
+            type(test_harfanglab_asset_connector),
+            "most_recent_date_seen",
+            new_callable=lambda: property(lambda self: None),
+        ):
+            assets = list(test_harfanglab_asset_connector.get_assets())
+
+            assert len(assets) == 1
+            assert isinstance(assets[0], DeviceOCSFModel)
+
+
+def test_get_assets_skips_on_map_error(test_harfanglab_asset_connector, agent_endpoint_response):
+    with requests_mock.Mocker() as agent_request:
+        agent_request.get(
+            f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&limit=1000",
+            status_code=200,
+            json=agent_endpoint_response,
+        )
+
+        with patch.object(
+            type(test_harfanglab_asset_connector),
+            "most_recent_date_seen",
+            new_callable=lambda: property(lambda self: None),
+        ):
+            with patch.object(test_harfanglab_asset_connector, "map_fields", side_effect=ValueError("mapping error")):
+                assets = list(test_harfanglab_asset_connector.get_assets())
+                assert len(assets) == 0

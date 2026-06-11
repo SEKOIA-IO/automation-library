@@ -177,6 +177,7 @@ class HarfanglabAssetConnector(AssetConnector):
             type=interface_type,
             type_id=interface_type_id,
             uid=subnet_info.id if subnet_info else None,
+            mac=subnet_info.gateway_macaddress if subnet_info and subnet_info.gateway_macaddress else None,
         )
 
     def build_device(self, agent: HarfanglabAgent) -> Device:
