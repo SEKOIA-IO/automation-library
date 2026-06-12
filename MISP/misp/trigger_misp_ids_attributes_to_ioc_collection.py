@@ -666,9 +666,7 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
                     # Mark as processed
                     for attr in new_attributes:
                         self.processed_attributes[attr.uuid] = True
-                    self.log(message=f"Before Saving : {self.context}", level="info")
                     self.save_cache()
-                    self.log(message=f"After Saving : {self.context}", level="info")
                     self.log(
                         message=(
                             f"Cycle complete: {len(new_attributes)} attributes fetched, "
