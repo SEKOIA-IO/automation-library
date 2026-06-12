@@ -184,7 +184,7 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
     # ------------------------------------------------------------------ #
 
     def test_initialize_http_session_defaults(self, trigger):
-        """Test that the HTTP session is configured with secure defaults (trust_env=False, verify=True)."""
+        """Test that the HTTP session is configured properly (trust_env=True, verify=True)."""
         trigger.initialize_http_session()
 
         assert trigger.http_session is not None
