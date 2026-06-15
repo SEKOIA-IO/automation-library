@@ -23,7 +23,7 @@
           "<public key id>": {
             "type": "object",
             "properties": {
-              "private_key_pem": {
+              "private": {
                 "description": "RSA private key in PEM format used to decrypt the AES symmetric key embedded in each log file",
                 "type": "string"
               }

@@ -180,7 +180,7 @@ class ImpervaLogsConnector(Connector):
             checksum = file_header_content.split("checksum:")[1].splitlines()[0]
 
             # get the private key
-            private_key = bytes(keys["private_key_pem"], "utf-8")
+            private_key = bytes(keys["private"], "utf-8")
             iv = 16 * b"\x00"
 
             try:
