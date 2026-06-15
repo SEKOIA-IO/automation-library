@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-08 - 1.21.5
+
+### Fixed
+
+- Revert the renaming of the `private` field to `private_key_pem`, in order to avoid breaking existing configuration.
+
 ## 2026-06-08 - 1.21.4
 
 ### Changed
