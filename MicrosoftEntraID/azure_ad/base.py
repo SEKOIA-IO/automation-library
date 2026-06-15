@@ -34,6 +34,7 @@ class AzureADConfiguration(CompatBaseModel):
         description="Client Secret associated with the registered application. Admin Consent has to be granted to the application for it to work.",  # noqa: E501
     )
 
+
 class AzureADModule(Module):
     configuration: AzureADConfiguration
 

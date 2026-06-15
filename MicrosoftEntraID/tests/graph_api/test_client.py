@@ -79,9 +79,7 @@ async def test_client_get_signins_uses_beta_endpoint_when_enabled(
 
 
 @pytest.mark.asyncio
-async def test_client_get_signins_uses_beta_endpoint_with_end_date(
-    graph_api_client: GraphApi, signins_page_2
-) -> None:
+async def test_client_get_signins_uses_beta_endpoint_with_end_date(graph_api_client: GraphApi, signins_page_2) -> None:
     graph_api_client._use_beta_signin_api = True
     graph_api_client._client.audit_logs.sign_ins.with_url.return_value.get.return_value = signins_page_2
 
