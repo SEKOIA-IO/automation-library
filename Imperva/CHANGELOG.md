@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-08 - 1.21.4
+
+### Changed
+
+- Rename the `private` field to `private_key_pem` in the encryption keys configuration to better reflect its purpose (RSA private key in PEM format)
+
 ## 2025-10-28 - 1.21.3
 
 ### Changed
