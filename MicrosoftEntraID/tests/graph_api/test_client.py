@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 
@@ -95,6 +96,29 @@ async def test_client_get_signins_uses_beta_endpoint_with_end_date(graph_api_cli
     graph_api_client._client.audit_logs.sign_ins.with_url.assert_any_call(
         "https://graph.microsoft.com/beta/auditLogs/signIns"
         "?$filter=createdDateTime+ge+2025-09-01T00%3A00%3A00Z+and+createdDateTime+le+2025-09-01T12%3A30%3A45Z"
+        "&$orderby=createdDateTime+asc"
+    )
+
+
+@pytest.mark.asyncio
+async def test_client_get_signins_uses_beta_sovereign_cloud_base_url(
+    graph_api_client: GraphApi, signins_page_2
+) -> None:
+    graph_api_client._use_beta_signin_api = True
+    graph_api_client._client.request_adapter = SimpleNamespace(base_url="https://graph.microsoft.us/v1.0/")
+    graph_api_client._client.audit_logs.sign_ins.with_url.return_value.get.return_value = signins_page_2
+
+    items = [
+        x
+        async for x in graph_api_client.get_signin_logs(
+            datetime.fromisoformat("2025-09-01T00:00:00").replace(tzinfo=timezone.utc)
+        )
+    ]
+
+    assert [i.id for i in items] == ["2"]
+    graph_api_client._client.audit_logs.sign_ins.with_url.assert_any_call(
+        "https://graph.microsoft.us/beta/auditLogs/signIns"
+        "?$filter=createdDateTime+ge+2025-09-01T00%3A00%3A00Z"
         "&$orderby=createdDateTime+asc"
     )
 

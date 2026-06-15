@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import AsyncGenerator, Iterable
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlsplit
 
 from azure.identity.aio import ClientSecretCredential
 from kiota_abstractions.base_request_configuration import RequestConfiguration
@@ -41,7 +41,6 @@ class GraphApi(object):
                 client_secret=self._client_secret,
             )
 
-            # Reset client to force re-creation with new credentials even if already set
             self._client = None
 
         if self._client is None:
@@ -73,8 +72,19 @@ class GraphApi(object):
     def _build_signin_beta_url(self, start_date: datetime, end_date: datetime | None = None) -> str:
         filter_value = self._build_filter("createdDateTime", start_date, end_date)
         order_by = "createdDateTime asc"
+        adapter_base_url = getattr(self.client.request_adapter, "base_url", "https://graph.microsoft.com/v1.0/")
+        if not isinstance(adapter_base_url, str) or len(adapter_base_url) == 0:
+            adapter_base_url = "https://graph.microsoft.com/v1.0/"
+
+        parsed_base_url = urlsplit(adapter_base_url)
+        graph_root_url = (
+            f"{parsed_base_url.scheme}://{parsed_base_url.netloc}"
+            if parsed_base_url.scheme and parsed_base_url.netloc
+            else "https://graph.microsoft.com"
+        )
+
         return (
-            "https://graph.microsoft.com/beta/auditLogs/signIns"
+            f"{graph_root_url}/beta/auditLogs/signIns"
             f"?$filter={quote_plus(filter_value)}"
             f"&$orderby={quote_plus(order_by)}"
         )

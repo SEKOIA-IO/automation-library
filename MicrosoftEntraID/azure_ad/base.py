@@ -14,11 +14,42 @@ from sekoia_automation.module import Module
 
 class CompatBaseModel(BaseModel):
     @classmethod
-    def model_validate(cls, value):
+    def model_validate(
+        cls,
+        value,
+        *,
+        strict=None,
+        from_attributes=None,
+        context=None,
+        **kwargs,
+    ):
+
         return cls.parse_obj(value)
 
-    def model_dump(self, *args, **kwargs):
-        return self.dict(*args, **kwargs)
+    def model_dump(
+        self,
+        *,
+        mode="python",
+        include=None,
+        exclude=None,
+        context=None,
+        by_alias=False,
+        exclude_unset=False,
+        exclude_defaults=False,
+        exclude_none=False,
+        round_trip=False,
+        warnings=True,
+        serialize_as_any=False,
+        **kwargs,
+    ):
+        return self.dict(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
 
 
 class AzureADConfiguration(CompatBaseModel):
