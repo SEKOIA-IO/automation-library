@@ -14,42 +14,15 @@ from sekoia_automation.module import Module
 
 class CompatBaseModel(BaseModel):
     @classmethod
-    def model_validate(
-        cls,
-        value,
-        *,
-        strict=None,
-        from_attributes=None,
-        context=None,
-        **kwargs,
-    ):
+    def model_validate(cls, obj, **kwargs):
+        # pydantic.v1 models don't support v2-style kwargs, so we ignore them.
+        return cls.parse_obj(obj)
 
-        return cls.parse_obj(value)
-
-    def model_dump(
-        self,
-        *,
-        mode="python",
-        include=None,
-        exclude=None,
-        context=None,
-        by_alias=False,
-        exclude_unset=False,
-        exclude_defaults=False,
-        exclude_none=False,
-        round_trip=False,
-        warnings=True,
-        serialize_as_any=False,
-        **kwargs,
-    ):
-        return self.dict(
-            include=include,
-            exclude=exclude,
-            by_alias=by_alias,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-        )
+    def model_dump(self, *args, **kwargs):
+        # pydantic.v1 BaseModel.dict() doesn't support several pydantic.v2-only kwargs.
+        for key in ("mode", "context", "round_trip", "warnings", "serialize_as_any"):
+            kwargs.pop(key, None)
+        return self.dict(*args, **kwargs)
 
 
 class AzureADConfiguration(CompatBaseModel):
