@@ -12,7 +12,20 @@ from sekoia_automation.action import Action
 from sekoia_automation.module import Module
 
 
-class AzureADConfiguration(BaseModel):
+class CompatBaseModel(BaseModel):
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        # pydantic.v1 models don't support v2-style kwargs, so we ignore them.
+        return cls.parse_obj(obj)
+
+    def model_dump(self, *args, **kwargs):
+        # pydantic.v1 BaseModel.dict() doesn't support several pydantic.v2-only kwargs.
+        for key in ("mode", "context", "round_trip", "warnings", "serialize_as_any"):
+            kwargs.pop(key, None)
+        return self.dict(*args, **kwargs)
+
+
+class AzureADConfiguration(CompatBaseModel):
     tenant_id: str = Field(..., description="ID of the Azure AD tenant")
     username: str | None = Field(None, description="")
     password: str | None = Field(None, secret=True, description="")
@@ -63,15 +76,15 @@ class MicrosoftGraphAction(AsyncAction):
         return self._client
 
 
-class ApplicationArguments(BaseModel):
+class ApplicationArguments(CompatBaseModel):
     objectId: str | None = Field(None, description="ID object of the app. you can find it in the app overview.")
 
 
-class IdArguments(BaseModel):
+class IdArguments(CompatBaseModel):
     id: str | None = Field(None, description="ID of the user. id should be specified.")
 
 
-class SingleUserArguments(BaseModel):
+class SingleUserArguments(CompatBaseModel):
     id: str | None = Field(None, description="ID of the user. id or userPrincipalName should be specified.")
     userPrincipalName: str | None = Field(
         None,

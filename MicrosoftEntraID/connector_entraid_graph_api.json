@@ -22,6 +22,11 @@
         "type": "integer",
         "description": "Batch frequency in seconds",
         "default": 60
+      },
+      "use_beta_signin_api": {
+        "type": "boolean",
+        "description": "Use Microsoft Graph beta endpoint for sign-ins to retrieve extra fields (for example device code related fields). Disabled by default because beta APIs can change.",
+        "default": false
       }
     },
     "required": [

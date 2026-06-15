@@ -22,6 +22,7 @@ class MicrosoftEntraIdGraphApiConnectorConfig(DefaultConnectorConfiguration):
 
     frequency: int = 60
     chunk_size: int = 1000
+    use_beta_signin_api: bool = False
 
 
 class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
@@ -76,6 +77,7 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
                 tenant_id=self.module.configuration.tenant_id,
                 client_id=self.module.configuration.client_id,
                 client_secret=self.module.configuration.client_secret,
+                use_beta_signin_api=self.configuration.use_beta_signin_api,
             )
 
         return self._client

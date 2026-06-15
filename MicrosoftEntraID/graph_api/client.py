@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import AsyncGenerator, Iterable
+from urllib.parse import quote_plus, urlsplit
 
 from azure.identity.aio import ClientSecretCredential
 from kiota_abstractions.base_request_configuration import RequestConfiguration
@@ -17,10 +18,17 @@ _factory = JsonSerializationWriterFactory()
 
 
 class GraphApi(object):
-    def __init__(self, client_id: str, client_secret: str, tenant_id: str) -> None:
+    def __init__(
+        self,
+        client_id: str,
+        client_secret: str,
+        tenant_id: str,
+        use_beta_signin_api: bool = False,
+    ) -> None:
         self._client_id = client_id
         self._client_secret = client_secret
         self._tenant_id = tenant_id
+        self._use_beta_signin_api = use_beta_signin_api
         self._client: GraphServiceClient | None = None
         self._credentials: ClientSecretCredential | None = None
 
@@ -33,7 +41,6 @@ class GraphApi(object):
                 client_secret=self._client_secret,
             )
 
-            # Reset client to force re-creation with new credentials even if already set
             self._client = None
 
         if self._client is None:
@@ -62,9 +69,43 @@ class GraphApi(object):
 
         return " and ".join(parts) if parts else ""
 
+    def _build_signin_beta_url(self, start_date: datetime, end_date: datetime | None = None) -> str:
+        filter_value = self._build_filter("createdDateTime", start_date, end_date)
+        order_by = "createdDateTime asc"
+        adapter_base_url = getattr(self.client.request_adapter, "base_url", "https://graph.microsoft.com/v1.0/")
+        if not isinstance(adapter_base_url, str) or len(adapter_base_url) == 0:
+            adapter_base_url = "https://graph.microsoft.com/v1.0/"
+
+        parsed_base_url = urlsplit(adapter_base_url)
+        graph_root_url = (
+            f"{parsed_base_url.scheme}://{parsed_base_url.netloc}"
+            if parsed_base_url.scheme and parsed_base_url.netloc
+            else "https://graph.microsoft.com"
+        )
+
+        return (
+            f"{graph_root_url}/beta/auditLogs/signIns"
+            f"?$filter={quote_plus(filter_value)}"
+            f"&$orderby={quote_plus(order_by)}"
+        )
+
     async def get_signin_logs(
         self, start_date: datetime, end_date: datetime | None = None
     ) -> AsyncGenerator[SignIn, None]:
+        if self._use_beta_signin_api:
+            next_data_link: str | None = self._build_signin_beta_url(start_date, end_date)
+            while next_data_link is not None:
+                response = await self.client.audit_logs.sign_ins.with_url(next_data_link).get()
+                if response is None:
+                    return
+
+                next_data_link = response.odata_next_link
+                items = response.value or []
+                for item in items:
+                    yield item
+
+            return
+
         request_configuration = RequestConfiguration(
             query_parameters=SignInsRequestBuilder.SignInsRequestBuilderGetQueryParameters(
                 filter=self._build_filter("createdDateTime", start_date, end_date),
@@ -106,7 +147,7 @@ class GraphApi(object):
         if response is None:
             return
 
-        next_data_link = response.odata_next_link
+        next_data_link: str | None = response.odata_next_link
         items = response.value or []
         for item in items:
             yield item
