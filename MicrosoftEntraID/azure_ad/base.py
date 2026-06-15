@@ -12,7 +12,16 @@ from sekoia_automation.action import Action
 from sekoia_automation.module import Module
 
 
-class AzureADConfiguration(BaseModel):
+class CompatBaseModel(BaseModel):
+    @classmethod
+    def model_validate(cls, value):
+        return cls.parse_obj(value)
+
+    def model_dump(self, *args, **kwargs):
+        return self.dict(*args, **kwargs)
+
+
+class AzureADConfiguration(CompatBaseModel):
     tenant_id: str = Field(..., description="ID of the Azure AD tenant")
     username: str | None = Field(None, description="")
     password: str | None = Field(None, secret=True, description="")
@@ -24,7 +33,6 @@ class AzureADConfiguration(BaseModel):
         secret=True,
         description="Client Secret associated with the registered application. Admin Consent has to be granted to the application for it to work.",  # noqa: E501
     )
-
 
 class AzureADModule(Module):
     configuration: AzureADConfiguration
@@ -63,15 +71,15 @@ class MicrosoftGraphAction(AsyncAction):
         return self._client
 
 
-class ApplicationArguments(BaseModel):
+class ApplicationArguments(CompatBaseModel):
     objectId: str | None = Field(None, description="ID object of the app. you can find it in the app overview.")
 
 
-class IdArguments(BaseModel):
+class IdArguments(CompatBaseModel):
     id: str | None = Field(None, description="ID of the user. id should be specified.")
 
 
-class SingleUserArguments(BaseModel):
+class SingleUserArguments(CompatBaseModel):
     id: str | None = Field(None, description="ID of the user. id or userPrincipalName should be specified.")
     userPrincipalName: str | None = Field(
         None,
