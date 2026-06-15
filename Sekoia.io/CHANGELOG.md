@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-06-05 - 2.73.0
+## 2026-06-15 - 2.73.3
 
 ### Added
 
@@ -16,6 +16,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `Delete an asset` and `Delete an asset (V2)` actions — the delete endpoints now return 403; use `Revoke an asset (V2)` instead
+
+## 2026-06-10 - 2.73.2
+
+### Changed
+
+- Change Deprecate `List Assets` from description to name
+
+## 2026-06-10 - 2.73.0
+
+### Changed
+
+- Deprecate `List Assets`
+
+## 2026-06-01 - 2.72.4
+
+### Fixed
+
+- Improve AD asset synchronization action response handling for non-JSON API responses.
+- Stop returning partial success payloads when AD asset synchronization encounters an error.
 
 ## 2026-06-04 - 2.72.3
 
@@ -35,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed the `List Queries` action to include the correct `is_shared` parameter in the request parameters rather that the incorrect `is_shared_run` parameter.
 - Fixed the `Create a Dataset` action to include the `community_uuid` parameter in the request data as it is required.
-  - The community UUID is taken from the action's `community_uuid` property.
+- The community UUID is taken from the action's `community_uuid` property.
 
 ## 2026-05-07 - 2.72.0
 

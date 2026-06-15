@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-05 - 1.18.3
+
+### Fixed
+
+- Fix the sophos api problem by using a cache to store the assets and avoid calling the API too much
+
 ## 2026-05-04 - 1.18.2
 
 ### Fixed
