@@ -93,7 +93,7 @@ class GraphApi(object):
         self, start_date: datetime, end_date: datetime | None = None
     ) -> AsyncGenerator[SignIn, None]:
         if self._use_beta_signin_api:
-            next_data_link = self._build_signin_beta_url(start_date, end_date)
+            next_data_link: str | None = self._build_signin_beta_url(start_date, end_date)
             while next_data_link is not None:
                 response = await self.client.audit_logs.sign_ins.with_url(next_data_link).get()
                 if response is None:
@@ -147,7 +147,7 @@ class GraphApi(object):
         if response is None:
             return
 
-        next_data_link = response.odata_next_link
+        next_data_link: str | None = response.odata_next_link
         items = response.value or []
         for item in items:
             yield item
