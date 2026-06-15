@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-15 - 2.10.23
+
+### Added
+
+- Add an optional `use_beta_signin_api` connector setting to fetch sign-in events from Microsoft Graph beta and expose extra sign-in fields (for example device code flow related details).
+
 ## 2026-05-21 - 2.10.22
 
 ### Fixed
