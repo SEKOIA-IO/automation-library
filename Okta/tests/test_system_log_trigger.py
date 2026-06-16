@@ -11,7 +11,7 @@ from requests import Response
 
 from okta_modules import OktaModule
 from okta_modules.helpers import get_upper_second
-from okta_modules.system_log_trigger import FetchEventsException, SystemLogConnector
+from okta_modules.system_log_trigger import FetchEventsException, SystemLogConnector, compute_event_checksum
 
 
 @pytest.fixture
@@ -457,3 +457,103 @@ def test_events_cache_persists_across_save_and_load(trigger):
 
     assert test_uuid in fresh_cache, "Cache should persist after save/load"
     assert len(fresh_cache) > 0, "Loaded cache should not be empty"
+
+
+def test_compute_event_checksum_with_target_dict(message1):
+    event = {**message1, "target": {"id": "target-dict-id"}}
+
+    checksum = compute_event_checksum(event)
+
+    assert isinstance(checksum, str)
+    assert len(checksum) == 64
+
+
+def test_exit_sets_stop_event_and_logs(trigger):
+    trigger.exit(None, None)
+
+    trigger.log.assert_called_once_with(message="Stopping OKTA system logs connector", level="info")
+    assert trigger._stop_event.is_set()
+
+
+def test_handle_response_error_with_api_details(data_storage):
+    module = OktaModule()
+    trigger = SystemLogConnector(module=module, data_path=data_storage)
+    response = Response()
+    response.status_code = 400
+    response.reason = "Bad Request"
+    response._content = b'{"errorCode":"E0000001","errorSummary":"Api validation failed"}'
+    response.headers["Content-Type"] = "application/json"
+
+    with pytest.raises(FetchEventsException) as exc_info:
+        trigger._handle_response_error(response)
+
+    assert "E0000001" in str(exc_info.value)
+    assert "Api validation failed" in str(exc_info.value)
+
+
+def test_fetch_events_with_filter_and_q_params(trigger, message1):
+    trigger.configuration = {
+        "intake_key": "intake_key",
+        "filter": 'eventType eq "user.session.start"',
+        "q": "mfa",
+    }
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get("https://tenant_id.okta.com/api/v1/logs", status_code=200, json=[message1])
+
+        events = list(trigger.fetch_events())
+
+        assert events == [[message1]]
+        assert len(mock_requests.request_history) == 1
+        request = mock_requests.request_history[0]
+        assert request.qs["filter"][0].lower() == 'eventtype eq "user.session.start"'
+        assert request.qs["q"][0] == "mfa"
+
+
+def test_fetch_events_empty_page_sleeps_when_all_events_filtered(trigger, message1):
+    trigger.events_cache[message1["uuid"]] = True
+
+    with patch("okta_modules.system_log_trigger.time.sleep") as mock_sleep, requests_mock.Mocker() as mock_requests:
+        mock_requests.get("https://tenant_id.okta.com/api/v1/logs", status_code=200, json=[message1])
+
+        assert list(trigger.fetch_events()) == []
+        mock_sleep.assert_called_once_with(trigger.configuration.frequency)
+
+
+def test_compute_batch_checkpoint_returns_none_when_missing_published(trigger):
+    assert trigger._compute_batch_checkpoint([{"uuid": "without-published"}]) is None
+
+
+def test_next_batch_caches_checksum_for_events_without_uuid(trigger, message1):
+    event_without_uuid = {**message1, "uuid": None}
+    checksum = compute_event_checksum(event_without_uuid)
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get("https://tenant_id.okta.com/api/v1/logs", status_code=200, json=[event_without_uuid])
+        trigger.next_batch()
+
+    assert checksum in trigger.events_cache
+
+
+def test_next_batch_logs_no_events_when_empty_batch(trigger):
+    trigger.fetch_events = MagicMock(return_value=iter([[]]))
+
+    with patch("okta_modules.system_log_trigger.time.sleep"):
+        trigger.next_batch()
+
+    trigger.log.assert_any_call(message="No events to forward", level="info")
+
+
+def test_run_logs_exception_and_continues(trigger):
+    def failing_then_stop() -> None:
+        if not hasattr(failing_then_stop, "called"):
+            failing_then_stop.called = True  # type: ignore[attr-defined]
+            raise RuntimeError("boom")
+
+        trigger._stop_event.set()
+
+    trigger.next_batch = MagicMock(side_effect=failing_then_stop)
+
+    trigger.run()
+
+    trigger.log_exception.assert_called_once()
