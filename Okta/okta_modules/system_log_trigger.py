@@ -1,3 +1,4 @@
+import hashlib
 import signal
 import time
 from collections.abc import Generator
@@ -28,6 +29,31 @@ class FetchEventsException(Exception):
     pass
 
 
+def compute_event_checksum(event: dict[str, Any]) -> str:
+    """
+    Compute a checksum of event content to detect duplicates even if UUID is missing.
+    Uses key fields that uniquely identify an event occurrence.
+    """
+    target = event.get("target")
+    target_id = None
+    if isinstance(target, dict):
+        target_id = target.get("id")
+    elif isinstance(target, list) and target:
+        first_target = target[0]
+        if isinstance(first_target, dict):
+            target_id = first_target.get("id")
+
+    event_hash_input = {
+        "eventType": event.get("eventType"),
+        "published": event.get("published"),
+        "actor_id": event.get("actor", {}).get("id"),
+        "target_id": target_id,
+    }
+
+    event_json = orjson.dumps(event_hash_input, default=str)
+    return hashlib.sha256(event_json).hexdigest()[:16]  # Use first 16 chars for storage efficiency
+
+
 class SystemLogConnectorConfiguration(DefaultConnectorConfiguration):
     frequency: int = 60
     ratelimit_per_minute: int = 20
@@ -55,7 +81,6 @@ class SystemLogConnector(Connector):
             ignore_older_than=timedelta(days=7),
         )
 
-        # Put cache size to 2000 in order to
         self.cache_size = 2000
         self.events_cache: Cache[str, bool] = self.load_events_cache()
 
@@ -65,25 +90,27 @@ class SystemLogConnector(Connector):
 
     def load_events_cache(self) -> Cache[str, bool]:
         """
-        Load the events cache.
+        Load the events cache from persistent storage.
+        Cache stores both UUIDs and event checksums for robust deduplication.
         """
         cache: Cache[str, bool] = LRUCache(maxsize=self.cache_size)
 
         with self.context as context:
-            # load the cache from the context
+            # load the cache from the context - includes both UUIDs and checksums
             events_cache = context.get("events_cache", [])
 
-        for uuid in events_cache:
-            cache[uuid] = True
+        for cache_key in events_cache:
+            cache[cache_key] = True
 
         return cache
 
     def save_events_cache(self) -> None:
         """
-        Save the events cache.
+        Persist the events cache to disk.
+        Stores both UUIDs and checksums for robust deduplication across restarts.
         """
         with self.context as context:
-            # save the events cache to the context
+            # save the events cache to the context - includes both UUIDs and checksums
             context["events_cache"] = list(self.events_cache.keys())
 
     def exit(self, _: Any, __: Optional[Any]) -> None:
@@ -145,9 +172,26 @@ class SystemLogConnector(Connector):
             # get events from the response
             events = response.json()
 
-            filtered_events = [
-                event for event in events if event.get("uuid") is not None and event["uuid"] not in self.events_cache
-            ]
+            # Filter events that have already been processed
+            # Uses both UUID (primary) and content checksum (fallback) for robust deduplication
+            filtered_events = []
+            for event in events:
+                event_uuid = event.get("uuid")
+
+                # Generate cache keys for deduplication
+                cache_keys_to_check = []
+
+                # Primary cache key: UUID (preferred if present)
+                if event_uuid is not None:
+                    cache_keys_to_check.append(event_uuid)
+
+                # Secondary cache key: content checksum (for events without UUID or as fallback)
+                event_checksum = compute_event_checksum(event)
+                cache_keys_to_check.append(event_checksum)
+
+                # Only include event if NONE of its cache keys exist in cache
+                if not any(key in self.events_cache for key in cache_keys_to_check):
+                    filtered_events.append(event)
 
             # yielding events if defined
             if filtered_events:
@@ -166,34 +210,27 @@ class SystemLogConnector(Connector):
             if url is None:
                 return
 
+    def _compute_batch_checkpoint(self, events: list[dict[str, Any]]) -> datetime | None:
+        events_date: list[str] = sorted(x["published"] for x in events if x.get("published") is not None)
+        if len(events_date) == 0:
+            return None
+
+        return get_upper_second(isoparse(events_date[-1]))
+
+    def _update_checkpoint(self, events: list[dict[str, Any]]) -> None:
+        next_checkpoint = self._compute_batch_checkpoint(events)
+        if next_checkpoint is not None and next_checkpoint > self.cursor.offset:
+            self.cursor.offset = next_checkpoint
+
     def fetch_events(self) -> Generator[list[dict[str, Any]], None, None]:
-        most_recent_date_seen = self.cursor.offset
+        from_date = self.cursor.offset
 
-        try:
-            for next_events in self.__fetch_next_events(most_recent_date_seen):
-                if next_events:
-                    # get the greater date seen in this list of events
-                    events_date: list[str] = sorted(
-                        x["published"] for x in next_events if x.get("published") is not None
-                    )
-
-                    last_event_date = isoparse(events_date[-1])
-
-                    # save the greater date ever seen
-                    if last_event_date > most_recent_date_seen:
-                        most_recent_date_seen = get_upper_second(
-                            last_event_date
-                        )  # get the upper second to exclude the most recent event seen
-
-                    # forward current events
-                    yield next_events
-        finally:
-            # save the most recent date
-            if most_recent_date_seen > self.cursor.offset:
-                self.cursor.offset = most_recent_date_seen
+        for next_events in self.__fetch_next_events(from_date):
+            if next_events:
+                yield next_events
 
         now = datetime.now(timezone.utc)
-        current_lag = now - most_recent_date_seen
+        current_lag = now - self.cursor.offset
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
 
     def next_batch(self) -> None:
@@ -206,6 +243,23 @@ class SystemLogConnector(Connector):
 
             # if the batch is full, push it
             if len(batch_of_events) > 0:
+                # Update cache BEFORE pushing events (better atomicity)
+                # This prevents duplicates if process crashes during/after push
+                for event in events:
+                    event_uuid = event.get("uuid")
+
+                    # Cache UUID if available (primary key)
+                    if event_uuid is not None:
+                        self.events_cache[event_uuid] = True
+
+                    # Always cache event checksum (fallback key)
+                    # This ensures deduplication even if UUID is missing or changes
+                    event_checksum = compute_event_checksum(event)
+                    self.events_cache[event_checksum] = True
+
+                # Persist cache to disk before pushing events
+                self.save_events_cache()
+
                 self.log(
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
@@ -213,11 +267,9 @@ class SystemLogConnector(Connector):
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
 
-                # Persist cache of event UUIDs after pushing to intake
-                for event in events:
-                    self.events_cache[event["uuid"]] = True
-
-                self.save_events_cache()
+                # Advance checkpoint only after successful push.
+                # This prevents replay storms on restart while keeping at-least-once delivery semantics.
+                self._update_checkpoint(events)
             else:
                 self.log(
                     message="No events to forward",

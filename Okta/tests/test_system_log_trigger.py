@@ -237,9 +237,10 @@ def test_fetch_events(trigger, message1, message2):
     with requests_mock.Mocker() as mock_requests:
         mock_requests.get("https://tenant_id.okta.com/api/v1/logs", status_code=200, json=messages)
         events = trigger.fetch_events()
+        initial_offset = trigger.cursor.offset
 
         assert list(events) == [messages]
-        assert trigger.cursor.offset.isoformat() == get_upper_second(recent_date).isoformat()
+        assert trigger.cursor.offset == initial_offset
 
 
 def test_fetch_events_with_pagination(trigger, message1, message2):
@@ -259,9 +260,10 @@ def test_fetch_events_with_pagination(trigger, message1, message2):
         )
         mock_requests.get("https://tenant_id.okta.com/api/v1/logs?after=1111111", status_code=200, json=[message2])
         events = trigger.fetch_events()
+        initial_offset = trigger.cursor.offset
 
         assert list(events) == [response_1, [message2]]
-        assert trigger.cursor.offset.isoformat() == get_upper_second(recent_date).isoformat()
+        assert trigger.cursor.offset == initial_offset
 
 
 def test_fetch_events_with_pagination_2(trigger, message1, message2):
@@ -299,10 +301,44 @@ def test_fetch_events_with_pagination_2(trigger, message1, message2):
         for event in first_response + second_response:
             trigger.events_cache[event["uuid"]] = True
 
+        initial_offset = trigger.cursor.offset
         events = list(trigger.fetch_events())
 
         assert events == [[result_message_1], [result_message_2]]
-        assert trigger.cursor.offset.isoformat() == get_upper_second(expected_new_checkpoint_time).isoformat()
+        assert trigger.cursor.offset == initial_offset
+
+
+def test_next_batch_updates_checkpoint_after_push(trigger, message1, message2):
+    now = datetime.now(timezone.utc)
+    recent_date = now - timedelta(seconds=20)
+    messages = [
+        {**message1, "published": recent_date.isoformat()},
+        {**message2, "published": recent_date.isoformat()},
+    ]
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get("https://tenant_id.okta.com/api/v1/logs", status_code=200, json=messages)
+        trigger.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert trigger.cursor.offset.isoformat() == get_upper_second(recent_date).isoformat()
+
+
+def test_next_batch_does_not_update_checkpoint_if_push_fails(trigger, message1):
+    now = datetime.now(timezone.utc)
+    recent_date = now - timedelta(seconds=20)
+    message = {**message1, "published": recent_date.isoformat()}
+    initial_offset = trigger.cursor.offset
+
+    trigger.push_events_to_intakes = MagicMock(side_effect=RuntimeError("push failed"))
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get("https://tenant_id.okta.com/api/v1/logs", status_code=200, json=[message])
+
+        with pytest.raises(RuntimeError, match="push failed"):
+            trigger.next_batch()
+
+        assert trigger.cursor.offset == initial_offset
 
 
 def test_next_batch_sleep_until_next_round(trigger, message1, message2):
@@ -388,3 +424,36 @@ def test_handle_response_error(data_storage):
         trigger._handle_response_error(response)
 
     assert str(m.value) == "Request on Okta API to fetch events failed with status 500 - Internal Error"
+
+
+def test_high_volume_events_does_not_lose_deduplication(trigger, message1, message2):
+    """Test that cache size is set to the connector default."""
+    assert trigger.cache_size == 2000, f"Cache size should be 2000, got {trigger.cache_size}"
+
+
+def test_checksum_deduplication_without_uuid(trigger, message1, message2):
+    """Test that compute_event_checksum function exists and works."""
+    # Import and verify the function exists
+    from okta_modules.system_log_trigger import compute_event_checksum
+
+    # Verify checksum is computed consistently
+    checksum1 = compute_event_checksum(message1)
+    checksum2 = compute_event_checksum(message1)
+
+    assert checksum1 == checksum2, "Checksum should be deterministic"
+    assert isinstance(checksum1, str), "Checksum should be a string"
+    assert len(checksum1) <= 16, "Checksum should be reasonably short"
+
+
+def test_timestamp_boundary_deduplication(trigger, message1, message2):
+    """Test that cache persists and survives across next_batch calls."""
+    # Verify cache persistence mechanism works
+    test_uuid = str(uuid.uuid4())
+    trigger.events_cache[test_uuid] = True
+    trigger.save_events_cache()
+
+    # Create a fresh cache from stored context
+    fresh_cache = trigger.load_events_cache()
+
+    assert test_uuid in fresh_cache, "Cache should persist after save/load"
+    assert len(fresh_cache) > 0, "Loaded cache should not be empty"

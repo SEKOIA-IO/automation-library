@@ -11,9 +11,9 @@ from typing import Any, Optional
 
 from dateutil.parser import isoparse
 from okta.client import Client as OktaClient
-from okta.models.user import User as OktaUser
 from okta.models.role import Role as OktaRole
 from okta.models.role_status import RoleStatus as OktaRoleStatus
+from okta.models.user import User as OktaUser
 from okta.models.user_status import UserStatus as OktaUserStatus
 from sekoia_automation.asset_connector import AsyncAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
