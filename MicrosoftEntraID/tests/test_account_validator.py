@@ -36,11 +36,6 @@ def test_configuration(test_azure_ad_account_validator):
     assert test_azure_ad_account_validator.module.configuration["client_secret"] == "fake_client_secret"
 
 
-# ---------------------------------------------------------------------------
-# validate() — integration with the event loop
-# ---------------------------------------------------------------------------
-
-
 @patch("azure_ad.account_validator.asyncio.get_event_loop")
 def test_validate_all_checks_pass(mock_get_event_loop, test_azure_ad_account_validator):
     """validate() returns True when _run_all_checks succeeds."""
@@ -68,11 +63,6 @@ def test_validate_fatal_connection_error(mock_get_event_loop, test_azure_ad_acco
     test_azure_ad_account_validator.error.assert_called_once_with(
         "Impossible to connect to the Azure AD tenant: Connection failed"
     )
-
-
-# ---------------------------------------------------------------------------
-# _run_all_checks() — step 1: list users with signInActivity
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -117,11 +107,6 @@ async def test_run_all_checks_no_users_in_tenant(test_azure_ad_account_validator
     test_azure_ad_account_validator._check_user_member_of.assert_not_called()
     test_azure_ad_account_validator._check_user_admin_roles.assert_not_called()
     test_azure_ad_account_validator._check_user_auth_methods.assert_not_called()
-
-
-# ---------------------------------------------------------------------------
-# _run_all_checks() — step 2: per-user permission checks
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
