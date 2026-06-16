@@ -51,7 +51,7 @@ def compute_event_checksum(event: dict[str, Any]) -> str:
     }
 
     event_json = orjson.dumps(event_hash_input, default=str)
-    return hashlib.sha256(event_json).hexdigest()[:16]  # Use first 16 chars for storage efficiency
+    return hashlib.sha256(event_json).hexdigest()
 
 
 class SystemLogConnectorConfiguration(DefaultConnectorConfiguration):
@@ -172,28 +172,20 @@ class SystemLogConnector(Connector):
             # get events from the response
             events = response.json()
 
-            # Filter events that have already been processed
-            # Uses both UUID (primary) and content checksum (fallback) for robust deduplication
+            # Filter events that have already been processed.
+            # Prefer UUID when available, fallback to checksum otherwise.
             filtered_events = []
             for event in events:
                 event_uuid = event.get("uuid")
-
-                # Generate cache keys for deduplication
-                cache_keys_to_check = []
-
-                # Primary cache key: UUID (preferred if present)
                 if event_uuid is not None:
-                    cache_keys_to_check.append(event_uuid)
+                    if event_uuid not in self.events_cache:
+                        filtered_events.append(event)
+                else:
+                    event_checksum = compute_event_checksum(event)
+                    if event_checksum not in self.events_cache:
+                        filtered_events.append(event)
 
-                # Secondary cache key: content checksum (for events without UUID or as fallback)
-                event_checksum = compute_event_checksum(event)
-                cache_keys_to_check.append(event_checksum)
-
-                # Only include event if NONE of its cache keys exist in cache
-                if not any(key in self.events_cache for key in cache_keys_to_check):
-                    filtered_events.append(event)
-
-            # yielding events if defined
+            # Only include events that are not present in cache.
             if filtered_events:
                 INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(filtered_events))
 
@@ -239,37 +231,36 @@ class SystemLogConnector(Connector):
 
         # Fetch next batch
         for events in self.fetch_events():
-            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
+            pushed_events = events
+            serialized_events = [orjson.dumps(event).decode("utf-8") for event in pushed_events]
 
             # if the batch is full, push it
-            if len(batch_of_events) > 0:
+            if len(serialized_events) > 0:
                 # Update cache BEFORE pushing events (better atomicity)
                 # This prevents duplicates if process crashes during/after push
-                for event in events:
+                for event in pushed_events:
                     event_uuid = event.get("uuid")
 
-                    # Cache UUID if available (primary key)
+                    # Cache UUID when available to maximize LRU coverage.
                     if event_uuid is not None:
                         self.events_cache[event_uuid] = True
-
-                    # Always cache event checksum (fallback key)
-                    # This ensures deduplication even if UUID is missing or changes
-                    event_checksum = compute_event_checksum(event)
-                    self.events_cache[event_checksum] = True
+                    else:
+                        event_checksum = compute_event_checksum(event)
+                        self.events_cache[event_checksum] = True
 
                 # Persist cache to disk before pushing events
                 self.save_events_cache()
 
                 self.log(
-                    message=f"Forwarded {len(batch_of_events)} events to the intake",
+                    message=f"Forwarded {len(serialized_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
-                self.push_events_to_intakes(events=batch_of_events)
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(serialized_events))
+                self.push_events_to_intakes(events=serialized_events)
 
                 # Advance checkpoint only after successful push.
                 # This prevents replay storms on restart while keeping at-least-once delivery semantics.
-                self._update_checkpoint(events)
+                self._update_checkpoint(pushed_events)
             else:
                 self.log(
                     message="No events to forward",

@@ -442,10 +442,10 @@ def test_checksum_deduplication_without_uuid(trigger, message1, message2):
 
     assert checksum1 == checksum2, "Checksum should be deterministic"
     assert isinstance(checksum1, str), "Checksum should be a string"
-    assert len(checksum1) <= 16, "Checksum should be reasonably short"
+    assert len(checksum1) == 64, "Checksum should be a full SHA-256 hex digest"
 
 
-def test_timestamp_boundary_deduplication(trigger, message1, message2):
+def test_events_cache_persists_across_save_and_load(trigger):
     """Test that cache persists and survives across next_batch calls."""
     # Verify cache persistence mechanism works
     test_uuid = str(uuid.uuid4())
