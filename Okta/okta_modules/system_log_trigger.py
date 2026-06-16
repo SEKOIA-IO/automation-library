@@ -236,8 +236,10 @@ class SystemLogConnector(Connector):
 
             # if the batch is full, push it
             if len(serialized_events) > 0:
-                # Update cache BEFORE pushing events (better atomicity)
-                # This prevents duplicates if process crashes during/after push
+                # Push first to preserve at-least-once delivery guarantees.
+                self.push_events_to_intakes(events=serialized_events)
+
+                # Update and persist cache only after successful push.
                 for event in pushed_events:
                     event_uuid = event.get("uuid")
 
@@ -248,19 +250,17 @@ class SystemLogConnector(Connector):
                         event_checksum = compute_event_checksum(event)
                         self.events_cache[event_checksum] = True
 
-                # Persist cache to disk before pushing events
                 self.save_events_cache()
+
+                # Advance checkpoint only after successful push.
+                # This prevents replay storms on restart while keeping at-least-once delivery semantics.
+                self._update_checkpoint(pushed_events)
 
                 self.log(
                     message=f"Forwarded {len(serialized_events)} events to the intake",
                     level="info",
                 )
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(serialized_events))
-                self.push_events_to_intakes(events=serialized_events)
-
-                # Advance checkpoint only after successful push.
-                # This prevents replay storms on restart while keeping at-least-once delivery semantics.
-                self._update_checkpoint(pushed_events)
             else:
                 self.log(
                     message="No events to forward",

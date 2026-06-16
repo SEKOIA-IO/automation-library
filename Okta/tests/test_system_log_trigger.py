@@ -339,6 +339,7 @@ def test_next_batch_does_not_update_checkpoint_if_push_fails(trigger, message1):
             trigger.next_batch()
 
         assert trigger.cursor.offset == initial_offset
+        assert message["uuid"] not in trigger.events_cache
 
 
 def test_next_batch_sleep_until_next_round(trigger, message1, message2):
@@ -426,19 +427,18 @@ def test_handle_response_error(data_storage):
     assert str(m.value) == "Request on Okta API to fetch events failed with status 500 - Internal Error"
 
 
-def test_high_volume_events_does_not_lose_deduplication(trigger, message1, message2):
+def test_default_cache_size_is_2000(trigger):
     """Test that cache size is set to the connector default."""
     assert trigger.cache_size == 2000, f"Cache size should be 2000, got {trigger.cache_size}"
 
 
-def test_checksum_deduplication_without_uuid(trigger, message1, message2):
-    """Test that compute_event_checksum function exists and works."""
-    # Import and verify the function exists
-    from okta_modules.system_log_trigger import compute_event_checksum
+def test_checksum_deduplication_without_uuid(trigger, message1):
+    """Test that compute_event_checksum works for events without UUID."""
+    event_without_uuid = {**message1, "uuid": None}
 
     # Verify checksum is computed consistently
-    checksum1 = compute_event_checksum(message1)
-    checksum2 = compute_event_checksum(message1)
+    checksum1 = compute_event_checksum(event_without_uuid)
+    checksum2 = compute_event_checksum(event_without_uuid)
 
     assert checksum1 == checksum2, "Checksum should be deterministic"
     assert isinstance(checksum1, str), "Checksum should be a string"
