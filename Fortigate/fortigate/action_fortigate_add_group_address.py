@@ -62,7 +62,7 @@ class FortigateAddGroupAddress(Action):
                 },
                 params={"vdom": self.vdom},
                 json=data,
-                verify=False,
+                verify=self.module.configuration.get("verify_certificate", True),
                 timeout=2,
             )
             return response
@@ -91,7 +91,7 @@ class FortigateAddGroupAddress(Action):
                 },
                 params={"vdom": self.vdom},
                 json=data,
-                verify=False,
+                verify=self.module.configuration.get("verify_certificate", True),
                 timeout=2,
             )
             return response
@@ -120,7 +120,7 @@ class FortigateAddGroupAddress(Action):
                 },
                 params={"vdom": self.vdom},
                 json=data,
-                verify=False,
+                verify=self.module.configuration.get("verify_certificate", True),
                 timeout=2,
             )
             return response

@@ -44,7 +44,7 @@ class FortigateDisableLocalUserAction(Action):
                     },
                     params={"vdom": vdom},
                     data=json.dumps(payload),
-                    verify=False,
+                    verify=self.module.configuration.get("verify_certificate", True),
                     timeout=10,
                 )
                 response.raise_for_status()
