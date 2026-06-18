@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from microsoft_ad.actions_base import MicrosoftADAction, MicrosoftADModule
 
