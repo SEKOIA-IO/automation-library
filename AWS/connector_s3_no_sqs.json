@@ -1,0 +1,56 @@
+{
+  "description": "Get line-oriented records from new S3 objects",
+  "docker_parameters": "aws_s3_no_sqs_trigger",
+  "name": "Fetch new logs on S3 (without SQS)",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing",
+        "default": 10000
+      },
+      "separator": {
+        "type": "string",
+        "description": "The separator used between each records (default: the linefeed character '\\n')",
+        "default": "\\n"
+      },
+      "skip_first": {
+        "type": "integer",
+        "description": "The number of records to skip at the beginning of each S3 object (default: 0)",
+        "default": 1
+      },
+      "ignore_comments": {
+        "type": "boolean",
+        "description": "Flag to ignore commented lines (starting with the character `#`; default: false)",
+        "default": false
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "prefix_filter": {
+        "description": "If set, only S3 objects whose key starts with this prefix will be processed. Use this when the S3 bucket contains multiple log types and you want to collect only specific ones",
+        "type": "string",
+        "default": null
+      }
+    },
+    "required": [
+      "frequency",
+      "intake_key"
+    ],
+    "title": "connector configuration",
+    "type": "object"
+  },
+  "uuid": "fea81d3d-779f-4799-8a82-99ad8c0158b5"
+}
