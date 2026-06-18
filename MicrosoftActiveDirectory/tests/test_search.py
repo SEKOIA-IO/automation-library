@@ -1,7 +1,7 @@
 import datetime
 import json
 from pathlib import Path
-from unittest.mock import Mock, mock_open, patch
+from unittest.mock import Mock, patch
 
 import orjson
 import pytest
@@ -173,19 +173,22 @@ def test_search_to_file_writes_string_result(data_storage):
     assert output_path.read_text() == "already serialized"
 
 
-def test_search_to_file_falls_back_to_raw_result_when_orjson_fails(data_storage):
+def test_search_to_file_serializes_unsupported_values_as_strings(data_storage):
     action = configured_action(SearchAction, data_path=data_storage)
     mock_client = Mock()
     mock_client.search.return_value = True
     action.client = mock_client
 
-    raw_result = [{"bad": object()}]
+    class UnserializableButStringable:
+        def __str__(self):
+            return "stringified-value"
+
+    raw_result = [{"bad": UnserializableButStringable()}]
 
     with patch.object(action, "transform_ldap_results", return_value=raw_result):
-        with patch("microsoft_ad.search_actions.orjson.dumps", side_effect=TypeError("boom")):
-            mocked_open = mock_open()
-            with patch("pathlib.Path.open", mocked_open):
-                results = action.run({"search_filter": "(cn=test)", "basedn": "dc=example,dc=com", "to_file": True})
+        results = action.run({"search_filter": "(cn=test)", "basedn": "dc=example,dc=com", "to_file": True})
 
-    mocked_open().write.assert_called_once_with(raw_result)
+    output_path = data_storage.joinpath(results["output_path"])
+    content = json.loads(output_path.read_text())
+    assert content == [{"bad": "stringified-value"}]
     assert results["output_path"].startswith("output-")

@@ -392,7 +392,9 @@ def test_disable_domain_controller_uses_shared_client(one_user_dn):
         "microsoft_ad.actions_base.MicrosoftADAction.search_userdn_query",
         return_value=one_user_dn,
     ) as mock_search:
-        with patch("microsoft_ad.actions_base.MicrosoftADAction.client") as mock_client:
+        with patch("microsoft_ad.actions_base.MicrosoftADAction.client_for") as mock_client_for:
+            mock_client = Mock()
+            mock_client_for.return_value = mock_client
             mock_client.modify.return_value = True
             mock_client.result.get.return_value = "success"
 
@@ -404,6 +406,7 @@ def test_disable_domain_controller_uses_shared_client(one_user_dn):
                 }
             )
 
+            mock_client_for.assert_called_once_with("child.lab.test.com")
             mock_search.assert_called_once_with("test_username", "cn=test_basedn", None)
 
 
@@ -414,7 +417,9 @@ def test_enable_domain_controller_uses_shared_client(one_user_dn):
         "microsoft_ad.actions_base.MicrosoftADAction.search_userdn_query",
         return_value=one_user_dn,
     ) as mock_search:
-        with patch("microsoft_ad.actions_base.MicrosoftADAction.client") as mock_client:
+        with patch("microsoft_ad.actions_base.MicrosoftADAction.client_for") as mock_client_for:
+            mock_client = Mock()
+            mock_client_for.return_value = mock_client
             mock_client.modify.return_value = True
             mock_client.result.get.return_value = "success"
 
@@ -426,6 +431,7 @@ def test_enable_domain_controller_uses_shared_client(one_user_dn):
                 }
             )
 
+            mock_client_for.assert_called_once_with("child.lab.test.com")
             mock_search.assert_called_once_with("test_username", "cn=test_basedn", None)
 
 
@@ -436,7 +442,9 @@ def test_reset_password_domain_controller_uses_shared_client(one_user_dn):
         "microsoft_ad.actions_base.MicrosoftADAction.search_userdn_query",
         return_value=one_user_dn,
     ) as mock_search:
-        with patch("microsoft_ad.actions_base.MicrosoftADAction.client") as mock_client:
+        with patch("microsoft_ad.actions_base.MicrosoftADAction.client_for") as mock_client_for:
+            mock_client = Mock()
+            mock_client_for.return_value = mock_client
             mock_client.result.get.return_value = "success"
 
             action.run(
@@ -448,7 +456,23 @@ def test_reset_password_domain_controller_uses_shared_client(one_user_dn):
                 }
             )
 
+            mock_client_for.assert_called_once_with("child.lab.test.com")
             mock_search.assert_called_once_with("test_username", "cn=test_basedn", None)
+
+
+def test_domain_controller_connection_error_propagates(one_user_dn):
+    action = configured_action(ResetUserPasswordAction)
+
+    with patch("microsoft_ad.actions_base.MicrosoftADAction.client_for", side_effect=Exception("bad controller")):
+        with pytest.raises(Exception, match="bad controller"):
+            action.run(
+                {
+                    "username": "test_username",
+                    "basedn": "cn=test_basedn",
+                    "new_password": "test_new_password",
+                    "domain_controller": "child.lab.test.com",
+                }
+            )
 
 
 def test_enable_apply_to_all_total_failure(two_users_dn):

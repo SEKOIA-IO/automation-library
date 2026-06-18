@@ -25,12 +25,7 @@ class ResetUserPasswordAction(MicrosoftADAction):
 
         # Set override client if domain_controller is specified
         if arguments.domain_controller is not None:
-            try:
-                self._override_client = self.client_for(arguments.domain_controller)
-            except Exception:
-                # If creating connection fails (e.g., in tests), it's OK
-                # The mocked client will be used instead
-                pass
+            self._override_client = self.client_for(arguments.domain_controller)
 
         try:
             user_query = self.search_userdn_query(
@@ -100,12 +95,7 @@ class EnableUserAction(MicrosoftADAction):
 
         # Set override client if domain_controller is specified
         if arguments.domain_controller is not None:
-            try:
-                self._override_client = self.client_for(arguments.domain_controller)
-            except Exception:
-                # If creating connection fails (e.g., in tests), it's OK
-                # The mocked client will be used instead
-                pass
+            self._override_client = self.client_for(arguments.domain_controller)
 
         try:
             user_query = self.search_userdn_query(
@@ -177,12 +167,7 @@ class DisableUserAction(MicrosoftADAction):
 
         # Set override client if domain_controller is specified
         if arguments.domain_controller is not None:
-            try:
-                self._override_client = self.client_for(arguments.domain_controller)
-            except Exception:
-                # If creating connection fails (e.g., in tests), it's OK
-                # The mocked client will be used instead
-                pass
+            self._override_client = self.client_for(arguments.domain_controller)
 
         try:
             user_query = self.search_userdn_query(
