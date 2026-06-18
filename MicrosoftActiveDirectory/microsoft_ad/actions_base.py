@@ -112,10 +112,10 @@ class MicrosoftADAction(Action):
         basedn: str,
         raise_on_error: bool = False,
         client: Connection | None = None,
-    ) -> list[list]:
+    ) -> list[list[str | int | None]]:
         """Perform a single LDAP search and return results."""
         target_client = client or self.client
-        users_query = []
+        users_query: list[list[str | int | None]] = []
 
         try:
             target_client.search(
