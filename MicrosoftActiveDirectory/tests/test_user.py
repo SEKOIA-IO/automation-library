@@ -1,4 +1,4 @@
-from unittest.mock import Mock, call, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -62,7 +62,7 @@ def test_disable_two_users(two_users_dn):
                 mock_client.modify.return_value = response
                 mock_client.result.get.return_value = "success"
 
-                results = action.run({"username": "test_username", "basedn": "cn=test_basedn"})
+                action.run({"username": "test_username", "basedn": "cn=test_basedn"})
 
 
 def test_enable_user(one_user_dn):
@@ -95,7 +95,7 @@ def test_enable_two_users(two_users_dn):
                 mock_client.modify.return_value = response
                 mock_client.result.get.return_value = "success"
 
-                results = action.run({"username": "test_username", "basedn": "cn=test_basedn"})
+                action.run({"username": "test_username", "basedn": "cn=test_basedn"})
 
 
 def test_reset_password_user(one_user_dn):
@@ -134,7 +134,7 @@ def test_reset_password_two_users(two_users_dn):
                 mock_client.modify.return_value = response
                 mock_client.result.get.return_value = "success"
 
-                results = action.run(
+                action.run(
                     {
                         "username": "test_username",
                         "basedn": "cn=test_basedn",
