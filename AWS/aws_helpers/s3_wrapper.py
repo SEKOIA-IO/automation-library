@@ -7,9 +7,9 @@ from contextlib import asynccontextmanager
 
 from aiofiles.threadpool.binary import AsyncBufferedReader
 from loguru import logger
-from pydantic.v1 import Field
-from aws_helpers.client import AwsClient, AwsClientConfiguration
+from pydantic import Field
 
+from aws_helpers.client import AwsClient, AwsClientConfiguration
 from aws_helpers.utils import AsyncReader, async_gzip_open, is_gzip_compressed
 
 

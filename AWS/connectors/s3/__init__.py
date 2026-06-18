@@ -7,7 +7,7 @@ from collections.abc import AsyncGenerator
 from typing import Any, Optional
 
 import orjson
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 from aws_helpers.utils import AsyncReader, normalize_s3_key, unescape_string
 from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
