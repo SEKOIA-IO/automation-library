@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -334,6 +334,55 @@ def test_reset_password_display_name_passed_to_search(one_user_dn):
             )
 
             mock_search.assert_called_once_with("test_username", "cn=test_basedn", "test@example.com")
+
+
+@pytest.mark.parametrize(
+    "action_class,run_arguments",
+    [
+        (
+            ResetUserPasswordAction,
+            {"username": "test_username", "basedn": "cn=test_basedn", "new_password": "test_new_password"},
+        ),
+        (EnableUserAction, {"username": "test_username", "basedn": "cn=test_basedn"}),
+        (DisableUserAction, {"username": "test_username", "basedn": "cn=test_basedn"}),
+    ],
+)
+def test_actions_raise_when_user_not_found(action_class, run_arguments):
+    action = configured_action(action_class)
+
+    with patch("microsoft_ad.actions_base.MicrosoftADAction.search_userdn_query", return_value=[]):
+        with pytest.raises(Exception, match="User not found"):
+            action.run(run_arguments)
+
+
+def test_reset_password_raises_when_ldap_result_is_not_success():
+    action = configured_action(ResetUserPasswordAction)
+    mock_client = Mock()
+    mock_client.extend.microsoft.modify_password.return_value = True
+    mock_client.result.get.return_value = "insufficientAccessRights"
+
+    with pytest.raises(Exception, match="Password reset failed"):
+        action._reset_password_for_user(mock_client, "CN=test", "test_username", "test_new_password")
+
+
+def test_enable_user_raises_when_ldap_result_is_not_success():
+    action = configured_action(EnableUserAction)
+    mock_client = Mock()
+    mock_client.modify.return_value = True
+    mock_client.result.get.return_value = "insufficientAccessRights"
+
+    with pytest.raises(Exception, match="Enable action failed"):
+        action._enable_user(mock_client, "CN=test", 512, "test_username")
+
+
+def test_disable_user_raises_when_ldap_result_is_not_success():
+    action = configured_action(DisableUserAction)
+    mock_client = Mock()
+    mock_client.modify.return_value = True
+    mock_client.result.get.return_value = "insufficientAccessRights"
+
+    with pytest.raises(Exception, match="Disable action failed"):
+        action._disable_user(mock_client, "CN=test", 512, "test_username")
 
 
 def test_disable_domain_controller_uses_shared_client(one_user_dn):
