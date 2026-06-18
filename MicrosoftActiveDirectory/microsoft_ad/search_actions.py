@@ -1,11 +1,9 @@
 from datetime import datetime
-from pathlib import Path
 from typing import List
 from uuid import uuid4
 
 import orjson
 from ldap3 import ALL_ATTRIBUTES
-from ldap3.core.timezone import OffsetTzInfo
 from pydantic.v1 import BaseModel
 
 from .actions_base import MicrosoftADAction
@@ -53,8 +51,8 @@ class SearchAction(MicrosoftADAction):
             self.client.search(
                 search_base=arguments.basedn, search_filter=arguments.search_filter, attributes=attributes
             )
-        except:
-            raise Exception(f"Failed to search in this base {arguments.basedn}")
+        except Exception as e:
+            raise Exception(f"Failed to search in this base {arguments.basedn}") from e
 
         result = self.transform_ldap_results(self.client.response)
         if arguments.to_file:
