@@ -5,6 +5,7 @@ import requests_mock
 
 from locaterisk_modules import LocateRiskModule
 from locaterisk_modules.connector_locaterisk_scan_report import LocateRiskScanReportConnector
+from locaterisk_modules.metrics import INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 REPORT_URL = "https://app.locaterisk.com/api/rest/report/export"
 SCAN_ID = "scan-123"
@@ -52,6 +53,21 @@ def test_run_pushes_parsed_csv_rows(connector):
     assert all('"source": "locaterisk"' in event for event in events)
     assert '"host": "host-a"' in events[0]
     assert "CVE-2024-0002\\nCVE-2024-0003" in events[1]
+
+
+def test_run_records_metrics(connector):
+    csv_body = "host;cve\r\nhost-a;CVE-2024-0001\r\nhost-b;CVE-2024-0002\r\n"
+    intake_key = connector.configuration.intake_key
+
+    incoming_before = INCOMING_MESSAGES.labels(intake_key=intake_key)._value.get()
+    outcoming_before = OUTCOMING_EVENTS.labels(intake_key=intake_key)._value.get()
+
+    with requests_mock.Mocker() as mock_requests, _stop_after_first_iteration(connector):
+        mock_requests.get(CSV_URL, status_code=200, text=csv_body)
+        connector.run()
+
+    assert INCOMING_MESSAGES.labels(intake_key=intake_key)._value.get() - incoming_before == 2
+    assert OUTCOMING_EVENTS.labels(intake_key=intake_key)._value.get() - outcoming_before == 2
 
 
 def test_run_skips_empty_rows(connector):

@@ -1,6 +1,7 @@
 import csv
 import io
 import json
+import time
 
 import requests
 from pydantic import Field
@@ -9,6 +10,7 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from urllib3.util.retry import Retry
 
 from . import LocateRiskModule
+from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
 class LocateRiskScanReportConnectorConfiguration(DefaultConnectorConfiguration):
@@ -46,6 +48,7 @@ class LocateRiskScanReportConnector(Connector):
 
         while self.running:
             self.log("Polling LocateRisk API...", level="info")
+            batch_start_time = time.time()
 
             had_error = False
             batch_of_events = []
@@ -84,8 +87,13 @@ class LocateRiskScanReportConnector(Connector):
 
             if batch_of_events:
                 self.log(message=f"{len(batch_of_events)} events collected", level="info")
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
             elif not had_error:
                 self.log("No events to push this cycle", level="info")
+
+            batch_duration = time.time() - batch_start_time
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
             self._stop_event.wait(timeout=self.configuration.polling_interval * 60)
