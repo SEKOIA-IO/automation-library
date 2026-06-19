@@ -68,7 +68,7 @@ class S3Wrapper(AwsClient[S3Configuration]):
 
     async def list_objects(
         self,
-        bucket: str,
+        bucket: str | None = None,
         prefix: str | None = None,
         start_after: str | None = None,
     ) -> AsyncGenerator[dict, None]:
