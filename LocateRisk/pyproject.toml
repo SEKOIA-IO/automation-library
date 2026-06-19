@@ -1,6 +1,6 @@
 [project]
 name = "locaterisk-automation-module"
-version = "0.1.8"
+version = "0.2.0"
 description = ""
 authors = []
 requires-python = ">=3.11,<4"
@@ -55,5 +55,6 @@ dev = [
     "pytest-cov (>=7.0.0,<8.0.0)",
     "mypy (>=2.1.0,<3.0.0)",
     "requests-mock (>=1.12.1,<2.0.0)",
-    "black (>=26.5.1,<27.0.0)"
+    "black (>=26.5.1,<27.0.0)",
+    "isort (>=5.13,<6)"
 ]

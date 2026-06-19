@@ -5,16 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.0 - 2026-06-17
 
 ### Added
 
 - Unit tests for the LocateRisk connector covering CSV parsing, empty rows, HTTP errors, and BOM handling.
+- Mounted a `urllib3` retry adapter on the connector's `requests` session so transient HTTP errors (429/502/503) are retried with back-off instead of dropping the polling cycle.
+- Added `isort` to the dev dependency group to match the configured `[tool.isort]` section.
 
 ### Changed
 
-- Declared connector secrets only in the module manifest (removed the redundant Pydantic `json_schema_extra` flag).
-- Aligned `pyproject.toml` project version with the module manifest version.
+- Marked `api_key` and `scan_id` with `Field(json_schema_extra={"secret": True})` so the Pydantic models stay the source of truth for the manifest `secrets` array on regeneration (mypy-clean, non-deprecated form).
+- Aligned `pyproject.toml` project version with the module manifest version (`0.2.0`).
+- Replaced the blocking `time.sleep()` between polling cycles with `self._stop_event.wait()` so the connector shuts down promptly when stopped.
 - Added a description for the `report_url` module configuration field.
 - Extracted the report CSV URL construction into a `_build_report_url()` helper for a single source of truth.
 - Guarded the "No events to push this cycle" log behind an error flag so failed polling cycles no longer log as empty successful ones.

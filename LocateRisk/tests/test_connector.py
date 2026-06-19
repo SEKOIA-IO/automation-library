@@ -28,12 +28,12 @@ def connector(data_storage):
 
 
 def _stop_after_first_iteration(connector):
-    """Patch time.sleep so the run() loop exits after one cycle."""
+    """Patch the stop-event wait so the run() loop exits after one cycle."""
 
-    def stop(_seconds):
+    def stop(*_args, **_kwargs):
         connector._stop_event.set()
 
-    return patch("locaterisk_modules.connector_locaterisk_scan_report.time.sleep", side_effect=stop)
+    return patch.object(connector._stop_event, "wait", side_effect=stop)
 
 
 def test_run_pushes_parsed_csv_rows(connector):
