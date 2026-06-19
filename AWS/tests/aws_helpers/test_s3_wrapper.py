@@ -138,6 +138,7 @@ async def test_read_compressed_content_key(session_faker: Faker, content_type: s
 async def test_list_objects(session_faker: Faker):
     bucket = session_faker.word()
     prefix = "123/dnslogs/"
+    marker = f"{prefix}2026-06-11/2026-06-10-11-35-1234.csv.gz"
 
     configuration = S3Configuration(
         aws_access_key_id=session_faker.word(),
@@ -220,8 +221,8 @@ async def test_list_objects(session_faker: Faker):
 
         mock_client.return_value.__aenter__.return_value = mock_s3
 
-        results = [obj async for obj in s3.list_objects(bucket=bucket, prefix=prefix)]
+        results = [obj async for obj in s3.list_objects(bucket=bucket, prefix=prefix, start_after=marker)]
         assert len(results) == 4
         mock_client.assert_called_once_with("s3")
         mock_s3.get_paginator.assert_called_once_with("list_objects_v2")
-        mock_paginator.paginate.assert_called_once_with(Bucket=bucket, Prefix=prefix)
+        mock_paginator.paginate.assert_called_once_with(Bucket=bucket, Prefix=prefix, StartAfter=marker)
