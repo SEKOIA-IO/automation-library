@@ -303,4 +303,3 @@ class SalesforceConnector(AsyncConnector):
         """Runs Salesforce connector."""
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_run())
-

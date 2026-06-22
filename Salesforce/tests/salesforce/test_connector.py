@@ -768,4 +768,3 @@ async def test_salesforce_connector_async_run_handles_generic_error(connector):
     connector.log_exception.assert_called_once()
     _, kwargs = connector.log_exception.call_args
     assert kwargs.get("message") == "Failed to forward events"
-

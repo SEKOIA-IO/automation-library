@@ -154,4 +154,3 @@ def test_timestepper_ranges_does_not_block(mock_connector):
 
     # The generator returns immediately instead of sleeping
     assert elapsed < 1
-
