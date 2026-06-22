@@ -53,10 +53,32 @@ mapping:
           "deployedComponents": [
             {
               "displayName": "ESET Endpoint Security",
+              "version": {
+                "id": "10.0.2045.0",
+                "major": 10,
+                "minor": 0,
+                "name": "ESET Endpoint Security 10.0",
+                "patch": 2045
+              },
               "id": 1,
               "name": "eea"
             }
-          ]
+          ],
+          "activeProducts": [
+            {
+              "activateDate": { "year": 2025, "month": 1, "day": 15 },
+              "subscriptionUuid": "sub-uuid-123",
+              "unitPoolUuid": "pool-uuid-456",
+              "validityDate": { "year": 2026, "month": 1, "day": 15 },
+              "id": 10,
+              "name": "ESET PROTECT Entry"
+            }
+          ],
+          "cloningConfiguration": {
+            "cloneNamingPatterns": ["DESKTOP-*"],
+            "securityGroupUuid": "sec-group-uuid-1",
+            "securityGroupDisplayName": "Default Security Group"
+          }
         }
 
     - name: "ESET Device Group Sample"
@@ -123,14 +145,28 @@ mapping:
       logic: "Direct mapping"
       description: "Primary local IP address of the device"
 
-    - source: "primaryLocalIpAddress + hardwareProfiles[].networkAdapters[].macAddress"
+    - source: "primaryLocalIpAddress + publicIpAddress + hardwareProfiles[].networkAdapters[].macAddress"
       target: "device.network_interfaces"
       type: "list[NetworkInterface]"
       logic: |
         First NetworkInterface built from primaryLocalIpAddress (type=Wired).
         MAC address from first hardware profile adapter enriches it.
         Additional adapters create extra NetworkInterface entries.
+        publicIpAddress (if different from primaryLocalIpAddress) is added as a separate
+        NetworkInterface with type=Unknown.
       description: "List of OCSF network interfaces"
+
+    - source: "managementDomain"
+      target: "device.domain"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Management domain of the device"
+
+    - source: "hardwareProfiles[0].manufacturer"
+      target: "device.vendor_name"
+      type: "string"
+      logic: "Manufacturer taken from the first hardware profile if present"
+      description: "Hardware vendor/manufacturer name"
 
     - source: "lastSyncTime"
       target: "device.last_seen_time"
@@ -210,6 +246,8 @@ mapping:
             "desc": "Finance workstation",
             "ip": "192.168.1.42",
             "model": "Latitude 5520",
+            "vendor_name": "Dell Inc.",
+            "domain": "eu.automation.eset.systems",
             "is_managed": true,
             "last_seen_time": 1747821600.0,
             "os": {
@@ -225,6 +263,11 @@ mapping:
                 "hostname": "DESKTOP-ABC123",
                 "type": "Wired",
                 "type_id": 1
+              },
+              {
+                "ip": "203.0.113.10",
+                "type": "Unknown",
+                "type_id": 0
               }
             ],
             "groups": [

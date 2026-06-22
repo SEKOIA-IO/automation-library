@@ -84,6 +84,7 @@ class EsetHardwareProfile(BaseModel):
 
 class EsetDeployedComponent(BaseModel):
     displayName: Optional[str] = None
+    version: Optional[EsetOsVersion] = None
     id: Optional[int] = None
     name: Optional[str] = None
 
@@ -91,8 +92,39 @@ class EsetDeployedComponent(BaseModel):
         extra = "allow"
 
 
+class EsetActivateDate(BaseModel):
+    year: Optional[int] = None
+    month: Optional[int] = None
+    day: Optional[int] = None
+
+    class Config:
+        extra = "allow"
+
+
+class EsetActiveProduct(BaseModel):
+    activateDate: Optional[EsetActivateDate] = None
+    subscriptionUuid: Optional[str] = None
+    unitPoolUuid: Optional[str] = None
+    validityDate: Optional[EsetActivateDate] = None
+    id: Optional[int] = None
+    name: Optional[str] = None
+
+    class Config:
+        extra = "allow"
+
+
+class EsetCloningConfiguration(BaseModel):
+    cloneNamingPatterns: Optional[list[str]] = None
+    securityGroupUuid: Optional[str] = None
+    securityGroupDisplayName: Optional[str] = None
+
+    class Config:
+        extra = "allow"
+
+
 class EsetDevice(BaseModel):
     uuid: str
+    activeProducts: Optional[list[EsetActiveProduct]] = None
     displayName: Optional[str] = None
     description: Optional[str] = None
     deviceToken: Optional[str] = None
@@ -107,6 +139,7 @@ class EsetDevice(BaseModel):
     isMuted: Optional[bool] = None
     lastSyncTime: Optional[str] = None
     managementDomain: Optional[str] = None
+    cloningConfiguration: Optional[EsetCloningConfiguration] = None
     operatingSystem: Optional[EsetOperatingSystem] = None
     originalDisplayName: Optional[str] = None
     parentGroupUuid: Optional[str] = None

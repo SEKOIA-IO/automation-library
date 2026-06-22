@@ -9,6 +9,7 @@ from pydantic.v1 import ValidationError
 from requests.exceptions import RequestException
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
+from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.asset_connector.models.ocsf.device import (
     Device,
     DeviceOCSFModel,
@@ -41,7 +42,7 @@ class EsetDeviceAssetConnector(AssetConnector):
 
     # Product constants
     PRODUCT_NAME: str = "ESET EDR"
-    PRODUCT_VERSION: str = "1.0"
+    PRODUCT_VERSION: str = "9.1.2500.0"
     METADATA_VERSION: str = "1.5.0"
 
     # OCSF constants
@@ -54,7 +55,6 @@ class EsetDeviceAssetConnector(AssetConnector):
     TYPE_NAME: str = "Device Inventory Info: Collect"
     TYPE_UID: int = 500102
 
-    # OS family ID to OCSF OS type mapping (ESET uses numeric familyId for OS type)
     OS_FAMILY_MAP: dict[int, tuple[OSTypeStr, OSTypeId]] = {
         1: (OSTypeStr.WINDOWS, OSTypeId.WINDOWS),
         2: (OSTypeStr.MACOS, OSTypeId.MACOS),
@@ -75,7 +75,7 @@ class EsetDeviceAssetConnector(AssetConnector):
     @cached_property
     def base_url(self) -> str:
         region = self.module.configuration.region
-        return f"https://{region}.automation.eset.systems"
+        return f"https://{region}.device-management.eset.systems"
 
     @cached_property
     def client(self) -> ApiClient:
@@ -124,6 +124,17 @@ class EsetDeviceAssetConnector(AssetConnector):
             type_id=os_type_id,
         )
 
+    @staticmethod
+    def _resolve_interface_type(caption: Optional[str]) -> tuple[NetworkInterfaceTypeStr, NetworkInterfaceTypeId]:
+        """Guess the network interface type from its caption/name."""
+        if caption:
+            caption_upper = caption.upper()
+            if any(kw in caption_upper for kw in ("WI-FI", "WIFI", "WIRELESS", "WLAN")):
+                return NetworkInterfaceTypeStr.WIRELESS, NetworkInterfaceTypeId.WIRELESS
+            if any(kw in caption_upper for kw in ("ETHERNET", "LAN", "WIRED", "REALTEK", "INTEL")):
+                return NetworkInterfaceTypeStr.WIRED, NetworkInterfaceTypeId.WIRED
+        return NetworkInterfaceTypeStr.UNKNOWN, NetworkInterfaceTypeId.UNKNOWN
+
     def build_network_interfaces(self, device: EsetDevice) -> Optional[list[NetworkInterface]]:
         """Build OCSF NetworkInterface list from hardware profile network adapters."""
         interfaces: list[NetworkInterface] = []
@@ -132,31 +143,45 @@ class EsetDeviceAssetConnector(AssetConnector):
             interfaces.append(
                 NetworkInterface(
                     ip=device.primaryLocalIpAddress,
-                    type=NetworkInterfaceTypeStr.WIRED,
-                    type_id=NetworkInterfaceTypeId.WIRED,
+                    type=NetworkInterfaceTypeStr.UNKNOWN,
+                    type_id=NetworkInterfaceTypeId.UNKNOWN,
                     hostname=device.displayName,
                 )
             )
 
-        # Extract MAC addresses from hardware profiles
+        # Extract MAC addresses from hardware profiles and enrich existing interfaces
         if device.hardwareProfiles:
             for profile in device.hardwareProfiles:
                 if profile.networkAdapters:
                     for adapter in profile.networkAdapters:
                         if adapter.macAddress:
-                            # Check if we already have an interface with same IP to enrich it
-                            if interfaces and not interfaces[0].mac:
-                                interfaces[0].mac = adapter.macAddress
-                                interfaces[0].name = adapter.caption
+                            type_str, type_id = self._resolve_interface_type(adapter.caption)
+                            # Search for an existing interface without a MAC to enrich
+                            unmatched = next((iface for iface in interfaces if not iface.mac), None)
+                            if unmatched:
+                                unmatched.mac = adapter.macAddress
+                                unmatched.name = adapter.caption
+                                unmatched.type = type_str
+                                unmatched.type_id = type_id
                             else:
                                 interfaces.append(
                                     NetworkInterface(
                                         mac=adapter.macAddress,
                                         name=adapter.caption,
-                                        type=NetworkInterfaceTypeStr.WIRED,
-                                        type_id=NetworkInterfaceTypeId.WIRED,
+                                        type=type_str,
+                                        type_id=type_id,
                                     )
                                 )
+
+        # Add public IP as a separate network interface if present and different from local IP
+        if device.publicIpAddress and device.publicIpAddress != device.primaryLocalIpAddress:
+            interfaces.append(
+                NetworkInterface(
+                    ip=device.publicIpAddress,
+                    type=NetworkInterfaceTypeStr.UNKNOWN,
+                    type_id=NetworkInterfaceTypeId.UNKNOWN,
+                )
+            )
 
         return interfaces if interfaces else None
 
@@ -175,7 +200,6 @@ class EsetDeviceAssetConnector(AssetConnector):
 
     def build_device(self, eset_device: EsetDevice, groups: list[EsetDeviceGroup]) -> Device:
         """Build OCSF Device from ESET device and group data."""
-        from sekoia_automation.asset_connector.models.ocsf.group import Group
 
         last_seen_time = None
         ts = self.extract_timestamp(eset_device)
@@ -186,15 +210,15 @@ class EsetDeviceAssetConnector(AssetConnector):
         network_interfaces = self.build_network_interfaces(eset_device)
         os = self.build_operating_system(eset_device)
 
-        # Map device groups to OCSF Group objects
         ocsf_groups = None
         if groups:
             ocsf_groups = [Group(name=g.displayName or g.uuid, uid=g.uuid) for g in groups]
 
-        # Get hardware model from first profile if available
         model = None
+        manufacturer = None
         if eset_device.hardwareProfiles:
             model = eset_device.hardwareProfiles[0].model
+            manufacturer = eset_device.hardwareProfiles[0].manufacturer
 
         hostname = eset_device.displayName or eset_device.originalDisplayName or eset_device.uuid
 
@@ -211,6 +235,8 @@ class EsetDeviceAssetConnector(AssetConnector):
             desc=eset_device.description,
             is_managed=True,
             model=model,
+            vendor_name=manufacturer,
+            domain=eset_device.managementDomain,
             groups=ocsf_groups,
         )
 
@@ -317,7 +343,7 @@ class EsetDeviceAssetConnector(AssetConnector):
     def iterate_devices(self) -> Generator[list[EsetDevice], None, None]:
         """Iterate over all ESET devices, tracking the most recent sync time."""
         max_date: Optional[datetime] = None
-        orig_date = isoparse(self.most_recent_date_seen) if self.most_recent_date_seen else None
+        checkpoint_date = isoparse(self.most_recent_date_seen) if self.most_recent_date_seen else None
         device_count = 0
 
         self.log(f"Starting device iteration - Checkpoint: {self.most_recent_date_seen or 'None'}", level="info")
@@ -340,7 +366,7 @@ class EsetDeviceAssetConnector(AssetConnector):
 
             self.log(f"Device iteration complete - {device_count} devices processed", level="info")
 
-            if max_date and (orig_date is None or max_date > orig_date):
+            if max_date and (checkpoint_date is None or max_date > checkpoint_date):
                 self._latest_time = max_date.isoformat()
 
         except Exception as e:
@@ -360,7 +386,6 @@ class EsetDeviceAssetConnector(AssetConnector):
         """Main entry point. Fetch all ESET devices and yield OCSF DeviceOCSFModel instances."""
         self.log("Starting ESET device asset collection", level="info")
 
-        # Pre-load all device groups to enrich devices with group membership
         all_groups = self._fetch_all_groups()
 
         assets_generated = 0
@@ -370,7 +395,6 @@ class EsetDeviceAssetConnector(AssetConnector):
             for devices in self.iterate_devices():
                 for device in devices:
                     try:
-                        # Resolve the device's parent group if available
                         device_groups: list[EsetDeviceGroup] = []
                         if device.parentGroupUuid and device.parentGroupUuid in all_groups:
                             device_groups.append(all_groups[device.parentGroupUuid])

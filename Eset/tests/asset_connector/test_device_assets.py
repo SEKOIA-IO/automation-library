@@ -8,6 +8,10 @@ import requests_mock as requests_mock_module
 from eset_modules import EsetModule
 from eset_modules.asset_connector.device_assets import EsetDeviceAssetConnector
 from eset_modules.asset_connector.models import (
+    EsetActiveProduct,
+    EsetActivateDate,
+    EsetCloningConfiguration,
+    EsetDeployedComponent,
     EsetDevice,
     EsetDeviceGroup,
     EsetHardwareProfile,
@@ -16,7 +20,7 @@ from eset_modules.asset_connector.models import (
     EsetOsVersion,
 )
 from eset_modules.models import EsetModuleConfiguration
-
+from sekoia_automation.asset_connector.models.ocsf.device import NetworkInterfaceTypeId
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -66,6 +70,7 @@ def sample_device() -> EsetDevice:
         isMaster=True,
         isMuted=False,
         lastSyncTime="2026-05-21T10:00:00Z",
+        managementDomain="eu.automation.eset.systems",
         parentGroupUuid="group-uuid-1",
         primaryLocalIpAddress="192.168.1.42",
         publicIpAddress="203.0.113.10",
@@ -88,6 +93,31 @@ def sample_device() -> EsetDevice:
                 ],
             )
         ],
+        deployedComponents=[
+            EsetDeployedComponent(
+                displayName="ESET Endpoint Security",
+                version=EsetOsVersion(
+                    id="10.0.2045.0", major=10, minor=0, name="ESET Endpoint Security 10.0", patch=2045
+                ),
+                id=1,
+                name="eea",
+            )
+        ],
+        activeProducts=[
+            EsetActiveProduct(
+                activateDate=EsetActivateDate(year=2025, month=1, day=15),
+                subscriptionUuid="sub-uuid-123",
+                unitPoolUuid="pool-uuid-456",
+                validityDate=EsetActivateDate(year=2026, month=1, day=15),
+                id=10,
+                name="ESET PROTECT Entry",
+            )
+        ],
+        cloningConfiguration=EsetCloningConfiguration(
+            cloneNamingPatterns=["DESKTOP-*"],
+            securityGroupUuid="sec-group-uuid-1",
+            securityGroupDisplayName="Default Security Group",
+        ),
     )
 
 
@@ -189,10 +219,85 @@ def test_build_operating_system_no_os(test_connector):
 def test_build_network_interfaces_with_ip_and_mac(test_connector, sample_device):
     interfaces = test_connector.build_network_interfaces(sample_device)
     assert interfaces is not None
-    assert len(interfaces) == 1
+    assert len(interfaces) == 2  # primary local IP (enriched) + public IP
+    # First interface: local IP enriched with MAC from adapter "Intel(R) Ethernet Connection" → WIRED
     assert interfaces[0].ip == "192.168.1.42"
     assert interfaces[0].mac == "AA:BB:CC:DD:EE:FF"
     assert interfaces[0].name == "Intel(R) Ethernet Connection"
+    assert interfaces[0].type_id == NetworkInterfaceTypeId.WIRED
+    # Second interface: public IP
+    assert interfaces[1].ip == "203.0.113.10"
+
+
+def test_build_network_interfaces_wifi_detection(test_connector):
+    device = EsetDevice(
+        uuid="abc",
+        primaryLocalIpAddress="192.168.1.10",
+        hardwareProfiles=[
+            EsetHardwareProfile(
+                networkAdapters=[EsetNetworkAdapter(caption="Intel Wi-Fi 6 AX201", macAddress="11:22:33:44:55:66")]
+            )
+        ],
+    )
+    interfaces = test_connector.build_network_interfaces(device)
+    assert interfaces is not None
+    assert interfaces[0].type_id == NetworkInterfaceTypeId.WIRELESS
+
+
+def test_build_network_interfaces_unknown_type_when_no_caption(test_connector):
+    device = EsetDevice(
+        uuid="abc",
+        primaryLocalIpAddress="10.0.0.1",
+        hardwareProfiles=[
+            EsetHardwareProfile(networkAdapters=[EsetNetworkAdapter(caption=None, macAddress="AA:BB:CC:DD:EE:FF")])
+        ],
+    )
+    interfaces = test_connector.build_network_interfaces(device)
+    assert interfaces is not None
+    assert interfaces[0].type_id == NetworkInterfaceTypeId.UNKNOWN
+
+
+def test_build_network_interfaces_multiple_adapters_enrich_correctly(test_connector):
+    """Two adapters: first enriches the IP interface, second creates a new MAC-only interface."""
+    device = EsetDevice(
+        uuid="abc",
+        primaryLocalIpAddress="10.0.0.1",
+        hardwareProfiles=[
+            EsetHardwareProfile(
+                networkAdapters=[
+                    EsetNetworkAdapter(caption="Realtek Ethernet", macAddress="AA:AA:AA:AA:AA:AA"),
+                    EsetNetworkAdapter(caption="Intel Wi-Fi", macAddress="BB:BB:BB:BB:BB:BB"),
+                ]
+            )
+        ],
+    )
+    interfaces = test_connector.build_network_interfaces(device)
+    assert interfaces is not None
+    assert len(interfaces) == 2
+    # First interface has IP + first adapter's MAC
+    assert interfaces[0].ip == "10.0.0.1"
+    assert interfaces[0].mac == "AA:AA:AA:AA:AA:AA"
+    assert interfaces[0].type_id == NetworkInterfaceTypeId.WIRED
+    # Second interface has only the second adapter's MAC (no IP)
+    assert interfaces[1].ip is None
+    assert interfaces[1].mac == "BB:BB:BB:BB:BB:BB"
+    assert interfaces[1].type_id == NetworkInterfaceTypeId.WIRELESS
+
+
+def test_build_network_interfaces_public_ip_same_as_local(test_connector):
+    device = EsetDevice(uuid="abc", primaryLocalIpAddress="10.0.0.1", publicIpAddress="10.0.0.1")
+    interfaces = test_connector.build_network_interfaces(device)
+    # Public IP equals local → not duplicated
+    assert interfaces is not None
+    assert len(interfaces) == 1
+
+
+def test_build_network_interfaces_public_ip_only(test_connector):
+    device = EsetDevice(uuid="abc", publicIpAddress="203.0.113.10")
+    interfaces = test_connector.build_network_interfaces(device)
+    assert interfaces is not None
+    assert len(interfaces) == 1
+    assert interfaces[0].ip == "203.0.113.10"
 
 
 def test_build_network_interfaces_no_data(test_connector):
@@ -242,6 +347,8 @@ def test_build_device_basic(test_connector, sample_device, sample_group):
     assert device.hostname == "DESKTOP-ABC123"
     assert device.ip == "192.168.1.42"
     assert device.model == "Latitude 5520"
+    assert device.vendor_name == "Dell Inc."
+    assert device.domain == "eu.automation.eset.systems"
     assert device.is_managed is True
     assert device.groups is not None
     assert device.groups[0].name == "Finance Department"
@@ -251,6 +358,34 @@ def test_build_device_basic(test_connector, sample_device, sample_group):
 def test_build_device_no_groups(test_connector, sample_device):
     device = test_connector.build_device(sample_device, [])
     assert device.groups is None
+
+
+def test_build_device_vendor_name_from_hardware_profile(test_connector):
+    device = EsetDevice(
+        uuid="abc",
+        hardwareProfiles=[EsetHardwareProfile(manufacturer="HP Inc.", model="EliteBook 840")],
+    )
+    result = test_connector.build_device(device, [])
+    assert result.vendor_name == "HP Inc."
+    assert result.model == "EliteBook 840"
+
+
+def test_build_device_vendor_name_none_without_hardware_profile(test_connector):
+    device = EsetDevice(uuid="abc")
+    result = test_connector.build_device(device, [])
+    assert result.vendor_name is None
+
+
+def test_build_device_domain_from_management_domain(test_connector):
+    device = EsetDevice(uuid="abc", managementDomain="eu.automation.eset.systems")
+    result = test_connector.build_device(device, [])
+    assert result.domain == "eu.automation.eset.systems"
+
+
+def test_build_device_domain_none_without_management_domain(test_connector):
+    device = EsetDevice(uuid="abc")
+    result = test_connector.build_device(device, [])
+    assert result.domain is None
 
 
 def test_build_device_hostname_fallback(test_connector):
