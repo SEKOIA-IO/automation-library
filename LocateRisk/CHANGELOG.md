@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.3.1 - 2026-06-22
+
+### Fixed
+
+- Fixed the Docker build failure (`"/uv": not found`) by copying the `uv`/`uvx` binaries from the standalone `ghcr.io/astral-sh/uv:latest` image (which exposes them at the root) instead of `astral/uv:python3.11-trixie`, where they live under `/usr/local/bin/`.
+
 ## 0.3.0 - 2026-06-19
 
 ### Added
