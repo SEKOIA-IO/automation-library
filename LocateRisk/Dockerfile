@@ -9,6 +9,9 @@ RUN useradd -ms /bin/bash sekoiaio-runtime
 # Set working directory
 WORKDIR /app
 
+# Make the uv-managed venv the default Python
+ENV PATH="/app/.venv/bin:$PATH"
+
 # Copy dependency files first
 COPY pyproject.toml uv.lock ./
 
