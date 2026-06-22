@@ -21,7 +21,7 @@ class DefenderMachine(BaseModel):
     lastExternalIpAddress: Optional[str] = None
     healthStatus: Optional[str] = None
     rbacGroupName: Optional[str] = None
-    rbacGroupId: Optional[str] = None
+    rbacGroupId: Optional[int] = None
     riskScore: Optional[str] = None
     exposureLevel: Optional[str] = None
     aadDeviceId: Optional[str] = None

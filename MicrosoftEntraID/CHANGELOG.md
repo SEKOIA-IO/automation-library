@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-16 - 2.10.23
+
+### Fixed
+
+- Fix Account validator to check all permissions needed for the asset connector
+
 ## 2026-05-21 - 2.10.22
 
 ### Fixed
