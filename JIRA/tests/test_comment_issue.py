@@ -1,8 +1,6 @@
-import time
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock
 
 import pytest
-import requests.exceptions
 import requests_mock
 
 from jira_modules.action_comment_issue import JiraAddCommentArguments, JIRAAddCommentToIssue
@@ -25,7 +23,7 @@ def action():
     return action
 
 
-def test_add_comment(action: JIRAAddCommentToIssue):
+def test_add_comment_defaults_to_internal(action: JIRAAddCommentToIssue):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "POST",
@@ -34,3 +32,18 @@ def test_add_comment(action: JIRAAddCommentToIssue):
         )
         args = JiraAddCommentArguments(issue_key="PRJ-1", comment="Hello, world")
         action.run(args)
+
+        assert mock.last_request.json()["properties"] == [{"key": "sd.public.comment", "value": {"internal": True}}]
+
+
+def test_add_public_comment(action: JIRAAddCommentToIssue):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://test.atlassian.net/rest/api/3/issue/PRJ-1/comment",
+            json={},
+        )
+        args = JiraAddCommentArguments(issue_key="PRJ-1", comment="Hello, world", public=True)
+        action.run(args)
+
+        assert mock.last_request.json()["properties"] == [{"key": "sd.public.comment", "value": {"internal": False}}]
