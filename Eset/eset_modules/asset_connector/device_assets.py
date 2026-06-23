@@ -310,7 +310,7 @@ class EsetDeviceAssetConnector(AssetConnector):
         try:
             page_number = 1
             while self.running:
-                response = self.client.get(url, params=params)
+                response = self.client.get(url, params=params, timeout=60)
                 response.raise_for_status()
                 raw = response.json()
 
