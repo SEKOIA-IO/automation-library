@@ -30,12 +30,10 @@ def mock_client(validator):
     return session
 
 
-
 def test_validator_configuration(validator):
     assert validator.module.configuration.region == "eu"
     assert validator.module.configuration.username == "testuser"
     assert validator.module.configuration.password == "testpassword"
-
 
 
 def test_validate_success(validator, mock_client):
@@ -49,7 +47,6 @@ def test_validate_success(validator, mock_client):
 
     assert result is True
     validator.error.assert_not_called()
-
 
 
 def test_validate_failure_unauthorized(validator, mock_client):

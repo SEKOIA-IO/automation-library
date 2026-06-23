@@ -22,7 +22,7 @@ class EsetAccountValidator(AccountValidator):
         try:
             region = self.module.configuration.region
             url = f"https://{region}.device-management.eset.systems/v1/devices"
-            response = self.client.get(url, params={"pageSize": 1})
+            response = self.client.get(url, params={"pageSize": 1}, timeout=60)
             response.raise_for_status()
         except Exception as e:
             self.error(f"Could not connect to ESET EDR API with the provided credentials: {e}")
