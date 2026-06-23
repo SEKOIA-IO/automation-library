@@ -249,10 +249,8 @@ class EsetDeviceAssetConnector(AssetConnector):
     def map_fields(self, eset_device: EsetDevice, groups: list[EsetDeviceGroup]) -> DeviceOCSFModel:
         """Map ESET device and group data to a full OCSF DeviceOCSFModel."""
         self.log(f"Mapping device - UUID: {eset_device.uuid}, Name: {eset_device.displayName}", level="debug")
-
         ts = self.extract_timestamp(eset_device)
-        time = ts.timestamp() if ts else datetime.utcnow().timestamp()
-
+        time = ts.timestamp() if ts else datetime.now().astimezone().timestamp()
         return DeviceOCSFModel(
             activity_id=self.ACTIVITY_ID,
             activity_name=self.ACTIVITY_NAME,
