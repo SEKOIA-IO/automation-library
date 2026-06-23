@@ -277,7 +277,7 @@ class EsetDeviceAssetConnector(AssetConnector):
 
         try:
             while self.running:
-                response = self.client.get(url, params=params)
+                response = self.client.get(url, params=params, timeout=60)
                 response.raise_for_status()
                 raw = response.json()
 
