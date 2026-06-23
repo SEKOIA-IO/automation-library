@@ -22,10 +22,6 @@ from eset_modules.asset_connector.models import (
 from eset_modules.models import EsetModuleConfiguration
 from sekoia_automation.asset_connector.models.ocsf.device import NetworkInterfaceTypeId
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
 
 @pytest.fixture
 def data_storage(tmp_path):
@@ -175,11 +171,6 @@ def sample_groups_response():
     }
 
 
-# ---------------------------------------------------------------------------
-# Unit tests — build_operating_system
-# ---------------------------------------------------------------------------
-
-
 def test_build_operating_system_windows(test_connector, sample_device):
     os = test_connector.build_operating_system(sample_device)
     assert os is not None
@@ -209,11 +200,6 @@ def test_build_operating_system_unknown_family(test_connector):
 def test_build_operating_system_no_os(test_connector):
     device = EsetDevice(uuid="abc")
     assert test_connector.build_operating_system(device) is None
-
-
-# ---------------------------------------------------------------------------
-# Unit tests — build_network_interfaces
-# ---------------------------------------------------------------------------
 
 
 def test_build_network_interfaces_with_ip_and_mac(test_connector, sample_device):
@@ -313,11 +299,6 @@ def test_build_network_interfaces_ip_only(test_connector):
     assert interfaces[0].mac is None
 
 
-# ---------------------------------------------------------------------------
-# Unit tests — _resolve_device_type
-# ---------------------------------------------------------------------------
-
-
 def test_resolve_device_type_mobile(test_connector):
     device = EsetDevice(uuid="abc", isMobile=True)
     type_str, type_id = test_connector._resolve_device_type(device)
@@ -334,11 +315,6 @@ def test_resolve_device_type_desktop_default(test_connector):
     device = EsetDevice(uuid="abc", isMobile=False, deviceType="DEVICE_TYPE_DESKTOP")
     type_str, type_id = test_connector._resolve_device_type(device)
     assert type_id == 2  # DESKTOP
-
-
-# ---------------------------------------------------------------------------
-# Unit tests — build_device
-# ---------------------------------------------------------------------------
 
 
 def test_build_device_basic(test_connector, sample_device, sample_group):
@@ -400,11 +376,6 @@ def test_build_device_hostname_uuid_fallback(test_connector):
     assert result.hostname == "my-uuid"
 
 
-# ---------------------------------------------------------------------------
-# Unit tests — map_fields
-# ---------------------------------------------------------------------------
-
-
 def test_map_fields_ocsf_classification(test_connector, sample_device, sample_group):
     from sekoia_automation.asset_connector.models.ocsf.device import DeviceOCSFModel
 
@@ -441,11 +412,6 @@ def test_map_fields_no_last_sync_time_uses_utcnow(test_connector):
     result = test_connector.map_fields(device, [])
     assert result.time is not None
     assert result.time > 0
-
-
-# ---------------------------------------------------------------------------
-# Fetch method tests (with requests_mock)
-# ---------------------------------------------------------------------------
 
 
 def test_fetch_all_groups_single_page(test_connector, sample_groups_response):
@@ -531,11 +497,6 @@ def test_fetch_devices_api_error(test_connector):
             list(test_connector._fetch_devices())
 
 
-# ---------------------------------------------------------------------------
-# Integration test — get_assets
-# ---------------------------------------------------------------------------
-
-
 def test_get_assets_yields_ocsf_models(test_connector, sample_devices_response, sample_groups_response):
     from sekoia_automation.asset_connector.models.ocsf.device import DeviceOCSFModel
 
@@ -582,11 +543,6 @@ def test_get_assets_device_without_group(test_connector):
     assert assets[0].device.groups is None
 
 
-# ---------------------------------------------------------------------------
-# Checkpoint tests
-# ---------------------------------------------------------------------------
-
-
 def test_update_checkpoint_persists(test_connector, sample_devices_response, sample_groups_response):
     with requests_mock_module.Mocker() as m:
         m.get(f"{test_connector.base_url}/v1/device_groups", json=sample_groups_response)
@@ -603,3 +559,213 @@ def test_update_checkpoint_no_devices(test_connector):
     # No devices → _latest_time stays None → update_checkpoint is a no-op
     test_connector.update_checkpoint()
     assert test_connector.most_recent_date_seen is None
+
+
+def test_iterate_devices_skips_already_seen(test_connector):
+    """Devices with lastSyncTime <= checkpoint should be skipped."""
+    devices_response = {
+        "devices": [
+            {"uuid": "dev-old", "displayName": "Old", "lastSyncTime": "2026-05-20T09:00:00Z"},
+            {"uuid": "dev-new", "displayName": "New", "lastSyncTime": "2026-05-22T09:00:00Z"},
+        ],
+        "nextPageToken": None,
+    }
+    # Checkpoint set to 2026-05-21 → dev-old (May 20) should be skipped
+    with test_connector.context as cache:
+        cache["most_recent_date_seen"] = "2026-05-21T00:00:00+00:00"
+
+    with requests_mock_module.Mocker() as m:
+        m.get(f"{test_connector.base_url}/v1/devices", json=devices_response)
+        pages = list(test_connector.iterate_devices())
+
+    all_devices = [d for page in pages for d in page]
+    uuids = [d.uuid for d in all_devices]
+    assert "dev-new" in uuids
+    assert "dev-old" not in uuids
+
+
+def test_iterate_devices_includes_no_last_sync_time(test_connector):
+    """Devices with no lastSyncTime should always be included regardless of checkpoint."""
+    devices_response = {
+        "devices": [
+            {"uuid": "dev-no-time", "displayName": "NoTime"},
+            {"uuid": "dev-old", "displayName": "Old", "lastSyncTime": "2026-05-20T09:00:00Z"},
+        ],
+        "nextPageToken": None,
+    }
+    with test_connector.context as cache:
+        cache["most_recent_date_seen"] = "2026-05-21T00:00:00+00:00"
+
+    with requests_mock_module.Mocker() as m:
+        m.get(f"{test_connector.base_url}/v1/devices", json=devices_response)
+        pages = list(test_connector.iterate_devices())
+
+    all_devices = [d for page in pages for d in page]
+    uuids = [d.uuid for d in all_devices]
+    assert "dev-no-time" in uuids
+    assert "dev-old" not in uuids
+
+
+def test_iterate_devices_no_checkpoint_yields_all(test_connector):
+    """Without a checkpoint, all devices should be yielded."""
+    devices_response = {
+        "devices": [
+            {"uuid": "dev-1", "lastSyncTime": "2026-05-20T09:00:00Z"},
+            {"uuid": "dev-2", "lastSyncTime": "2026-05-21T09:00:00Z"},
+        ],
+        "nextPageToken": None,
+    }
+    with requests_mock_module.Mocker() as m:
+        m.get(f"{test_connector.base_url}/v1/devices", json=devices_response)
+        pages = list(test_connector.iterate_devices())
+
+    all_devices = [d for page in pages for d in page]
+    assert len(all_devices) == 2
+
+
+def test_iterate_devices_checkpoint_updated_to_max_even_if_all_skipped(test_connector):
+    """Even if all devices are skipped, _latest_time should not regress."""
+    devices_response = {
+        "devices": [
+            {"uuid": "dev-1", "lastSyncTime": "2026-05-20T09:00:00Z"},
+        ],
+        "nextPageToken": None,
+    }
+    with test_connector.context as cache:
+        cache["most_recent_date_seen"] = "2026-05-21T00:00:00+00:00"
+
+    with requests_mock_module.Mocker() as m:
+        m.get(f"{test_connector.base_url}/v1/devices", json=devices_response)
+        list(test_connector.iterate_devices())
+
+    # All devices skipped → max_date (May 20) < checkpoint (May 21) → _latest_time not updated
+    assert not hasattr(test_connector, "_latest_time") or test_connector._latest_time is None
+
+
+def test_iterate_devices_device_at_exact_checkpoint_boundary_is_skipped(test_connector):
+    """A device whose lastSyncTime is exactly equal to the checkpoint must be skipped (<=)."""
+    checkpoint = "2026-05-21T10:00:00+00:00"
+    devices_response = {
+        "devices": [
+            {"uuid": "dev-exact", "lastSyncTime": "2026-05-21T10:00:00Z"},
+            {"uuid": "dev-after", "lastSyncTime": "2026-05-21T10:00:01Z"},
+        ],
+        "nextPageToken": None,
+    }
+    with test_connector.context as cache:
+        cache["most_recent_date_seen"] = checkpoint
+
+    with requests_mock_module.Mocker() as m:
+        m.get(f"{test_connector.base_url}/v1/devices", json=devices_response)
+        pages = list(test_connector.iterate_devices())
+
+    uuids = [d.uuid for page in pages for d in page]
+    assert "dev-exact" not in uuids  # exactly at checkpoint → skipped
+    assert "dev-after" in uuids  # 1 second after → included
+
+
+def test_iterate_devices_checkpoint_advances_to_newest_date(test_connector):
+    """After a run, _latest_time should be set to the newest lastSyncTime seen + 1µs."""
+    devices_response = {
+        "devices": [
+            {"uuid": "dev-1", "lastSyncTime": "2026-05-20T09:00:00Z"},
+            {"uuid": "dev-2", "lastSyncTime": "2026-05-22T12:00:00Z"},
+            {"uuid": "dev-3", "lastSyncTime": "2026-05-21T00:00:00Z"},
+        ],
+        "nextPageToken": None,
+    }
+    with requests_mock_module.Mocker() as m:
+        m.get(f"{test_connector.base_url}/v1/devices", json=devices_response)
+        list(test_connector.iterate_devices())
+
+    # _latest_time should be the newest date (May 22) + 1µs
+    assert test_connector._latest_time is not None
+    assert "2026-05-22T12:00:00.000001" in test_connector._latest_time
+
+
+def test_iterate_devices_mixed_pages_filter_correctly(test_connector):
+    """Across multiple pages, old devices are skipped and new ones are yielded."""
+    page1 = {
+        "devices": [
+            {"uuid": "old-1", "lastSyncTime": "2026-05-19T00:00:00Z"},
+            {"uuid": "new-1", "lastSyncTime": "2026-05-22T00:00:00Z"},
+        ],
+        "nextPageToken": "token2",
+    }
+    page2 = {
+        "devices": [
+            {"uuid": "old-2", "lastSyncTime": "2026-05-20T00:00:00Z"},
+            {"uuid": "new-2", "lastSyncTime": "2026-05-23T00:00:00Z"},
+        ],
+        "nextPageToken": None,
+    }
+    with test_connector.context as cache:
+        cache["most_recent_date_seen"] = "2026-05-21T00:00:00+00:00"
+
+    with requests_mock_module.Mocker() as m:
+        m.get(f"{test_connector.base_url}/v1/devices", [{"json": page1}, {"json": page2}])
+        pages = list(test_connector.iterate_devices())
+
+    uuids = [d.uuid for page in pages for d in page]
+    assert set(uuids) == {"new-1", "new-2"}
+    assert "old-1" not in uuids
+    assert "old-2" not in uuids
+
+
+def test_iterate_devices_max_date_initialized_from_latest_time(test_connector):
+    """If _latest_time is already set (e.g. from a previous retry), max_date starts from it."""
+    # Simulate a previous partial run that set _latest_time to May 25
+    test_connector._latest_time = "2026-05-25T00:00:00+00:00"
+
+    # Now fetch devices older than May 25 → max_date should not regress
+    devices_response = {
+        "devices": [
+            {"uuid": "dev-old", "lastSyncTime": "2026-05-23T00:00:00Z"},
+        ],
+        "nextPageToken": None,
+    }
+    with requests_mock_module.Mocker() as m:
+        m.get(f"{test_connector.base_url}/v1/devices", json=devices_response)
+        list(test_connector.iterate_devices())
+
+    # max_date starts at May 25 → device May 23 doesn't move it forward → _latest_time stays at May 25
+    assert "2026-05-25" in test_connector._latest_time
+
+
+def test_iterate_devices_second_run_uses_first_run_checkpoint(test_connector, sample_groups_response):
+    """Simulate two consecutive runs: second run should only yield devices newer than first run's checkpoint."""
+    devices_run1 = {
+        "devices": [
+            {"uuid": "dev-a", "lastSyncTime": "2026-05-21T10:00:00Z"},
+            {"uuid": "dev-b", "lastSyncTime": "2026-05-21T11:00:00Z"},
+        ],
+        "nextPageToken": None,
+    }
+    devices_run2 = {
+        "devices": [
+            {"uuid": "dev-a", "lastSyncTime": "2026-05-21T10:00:00Z"},  # unchanged
+            {"uuid": "dev-b", "lastSyncTime": "2026-05-21T11:00:00Z"},  # unchanged
+            {"uuid": "dev-c", "lastSyncTime": "2026-05-22T09:00:00Z"},  # new
+        ],
+        "nextPageToken": None,
+    }
+
+    # Run 1 — no checkpoint
+    with requests_mock_module.Mocker() as m:
+        m.get(f"{test_connector.base_url}/v1/device_groups", json=sample_groups_response)
+        m.get(f"{test_connector.base_url}/v1/devices", json=devices_run1)
+        list(test_connector.get_assets())
+        test_connector.update_checkpoint()
+
+    assert test_connector.most_recent_date_seen is not None
+
+    # Run 2 — checkpoint set from run 1
+    with requests_mock_module.Mocker() as m:
+        m.get(f"{test_connector.base_url}/v1/device_groups", json=sample_groups_response)
+        m.get(f"{test_connector.base_url}/v1/devices", json=devices_run2)
+        assets_run2 = list(test_connector.get_assets())
+
+    uuids_run2 = [a.device.uid for a in assets_run2]
+    assert "dev-c" in uuids_run2  # new device → included
+    assert "dev-a" not in uuids_run2  # unchanged since run 1 → skipped
+    assert "dev-b" not in uuids_run2  # unchanged since run 1 → skipped

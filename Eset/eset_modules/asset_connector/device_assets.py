@@ -341,10 +341,14 @@ class EsetDeviceAssetConnector(AssetConnector):
             raise
 
     def iterate_devices(self) -> Generator[list[EsetDevice], None, None]:
-        """Iterate over all ESET devices, tracking the most recent sync time."""
-        max_date: Optional[datetime] = None
+        """
+        Iterate over ESET devices, filtering out already-seen devices via lastSyncTime checkpoint.
+        """
+        max_date: Optional[datetime] = isoparse(self._latest_time) if getattr(self, "_latest_time", None) else None
         checkpoint_date = isoparse(self.most_recent_date_seen) if self.most_recent_date_seen else None
-        device_count = 0
+        total_fetched = 0
+        total_skipped = 0
+        total_yielded = 0
 
         self.log(f"Starting device iteration - Checkpoint: {self.most_recent_date_seen or 'None'}", level="info")
 
@@ -353,18 +357,32 @@ class EsetDeviceAssetConnector(AssetConnector):
                 if not devices:
                     continue
 
-                device_count += len(devices)
+                total_fetched += len(devices)
+                new_devices: list[EsetDevice] = []
 
                 for device in devices:
                     ts = self.extract_timestamp(device)
+
                     if ts:
                         candidate = ts + timedelta(microseconds=1)
                         if max_date is None or candidate > max_date:
                             max_date = candidate
 
-                yield devices
+                        if checkpoint_date and ts <= checkpoint_date:
+                            total_skipped += 1
+                            continue
 
-            self.log(f"Device iteration complete - {device_count} devices processed", level="info")
+                    new_devices.append(device)
+                    total_yielded += 1
+
+                if new_devices:
+                    yield new_devices
+
+            self.log(
+                f"Device iteration complete - Fetched: {total_fetched}, "
+                f"New/updated: {total_yielded}, Skipped (already seen): {total_skipped}",
+                level="info",
+            )
 
             if max_date and (checkpoint_date is None or max_date > checkpoint_date):
                 self._latest_time = max_date.isoformat()
