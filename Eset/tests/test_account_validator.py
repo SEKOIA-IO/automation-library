@@ -8,7 +8,6 @@ from eset_modules import EsetModule
 from eset_modules.account_validator import EsetAccountValidator
 from eset_modules.models import EsetModuleConfiguration
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

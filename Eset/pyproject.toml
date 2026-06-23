@@ -31,5 +31,8 @@ pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
 isort = "*"
-black = "*"
 mypy = "*"
+
+[tool.poetry.group.dev.dependencies.black]
+version = "^26.3.1"
+extras = ["colorama"]
