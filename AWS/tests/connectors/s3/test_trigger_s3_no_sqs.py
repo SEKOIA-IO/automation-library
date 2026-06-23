@@ -34,7 +34,7 @@ def aws_s3_flowlogs_trigger_config(faker: Faker) -> AwsS3LogsNoSqsConfiguration:
         "skip_first": 0,
         "ignore_comments": True,
         "bucket": "test-bucket",
-        "prefix_filer": "123/dnslogs/",
+        "prefix_filter": "123/dnslogs/",
         "intake_key": faker.word(),
     }
 

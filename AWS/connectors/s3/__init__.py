@@ -30,7 +30,6 @@ class AwsS3ListConfiguration(AbstractAwsConnectorConfiguration):
 
     bucket: str
     prefix_filter: str | None = None
-    chunk_size: int = 10000
 
 
 class AwsS3LogsBaseConfiguration(BaseModel):

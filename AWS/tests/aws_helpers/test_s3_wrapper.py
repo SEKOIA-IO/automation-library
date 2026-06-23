@@ -135,6 +135,7 @@ async def test_read_compressed_content_key(session_faker: Faker, content_type: s
         mock_s3.get_object.assert_called_once_with(Bucket=bucket, Key=key)
 
 
+@pytest.mark.asyncio
 async def test_list_objects(session_faker: Faker):
     bucket = session_faker.word()
     prefix = "123/dnslogs/"
