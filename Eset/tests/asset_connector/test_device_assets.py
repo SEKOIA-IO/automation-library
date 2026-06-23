@@ -664,7 +664,7 @@ def test_iterate_devices_checkpoint_updated_to_max_even_if_all_skipped(test_conn
         list(test_connector.iterate_devices())
 
     # All devices skipped → max_date (May 20) < checkpoint (May 21) → _latest_time not updated
-    assert not hasattr(test_connector, "_latest_time") or test_connector._latest_time is None
+    assert test_connector._latest_time is None
 
 
 def test_iterate_devices_device_at_exact_checkpoint_boundary_is_skipped(test_connector):

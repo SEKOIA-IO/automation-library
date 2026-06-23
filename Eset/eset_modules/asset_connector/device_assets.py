@@ -66,6 +66,7 @@ class EsetDeviceAssetConnector(AssetConnector):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("eset_device_context.json", self._data_path)
+        self._latest_time: Optional[str] = None
 
     @property
     def most_recent_date_seen(self) -> Optional[str]:
