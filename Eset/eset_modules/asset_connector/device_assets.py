@@ -349,7 +349,7 @@ class EsetDeviceAssetConnector(AssetConnector):
         """
         Iterate over ESET devices, filtering out already-seen devices via lastSyncTime checkpoint.
         """
-        max_date: Optional[datetime] = isoparse(self._latest_time) if getattr(self, "_latest_time", None) else None
+        max_date: Optional[datetime] = isoparse(self._latest_time) if self._latest_time else None
         checkpoint_date = isoparse(self.most_recent_date_seen) if self.most_recent_date_seen else None
         total_fetched = 0
         total_skipped = 0
