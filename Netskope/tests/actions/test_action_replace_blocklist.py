@@ -53,7 +53,6 @@ def test_replace_blocklist_success(replace_action):
             "api_token": "fake_api_token",
             "blocklist_id": "456",
             "items": ["new-blocked.com", "another-blocked.com", "new-blocked.com"],
-            "blocklist_name": "Updated Blocklist",
             "blocklist_type": "exact",
         }
 
@@ -63,22 +62,18 @@ def test_replace_blocklist_success(replace_action):
         assert result["action_name"] == "replace_blocklist"
         assert result["action_response"]["id"] == 456
         assert "Successfully replaced blocklist Updated Blocklist (id = 456) with 2 item(s)" in result["action_status"]
-        assert replace_request_body == {
-            "data": {"type": "exact", "urls": ["another-blocked.com", "new-blocked.com"]},
-            "name": "Updated Blocklist",
-        }
+        assert replace_request_body == {"data": {"type": "exact", "urls": ["another-blocked.com", "new-blocked.com"]}}
 
 
 def test_replace_blocklist_missing_required_params(replace_action):
     """Test that replace action fails when required parameters are missing"""
     arguments = {
         "api_token": "fake_api_token",
-        "blocklist_id": "456",
         "items": ["new-blocked.com"],
     }
 
     with pytest.raises(ValidationError):
-        # Missing field 'blocklist_name' should cause validation error
+        # Missing field 'blocklist_id' should cause validation error
         replace_action.run(arguments)
 
 
@@ -101,14 +96,10 @@ def test_replace_blocklist_should_not_sort_when_sort_items_false(replace_action)
             "api_token": "fake_api_token",
             "blocklist_id": "456",
             "items": ["www.z.com", "www.a.com", "www.z.com"],
-            "blocklist_name": "Updated Blocklist",
             "sort_items": False,
         }
 
         replace_action.run(arguments)
 
         replace_request_body = mock_requests.request_history[0].json()
-        assert replace_request_body == {
-            "data": {"type": "exact", "urls": ["www.z.com", "www.a.com"]},
-            "name": "Updated Blocklist",
-        }
+        assert replace_request_body == {"data": {"type": "exact", "urls": ["www.z.com", "www.a.com"]}}

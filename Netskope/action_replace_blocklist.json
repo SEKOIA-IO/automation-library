@@ -13,10 +13,6 @@
         "type": "string",
         "description": "The ID of the blocklist"
       },
-      "blocklist_name": {
-        "type": "string",
-        "description": "The name of the blocklist"
-      },
       "blocklist_type": {
         "type": "string",
         "default": "exact",
@@ -39,7 +35,6 @@
     "required": [
       "api_token",
       "items",
-      "blocklist_name",
       "blocklist_id"
     ],
     "title": "Replace blocklist",
