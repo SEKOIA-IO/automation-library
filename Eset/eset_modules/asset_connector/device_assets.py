@@ -325,15 +325,8 @@ class EsetDeviceAssetConnector(AssetConnector):
                 if not page.devices:
                     break
 
-                valid_devices: list[EsetDevice] = []
-                for item in page.devices:
-                    try:
-                        valid_devices.append(item)
-                    except ValidationError as e:
-                        self.log(f"Skipping invalid device: {e}", level="warning")
-
-                if valid_devices:
-                    yield valid_devices
+                # Devices are already validated by pydantic when building `EsetDevicePage`.
+                yield page.devices
 
                 if not page.nextPageToken:
                     self.log(f"Pagination complete after {page_number} pages", level="info")
