@@ -83,11 +83,8 @@ def test_remove_from_blocklist_success(remove_action):
 
         result = remove_action.run(arguments)
 
-        assert result["action_name"] == "remove_from_blocklist"
-        assert result["action_response"]["modify_type"] == "Edited"
         assert (
-            "Successfully removed from blocklist Test Blocklist (id = 123): 1/1 removed (0 already missing)"
-            in result["action_status"]
+            "Successfully removed from blocklist Test Blocklist (id = 123): 1/1 removed (0 already missing)" in result
         )
 
 
@@ -112,8 +109,5 @@ def test_remove_from_blocklist_noop_when_items_are_absent(remove_action):
 
         result = remove_action.run(arguments)
 
-        assert (
-            "No item(s) removed from blocklist Test Blocklist (id = 123): 0/2 removed (2 already missing)"
-            in result["action_status"]
-        )
+        assert "No item(s) removed from blocklist Test Blocklist (id = 123): 0/2 removed (2 already missing)" in result
         assert len(mock_requests.request_history) == 1

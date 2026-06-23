@@ -2,8 +2,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from netskope_modules.actions.action_base import NetskopeActionArguments
-from netskope_modules.actions.action_blocklist_base import NetskopeBlocklistAction
+from netskope_modules.actions.action_base import NetskopeAction, NetskopeActionArguments
 
 
 class ReplaceBlocklistArguments(NetskopeActionArguments):
@@ -13,12 +12,12 @@ class ReplaceBlocklistArguments(NetskopeActionArguments):
     sort_items: bool = Field(True, description="Sort items alphabetically")
 
 
-class ReplaceBlocklistAction(NetskopeBlocklistAction):
+class ReplaceBlocklistAction(NetskopeAction):
     """
     Replace an entire Netskope blocklist with new items.
     """
 
-    def run(self, arguments: dict) -> dict:
+    def run(self, arguments: dict) -> str:
         args = ReplaceBlocklistArguments(**arguments)
         self.initialize_action_arguments(args)
         normalized_items = self.normalize_urls(args.items, sort_items=args.sort_items)
@@ -31,18 +30,12 @@ class ReplaceBlocklistAction(NetskopeBlocklistAction):
         replace_response = self.execute_request(
             "PATCH", f"api/v2/policy/urllist/{args.blocklist_id}/replace", json=replace_payload
         )
-        replace_request = self.get_last_api_request()
         blocklist_name = replace_response.get("name", "unknown")
 
         # Deploy the changes
         self.deploy_blocklist_changes()
 
-        return self.build_blocklist_result(
-            action_name="replace_blocklist",
-            api_request=replace_request,
-            action_response=replace_response,
-            status=(
-                f"Successfully replaced blocklist {blocklist_name} "
-                f"(id = {args.blocklist_id}) with {len(normalized_items)} item(s)"
-            ),
+        return (
+            f"Successfully replaced blocklist {blocklist_name} "
+            f"(id = {args.blocklist_id}) with {len(normalized_items)} item(s)"
         )

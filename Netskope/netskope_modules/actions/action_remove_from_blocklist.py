@@ -1,7 +1,6 @@
 from pydantic import Field
 
-from netskope_modules.actions.action_base import NetskopeActionArguments
-from netskope_modules.actions.action_blocklist_base import NetskopeBlocklistAction
+from netskope_modules.actions.action_base import NetskopeAction, NetskopeActionArguments
 
 
 class RemoveFromBlocklistArguments(NetskopeActionArguments):
@@ -10,12 +9,12 @@ class RemoveFromBlocklistArguments(NetskopeActionArguments):
     sort_items: bool = Field(True, description="Sort items alphabetically")
 
 
-class RemoveFromBlocklistAction(NetskopeBlocklistAction):
+class RemoveFromBlocklistAction(NetskopeAction):
     """
     Remove URL entries from an existing Netskope blocklist.
     """
 
-    def run(self, arguments: dict) -> dict:
+    def run(self, arguments: dict) -> str:
         args = RemoveFromBlocklistArguments(**arguments)
         self.initialize_action_arguments(args)
 
@@ -34,16 +33,12 @@ class RemoveFromBlocklistAction(NetskopeBlocklistAction):
         removed_count = len(items_to_remove)
 
         if not items_to_remove:
-            return self.build_blocklist_result(
-                action_name="remove_from_blocklist",
-                api_request=self.get_last_api_request(),
-                action_response=current_blocklist,
-                status=(
-                    f"No item(s) removed from blocklist {blocklist_name} "
-                    f"(id = {args.blocklist_id}): 0/{provided_count} removed ({missing_count} already missing)"
-                ),
+            return (
+                f"No item(s) removed from blocklist {blocklist_name} "
+                f"(id = {args.blocklist_id}): 0/{provided_count} removed ({missing_count} already missing)"
             )
 
+        # Build the next full blocklist content by excluding requested entries.
         remaining_items = [item for item in existing_items if item not in set(items_to_remove)]
         remaining_items = self.normalize_urls(remaining_items, sort_items=args.sort_items)
 
@@ -60,18 +55,12 @@ class RemoveFromBlocklistAction(NetskopeBlocklistAction):
             f"api/v2/policy/urllist/{args.blocklist_id}/replace",
             json=replace_payload,
         )
-        remove_request = self.get_last_api_request()
         blocklist_name = remove_response.get("name", blocklist_name)
 
         # Deploy the changes
         self.deploy_blocklist_changes()
 
-        return self.build_blocklist_result(
-            action_name="remove_from_blocklist",
-            api_request=remove_request,
-            action_response=remove_response,
-            status=(
-                f"Successfully removed from blocklist {blocklist_name} "
-                f"(id = {args.blocklist_id}): {removed_count}/{provided_count} removed ({missing_count} already missing)"
-            ),
+        return (
+            f"Successfully removed from blocklist {blocklist_name} "
+            f"(id = {args.blocklist_id}): {removed_count}/{provided_count} removed ({missing_count} already missing)"
         )

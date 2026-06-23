@@ -4,7 +4,7 @@ from typing import Any, cast
 
 import requests
 from pydantic import BaseModel, Field
-from requests import PreparedRequest, Response
+from requests import Response
 from sekoia_automation.action import Action
 from sekoia_automation.exceptions import ModuleConfigurationError
 
@@ -21,7 +21,6 @@ class NetskopeActionArguments(BaseModel):
 class NetskopeAction(Action):
     module: NetskopeModule
     _api_token: str | None = None
-    _last_api_request: dict[str, Any] | None = None
 
     @property
     def api_token(self) -> str:
@@ -93,9 +92,6 @@ class NetskopeAction(Action):
             raise ModuleConfigurationError("The base url is undefined. Please set the url of the Netskope API")
         return base_url.rstrip("/")
 
-    def get_api_url(self, endpoint: str) -> str:
-        return f"{self.base_url}/{endpoint}"
-
     def _handle_response_error(self, response: Response) -> None:
         if not response.ok:
             logger.error(
@@ -128,58 +124,11 @@ class NetskopeAction(Action):
         """
         return self.execute_request("POST", "api/v2/policy/urllist/deploy")
 
-    @staticmethod
-    def _mask_headers(headers: dict[str, str] | None) -> dict[str, str]:
-        if not headers:
-            return {}
-
-        masked = dict(headers)
-        authorization_key = next((key for key in masked if key.lower() == "authorization"), None)
-        if authorization_key:
-            masked[authorization_key] = "Bearer ***"
-
-        return masked
-
-    def _serialize_request(self, prepared_request: PreparedRequest, kwargs: dict[str, Any]) -> dict[str, Any]:
-        body: str | None = None
-        if prepared_request.body is not None:
-            if isinstance(prepared_request.body, bytes):
-                body = prepared_request.body.decode("utf-8", errors="replace")
-            else:
-                body = str(prepared_request.body)
-
-        normalized_headers: dict[str, str] = {}
-        for key, value in (prepared_request.headers or {}).items():
-            header_key = key.decode("utf-8", errors="replace") if isinstance(key, bytes) else str(key)
-            header_value = value.decode("utf-8", errors="replace") if isinstance(value, bytes) else str(value)
-            normalized_headers[header_key] = header_value
-
-        request_snapshot = {
-            "method": prepared_request.method,
-            "url": prepared_request.url,
-            "headers": self._mask_headers(normalized_headers),
-        }
-
-        if body is not None:
-            request_snapshot["body"] = body
-
-        # Keep caller-level intent visible when available.
-        if "json" in kwargs:
-            request_snapshot["json"] = kwargs["json"]
-        if "params" in kwargs:
-            request_snapshot["params"] = kwargs["params"]
-
-        return request_snapshot
-
-    def get_last_api_request(self) -> dict[str, Any]:
-        return self._last_api_request or {}
-
     def execute_request(self, method: str, endpoint: str, **kwargs) -> Any:
         """
         Execute a request to the Netskope API.
         """
-        url = self.get_api_url(endpoint)
-        request_kwargs = dict(kwargs)
+        url = f"{self.base_url}/{endpoint}"
         extra_headers = kwargs.pop("headers", {})
         headers = {
             "Accept": "application/json",
@@ -188,7 +137,6 @@ class NetskopeAction(Action):
         }
 
         response = requests.request(method, url, headers=headers, **kwargs)
-        self._last_api_request = self._serialize_request(response.request, request_kwargs)
         self._handle_response_error(response)
 
         return response.json() if response.content else {}
