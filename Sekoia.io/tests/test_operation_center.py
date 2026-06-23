@@ -4,19 +4,20 @@ import pytest
 import requests_mock
 
 from sekoiaio.operation_center import (
-    GetAlert,
-    ListAlerts,
     AddEventsToACase,
-    RemoveEventFromCase,
     CreateCase,
-    UpdateCase,
     DeleteCase,
+    GetAlert,
     GetCase,
+    GetCustomPriority,
+    GetCustomStatus,
+    GetCustomVerdict,
+    ListAlerts,
     ListsCases,
     PostCommentOnCase,
-    GetCustomStatus,
-    GetCustomPriority,
-    GetCustomVerdict,
+    RemoveEventFromCase,
+    RevokesAssetV2,
+    UpdateCase,
 )
 
 module_base_url = "http://fake.url/"
@@ -448,6 +449,33 @@ def test_get_custom_priority():
         history = mock.request_history
         assert history[0].method == "GET"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
+
+
+def test_revoke_asset():
+    action: RevokesAssetV2 = RevokesAssetV2()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    assets_v2_base_url = module_base_url + "api/v2/asset-management/"
+    ressource = "assets/fake_uuid/revoke"
+    expected_response = {
+        "uuid": "fake_uuid",
+        "community_uuid": "e391588b-4c35-45eb-a5af-211fba0cde08",
+        "name": "asset name",
+        "type": "host",
+        "revoked": True,
+    }
+    arguments = {"uuid": "fake_uuid"}
+
+    with requests_mock.Mocker() as mock:
+        mock.put(f"{assets_v2_base_url}{ressource}", json=expected_response)
+
+        results: dict = action.run(arguments)
+
+        assert results == expected_response
+        assert mock.call_count == 1
+        history = mock.request_history
+        assert history[0].method == "PUT"
+        assert url_decoder(history[0].url) == f"{assets_v2_base_url}{ressource}"
 
 
 def test_get_custom_verdict():

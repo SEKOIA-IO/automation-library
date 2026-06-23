@@ -1,12 +1,12 @@
 {
-  "uuid": "31e6e73a-ac13-41ca-9f1a-0a0e33fda801",
-  "name": "[DEPRECATED] Delete an asset (V2)",
-  "docker_parameters": "delete-assets-v2/{uuid}",
-  "description": "(deprecated — use Revoke an asset (V2)) Delete the requested asset",
+  "uuid": "a4fc0129-1696-4e88-b248-fb615188cf1b",
+  "name": "Revoke an asset (V2)",
+  "docker_parameters": "revoke-assets-v2/{uuid}",
+  "description": "Revoke the requested asset (soft-delete). Replaces the deprecated Delete an asset actions.",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
-    "title": "Delete an asset",
+    "title": "Revoke an asset",
     "properties": {
       "uuid": {
         "type": "string",
@@ -303,5 +303,5 @@
       "type"
     ]
   },
-  "slug": "delete_assetv2"
+  "slug": "revoke_assetv2"
 }
