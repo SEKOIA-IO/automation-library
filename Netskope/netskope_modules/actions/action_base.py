@@ -169,37 +169,7 @@ class NetskopeAction(Action):
         if "params" in kwargs:
             request_snapshot["params"] = kwargs["params"]
 
-        request_snapshot["curl"] = self._build_curl_command(request_snapshot)
-
         return request_snapshot
-
-    @staticmethod
-    def _build_curl_command(request_snapshot: dict[str, Any]) -> str:
-        def sq(value: str) -> str:
-            return "'" + value.replace("'", "'\"'\"'") + "'"
-
-        method = str(request_snapshot.get("method") or "GET")
-        url = str(request_snapshot.get("url") or "")
-        headers = request_snapshot.get("headers") or {}
-
-        curl_parts: list[str] = [f"curl -X {sq(method)}", sq(url)]
-
-        accept_value = headers.get("Accept") or headers.get("accept")
-        if accept_value:
-            curl_parts.append(f"-H {sq(f'accept: {accept_value}')}")
-
-        content_type_value = headers.get("Content-Type") or headers.get("content-type")
-        if content_type_value:
-            curl_parts.append(f"-H {sq(f'Content-Type: {content_type_value}')}")
-
-        if "json" in request_snapshot:
-            payload = json.dumps(request_snapshot["json"], separators=(",", ":"), ensure_ascii=False)
-            curl_parts.append(f"-d {sq(payload)}")
-        elif "body" in request_snapshot:
-            curl_parts.append(f"-d {sq(str(request_snapshot['body']))}")
-
-        separator = " \\\n" + "  "
-        return separator.join(curl_parts)
 
     def get_last_api_request(self) -> dict[str, Any]:
         return self._last_api_request or {}

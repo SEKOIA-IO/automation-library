@@ -18,7 +18,7 @@ class NetskopeBlocklistAction(NetskopeAction):
     ) -> dict:
         return {
             "action_name": action_name,
-            "action_request": api_request.get("curl", ""),
+            "action_request": api_request,
             "action_response": action_response,
             "action_status": status,
         }
