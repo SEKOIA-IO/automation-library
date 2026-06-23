@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2024-07-08 - 1.5.2
-
 ### Fixed
 
 - Accept Cato account IDs from 4 to 8 digits in module configuration

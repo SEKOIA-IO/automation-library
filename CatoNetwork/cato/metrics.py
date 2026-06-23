@@ -1,4 +1,4 @@
-from prometheus_client import Counter, Gauge, Histogram
+from prometheus_client import Counter, Histogram, Gauge
 
 # Declare common prometheus metrics
 prom_namespace = "symphony_module_common"
