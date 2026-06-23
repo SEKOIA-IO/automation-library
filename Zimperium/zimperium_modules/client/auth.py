@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urljoin
 
 import requests
@@ -28,7 +28,6 @@ class ZimperiumApiAuthentication(AuthBase):
         client_secret: str,
         ratelimit_per_second: int = 10,
     ) -> None:
-        self.__authorization_url = urljoin(base_url, "api/auth/v1/api_keys/login")
         self.__base_url = base_url
         self.__client_id = client_id
         self.__client_secret = client_secret
@@ -47,7 +46,7 @@ class ZimperiumApiAuthentication(AuthBase):
         )
 
     def get_credentials(self) -> ZimperiumApiCredentials:
-        current_dt = datetime.utcnow()
+        current_dt = datetime.now(timezone.utc)
 
         refresh_token = self.__api_credentials.refresh_token if self.__api_credentials else None
         if self.__api_credentials is None or current_dt + timedelta(seconds=300) >= self.__api_credentials.expires_at:

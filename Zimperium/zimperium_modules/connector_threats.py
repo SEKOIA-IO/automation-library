@@ -1,3 +1,4 @@
+import os
 import time
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
@@ -7,14 +8,16 @@ from typing import Any, Generator
 import orjson
 import requests
 from cachetools import Cache, LRUCache
-from dateutil.parser import isoparse
 from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from . import ZimperiumModule
 from .client import ApiClient
+from .logging import get_logger
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+
+logger = get_logger()
 
 
 class MobileThreatDefenceConnectorConfiguration(DefaultConnectorConfiguration):
@@ -36,7 +39,7 @@ class MobileThreatDefenceConnector(Connector):
             ignore_older_than=timedelta(days=300),
         )
 
-        self.cache_size = 2000
+        self.cache_size = int(os.getenv("EVENTS_CACHE_SIZE", 2000))
         self.events_cache: Cache = self.load_events_cache()
 
     def load_events_cache(self) -> Cache:
@@ -83,6 +86,10 @@ class MobileThreatDefenceConnector(Connector):
                 pass
 
             self.log(message, level="error")
+            logger.error(
+                message,
+                response_content=response.text,
+            )
             response.raise_for_status()
 
     def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:

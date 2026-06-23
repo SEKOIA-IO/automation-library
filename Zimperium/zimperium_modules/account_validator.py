@@ -4,19 +4,11 @@ import requests.exceptions
 from sekoia_automation.account_validator import AccountValidator
 
 from . import ZimperiumModule
-from .client import ApiClient, ZimperiumApiAuthentication
+from .client import ZimperiumApiAuthentication
 
 
 class ZimperiumAccountValidator(AccountValidator):
     module: ZimperiumModule
-
-    @cached_property
-    def client(self) -> ApiClient:
-        return ApiClient(
-            base_url=self.module.configuration.base_url,
-            client_id=self.module.configuration.client_id,
-            client_secret=self.module.configuration.client_secret,
-        )
 
     @cached_property
     def auth(self) -> ZimperiumApiAuthentication:
