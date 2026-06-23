@@ -8,10 +8,6 @@ from eset_modules import EsetModule
 from eset_modules.account_validator import EsetAccountValidator
 from eset_modules.models import EsetModuleConfiguration
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
 
 @pytest.fixture
 def validator(data_storage):
@@ -34,10 +30,6 @@ def mock_client(validator):
     return session
 
 
-# ---------------------------------------------------------------------------
-# Config sanity check
-# ---------------------------------------------------------------------------
-
 
 def test_validator_configuration(validator):
     assert validator.module.configuration.region == "eu"
@@ -45,15 +37,11 @@ def test_validator_configuration(validator):
     assert validator.module.configuration.password == "testpassword"
 
 
-# ---------------------------------------------------------------------------
-# Success path
-# ---------------------------------------------------------------------------
-
 
 def test_validate_success(validator, mock_client):
     with requests_mock_module.Mocker() as m:
         m.get(
-            "https://eu.automation.eset.systems/v1/devices",
+            "https://eu.device-management.eset.systems/v1/devices",
             status_code=200,
             json={"devices": [], "nextPageToken": None},
         )
@@ -63,15 +51,11 @@ def test_validate_success(validator, mock_client):
     validator.error.assert_not_called()
 
 
-# ---------------------------------------------------------------------------
-# Failure paths
-# ---------------------------------------------------------------------------
-
 
 def test_validate_failure_unauthorized(validator, mock_client):
     with requests_mock_module.Mocker() as m:
         m.get(
-            "https://eu.automation.eset.systems/v1/devices",
+            "https://eu.device-management.eset.systems/v1/devices",
             status_code=401,
         )
         result = validator.validate()
@@ -85,7 +69,7 @@ def test_validate_failure_unauthorized(validator, mock_client):
 def test_validate_failure_forbidden(validator, mock_client):
     with requests_mock_module.Mocker() as m:
         m.get(
-            "https://eu.automation.eset.systems/v1/devices",
+            "https://eu.device-management.eset.systems/v1/devices",
             status_code=403,
         )
         result = validator.validate()
@@ -97,7 +81,7 @@ def test_validate_failure_forbidden(validator, mock_client):
 def test_validate_failure_server_error(validator, mock_client):
     with requests_mock_module.Mocker() as m:
         m.get(
-            "https://eu.automation.eset.systems/v1/devices",
+            "https://eu.device-management.eset.systems/v1/devices",
             status_code=500,
         )
         result = validator.validate()
@@ -109,7 +93,7 @@ def test_validate_failure_server_error(validator, mock_client):
 def test_validate_failure_connection_error(validator, mock_client):
     with requests_mock_module.Mocker() as m:
         m.get(
-            "https://eu.automation.eset.systems/v1/devices",
+            "https://eu.device-management.eset.systems/v1/devices",
             exc=requests.exceptions.ConnectionError("unreachable"),
         )
         result = validator.validate()
@@ -123,7 +107,7 @@ def test_validate_failure_connection_error(validator, mock_client):
 def test_validate_failure_timeout(validator, mock_client):
     with requests_mock_module.Mocker() as m:
         m.get(
-            "https://eu.automation.eset.systems/v1/devices",
+            "https://eu.device-management.eset.systems/v1/devices",
             exc=requests.exceptions.Timeout("timed out"),
         )
         result = validator.validate()

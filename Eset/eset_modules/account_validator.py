@@ -21,7 +21,7 @@ class EsetAccountValidator(AccountValidator):
     def validate(self) -> bool:
         try:
             region = self.module.configuration.region
-            url = f"https://{region}.automation.eset.systems/v1/devices"
+            url = f"https://{region}.device-management.eset.systems/v1/devices"
             response = self.client.get(url, params={"pageSize": 1})
             response.raise_for_status()
         except Exception as e:
