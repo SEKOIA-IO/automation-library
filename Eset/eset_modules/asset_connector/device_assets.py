@@ -135,9 +135,15 @@ class EsetDeviceAssetConnector(AssetConnector):
                 return NetworkInterfaceTypeStr.WIRED, NetworkInterfaceTypeId.WIRED
         return NetworkInterfaceTypeStr.UNKNOWN, NetworkInterfaceTypeId.UNKNOWN
 
+    @staticmethod
+    def _resolve_hostname(device: EsetDevice) -> str:
+        """Resolve device hostname with fallback chain: displayName → originalDisplayName → uuid."""
+        return device.displayName or device.originalDisplayName or device.uuid
+
     def build_network_interfaces(self, device: EsetDevice) -> Optional[list[NetworkInterface]]:
         """Build OCSF NetworkInterface list from hardware profile network adapters."""
         interfaces: list[NetworkInterface] = []
+        resolved_hostname = self._resolve_hostname(device)
 
         if device.primaryLocalIpAddress:
             interfaces.append(
@@ -145,7 +151,7 @@ class EsetDeviceAssetConnector(AssetConnector):
                     ip=device.primaryLocalIpAddress,
                     type=NetworkInterfaceTypeStr.UNKNOWN,
                     type_id=NetworkInterfaceTypeId.UNKNOWN,
-                    hostname=device.displayName,
+                    hostname=resolved_hostname,
                 )
             )
 
@@ -206,6 +212,7 @@ class EsetDeviceAssetConnector(AssetConnector):
         if ts:
             last_seen_time = ts.timestamp()
 
+        hostname = self._resolve_hostname(eset_device)
         device_type_str, device_type_id = self._resolve_device_type(eset_device)
         network_interfaces = self.build_network_interfaces(eset_device)
         os = self.build_operating_system(eset_device)
@@ -219,8 +226,6 @@ class EsetDeviceAssetConnector(AssetConnector):
         if eset_device.hardwareProfiles:
             model = eset_device.hardwareProfiles[0].model
             manufacturer = eset_device.hardwareProfiles[0].manufacturer
-
-        hostname = eset_device.displayName or eset_device.originalDisplayName or eset_device.uuid
 
         return Device(
             uid=eset_device.uuid,

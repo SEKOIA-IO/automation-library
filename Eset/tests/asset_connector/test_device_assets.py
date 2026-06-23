@@ -299,6 +299,31 @@ def test_build_network_interfaces_ip_only(test_connector):
     assert interfaces[0].mac is None
 
 
+def test_build_network_interfaces_hostname_uses_resolved_hostname(test_connector):
+    """hostname on the network interface should match the resolved device hostname, not just displayName."""
+    device = EsetDevice(uuid="my-uuid", originalDisplayName="ORIG-NAME", primaryLocalIpAddress="10.0.0.1")
+    interfaces = test_connector.build_network_interfaces(device)
+    assert interfaces is not None
+    assert interfaces[0].hostname == "ORIG-NAME"  # falls back to originalDisplayName, not None
+
+
+def test_build_network_interfaces_hostname_falls_back_to_uuid(test_connector):
+    """If displayName and originalDisplayName are both None, hostname should be the uuid."""
+    device = EsetDevice(uuid="my-uuid", primaryLocalIpAddress="10.0.0.1")
+    interfaces = test_connector.build_network_interfaces(device)
+    assert interfaces is not None
+    assert interfaces[0].hostname == "my-uuid"
+
+
+def test_build_device_network_interface_hostname_consistent(test_connector):
+    """device.hostname and device.network_interfaces[0].hostname must always be identical."""
+    device = EsetDevice(uuid="my-uuid", originalDisplayName="ORIG-NAME", primaryLocalIpAddress="10.0.0.1")
+    result = test_connector.build_device(device, [])
+    assert result.hostname == "ORIG-NAME"
+    assert result.network_interfaces is not None
+    assert result.network_interfaces[0].hostname == result.hostname
+
+
 def test_resolve_device_type_mobile(test_connector):
     device = EsetDevice(uuid="abc", isMobile=True)
     type_str, type_id = test_connector._resolve_device_type(device)
