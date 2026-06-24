@@ -43,6 +43,7 @@ requests-mock = "*"
 aioresponses = "^0.7.6"
 black = { version = "*", extras = ["colorama"] }
 isort = "*"
+ruff = "^0.15.19"
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]

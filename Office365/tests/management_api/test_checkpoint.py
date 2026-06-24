@@ -7,7 +7,6 @@ import pytest
 from prometheus_client import REGISTRY
 
 from office365.management_api.checkpoint import Checkpoint
-from office365.metrics import CHECKPOINT_PERSISTENCE_FAILURES
 
 
 @pytest.fixture
@@ -118,19 +117,13 @@ def test_checkpoint_write_error_increments_metric(symphony_storage, checkpoint, 
     assert checkpoint.offset == previous_observed_date
 
     new_observed_date = now - timedelta(days=1)
-    
+
     sample_name = "symphony_module_common_checkpoint_persistence_failures_total"
-    
-    before = REGISTRY.get_sample_value(
-        sample_name,
-        labels={"intake_key": intake_key}
-    ) or 0
+
+    before = REGISTRY.get_sample_value(sample_name, labels={"intake_key": intake_key}) or 0
 
     with patch.object(Path, "write_text", side_effect=OSError("s3 upload failed")):
         checkpoint.offset = new_observed_date
 
-    after = REGISTRY.get_sample_value(
-        sample_name,
-        labels={"intake_key": intake_key}
-    ) or 0
+    after = REGISTRY.get_sample_value(sample_name, labels={"intake_key": intake_key}) or 0
     assert after == before + 1
