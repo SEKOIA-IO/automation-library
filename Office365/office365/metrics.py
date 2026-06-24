@@ -23,3 +23,10 @@ EVENTS_LAG = Gauge(
     namespace=prom_namespace,
     labelnames=["intake_key"],
 )
+
+CHECKPOINT_PERSISTENCE_FAILURES = Counter(
+    name="checkpoint_persistence_failures",
+    documentation="Number of failed checkpoint persistence attempts",
+    namespace=prom_namespace,
+    labelnames=["intake_key"],
+)

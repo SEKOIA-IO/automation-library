@@ -5,7 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [Unreleased] - 2026-06-24
+
+### Added
+
+- Add a prometheus metric for checkpoint persistence errors
+- Log checkpoint persistence errors as warnings
+
+### Fixed
+
+- Keep forwarding events when checkpoint persistence errors occur (avoid `IncompleteBody` errors from breaking the loop)
 
 ## 2026-06-01 - 2.20.5
 

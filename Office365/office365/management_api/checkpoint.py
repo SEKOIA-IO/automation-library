@@ -3,10 +3,17 @@ from pathlib import Path
 
 from dateutil.parser import isoparse
 
+from office365.metrics import CHECKPOINT_PERSISTENCE_FAILURES
+
+from .logging import get_logger
+
+logger = get_logger()
+
 
 class Checkpoint:
     def __init__(self, path: Path, intake_key: str):
         self._context: Path = path / f"o365_{intake_key}_last_pull"
+        self._intake_key = intake_key
         self._most_recent_date_seen: datetime | None = None
 
     @property
@@ -37,4 +44,14 @@ class Checkpoint:
         if last_message_date is not None:
             if self.offset is None or last_message_date > self.offset:
                 self._most_recent_date_seen = last_message_date
-                self._context.write_text(last_message_date.isoformat())
+                try:
+                    self._context.write_text(last_message_date.isoformat())
+                except Exception as error:
+                    # Keep forwarding even if remote checkpoint persistence is temporarily unavailable.
+                    CHECKPOINT_PERSISTENCE_FAILURES.labels(intake_key=self._intake_key).inc()
+                    logger.warning(
+                        "Failed to persist Office365 checkpoint offset",
+                        checkpoint_path=str(self._context),
+                        last_message_date=last_message_date.isoformat(),
+                        error=str(error),
+                    )

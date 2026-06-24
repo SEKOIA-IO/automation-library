@@ -6,6 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from office365.management_api.checkpoint import Checkpoint
+from office365.metrics import CHECKPOINT_PERSISTENCE_FAILURES
 
 
 @pytest.fixture
@@ -89,3 +90,37 @@ def test_checkpoint_save_last_date(symphony_storage, checkpoint, intake_key):
 
     # assert that the checkpoint was updated to the new observed date
     assert checkpoint.offset == new_observed_date
+
+
+def test_checkpoint_write_error_keeps_in_memory_offset(symphony_storage, checkpoint, intake_key):
+    now = datetime.now(UTC)
+    previous_observed_date = now - timedelta(days=5)
+    context = symphony_storage / f"o365_{intake_key}_last_pull"
+    context.write_text(previous_observed_date.isoformat())
+
+    assert checkpoint.offset == previous_observed_date
+
+    new_observed_date = now - timedelta(days=1)
+    with patch.object(Path, "write_text", side_effect=OSError("s3 upload failed")):
+        checkpoint.offset = new_observed_date
+
+    # The in-memory offset should still move forward even when persistence fails.
+    assert checkpoint.offset == new_observed_date
+
+
+def test_checkpoint_write_error_increments_metric(symphony_storage, checkpoint, intake_key):
+    now = datetime.now(UTC)
+    previous_observed_date = now - timedelta(days=5)
+    context = symphony_storage / f"o365_{intake_key}_last_pull"
+    context.write_text(previous_observed_date.isoformat())
+
+    assert checkpoint.offset == previous_observed_date
+
+    new_observed_date = now - timedelta(days=1)
+    metric = CHECKPOINT_PERSISTENCE_FAILURES.labels(intake_key=intake_key)
+    before = metric._value.get()
+
+    with patch.object(Path, "write_text", side_effect=OSError("s3 upload failed")):
+        checkpoint.offset = new_observed_date
+
+    assert metric._value.get() == before + 1
