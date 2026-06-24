@@ -8,8 +8,9 @@ from typing import Any, Generator
 import orjson
 import requests
 from cachetools import Cache, LRUCache
-from sekoia_automation.checkpoint import CheckpointDatetime
+from dateutil.parser import isoparse
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.helpers.timestepper import TimeStepper
 from sekoia_automation.storage import PersistentJSON
 
 from . import ZimperiumModule
@@ -22,7 +23,10 @@ logger = get_logger()
 
 class MobileThreatDefenceConnectorConfiguration(DefaultConnectorConfiguration):
     chunk_size: int = 1000
+
     frequency: int = 60
+    timedelta: int = 5
+    start_time: int = 10
 
 
 class MobileThreatDefenceConnector(Connector):
@@ -33,14 +37,38 @@ class MobileThreatDefenceConnector(Connector):
         super().__init__(*args, **kwargs)
 
         self.context = PersistentJSON("context.json", self.data_path)
-        self.cursor = CheckpointDatetime(
-            path=self.data_path,
-            start_at=timedelta(days=200),
-            ignore_older_than=timedelta(days=300),
-        )
-
         self.cache_size = int(os.getenv("EVENTS_CACHE_SIZE", 2000))
         self.events_cache: Cache = self.load_events_cache()
+
+    @cached_property
+    def stepper(self):
+        with self.context as cache:
+            most_recent_date_requested_str = cache.get("most_recent_date_requested")
+
+        if most_recent_date_requested_str is None:
+            return TimeStepper.create(
+                trigger=self,
+                frequency=self.configuration.frequency,
+                timedelta=self.configuration.timedelta,
+                start_time=self.configuration.start_time,
+                metric=EVENTS_LAG,
+            )
+
+        # parse the most recent requested date
+        most_recent_date_requested = isoparse(most_recent_date_requested_str)
+
+        now = datetime.now(timezone.utc)
+        one_week_ago = now - timedelta(days=7)
+        if most_recent_date_requested < one_week_ago:
+            most_recent_date_requested = one_week_ago
+
+        return TimeStepper.create_from_time(
+            trigger=self,
+            start=most_recent_date_requested,
+            frequency=self.configuration.frequency,
+            timedelta=self.configuration.timedelta,
+            metric=EVENTS_LAG,
+        )
 
     def load_events_cache(self) -> Cache:
         """
@@ -92,7 +120,7 @@ class MobileThreatDefenceConnector(Connector):
             )
             response.raise_for_status()
 
-    def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
+    def fetch_events(self, from_date: datetime, to_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
         page_num = 0
 
         headers = {"Accept": "application/json"}
@@ -100,6 +128,7 @@ class MobileThreatDefenceConnector(Connector):
         params: dict[str, str | int] = {
             "module": "ZIPS",
             "after": from_date.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "before": to_date.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "page": page_num,
             "size": self.configuration.chunk_size,
             "sort": "timestamp,asc",
@@ -126,78 +155,51 @@ class MobileThreatDefenceConnector(Connector):
             page_num += 1
             params["page"] = page_num
 
-    def fetch_events(self) -> Generator[list[dict[str, Any]], None, None]:
-        most_recent_date_seen = self.cursor.offset
+    def is_processed(self, event: dict) -> bool:
+        return event["id"] in self.events_cache
 
-        try:
-            for next_events in self.__fetch_next_events(most_recent_date_seen):
-                if next_events:
-                    last_event_timestamp = max(
-                        item["timestamp"] // 1000 for item in next_events if item.get("timestamp") is not None
-                    )
-                    last_event_date = datetime.fromtimestamp(last_event_timestamp, tz=timezone.utc)
+    def mark_processed(self, event: dict) -> None:
+        self.events_cache[event["id"]] = True
 
-                    if last_event_date > most_recent_date_seen:
-                        most_recent_date_seen = last_event_date
+    def run(self):  # pragma: no cover
+        self.log(message="Zimperium MTD connector has started.", level="info")
 
-                    yield next_events
+        for start, end in self.stepper.ranges():
+            # check if the trigger should stop
+            if not self.running:
+                break
 
-        finally:
-            if most_recent_date_seen > self.cursor.offset:
-                self.cursor.offset = most_recent_date_seen
-
-        now = datetime.now(timezone.utc)
-        current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
-
-    def next_batch(self) -> None:
-        # save the starting time
-        batch_start_time = time.time()
-
-        # Fetch next batch
-        for events in self.fetch_events():
-            batch_of_events = [
-                orjson.dumps(event).decode("utf-8") for event in events if event["id"] not in self.events_cache
-            ]
-
-            # if the batch is full, push it
-            if len(batch_of_events) > 0:
-                self.log(
-                    message=f"Forwarded {len(batch_of_events)} events to the intake",
-                    level="info",
-                )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
-                self.push_events_to_intakes(events=batch_of_events)
-
-                # Persist cache of event UUIDs after pushing to intake
-                for event in events:
-                    self.events_cache[event["id"]] = True
-
-                self.save_events_cache()
-            else:
-                self.log(
-                    message="No events to forward",
-                    level="info",
-                )
-
-        # get the ending time and compute the duration to fetch the events
-        batch_end_time = time.time()
-        batch_duration = int(batch_end_time - batch_start_time)
-        self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="info")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
-
-        # compute the remaining sleeping time. If greater than 0, sleep
-        delta_sleep = self.configuration.frequency - batch_duration
-        if delta_sleep > 0:
-            self.log(f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
-            time.sleep(delta_sleep)
-
-    def run(self) -> None:
-        self.log(message="Start fetching Zimperium MTD Threats events", level="info")
-
-        while self.running:
             try:
-                self.next_batch()
+                duration_start = time.time()
+                for events in self.fetch_events(start, end):
+                    batch_of_events = [event for event in events if not self.is_processed(event)]
 
-            except Exception as error:
-                self.log_exception(error, message="Failed to forward events")
+                    if len(batch_of_events) > 0:
+                        self.log(message=f"Forwarding {len(batch_of_events)} events", level="info")
+
+                        batch_of_events = [orjson.dumps(event).decode("utf-8") for event in batch_of_events]
+                        self.push_events_to_intakes(events=batch_of_events)
+
+                        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+
+                        # mark sent events as processed
+                        for event in events:
+                            self.mark_processed(event)
+
+                        self.save_events_cache()
+
+                    else:
+                        self.log(message="No events to forward", level="info")
+
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                    time.time() - duration_start
+                )
+
+            except Exception as ex:
+                self.log_exception(ex, message="Failed to fetch events.")
+                raise ex
+
+            finally:
+                # save in context the most recent date seen
+                with self.context as cache:
+                    cache["most_recent_date_requested"] = end.isoformat()

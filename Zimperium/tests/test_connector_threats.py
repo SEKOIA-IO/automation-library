@@ -1,20 +1,15 @@
-import os
-import time
-import uuid
 from datetime import datetime, timedelta, timezone
-from threading import Thread
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import requests_mock
-from requests import Response
 
-from zimperium_modules import ZimperiumModule, ZimperiumModuleConfiguration
-from zimperium_modules.connector_threats import MobileThreatDefenceConnector, MobileThreatDefenceConnectorConfiguration
+from zimperium_modules import ZimperiumModule
+from zimperium_modules.connector_threats import MobileThreatDefenceConnector
 
 
 @pytest.fixture
-def trigger(data_storage):
+def trigger(data_storage) -> MobileThreatDefenceConnector:
     module = ZimperiumModule()
     module.configuration = {
         "client_id": "CLIENT_ID",
@@ -659,8 +654,25 @@ def response_empty():
     }
 
 
-def test_next_batch(trigger, response_1):
-    with requests_mock.Mocker() as mock_requests, patch("zimperium_modules.connector_threats.time") as mock_time:
+@pytest.fixture
+def trigger_activation() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+@pytest.fixture
+def end_time(trigger_activation: datetime) -> datetime:
+    return trigger_activation
+
+
+@pytest.fixture
+def start_time(trigger_activation: datetime) -> datetime:
+    return trigger_activation - timedelta(minutes=1)
+
+
+def test_fetch_events(
+    trigger: MobileThreatDefenceConnector, response_1: dict, start_time: datetime, end_time: datetime
+) -> None:
+    with requests_mock.Mocker() as mock_requests:
         mock_requests.post(
             "https://example.com/api/auth/v1/api_keys/login",
             status_code=200,
@@ -669,33 +681,8 @@ def test_next_batch(trigger, response_1):
 
         mock_requests.get("https://example.com/api/threats/public/v1/threats", status_code=200, json=response_1)
 
-        batch_duration = 16  # the batch lasts 16 seconds
-        start_time = 1666711174.0
-        end_time = start_time + batch_duration
-        mock_time.time.side_effect = [start_time, end_time, end_time]
+        batches = list(trigger.fetch_events(from_date=start_time, to_date=end_time))
+        assert len(batches) == 1
 
-        trigger.next_batch()
-
-        assert trigger.push_events_to_intakes.call_count == 1
-        mock_time.sleep.assert_called_once_with(44)
-
-
-def test_next_batch_without_events(trigger, response_empty):
-    with requests_mock.Mocker() as mock_requests, patch("zimperium_modules.connector_threats.time") as mock_time:
-        mock_requests.post(
-            "https://example.com/api/auth/v1/api_keys/login",
-            status_code=200,
-            json={"accessToken": "TOKEN1", "refreshToken": "TOKEN2"},
-        )
-
-        mock_requests.get("https://example.com/api/threats/public/v1/threats", status_code=200, json=response_empty)
-
-        batch_duration = 16  # the batch lasts 16 seconds
-        start_time = 1666711174.0
-        end_time = start_time + batch_duration
-        mock_time.time.side_effect = [start_time, end_time, end_time]
-
-        trigger.next_batch()
-
-        assert trigger.push_events_to_intakes.call_count == 0
-        mock_time.sleep.assert_called_once_with(44)
+        events = batches[0]
+        assert len(events) == 4
