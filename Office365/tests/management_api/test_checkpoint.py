@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from prometheus_client import REGISTRY
 
 from office365.management_api.checkpoint import Checkpoint
 from office365.metrics import CHECKPOINT_PERSISTENCE_FAILURES
@@ -117,10 +118,19 @@ def test_checkpoint_write_error_increments_metric(symphony_storage, checkpoint, 
     assert checkpoint.offset == previous_observed_date
 
     new_observed_date = now - timedelta(days=1)
-    metric = CHECKPOINT_PERSISTENCE_FAILURES.labels(intake_key=intake_key)
-    before = metric._value.get()
+    
+    sample_name = "symphony_module_common_checkpoint_persistence_failures_total"
+    
+    before = REGISTRY.get_sample_value(
+        sample_name,
+        labels={"intake_key": intake_key}
+    ) or 0
 
     with patch.object(Path, "write_text", side_effect=OSError("s3 upload failed")):
         checkpoint.offset = new_observed_date
 
-    assert metric._value.get() == before + 1
+    after = REGISTRY.get_sample_value(
+        sample_name,
+        labels={"intake_key": intake_key}
+    ) or 0
+    assert after == before + 1

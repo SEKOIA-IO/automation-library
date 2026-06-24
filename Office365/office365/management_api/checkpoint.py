@@ -46,7 +46,7 @@ class Checkpoint:
                 self._most_recent_date_seen = last_message_date
                 try:
                     self._context.write_text(last_message_date.isoformat())
-                except Exception as error:
+                except OSError as error:
                     # Keep forwarding even if remote checkpoint persistence is temporarily unavailable.
                     CHECKPOINT_PERSISTENCE_FAILURES.labels(intake_key=self._intake_key).inc()
                     logger.warning(
