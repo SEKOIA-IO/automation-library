@@ -75,6 +75,26 @@ async def test_fetch_activity_logs_success(faker: Faker, workday_client_faker: W
 
 
 @pytest.mark.asyncio
+async def test_fetch_activity_logs_passes_instances_returned(faker: Faker, workday_client_faker: WorkdayClient):
+    """The instancesReturned parameter must be forwarded to the API (no longer hardcoded to 1)."""
+    from_time = datetime.now(timezone.utc)
+    to_time = from_time + timedelta(minutes=1)
+
+    with aioresponses() as mocked:
+        token_data = {"access_token": faker.pystr(), "expires_in": 3600}
+        mocked.post(workday_client_faker.token_endpoint, status=200, payload=token_data)
+
+        url = urljoin(workday_client_faker.base_url + "/", "activityLogging")
+        mocked.get(re.compile(rf"^{re.escape(url)}(\?.+)?$"), status=200, payload=[])
+
+        async with workday_client_faker as client:
+            await client.fetch_activity_logs(from_time, to_time, instances_returned=5)
+
+        sent_urls = [str(key[1]) for key in mocked.requests if key[0] == "GET"]
+        assert any("instancesReturned=5" in u for u in sent_urls)
+
+
+@pytest.mark.asyncio
 async def test_fetch_activity_logs_401_retry(faker: Faker, workday_client_faker: WorkdayClient):
     """Test that 401 triggers token refresh and retry."""
     from_time = datetime.now(timezone.utc)

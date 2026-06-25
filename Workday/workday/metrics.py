@@ -16,6 +16,12 @@ events_duplicated = Counter(
     "Total number of duplicate activity logs filtered",
 )
 
+events_truncated = Counter(
+    "workday_activity_logs_truncated_total",
+    "Number of collection cycles where the time window saturated the instancesReturned pool "
+    "(events may have been truncated by the API)",
+)
+
 # API metrics
 api_requests = Counter("workday_api_requests_total", "Total number of API requests", ["endpoint", "status_code"])
 

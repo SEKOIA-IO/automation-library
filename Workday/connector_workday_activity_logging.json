@@ -34,6 +34,13 @@
         "description": "Number of records to fetch per API request",
         "default": 1000,
         "maximum": 1000
+      },
+      "instances_returned": {
+        "type": "integer",
+        "description": "Workday 'instancesReturned' parameter: maximum pool of activity instances per time window, expressed in units of 10,000 (1 = 10,000 records, 25 = 250,000). Defaults to 1 (most performant); raise it for high-volume tenants that exceed 10,000 events per window to avoid truncation.",
+        "default": 1,
+        "minimum": 1,
+        "maximum": 25
       }
     },
     "required": ["intake_key"]

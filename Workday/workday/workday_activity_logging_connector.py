@@ -6,6 +6,7 @@ from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.storage import PersistentJSON
 from workday.client.http_client import WorkdayClient
 from workday.client.errors import WorkdayAuthError
+from workday.metrics import events_truncated
 import asyncio
 import signal
 
@@ -16,6 +17,7 @@ class WorkdayActivityLoggingConfiguration(DefaultConnectorConfiguration):
     frequency: int = 600  # 10 minutes
     chunk_size: int = 1000
     limit: int = 1000  # API max per request
+    instances_returned: int = 1  # pool size in units of 10,000 (1..25); 1 = 10,000 records (most performant)
     intake_server: Optional[str] = None
     intake_key: str = ""
 
@@ -54,21 +56,21 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
         one_day_ago = datetime.now(timezone.utc) - timedelta(hours=24)
 
         with self.context as c:
-            # self.log(message=f"Reading checkpoint from context - Available keys: {list(c.keys())}", level="debug")
+            self.log(message=f"Reading checkpoint from context - Available keys: {list(c.keys())}", level="debug")
 
             ts = c.get("last_collection_end_time")
             if ts:
                 last_date = datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(timezone.utc)
-                # self.log(
-                #     message=f"Checkpoint found - Last collection end time: {ts} ({last_date.isoformat()})",
-                #     level="info",
-                # )
+                self.log(
+                    message=f"Checkpoint found - Last collection end time: {ts} ({last_date.isoformat()})",
+                    level="info",
+                )
                 return last_date
 
-            # self.log(
-            #     message=f"No checkpoint found - Using default start time: {one_day_ago.isoformat()} (24h ago)",
-            #     level="info",
-            # )
+            self.log(
+                message=f"No checkpoint found - Using default start time: {one_day_ago.isoformat()} (24h ago)",
+                level="info",
+            )
 
         return one_day_ago
 
@@ -81,21 +83,21 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             c["last_collection_end_time"] = checkpoint_time
             c["last_successful_run"] = run_time
 
-        # self.log(
-        #     message=f"Checkpoint saved - Last collection end time: {checkpoint_time}, "
-        #     f"Last successful run: {run_time}",
-        #     level="info",
-        # )
+        self.log(
+            message=f"Checkpoint saved - Last collection end time: {checkpoint_time}, "
+            f"Last successful run: {run_time}",
+            level="info",
+        )
 
     def _cleanup_event_cache(self):
         """Remove events older than TTL from cache"""
         cutoff = datetime.now(timezone.utc) - self.event_cache_ttl
 
-        # self.log(
-        #     message=f"Starting event cache cleanup - Cutoff time: {cutoff.isoformat()} "
-        #     f"(TTL: {self.event_cache_ttl})",
-        #     level="debug",
-        # )
+        self.log(
+            message=f"Starting event cache cleanup - Cutoff time: {cutoff.isoformat()} "
+            f"(TTL: {self.event_cache_ttl})",
+            level="debug",
+        )
 
         with self.event_cache_store as s:
             initial_count = len(s)
@@ -109,18 +111,18 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
                         del s[k]
                         removed_count += 1
                 except Exception as e:
-                    # self.log(
-                    #     message=f"Error parsing cache timestamp for key '{k}': {e} - Removing entry", level="warning"
-                    # )
+                    self.log(
+                        message=f"Error parsing cache timestamp for key '{k}': {e} - Removing entry", level="warning"
+                    )
                     del s[k]
                     removed_count += 1
 
             final_count = len(s)
-            # self.log(
-            #     message=f"Event cache cleanup complete - "
-            #     f"Initial: {initial_count}, Removed: {removed_count}, Remaining: {final_count}",
-            #     level="info",
-            # )
+            self.log(
+                message=f"Event cache cleanup complete - "
+                f"Initial: {initial_count}, Removed: {removed_count}, Remaining: {final_count}",
+                level="info",
+            )
 
     def _is_new_event(self, event: Dict[str, Any]) -> bool:
         """
@@ -133,13 +135,13 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
 
         with self.event_cache_store as s:
             if cache_key in s:
-                # self.log(message=f"Duplicate event detected - Cache key: {cache_key}", level="debug")
+                self.log(message=f"Duplicate event detected - Cache key: {cache_key}", level="debug")
                 return False
 
             timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
             s[cache_key] = timestamp
 
-            # self.log(message=f"New event cached - Key: {cache_key}, Timestamp: {timestamp}", level="debug")
+            self.log(message=f"New event cached - Key: {cache_key}, Timestamp: {timestamp}", level="debug")
 
         return True
 
@@ -155,8 +157,9 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
         from_time = self.last_event_date()
         to_time = datetime.now(timezone.utc) - timedelta(minutes=2)  # 2-minute buffer
 
-        # SAVE CHECKPOINT IMMEDIATELY
-        self.save_checkpoint(to_time)
+        # NOTE: the checkpoint is intentionally saved at the END of this cycle (after every page has
+        # been fetched and yielded), so an interrupted or truncated collection never advances past
+        # events that were not actually collected.
 
         self.log(
             message=f"Fetch parameters - From: {from_time.isoformat()}, "
@@ -179,7 +182,11 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
 
             try:
                 events = await client.fetch_activity_logs(
-                    from_time=from_time, to_time=to_time, limit=limit, offset=offset
+                    from_time=from_time,
+                    to_time=to_time,
+                    limit=limit,
+                    offset=offset,
+                    instances_returned=self.configuration.instances_returned,
                 )
 
                 events_received = len(events) if events else 0
@@ -188,26 +195,25 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
                 self.log(message=f"Page {page_count} received - Events: {events_received}", level="info")
 
                 if events_received > 0:
-                    pass
-                    # self.log(
-                    #     message=f"Sample event from page {page_count}: {events[0] if events else 'None'}",
-                    #     level="debug",
-                    # )
+                    self.log(
+                        message=f"Sample event from page {page_count}: {events[0] if events else 'None'}",
+                        level="debug",
+                    )
 
             except Exception as e:
-                # self.log(message=f"Transient error fetching page {page_count} at offset {offset}: {e}", level="error")
+                self.log(message=f"Transient error fetching page {page_count} at offset {offset}: {e}", level="error")
                 await asyncio.sleep(2)
                 continue
 
             if not events:
-                # self.log(
-                #     message=f"No more events - Total pages: {page_count}, "
-                #     f"Total events fetched: {total_events_fetched}",
-                #     level="info",
-                # )
+                self.log(
+                    message=f"No more events - Total pages: {page_count}, "
+                    f"Total events fetched: {total_events_fetched}",
+                    level="info",
+                )
 
                 if batch:
-                    # self.log(message=f"Yielding final batch - Events: {len(batch)}", level="info")
+                    self.log(message=f"Yielding final batch - Events: {len(batch)}", level="info")
                     yield batch
                 break
 
@@ -216,63 +222,80 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             total_new_events += len(new_events)
             total_duplicate_events += duplicate_count
 
-            # self.log(
-            #     message=f"Page {page_count} filtering - New: {len(new_events)}, Duplicates: {duplicate_count}",
-            #     level="info",
-            # )
+            self.log(
+                message=f"Page {page_count} filtering - New: {len(new_events)}, Duplicates: {duplicate_count}",
+                level="info",
+            )
 
             if new_events:
                 batch.extend(new_events)
-                # self.log(
-                #     message=f"Batch updated - Current batch size: {len(batch)}, "
-                #     f"Chunk size threshold: {self.configuration.chunk_size}",
-                #     level="debug",
-                # )
+                self.log(
+                    message=f"Batch updated - Current batch size: {len(batch)}, "
+                    f"Chunk size threshold: {self.configuration.chunk_size}",
+                    level="debug",
+                )
 
                 if len(batch) >= self.configuration.chunk_size:
                     chunk = batch[: self.configuration.chunk_size]
                     batch = batch[self.configuration.chunk_size :]
-                    # self.log(
-                    #     message=f"Chunk size reached - Yielding {len(chunk)} events, "
-                    #     f"Remaining in batch: {len(batch)}",
-                    #     level="info",
-                    # )
+                    self.log(
+                        message=f"Chunk size reached - Yielding {len(chunk)} events, "
+                        f"Remaining in batch: {len(batch)}",
+                        level="info",
+                    )
                     yield chunk
 
             if len(events) < limit:
-                # self.log(
-                #     message=f"Last page detected - Events received ({len(events)}) < Limit ({limit})", level="info"
-                # )
+                self.log(
+                    message=f"Last page detected - Events received ({len(events)}) < Limit ({limit})", level="info"
+                )
 
                 if batch:
-                    # self.log(message=f"Yielding remaining batch - Events: {len(batch)}", level="info")
+                    self.log(message=f"Yielding remaining batch - Events: {len(batch)}", level="info")
                     yield batch
                 break
 
             offset += limit
-            # self.log(message=f"Moving to next page - New offset: {offset}", level="debug")
+            self.log(message=f"Moving to next page - New offset: {offset}", level="debug")
 
-        # self.log(
-        #     message=f"Fetch cycle complete - "
-        #     f"Total pages: {page_count}, "
-        #     f"Total events fetched: {total_events_fetched}, "
-        #     f"New events: {total_new_events}, "
-        #     f"Duplicates filtered: {total_duplicate_events}",
-        #     level="info",
-        # )
+        self.log(
+            message=f"Fetch cycle complete - "
+            f"Total pages: {page_count}, "
+            f"Total events fetched: {total_events_fetched}, "
+            f"New events: {total_new_events}, "
+            f"Duplicates filtered: {total_duplicate_events}",
+            level="info",
+        )
+
+        # Detect window saturation: if we paged through the whole instancesReturned pool, the API may
+        # have truncated extra events for this window -> surface it instead of failing silently.
+        pool_size = self.configuration.instances_returned * 10000
+        if total_events_fetched >= pool_size:
+            events_truncated.inc()
+            self.log(
+                message=(
+                    f"Activity window {from_time.isoformat()} -> {to_time.isoformat()} reached the "
+                    f"instancesReturned pool ({pool_size} records); some events may have been truncated. "
+                    f"Increase 'instances_returned' (max 25) or lower 'frequency' to shorten the window."
+                ),
+                level="warning",
+            )
+
+        # Advance the checkpoint only now that the full window has been fetched and yielded.
+        self.save_checkpoint(to_time)
 
     async def next_batch(self) -> AsyncGenerator[List[Dict[str, Any]], None]:
         """
         Get next batch of events
         Called by AsyncConnector framework
         """
-        # self.log(
-        #     message=f"Creating WorkdayClient - "
-        #     f"Host: {self.module.configuration.workday_host}, "
-        #     f"Tenant: {self.module.configuration.tenant_name}, "
-        #     f"Client ID: {self.module.configuration.client_id[:8]}...",
-        #     level="info",
-        # )
+        self.log(
+            message=f"Creating WorkdayClient - "
+            f"Host: {self.module.configuration.workday_host}, "
+            f"Tenant: {self.module.configuration.tenant_name}, "
+            f"Client ID: {self.module.configuration.client_id[:8]}...",
+            level="info",
+        )
 
         async with WorkdayClient(
             workday_host=self.module.configuration.workday_host,
@@ -281,10 +304,10 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             client_secret=self.module.configuration.client_secret,
             refresh_token=self.module.configuration.refresh_token,
         ) as client:
-            # self.log(message="WorkdayClient context entered successfully", level="info")
+            self.log(message="WorkdayClient context entered successfully", level="info")
 
             async for batch in self.fetch_events(client):
-                # self.log(message=f"Batch ready for intake - Events: {len(batch)}", level="info")
+                self.log(message=f"Batch ready for intake - Events: {len(batch)}", level="info")
                 yield batch
 
     def run(self):  # pragma: no cover
@@ -292,12 +315,12 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
         Main execution loop
         Runs the async event collection in a synchronous wrapper
         """
-        # self.log(message=f"Connector starting - Polling frequency: {self.configuration.frequency}s", level="info")
+        self.log(message=f"Connector starting - Polling frequency: {self.configuration.frequency}s", level="info")
 
         loop = asyncio.get_event_loop()
 
         def handle_stop_signal():
-            # self.log(message="Received stop signal", level="info")
+            self.log(message="Received stop signal", level="info")
             loop.create_task(self.shutdown())
 
         loop.add_signal_handler(signal.SIGTERM, handle_stop_signal)
@@ -307,13 +330,13 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             loop.run_until_complete(self._async_run())
         except WorkdayAuthError as e:
             self.log_exception(e, message="CRITICAL: Authentication failed - Check credentials")
-            # self.log(message="Stopping connector due to authentication failure", level="error")
+            self.log(message="Stopping connector due to authentication failure", level="error")
         except Exception as e:
             self.log_exception(e, message="Unexpected error in connector execution")
         finally:
             loop.close()
 
-        # self.log(message="Connector stopped gracefully", level="info")
+        self.log(message="Connector stopped gracefully", level="info")
 
     async def _async_run(self):
         """
@@ -323,7 +346,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
 
         while self.running:
             iteration += 1
-            # self.log(message=f"=== Starting iteration {iteration} ===", level="info")
+            self.log(message=f"=== Starting iteration {iteration} ===", level="info")
 
             try:
                 batch_count = 0
@@ -346,13 +369,13 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
                         self.log(message=f"Failed to push batch {batch_count} to intake: {e}", level="error")
                         raise
 
-                # self.log(
-                #     message=f"Iteration {iteration} complete - "
-                #     f"Total batches: {batch_count}, Total events: {total_events}",
-                #     level="info",
-                # )
+                self.log(
+                    message=f"Iteration {iteration} complete - "
+                    f"Total batches: {batch_count}, Total events: {total_events}",
+                    level="info",
+                )
 
-                # self.log(message=f"Sleeping for {self.configuration.frequency}s until next iteration", level="info")
+                self.log(message=f"Sleeping for {self.configuration.frequency}s until next iteration", level="info")
                 await sleep(self.configuration.frequency)
 
             except WorkdayAuthError:

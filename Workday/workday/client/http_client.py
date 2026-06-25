@@ -116,7 +116,12 @@ class WorkdayClient:
         return self._access_token
 
     async def fetch_activity_logs(
-        self, from_time: datetime, to_time: datetime, limit: int = 1000, offset: int = 0
+        self,
+        from_time: datetime,
+        to_time: datetime,
+        limit: int = 1000,
+        offset: int = 0,
+        instances_returned: int = 1,
     ) -> List[Dict[str, Any]]:
         if not self._session:
             # self.log("HTTP session not initialized when fetching activity logs")
@@ -129,7 +134,10 @@ class WorkdayClient:
             "to": to_time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
             "limit": str(limit),
             "offset": str(offset),
-            "instancesReturned": "1",
+            # instancesReturned is a multiplier of 10,000 capping the total pool for this window.
+            # Hardcoding "1" previously limited every window to 10,000 records (data loss on
+            # high-volume tenants). Now driven by the connector configuration.
+            "instancesReturned": str(instances_returned),
         }
 
         headers = {"Accept": "application/json"}

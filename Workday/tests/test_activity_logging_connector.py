@@ -4,6 +4,12 @@ from aioresponses import aioresponses
 import re
 
 from workday.workday_activity_logging_connector import WorkdayActivityLoggingConnector
+from workday.metrics import events_truncated
+
+TOKEN_URL = "https://wd3-services1.myworkday.com/ccx/oauth2/test_tenant/token"
+ACTIVITY_URL_PATTERN = re.compile(
+    r"^https://wd3-services1\.myworkday\.com/ccx/api/privacy/v1/test_tenant/activityLogging(\?.*)?$"
+)
 
 
 @pytest.mark.asyncio
@@ -89,6 +95,70 @@ async def test_checkpoint_management(activity_logging_connector):
         loaded_checkpoint = loaded_checkpoint.replace(tzinfo=timezone.utc)
 
     assert loaded_checkpoint == new_checkpoint
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_saved_after_collection(activity_logging_connector):
+    """The checkpoint must advance only once the whole window is collected, never mid-cycle.
+
+    Regression test: it used to be saved up-front, so a window truncated at 10,000 events lost the
+    surplus permanently. We assert it is unchanged while a batch is still pending and only advances
+    after the generator is fully drained.
+    """
+    token_response = {"access_token": "mock_access_token", "token_type": "Bearer", "expires_in": 3600}
+    events_page1 = [{"taskId": f"task-{i}", "requestTime": "2025-10-14T15:30:00.000Z"} for i in range(1000)]
+
+    # Pin an explicit starting checkpoint so last_event_date() does not fall back to the moving
+    # "24h ago" default (which would change on every call).
+    initial = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    activity_logging_connector.save_checkpoint(initial)
+    before = activity_logging_connector.last_event_date()
+
+    with aioresponses() as mocked:
+        mocked.post(TOKEN_URL, payload=token_response)
+        mocked.get(ACTIVITY_URL_PATTERN, payload=events_page1)
+        mocked.get(ACTIVITY_URL_PATTERN, payload=[])
+
+        gen = activity_logging_connector.next_batch()
+        await gen.__anext__()  # first batch yielded, collection not finished yet
+
+        mid = activity_logging_connector.last_event_date()
+        assert mid == before, "checkpoint must not advance while collection is still in progress"
+
+        async for _ in gen:  # drain remaining batches -> generator runs its trailing save_checkpoint
+            pass
+
+    after = activity_logging_connector.last_event_date()
+    assert after > before, "checkpoint must advance once the window is fully collected"
+
+
+@pytest.mark.asyncio
+async def test_truncation_warning_when_pool_saturated(activity_logging_connector):
+    """When the window saturates the instancesReturned pool, a warning is logged and the metric ticks."""
+    activity_logging_connector.configuration.instances_returned = 1  # pool = 10,000 records
+
+    token_response = {"access_token": "mock_access_token", "token_type": "Bearer", "expires_in": 3600}
+    # Same event repeated keeps the dedup cache tiny (fast) while still counting toward the raw total.
+    full_page = [{"taskId": "task-dup", "requestTime": "2025-10-14T15:30:00.000Z"}] * 1000
+
+    truncated_before = events_truncated._value.get()
+
+    with aioresponses() as mocked:
+        mocked.post(TOKEN_URL, payload=token_response)
+        for _ in range(10):  # 10 full pages of 1000 -> 10,000 raw events == pool size
+            mocked.get(ACTIVITY_URL_PATTERN, payload=full_page)
+        mocked.get(ACTIVITY_URL_PATTERN, payload=[])
+
+        async for _ in activity_logging_connector.next_batch():
+            pass
+
+    assert events_truncated._value.get() == truncated_before + 1
+    warning_calls = [
+        c
+        for c in activity_logging_connector.log.call_args_list
+        if c.kwargs.get("level") == "warning" and "truncated" in c.kwargs.get("message", "")
+    ]
+    assert warning_calls, "a truncation warning should have been logged"
 
 
 @pytest.mark.asyncio
