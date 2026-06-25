@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-06-28 - 1.0.2
+
+### Added
+
+- Add new asset device connector for ESET Protect to support new asset device API endpoints.
+
 ## 2025-08-04 - 1.0.1
 
 ### Fixed
