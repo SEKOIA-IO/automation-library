@@ -26,7 +26,21 @@ def events_queue():
 
 
 @pytest.fixture
-def trigger(symphony_storage):
+def fake_time():
+    yield datetime(2024, 8, 15, 9, 30, 23, tzinfo=timezone.utc)
+
+
+@pytest.fixture
+def patch_datetime_now(fake_time):
+    with patch("gateway_cloud_services.trigger_skyhigh_security_swg.datetime") as mock_datetime:
+        mock_datetime.now.return_value = fake_time
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        mock_datetime.fromtimestamp = lambda ts: datetime.fromtimestamp(ts)
+        yield mock_datetime
+
+
+@pytest.fixture
+def trigger(symphony_storage, patch_datetime_now):
     trigger = SkyhighSecuritySWGTrigger(data_path=symphony_storage)
 
     trigger.module.configuration = {}
@@ -215,12 +229,15 @@ def test_saving_checkpoint(event_collector, requests_mock):
     assert event_collector.start_date.isoformat() == "2024-08-15T09:25:26.172059+00:00"
     assert event_collector.end_date.isoformat() == "2024-08-15T09:26:26.172059+00:00"
 
+
+def test_very_old_checkpoint(event_collector, fake_time):
     with event_collector.connector.context as cache:
-        cache["most_recent_date_seen"] = "2024-08-15 10:26:26.172059+00:00"
+        cache["most_recent_date_seen"] = (fake_time - timedelta(days=365)).isoformat()
+
     event_collector._init_time_range()
 
-    assert event_collector.start_date.isoformat() == "2024-08-15T10:26:26.172059+00:00"
-    assert event_collector.end_date.isoformat() == "2024-08-15T10:27:26.172059+00:00"
+    expected_date = fake_time - timedelta(days=7)
+    assert event_collector.start_date.isoformat() == expected_date.isoformat()
 
 
 def log(message: str, level: str = "debug", only_sentry: bool = False, **kwargs) -> None:
