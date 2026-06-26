@@ -1,60 +1,30 @@
-from ldap3 import Connection, Server
+from ldap3 import Connection
 from ldap3.core.exceptions import LDAPException
 from ldap3.utils.conv import escape_filter_chars
 from sekoia_automation.action import Action
 
+from microsoft_ad.client.ldap_client import LDAPClient
 from microsoft_ad.models.common_models import MicrosoftADModule
 
 
 class MicrosoftADAction(Action):
     module: MicrosoftADModule
-    _override_client: Connection | None = None
 
     @property
-    def client(self):
-        # Return override client if set, otherwise create/get default client
-        if self._override_client is not None:
-            return self._override_client
-
-        # Use cached property pattern manually
-        if not hasattr(self, "_default_client"):
-            server = Server(
-                host=self.module.configuration.servername,
-                port=636,
-                use_ssl=True,
-            )
-            conn = Connection(
-                server,
-                auto_bind=True,
-                user=self.module.configuration.admin_username,
-                password=self.module.configuration.admin_password,
-            )
-            self._default_client = conn
-
-        return self._default_client
+    def client(self) -> Connection:
+        if not hasattr(self, "_client"):
+            self._client = LDAPClient.from_module(self.module)
+        return self._client
 
     @client.setter
-    def client(self, value: Connection | None):
-        """Set the override client."""
-        self._override_client = value
+    def client(self, value: Connection) -> None:
+        self._client = value
 
     def client_for(self, host: str | None = None) -> Connection:
-        """Create a client connection to the specified host or use the default client."""
+        """Return a connection for the given host, or the default client if host is None."""
         if host is None:
             return self.client
-
-        server = Server(
-            host=host,
-            port=636,
-            use_ssl=True,
-        )
-        conn = Connection(
-            server,
-            auto_bind=True,
-            user=self.module.configuration.admin_username,
-            password=self.module.configuration.admin_password,
-        )
-        return conn
+        return LDAPClient.for_domain_controller(host, self.module)
 
     def _get_forest_root_dn(self, basedn: str | None = None, client: Connection | None = None) -> str | None:
         """Extract the forest root DN from RootDSE."""
@@ -150,7 +120,7 @@ class MicrosoftADAction(Action):
 
         return users_query
 
-    def search_userdn_query(self, username, basedn, email=None, search_child_domains=True, domain_controller=None):
+    def search_userdn_query(self, username, basedn, email=None, search_child_domains=True, client=None):
         has_username = bool(username)
         has_email = bool(email)
 
@@ -173,26 +143,26 @@ class MicrosoftADAction(Action):
             safe_email = escape_filter_chars(email)
             search_filter = f"(mail={safe_email})"
 
-        # Use specified domain controller or default client
-        client = self.client_for(domain_controller)
+        # Use provided client or fall back to default
+        target_client = client or self.client
 
         self.log(f"Starting search in {basedn} for {username}", level="debug")
 
         # First, try searching in the specified basedn (raise exceptions on error)
-        users_query = self._perform_search(search_filter, basedn, raise_on_error=True, client=client)
+        users_query = self._perform_search(search_filter, basedn, raise_on_error=True, client=target_client)
 
         # If no users found and search_child_domains is enabled, try child domains (silently ignore errors)
         if not users_query and search_child_domains:
             self.log(f"No users found in {basedn}, searching child domains", level="debug")
 
-            forest_root_dn = self._get_forest_root_dn(basedn, client=client)
+            forest_root_dn = self._get_forest_root_dn(basedn, client=target_client)
             if forest_root_dn:
-                child_domains = self._get_child_domains(forest_root_dn, client=client)
+                child_domains = self._get_child_domains(forest_root_dn, client=target_client)
 
                 for child_domain in child_domains:
                     self.log(f"Searching in child domain: {child_domain}", level="debug")
                     child_results = self._perform_search(
-                        search_filter, child_domain, raise_on_error=False, client=client
+                        search_filter, child_domain, raise_on_error=False, client=target_client
                     )
                     users_query.extend(child_results)
 

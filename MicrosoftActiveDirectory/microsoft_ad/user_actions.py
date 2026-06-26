@@ -23,54 +23,48 @@ class ResetUserPasswordAction(MicrosoftADAction):
     def run(self, arguments: ResetPassUserArguments):
         self.log(f"Starting password reset for user: {arguments.username}", level="info")
 
-        # Set override client if domain_controller is specified
-        if arguments.domain_controller is not None:
-            self._override_client = self.client_for(arguments.domain_controller)
+        client = self.client_for(arguments.domain_controller)
+        user_query = self.search_userdn_query(
+            arguments.username,
+            arguments.basedn,
+            arguments.email,
+            client=client,
+        )
 
-        try:
-            user_query = self.search_userdn_query(
-                arguments.username,
-                arguments.basedn,
-                arguments.email,
-            )
+        if len(user_query) == 0:
+            raise Exception(f"User not found: {arguments.username}")
 
-            if len(user_query) == 0:
-                raise Exception(f"User not found: {arguments.username}")
+        if len(user_query) > 1 and not arguments.apply_to_all:
+            raise Exception(f"Multiple users found with name: {arguments.username}, count: {len(user_query)}")
 
-            if len(user_query) > 1 and not arguments.apply_to_all:
-                raise Exception(f"Multiple users found with name: {arguments.username}, count: {len(user_query)}")
+        if len(user_query) == 1 and not arguments.apply_to_all:
+            user_dn = user_query[0][0]
+            self._reset_password_for_user(client, user_dn, arguments.username, arguments.new_password)
+            self.log(f"Password reset successful for user: {arguments.username}", level="info")
+            return None
 
-            if len(user_query) == 1 and not arguments.apply_to_all:
-                user_dn = user_query[0][0]
-                self._reset_password_for_user(self.client, user_dn, arguments.username, arguments.new_password)
-                self.log(f"Password reset successful for user: {arguments.username}", level="info")
-                return None
+        results: list[dict] = []
+        for user_dn, _ in user_query:
+            try:
+                self._reset_password_for_user(client, user_dn, arguments.username, arguments.new_password)
+                results.append({"dn": user_dn, "status": "success"})
+                self.log(f"Password reset successful for user: {user_dn}", level="info")
+            except Exception as e:
+                results.append({"dn": user_dn, "status": "failed", "error": str(e)})
+                self.log(f"Password reset failed for user {user_dn}: {e}", level="error")
 
-            results: list[dict] = []
-            for user_dn, _ in user_query:
-                try:
-                    self._reset_password_for_user(self.client, user_dn, arguments.username, arguments.new_password)
-                    results.append({"dn": user_dn, "status": "success"})
-                    self.log(f"Password reset successful for user: {user_dn}", level="info")
-                except Exception as e:
-                    results.append({"dn": user_dn, "status": "failed", "error": str(e)})
-                    self.log(f"Password reset failed for user {user_dn}: {e}", level="error")
+        total_success = sum(1 for r in results if r["status"] == "success")
+        total_failed = sum(1 for r in results if r["status"] == "failed")
 
-            total_success = sum(1 for r in results if r["status"] == "success")
-            total_failed = sum(1 for r in results if r["status"] == "failed")
+        if total_success == 0:
+            raise Exception(f"All password resets failed for {arguments.username}")
 
-            if total_success == 0:
-                raise Exception(f"All password resets failed for {arguments.username}")
-
-            return {
-                "affected_users": results,
-                "total_found": len(user_query),
-                "total_success": total_success,
-                "total_failed": total_failed,
-            }
-        finally:
-            # Clear override client
-            self._override_client = None
+        return {
+            "affected_users": results,
+            "total_found": len(user_query),
+            "total_success": total_success,
+            "total_failed": total_failed,
+        }
 
 
 class EnableUserAction(MicrosoftADAction):
@@ -93,56 +87,50 @@ class EnableUserAction(MicrosoftADAction):
     def run(self, arguments: UserAccountArguments):
         self.log(f"Starting enabling user account: {arguments.username}", level="info")
 
-        # Set override client if domain_controller is specified
-        if arguments.domain_controller is not None:
-            self._override_client = self.client_for(arguments.domain_controller)
+        client = self.client_for(arguments.domain_controller)
+        user_query = self.search_userdn_query(
+            arguments.username,
+            arguments.basedn,
+            arguments.email,
+            client=client,
+        )
 
-        try:
-            user_query = self.search_userdn_query(
-                arguments.username,
-                arguments.basedn,
-                arguments.email,
-            )
+        if len(user_query) == 0:
+            raise Exception(f"User not found: {arguments.username}")
 
-            if len(user_query) == 0:
-                raise Exception(f"User not found: {arguments.username}")
+        if len(user_query) > 1 and not arguments.apply_to_all:
+            raise Exception(f"Multiple users found with name: {arguments.username}, count: {len(user_query)}")
 
-            if len(user_query) > 1 and not arguments.apply_to_all:
-                raise Exception(f"Multiple users found with name: {arguments.username}, count: {len(user_query)}")
+        if len(user_query) == 1 and not arguments.apply_to_all:
+            user_dn = user_query[0][0]
+            current_uac = user_query[0][1]
+            self.log(f"User DN: {user_dn} and userAccountControl value {current_uac} were found", level="info")
+            self._enable_user(client, user_dn, current_uac, arguments.username)
+            self.log(f"User {arguments.username} enabled successfully", level="info")
+            return None
 
-            if len(user_query) == 1 and not arguments.apply_to_all:
-                user_dn = user_query[0][0]
-                current_uac = user_query[0][1]
-                self.log(f"User DN: {user_dn} and userAccountControl value {current_uac} were found", level="info")
-                self._enable_user(self.client, user_dn, current_uac, arguments.username)
-                self.log(f"User {arguments.username} enabled successfully", level="info")
-                return None
+        results: list[dict] = []
+        for user_dn, current_uac in user_query:
+            try:
+                self._enable_user(client, user_dn, current_uac, arguments.username)
+                results.append({"dn": user_dn, "status": "success"})
+                self.log(f"User {user_dn} enabled successfully", level="info")
+            except Exception as e:
+                results.append({"dn": user_dn, "status": "failed", "error": str(e)})
+                self.log(f"Failed to enable user {user_dn}: {e}", level="error")
 
-            results: list[dict] = []
-            for user_dn, current_uac in user_query:
-                try:
-                    self._enable_user(self.client, user_dn, current_uac, arguments.username)
-                    results.append({"dn": user_dn, "status": "success"})
-                    self.log(f"User {user_dn} enabled successfully", level="info")
-                except Exception as e:
-                    results.append({"dn": user_dn, "status": "failed", "error": str(e)})
-                    self.log(f"Failed to enable user {user_dn}: {e}", level="error")
+        total_success = sum(1 for r in results if r["status"] == "success")
+        total_failed = sum(1 for r in results if r["status"] == "failed")
 
-            total_success = sum(1 for r in results if r["status"] == "success")
-            total_failed = sum(1 for r in results if r["status"] == "failed")
+        if total_success == 0:
+            raise Exception(f"All enable operations failed for {arguments.username}")
 
-            if total_success == 0:
-                raise Exception(f"All enable operations failed for {arguments.username}")
-
-            return {
-                "affected_users": results,
-                "total_found": len(user_query),
-                "total_success": total_success,
-                "total_failed": total_failed,
-            }
-        finally:
-            # Clear override client
-            self._override_client = None
+        return {
+            "affected_users": results,
+            "total_found": len(user_query),
+            "total_success": total_success,
+            "total_failed": total_failed,
+        }
 
 
 class DisableUserAction(MicrosoftADAction):
@@ -165,53 +153,47 @@ class DisableUserAction(MicrosoftADAction):
     def run(self, arguments: UserAccountArguments):
         self.log(f"Starting disable action for user: {arguments.username}", level="info")
 
-        # Set override client if domain_controller is specified
-        if arguments.domain_controller is not None:
-            self._override_client = self.client_for(arguments.domain_controller)
+        client = self.client_for(arguments.domain_controller)
+        user_query = self.search_userdn_query(
+            arguments.username,
+            arguments.basedn,
+            arguments.email,
+            client=client,
+        )
 
-        try:
-            user_query = self.search_userdn_query(
-                arguments.username,
-                arguments.basedn,
-                arguments.email,
-            )
+        if len(user_query) == 0:
+            raise Exception(f"User not found: {arguments.username}")
 
-            if len(user_query) == 0:
-                raise Exception(f"User not found: {arguments.username}")
+        if len(user_query) > 1 and not arguments.apply_to_all:
+            raise Exception(f"Multiple users found with name: {arguments.username}, count: {len(user_query)}")
 
-            if len(user_query) > 1 and not arguments.apply_to_all:
-                raise Exception(f"Multiple users found with name: {arguments.username}, count: {len(user_query)}")
+        if len(user_query) == 1 and not arguments.apply_to_all:
+            user_dn = user_query[0][0]
+            current_uac = user_query[0][1]
+            self.log(f"User DN: {user_dn} and userAccountControl value {current_uac} were found", level="info")
+            self._disable_user(client, user_dn, current_uac, arguments.username)
+            self.log(f"User {arguments.username} has been disabled successfully", level="info")
+            return None
 
-            if len(user_query) == 1 and not arguments.apply_to_all:
-                user_dn = user_query[0][0]
-                current_uac = user_query[0][1]
-                self.log(f"User DN: {user_dn} and userAccountControl value {current_uac} were found", level="info")
-                self._disable_user(self.client, user_dn, current_uac, arguments.username)
-                self.log(f"User {arguments.username} has been disabled successfully", level="info")
-                return None
+        results: list[dict] = []
+        for user_dn, current_uac in user_query:
+            try:
+                self._disable_user(client, user_dn, current_uac, arguments.username)
+                results.append({"dn": user_dn, "status": "success"})
+                self.log(f"User {user_dn} has been disabled successfully", level="info")
+            except Exception as e:
+                results.append({"dn": user_dn, "status": "failed", "error": str(e)})
+                self.log(f"Failed to disable user {user_dn}: {e}", level="error")
 
-            results: list[dict] = []
-            for user_dn, current_uac in user_query:
-                try:
-                    self._disable_user(self.client, user_dn, current_uac, arguments.username)
-                    results.append({"dn": user_dn, "status": "success"})
-                    self.log(f"User {user_dn} has been disabled successfully", level="info")
-                except Exception as e:
-                    results.append({"dn": user_dn, "status": "failed", "error": str(e)})
-                    self.log(f"Failed to disable user {user_dn}: {e}", level="error")
+        total_success = sum(1 for r in results if r["status"] == "success")
+        total_failed = sum(1 for r in results if r["status"] == "failed")
 
-            total_success = sum(1 for r in results if r["status"] == "success")
-            total_failed = sum(1 for r in results if r["status"] == "failed")
+        if total_success == 0:
+            raise Exception(f"All disable operations failed for {arguments.username}")
 
-            if total_success == 0:
-                raise Exception(f"All disable operations failed for {arguments.username}")
-
-            return {
-                "affected_users": results,
-                "total_found": len(user_query),
-                "total_success": total_success,
-                "total_failed": total_failed,
-            }
-        finally:
-            # Clear override client
-            self._override_client = None
+        return {
+            "affected_users": results,
+            "total_found": len(user_query),
+            "total_success": total_success,
+            "total_failed": total_failed,
+        }

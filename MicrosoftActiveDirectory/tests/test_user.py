@@ -289,7 +289,9 @@ def test_disable_display_name_passed_to_search(one_user_dn):
                 }
             )
 
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "test@example.com")
+            mock_search.assert_called_once_with(
+                "test_username", "cn=test_basedn", "test@example.com", client=mock_client
+            )
 
 
 def test_enable_display_name_passed_to_search(one_user_dn):
@@ -311,7 +313,9 @@ def test_enable_display_name_passed_to_search(one_user_dn):
                 }
             )
 
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "test@example.com")
+            mock_search.assert_called_once_with(
+                "test_username", "cn=test_basedn", "test@example.com", client=mock_client
+            )
 
 
 def test_reset_password_display_name_passed_to_search(one_user_dn):
@@ -333,7 +337,9 @@ def test_reset_password_display_name_passed_to_search(one_user_dn):
                 }
             )
 
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "test@example.com")
+            mock_search.assert_called_once_with(
+                "test_username", "cn=test_basedn", "test@example.com", client=mock_client
+            )
 
 
 @pytest.mark.parametrize(
@@ -351,8 +357,9 @@ def test_actions_raise_when_user_not_found(action_class, run_arguments):
     action = configured_action(action_class)
 
     with patch("microsoft_ad.actions_base.MicrosoftADAction.search_userdn_query", return_value=[]):
-        with pytest.raises(Exception, match="User not found"):
-            action.run(run_arguments)
+        with patch("microsoft_ad.actions_base.MicrosoftADAction.client_for", return_value=Mock()):
+            with pytest.raises(Exception, match="User not found"):
+                action.run(run_arguments)
 
 
 def test_reset_password_raises_when_ldap_result_is_not_success():
@@ -407,7 +414,7 @@ def test_disable_domain_controller_uses_shared_client(one_user_dn):
             )
 
             mock_client_for.assert_called_once_with("child.lab.test.com")
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", None)
+            mock_search.assert_called_once_with("test_username", "cn=test_basedn", None, client=mock_client)
 
 
 def test_enable_domain_controller_uses_shared_client(one_user_dn):
@@ -432,7 +439,7 @@ def test_enable_domain_controller_uses_shared_client(one_user_dn):
             )
 
             mock_client_for.assert_called_once_with("child.lab.test.com")
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", None)
+            mock_search.assert_called_once_with("test_username", "cn=test_basedn", None, client=mock_client)
 
 
 def test_reset_password_domain_controller_uses_shared_client(one_user_dn):
@@ -457,7 +464,7 @@ def test_reset_password_domain_controller_uses_shared_client(one_user_dn):
             )
 
             mock_client_for.assert_called_once_with("child.lab.test.com")
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", None)
+            mock_search.assert_called_once_with("test_username", "cn=test_basedn", None, client=mock_client)
 
 
 def test_domain_controller_connection_error_propagates(one_user_dn):

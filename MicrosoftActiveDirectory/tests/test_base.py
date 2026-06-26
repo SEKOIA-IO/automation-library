@@ -248,9 +248,9 @@ class TestSearchUserdnQuery:
 
         default_client = Mock()
         with (
-            patch("microsoft_ad.actions_base.Server") as mock_server,
+            patch("microsoft_ad.client.ldap_client.Server") as mock_server,
             patch(
-                "microsoft_ad.actions_base.Connection",
+                "microsoft_ad.client.ldap_client.Connection",
                 return_value=default_client,
             ),
         ):
@@ -274,9 +274,9 @@ class TestSearchUserdnQuery:
 
         created_client = Mock()
         with (
-            patch("microsoft_ad.actions_base.Server") as mock_server,
+            patch("microsoft_ad.client.ldap_client.Server") as mock_server,
             patch(
-                "microsoft_ad.actions_base.Connection",
+                "microsoft_ad.client.ldap_client.Connection",
                 return_value=created_client,
             ) as mock_connection,
         ):
