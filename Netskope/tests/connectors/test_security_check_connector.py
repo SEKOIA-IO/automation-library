@@ -6,6 +6,7 @@ from netskope_api.iterator.netskope_iterator import NetskopeIterator
 
 from netskope_modules import NetskopeModule
 from netskope_modules.connectors.connector_pull_events_v2 import NetskopeEventConnector, NetskopeEventConsumer
+from netskope_modules.connectors.connector_security_check import NetskopeSecurityCheckConnector
 from netskope_modules.types import NetskopeAlertType, NetskopeEventType
 
 
@@ -31,6 +32,38 @@ def make_trigger(symphony_storage, security_check_only):
 @pytest.fixture
 def trigger(symphony_storage):
     return make_trigger(symphony_storage, security_check_only=True)
+
+
+def make_security_check_trigger(symphony_storage):
+    module = NetskopeModule()
+    module._trigger_configuration_uuid = "ec92e51c-d45e-47b1-b820-29b97721623f"
+    trigger = NetskopeSecurityCheckConnector(module=module, data_path=symphony_storage)
+    trigger.log = MagicMock()
+    trigger.log_exception = MagicMock()
+    trigger.push_events_to_intakes = MagicMock()
+    trigger.module.configuration = {
+        "base_url": "https://my.fake.sekoia",
+    }
+    trigger.configuration = {
+        "api_token": "api_token",
+        "intake_key": "intake_key",
+        "consumer_group": "",
+    }
+    return trigger
+
+
+def test_security_check_connector_dataexports_content_and_cache(symphony_storage):
+    trigger = make_security_check_trigger(symphony_storage)
+
+    first = trigger.dataexports
+    second = trigger.dataexports
+
+    assert first is second
+    assert first == [
+        (NetskopeEventType.ALERT, NetskopeAlertType.MALWARE),
+        (NetskopeEventType.ALERT, NetskopeAlertType.MALSITE),
+        (NetskopeEventType.ALERT, NetskopeAlertType.DLP),
+    ]
 
 
 def test_dataexports_only_contains_security_check_alerts(trigger):

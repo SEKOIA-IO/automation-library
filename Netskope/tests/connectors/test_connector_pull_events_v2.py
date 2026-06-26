@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 import requests_mock
 from netskope_api.iterator.netskope_iterator import NetskopeIterator
+from requests.exceptions import ConnectionError
 from sekoia_automation.exceptions import ModuleConfigurationError
 
 from netskope_modules.connectors.connector_pull_events_v2 import NetskopeEventConsumer
@@ -237,6 +238,46 @@ def test_next_batch_invalid_api_token(trigger):
         assert not mock_time.sleep.called
 
 
+def test_consumer_stop_changes_running_state(trigger):
+    iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+    consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
+
+    assert consumer.running
+    consumer.stop()
+    assert not consumer.running
+
+
+def test_next_batch_connection_aborted_is_ignored(trigger):
+    iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+    iterator.client.get = MagicMock(side_effect=ConnectionError("Connection aborted by peer"))
+
+    consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
+
+    consumer.next_batch()
+
+    assert trigger.push_events_to_intakes.call_count == 0
+
+
+def test_next_batch_connection_error_is_raised(trigger):
+    iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+    iterator.client.get = MagicMock(side_effect=ConnectionError("TLS handshake failure"))
+
+    consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
+
+    with pytest.raises(ConnectionError, match="TLS handshake failure"):
+        consumer.next_batch()
+
+
+def test_next_batch_unhandled_value_error_is_raised(trigger):
+    iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+    iterator.client.get = MagicMock(side_effect=ValueError("unexpected value error"))
+
+    consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
+
+    with pytest.raises(ValueError, match="unexpected value error"):
+        consumer.next_batch()
+
+
 def test_next_batch_403_service(trigger):
     with (
         patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time,
@@ -258,6 +299,29 @@ def test_next_batch_403_service(trigger):
         assert mock_time.sleep.called
 
 
+def test_next_batch_403_service_with_json_error_message(trigger):
+    with (
+        patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_requests.get(
+            "https://my.fake.sekoia/api/v2/events/dataexport/alerts/dlp",
+            status_code=403,
+            json={"message": "custom 403 error"},
+        )
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+        consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
+        mock_time.time.return_value = 1666711174.0
+
+        consumer.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 0
+        trigger.log.assert_any_call(
+            message="Cannot consume the service alert-dlp. Error=custom 403 error",
+            level="error",
+        )
+
+
 def test_create_iterators(trigger):
     iterators = trigger.create_iterators(trigger.dataexports)
 
@@ -266,6 +330,39 @@ def test_create_iterators(trigger):
 
     for iterator in iterators.values():
         assert isinstance(iterator, NetskopeIterator)
+
+
+def test_dataexports_security_check_only(trigger):
+    trigger.configuration.security_check_only = True
+    trigger.__dict__.pop("dataexports", None)
+
+    dataexports = trigger.dataexports
+
+    assert dataexports == [
+        (NetskopeEventType.ALERT, NetskopeAlertType.MALWARE),
+        (NetskopeEventType.ALERT, NetskopeAlertType.MALSITE),
+        (NetskopeEventType.ALERT, NetskopeAlertType.DLP),
+    ]
+
+
+def test_configuration_uuid_prefers_connector_configuration_uuid(trigger):
+    trigger.module._connector_configuration_uuid = "connector-uuid"
+    trigger.__dict__.pop("configuration_uuid", None)
+
+    assert trigger.configuration_uuid == "connector-uuid"
+
+
+def test_get_index_name_uses_consumer_group_when_set(trigger):
+    trigger.configuration.consumer_group = "shared-group"
+
+    index_name = trigger.get_index_name(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+
+    assert index_name == "shared-group"
+
+
+def test_create_iterator_alert_requires_alert_type(trigger):
+    with pytest.raises(ValueError, match="alert_type cannot be null"):
+        trigger.create_iterator(NetskopeEventType.ALERT, None)
 
 
 def test_start_consumers(trigger):
@@ -280,7 +377,7 @@ def test_start_consumers(trigger):
         assert mock_start.called
 
 
-def test_supervice_consumers(trigger):
+def test_supervise_consumers(trigger):
     with patch.object(NetskopeEventConsumer, "start") as mock_start:
         alert_dlp_iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
         event_page_iterator = trigger.create_iterator(NetskopeEventType.PAGE, None)
@@ -332,6 +429,45 @@ def test_undefined_base_url_should_raise_exception(trigger):
     trigger.module.configuration.base_url = None
     with pytest.raises(ModuleConfigurationError):
         trigger.run()
+
+
+def test_consumer_run_logs_exception(trigger):
+    iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+    consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
+    consumer.next_batch = Mock(side_effect=RuntimeError("boom"))
+
+    consumer.run()
+
+    trigger.log_exception.assert_called_once()
+
+
+def test_run_supervises_consumers_and_stops_them(trigger):
+    trigger._stop_event.clear()
+    iterators = {"alert-dlp": Mock()}
+    consumers = {"alert-dlp": Mock()}
+
+    def stop_after_first_supervision(*args, **kwargs):
+        trigger._stop_event.set()
+
+    with (
+        patch.object(trigger, "create_iterators", return_value=iterators),
+        patch.object(trigger, "start_consumers", return_value=consumers),
+        patch.object(trigger, "supervise_consumers", side_effect=stop_after_first_supervision) as mock_supervise,
+        patch.object(trigger, "stop_consumers") as mock_stop,
+        patch("netskope_modules.connectors.connector_pull_events_v2.time.sleep") as mock_sleep,
+    ):
+        trigger.run()
+
+    mock_supervise.assert_called_once_with(consumers, iterators)
+    mock_sleep.assert_called_once_with(5)
+    mock_stop.assert_called_once_with(consumers, iterators)
+
+
+def test_run_logs_exception_when_consumer_start_fails(trigger):
+    with patch.object(trigger, "create_iterators", side_effect=RuntimeError("iterators failed")):
+        trigger.run()
+
+    trigger.log_exception.assert_called_once()
 
 
 @pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}" ".issubset(os.environ.keys()) == False")
