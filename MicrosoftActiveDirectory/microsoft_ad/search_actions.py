@@ -61,7 +61,10 @@ class SearchAction(MicrosoftADAction):
                 if isinstance(result, str):
                     f.write(result)
                 else:
-                    f.write(orjson.dumps(result, default=str).decode("utf-8"))
+                    try:
+                        f.write(orjson.dumps(result, default=str).decode("utf-8"))
+                    except (TypeError, ValueError):
+                        f.write(str(result))
             return {"output_path": filename}
         else:
             return {"search_result": result}
