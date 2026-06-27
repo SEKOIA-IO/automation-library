@@ -3,9 +3,48 @@ from posixpath import join as urljoin
 
 import requests
 from requests.auth import AuthBase
+from requests.exceptions import JSONDecodeError
 from requests_ratelimiter import LimiterAdapter
 
 from crowdstrike_falcon.client.retry import Retry
+
+
+class AuthenticationError(Exception):
+    def __init__(self, message: str, reason: str | None = None):
+        super().__init__(message)
+        self.message = message
+        self.reason = reason
+
+    @staticmethod
+    def _normalize_reason(message: str, reason: str) -> str:
+        prefix = f"{message}:"
+        if reason.startswith(prefix):
+            return reason[len(prefix) :].lstrip()
+
+        return reason
+
+    def __str__(self) -> str:
+        message = self.message
+
+        if self.reason:
+            reason = self._normalize_reason(message, self.reason)
+            message = f"{message}: {reason}"
+
+        return message
+
+    @classmethod
+    def from_http_response(cls, message: str, response: requests.Response):
+        reason = None
+        try:
+            errors = response.json().get("errors", [])
+            reason = ",".join([error["message"] for error in errors if "message" in error])
+        except JSONDecodeError:
+            reason = response.text
+
+        return cls(
+            message=message,
+            reason=reason,
+        )
 
 
 class CrowdStrikeFalconApiCredentials:
@@ -66,7 +105,15 @@ class CrowdStrikeFalconApiAuthentication(AuthBase):
                 },
             )
 
-            response.raise_for_status()
+            if not response.ok:
+                # Raise exception when facing Unauthorized error
+                if response.status_code == 401:
+                    raise AuthenticationError.from_http_response("Unauthorized", response)
+                # Raise exception when facing Forbidden error
+                elif response.status_code == 403:
+                    raise AuthenticationError.from_http_response("Forbidden", response)
+                else:
+                    response.raise_for_status()
 
             credentials = CrowdStrikeFalconApiCredentials()
 

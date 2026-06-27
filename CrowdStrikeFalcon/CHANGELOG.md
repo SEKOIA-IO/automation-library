@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-19 - 1.25.17
+
+### Changed
+
+- Stop the connector when authentication fails
+
 ## 2026-05-19 - 1.25.16
 
 ### Fixed

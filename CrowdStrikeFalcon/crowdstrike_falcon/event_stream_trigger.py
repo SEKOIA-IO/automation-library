@@ -15,6 +15,7 @@ from sekoia_automation.timer import RepeatedTimer
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
+from crowdstrike_falcon.client.auth import AuthenticationError
 from crowdstrike_falcon.exceptions import StreamNotAvailable
 from crowdstrike_falcon.helpers import (
     compute_refresh_interval,
@@ -126,6 +127,11 @@ class VerticlesCollector:
                         message=f"Failed to collect verticles for edge_type {edge_type} for graph_id {graph_id}",
                         level="warning",
                     )
+                except AuthenticationError as error:
+                    self.log(
+                        message=str(error),
+                        level="critical",
+                    )
 
     def collect_verticles_from_detection(self, detection_id: str) -> Generator[tuple[str, str, dict], None, None]:
         """
@@ -149,6 +155,11 @@ class VerticlesCollector:
                     f"Failed to collect verticles for detection {detection_id}: "
                     f"{error.response.status_code} {error.response.reason}"
                 ),
+            )
+        except AuthenticationError as error:
+            self.log(
+                message=str(error),
+                level="critical",
             )
         except Exception as error:
             self.log_exception(
@@ -187,7 +198,11 @@ class VerticlesCollector:
                     f"{error.response.status_code} {error.response.reason}"
                 ),
             )
-
+        except AuthenticationError as error:
+            self.log(
+                message=str(error),
+                level="critical",
+            )
         except Exception as error:
             self.log_exception(
                 error,
@@ -352,6 +367,11 @@ class EventStreamReader(threading.Thread):
                         )
                         break
 
+        except AuthenticationError as error:
+            self.log(
+                message=str(error),
+                level="critical",
+            )
         except Exception as any_exception:
             self.log_exception(any_exception)
             raise
@@ -693,5 +713,10 @@ class EventStreamTrigger(Connector):
                 time.sleep(60)  # The authentication faces a ratelimit, sleep 1 minutes
             else:
                 self.log_exception(error, message="Failed to fetch and forward events")
+        except AuthenticationError as error:
+            self.log(
+                message=str(error),
+                level="critical",
+            )
         except Exception as error:
             self.log_exception(error, message="Failed to fetch and forward events")
