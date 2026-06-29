@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import inspect
 from typing import AsyncGenerator, Iterable
 
 from azure.identity.aio import ClientSecretCredential
@@ -131,6 +132,13 @@ class GraphApi(object):
 
     async def close(self) -> None:  # pragma: no cover
         if self._client:
+            request_adapter = getattr(self._client, "request_adapter", None)
+            close_method = getattr(request_adapter, "close", None) if request_adapter is not None else None
+            if callable(close_method):
+                maybe_awaitable = close_method()
+                if inspect.isawaitable(maybe_awaitable):
+                    await maybe_awaitable
+
             self._client = None
 
         if self._credentials:

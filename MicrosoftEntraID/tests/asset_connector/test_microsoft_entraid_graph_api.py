@@ -1,5 +1,6 @@
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock, patch
 
+import httpx
 import pytest
 
 from azure_ad.connector_entraid_graph_api import MicrosoftEntraIdGraphApiConnector
@@ -61,3 +62,23 @@ async def test_entraid_connector_single_run_2(
     result = await entraid_connector.single_run()
 
     assert result == 4
+
+
+@pytest.mark.asyncio
+async def test_entraid_connector_async_run_handles_pool_timeout(entraid_connector):
+    entraid_connector._running = True
+    entraid_connector.configuration.frequency = 0
+    entraid_connector.single_run = AsyncMock(side_effect=httpx.PoolTimeout("pool timeout"))
+    mocked_close = AsyncMock()
+    entraid_connector._client.close = mocked_close
+
+    async def fake_sleep(_: int):
+        entraid_connector._running = False
+
+    with patch("azure_ad.connector_entraid_graph_api.asyncio.sleep", new=fake_sleep):
+        await entraid_connector.async_run()
+
+    entraid_connector.log_exception.assert_not_called()
+    entraid_connector.log.assert_called()
+    mocked_close.assert_awaited_once()
+    assert entraid_connector._client is None
