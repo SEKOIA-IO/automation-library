@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-29 - 1.19.1
+
+### Fixed
+
+- Fix anonymization of the Sophos User Asset Connector tests.
+
 ## 2026-06-29 - 1.19.0
 
 ### Added
