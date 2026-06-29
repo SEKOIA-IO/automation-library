@@ -66,14 +66,14 @@ async def test_entraid_connector_single_run_2(
 
 @pytest.mark.asyncio
 async def test_entraid_connector_async_run_handles_pool_timeout(entraid_connector):
-    entraid_connector._running = True
+    entraid_connector._stop_event.clear()
     entraid_connector.configuration.frequency = 0
     entraid_connector.single_run = AsyncMock(side_effect=httpx.PoolTimeout("pool timeout"))
     mocked_close = AsyncMock()
     entraid_connector._client.close = mocked_close
 
     async def fake_sleep(_: int):
-        entraid_connector._running = False
+        entraid_connector._stop_event.set()
 
     with patch("azure_ad.connector_entraid_graph_api.asyncio.sleep", new=fake_sleep):
         await entraid_connector.async_run()
