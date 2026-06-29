@@ -34,8 +34,8 @@ def fake_time():
 def patch_datetime_now(fake_time):
     with patch("gateway_cloud_services.trigger_skyhigh_security_swg.datetime") as mock_datetime:
         mock_datetime.now.return_value = fake_time
-        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
-        mock_datetime.fromtimestamp = lambda ts: datetime.fromtimestamp(ts)
+        mock_datetime.side_effect = datetime
+        mock_datetime.fromtimestamp = datetime.fromtimestamp
         yield mock_datetime
 
 
