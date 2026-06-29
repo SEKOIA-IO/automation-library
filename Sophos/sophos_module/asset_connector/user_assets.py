@@ -24,6 +24,9 @@ from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
 
 
+_CACHE_KEY = "known_users"
+
+
 class SophosUserAssetConnector(AssetConnector):
     """
     Asset connector for Sophos directory users.
@@ -62,7 +65,7 @@ class SophosUserAssetConnector(AssetConnector):
     def _known_users(self) -> dict[str, str]:
         """Return the cached id→timestamp map from the previous run."""
         with self.context as cache:
-            return dict(cache.get("known_users") or {})
+            return dict(cache.get(_CACHE_KEY) or {})
 
     @cached_property
     def client(self) -> SophosApiClient:
@@ -236,7 +239,7 @@ class SophosUserAssetConnector(AssetConnector):
     def update_checkpoint(self) -> None:
         """Persist the full id→timestamp snapshot from the current run."""
         with self.context as cache:
-            cache["known_users"] = self._current_run
+            cache[_CACHE_KEY] = self._current_run
         self.log(
             f"Checkpoint updated – {len(self._current_run)} users cached",
             level="debug",
