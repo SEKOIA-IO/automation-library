@@ -4,9 +4,9 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
-from aws_helpers.client import AwsClientConfiguration
 
 from aws_helpers.base import AwsModule, AwsModuleConfiguration
+from aws_helpers.client import AwsClientConfiguration
 from aws_helpers.oidc import OidcAwsMixin
 
 

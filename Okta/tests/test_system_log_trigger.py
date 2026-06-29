@@ -378,6 +378,30 @@ def test_run_integration(data_storage):
         assert len(calls) > 0
 
 
+def test_cache_and_checkpoint_survive_restart(data_storage, patch_datetime_now, message1):
+    module = OktaModule()
+    module.configuration = {"apikey": "myapikey", "base_url": "https://tenant_id.okta.com"}
+
+    first = SystemLogConnector(module=module, data_path=data_storage)
+    first.configuration = {"intake_key": "intake_key"}
+
+    # persist a checkpoint
+    checkpoint = (datetime.now(timezone.utc) - timedelta(seconds=30)).replace(microsecond=0)
+    first.cursor.offset = checkpoint
+
+    # persist the events cache
+    first.events_cache[message1["uuid"]] = True
+    first.save_events_cache()
+
+    # simulate a restart: brand new instances reading from the same data path
+    second = SystemLogConnector(module=module, data_path=data_storage)
+    second.configuration = {"intake_key": "intake_key"}
+
+    # both the checkpoint and the cache must have survived
+    assert second.cursor.offset == checkpoint
+    assert message1["uuid"] in second.events_cache
+
+
 def test_handle_response_error(data_storage):
     module = OktaModule()
     trigger = SystemLogConnector(module=module, data_path=data_storage)

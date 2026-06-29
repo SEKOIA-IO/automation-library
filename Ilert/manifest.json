@@ -23,7 +23,7 @@
   },
   "description": "ilert is an incident management platform. This module triggers alerts and manages incidents.",
   "name": "ilert",
-  "uuid": "1cb62622-c4ee-4b5c-9e42-bd9845f25909",
+  "uuid": "4970d347-495b-4f40-8e66-244abec12d8b",
   "slug": "ilert",
   "version": "1.0.0",
   "categories": [

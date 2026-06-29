@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-06-02 - 1.2.2
+
+### Fixed
+
+- Fix device asset connector checkpoint filter: use `lastSeen` instead of `firstSeen` (not filterable by Defender API), encode datetime as UTC with `Z` suffix to avoid `+00:00` breaking URL query strings
+
 ## 2026-05-26 - 1.2.1
 
 ### Fixed
