@@ -128,7 +128,7 @@ class SophosUserAssetConnector(AssetConnector):
         cached_ts = known.get(user.id)
         if cached_ts is None:
             return True
-        current_ts = self._user_timestamp(user)
+        current_ts = self._user_timestamp(user) or ""
         return current_ts != cached_ts
 
     def map_user_fields(self, user: SophosUser) -> UserOCSFModel | None:
