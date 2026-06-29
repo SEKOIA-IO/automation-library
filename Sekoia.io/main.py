@@ -8,10 +8,19 @@ if should_patch():
 
 from sekoia_automation.module import Module
 
-from sekoiaio.intelligence_center import CreateNewTrackerNotification, PostReportsPdf, PostReportsUrl, ReportsGetReport
+from sekoiaio.intelligence_center import (
+    CreateNewTrackerNotification,
+    PostReportsPdf,
+    PostReportsUrl,
+    ReportsGetReport,
+)
 from sekoiaio.intelligence_center.actions import GetContextAction, PostBundleAction
-from sekoiaio.intelligence_center.add_ioc_to_ioc_collection import AddIOCtoIOCCollectionAction
-from sekoiaio.intelligence_center.upload_observables_inthreat import UploadObservablesAction
+from sekoiaio.intelligence_center.add_ioc_to_ioc_collection import (
+    AddIOCtoIOCCollectionAction,
+)
+from sekoiaio.intelligence_center.upload_observables_inthreat import (
+    UploadObservablesAction,
+)
 from sekoiaio.operation_center import (
     ActivateCountermeasure,
     AddEventsToACase,
@@ -48,15 +57,22 @@ from sekoiaio.operation_center import (
     RemoveEventFromCase,
     ReturnsAsset,
     ReturnsAssetV2,
+    RevokesAssetV2,
     TriggerActionOnAlertWorkflow,
     UpdateCase,
     UpdateRule,
 )
 from sekoiaio.operation_center.assets_merge import MergeAssets
+from sekoiaio.operation_center.create_dataset import CreateDataset
+from sekoiaio.operation_center.delete_dataset import DeleteDataset
+from sekoiaio.operation_center.execute_a_query import ExecuteAQuery
 from sekoiaio.operation_center.get_aggregation_query import GetAggregationQuery
 from sekoiaio.operation_center.get_asset import GetAsset
-from sekoiaio.operation_center.get_event_field_common_values import GetEventFieldCommonValues
+from sekoiaio.operation_center.get_event_field_common_values import (
+    GetEventFieldCommonValues,
+)
 from sekoiaio.operation_center.get_events import GetEvents
+from sekoiaio.operation_center.list_queries import ListQueries
 from sekoiaio.operation_center.push_event_to_intake import PushEventToIntake
 from sekoiaio.operation_center.synchronize_assets_with_ad import SynchronizeAssetsWithAD
 from sekoiaio.operation_center.update_alert_status import UpdateAlertStatus
@@ -69,8 +85,15 @@ from sekoiaio.triggers.alerts import (
     AlertUpdatedTrigger,
     SecurityAlertsTrigger,
 )
-from sekoiaio.triggers.cases import CaseAlertsUpdatedTrigger, CaseCreatedTrigger, CaseUpdatedTrigger
-from sekoiaio.triggers.intelligence import FeedConsumptionTrigger, FeedIOCConsumptionTrigger
+from sekoiaio.triggers.cases import (
+    CaseAlertsUpdatedTrigger,
+    CaseCreatedTrigger,
+    CaseUpdatedTrigger,
+)
+from sekoiaio.triggers.intelligence import (
+    FeedConsumptionTrigger,
+    FeedIOCConsumptionTrigger,
+)
 from sekoiaio.workspace import GetCommunity
 
 if __name__ == "__main__":
@@ -110,6 +133,7 @@ if __name__ == "__main__":
     module.register(ListAssets, "get-assets-v2")
     module.register(DeletesAsset, "delete-assets/{uuid}")
     module.register(DeletesAssetV2, "delete-assets-v2/{uuid}")
+    module.register(RevokesAssetV2, "revoke-assets-v2/{uuid}")
     module.register(GetAsset, "get-asset-v2-legacy")
     module.register(ReturnsAsset, "get-assets/{uuid}")
     module.register(ReturnsAssetV2, "get-assets-v2/{uuid}")
@@ -132,6 +156,10 @@ if __name__ == "__main__":
     module.register(GetCustomStatus, "get-custom-status")
     module.register(GetCustomPriority, "get-custom-priority")
     module.register(GetCustomVerdict, "get-custom-verdict")
+    module.register(CreateDataset, "create-dataset")
+    module.register(ListQueries, "list-queries")
+    module.register(ExecuteAQuery, "execute-a-query")
+    module.register(DeleteDataset, "delete-dataset")
 
     # Operation Center Triggers
     module.register(SecurityAlertsTrigger, "security_alerts_trigger")
