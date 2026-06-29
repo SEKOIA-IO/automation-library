@@ -23,7 +23,6 @@ from sophos_module.asset_connector.model import SophosUser, SophosUsersResponse
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
 
-
 _CACHE_KEY = "known_users"
 
 
