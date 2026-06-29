@@ -235,15 +235,12 @@ class SophosUserAssetConnector(AssetConnector):
 
     def update_checkpoint(self) -> None:
         """Persist the full id→timestamp snapshot from the current run."""
-        if self._current_run:
-            with self.context as cache:
-                cache["known_users"] = self._current_run
-            self.log(
-                f"Checkpoint updated – {len(self._current_run)} users cached",
-                level="debug",
-            )
-        else:
-            self.log("No checkpoint update needed – no users seen this run", level="debug")
+        with self.context as cache:
+            cache["known_users"] = self._current_run
+        self.log(
+            f"Checkpoint updated – {len(self._current_run)} users cached",
+            level="debug",
+        )
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
         """Main entry point: yield new/changed Sophos directory users as OCSF models."""
