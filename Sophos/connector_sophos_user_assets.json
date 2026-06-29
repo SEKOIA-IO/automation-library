@@ -1,5 +1,5 @@
 {
-  "name": "Sophos User Assets",
+  "name": "Sophos EDR Users",
   "description": "Fetch Sophos directory user assets from the Sophos Central API",
   "uuid": "e2a716a2-82fd-4e1e-92ef-b07704446ee4",
   "docker_parameters": "sophos_user_asset_connector",
