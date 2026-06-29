@@ -238,6 +238,7 @@ def test_very_old_checkpoint(event_collector, fake_time):
 
     expected_date = fake_time - timedelta(days=7)
     assert event_collector.start_date.isoformat() == expected_date.isoformat()
+    assert event_collector.end_date == expected_date + timedelta(seconds=event_collector.configuration.frequency)
 
 
 def log(message: str, level: str = "debug", only_sentry: bool = False, **kwargs) -> None:
