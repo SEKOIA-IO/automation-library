@@ -1,5 +1,6 @@
 from unittest.mock import AsyncMock, Mock, patch
 
+import asyncio
 import httpx
 import pytest
 
@@ -81,4 +82,64 @@ async def test_entraid_connector_async_run_handles_pool_timeout(entraid_connecto
     entraid_connector.log_exception.assert_not_called()
     entraid_connector.log.assert_called()
     mocked_close.assert_awaited_once()
+    assert entraid_connector._client is None
+
+
+@pytest.mark.asyncio
+async def test_entraid_connector_async_run_handles_timeout_exception(entraid_connector):
+    entraid_connector._stop_event.clear()
+    entraid_connector.configuration.frequency = 0
+    entraid_connector.single_run = AsyncMock(side_effect=httpx.TimeoutException("timeout"))
+    mocked_close = AsyncMock()
+    entraid_connector._client.close = mocked_close
+
+    async def fake_sleep(_: int):
+        entraid_connector._stop_event.set()
+
+    with patch("azure_ad.connector_entraid_graph_api.asyncio.sleep", new=fake_sleep):
+        await entraid_connector.async_run()
+
+    entraid_connector.log_exception.assert_not_called()
+    entraid_connector.log.assert_called()
+    mocked_close.assert_awaited_once()
+    assert entraid_connector._client is None
+
+
+@pytest.mark.asyncio
+async def test_entraid_connector_async_run_handles_asyncio_timeout(entraid_connector):
+    entraid_connector._stop_event.clear()
+    entraid_connector.configuration.frequency = 0
+    entraid_connector.single_run = AsyncMock(side_effect=asyncio.TimeoutError("asyncio timeout"))
+    mocked_close = AsyncMock()
+    entraid_connector._client.close = mocked_close
+
+    async def fake_sleep(_: int):
+        entraid_connector._stop_event.set()
+
+    with patch("azure_ad.connector_entraid_graph_api.asyncio.sleep", new=fake_sleep):
+        await entraid_connector.async_run()
+
+    entraid_connector.log_exception.assert_not_called()
+    entraid_connector.log.assert_called()
+    mocked_close.assert_awaited_once()
+    assert entraid_connector._client is None
+
+
+@pytest.mark.asyncio
+async def test_entraid_connector_reset_graph_client_with_client(entraid_connector):
+    mocked_close = AsyncMock()
+    entraid_connector._client.close = mocked_close
+
+    await entraid_connector._reset_graph_client()
+
+    mocked_close.assert_awaited_once()
+    assert entraid_connector._client is None
+
+
+@pytest.mark.asyncio
+async def test_entraid_connector_reset_graph_client_without_client(entraid_connector):
+    entraid_connector._client = None
+
+    await entraid_connector._reset_graph_client()
+
     assert entraid_connector._client is None
