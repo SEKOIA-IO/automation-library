@@ -112,11 +112,7 @@ class SophosUserAssetConnector(AssetConnector):
     def _get_groups(user: SophosUser) -> list[Group] | None:
         if not user.groups or not user.groups.items:
             return None
-        groups = [
-            Group(uid=g.id, name=g.name or g.displayName or "")
-            for g in user.groups.items
-            if g.id
-        ]
+        groups = [Group(uid=g.id, name=g.name or g.displayName or "") for g in user.groups.items if g.id]
         return groups if groups else None
 
     @staticmethod

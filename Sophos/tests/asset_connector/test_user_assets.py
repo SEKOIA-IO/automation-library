@@ -22,7 +22,6 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     UserTypeId,
 )
 
-
 NAMED_USER = SophosUser(
     id="3d925986-d1ae-48cb-b3d2-27f053ea9a2a",
     name="Erwan Chevalier",
@@ -361,9 +360,12 @@ class TestMapUserFields:
 
 class TestFetchAllPages:
     def test_single_page(self, connector):
-        _mock_list_users(connector, [
-            {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-        ])
+        _mock_list_users(
+            connector,
+            [
+                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
+            ],
+        )
         items = list(connector._fetch_all_pages())
         assert len(items) == 2
         connector.client.list_directory_users.assert_called_once()
@@ -377,9 +379,12 @@ class TestFetchAllPages:
         assert second_params["page"] == 2
 
     def test_empty_response(self, connector):
-        _mock_list_users(connector, [
-            {"items": [], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-        ])
+        _mock_list_users(
+            connector,
+            [
+                {"items": [], "pages": {"current": 1, "size": 50, "maxSize": 100}},
+            ],
+        )
         assert list(connector._fetch_all_pages()) == []
 
     def test_stops_when_not_running(self, connector):
@@ -392,33 +397,48 @@ class TestFetchAllPages:
 class TestIterUsers:
     def test_first_run_yields_all_users(self, connector):
         """No cache → every user is considered new."""
-        _mock_list_users(connector, [
-            {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-        ])
+        _mock_list_users(
+            connector,
+            [
+                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
+            ],
+        )
         items = list(connector._iter_users())
         assert len(items) == 2
 
     def test_unchanged_users_are_filtered_out(self, connector):
         """Cache matches current timestamps → nothing yielded."""
-        _seed_cache(connector, {
-            NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],
-            WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],
-        })
-        _mock_list_users(connector, [
-            {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-        ])
+        _seed_cache(
+            connector,
+            {
+                NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],
+                WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],
+            },
+        )
+        _mock_list_users(
+            connector,
+            [
+                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
+            ],
+        )
         items = list(connector._iter_users())
         assert items == []
 
     def test_updated_user_is_yielded(self, connector):
         """Cache has old timestamp for one user → only that user is yielded."""
-        _seed_cache(connector, {
-            NAMED_USER_DICT["id"]: "2020-01-01T00:00:00.000Z",  # stale
-            WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],  # current
-        })
-        _mock_list_users(connector, [
-            {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-        ])
+        _seed_cache(
+            connector,
+            {
+                NAMED_USER_DICT["id"]: "2020-01-01T00:00:00.000Z",  # stale
+                WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],  # current
+            },
+        )
+        _mock_list_users(
+            connector,
+            [
+                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
+            ],
+        )
         items = list(connector._iter_users())
         assert len(items) == 1
         assert items[0].id == NAMED_USER_DICT["id"]
@@ -426,30 +446,42 @@ class TestIterUsers:
     def test_new_user_is_yielded(self, connector):
         """Cache has one user; second is brand new → only new one yielded."""
         _seed_cache(connector, {NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"]})
-        _mock_list_users(connector, [
-            {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-        ])
+        _mock_list_users(
+            connector,
+            [
+                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
+            ],
+        )
         items = list(connector._iter_users())
         assert len(items) == 1
         assert items[0].id == WINDOWS_USER_DICT["id"]
 
     def test_current_run_tracks_all_users(self, connector):
         """_current_run is populated for ALL fetched users, not just the yielded ones."""
-        _seed_cache(connector, {
-            NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],  # unchanged
-        })
-        _mock_list_users(connector, [
-            {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-        ])
+        _seed_cache(
+            connector,
+            {
+                NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],  # unchanged
+            },
+        )
+        _mock_list_users(
+            connector,
+            [
+                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
+            ],
+        )
         list(connector._iter_users())
         assert NAMED_USER_DICT["id"] in connector._current_run
         assert WINDOWS_USER_DICT["id"] in connector._current_run
 
     def test_user_without_id_not_tracked_in_current_run(self, connector):
         no_id = {**NAMED_USER_DICT, "id": None}
-        _mock_list_users(connector, [
-            {"items": [no_id], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-        ])
+        _mock_list_users(
+            connector,
+            [
+                {"items": [no_id], "pages": {"current": 1, "size": 50, "maxSize": 100}},
+            ],
+        )
         list(connector._iter_users())
         assert connector._current_run == {}
 
@@ -484,41 +516,59 @@ class TestUpdateCheckpoint:
 
 class TestGetAssets:
     def test_first_run_yields_all_valid_users(self, connector):
-        _mock_list_users(connector, [
-            {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-        ])
+        _mock_list_users(
+            connector,
+            [
+                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
+            ],
+        )
         assets = list(connector.get_assets())
         assert len(assets) == 2
 
     def test_second_run_yields_nothing_when_unchanged(self, connector):
-        _seed_cache(connector, {
-            NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],
-            WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],
-        })
-        _mock_list_users(connector, [
-            {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-        ])
+        _seed_cache(
+            connector,
+            {
+                NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],
+                WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],
+            },
+        )
+        _mock_list_users(
+            connector,
+            [
+                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
+            ],
+        )
         assets = list(connector.get_assets())
         assert assets == []
 
     def test_second_run_yields_only_changed_user(self, connector):
         updated_windows = {**WINDOWS_USER_DICT, "updatedAt": "2099-01-01T00:00:00.000Z"}
-        _seed_cache(connector, {
-            NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],
-            WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],  # old ts
-        })
-        _mock_list_users(connector, [
-            {"items": [NAMED_USER_DICT, updated_windows], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-        ])
+        _seed_cache(
+            connector,
+            {
+                NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],
+                WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],  # old ts
+            },
+        )
+        _mock_list_users(
+            connector,
+            [
+                {"items": [NAMED_USER_DICT, updated_windows], "pages": {"current": 1, "size": 50, "maxSize": 100}},
+            ],
+        )
         assets = list(connector.get_assets())
         assert len(assets) == 1
         assert assets[0].user.uid == WINDOWS_USER_DICT["id"]
 
     def test_skips_users_missing_id(self, connector):
         no_id = {**NAMED_USER_DICT, "id": None}
-        _mock_list_users(connector, [
-            {"items": [no_id, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-        ])
+        _mock_list_users(
+            connector,
+            [
+                {"items": [no_id, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
+            ],
+        )
         assets = list(connector.get_assets())
         assert len(assets) == 1
 
