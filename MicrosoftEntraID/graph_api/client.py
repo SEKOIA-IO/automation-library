@@ -130,7 +130,7 @@ class GraphApi(object):
 
         return writer.get_serialized_content().decode("utf-8")
 
-    async def close(self) -> None:  # pragma: no cover
+    async def close(self) -> None:
         if self._client:
             request_adapter = getattr(self._client, "request_adapter", None)
             close_method = getattr(request_adapter, "close", None) if request_adapter is not None else None

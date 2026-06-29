@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
@@ -101,3 +102,35 @@ async def test_client_get_directory_audits_empty_1(graph_api_client: GraphApi, d
 
     assert [i.id for i in items] == ["3"]
     assert items[0].activity_display_name == "Add user"
+
+
+@pytest.mark.asyncio
+async def test_client_close_with_async_request_adapter_close(graph_api_client: GraphApi) -> None:
+    graph_api_client._client.request_adapter = MagicMock()
+    adapter_close = AsyncMock()
+    credentials_close = AsyncMock()
+    graph_api_client._client.request_adapter.close = adapter_close
+    graph_api_client._credentials.close = credentials_close
+
+    await graph_api_client.close()
+
+    adapter_close.assert_awaited_once()
+    credentials_close.assert_awaited_once()
+    assert graph_api_client._client is None
+    assert graph_api_client._credentials is None
+
+
+@pytest.mark.asyncio
+async def test_client_close_with_sync_request_adapter_close(graph_api_client: GraphApi) -> None:
+    graph_api_client._client.request_adapter = MagicMock()
+    adapter_close = Mock(return_value=None)
+    credentials_close = AsyncMock()
+    graph_api_client._client.request_adapter.close = adapter_close
+    graph_api_client._credentials.close = credentials_close
+
+    await graph_api_client.close()
+
+    adapter_close.assert_called_once()
+    credentials_close.assert_awaited_once()
+    assert graph_api_client._client is None
+    assert graph_api_client._credentials is None
