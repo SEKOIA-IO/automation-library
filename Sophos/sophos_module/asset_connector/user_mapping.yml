@@ -8,14 +8,14 @@ mapping:
       description: "A Sophos directory user with full name and email address"
       data: |
         {
-          "id": "3d925986-d1ae-48cb-b3d2-27f053ea9a2a",
-          "name": "Erwan Chevalier",
-          "firstName": "Erwan",
-          "lastName": "Chevalier",
-          "email": "erwan.chevalier@sekoia.io",
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "Jane Doe",
+          "firstName": "Jane",
+          "lastName": "Doe",
+          "email": "jane.doe@example.com",
           "exchangeLogin": "",
           "groups": { "total": 0, "itemsCount": 0, "items": [] },
-          "tenant": { "id": "4feff6df-7454-4036-923d-7b2444462416" },
+          "tenant": { "id": "00000000-0000-0000-0000-000000000010" },
           "source": { "type": "custom" },
           "createdAt": "2023-06-16T15:00:56.473Z",
           "updatedAt": "2023-06-16T15:00:56.870Z"
@@ -24,10 +24,10 @@ mapping:
       description: "A Sophos directory user representing a Windows local account (DOMAIN\\username)"
       data: |
         {
-          "id": "cd44d7ae-fe79-4e79-8460-d6709640f623",
-          "name": "DESKTOP-2CHL3DH\\volsh",
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "DESKTOP-ABC1234\\jdoe",
           "groups": { "total": 0, "itemsCount": 0, "items": [] },
-          "tenant": { "id": "4feff6df-7454-4036-923d-7b2444462416" },
+          "tenant": { "id": "00000000-0000-0000-0000-000000000010" },
           "source": { "type": "custom" },
           "createdAt": "2025-12-10T12:49:12.371Z",
           "updatedAt": "2025-12-11T12:22:37.223Z"
@@ -36,26 +36,101 @@ mapping:
       description: "A Sophos directory user that belongs to one or more groups"
       data: |
         {
-          "id": "98d16f06-d01f-4005-b7bc-9ff2d294063c",
-          "name": "Sebastien",
-          "email": "sebastien.quioc@integrationssekoiaio.onmicrosoft.com",
+          "id": "00000000-0000-0000-0000-000000000003",
+          "name": "John Smith",
+          "email": "john.smith@example.onmicrosoft.com",
           "groups": {
             "total": 1,
             "itemsCount": 1,
             "items": [
               {
-                "id": "f31870d7-0a28-416a-b67c-911a69c083da",
-                "name": "integrationssekoiaio.onmicrosoft.com",
-                "displayName": "integrationssekoiaio.onmicrosoft.com"
+                "id": "00000000-0000-0000-0000-000000000020",
+                "name": "example.onmicrosoft.com",
+                "displayName": "example.onmicrosoft.com"
               }
             ]
           },
-          "tenant": { "id": "4feff6df-7454-4036-923d-7b2444462416" },
+          "tenant": { "id": "00000000-0000-0000-0000-000000000010" },
           "source": { "type": "custom" },
           "createdAt": "2023-11-20T09:46:38.886Z"
         }
 
   fields:
+    # EVENT CLASSIFICATION
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      description: "OCSF activity ID – always 2 for Collect"
+
+    - source: "static: Collect"
+      target: "activity_name"
+      type: "string"
+      description: "OCSF activity name"
+
+    - source: "static: Discovery"
+      target: "category_name"
+      type: "string"
+      description: "OCSF category name"
+
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      description: "OCSF category UID"
+
+    - source: "static: User Inventory Info"
+      target: "class_name"
+      type: "string"
+      description: "OCSF class name"
+
+    - source: "static: 5003"
+      target: "class_uid"
+      type: "integer"
+      description: "OCSF class UID"
+
+    - source: "static: 500302"
+      target: "type_uid"
+      type: "integer"
+      description: "OCSF type UID"
+
+    - source: "static: User Inventory Info: Collect"
+      target: "type_name"
+      type: "string"
+      description: "OCSF type name"
+
+    - source: "static: Informational"
+      target: "severity"
+      type: "string"
+      description: "Event severity"
+
+    - source: "static: 1"
+      target: "severity_id"
+      type: "integer"
+      description: "OCSF severity ID"
+
+    # METADATA
+    - source: "static: Sophos EDR"
+      target: "metadata.product.name"
+      type: "string"
+      description: "Source product name"
+
+    - source: "static: N/A"
+      target: "metadata.product.version"
+      type: "string"
+      description: "Product version"
+
+    - source: "static: 1.6.0"
+      target: "metadata.version"
+      type: "string"
+      description: "OCSF schema version"
+
+    # TIMESTAMPS
+    - source: "updatedAt (fallback: createdAt, then now)"
+      target: "time"
+      type: "timestamp"
+      logic: "Parse ISO-8601 timestamp; convert to Unix epoch float"
+      description: "OCSF event timestamp"
+
+    # USER FIELDS
     - source: "id"
       target: "user.uid"
       type: "string"
@@ -106,17 +181,18 @@ mapping:
       logic: "Tenant ID is used for both uid and name of the Organization object"
       description: "Sophos tenant → OCSF organization"
 
-    - source: "updatedAt (fallback: createdAt, then now)"
-      target: "time"
-      type: "timestamp"
-      logic: "Parse ISO-8601 timestamp; convert to Unix epoch float"
-      description: "Event time for the OCSF record"
-
-    - source: "static: Sophos EDR"
-      target: "metadata.product.name"
+    # CHECKPOINT
+    - source: "updatedAt (or createdAt) per user"
+      target: "context.known_users[id]"
       type: "string"
-      logic: "Static constant"
-      description: "Product name in OCSF metadata"
+      logic: "A full id→timestamp snapshot is persisted at the end of each run. On the next run, users whose timestamp matches the cache are skipped (change-detection)."
+      description: "Incremental collection checkpoint for change detection"
+
+  not_mapped:
+    - field: "exchangeLogin"
+      reason: "No corresponding OCSF field for Exchange login"
+    - field: "source.type"
+      reason: "Internal Sophos user source type; not relevant to OCSF user model"
 
   ocsf_samples:
     - name: "Named user with email – OCSF output"
@@ -139,22 +215,22 @@ mapping:
             "version": "1.6.0"
           },
           "user": {
-            "uid": "3d925986-d1ae-48cb-b3d2-27f053ea9a2a",
-            "name": "Erwan Chevalier",
-            "full_name": "Erwan Chevalier",
-            "email_addr": "erwan.chevalier@sekoia.io",
+            "uid": "00000000-0000-0000-0000-000000000001",
+            "name": "Jane Doe",
+            "full_name": "Jane Doe",
+            "email_addr": "jane.doe@example.com",
             "type_id": 1,
             "type": "User",
             "account": {
-              "name": "Erwan Chevalier",
+              "name": "Jane Doe",
               "type_id": 0,
               "type": "Unknown",
-              "uid": "3d925986-d1ae-48cb-b3d2-27f053ea9a2a"
+              "uid": "00000000-0000-0000-0000-000000000001"
             },
             "groups": null,
             "org": {
-              "uid": "4feff6df-7454-4036-923d-7b2444462416",
-              "name": "4feff6df-7454-4036-923d-7b2444462416"
+              "uid": "00000000-0000-0000-0000-000000000010",
+              "name": "00000000-0000-0000-0000-000000000010"
             }
           }
         }
