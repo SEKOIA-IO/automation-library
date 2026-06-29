@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-29 - 1.19.0
+
+### Added
+
+- Add Sophos User Asset Connector (`SophosUserAssetConnector`) that collects directory users from the Sophos Central API
+
 ## 2026-06-05 - 1.18.3
 
 ### Fixed
