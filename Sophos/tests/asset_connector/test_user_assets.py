@@ -23,98 +23,98 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
 )
 
 NAMED_USER = SophosUser(
-    id="3d925986-d1ae-48cb-b3d2-27f053ea9a2a",
-    name="Erwan Chevalier",
-    firstName="Erwan",
-    lastName="Chevalier",
-    email="erwan.chevalier@sekoia.io",
+    id="aaaaaaaa-0000-0000-0000-000000000001",
+    name="Jane Doe",
+    firstName="Jane",
+    lastName="Doe",
+    email="jane.doe@example.com",
     exchangeLogin="",
     groups=SophosUserGroups(total=0, itemsCount=0, items=[]),
-    tenant=SophosTenant(id="4feff6df-7454-4036-923d-7b2444462416"),
+    tenant=SophosTenant(id="bbbbbbbb-0000-0000-0000-000000000001"),
     source=SophosUserSource(type="custom"),
     createdAt="2023-06-16T15:00:56.473Z",
     updatedAt="2023-06-16T15:00:56.870Z",
 )
 
 WINDOWS_USER = SophosUser(
-    id="cd44d7ae-fe79-4e79-8460-d6709640f623",
-    name="DESKTOP-2CHL3DH\\volsh",
+    id="aaaaaaaa-0000-0000-0000-000000000002",
+    name="DESKTOP-ABC1234\\jdoe",
     groups=SophosUserGroups(total=0, itemsCount=0, items=[]),
-    tenant=SophosTenant(id="4feff6df-7454-4036-923d-7b2444462416"),
+    tenant=SophosTenant(id="bbbbbbbb-0000-0000-0000-000000000001"),
     source=SophosUserSource(type="custom"),
     createdAt="2025-12-10T12:49:12.371Z",
     updatedAt="2025-12-11T12:22:37.223Z",
 )
 
 USER_WITH_GROUPS = SophosUser(
-    id="98d16f06-d01f-4005-b7bc-9ff2d294063c",
-    name="Sebastien",
-    email="sebastien.quioc@integrationssekoiaio.onmicrosoft.com",
+    id="aaaaaaaa-0000-0000-0000-000000000003",
+    name="John Smith",
+    email="john.smith@example.onmicrosoft.com",
     groups=SophosUserGroups(
         total=1,
         itemsCount=1,
         items=[
             SophosUserGroup(
-                id="f31870d7-0a28-416a-b67c-911a69c083da",
-                name="integrationssekoiaio.onmicrosoft.com",
-                displayName="integrationssekoiaio.onmicrosoft.com",
+                id="cccccccc-0000-0000-0000-000000000001",
+                name="example.onmicrosoft.com",
+                displayName="example.onmicrosoft.com",
             )
         ],
     ),
-    tenant=SophosTenant(id="4feff6df-7454-4036-923d-7b2444462416"),
+    tenant=SophosTenant(id="bbbbbbbb-0000-0000-0000-000000000001"),
     source=SophosUserSource(type="custom"),
     createdAt="2023-11-20T09:46:38.886Z",
 )
 
 MINIMAL_USER = SophosUser(
-    id="c9f4387e-4ca9-4e43-95c2-3d81f694c13a",
-    name="DESKTOP-A367UC7\\vagrant",
-    tenant=SophosTenant(id="4feff6df-7454-4036-923d-7b2444462416"),
+    id="aaaaaaaa-0000-0000-0000-000000000004",
+    name="DESKTOP-XYZ5678\\testuser",
+    tenant=SophosTenant(id="bbbbbbbb-0000-0000-0000-000000000001"),
     createdAt="2024-10-02T14:32:00.091Z",
     updatedAt="2024-10-02T14:32:01.182Z",
 )
 
 # Raw dict versions for HTTP mock tests
 NAMED_USER_DICT = {
-    "id": "3d925986-d1ae-48cb-b3d2-27f053ea9a2a",
-    "name": "Erwan Chevalier",
-    "firstName": "Erwan",
-    "lastName": "Chevalier",
-    "email": "erwan.chevalier@sekoia.io",
+    "id": "aaaaaaaa-0000-0000-0000-000000000001",
+    "name": "Jane Doe",
+    "firstName": "Jane",
+    "lastName": "Doe",
+    "email": "jane.doe@example.com",
     "exchangeLogin": "",
     "groups": {"total": 0, "itemsCount": 0, "items": []},
-    "tenant": {"id": "4feff6df-7454-4036-923d-7b2444462416"},
+    "tenant": {"id": "bbbbbbbb-0000-0000-0000-000000000001"},
     "source": {"type": "custom"},
     "createdAt": "2023-06-16T15:00:56.473Z",
     "updatedAt": "2023-06-16T15:00:56.870Z",
 }
 
 WINDOWS_USER_DICT = {
-    "id": "cd44d7ae-fe79-4e79-8460-d6709640f623",
-    "name": "DESKTOP-2CHL3DH\\volsh",
+    "id": "aaaaaaaa-0000-0000-0000-000000000002",
+    "name": "DESKTOP-ABC1234\\jdoe",
     "groups": {"total": 0, "itemsCount": 0, "items": []},
-    "tenant": {"id": "4feff6df-7454-4036-923d-7b2444462416"},
+    "tenant": {"id": "bbbbbbbb-0000-0000-0000-000000000001"},
     "source": {"type": "custom"},
     "createdAt": "2025-12-10T12:49:12.371Z",
     "updatedAt": "2025-12-11T12:22:37.223Z",
 }
 
 USER_WITH_GROUPS_DICT = {
-    "id": "98d16f06-d01f-4005-b7bc-9ff2d294063c",
-    "name": "Sebastien",
-    "email": "sebastien.quioc@integrationssekoiaio.onmicrosoft.com",
+    "id": "aaaaaaaa-0000-0000-0000-000000000003",
+    "name": "John Smith",
+    "email": "john.smith@example.onmicrosoft.com",
     "groups": {
         "total": 1,
         "itemsCount": 1,
         "items": [
             {
-                "id": "f31870d7-0a28-416a-b67c-911a69c083da",
-                "name": "integrationssekoiaio.onmicrosoft.com",
-                "displayName": "integrationssekoiaio.onmicrosoft.com",
+                "id": "cccccccc-0000-0000-0000-000000000001",
+                "name": "example.onmicrosoft.com",
+                "displayName": "example.onmicrosoft.com",
             }
         ],
     },
-    "tenant": {"id": "4feff6df-7454-4036-923d-7b2444462416"},
+    "tenant": {"id": "bbbbbbbb-0000-0000-0000-000000000001"},
     "source": {"type": "custom"},
     "createdAt": "2023-11-20T09:46:38.886Z",
 }
@@ -139,7 +139,7 @@ AUTH_TOKEN_RESPONSE = {
 }
 
 WHOAMI_RESPONSE = {
-    "id": "4feff6df-7454-4036-923d-7b2444462416",
+    "id": "bbbbbbbb-0000-0000-0000-000000000001",
     "idType": "tenant",
     "apiHosts": {
         "global": "https://api.central.sophos.com",
@@ -211,8 +211,8 @@ class TestGetGroups:
         groups = SophosUserAssetConnector._get_groups(USER_WITH_GROUPS)
         assert groups is not None
         assert len(groups) == 1
-        assert groups[0].uid == "f31870d7-0a28-416a-b67c-911a69c083da"
-        assert groups[0].name == "integrationssekoiaio.onmicrosoft.com"
+        assert groups[0].uid == "cccccccc-0000-0000-0000-000000000001"
+        assert groups[0].name == "example.onmicrosoft.com"
 
     def test_empty_groups_returns_none(self):
         assert SophosUserAssetConnector._get_groups(NAMED_USER) is None
@@ -238,8 +238,8 @@ class TestGetOrganization:
     def test_tenant_present(self):
         org = SophosUserAssetConnector._get_organization(NAMED_USER)
         assert org is not None
-        assert org.uid == "4feff6df-7454-4036-923d-7b2444462416"
-        assert org.name == "4feff6df-7454-4036-923d-7b2444462416"
+        assert org.uid == "bbbbbbbb-0000-0000-0000-000000000001"
+        assert org.name == "bbbbbbbb-0000-0000-0000-000000000001"
 
     def test_tenant_missing_returns_none(self):
         user = SophosUser(id="x", name="Test")
@@ -301,14 +301,14 @@ class TestMapUserFields:
     def test_named_user_mapping(self, connector):
         result = connector.map_user_fields(NAMED_USER)
         assert result is not None
-        assert result.user.uid == "3d925986-d1ae-48cb-b3d2-27f053ea9a2a"
-        assert result.user.name == "Erwan Chevalier"
-        assert result.user.full_name == "Erwan Chevalier"
-        assert result.user.email_addr == "erwan.chevalier@sekoia.io"
+        assert result.user.uid == "aaaaaaaa-0000-0000-0000-000000000001"
+        assert result.user.name == "Jane Doe"
+        assert result.user.full_name == "Jane Doe"
+        assert result.user.email_addr == "jane.doe@example.com"
         assert result.user.type_id == UserTypeId.USER
         assert result.user.account.type_id == AccountTypeId.UNKNOWN
         assert result.user.org is not None
-        assert result.user.org.uid == "4feff6df-7454-4036-923d-7b2444462416"
+        assert result.user.org.uid == "bbbbbbbb-0000-0000-0000-000000000001"
         assert result.activity_id == 2
         assert result.class_uid == 5003
         assert result.type_uid == 500302
@@ -608,5 +608,5 @@ class TestFullHttpRoundTrip:
 
         assert len(assets) == 2
         names = {a.user.name for a in assets}
-        assert "Erwan Chevalier" in names
-        assert "DESKTOP-2CHL3DH\\volsh" in names
+        assert "Jane Doe" in names
+        assert "DESKTOP-ABC1234\\jdoe" in names
