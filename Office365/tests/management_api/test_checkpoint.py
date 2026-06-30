@@ -118,7 +118,7 @@ def test_checkpoint_write_error_increments_metric(symphony_storage, checkpoint, 
 
     new_observed_date = now - timedelta(days=1)
 
-    sample_name = "symphony_module_common_checkpoint_persistence_failures_total"
+    sample_name = "symphony_module_o365_checkpoint_persistence_failures_total"
 
     before = REGISTRY.get_sample_value(sample_name, labels={"intake_key": intake_key}) or 0
 
