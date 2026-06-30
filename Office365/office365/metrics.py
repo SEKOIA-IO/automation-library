@@ -2,6 +2,7 @@ from prometheus_client import Counter, Gauge, Histogram
 
 # Declare prometheus metrics
 prom_namespace = "symphony_module_common"
+prom_o365_namespace = "symphony_module_o365"
 
 OUTCOMING_EVENTS = Counter(
     name="forwarded_events",
@@ -27,6 +28,6 @@ EVENTS_LAG = Gauge(
 CHECKPOINT_PERSISTENCE_FAILURES = Counter(
     name="checkpoint_persistence_failures",
     documentation="Number of failed checkpoint persistence attempts",
-    namespace=prom_namespace,
+    namespace=prom_o365_namespace,
     labelnames=["intake_key"],
 )
