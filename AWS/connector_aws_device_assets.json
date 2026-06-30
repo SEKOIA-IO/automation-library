@@ -45,6 +45,6 @@
   },
   "labels": {
     "scalable_horizontally": false,
-    "scalable_vertically": false
+    "scalable_vertically": true
   }
 }
