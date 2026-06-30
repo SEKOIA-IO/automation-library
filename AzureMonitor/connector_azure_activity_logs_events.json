@@ -100,7 +100,7 @@
   "name": "Collect Azure Activity Logs events",
   "uuid": "66627aa0-6800-4f54-9550-85463cb622cc",
   "labels": {
-    "scalable-horizontally": false,
-    "scalable-vertically": true
+    "scalable_horizontally": false,
+    "scalable_vertically": true
   }
 }

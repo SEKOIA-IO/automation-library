@@ -52,7 +52,7 @@
   },
   "uuid": "1137c3e1-a0b3-4c3c-981e-be7c3249d64f",
   "labels": {
-    "scalable-horizontally": true,
-    "scalable-vertically": true
+    "scalable_horizontally": true,
+    "scalable_vertically": true
   }
 }

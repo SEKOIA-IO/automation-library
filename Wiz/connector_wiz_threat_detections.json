@@ -29,7 +29,7 @@
   },
   "uuid": "f04a437d-5d2e-4de7-8313-36b5c7716ad2",
   "labels": {
-    "scalable-horizontally": false,
-    "scalable-vertically": false
+    "scalable_horizontally": false,
+    "scalable_vertically": false
   }
 }

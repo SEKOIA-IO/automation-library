@@ -35,7 +35,7 @@
   "slug": "retarus",
   "results": {},
   "labels": {
-    "scalable-horizontally": false,
-    "scalable-vertically": false
+    "scalable_horizontally": false,
+    "scalable_vertically": false
   }
 }

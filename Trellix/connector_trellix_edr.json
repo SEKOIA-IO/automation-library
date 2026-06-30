@@ -48,7 +48,7 @@
   "name": "[ALPHA] Get Trellix EDR events",
   "uuid": "3c7eba64-892a-11ee-b9d1-0242ac120002",
   "labels": {
-    "scalable-horizontally": false,
-    "scalable-vertically": true
+    "scalable_horizontally": false,
+    "scalable_vertically": true
   }
 }

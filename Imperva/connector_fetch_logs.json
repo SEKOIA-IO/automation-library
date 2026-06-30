@@ -28,7 +28,7 @@
   "name": "Imperva WAF logs",
   "uuid": "7902efc5-a9c4-4ff1-9f82-b0551ec9d003",
   "labels": {
-    "scalable-horizontally": false,
-    "scalable-vertically": true
+    "scalable_horizontally": false,
+    "scalable_vertically": true
   }
 }

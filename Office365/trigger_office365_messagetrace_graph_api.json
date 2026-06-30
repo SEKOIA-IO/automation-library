@@ -62,7 +62,7 @@
   "results": {},
   "uuid": "01578648-40c0-47ed-bb56-1c89003d290c",
   "labels": {
-    "scalable-horizontally": false,
-    "scalable-vertically": true
+    "scalable_horizontally": false,
+    "scalable_vertically": true
   }
 }

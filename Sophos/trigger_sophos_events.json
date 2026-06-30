@@ -42,7 +42,7 @@
   "results": {},
   "uuid": "5728b8e3-ad1a-431a-bcbd-083f5fde3672",
   "labels": {
-    "scalable-horizontally": false,
-    "scalable-vertically": true
+    "scalable_horizontally": false,
+    "scalable_vertically": true
   }
 }

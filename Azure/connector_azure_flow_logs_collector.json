@@ -51,7 +51,7 @@
   "name": "Collect Azure Network Watcher VirtualNet Flow Logs",
   "uuid": "d79440e4-57e9-4534-88af-62f3aca0959b",
   "labels": {
-    "scalable-horizontally": false,
-    "scalable-vertically": true
+    "scalable_horizontally": false,
+    "scalable_vertically": true
   }
 }

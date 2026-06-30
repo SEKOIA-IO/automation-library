@@ -35,7 +35,7 @@
   "results": {},
   "uuid": "d7052d5e-0ccc-403f-928a-f63cb71b2e0c",
   "labels": {
-    "scalable-horizontally": false,
-    "scalable-vertically": true
+    "scalable_horizontally": false,
+    "scalable_vertically": true
   }
 }
