@@ -17,10 +17,17 @@ from netskope_modules.helpers import get_index_name, get_iterator_name, get_tena
 from netskope_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 from netskope_modules.types import NetskopeAlertType, NetskopeEventType
 
+SECURITY_CHECK_DATAEXPORTS: list[tuple[NetskopeEventType, NetskopeAlertType | None]] = [
+    (NetskopeEventType.ALERT, NetskopeAlertType.MALWARE),
+    (NetskopeEventType.ALERT, NetskopeAlertType.MALSITE),
+    (NetskopeEventType.ALERT, NetskopeAlertType.DLP),
+]
+
 
 class NetskopeEventConnectorConfiguration(DefaultConnectorConfiguration):
     api_token: str = Field(..., description="The API token")
     consumer_group: str | None = Field(None, description="A unique name to track events consumption")
+    security_check_only: bool = Field(False, description="Collect only security-check alerts (malware, malsite, DLP)")
 
 
 class NetskopeEventConsumer(Thread):
@@ -179,6 +186,9 @@ class NetskopeEventConnector(Connector):
 
     @cached_property
     def dataexports(self) -> list[tuple[NetskopeEventType, NetskopeAlertType | None]]:
+        if self.configuration.security_check_only:
+            return SECURITY_CHECK_DATAEXPORTS
+
         return [
             (NetskopeEventType.PAGE, None),
             (NetskopeEventType.APPLICATION, None),

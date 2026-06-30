@@ -70,6 +70,8 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
         # Cache context for storing event hashes
         self.cache_context = PersistentJSON("cache.json", self.data_path)
         self.events_cache: Cache = self.load_events_cache()
+        # HTTP client for API requests (lazily initialized)
+        self._client: UbikaCloudProtectorNextGenApiClient | None = None
 
     @cached_property
     def scalability_labels(self) -> dict[str, str]:
@@ -105,12 +107,15 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
             # save the events cache to the context
             context["events_cache"] = list(self.events_cache.keys())
 
-    @cached_property
+    @property
     def client(self) -> UbikaCloudProtectorNextGenApiClient:
         """
         HTTP client that automatically injects tokens and handles rate‐limits.
+        Lazily initialized on first access; use _client to manage lifecycle.
         """
-        return UbikaCloudProtectorNextGenApiClient(refresh_token=self.configuration.refresh_token)
+        if self._client is None:
+            self._client = UbikaCloudProtectorNextGenApiClient(refresh_token=self.configuration.refresh_token)
+        return self._client
 
     @cached_property
     def stepper(self) -> TimeStepper:
@@ -375,6 +380,12 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
 
         finally:
             # Cleanup on stop or fatal error
-            self.client.close()
+            if self._client is not None:
+                # Use _client directly to close only an already-instantiated client,
+                # avoiding lazy creation of a fresh client just to immediately close it.
+                # Reset to None forces the property to create a new one on next run,
+                # preventing "Cannot send a request, as the client has been closed." errors.
+                self._client.close()
+                self._client = None
             self.save_events_cache()
             self.log(message=f"Stopped fetching {self.NAME} events", level="info")

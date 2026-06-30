@@ -1,7 +1,7 @@
 import pytest
 import orjson
 from datetime import datetime, timezone
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, call
 
 
 from microsoft_sentinel import MicrosoftSentinelModule
@@ -148,13 +148,104 @@ def test_serialize_incident(trigger, first_incident_item):
 
 
 def test_get_incidents_without_batch(trigger, incidents_list):
-    with patch(
-        "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator"
-    ) as mock_incidents_iterator:
+    with (
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator"
+        ) as mock_incidents_iterator,
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._get_incident_entities"
+        ) as mock_get_incident_entities,
+    ):
         mock_incidents_iterator.return_value = incidents_list
+        mock_get_incident_entities.return_value = [{"id": "dummy_entity_id"}]
+
         trigger.get_incidents()
-        results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+        results = [c.kwargs["events"] for c in trigger.push_events_to_intakes.call_args_list]
 
         assert len(results[0]) == 2
-        assert orjson.loads(results[0][0])["title"] == "title"
-        assert orjson.loads(results[0][1])["title"] == "title 2"
+
+        assert mock_get_incident_entities.call_count == len(incidents_list)
+        assert mock_get_incident_entities.call_args_list == [call(incident.name) for incident in incidents_list]
+
+        parsed_first = orjson.loads(results[0][0])
+        assert parsed_first["title"] == "title"
+        assert parsed_first["entities"] == [{"id": "dummy_entity_id"}]
+
+        parsed_second = orjson.loads(results[0][1])
+        assert parsed_second["title"] == "title 2"
+        assert parsed_second["entities"] == [{"id": "dummy_entity_id"}]
+
+
+def test_get_incident_entities_coverage(trigger):
+    from azure.core.exceptions import AzureError
+    from unittest.mock import MagicMock
+
+    class EntityAsDict:
+        def as_dict(self):
+            return {"type": "as_dict"}
+
+    mock_response = MagicMock()
+    mock_response.entities = [EntityAsDict()]
+
+    trigger.client = MagicMock()
+    trigger.client.incidents.list_entities.return_value = mock_response
+
+    res = trigger._get_incident_entities("inc1")
+    assert len(res) == 1
+    assert res[0] == {"type": "as_dict"}
+
+    # Test exceptions
+    trigger.client.incidents.list_entities.side_effect = AzureError("azure_err")
+    assert trigger._get_incident_entities("inc1") == []
+
+    trigger.client.incidents.list_entities.side_effect = Exception("err")
+    assert trigger._get_incident_entities("inc1") == []
+
+    # Test None / no entities
+    mock_response_empty = MagicMock()
+    mock_response_empty.entities = []
+
+    # Test when response has no entities attribute at all
+    mock_response_no_entities = MagicMock()
+    del mock_response_no_entities.entities
+    trigger.client.incidents.list_entities.side_effect = None
+    trigger.client.incidents.list_entities.return_value = mock_response_no_entities
+    assert trigger._get_incident_entities("inc1") == []
+    trigger.client.incidents.list_entities.return_value = mock_response_empty
+    assert trigger._get_incident_entities("inc1") == []
+
+
+def test_run_method_coverage(trigger):
+    from requests.exceptions import HTTPError
+
+    # We will control the while loop by changing trigger._stop_event to True after one iteration
+    def mock_get_incidents():
+        trigger._stop_event.set()
+
+    trigger.get_incidents = mock_get_incidents
+
+    # normal run
+    trigger._stop_event.clear()
+    trigger.run()
+
+    # HTTPError run
+    def mock_get_incidents_http():
+        trigger._stop_event.set()
+        raise HTTPError("http error")
+
+    trigger.get_incidents = mock_get_incidents_http
+    trigger._stop_event.clear()
+    trigger.run()
+
+    # Exception run
+    def mock_get_incidents_err():
+        trigger._stop_event.set()
+        raise Exception("generic error")
+
+    trigger.get_incidents = mock_get_incidents_err
+    trigger._stop_event.clear()
+
+    import pytest
+
+    with pytest.raises(Exception):
+        trigger.run()

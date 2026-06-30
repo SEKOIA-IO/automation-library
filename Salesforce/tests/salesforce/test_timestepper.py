@@ -1,6 +1,7 @@
 """Tests for the TimeStepper class."""
 
 import datetime
+import time
 from datetime import timezone
 from unittest.mock import MagicMock
 
@@ -124,3 +125,33 @@ def test_timestepper_sleep_duration(mock_connector):
 
     # sleep_duration should be set since we're approaching real-time
     assert stepper.sleep_duration > 0
+
+
+def test_timestepper_ranges_does_not_block(mock_connector):
+    """
+    Test that ranges() never sleeps itself.
+
+    Waiting is now the connector's responsibility (done asynchronously via
+    asyncio.sleep), so even a large sleep_duration must not block the generator.
+    """
+    start = datetime.datetime.now(timezone.utc) - datetime.timedelta(hours=2)
+    end = start + datetime.timedelta(minutes=10)
+
+    stepper = TimeStepper(
+        mock_connector,
+        start,
+        end,
+        datetime.timedelta(minutes=10),
+        datetime.timedelta(minutes=15),
+    )
+
+    # A large value that would block for an hour if the generator slept internally
+    stepper.sleep_duration = 3600
+
+    started = time.monotonic()
+    ranges_gen = stepper.ranges()
+    next(ranges_gen)
+    elapsed = time.monotonic() - started
+
+    # The generator returns immediately instead of sleeping
+    assert elapsed < 1

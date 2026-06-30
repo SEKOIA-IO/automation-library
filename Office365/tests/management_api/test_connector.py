@@ -8,7 +8,7 @@ from prometheus_client import Counter
 
 from office365.management_api.checkpoint import Checkpoint
 from office365.management_api.connector import FORWARD_EVENTS_DURATION
-from office365.management_api.errors import FailedToActivateO365Subscription
+from office365.management_api.errors import FailedToActivateO365Subscription, SessionClosedError
 
 
 @pytest.mark.asyncio
@@ -207,3 +207,82 @@ async def test_client_property_is_cached(connector):
     client1 = connector.client
     client2 = connector.client
     assert client1 is client2
+
+
+@pytest.mark.asyncio
+async def test_activate_subscriptions_logs_info_when_stopping(connector):
+    """When the connector is shutting down, a closed-session error should be logged at info level, not re-raised."""
+    connector._stop_event.set()  # self.running becomes False
+    connector.client.activate_subscriptions.side_effect = SessionClosedError("closed")
+
+    await connector.activate_subscriptions()
+
+    connector.client.activate_subscriptions.assert_called_once()
+    connector.log.assert_called_once()
+    log_call = connector.log.call_args
+    assert log_call.kwargs.get("level") == "info"
+    assert "shutdown" in log_call.kwargs.get("message", "").lower()
+    connector.log_exception.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_activate_subscriptions_recovers_when_running(connector):
+    """When the connector is still running, a closed-session error should trigger a single retry after _reset_client."""
+    connector.client.activate_subscriptions.side_effect = [SessionClosedError("closed"), None]
+
+    with patch.object(connector, "_reset_client", wraps=connector._reset_client) as reset_spy:
+        await connector.activate_subscriptions()
+
+    assert connector.client.activate_subscriptions.call_count == 2
+    reset_spy.assert_called_once()
+    connector.log_exception.assert_called_once()
+    # The retry succeeded, so no second log_exception call.
+
+
+@pytest.mark.asyncio
+async def test_forward_events_forever_exits_on_session_closed_during_shutdown(connector, symphony_storage):
+    """SessionClosedError during shutdown should stop the forwarding loop cleanly."""
+    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
+
+    async def mock_forward_next_batches(cp):
+        connector._stop_event.set()
+        raise SessionClosedError("closed")
+
+    with (
+        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches) as forward_mock,
+        patch("office365.management_api.connector.asyncio.sleep", return_value=None) as sleep_mock,
+    ):
+        await connector.forward_events_forever(checkpoint)
+
+    forward_mock.assert_called_once()
+    sleep_mock.assert_not_called()  # no retry-sleep after a shutdown-triggered closure
+    connector.log.assert_called()
+    info_calls = [call for call in connector.log.call_args_list if call.kwargs.get("level") == "info"]
+    assert any("shutdown" in call.kwargs.get("message", "").lower() for call in info_calls)
+
+
+@pytest.mark.asyncio
+async def test_forward_events_forever_resets_client_on_unexpected_session_closed(connector, symphony_storage):
+    """An unexpected SessionClosedError should reset the client and let the loop continue to the next iteration."""
+    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
+    call_count = 0
+
+    async def mock_forward_next_batches(cp):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise SessionClosedError("closed")
+        # Second iteration: stop the loop cleanly.
+        connector._stop_event.set()
+
+    with (
+        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
+        patch.object(connector, "_reset_client", wraps=connector._reset_client) as reset_spy,
+        patch("office365.management_api.connector.asyncio.sleep", return_value=None),
+    ):
+        await connector.forward_events_forever(checkpoint)
+
+    assert call_count == 2
+    reset_spy.assert_called_once()
+    connector.log_exception.assert_called_once()
+    assert "rebuilding" in connector.log_exception.call_args.kwargs.get("message", "").lower()

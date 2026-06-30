@@ -1,5 +1,5 @@
 {
-  "name": "Sophos EDR Device Assets",
+  "name": "Sophos EDR Devices",
   "description": "Fetch Sophos EDR endpoint device assets from the Sophos Central API",
   "uuid": "b3f7a1c2-4e8d-4b5a-9c6f-1d2e3f4a5b6c",
   "docker_parameters": "sophos_device_asset_connector",

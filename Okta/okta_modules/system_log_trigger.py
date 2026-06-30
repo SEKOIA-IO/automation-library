@@ -51,7 +51,7 @@ class SystemLogConnector(Connector):
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self._stop_event = Event()
-        self.context = PersistentJSON("context.json", self._data_path)
+        self.context = PersistentJSON("events_cache.json", self._data_path)
         self.fetch_events_limit = 1000
 
         self.cursor = CheckpointDatetime(
@@ -77,6 +77,10 @@ class SystemLogConnector(Connector):
         with self.context as context:
             # load the cache from the context
             events_cache = context.get("events_cache", [])
+
+        if not events_cache:
+            with PersistentJSON("context.json", self._data_path) as legacy_context:
+                events_cache = legacy_context.get("events_cache", [])
 
         for uuid in events_cache:
             cache[uuid] = True

@@ -1,8 +1,8 @@
 {
   "uuid": "31e6e73a-ac13-41ca-9f1a-0a0e33fda801",
-  "name": "Delete an asset (V2)",
+  "name": "[DEPRECATED] Delete an asset (V2)",
   "docker_parameters": "delete-assets-v2/{uuid}",
-  "description": "Delete the requested asset",
+  "description": "(deprecated — use Revoke an asset (V2)) Delete the requested asset",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",

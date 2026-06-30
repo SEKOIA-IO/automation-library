@@ -7,11 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-05-22 - 1.8.2
+## 2026-05-22 - 1.8.4
 
 ### Changed
 
 - Add scalability labels to Prometheus metrics
+
+## 2026-05-04 - 1.8.3
+
+### Changed
+
+- Make the Salesforce connector run loop fully asynchronous
+
+## 2026-05-04 - 1.8.2
+
+### Changed
+
+- Allow setting file processing thresholds from environment variables
 
 ## 2026-02-06 - 1.8.1
 

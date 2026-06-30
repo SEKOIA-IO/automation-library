@@ -22,6 +22,11 @@
         "description": "A unique name to track event consumption (default empty for auto-generated one)",
         "type": "string",
         "default": ""
+      },
+      "security_check_only": {
+        "description": "Collect only security-check alerts (malware, malsite, DLP)",
+        "type": "boolean",
+        "default": false
       }
     },
     "required": [
