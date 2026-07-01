@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- Reset the Microsoft Graph client when timeout-related exceptions occur in the asset connector loop
+- Add a regression test for Graph `PoolTimeout` handling and client reset behavior
+
 ## 2026-06-16 - 2.10.23
 
 ### Fixed
