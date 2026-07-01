@@ -49,23 +49,59 @@
         "default": 60
       }
     },
-    "required": ["intake_key", "subscription_id"],
+    "required": [
+      "intake_key",
+      "subscription_id"
+    ],
     "not": {
       "anyOf": [
-        { "required": ["filter_resource", "filter_resource_group"] },
-        { "required": ["filter_resource", "filter_resource_provider"] },
-        { "required": ["filter_resource", "filter_correlation_id"] },
-        { "required": ["filter_resource_group", "filter_resource_provider"] },
-        { "required": ["filter_resource_group", "filter_correlation_id"] },
-        { "required": ["filter_resource_provider", "filter_correlation_id"] }
+        {
+          "required": [
+            "filter_resource",
+            "filter_resource_group"
+          ]
+        },
+        {
+          "required": [
+            "filter_resource",
+            "filter_resource_provider"
+          ]
+        },
+        {
+          "required": [
+            "filter_resource",
+            "filter_correlation_id"
+          ]
+        },
+        {
+          "required": [
+            "filter_resource_group",
+            "filter_resource_provider"
+          ]
+        },
+        {
+          "required": [
+            "filter_resource_group",
+            "filter_correlation_id"
+          ]
+        },
+        {
+          "required": [
+            "filter_resource_provider",
+            "filter_correlation_id"
+          ]
+        }
       ]
     },
-    "secrets": [
-    ]
+    "secrets": []
   },
   "results": {},
   "description": "connector playbook to get Azure Activity Logs information",
   "docker_parameters": "azure_activity_logs",
   "name": "Collect Azure Activity Logs events",
-  "uuid": "66627aa0-6800-4f54-9550-85463cb622cc"
+  "uuid": "66627aa0-6800-4f54-9550-85463cb622cc",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

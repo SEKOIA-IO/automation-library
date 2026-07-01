@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-22 - 2.10.5
+
+### Changed
+
+- Add scalability labels to Prometheus metrics
+
 ## 2026-06-16 - 2.10.4
 
 ### Fixed
@@ -18,7 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fix account validator to detect authentication failures.
-
 ## 2026-04-21 - 2.10.2
 
 ### Changed

@@ -74,21 +74,29 @@ class MobileEndpointSecurityThread(Thread):
 
         try:
             response = self.client.get(
-                f"{base_url}/mra/stream/v2/events", stream=True, headers=headers, params=params, timeout=timeout
+                f"{base_url}/mra/stream/v2/events",
+                stream=True,
+                headers=headers,
+                params=params,
+                timeout=timeout,
             )
             response.raise_for_status()
 
             return response
 
         except requests.exceptions.HTTPError as err:
-            if err.response.status_code == 401:
+            if err.response is not None and err.response.status_code == 401:
                 self.log("Unauthorized error", level="critical")
 
                 try:
                     raw = err.response.json()
                     error = raw["error"]
                     error_description = raw["error_description"]
-                    logger.error("Unauthorized error", error=error, error_description=error_description)
+                    logger.error(
+                        "Unauthorized error",
+                        error=error,
+                        error_description=error_description,
+                    )
 
                 except Exception:
                     pass
@@ -142,7 +150,10 @@ class MobileEndpointSecurityThread(Thread):
                         mra_events = json.loads(event.data).get("events", [])
 
                     except ValueError as e:
-                        self.log_exception(exception=e, message="failed to parse mra events from sse client")
+                        self.log_exception(
+                            exception=e,
+                            message="failed to parse mra events from sse client",
+                        )
 
                     if len(mra_events) > 0:
                         most_recent_date_seen = max(isoparse(item["created_time"]) for item in mra_events)
@@ -152,9 +163,10 @@ class MobileEndpointSecurityThread(Thread):
                             message=f"Forwarded {len(batch_of_events)} events to the intake",
                             level="info",
                         )
-                        OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(
-                            len(batch_of_events)
-                        )
+                        OUTCOMING_EVENTS.labels(
+                            intake_key=self.connector.configuration.intake_key,
+                            **self.connector.scalability_labels,
+                        ).inc(len(batch_of_events))
                         self.connector.push_events_to_intakes(events=batch_of_events)
 
                         # save last seen event id
@@ -162,13 +174,17 @@ class MobileEndpointSecurityThread(Thread):
 
                         now = datetime.now(timezone.utc)
                         current_lag = now - most_recent_date_seen
-                        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(
-                            current_lag.total_seconds()
-                        )
+                        EVENTS_LAG.labels(
+                            intake_key=self.connector.configuration.intake_key,
+                            **self.connector.scalability_labels,
+                        ).set(current_lag.total_seconds())
 
                 elif event.event == "heartbeat":
                     logger.debug("Received heartbeat")
-                    EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(0)
+                    EVENTS_LAG.labels(
+                        intake_key=self.connector.configuration.intake_key,
+                        **self.connector.scalability_labels,
+                    ).set(0)
 
 
 class MobileEndpointSecurityConnector(Connector):
@@ -177,6 +193,17 @@ class MobileEndpointSecurityConnector(Connector):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     def run(self) -> None:
         self.log("Starting collecting Lookout MES events", level="info")

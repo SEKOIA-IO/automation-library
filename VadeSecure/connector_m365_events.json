@@ -46,5 +46,9 @@
     "title": "M365 Events",
     "type": "object"
   },
-  "uuid": "d3860745-4433-4690-b025-378369ad7201"
+  "uuid": "d3860745-4433-4690-b025-378369ad7201",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

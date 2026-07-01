@@ -2,6 +2,7 @@ import asyncio
 import os
 import time
 from datetime import datetime, timedelta, timezone
+from functools import cached_property
 from operator import itemgetter
 from pathlib import Path
 from threading import Event, Lock, Thread
@@ -20,7 +21,12 @@ from . import MimecastModule
 from .client import ApiClient, ApiKeyAuthentication
 from .helpers import download_batches, batched, filter_processed_events
 from .logging import get_logger
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 logger = get_logger()
 
@@ -45,7 +51,9 @@ class MimecastSIEMWorker(Thread):
         self.old_cursor = self.get_old_cursor()
 
         self.cursor = CheckpointCursor(
-            path=self.connector.data_path, subkey=self.log_type, lock=self.connector.context_lock
+            path=self.connector.data_path,
+            subkey=self.log_type,
+            lock=self.connector.context_lock,
         )
 
         self._stop_event = Event()
@@ -145,7 +153,9 @@ class MimecastSIEMWorker(Thread):
         if self.cursor.offset is None:
             if self.old_cursor is not None:
                 logger.info(
-                    "Starting with old datetime cursor", log_type=self.log_type, datetime=self.old_cursor.isoformat()
+                    "Starting with old datetime cursor",
+                    log_type=self.log_type,
+                    datetime=self.old_cursor.isoformat(),
                 )
                 params["dateRangeStartsAt"] = self.old_cursor.strftime("%Y-%m-%d")
 
@@ -223,7 +233,10 @@ class MimecastSIEMWorker(Thread):
                 events = self.__filter_events(events)
 
                 if len(events) > 0:
-                    INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
+                    INCOMING_MESSAGES.labels(
+                        intake_key=self.connector.configuration.intake_key,
+                        **self.connector.scalability_labels,
+                    ).inc(len(events))
                     yield events
 
             nextPageToken = result.get("@nextPage")
@@ -283,7 +296,10 @@ class MimecastSIEMWorker(Thread):
                 delta_time = datetime.now(timezone.utc) - most_recent_date_seen
                 current_lag = int(delta_time.total_seconds())
 
-        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(current_lag)
+        EVENTS_LAG.labels(
+            intake_key=self.connector.configuration.intake_key,
+            **self.connector.scalability_labels,
+        ).set(current_lag)
 
     def next_batch(self) -> None:
         # save the starting time
@@ -300,7 +316,10 @@ class MimecastSIEMWorker(Thread):
                     message=f"{self.log_type}: Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    **self.connector.scalability_labels,
+                ).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
                 has_forwarded_events = True
 
@@ -314,13 +333,23 @@ class MimecastSIEMWorker(Thread):
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
-        logger.info("Fetched and forwarded events", log_type=self.log_type, duration=batch_duration)
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key).observe(batch_duration)
+        logger.info(
+            "Fetched and forwarded events",
+            log_type=self.log_type,
+            duration=batch_duration,
+        )
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.connector.configuration.intake_key,
+            **self.connector.scalability_labels,
+        ).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.connector.configuration.frequency - batch_duration
         if delta_sleep > 0:
-            self.log(message=f"{self.log_type}: Next batch in the future. Waiting {delta_sleep} seconds", level="info")
+            self.log(
+                message=f"{self.log_type}: Next batch in the future. Waiting {delta_sleep} seconds",
+                level="info",
+            )
             time.sleep(delta_sleep)
 
     def run(self) -> None:
@@ -368,6 +397,17 @@ class MimecastSIEMConnector(Connector):
     @property
     def data_path(self) -> Path:
         return self._data_path
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     def start_consumers(self, client: ApiClient) -> dict[str, MimecastSIEMWorker]:
         consumers = {}

@@ -23,7 +23,12 @@ from crowdstrike_falcon.helpers import (
     group_edges_by_verticle_type,
 )
 from crowdstrike_falcon.logging import get_logger
-from crowdstrike_falcon.metrics import EVENTS_LAG, INCOMING_DETECTIONS, INCOMING_VERTICLES, OUTCOMING_EVENTS
+from crowdstrike_falcon.metrics import (
+    EVENTS_LAG,
+    INCOMING_DETECTIONS,
+    INCOMING_VERTICLES,
+    OUTCOMING_EVENTS,
+)
 
 logger = get_logger()
 
@@ -118,7 +123,10 @@ class VerticlesCollector:
                         for vertex in self.falcon_client.get_verticles_details(
                             list(verticles_links.keys()), verticle_type
                         ):
-                            INCOMING_VERTICLES.labels(intake_key=self.connector.configuration.intake_key).inc()
+                            INCOMING_VERTICLES.labels(
+                                intake_key=self.connector.configuration.intake_key,
+                                **self.connector.scalability_labels,
+                            ).inc()
                             yield (verticles_links[vertex["id"]], edge_type, vertex)
                 except HTTPError as error:
                     self.log_exception(
@@ -177,7 +185,8 @@ class VerticlesCollector:
                 # we don't have proper permissions - roll back to the old API
                 self.connector.use_alert_api = False
                 self.log(
-                    level="warning", message="Not enough permissions to use Alert API - rollback to Detection API"
+                    level="warning",
+                    message="Not enough permissions to use Alert API - rollback to Detection API",
                 )
 
             self.log_exception(
@@ -323,7 +332,8 @@ class EventStreamReader(threading.Thread):
                                     # store the new event in the queue along with it stream root url
                                     self.events_queue.put((self.stream_root_url, decoded_line))
                                     INCOMING_DETECTIONS.labels(
-                                        intake_key=self.connector.configuration.intake_key
+                                        intake_key=self.connector.configuration.intake_key,
+                                        **self.connector.scalability_labels,
                                     ).inc()
 
                                     if self.connector.use_alert_api:
@@ -482,9 +492,10 @@ class EventForwarder(threading.Thread):
                         message=f"Forward {len(batch_of_events)} events to the intake",
                         level="info",
                     )
-                    OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(
-                        len(batch_of_events)
-                    )
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.connector.configuration.intake_key,
+                        **self.connector.scalability_labels,
+                    ).inc(len(batch_of_events))
                     self.connector.push_events_to_intakes(events=batch_of_events)
 
                     now = time.time()
@@ -508,13 +519,16 @@ class EventForwarder(threading.Thread):
                             if creation_time:
                                 lag = now - (creation_time / 1000)
                                 EVENTS_LAG.labels(
-                                    intake_key=self.connector.configuration.intake_key, stream=stream_root_url
+                                    intake_key=self.connector.configuration.intake_key,
+                                    stream=stream_root_url,
+                                    **self.connector.scalability_labels,
                                 ).set(lag)
             except queue.Empty:
                 for stream_root_url in self.stream_root_urls:
-                    EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, stream=stream_root_url).set(
-                        0
-                    )
+                    EVENTS_LAG.labels(
+                        intake_key=self.connector.configuration.intake_key,
+                        stream=stream_root_url,
+                    ).set(0)
                 pass
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
@@ -553,6 +567,17 @@ class EventStreamTrigger(Connector):
         return f"sio-{time.time()}"
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
+    @cached_property
     def _http_default_headers(self) -> dict[str, str]:
         """
         Return the default headers for the HTTP requests used in this connector.
@@ -579,13 +604,19 @@ class EventStreamTrigger(Connector):
     def verticles_collector(self) -> VerticlesCollector | None:
         try:
             if os.getenv("ACTIVATE_VERTICLES_COLLECTION", "false").lower() == "false":
-                self.log(message="Verticles collection is disabled by configuration", level="info")
+                self.log(
+                    message="Verticles collection is disabled by configuration",
+                    level="info",
+                )
                 return None
             verticles_collector = VerticlesCollector(self, self.client)
             return verticles_collector
         except HTTPError as error:
             if error.response.status_code == 403:
-                self.log(message="Not enough permissions to use ThreatGraph API", level="warning")
+                self.log(
+                    message="Not enough permissions to use ThreatGraph API",
+                    level="warning",
+                )
                 return None
             self.log_exception(error, message="Failed to create verticles collector")
             return None
@@ -638,7 +669,10 @@ class EventStreamTrigger(Connector):
         for stream_root_url in streams.keys():
             stream_thread = stream_threads[stream_root_url]
             if not stream_thread.is_alive():
-                logger.warning("Stream reader is down, restarting it", stream_root_url=stream_root_url)
+                logger.warning(
+                    "Stream reader is down, restarting it",
+                    stream_root_url=stream_root_url,
+                )
                 restart_stream_readers = True
 
         if restart_stream_readers:
@@ -694,7 +728,10 @@ class EventStreamTrigger(Connector):
 
         except HTTPError as error:
             if error.response is not None and error.response.status_code == 429:
-                self.log(message="The connector was rate-limited, waiting 1 minute before retrying.", level="warning")
+                self.log(
+                    message="The connector was rate-limited, waiting 1 minute before retrying.",
+                    level="warning",
+                )
                 time.sleep(60)  # The authentication faces a ratelimit, sleep 1 minutes
             else:
                 self.log_exception(error, message="Failed to fetch and forward events")

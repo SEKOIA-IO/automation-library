@@ -46,5 +46,9 @@
   "description": "connector playbook to get Trellix events information",
   "docker_parameters": "trellix_edr",
   "name": "[ALPHA] Get Trellix EDR events",
-  "uuid": "3c7eba64-892a-11ee-b9d1-0242ac120002"
+  "uuid": "3c7eba64-892a-11ee-b9d1-0242ac120002",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

@@ -26,5 +26,9 @@
       "intake_key"
     ]
   },
-  "results": {}
+  "results": {},
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": false
+  }
 }

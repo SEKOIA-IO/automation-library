@@ -47,5 +47,9 @@
     "type": "object"
   },
   "results": {},
-  "uuid": "6cef696f-bbb2-494b-b473-11dfa03212d7"
+  "uuid": "6cef696f-bbb2-494b-b473-11dfa03212d7",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

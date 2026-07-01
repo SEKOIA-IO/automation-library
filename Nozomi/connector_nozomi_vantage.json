@@ -32,5 +32,9 @@
   "description": "Get Events From Nozomi Vantage",
   "docker_parameters": "nozomi_vantage",
   "name": "Collect events from Nozomi Vantage",
-  "uuid": "ec2c3f4d-26c1-4730-bc46-372461486187"
+  "uuid": "ec2c3f4d-26c1-4730-bc46-372461486187",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

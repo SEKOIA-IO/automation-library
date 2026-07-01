@@ -32,5 +32,9 @@
     "title": "Github audit logs",
     "type": "object"
   },
-  "uuid": "8e09b78c-d6bd-4c5e-af66-72635b99bb32"
+  "uuid": "8e09b78c-d6bd-4c5e-af66-72635b99bb32",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": false
+  }
 }

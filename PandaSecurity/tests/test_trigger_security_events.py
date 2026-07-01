@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import requests_mock
@@ -20,7 +20,14 @@ def trigger(symphony_storage):
     trigger.configuration = {"frequency": 604800}
     trigger.send_event = Mock()
     trigger.log = Mock()
-    return trigger
+    with patch.object(
+        type(trigger.module),
+        "manifest",
+        new_callable=lambda: property(
+            lambda self: {"labels": {"scalable_horizontally": "false", "scalable_vertically": "false"}}
+        ),
+    ):
+        yield trigger
 
 
 def test_fetch_events(trigger):

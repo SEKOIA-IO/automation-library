@@ -49,5 +49,9 @@
   "description": "connector playbook to get Azure Key Vault events information",
   "docker_parameters": "azure_key_vault",
   "name": "Collect Azure Key Vault events",
-  "uuid": "23ab3160-a632-494a-b036-5e4f76be7ec3"
+  "uuid": "23ab3160-a632-494a-b036-5e4f76be7ec3",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

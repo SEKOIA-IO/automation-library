@@ -1,4 +1,4 @@
-  {
+{
   "name": "Okta Users",
   "description": "Fetch Okta user assets",
   "uuid": "b2e2e2c7-1a3e-4b7a-9c2d-8e4f3a6b7c9d",
@@ -14,14 +14,14 @@
         "type": "string"
       },
       "frequency": {
-          "type": "integer",
-          "description": "Batch frequency in seconds",
-          "minimum": 1,
-          "default": 1200
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "minimum": 1,
+        "default": 1200
       },
       "sekoia_api_key": {
-          "description": "API key to use from sekoia.io",
-          "type": "string"
+        "description": "API key to use from sekoia.io",
+        "type": "string"
       },
       "batch_size": {
         "type": "integer",
@@ -30,8 +30,21 @@
         "default": 100
       }
     },
-    "required": ["sekoia_api_key"],
-    "secrets": ["sekoia_api_key"],
-    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"]
+    "required": [
+      "sekoia_api_key"
+    ],
+    "secrets": [
+      "sekoia_api_key"
+    ],
+    "internal": [
+      "sekoia_base_url",
+      "sekoia_api_key",
+      "frequency",
+      "batch_size"
+    ]
+  },
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
   }
 }

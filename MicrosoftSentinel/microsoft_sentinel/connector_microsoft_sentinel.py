@@ -13,14 +13,29 @@ from requests.exceptions import HTTPError
 from azure.identity import ClientSecretCredential
 from azure.mgmt.securityinsight import SecurityInsights
 from azure.core.paging import ItemPaged
+from azure.mgmt.securityinsight.models import (
+    IncidentAdditionalData,
+    IncidentOwnerInfo,
+    Incident,
+    IncidentLabel,
+)
 from azure.core.exceptions import AzureError
 from azure.mgmt.securityinsight.models import IncidentAdditionalData, IncidentOwnerInfo, Incident, IncidentLabel
 
 from sekoia_automation.connector import Connector
 from sekoia_automation.checkpoint import CheckpointDatetime
 
-from microsoft_sentinel.utils import additional_data_to_dict, owner_data_to_dict, labels_data_to_dict
-from microsoft_sentinel.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+from microsoft_sentinel.utils import (
+    additional_data_to_dict,
+    owner_data_to_dict,
+    labels_data_to_dict,
+)
+from microsoft_sentinel.metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_EVENTS,
+    OUTCOMING_EVENTS,
+)
 from microsoft_sentinel import (
     MicrosoftSentinelModule,
     MicrosoftSentinelResponseModel,
@@ -36,7 +51,9 @@ class MicrosoftSentineldConnector(Connector):
         super().__init__(*args, **kwargs)
 
         self.cursor = CheckpointDatetime(
-            path=self._data_path, start_at=timedelta(days=1), ignore_older_than=timedelta(days=30)
+            path=self._data_path,
+            start_at=timedelta(days=1),
+            ignore_older_than=timedelta(days=30),
         )
         self.from_date = self.cursor.offset
 
@@ -48,6 +65,17 @@ class MicrosoftSentineldConnector(Connector):
     @cached_property
     def batch_limit(self) -> int:
         return max(self.configuration.chunk_size, 1000)
+
+    @cached_property
+    def scalability_labels(self) -> Dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     @cached_property
     def client(self) -> SecurityInsights:
@@ -126,7 +154,7 @@ class MicrosoftSentineldConnector(Connector):
 
         if first_item is None:
             self.log(message="No messages to forward", level="info")
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
             return
 
         alerts_batch = []
@@ -153,7 +181,9 @@ class MicrosoftSentineldConnector(Connector):
             if (incoming_events_sum + 1) % self.batch_limit == 0:
                 alerts_len: int = len(alerts_batch)
                 self.log(message=f"Sending batch of {alerts_len} messages", level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(alerts_len)
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    alerts_len
+                )
                 self.push_events_to_intakes(events=alerts_batch)
                 alerts_batch = []
 
@@ -162,21 +192,28 @@ class MicrosoftSentineldConnector(Connector):
         if alerts_batch:
             last_alerts_len: int = len(alerts_batch)
             self.log(message=f"Sending batch of {last_alerts_len} messages", level="info")
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(last_alerts_len)
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                last_alerts_len
+            )
             self.push_events_to_intakes(events=alerts_batch)
 
-        INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(incoming_events_sum)
+        INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+            incoming_events_sum
+        )
 
         if stored_time:
             self.from_date = stored_time
 
             most_recent_timestamp = stored_time.timestamp()
             events_lag = int(time.time() - most_recent_timestamp)
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(events_lag)
 
     def run(self) -> None:
         trigger_start_time = datetime.now().isoformat()
-        self.log(message=f"Microsoft Sentinel Trigger process initiated at {trigger_start_time}", level="info")
+        self.log(
+            message=f"Microsoft Sentinel Trigger process initiated at {trigger_start_time}",
+            level="info",
+        )
 
         try:
             while self.running:
@@ -191,11 +228,16 @@ class MicrosoftSentineldConnector(Connector):
                     raise
 
                 duration = int(time.time() - start)
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
+                FORWARD_EVENTS_DURATION.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).observe(duration)
 
                 delta_sleep = self.configuration.frequency - duration
                 if delta_sleep > 0:
                     time.sleep(delta_sleep)
         finally:
             trigger_end_time = datetime.now().isoformat()
-            self.log(message=f"Microsoft Sentinel Trigger process has stopped at {trigger_end_time}", level="info")
+            self.log(
+                message=f"Microsoft Sentinel Trigger process has stopped at {trigger_end_time}",
+                level="info",
+            )

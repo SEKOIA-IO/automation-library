@@ -15,7 +15,12 @@ from sophos_module.base import SophosConnector
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
 from sophos_module.client.exceptions import SophosApiAuthenticationError
-from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+from sophos_module.metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_EVENTS,
+    OUTCOMING_EVENTS,
+)
 
 
 class SophosXDRQueryConfiguration(DefaultConnectorConfiguration):
@@ -37,7 +42,9 @@ class SophosXDRQueryTrigger(SophosConnector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self.cursor = CheckpointDatetime(
-            path=self.data_path, start_at=timedelta(days=1), ignore_older_than=timedelta(days=30)
+            path=self.data_path,
+            start_at=timedelta(days=1),
+            ignore_older_than=timedelta(days=30),
         )
         self._from_date: datetime = self.cursor.offset
         self.events_sum = 0
@@ -60,6 +67,17 @@ class SophosXDRQueryTrigger(SophosConnector):
     def query(self) -> dict[str, Any]:
         """Return the Sophos XDR query definition."""
         raise NotImplementedError
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     @cached_property
     def pagination_limit(self) -> int:
@@ -98,7 +116,9 @@ class SophosXDRQueryTrigger(SophosConnector):
 
                 # compute the duration of the last events fetching
                 duration = int(time.time() - start)
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
+                FORWARD_EVENTS_DURATION.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).observe(duration)
 
                 # Compute the remaining sleeping time
                 delta_sleep = self.configuration.frequency - duration
@@ -117,7 +137,8 @@ class SophosXDRQueryTrigger(SophosConnector):
         # It's the first step of our query treatment.
         # Posting the query
         self.log(
-            message=f"Querying the Sophos data lake at {self.from_date.strftime('%Y-%m-%d %H:%M:%S')}", level="info"
+            message=f"Querying the Sophos data lake at {self.from_date.strftime('%Y-%m-%d %H:%M:%S')}",
+            level="info",
         )
 
         response = self.client.run_query(json_query=query)
@@ -155,7 +176,10 @@ class SophosXDRQueryTrigger(SophosConnector):
             status = result_query_status.get("status")
             result = result_query_status.get("result")
 
-        self.log(message=f"Finishing the loop with status {status} and result {result}", level="info")
+        self.log(
+            message=f"Finishing the loop with status {status} and result {result}",
+            level="info",
+        )
 
         return result, query_id
 
@@ -175,7 +199,7 @@ class SophosXDRQueryTrigger(SophosConnector):
         most_recent_timestamp = _extract_timestamp(most_recent_item)
 
         events_lag = int(time.time() - most_recent_timestamp)
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(events_lag)
 
     def getting_results(self, pagination: int) -> None:
         now = datetime.now(timezone.utc)
@@ -192,13 +216,18 @@ class SophosXDRQueryTrigger(SophosConnector):
             items = response.get("items", [])
             self._observe_items_events_lag(items)
             self.log(message=f"Getting results with {len(items)} elements", level="info")
-            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
+            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(items))
 
             if len(items) > 0:
                 messages = [orjson.dumps(message).decode("utf-8") for message in items]
                 next_key = response.get("pages", {}).get("nextKey")
-                self.log(message=f"Sending the first batch of {len(messages)} messages", level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
+                self.log(
+                    message=f"Sending the first batch of {len(messages)} messages",
+                    level="info",
+                )
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(messages)
+                )
                 self.push_events_to_intakes(events=messages)
                 self.events_sum += len(messages)
 
@@ -210,8 +239,14 @@ class SophosXDRQueryTrigger(SophosConnector):
                     next_page_items = response_next_page.get("items", [])
                     next_messages = [orjson.dumps(message).decode("utf-8") for message in next_page_items]
                     self._observe_items_events_lag(next_page_items)
-                    self.log(message=f"Sending other batches of {len(next_messages)} messages", level="info")
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(next_messages))
+                    self.log(
+                        message=f"Sending other batches of {len(next_messages)} messages",
+                        level="info",
+                    )
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).inc(len(next_messages))
                     self.push_events_to_intakes(events=next_messages)
                     self.events_sum += len(next_messages)
                     next_key = response_next_page.get("pages", {}).get("nextKey")
@@ -222,7 +257,7 @@ class SophosXDRQueryTrigger(SophosConnector):
 
             else:
                 self.log(message="No messages to forward", level="info")
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
 
 
 class SophosXDRIOCQuery(SophosXDRQueryTrigger):

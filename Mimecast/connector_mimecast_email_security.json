@@ -36,5 +36,9 @@
     "title": "The configuration to fetch new events",
     "type": "object"
   },
-  "uuid": "a5b598ef-a962-4274-93de-b9e6be0cd915"
+  "uuid": "a5b598ef-a962-4274-93de-b9e6be0cd915",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

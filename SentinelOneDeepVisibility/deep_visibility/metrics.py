@@ -9,5 +9,5 @@ DISCARDED_EVENTS = Counter(
     name="discarded_events",
     documentation="Number of events discarded from the colect",
     namespace=prom_namespace,
-    labelnames=["intake_key"],
+    labelnames=["intake_key", "scalable_horizontally", "scalable_vertically"],
 )

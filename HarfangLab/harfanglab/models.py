@@ -33,7 +33,6 @@ class JobTriggerResult(BaseModel):
 
 
 class JobStatus(BaseModel):
-
     total: int  # number of job actions to be executed
 
     # status when running (in exec-time order)

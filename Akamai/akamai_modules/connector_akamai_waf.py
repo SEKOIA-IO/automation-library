@@ -17,7 +17,12 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from . import AkamaiModule
 from .client import ApiClient
 from .logging import get_logger
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 logger = get_logger()
 
@@ -75,6 +80,17 @@ class AkamaiWAFLogsConnector(Connector):
             client_secret=self.module.configuration.client_secret,
             access_token=self.module.configuration.access_token,
         )
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     @staticmethod
     def extract_attack_data(event: dict[str, Any]) -> dict[str, Any]:
@@ -139,7 +155,10 @@ class AkamaiWAFLogsConnector(Connector):
     def __fetch_next_events(self, from_date: int) -> Generator[list, None, None]:
         url = f"{self.module.configuration.base_url}/siem/v1/configs/{self.configuration.config_id}"
         response = self.client.get(
-            url=url, params={"from": from_date, "limit": self.page_size}, timeout=60, stream=True
+            url=url,
+            params={"from": from_date, "limit": self.page_size},
+            timeout=60,
+            stream=True,
         )
 
         while self.running:
@@ -158,7 +177,10 @@ class AkamaiWAFLogsConnector(Connector):
                         events_in_page += 1
 
                         if len(chunk) >= self.chunk_size:
-                            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
+                            INCOMING_MESSAGES.labels(
+                                intake_key=self.configuration.intake_key,
+                                **self.scalability_labels,
+                            ).inc(len(chunk))
                             yield chunk
                             chunk = []
 
@@ -168,22 +190,34 @@ class AkamaiWAFLogsConnector(Connector):
                         if events_in_page > 0:
                             # Yield remaining events that didn't fill a full chunk
                             if chunk:
-                                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
+                                INCOMING_MESSAGES.labels(
+                                    intake_key=self.configuration.intake_key,
+                                    **self.scalability_labels,
+                                ).inc(len(chunk))
                                 yield chunk
                                 chunk = []
 
                         else:
-                            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+                            EVENTS_LAG.labels(
+                                intake_key=self.configuration.intake_key,
+                                **self.scalability_labels,
+                            ).set(0)
                             return
 
             if offset is None:
                 if chunk:
-                    INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
+                    INCOMING_MESSAGES.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).inc(len(chunk))
                     yield chunk
                 return
 
             response = self.client.get(
-                url=url, params={"offset": offset, "limit": self.page_size}, timeout=60, stream=True
+                url=url,
+                params={"offset": offset, "limit": self.page_size},
+                timeout=60,
+                stream=True,
             )
 
     def fetch_events(self) -> Generator[list, None, None]:
@@ -207,7 +241,7 @@ class AkamaiWAFLogsConnector(Connector):
 
             delta_time = datetime.now(timezone.utc).timestamp() - most_recent_date_seen
             current_lag = int(delta_time)
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
     def __handle_response_error(self, response: requests.Response):
         if not response.ok:
@@ -262,7 +296,9 @@ class AkamaiWAFLogsConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(batch_of_events)
+                )
 
                 self.push_events_to_intakes(events=batch_of_events)
                 self.save_events_cache()
@@ -277,12 +313,17 @@ class AkamaiWAFLogsConnector(Connector):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="debug")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            batch_duration
+        )
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
         if delta_sleep > 0:
-            self.log(f"Next batch in the future. Waiting {delta_sleep} seconds", level="debug")
+            self.log(
+                f"Next batch in the future. Waiting {delta_sleep} seconds",
+                level="debug",
+            )
             time.sleep(delta_sleep)
 
     def run(self):  # pragma: no cover

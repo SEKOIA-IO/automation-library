@@ -26,5 +26,9 @@
   "description": "Fetch Imperva WAF logs",
   "docker_parameters": "imperva_logs",
   "name": "Imperva WAF logs",
-  "uuid": "7902efc5-a9c4-4ff1-9f82-b0551ec9d003"
+  "uuid": "7902efc5-a9c4-4ff1-9f82-b0551ec9d003",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

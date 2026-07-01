@@ -51,5 +51,9 @@
     "title": "The configuration to fetch new logs",
     "type": "object"
   },
-  "uuid": "c8297677-7f44-41f9-993b-28e5ec823554"
+  "uuid": "c8297677-7f44-41f9-993b-28e5ec823554",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": false
+  }
 }

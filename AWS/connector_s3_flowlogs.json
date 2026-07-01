@@ -57,5 +57,9 @@
     "title": "connector configuration",
     "type": "object"
   },
-  "uuid": "e055f048-73eb-11ee-b962-0242ac120002"
+  "uuid": "e055f048-73eb-11ee-b962-0242ac120002",
+  "labels": {
+    "scalable_horizontally": true,
+    "scalable_vertically": true
+  }
 }

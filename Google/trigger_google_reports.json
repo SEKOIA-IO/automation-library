@@ -73,5 +73,9 @@
     "type": "object"
   },
   "results": {},
-  "uuid": "ce5535a3-4d14-4d7b-9b5a-f948e64fe755"
+  "uuid": "ce5535a3-4d14-4d7b-9b5a-f948e64fe755",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

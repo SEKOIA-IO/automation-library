@@ -59,5 +59,9 @@
     "title": "MessageTrace Events",
     "type": "object"
   },
-  "uuid": "01578648-40c0-47ed-bb56-1c89003d290c"
+  "uuid": "01578648-40c0-47ed-bb56-1c89003d290c",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

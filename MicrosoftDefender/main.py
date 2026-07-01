@@ -1,5 +1,4 @@
 from microsoftdefender_modules import MicrosoftDefenderModule
-from microsoftdefender_modules.account_validator import MicrosoftDefenderAccountValidator
 from microsoftdefender_modules.action_cancel_machine_action import CancelMachineAction
 from microsoftdefender_modules.action_get_machine_action import GetMachineAction
 from microsoftdefender_modules.action_isolate_machine import IsolateMachineAction
@@ -10,11 +9,9 @@ from microsoftdefender_modules.action_unisolate_machine import UnIsolateMachineA
 from microsoftdefender_modules.action_unrestrict_code_execution import UnRestrictCodeExecutionAction
 from microsoftdefender_modules.action_update_alert import UpdateAlertAction
 from microsoftdefender_modules.connector_microsoft_defender_xdr import MicrosoftDefenderGraphAPIAlerts
-from asset_connector.device_assets import MicrosoftDefenderDeviceAssetConnector
 
 if __name__ == "__main__":
     module = MicrosoftDefenderModule()
-    module.register_account_validator(MicrosoftDefenderAccountValidator)
     module.register(UpdateAlertAction, "UpdateAlertAction")
     module.register(UpdateAlertAction, "AddCommentToAlert")
     module.register(GetMachineAction, "GetMachineAction")
@@ -26,5 +23,4 @@ if __name__ == "__main__":
     module.register(IsolateMachineAction, "IsolateMachineAction")
     module.register(CancelMachineAction, "CancelMachineAction")
     module.register(MicrosoftDefenderGraphAPIAlerts, "connector_microsoft_defender_xdr")
-    module.register(MicrosoftDefenderDeviceAssetConnector, "microsoft_defender_device_asset_connector")
     module.run()

@@ -39,5 +39,9 @@
     "title": "Sophos Events",
     "type": "object"
   },
-  "uuid": "5728b8e3-ad1a-431a-bcbd-083f5fde3672"
+  "uuid": "5728b8e3-ad1a-431a-bcbd-083f5fde3672",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

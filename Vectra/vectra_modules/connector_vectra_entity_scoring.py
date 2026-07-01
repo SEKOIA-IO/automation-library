@@ -67,6 +67,10 @@ class VectraEntityScoringConsumer(Thread):
         self.connector.log_exception(*args, **kwargs)
 
     @property
+    def scalability_labels(self) -> dict[str, str]:
+        return self.connector.scalability_labels
+
+    @property
     def running(self) -> bool:
         return not self._stop_event.is_set()
 
@@ -129,6 +133,9 @@ class VectraEntityScoringConsumer(Thread):
             return response
 
         except requests.exceptions.HTTPError as err:
+            if err.response is None:
+                raise
+
             level = "critical" if err.response.status_code in [401, 403] else "error"
             message = f"Request to Vectra API failed with status {err.response.status_code} - {err.response.reason}"
 
@@ -179,7 +186,9 @@ class VectraEntityScoringConsumer(Thread):
                 self.cursor.offset = next_checkpoint
 
             else:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.entity_type).set(0)
+                EVENTS_LAG.labels(
+                    intake_key=self.configuration.intake_key, type=self.entity_type, **self.scalability_labels
+                ).set(0)
                 return
 
             if raw["remaining_count"] == 0:
@@ -208,7 +217,9 @@ class VectraEntityScoringConsumer(Thread):
         if most_recent_date_seen:
             delta_time = (datetime.now(timezone.utc) - most_recent_date_seen).total_seconds()
             current_lag = int(delta_time)
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.entity_type).set(current_lag)
+            EVENTS_LAG.labels(
+                intake_key=self.configuration.intake_key, type=self.entity_type, **self.scalability_labels
+            ).set(current_lag)
 
     def next_batch(self):
         # save the starting time
@@ -224,9 +235,9 @@ class VectraEntityScoringConsumer(Thread):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, type=self.entity_type).inc(
-                    len(batch_of_events)
-                )
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key, type=self.entity_type, **self.scalability_labels
+                ).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
 
             else:
@@ -242,9 +253,9 @@ class VectraEntityScoringConsumer(Thread):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="info")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, type=self.entity_type).observe(
-            batch_duration
-        )
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.configuration.intake_key, type=self.entity_type, **self.scalability_labels
+        ).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
@@ -268,6 +279,17 @@ class VectraEntityScoringConnector(Connector):
     configuration: VectraEntityScoringConnectorConfiguration
 
     ENTITY_TYPES = ("account", "host")
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)

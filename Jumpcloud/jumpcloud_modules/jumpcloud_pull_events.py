@@ -81,6 +81,17 @@ class JumpcloudDirectoryInsightsConnector(Connector):
             return most_recent_date_seen
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
+    @cached_property
     def client(self):
         return ApiClient(self.module.configuration.apikey)
 
@@ -118,7 +129,9 @@ failed with status {response.status_code} - {response.reason}"
 
             # get events from the response
             events = response.json()
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events or []))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(events or [])
+            )
 
             # yielding events if defined
             if events:
@@ -186,7 +199,7 @@ failed with status {response.status_code} - {response.reason}"
                 level="info",
             )
 
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
     def next_batch(self):
         # save the starting time
@@ -202,7 +215,9 @@ failed with status {response.status_code} - {response.reason}"
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(events)
+                )
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -214,7 +229,9 @@ failed with status {response.status_code} - {response.reason}"
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            batch_duration
+        )
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

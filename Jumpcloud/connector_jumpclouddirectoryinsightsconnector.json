@@ -36,5 +36,9 @@
     "required": [
       "intake_key"
     ]
+  },
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
   }
 }

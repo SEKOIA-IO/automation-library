@@ -32,5 +32,9 @@
     "title": "Microsoft Sentinel Alerts",
     "type": "object"
   },
-  "uuid": "7537aa6a-7411-4feb-a6c8-f02d55077db9"
+  "uuid": "7537aa6a-7411-4feb-a6c8-f02d55077db9",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

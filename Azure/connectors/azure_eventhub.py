@@ -14,7 +14,13 @@ from azure.storage.blob.aio import BlobServiceClient
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, MESSAGES_AGE, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    MESSAGES_AGE,
+    OUTCOMING_EVENTS,
+)
 
 
 class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
@@ -36,7 +42,8 @@ class Client(object):
     @cached_property
     def checkpoint_store(self) -> BlobCheckpointStore:
         return BlobCheckpointStore.from_connection_string(
-            self.configuration.storage_connection_string, container_name=self.configuration.storage_container_name
+            self.configuration.storage_connection_string,
+            container_name=self.configuration.storage_container_name,
         )
 
     def client(self) -> EventHubConsumerClient:
@@ -82,6 +89,17 @@ class AzureEventsHubTrigger(AsyncConnector):
     def client(self) -> Client:
         return Client(self.configuration)
 
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
     async def _initialize_checkpoint_store(self) -> None:  # pragma: no cover
         """
         Pre-create the storage container to prevent race conditions during partition ownership claims.
@@ -122,8 +140,8 @@ class AzureEventsHubTrigger(AsyncConnector):
             )
 
             # reset the metrics
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
-            MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
+            MESSAGES_AGE.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
 
     @staticmethod
     def get_records_from_message(message: EventData) -> tuple[list[Any], str]:
@@ -147,7 +165,9 @@ class AzureEventsHubTrigger(AsyncConnector):
             return [body], "str"
 
     async def forward_events(self, messages: list[EventData]) -> None:
-        INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(messages))
+        INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+            len(messages)
+        )
         start = time.time()
 
         records = []
@@ -174,14 +194,18 @@ class AzureEventsHubTrigger(AsyncConnector):
 
         if len(records) > 0:
             self.log(f"Forward {len(records)} events")
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(records))
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(records)
+            )
             await self.push_data_to_intakes(events=records)
             self._has_more_events = True
         else:
             self.log("No events to forward")
             self._has_more_events = False
 
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(time.time() - start)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            time.time() - start
+        )
 
         enqueued_times = [message.enqueued_time for message in messages if message.enqueued_time is not None]
         if len(enqueued_times) > 0:  # pragma: no cover
@@ -190,11 +214,11 @@ class AzureEventsHubTrigger(AsyncConnector):
 
             # Compute the distance from the most recent message consumed
             current_lag = min(messages_age)
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
             # Monitor the age of all messages
             for age in messages_age:
-                MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).set(age)
+                MESSAGES_AGE.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(age)
 
     async def handle_exception(self, partition_context: PartitionContext, exception: Exception) -> None:
         self.log_exception(

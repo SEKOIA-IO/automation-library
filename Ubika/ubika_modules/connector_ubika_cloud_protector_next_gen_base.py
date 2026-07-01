@@ -73,6 +73,17 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
         # HTTP client for API requests (lazily initialized)
         self._client: UbikaCloudProtectorNextGenApiClient | None = None
 
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
     def load_events_cache(self) -> Cache:
         """
         Load the events cache.
@@ -194,7 +205,9 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
                 return
 
             # Yield the current batch of items
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(items))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(items)
+            )
             yield items
 
             # Look for a nextPageToken to fetch further pages
@@ -316,7 +329,9 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(batch_of_events)
+                )
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -338,7 +353,9 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
             message=f"Fetched and forwarded events in {batch_duration} seconds",
             level="debug",
         )
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            batch_duration
+        )
 
     def run(self) -> None:
         """

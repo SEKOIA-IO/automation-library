@@ -59,5 +59,9 @@
     "title": "Hub Events",
     "type": "object"
   },
-  "uuid": "57f8f587-18ee-434b-a4ed-b5459f5b0fef"
+  "uuid": "57f8f587-18ee-434b-a4ed-b5459f5b0fef",
+  "labels": {
+    "scalable_horizontally": true,
+    "scalable_vertically": true
+  }
 }

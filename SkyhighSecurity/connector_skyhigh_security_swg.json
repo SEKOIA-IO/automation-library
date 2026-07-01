@@ -61,5 +61,9 @@
     "title": "Fetch events from Skyhigh Security Secure Web Gateway (SWG) API",
     "type": "object"
   },
-  "uuid": "b30b9125-8dfd-4958-85b1-9a39d172d94c"
+  "uuid": "b30b9125-8dfd-4958-85b1-9a39d172d94c",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

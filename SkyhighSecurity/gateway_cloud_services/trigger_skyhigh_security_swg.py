@@ -16,7 +16,12 @@ from sekoia_automation.storage import PersistentJSON
 
 from gateway_cloud_services.client import ApiClient
 from gateway_cloud_services.logging import get_logger
-from gateway_cloud_services.metrics import COLLECT_EVENTS_DURATION, EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
+from gateway_cloud_services.metrics import (
+    COLLECT_EVENTS_DURATION,
+    EVENTS_LAG,
+    INCOMING_EVENTS,
+    OUTCOMING_EVENTS,
+)
 
 logger = get_logger()
 
@@ -110,7 +115,10 @@ class EventCollector(Thread):
             message=f"Current lag {int(current_lag.total_seconds())} seconds.",
             level="info",
         )
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
+        EVENTS_LAG.labels(
+            intake_key=self.configuration.intake_key,
+            **self.connector.scalability_labels,
+        ).set(int(current_lag.total_seconds()))
 
         if self.end_date >= now:
             difference = self.end_date - now
@@ -147,9 +155,10 @@ class EventCollector(Thread):
             "Skyhigh API response received",
             time_elapsed_seconds=int(time_elapsed.total_seconds()),
         )
-        COLLECT_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-            int(time_elapsed.total_seconds())
-        )
+        COLLECT_EVENTS_DURATION.labels(
+            intake_key=self.configuration.intake_key,
+            **self.connector.scalability_labels,
+        ).observe(int(time_elapsed.total_seconds()))
 
         if not response.ok:
             level = "critical" if response.status_code in [401, 403] else "error"
@@ -249,7 +258,10 @@ class Transformer(Worker):
                     for messages in batched(self._transform(response), self.max_batch_size):
                         if len(messages) > 0:
                             nb_events = len(messages)
-                            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(nb_events)
+                            INCOMING_EVENTS.labels(
+                                intake_key=self.configuration.intake_key,
+                                **self.connector.scalability_labels,
+                            ).inc(nb_events)
                             logger.info("Transformed events", nb_events=nb_events)
                             self.output_queue.put(list(messages))
 
@@ -264,7 +276,12 @@ class Transformer(Worker):
 class EventsForwarder(Worker):
     KIND = "forwarder"
 
-    def __init__(self, connector: "SkyhighSecuritySWGTrigger", queue: queue.Queue, max_batch_size: int = 20000):
+    def __init__(
+        self,
+        connector: "SkyhighSecuritySWGTrigger",
+        queue: queue.Queue,
+        max_batch_size: int = 20000,
+    ):
         super().__init__()
         self.connector = connector
         self.configuration = connector.configuration
@@ -294,7 +311,10 @@ class EventsForwarder(Worker):
         try:
             while self.is_running or self.queue.qsize() > 0:
                 events = self.next_batch(self.max_batch_size)
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key,
+                    **self.connector.scalability_labels,
+                ).inc(len(events))
 
                 if len(events) > 0:
                     self.connector.log(
@@ -317,6 +337,17 @@ class SkyhighSecuritySWGTrigger(Connector):
         self.context = PersistentJSON("context.json", self._data_path)
         self.context_lock = Lock()
 
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
     def run(self):  # pragma: no cover
         self.log(message="SkyhighSWG Trigger has started", level="info")
 
@@ -329,13 +360,22 @@ class SkyhighSecuritySWGTrigger(Connector):
         # start the event forwarder
         batch_size = int(os.environ.get("BATCH_SIZE", 10000))
         forwarders = Workers.create(
-            int(os.environ.get("NB_FORWARDERS", 1)), EventsForwarder, self, forwarding_queue, batch_size
+            int(os.environ.get("NB_FORWARDERS", 1)),
+            EventsForwarder,
+            self,
+            forwarding_queue,
+            batch_size,
         )
         forwarders.start()
 
         # start the transformers
         transformers = Workers.create(
-            int(os.environ.get("NB_TRANSFORMERS", 1)), Transformer, self, collect_queue, forwarding_queue, batch_size
+            int(os.environ.get("NB_TRANSFORMERS", 1)),
+            Transformer,
+            self,
+            collect_queue,
+            forwarding_queue,
+            batch_size,
         )
         transformers.start()
 

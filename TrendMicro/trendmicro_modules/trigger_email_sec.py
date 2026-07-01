@@ -13,7 +13,12 @@ from sekoia_automation.storage import PersistentJSON
 from . import TrendMicroModule
 from .client import ApiClient
 from .helpers import iso8601_to_timestamp, unixtime_to_iso8601
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 
 class TrendMicroConnectorConfiguration(DefaultConnectorConfiguration):
@@ -55,7 +60,10 @@ class TrendMicroWorker(Thread):
 
     @cached_property
     def client(self) -> ApiClient:
-        return ApiClient(username=self.connector.configuration.username, api_key=self.connector.configuration.api_key)
+        return ApiClient(
+            username=self.connector.configuration.username,
+            api_key=self.connector.configuration.api_key,
+        )
 
     def get_last_timestamp(self) -> int:
         now = int(time.time())  # in seconds
@@ -198,9 +206,11 @@ class TrendMicroWorker(Thread):
                     message=f"{self.log_type}: Forwarded {events_len} events to the intake",
                     level="info",
                 )
-                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).inc(
-                    events_len
-                )
+                INCOMING_MESSAGES.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.log_type,
+                    **self.connector.scalability_labels,
+                ).inc(events_len)
 
                 self.connector.push_events_to_intakes(events=batch_of_events)
 
@@ -211,15 +221,19 @@ class TrendMicroWorker(Thread):
                 if last_event_timestamp > most_recent_timestamp_seen:
                     self.set_last_timestamp(last_event_timestamp)
                 events_lag = int(time.time()) - most_recent_timestamp_seen
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).set(
-                    events_lag
-                )
+                EVENTS_LAG.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.log_type,
+                    **self.connector.scalability_labels,
+                ).set(events_lag)
                 # We should cache the list of events that we pushed as well
                 self.set_recent_pushed_events(events)
 
-                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).inc(
-                    len(batch_of_events)
-                )
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.log_type,
+                    **self.connector.scalability_labels,
+                ).inc(len(batch_of_events))
 
             else:
                 self.log(
@@ -235,9 +249,11 @@ class TrendMicroWorker(Thread):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
 
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).observe(
-            batch_duration
-        )
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.connector.configuration.intake_key,
+            type=self.log_type,
+            **self.connector.scalability_labels,
+        ).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.frequency - batch_duration
@@ -275,6 +291,17 @@ class TrendMicroEmailSecurityConnector(Connector):
         self.context_lock = Lock()
 
         self.consumers = {}
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     def start_consumers(self) -> dict[str, TrendMicroWorker]:
         consumers = {}

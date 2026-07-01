@@ -81,6 +81,17 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
         self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
+    @cached_property
     def sqs_wrapper(self) -> SqsWrapper:  # pragma: no cover
         """
         Get SQS wrapper.
@@ -165,7 +176,8 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
 
         while continue_receiving:
             async with self.sqs_wrapper.receive_messages(
-                max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
+                max_messages=self.sqs_max_messages,
+                visibility_timeout=self.sqs_visibility_timeout,
             ) as messages:
                 message_records = []
 
@@ -180,12 +192,17 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
                         # This are custom CrowdStrike messages, we just parse them as it is
                         message_records.append(orjson.loads(message))
                     except (ValueError, TypeError) as e:  # pragma: no cover
-                        self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
+                        self.log_exception(
+                            e,
+                            message=f"Invalid JSON in message.\nInvalid message is: {message}",
+                        )
 
                 if not message_records:
                     continue_receiving = False
 
-                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_records))
+                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(message_records)
+                )
                 for record in message_records:
                     try:
                         # This is only one difference between this connector and the base S3 one
@@ -238,16 +255,23 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
                     # Validate json_record is a dict before calling .get()
                     if not isinstance(json_record, dict):
                         self.log(
-                            message=f"Record is not a dict, got {type(json_record).__name__}, skipping", level="error"
+                            message=f"Record is not a dict, got {type(json_record).__name__}, skipping",
+                            level="error",
                         )
-                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+                        DISCARDED_EVENTS.labels(
+                            intake_key=self.configuration.intake_key,
+                            **self.scalability_labels,
+                        ).inc()
                         continue
 
                     if (
                         json_record.get("event_simpleName") is None
                         or json_record.get("event_simpleName") in EXCLUDED_EVENT_ACTIONS
                     ):
-                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+                        DISCARDED_EVENTS.labels(
+                            intake_key=self.configuration.intake_key,
+                            **self.scalability_labels,
+                        ).inc()
                         continue
 
                     yield record.decode("utf-8")

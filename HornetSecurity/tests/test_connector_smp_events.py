@@ -521,10 +521,8 @@ def test_fetch_events_with_direction(module, data_storage, event1, event2):
         assert events_list[1][0]["msg_id"] == event2["msg_id"]
 
 
-@pytest.mark.skipif(
-    "{'HORNETSECURITY_BASE_URL', 'HORNETSECURITY_API_TOKEN', 'HORNETSECURITY_SCOPE'} \
-    .issubset(os.environ.keys()) == False"
-)
+@pytest.mark.skipif("{'HORNETSECURITY_BASE_URL', 'HORNETSECURITY_API_TOKEN', 'HORNETSECURITY_SCOPE'} \
+    .issubset(os.environ.keys()) == False")
 def test_next_batch_integration(data_storage):
     """
     Test the fetch_events method of SMPEventsConnector.

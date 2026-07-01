@@ -21,5 +21,9 @@
     "title": "The configuration to fetch new security events",
     "type": "object"
   },
-  "uuid": "c1f7f0b8-0f71-480a-a67f-0053af356c48"
+  "uuid": "c1f7f0b8-0f71-480a-a67f-0053af356c48",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": false
+  }
 }

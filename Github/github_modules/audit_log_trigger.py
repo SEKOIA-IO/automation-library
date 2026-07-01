@@ -3,6 +3,7 @@
 import asyncio
 import time
 import traceback
+from functools import cached_property
 from typing import Any, Optional
 
 import orjson
@@ -13,9 +14,17 @@ from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from github_modules import GithubModule
-from github_modules.async_client.http_client import AsyncGithubClient, BadCredentialsError
+from github_modules.async_client.http_client import (
+    AsyncGithubClient,
+    BadCredentialsError,
+)
 from github_modules.logging import get_logger
-from github_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from github_modules.metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 logger = get_logger()
 
@@ -51,6 +60,17 @@ class AuditLogConnector(AsyncConnector):
         """
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     @property
     def github_client(self) -> AsyncGithubClient:
@@ -140,7 +160,9 @@ class AuditLogConnector(AsyncConnector):
         current_lag: int = 0
         batch_start_time = time.time()
         audit_events = await self.get_audit_events(self.last_ts)
-        INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(audit_events))
+        INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+            len(audit_events)
+        )
 
         if type(audit_events) is list:
             filtered_data = self._refine_batch(audit_events, batch_start_time)
@@ -149,7 +171,9 @@ class AuditLogConnector(AsyncConnector):
             if filtered_data:
                 self.last_ts = filtered_data[-1]["@timestamp"]
                 batch_of_events = [orjson.dumps(event).decode("utf-8") for event in filtered_data]
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(batch_of_events)
+                )
 
                 await self.push_data_to_intakes(events=batch_of_events)
 
@@ -172,13 +196,15 @@ class AuditLogConnector(AsyncConnector):
                 level="warning",
             )
 
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            batch_duration
+        )
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

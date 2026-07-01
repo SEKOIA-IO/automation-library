@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## 2026-05-22 - 2.16.5
+
+### Changed
+
+- Add scalability labels to Prometheus metrics
+
 ## 2025-10-20 - 2.16.4
 
 ### Fixed

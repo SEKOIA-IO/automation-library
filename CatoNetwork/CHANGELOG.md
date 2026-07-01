@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-22 - 1.5.3
+
+### Changed
+
+- Add scalability labels to Prometheus metrics
+
+## 2026-05-22 - 1.5.2
+
 ### Fixed
 
 - Accept Cato account IDs from 4 to 8 digits in module configuration

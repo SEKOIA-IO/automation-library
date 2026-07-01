@@ -16,5 +16,9 @@
     "title": "CrowdStrike Falcon connector",
     "type": "object"
   },
-  "uuid": "5258c493-3624-4301-a368-198e03df5d27"
+  "uuid": "5258c493-3624-4301-a368-198e03df5d27",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": false
+  }
 }

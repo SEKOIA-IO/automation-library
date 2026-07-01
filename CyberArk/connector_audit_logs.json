@@ -38,5 +38,9 @@
     "secrets": [
       "api_key"
     ]
+  },
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": false
   }
 }

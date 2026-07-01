@@ -148,7 +148,6 @@ class BlockMaliciousFilesAction(PaloAltoCortexXDRAction):
         }
 
     def run(self, arguments: dict[str, Any]) -> dict[str, Any]:
-
         count_blocked_fiels = 0
         for payload in self.request_payload(arguments):
             count_blocked_fiels += len(payload["request_data"]["hash_list"])

@@ -7,8 +7,12 @@ from respx import MockRouter
 from sekoia_automation.storage import PersistentJSON
 
 from ubika_modules import UbikaModule
-from ubika_modules.connector_ubika_cloud_protector_base import UbikaCloudProtectorConnectorConfiguration
-from ubika_modules.connector_ubika_cloud_protector_traffic import UbikaCloudProtectorTrafficConnector
+from ubika_modules.connector_ubika_cloud_protector_base import (
+    UbikaCloudProtectorConnectorConfiguration,
+)
+from ubika_modules.connector_ubika_cloud_protector_traffic import (
+    UbikaCloudProtectorTrafficConnector,
+)
 
 
 @pytest.fixture

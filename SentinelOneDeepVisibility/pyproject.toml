@@ -41,3 +41,6 @@ develop = false
 [tool.poetry.group.dev.dependencies]
 mypy = "^0.990"
 Faker = "^13.12.0"
+
+[tool.poetry.dev-dependencies.black]
+version = "^26.3.1"

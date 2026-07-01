@@ -12,7 +12,12 @@ from sekoia_automation.storage import PersistentJSON
 
 from . import VadeCloudModule
 from .client import ApiClient
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 
 class FetchEventException(Exception):
@@ -20,7 +25,6 @@ class FetchEventException(Exception):
 
 
 class APIException(Exception):
-
     def __init__(self, code: int, reason: str, content: str):
         super().__init__(reason)
         self.code = code
@@ -93,7 +97,9 @@ class VadeCloudConsumer(Thread):
         params.update(self.params)  # override with custom stuff
 
         response = self.client.post(
-            f"{self.connector.module.configuration.hostname}/rest/v3.0/filteringlog/getReport", json=params, timeout=60
+            f"{self.connector.module.configuration.hostname}/rest/v3.0/filteringlog/getReport",
+            json=params,
+            timeout=60,
         )
 
         return response
@@ -112,7 +118,10 @@ class VadeCloudConsumer(Thread):
                     message = f"{message}: {error['error']}"
 
                 except requests.exceptions.JSONDecodeError as e:  # pragma: no cover
-                    self.log(message="Cannot parse not 200 response as json {0}".format(str(e)), level="debug")
+                    self.log(
+                        message="Cannot parse not 200 response as json {0}".format(str(e)),
+                        level="debug",
+                    )
 
                 raise FetchEventException(message)
 
@@ -160,9 +169,11 @@ class VadeCloudConsumer(Thread):
 
                 if last_event_timestamp:  # pragma: no cover
                     event_lag = int(time.time()) - last_event_timestamp // 1000
-                    EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(
-                        event_lag
-                    )
+                    EVENTS_LAG.labels(
+                        intake_key=self.connector.configuration.intake_key,
+                        type=self.name,
+                        **self.connector.scalability_labels,
+                    ).set(event_lag)
 
                     # save the greater date ever seen
                     if last_event_timestamp > most_recent_timestamp_seen:
@@ -190,15 +201,19 @@ class VadeCloudConsumer(Thread):
                     level="info",
                 )
 
-                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.name).inc(
-                    len(batch_of_events)
-                )
+                INCOMING_MESSAGES.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.name,
+                    **self.connector.scalability_labels,
+                ).inc(len(batch_of_events))
 
                 self.connector.push_events_to_intakes(events=batch_of_events)
 
-                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.name).inc(
-                    len(events)
-                )
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.name,
+                    **self.connector.scalability_labels,
+                ).inc(len(events))
 
             else:
                 self.log(
@@ -210,9 +225,11 @@ class VadeCloudConsumer(Thread):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
 
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.name).observe(
-            batch_duration
-        )
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.connector.configuration.intake_key,
+            type=self.name,
+            **self.connector.scalability_labels,
+        ).observe(batch_duration)
 
         self.log(
             message=f"{self.name}: Fetched and forwarded events in {batch_duration} seconds",
@@ -240,7 +257,8 @@ class VadeCloudConsumer(Thread):
 
         self.connector.log(message, level="error")
         self.connector.log(
-            f"WatchGuard: Wait {self.connector.configuration.frequency}s before next attempt", level="info"
+            f"WatchGuard: Wait {self.connector.configuration.frequency}s before next attempt",
+            level="info",
         )
         time.sleep(self.connector.configuration.frequency)
 
@@ -277,6 +295,17 @@ class VadeCloudLogsConnector(Connector):
         self.context_lock = Lock()
         self.consumers: dict[str, VadeCloudConsumer] = {}
 
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
     def create_client(self) -> ApiClient:
         try:
             return ApiClient(
@@ -293,11 +322,15 @@ class VadeCloudLogsConnector(Connector):
 
             http_error_code = error_response.status_code
             if http_error_code in [401, 403, 404]:
-                self.log(message=f"Wrong login or password. Please check our credentials", level="critical")
+                self.log(
+                    message=f"Wrong login or password. Please check our credentials",
+                    level="critical",
+                )
 
             if http_error_code == 400 and error_response.json().get("error", {}).get("trKey", "") == "INVALID_USER":
                 self.log(
-                    message=f"Invalid account type. It must be User, not Admin. Please change it", level="critical"
+                    message=f"Invalid account type. It must be User, not Admin. Please change it",
+                    level="critical",
                 )
 
             raise error
@@ -322,7 +355,10 @@ class VadeCloudLogsConnector(Connector):
     def supervise_consumers(self, consumers: dict[str, VadeCloudConsumer], client: ApiClient) -> None:
         for consumer_name, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
-                self.log(message=f"Restart consuming logs of `{consumer_name}` emails", level="info")
+                self.log(
+                    message=f"Restart consuming logs of `{consumer_name}` emails",
+                    level="info",
+                )
 
                 consumers[consumer_name] = VadeCloudConsumer(
                     connector=self,
@@ -335,7 +371,10 @@ class VadeCloudLogsConnector(Connector):
     def stop_consumers(self, consumers: dict[str, VadeCloudConsumer]) -> None:
         for consumer_name, consumer in consumers.items():
             if consumer is not None and consumer.is_alive():
-                self.log(message=f"Stop consuming logs of `{consumer_name}` emails", level="info")
+                self.log(
+                    message=f"Stop consuming logs of `{consumer_name}` emails",
+                    level="info",
+                )
                 consumer.stop()
 
     def run(self) -> None:  # pragma: no cover

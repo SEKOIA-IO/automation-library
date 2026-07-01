@@ -36,7 +36,6 @@ class BroadcomCloudSwgConnectorConfig(DefaultConnectorConfiguration):
 
 @dataclass
 class DatetimeRange(object):
-
     start_date: datetime | None = None
     end_date: datetime | None = None
 
@@ -84,7 +83,8 @@ class DatetimeRange(object):
             new_start_date = self.utc_start_date
 
         return DatetimeRange(
-            start_date=new_start_date + timedelta(microseconds=1), end_date=new_end_date - timedelta(microseconds=1)
+            start_date=new_start_date + timedelta(microseconds=1),
+            end_date=new_end_date - timedelta(microseconds=1),
         )
 
     def duplicate(self) -> "DatetimeRange":
@@ -127,6 +127,17 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
     _broadcom_cloud_swg_client: BroadcomCloudSwgClient | None = None
     _rate_limiter: AsyncLimiter | None = None
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         """Init BroadcomCloudSwgConnector."""
@@ -285,7 +296,10 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
     @staticmethod
     async def produce_file_to_queue(
-        file_path: str, queue: Queue[dict[str, str] | None], date_range: DatetimeRange, consumers_count: int = 1
+        file_path: str,
+        queue: Queue[dict[str, str] | None],
+        date_range: DatetimeRange,
+        consumers_count: int = 1,
     ) -> DatetimeRange:
         """
         Reads zipped archive line by line and produce parsed messages to queue.
@@ -416,20 +430,19 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                     local_file_name = await self.broadcom_cloud_swg_client.download_file(file_id)
 
             else:
-                local_file_name, _ = await self.broadcom_cloud_swg_client.get_near_realtime_report(_date_to_process)
+                (
+                    local_file_name,
+                    _,
+                ) = await self.broadcom_cloud_swg_client.get_near_realtime_report(_date_to_process)
 
         except Exception as e:
-            logger.error(
-                """
+            logger.error("""
                     Error while getting file:
                      Date: {0}
                      File id: {1}
                      Offsets: {2}
                      Exception: {3}
-                """.format(
-                    date_to_process, file_id, _date_range, e
-                )
-            )
+                """.format(date_to_process, file_id, _date_range, e))
 
         if local_file_name is not None:
             logger.info("File {0}: Start to decompress and process zip file".format(local_file_name))
@@ -494,7 +507,8 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                 result.append(process_result)
 
         process_result = await self.process_datetime(
-            datetime.fromtimestamp(current_file / 1000, pytz.utc), offsets.get(current_file)
+            datetime.fromtimestamp(current_file / 1000, pytz.utc),
+            offsets.get(current_file),
         )
         self.update_latest_offsets({**offsets, process_result[0]: process_result[1]})
         result.append(process_result)
@@ -527,18 +541,26 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                     result_count, last_event_date = loop.run_until_complete(self.get_events())
                     processing_end = time.time()
 
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
-                        processing_end - last_event_date.timestamp()
-                    )
+                    EVENTS_LAG.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).set(processing_end - last_event_date.timestamp())
 
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result_count)
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).inc(result_count)
 
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                        last_event_date.timestamp() - processing_start
-                    )
+                    FORWARD_EVENTS_DURATION.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).observe(last_event_date.timestamp() - processing_start)
 
                     if result_count > 0:
-                        self.log(message="Total forwarded {0} records".format(result_count), level="info")
+                        self.log(
+                            message="Total forwarded {0} records".format(result_count),
+                            level="info",
+                        )
                     else:
                         self.log(message="No records to forward", level="info")
                         time.sleep(self.configuration.frequency)

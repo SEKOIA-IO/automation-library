@@ -1,6 +1,7 @@
 import os
 import queue
 import time
+from functools import cached_property
 from typing import Any, Optional
 
 from sekoia_automation.connector import Connector
@@ -25,6 +26,17 @@ class RetarusConnector(Connector):
         self.queue_get_block = True
         self.queue_get_retries = 10
 
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
     def run(self):  # pragma: no cover
         self.log(message="Retarus Events Trigger has started", level="info")
 
@@ -46,7 +58,9 @@ class RetarusConnector(Connector):
                     message="Forward an event to the intake",
                     level="info",
                 )
-                OUTGOING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                OUTGOING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(events)
+                )
                 self.push_events_to_intakes(events=events)
 
             # Wait 5 seconds for the next supervision

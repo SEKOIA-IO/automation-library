@@ -10,7 +10,12 @@ from sekoia_automation.storage import PersistentJSON
 from . import ExtraHopModule
 from .client import ApiClient
 from .client.auth import ExtraHopApiAuthentication
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 
 class ExtraHopReveal360Configuration(DefaultConnectorConfiguration):
@@ -26,6 +31,17 @@ class ExtraHopReveal360Connector(Connector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self.from_date = self.get_last_timestamp()
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     @cached_property
     def client(self) -> ApiClient:
@@ -104,7 +120,9 @@ class ExtraHopReveal360Connector(Connector):
             if next_events:
                 # Filter out old, but ongoing detections
                 next_events = [event for event in next_events if event["start_time"] >= most_recent_timestamp_seen]
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(next_events))
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(next_events)
+                )
 
                 if len(next_events) > 0:
                     last_event = max(next_events, key=lambda x: x["start_time"])
@@ -122,7 +140,7 @@ class ExtraHopReveal360Connector(Connector):
             self.set_last_timestamp(last_timestamp=self.from_date)
 
         # Report the current lag
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
     def next_batch(self) -> None:
         batch_start_time = time.time()
@@ -132,7 +150,9 @@ class ExtraHopReveal360Connector(Connector):
 
             # if the batch is full, push it
             if len(batch_of_events) > 0:
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(events)
+                )
                 self.push_events_to_intakes(events=batch_of_events)
                 self.log(
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
@@ -142,12 +162,17 @@ class ExtraHopReveal360Connector(Connector):
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            batch_duration
+        )
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
         if delta_sleep > 0:
-            self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
+            self.log(
+                message=f"Next batch in the future. Waiting {delta_sleep} seconds",
+                level="info",
+            )
             time.sleep(delta_sleep)
 
     def run(self) -> None:

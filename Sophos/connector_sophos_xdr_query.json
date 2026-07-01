@@ -32,5 +32,9 @@
     "title": "Sophos Query Events",
     "type": "object"
   },
-  "uuid": "d7052d5e-0ccc-403f-928a-f63cb71b2e0c"
+  "uuid": "d7052d5e-0ccc-403f-928a-f63cb71b2e0c",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

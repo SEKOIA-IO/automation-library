@@ -2,7 +2,7 @@ import asyncio
 import time
 from asyncio import Queue
 from datetime import datetime, timedelta, timezone
-from functools import reduce
+from functools import cached_property, reduce
 from typing import Annotated, Any, Optional, TypeAlias, cast
 
 import orjson
@@ -52,7 +52,11 @@ class CompanyCheckpoint(BaseModel):
         if parsed_last_seen is not None and parsed_last_seen >= result:
             return self
 
-        return CompanyCheckpoint(company_uuid=self.company_uuid, last_seen=result.strftime("%Y-%m-%d"), offset=None)
+        return CompanyCheckpoint(
+            company_uuid=self.company_uuid,
+            last_seen=result.strftime("%Y-%m-%d"),
+            offset=None,
+        )
 
 
 class Checkpoint(BaseModel):
@@ -121,6 +125,17 @@ class PullFindingsConnector(AsyncConnector):
 
     module: BitsightModule
     configuration: PullFindingsConnectorConfiguration
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         """Init PullFindingsConnector."""
@@ -243,7 +258,10 @@ class PullFindingsConnector(AsyncConnector):
         """
         Fetch next batch of findings.
         """
-        logger.info("Start fetching next batch of findings. Companies {0}", self.module.configuration.company_uuids)
+        logger.info(
+            "Start fetching next batch of findings. Companies {0}",
+            self.module.configuration.company_uuids,
+        )
         checkpoint = self.get_checkpoint()
 
         company_ids = self.module.configuration.company_uuids
@@ -288,19 +306,31 @@ class PullFindingsConnector(AsyncConnector):
                         logger.info("No new events to forward")
 
                     # report the lag
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+                    EVENTS_LAG.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).set(current_lag)
 
                     # report the number of forwarded events
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result_count)
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).inc(result_count)
 
                     # compute and report the duration to fetch the events
                     batch_duration = int(processing_end - processing_start)
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+                    FORWARD_EVENTS_DURATION.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).observe(batch_duration)
 
                     # compute the remaining sleeping time. If greater than 0, sleep
                     delta_sleep = self.configuration.frequency - batch_duration
                     if delta_sleep > 0:
-                        self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
+                        self.log(
+                            message=f"Next batch in the future. Waiting {delta_sleep} seconds",
+                            level="info",
+                        )
                         time.sleep(delta_sleep)
 
             except Exception as error:

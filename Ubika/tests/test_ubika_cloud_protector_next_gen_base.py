@@ -46,7 +46,11 @@ def test_handle_response_error(trigger):
         trigger._handle_response_error(response)
     assert "Internal Error" in str(m.value)
     # Should not raise
-    response = httpx.Response(status_code=200, request=request, json={"spec": {"items": [], "nextPageToken": None}})
+    response = httpx.Response(
+        status_code=200,
+        request=request,
+        json={"spec": {"items": [], "nextPageToken": None}},
+    )
     trigger._handle_response_error(response)
 
 

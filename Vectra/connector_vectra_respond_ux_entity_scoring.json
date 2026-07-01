@@ -41,5 +41,9 @@
     "title": "Vectra Respond UX Entity Scoring",
     "type": "object"
   },
-  "uuid": "a1ca3586-8e85-4381-8cf5-ad944e189c6a"
+  "uuid": "a1ca3586-8e85-4381-8cf5-ad944e189c6a",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

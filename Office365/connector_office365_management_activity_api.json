@@ -36,5 +36,9 @@
   },
   "uuid": "584ebe4c-d94f-44ed-b53b-fe4f7ccaf6c8",
   "slug": "o365mgmtapi",
-  "results": {}
+  "results": {},
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

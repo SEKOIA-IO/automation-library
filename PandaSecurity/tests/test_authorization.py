@@ -6,10 +6,8 @@ import pytest
 from aether_endpoint_security_api import RetrievesListOfDevices
 
 
-@pytest.mark.skipif(
-    "{'WG_API_KEY', 'WG_ACCOUNT_ID', 'WG_ACCESS_ID', \
-            'WG_ACCESS_SECRET'}.issubset(os.environ.keys()) == False"
-)
+@pytest.mark.skipif("{'WG_API_KEY', 'WG_ACCOUNT_ID', 'WG_ACCESS_ID', \
+            'WG_ACCESS_SECRET'}.issubset(os.environ.keys()) == False")
 def test_authorization():
     action = RetrievesListOfDevices()
     action.module.configuration = {

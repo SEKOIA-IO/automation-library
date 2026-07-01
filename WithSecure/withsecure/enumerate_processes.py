@@ -17,7 +17,6 @@ class EnumerateProcesses(ResponseAction):
     results_model = ResponseActionResponse
 
     def run(self, arguments: ActionArguments) -> Any:
-
         response = self._execute_operation_on_device(
             action_type="enumerateProcesses",
             organization_id=arguments.organization_id,

@@ -6,7 +6,9 @@ import pytest
 from respx import MockRouter
 
 from ubika_modules import UbikaModule
-from ubika_modules.connector_ubika_cloud_protector_alerts import UbikaCloudProtectorAlertsConnector
+from ubika_modules.connector_ubika_cloud_protector_alerts import (
+    UbikaCloudProtectorAlertsConnector,
+)
 from ubika_modules.connector_ubika_cloud_protector_base import (
     FetchEventsException,
     UbikaCloudProtectorConnectorConfiguration,

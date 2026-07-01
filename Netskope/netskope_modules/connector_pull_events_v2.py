@@ -107,9 +107,9 @@ class NetskopeEventConsumer(Thread):
             batch_of_events.append(orjson.dumps(event).decode("utf-8"))
             if event.get("timestamp", 0) > most_recent_timestamp:
                 most_recent_timestamp = event["timestamp"]
-        OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.name).inc(
-            len(batch_of_events)
-        )
+        OUTCOMING_EVENTS.labels(
+            intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels
+        ).inc(len(batch_of_events))
 
         if len(batch_of_events) > 0:
             self.connector.push_events_to_intakes(events=batch_of_events)
@@ -121,9 +121,9 @@ class NetskopeEventConsumer(Thread):
             message=f"Fetch and forward {len(batch_of_events)} events in {batch_duration} seconds",
             level="info",
         )
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.name).observe(
-            batch_end_time
-        )
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels
+        ).observe(batch_end_time)
 
         # compute the lag
         current_lag: int = 0
@@ -132,7 +132,9 @@ class NetskopeEventConsumer(Thread):
             current_lag = int(now - most_recent_timestamp)
 
         # report the lag
-        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(current_lag)
+        EVENTS_LAG.labels(
+            intake_key=self.connector.configuration.intake_key, type=self.name, **self.connector.scalability_labels
+        ).set(current_lag)
 
         # get the sleeping time from the response. Otherwise, compute the remaining sleeping time.
         delta_sleep = content.get("wait_time", 30 - batch_duration)
@@ -162,6 +164,14 @@ class NetskopeEventConnector(Connector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    @property
+    def scalability_labels(self) -> dict:
+        labels = self.module.manifest.get("labels", {})
+        return {
+            "scalable_horizontally": str(labels.get("scalable_horizontally", "false")).lower(),
+            "scalable_vertically": str(labels.get("scalable_vertically", "false")).lower(),
+        }
 
     @cached_property
     def tenant_hostname(self):

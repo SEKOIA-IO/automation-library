@@ -32,7 +32,6 @@ from harfanglab.helpers import handle_uri
 
 
 class HarfanglabAssetConnector(AssetConnector):
-
     # Configuration Constants
     AGENT_ENDPOINT: str = "/api/data/endpoint/Agent"
     DEVICE_ORDERING_FIELD: str = "firstseen"
@@ -382,7 +381,6 @@ class HarfanglabAssetConnector(AssetConnector):
         device_count = 0
 
         try:
-
             for agents in self._fetch_devices(from_date=self.most_recent_date_seen):
                 if not agents:
                     continue

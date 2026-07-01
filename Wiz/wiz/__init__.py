@@ -3,6 +3,7 @@ import os
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
+from functools import cached_property
 from typing import Any, Callable, Optional, Sequence
 
 import orjson
@@ -63,6 +64,17 @@ class WizConnector(AsyncConnector, ABC):
             start_at=timedelta(days=7),
             ignore_older_than=timedelta(days=7),
         )
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     @property
     def wiz_gql_client(self) -> WizGqlClient:  # pragma: no cover
@@ -140,12 +152,16 @@ class WizConnector(AsyncConnector, ABC):
 
                 self.log(message=log_message, level="info")
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(events_lag)
 
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result)
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    result
+                )
 
                 processing_time = processing_end - processing_start
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(processing_time)
+                FORWARD_EVENTS_DURATION.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).observe(processing_time)
                 logger.info(
                     "Processing took {processing_time} seconds",
                     processing_time=processing_time,

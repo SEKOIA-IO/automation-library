@@ -37,5 +37,9 @@
     "properties": {},
     "title": "The events"
   },
-  "uuid": "8a0ff198-9f12-446e-ba0d-78c1763b58a6"
+  "uuid": "8a0ff198-9f12-446e-ba0d-78c1763b58a6",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

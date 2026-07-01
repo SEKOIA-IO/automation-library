@@ -49,5 +49,9 @@
   "description": "Connector playbook to get Azure Network Watcher events information",
   "docker_parameters": "azure_network_watcher",
   "name": "Collect Azure Network Watcher Network Security Group Flow logs",
-  "uuid": "626f4d84-5ab7-11ee-8c99-0242ac120002"
+  "uuid": "626f4d84-5ab7-11ee-8c99-0242ac120002",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

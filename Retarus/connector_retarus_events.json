@@ -33,5 +33,9 @@
   },
   "uuid": "f7f7cb83-40d3-4861-8e93-058a1e771777",
   "slug": "retarus",
-  "results": {}
+  "results": {},
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": false
+  }
 }

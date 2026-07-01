@@ -1,6 +1,7 @@
 import asyncio
 import time
 from datetime import datetime, timedelta, timezone
+from functools import cached_property
 from typing import Any, Optional
 
 import orjson
@@ -54,6 +55,17 @@ class WatchGuardEpdrConnector(AsyncConnector):
 
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     @property
     def watchguard_client(self) -> WatchGuardClient:
@@ -139,13 +151,17 @@ class WatchGuardEpdrConnector(AsyncConnector):
                 while self.running:
                     processing_start = time.time()
                     if previous_processing_end is not None:
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
-                            processing_start - previous_processing_end
-                        )
+                        EVENTS_LAG.labels(
+                            intake_key=self.configuration.intake_key,
+                            **self.scalability_labels,
+                        ).set(processing_start - previous_processing_end)
 
                     events_count = loop.run_until_complete(self.get_watchguard_events())
                     processing_end = time.time()
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(events_count)
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).inc(events_count)
 
                     log_message = "No records to forward"
                     if events_count > 0:
@@ -155,7 +171,10 @@ class WatchGuardEpdrConnector(AsyncConnector):
                     self.log(message=log_message, level="info")
 
                     batch_duration = processing_end - processing_start
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+                    FORWARD_EVENTS_DURATION.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).observe(batch_duration)
 
                     # If no records were fetched
                     if events_count == 0:

@@ -24,5 +24,9 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {},
     "title": "The events"
+  },
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": false
   }
 }

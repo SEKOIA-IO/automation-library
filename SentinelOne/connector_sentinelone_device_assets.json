@@ -44,6 +44,15 @@
     "secrets": [
       "sekoia_api_key"
     ],
-    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"]
+    "internal": [
+      "sekoia_base_url",
+      "sekoia_api_key",
+      "frequency",
+      "batch_size"
+    ]
+  },
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": false
   }
 }

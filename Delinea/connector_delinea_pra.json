@@ -31,5 +31,9 @@
   "description": "Collect Delinea PRA events.",
   "docker_parameters": "delinea_pra",
   "name": "Collect Delinea PRA events",
-  "uuid": "495a9ea5-ff22-4a86-b6be-935f6f121719"
+  "uuid": "495a9ea5-ff22-4a86-b6be-935f6f121719",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

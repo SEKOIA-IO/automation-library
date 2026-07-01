@@ -15,7 +15,11 @@ from sekoia_automation.storage import PersistentJSON
 from nozomi_networks import NozomiModule
 from nozomi_networks.client.event_type import EventType
 from nozomi_networks.client.http_client import NozomiClient
-from nozomi_networks.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from nozomi_networks.metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    OUTCOMING_EVENTS,
+)
 
 
 def _format_event(record: dict[str, Any]) -> dict[str, Any]:
@@ -87,6 +91,17 @@ class NozomiVantageConnector(AsyncConnector):
                 self._lru_caches[event_type] = LRUCache(maxsize=1000)
                 for event_id in existed_items:
                     self._lru_caches[event_type][event_id] = 1
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     @cached_property
     def _version(self) -> Any:
@@ -264,13 +279,17 @@ class NozomiVantageConnector(AsyncConnector):
                 while self.running:
                     processing_start = time.time()
                     if previous_processing_end is not None:
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
-                            processing_start - previous_processing_end
-                        )
+                        EVENTS_LAG.labels(
+                            intake_key=self.configuration.intake_key,
+                            **self.scalability_labels,
+                        ).set(processing_start - previous_processing_end)
 
                     events_count = loop.run_until_complete(self.get_events())
                     processing_end = time.time()
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(events_count)
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).inc(events_count)
 
                     log_message = "No records to forward"
                     if events_count > 0:
@@ -280,7 +299,10 @@ class NozomiVantageConnector(AsyncConnector):
                     self.log(message=log_message, level="info")
 
                     batch_duration = processing_end - processing_start
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+                    FORWARD_EVENTS_DURATION.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).observe(batch_duration)
 
                     # If no records were fetched
                     if events_count == 0:

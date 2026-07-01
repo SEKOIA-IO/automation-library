@@ -87,6 +87,17 @@ class CortexQueryEDRTrigger(CortexConnector):
             cache["timestamp_cursor"] = self._timestamp_cursor
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
+    @cached_property
     def alert_url(self) -> str:
         return handle_fqdn(self.module.configuration.fqdn)
 
@@ -168,7 +179,9 @@ class CortexQueryEDRTrigger(CortexConnector):
 
             # Not push empty data
             if len(combined_data) > 0:
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(combined_data))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(combined_data)
+                )
                 self.push_events_to_intakes(events=combined_data)
                 self.save_alerts_cache()
 
@@ -183,7 +196,7 @@ class CortexQueryEDRTrigger(CortexConnector):
         else:
             self.log(message=f"No alerts to forward at {self.timestamp_cursor}", level="info")
 
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
     def forward_next_batch(self) -> None:
         """
@@ -201,7 +214,10 @@ class CortexQueryEDRTrigger(CortexConnector):
                 http_status_code = error_response.status_code
 
                 if http_status_code == 401:
-                    self.log(level="critical", message="Authentication failed: Credentials are invalid")
+                    self.log(
+                        level="critical",
+                        message="Authentication failed: Credentials are invalid",
+                    )
                 elif http_status_code == 403:
                     self.log(
                         level="critical",
@@ -214,7 +230,9 @@ class CortexQueryEDRTrigger(CortexConnector):
             raise
 
         duration = int(time.time() - start)
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            duration
+        )
 
         delta_sleep = self.configuration.frequency - duration
         if delta_sleep > 0:

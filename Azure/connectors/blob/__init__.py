@@ -4,6 +4,7 @@ import asyncio
 import os
 import time
 from abc import ABCMeta
+from functools import cached_property
 from datetime import datetime, timedelta, timezone
 from gzip import decompress
 from typing import Any, AsyncGenerator, Optional
@@ -47,6 +48,17 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self.limit_of_events_to_push = int(os.getenv("AZURE_BATCH_SIZE", 1000))
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     def azure_blob_wrapper(self) -> AzureBlobStorageWrapper:
         """
@@ -192,27 +204,32 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
                 while self.running:
                     processing_start = time.time()
                     if previous_processing_end is not None:
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
                             processing_start - self.last_event_date.timestamp()
                         )
 
                     message_ids: list[str] = loop.run_until_complete(self.get_azure_blob_data())
                     processing_end = time.time()
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                        len(message_ids)
+                    )
 
                     logger.info(
                         "Processing took {processing_time} seconds",
                         processing_time=(processing_end - processing_start),
                     )
 
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                        processing_end - processing_start
-                    )
+                    FORWARD_EVENTS_DURATION.labels(
+                        intake_key=self.configuration.intake_key, **self.scalability_labels
+                    ).observe(processing_end - processing_start)
 
                     previous_processing_end = processing_end
 
                     if len(message_ids) > 0:
-                        self.log(message="Pushed {0} records".format(len(message_ids)), level="info")
+                        self.log(
+                            message="Pushed {0} records".format(len(message_ids)),
+                            level="info",
+                        )
                     else:
                         self.log(message="No records to forward", level="info")
                         time.sleep(self.configuration.frequency)

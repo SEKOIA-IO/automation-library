@@ -23,7 +23,12 @@ from cybereason_modules.constants import (
     MALOP_DETAIL_ENDPOINT,
     MALOP_INBOX_ENDPOINT,
 )
-from cybereason_modules.exceptions import InvalidJsonResponse, InvalidResponse, LoginFailureError, TimeoutError
+from cybereason_modules.exceptions import (
+    InvalidJsonResponse,
+    InvalidResponse,
+    LoginFailureError,
+    TimeoutError,
+)
 from cybereason_modules.helpers import (
     RETRY_ON_STATUS,
     extract_models_from_malop,
@@ -33,7 +38,12 @@ from cybereason_modules.helpers import (
     validate_response_not_login_failure,
 )
 from cybereason_modules.logging import get_logger
-from cybereason_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MALOPS, OUTCOMING_EVENTS
+from cybereason_modules.metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MALOPS,
+    OUTCOMING_EVENTS,
+)
 
 logger = get_logger()
 
@@ -88,6 +98,17 @@ class CybereasonEventConnector(Connector):
             cache["events_cache"] = list(events_cache.keys())
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
+    @cached_property
     def client(self):
         """
         Return the HTTP client for the API
@@ -96,7 +117,9 @@ class CybereasonEventConnector(Connector):
         :return: requests.Session
         """
         auth = CybereasonApiAuthentication(
-            self.module.configuration.base_url, self.module.configuration.username, self.module.configuration.password
+            self.module.configuration.base_url,
+            self.module.configuration.username,
+            self.module.configuration.password,
         )
         return ApiClient(auth=auth)
 
@@ -212,7 +235,13 @@ class CybereasonEventConnector(Connector):
             "perGroupLimit": 10000,
             "perFeatureLimit": 100,
             "templateContext": "OVERVIEW",
-            "queryPath": [{"result": True, "guidList": [malop_uuid], "requestedType": requested_type}],
+            "queryPath": [
+                {
+                    "result": True,
+                    "guidList": [malop_uuid],
+                    "requestedType": requested_type,
+                }
+            ],
         }
 
         # call the api
@@ -326,11 +355,12 @@ class CybereasonEventConnector(Connector):
 
         # fetch malops for the timerange
         next_malops = self.fetch_malops(from_date, to_date)
-        INCOMING_MALOPS.labels(intake_key=self.configuration.intake_key).inc(len(next_malops))
+        INCOMING_MALOPS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+            len(next_malops)
+        )
 
         most_recent_date_seen = from_date
         for malop in next_malops:
-
             malop_uuid = malop["guid"]
             # skip already processed malops based on their GUID
             if malop_uuid in self.events_cache:
@@ -353,10 +383,16 @@ class CybereasonEventConnector(Connector):
                 yield from extract_models_from_malop(malop, users, ".UserInboxModel")
                 yield from extract_models_from_malop(malop, machines, ".MachineInboxModel")
                 if suspicions:
-                    for (suspicion_uuid, suspicion_name), suspicion in suspicions.items():
+                    for (
+                        suspicion_uuid,
+                        suspicion_name,
+                    ), suspicion in suspicions.items():
                         if suspicion is not None:
                             yield {
-                                "metadata": {"malopGuid": malop["guid"], "timestamp": malop["lastUpdateTime"]},
+                                "metadata": {
+                                    "malopGuid": malop["guid"],
+                                    "timestamp": malop["lastUpdateTime"],
+                                },
                                 "@class": ".SuspicionModel",
                                 "name": suspicion_name,
                                 "guid": suspicion_uuid,
@@ -374,7 +410,7 @@ class CybereasonEventConnector(Connector):
             self.cursor.offset = most_recent_date_seen
             self.from_date = most_recent_date_seen
             current_lag = int(time.time() - (most_recent_date_seen / 1000))
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
     def next_batch(self):
         """
@@ -387,10 +423,12 @@ class CybereasonEventConnector(Connector):
         batch_of_events = [orjson.dumps(event).decode("utf-8") for event in self.fetch_last_events()]
 
         if len(batch_of_events) > 0:
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(batch_of_events)
+            )
             self.push_events_to_intakes(events=batch_of_events)
         else:
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
@@ -399,7 +437,9 @@ class CybereasonEventConnector(Connector):
             message=f"Fetch and forward {len(batch_of_events)} events in {batch_duration} seconds",
             level="info",
         )
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            batch_duration
+        )
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

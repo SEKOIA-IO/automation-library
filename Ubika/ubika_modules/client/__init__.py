@@ -13,7 +13,6 @@ class ApiClient(httpx.Client):
         ratelimit_per_minute: int = 20,
         use_jitter: bool = False,
     ) -> None:
-
         base_transport = httpx.HTTPTransport()
 
         rate_limited_transport = LimiterTransport(

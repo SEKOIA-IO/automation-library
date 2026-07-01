@@ -39,12 +39,22 @@ def message1():
     return {
         "apiVersion": "logs.ubika.io/v1beta",
         "kind": "TrafficLogs",
-        "metadata": {"name": "", "namespace": "", "created": None, "updated": None, "version": "0"},
+        "metadata": {
+            "name": "",
+            "namespace": "",
+            "created": None,
+            "updated": None,
+            "version": "0",
+        },
         "spec": {
             "items": [
                 {
                     "timestamp": "1777383278301",
-                    "context": {"assetName": "testAsset", "assetNamespace": "example", "reaction": "BLOCKED"},
+                    "context": {
+                        "assetName": "testAsset",
+                        "assetNamespace": "example",
+                        "reaction": "BLOCKED",
+                    },
                     "request": {
                         "uid": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
                         "hostname": "example.comm",
@@ -68,7 +78,11 @@ def message1():
                 },
                 {
                     "timestamp": "1777383263946",
-                    "context": {"assetName": "testAsset", "assetNamespace": "example", "reaction": "PASSED"},
+                    "context": {
+                        "assetName": "testAsset",
+                        "assetNamespace": "example",
+                        "reaction": "PASSED",
+                    },
                     "request": {
                         "uid": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
                         "hostname": "example.com",
@@ -104,7 +118,13 @@ def message2():
     return {
         "apiVersion": "logs.ubika.io/v1beta",
         "kind": "TrafficLogs",
-        "metadata": {"name": "", "namespace": "", "created": None, "updated": None, "version": "0"},
+        "metadata": {
+            "name": "",
+            "namespace": "",
+            "created": None,
+            "updated": None,
+            "version": "0",
+        },
         "spec": {"items": [], "nextPageToken": "tokenEnd"},
     }
 

@@ -59,5 +59,9 @@
     "properties": {},
     "title": "The alerts"
   },
-  "uuid": "ad030b92-d069-4b35-b11b-0e02dad004fc"
+  "uuid": "ad030b92-d069-4b35-b11b-0e02dad004fc",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

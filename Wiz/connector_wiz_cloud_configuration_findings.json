@@ -27,5 +27,9 @@
     "title": "Wiz Cloud Configuration Findings connector",
     "type": "object"
   },
-  "uuid": "ba64d363-9edb-40dc-87ca-97f0a7fbf20e"
+  "uuid": "ba64d363-9edb-40dc-87ca-97f0a7fbf20e",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": false
+  }
 }

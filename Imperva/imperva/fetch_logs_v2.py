@@ -19,7 +19,12 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from . import ImpervaModule
 from .client import ApiClient
 from .helpers import LogFileId, extract_last_timestamp, is_compressed, validate_checksum
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 
 class ImpervaLogsConnectorConfiguration(DefaultConnectorConfiguration):
@@ -57,12 +62,26 @@ class ImpervaLogsConnector(Connector):
         )  # all logs that we tried to download and process (both successful and failed)
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
+    @cached_property
     def connector_user_agent(self) -> str:
         return f"sekoiaio-connector-{self.configuration.intake_key}"
 
     @cached_property
     def client(self) -> ApiClient:
-        return ApiClient(api_id=self.module.configuration.api_id, api_key=self.module.configuration.api_key)
+        return ApiClient(
+            api_id=self.module.configuration.api_id,
+            api_key=self.module.configuration.api_key,
+        )
 
     def fetch_logs_index(self) -> list[LogFileId]:
         url = urljoin(self.module.configuration.base_url, "logs.index")
@@ -77,7 +96,10 @@ class ImpervaLogsConnector(Connector):
                 return [LogFileId.from_filename(filename) for filename in response.text.split("\n")]
 
         elif response.status_code == 404:
-            self.log("Index file does not yet exist, please allow time for files to be generated.", level="info")
+            self.log(
+                "Index file does not yet exist, please allow time for files to be generated.",
+                level="info",
+            )
 
         else:
             response.raise_for_status()
@@ -133,7 +155,9 @@ class ImpervaLogsConnector(Connector):
         if events_list[-1] == "":
             del events_list[-1]
 
-        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events_list))
+        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+            len(events_list)
+        )
 
         self.push_events_to_intakes(events_list)
 
@@ -144,7 +168,10 @@ class ImpervaLogsConnector(Connector):
         # Formats other than CEF, LEEF, and W3C do not contain headers.
         # These formats also do not require decryption or decompression.
         if len(file_split_content) != 2:
-            self.log("File %s is not encrypted/compressed, returning the content as is." % filename, level="info")
+            self.log(
+                "File %s is not encrypted/compressed, returning the content as is." % filename,
+                level="info",
+            )
             return file_content
 
         # get the header section content
@@ -191,7 +218,8 @@ class ImpervaLogsConnector(Connector):
                 )
 
                 decryptor = Cipher(
-                    algorithms.AES(key=base64.decodebytes(content_decrypted_sym_key)), mode=modes.CBC(iv)
+                    algorithms.AES(key=base64.decodebytes(content_decrypted_sym_key)),
+                    mode=modes.CBC(iv),
                 ).decryptor()
                 padded_content = decryptor.update(file_log_content) + decryptor.finalize()
 
@@ -250,15 +278,20 @@ class ImpervaLogsConnector(Connector):
             additions: list[LogFileId] = [
                 x for x in logs_in_index if x not in self.processed and x not in self.in_progress
             ]
-            self.log("%d logs in index file, %d new" % (len(logs_in_index), len(additions)), level="info")
+            self.log(
+                "%d logs in index file, %d new" % (len(logs_in_index), len(additions)),
+                level="info",
+            )
             if len(additions) == 0:
                 self.log("No new logs to download", level="info")
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
 
                 time.sleep(self.configuration.frequency)
                 continue
 
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(additions))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(additions)
+            )
             self.log("%d new logs to download" % len(additions), level="info")
 
             self.in_progress.extend(additions)
@@ -275,7 +308,10 @@ class ImpervaLogsConnector(Connector):
                     if last_timestamp:
                         now = datetime.now(tz=timezone.utc).timestamp()
                         current_lag = now - last_timestamp / 1000.0
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+                        EVENTS_LAG.labels(
+                            intake_key=self.configuration.intake_key,
+                            **self.scalability_labels,
+                        ).set(current_lag)
 
                     self.last_seen_log = max(self.processed)
                     self.cursor.offset = self.last_seen_log.get_filename()
@@ -283,8 +319,13 @@ class ImpervaLogsConnector(Connector):
                 # get the ending time and compute the duration to fetch the events
                 batch_end_time = time.time()
                 batch_duration = int(batch_end_time - batch_start_time)
-                self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="info")
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+                self.log(
+                    f"Fetched and forwarded events in {batch_duration} seconds",
+                    level="info",
+                )
+                FORWARD_EVENTS_DURATION.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).observe(batch_duration)
             except Exception as e:
                 self.log_exception(e)
 
@@ -295,5 +336,8 @@ class ImpervaLogsConnector(Connector):
             # compute the remaining sleeping time. If greater than 0, sleep
             delta_sleep = self.configuration.frequency - batch_duration
             if delta_sleep > 0:
-                self.log(f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
+                self.log(
+                    f"Next batch in the future. Waiting {delta_sleep} seconds",
+                    level="info",
+                )
                 time.sleep(delta_sleep)

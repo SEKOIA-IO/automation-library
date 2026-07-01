@@ -63,6 +63,7 @@ def test_timestepper_creation_from_time_cursor():
 @patch("hornetsecurity_modules.timestepper.time")
 def test_timestepper_get_time_ranges_with_no_timedelta(mock_time):
     trigger = Mock()
+    trigger.scalability_labels = {"scalable_horizontally": "false", "scalable_vertically": "false"}
     frequency = 60
     timedelta = 0
     start_time = 0
@@ -109,6 +110,7 @@ def test_timestepper_get_time_ranges_with_no_timedelta(mock_time):
 @patch("hornetsecurity_modules.timestepper.time")
 def test_timestepper_get_time_ranges_with_timedelta(mock_time):
     trigger = Mock()
+    trigger.scalability_labels = {"scalable_horizontally": "false", "scalable_vertically": "false"}
     frequency = 60
     time_lag = 5
     start_time = 0
@@ -180,6 +182,7 @@ def test_timestepper_get_time_ranges_with_timedelta(mock_time):
 @patch("hornetsecurity_modules.timestepper.time")
 def test_timestepper_get_time_ranges_reach_max_wait_time(mock_time):
     trigger = Mock()
+    trigger.scalability_labels = {"scalable_horizontally": "false", "scalable_vertically": "false"}
     frequency = 600
     timedelta = 0
     start_time = 0

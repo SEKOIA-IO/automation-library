@@ -47,5 +47,9 @@
     "title": "TAP Events",
     "type": "object"
   },
-  "uuid": "eccb8d60-0290-48f2-b7d0-12051bb2ff42"
+  "uuid": "eccb8d60-0290-48f2-b7d0-12051bb2ff42",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

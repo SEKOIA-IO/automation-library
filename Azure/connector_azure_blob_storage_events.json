@@ -49,5 +49,9 @@
   "description": "connector playbook to get Azure Blob Storage events information",
   "docker_parameters": "azure_blob_storage",
   "name": "Collect Azure Blob Storage events",
-  "uuid": "d75861b5-03a6-4857-b2b6-40f04a4255a8"
+  "uuid": "d75861b5-03a6-4857-b2b6-40f04a4255a8",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

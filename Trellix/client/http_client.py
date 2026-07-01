@@ -1,5 +1,6 @@
 """Trellix http client."""
 
+import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator, Optional, Set
@@ -122,7 +123,7 @@ class TrellixHttpClient(object):
         if cls._session is None:
             cls._session = RetryClient(
                 retry_options=RetryWithRateLimiter(
-                    ExponentialRetry(attempts=3, start_timeout=5.0, statuses={429}, max_timeout=60.0)
+                    ExponentialRetry(attempts=3, start_timeout=5.0, statuses={429, 500}, max_timeout=60.0)
                 )
             )
 
@@ -195,6 +196,31 @@ class TrellixHttpClient(object):
                 if response.status == 401:  # pragma: no cover
                     raise AuthenticationError("Unauthorized for request. Refresh token and try again")
 
+                if response.status == 429:
+                    retry_after = float(response.headers.get("Retry-After", 0))
+                    if retry_after > 0:
+                        await asyncio.sleep(retry_after)
+                    async with session.get(url, headers=headers) as retry_response:
+                        if retry_response.status != 200:
+                            raise Exception(
+                                "Error while getting data from {0} status {1}: {2}".format(
+                                    url, retry_response.status, await retry_response.text()
+                                ),
+                            )
+                        result: dict[str, Any] = await retry_response.json()
+                        return result
+
+                if response.status == 500:
+                    async with session.get(url, headers=headers) as retry_response:
+                        if retry_response.status != 200:
+                            raise Exception(
+                                "Error while getting data from {0} status {1}: {2}".format(
+                                    url, retry_response.status, await retry_response.text()
+                                ),
+                            )
+                        result = await retry_response.json()
+                        return result
+
                 if response.status != 200:
                     raise Exception(
                         "Error while getting data from {0} status {1}: {2}".format(
@@ -202,7 +228,7 @@ class TrellixHttpClient(object):
                         ),
                     )
 
-                result: dict[str, Any] = await response.json()
+                result = await response.json()
 
                 return result
 

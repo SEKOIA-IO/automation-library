@@ -13,7 +13,11 @@ from dateutil.parser import isoparse
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from websocket import WebSocketApp, WebSocketTimeoutException
 
-from proofpoint_modules.helpers import format_datetime, normalize_since_time, split_message
+from proofpoint_modules.helpers import (
+    format_datetime,
+    normalize_since_time,
+    split_message,
+)
 from proofpoint_modules.metrics import EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
 from proofpoint_modules.pod.checkpoint import Checkpoint
 
@@ -101,7 +105,10 @@ class PoDEventsConsumer(Thread):
             else:
                 self.most_recent_date_seen = timestamp
 
-            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+            INCOMING_EVENTS.labels(
+                intake_key=self.configuration.intake_key,
+                **self.connector.scalability_labels,
+            ).inc()
 
             # we put the message in the queue with the most recent date seen as timestamp,
             # so the forwarder can update the checkpoint and compute the lag
@@ -129,7 +136,11 @@ class PoDEventsConsumer(Thread):
 
 class EventsForwarder(Thread):
     def __init__(
-        self, connector: "PoDEventsTrigger", queue: queue.Queue, checkpoint: Checkpoint, max_batch_size: int = 20000
+        self,
+        connector: "PoDEventsTrigger",
+        queue: queue.Queue,
+        checkpoint: Checkpoint,
+        max_batch_size: int = 20000,
     ):
         super().__init__()
         self.connector = connector
@@ -174,7 +185,10 @@ class EventsForwarder(Thread):
             # compute the lag
             now = datetime.now(timezone.utc)
             current_lag = now - most_recent_date_seen
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
+            EVENTS_LAG.labels(
+                intake_key=self.configuration.intake_key,
+                **self.connector.scalability_labels,
+            ).set(int(current_lag.total_seconds()))
 
         return events
 
@@ -188,7 +202,10 @@ class EventsForwarder(Thread):
                         message=f"Forward {len(events)} events to the intake",
                         level="info",
                     )
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.connector.scalability_labels,
+                    ).inc(len(events))
                     self.connector.push_events_to_intakes(events=events)
             except Exception as ex:
                 self.connector.log_exception(ex, message="Failed to forward event")
@@ -207,6 +224,17 @@ class PoDEventsTrigger(Connector):
     def stop(self, *args, **kwargs):
         self.log(message="Stopping Proofpoint PoD connector", level="info")
         super().stop(*args, **kwargs)
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     def run(self):  # pragma: no cover
         self.log(message="ProofPoint PoD Events Trigger has started", level="info")

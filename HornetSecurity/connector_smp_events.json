@@ -61,5 +61,9 @@
     "title": "Hornetsecurity 365 Total Protection Configuration",
     "type": "object"
   },
-  "uuid": "24a18e6f-5607-4bc1-a7b2-a9e18ee29de1"
+  "uuid": "24a18e6f-5607-4bc1-a7b2-a9e18ee29de1",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

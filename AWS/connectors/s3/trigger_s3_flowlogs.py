@@ -6,7 +6,11 @@ from itertools import islice
 
 from aws_helpers.utils import AsyncReader, unescape_string
 from connectors.metrics import DISCARDED_EVENTS
-from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3LogsBaseConfiguration, AwsS3QueuedConfiguration
+from connectors.s3 import (
+    AbstractAwsS3QueuedConnector,
+    AwsS3LogsBaseConfiguration,
+    AwsS3QueuedConfiguration,
+)
 from connectors.s3.provider import AwsAccountProvider
 
 
@@ -21,6 +25,7 @@ class BaseAwsS3FlowLogsTrigger:
 
     configuration: AwsS3FlowLogsConfiguration
     name = "AWS S3 Flow Logs"
+    scalability_labels: dict[str, str]
 
     @staticmethod
     def check_all_ips_are_private(input_str: str) -> bool:
@@ -60,7 +65,7 @@ class BaseAwsS3FlowLogsTrigger:
                 if not self.check_all_ips_are_private(record):
                     records.append(record)
                 else:
-                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc()
 
         if self.configuration.ignore_comments:  # pragma: no cover
             records = [record for record in records if not record.strip().startswith("#")]

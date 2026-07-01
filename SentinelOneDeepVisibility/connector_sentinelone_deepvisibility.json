@@ -35,5 +35,9 @@
     "title": "DeepVisibility Connector",
     "type": "object"
   },
-  "uuid": "607322b7-c13b-4727-b7ca-fe58bd30b4a9"
+  "uuid": "607322b7-c13b-4727-b7ca-fe58bd30b4a9",
+  "labels": {
+    "scalable_horizontally": true,
+    "scalable_vertically": true
+  }
 }

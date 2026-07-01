@@ -44,6 +44,17 @@ class Office365MessageTraceBaseTrigger(Connector):
         super().stop(*args, **kwargs)
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
+    @cached_property
     def stepper(self):
         with self.context as cache:
             most_recent_date_requested_str = cache.get("most_recent_date_requested")
@@ -135,7 +146,9 @@ class Office365MessageTraceBaseTrigger(Connector):
             try:
                 duration_start = time.time()
                 messages: list[str] = self.query_api(start, end)
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(messages)
+                )
 
                 if len(messages) > 0:
                     self.log(message=f"Forwarding {len(messages)} records", level="info")
@@ -143,9 +156,9 @@ class Office365MessageTraceBaseTrigger(Connector):
                 else:
                     self.log(message="No records to forward", level="info")
 
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                    time.time() - duration_start
-                )
+                FORWARD_EVENTS_DURATION.labels(
+                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                ).observe(time.time() - duration_start)
             except Exception as ex:
                 self.log_exception(ex, message="Failed to fetch events.")
                 raise ex
