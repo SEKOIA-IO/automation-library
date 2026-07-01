@@ -108,3 +108,43 @@ def test_run_handles_utf8_bom(connector):
 
     events = connector.push_events_to_intakes.call_args.kwargs["events"]
     assert '"host": "host-a"' in events[0]
+
+
+def test_run_deduplicates_unchanged_rows_across_polls(connector):
+    csv_body = "host;cve\r\nhost-a;CVE-2024-0001\r\nhost-b;CVE-2024-0002\r\n"
+
+    # First poll forwards both rows.
+    with requests_mock.Mocker() as mock_requests, _stop_after_first_iteration(connector):
+        mock_requests.get(CSV_URL, status_code=200, text=csv_body)
+        connector.run()
+    assert len(connector.push_events_to_intakes.call_args.kwargs["events"]) == 2
+
+    connector.push_events_to_intakes.reset_mock()
+    connector._stop_event.clear()  # allow the loop to run a second cycle
+
+    # Second poll with an identical report forwards nothing.
+    with requests_mock.Mocker() as mock_requests, _stop_after_first_iteration(connector):
+        mock_requests.get(CSV_URL, status_code=200, text=csv_body)
+        connector.run()
+    connector.push_events_to_intakes.assert_not_called()
+
+
+def test_run_forwards_only_new_rows(connector):
+    first = "host;cve\r\nhost-a;CVE-2024-0001\r\n"
+    second = "host;cve\r\nhost-a;CVE-2024-0001\r\nhost-b;CVE-2024-0002\r\n"
+
+    with requests_mock.Mocker() as mock_requests, _stop_after_first_iteration(connector):
+        mock_requests.get(CSV_URL, status_code=200, text=first)
+        connector.run()
+
+    connector.push_events_to_intakes.reset_mock()
+    connector._stop_event.clear()
+
+    # Only the newly-added row (host-b) is forwarded on the next poll.
+    with requests_mock.Mocker() as mock_requests, _stop_after_first_iteration(connector):
+        mock_requests.get(CSV_URL, status_code=200, text=second)
+        connector.run()
+
+    events = connector.push_events_to_intakes.call_args.kwargs["events"]
+    assert len(events) == 1
+    assert '"host": "host-b"' in events[0]

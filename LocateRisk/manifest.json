@@ -26,7 +26,7 @@
   "description": "Specialist for automated IT risk analysis and monitoring",
   "name": "LocateRisk",
   "slug": "locaterisk",
-  "categories": [],
+  "categories": ["Threat Intelligence"],
   "uuid": "4d493ab9-ab75-4a27-90c5-b7157e6d085b",
-  "version": "0.3.2"
+  "version": "0.4.0"
 }

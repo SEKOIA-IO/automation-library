@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class LocateRiskModuleConfiguration(BaseModel):
@@ -8,3 +8,12 @@ class LocateRiskModuleConfiguration(BaseModel):
         "https://app.locaterisk.com/api/rest/report/export",
         description="Base URL of the LocateRisk report export endpoint",
     )
+
+    @field_validator("report_url")
+    @classmethod
+    def _require_https(cls, value: str) -> str:
+        # Reject non-HTTPS report URLs at configuration time so the API key
+        # (sent as a Bearer token) is never transmitted in cleartext.
+        if not value.lower().startswith("https://"):
+            raise ValueError("report_url must use HTTPS")
+        return value

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.4.0 - 2026-07-01
+
+### Added
+
+- Row-level deduplication: the connector persists SHA-256 hashes of forwarded report rows in a `context.json` checkpoint (`PersistentJSON`) and only pushes rows not seen on the previous poll, so an unchanged report is no longer re-sent every cycle.
+- `.dockerignore` excluding tests, coverage artifacts, caches, docs, and the local `.venv/`, so build/dev files (and a host virtualenv that could clobber the image's `/app/.venv`) are not copied into the production image.
+
+### Changed
+
+- Normalized `connector_locaterisk_scan_report.json` from a raw Pydantic schema dump into a proper draft-07 connector descriptor: added `$schema`, replaced auto-generated `title` keys with `description` fields, set a real `intake_server` default (`https://intake.sekoia.io`), removed the duplicate `type` key and the `anyOf`/`null` artifact, and added a trailing newline.
+- Set the module `categories` to `["Threat Intelligence"]` so the module is discoverable in the platform.
+- Pinned `sekoia-automation-sdk` to `>=1.23.0,<2.0.0` (previously unconstrained) so a breaking SDK release cannot be pulled in silently.
+
+### Security
+
+- `report_url` now rejects non-HTTPS URLs at configuration time (Pydantic field validator), and the connector's retry adapter is no longer mounted on `http://`, so the API key (sent as a Bearer token) can never be transmitted in cleartext.
+- Declared `intake_key` in the connector descriptor's `secrets` array so the platform masks it in the UI and in stored configuration.
+
 ## 0.3.2 - 2026-06-22
 
 ### Fixed

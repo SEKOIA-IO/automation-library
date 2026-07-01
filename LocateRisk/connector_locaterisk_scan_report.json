@@ -4,34 +4,26 @@
   "uuid": "d18a2265-324d-53d0-b2c8-e29748f1638f",
   "docker_parameters": "locaterisk_scan_report",
   "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
     "properties": {
       "intake_server": {
-        "anyOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Intake Server"
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
       },
       "intake_key": {
-        "title": "Intake Key",
+        "description": "Intake key to use when sending events",
         "type": "string"
       },
       "polling_interval": {
-        "default": 5,
         "description": "Polling interval in minutes",
-        "title": "Polling Interval",
+        "default": 5,
         "type": "integer"
       }
     },
-    "required": [
-      "intake_key"
-    ],
-    "title": "LocateRiskScanReportConnectorConfiguration",
-    "type": "object"
+    "required": ["intake_key"],
+    "secrets": ["intake_key"],
+    "title": "LocateRisk Scan Report configuration"
   }
 }

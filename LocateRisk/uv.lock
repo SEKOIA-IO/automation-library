@@ -894,7 +894,7 @@ wheels = [
 
 [[package]]
 name = "locaterisk-automation-module"
-version = "0.2.0"
+version = "0.4.0"
 source = { virtual = "." }
 dependencies = [
     { name = "requests" },
@@ -914,7 +914,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "requests", specifier = ">=2.34.2,<3.0.0" },
-    { name = "sekoia-automation-sdk" },
+    { name = "sekoia-automation-sdk", specifier = ">=1.23.0,<2.0.0" },
 ]
 
 [package.metadata.requires-dev]
