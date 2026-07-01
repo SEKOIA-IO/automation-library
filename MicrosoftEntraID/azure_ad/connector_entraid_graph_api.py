@@ -91,9 +91,10 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
 
     async def _reset_graph_client(self) -> None:
         if self._client is not None:
-            await self._client.close()
-            self._client = None
-
+            try:
+                await self._client.close()
+            finally:
+                self._client = None
     async def run_directory(self) -> int:
         events: list[DirectoryAudit] = []
         total_events = 0
