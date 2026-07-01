@@ -482,6 +482,16 @@ DeletesAssetV2 = type(
     },
 )
 
+RevokesAssetV2 = type(
+    "RevokesAssetV2",
+    (GenericAPIAction,),
+    {
+        "verb": "put",
+        "endpoint": assets_v2_base_url + "assets/{uuid}/revoke",
+        "query_parameters": [],
+    },
+)
+
 ReturnsAsset = type(
     "ReturnsAsset",
     (GenericAPIAction,),

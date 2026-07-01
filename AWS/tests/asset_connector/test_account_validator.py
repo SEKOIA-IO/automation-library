@@ -1,9 +1,8 @@
 from unittest.mock import MagicMock, Mock, patch
 
-from aws_helpers.client import AwsClientConfiguration
-
 from aws_helpers.account_validator import AwsAccountValidator
 from aws_helpers.base import AwsModule, AwsModuleConfiguration
+from aws_helpers.client import AwsClientConfiguration
 
 
 def _make_mock_assume_role(

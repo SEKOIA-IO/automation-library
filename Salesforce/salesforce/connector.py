@@ -54,6 +54,10 @@ class SalesforceConnector(AsyncConnector):
     # 100 is more then enough because we persist log file ids and not event ids itself
     LOG_FILE_CACHE_SIZE = 100
 
+    # Thresholds for log processing
+    SIZE_TO_PROCESS_DEFAULT = 20 * 1024 * 1024  # 20MB
+    CHUNK_SIZE_DEFAULT = 1024 * 1024  # 1MB
+
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         """Init SalesforceConnector."""
         super().__init__(*args, **kwargs)
@@ -61,6 +65,9 @@ class SalesforceConnector(AsyncConnector):
 
         log_file_cache_size = int(os.getenv("LOG_FILE_CACHE_SIZE", 100))
         self.log_file_cache: Cache[str, bool] = self._load_log_file_cache(log_file_cache_size)
+
+        self.size_to_process = int(os.getenv("SIZE_TO_PROCESS", self.SIZE_TO_PROCESS_DEFAULT))
+        self.chunk_size = int(os.getenv("CHUNK_SIZE", self.CHUNK_SIZE_DEFAULT))
 
     @property
     def stepper(self) -> TimeStepper:
@@ -219,6 +226,8 @@ class SalesforceConnector(AsyncConnector):
 
             records, csv_path = await self.salesforce_client.get_log_file_content(
                 log_file=log_file,
+                size_to_process=self.size_to_process,
+                chunk_size=self.chunk_size,
             )
 
             if records is not None:
@@ -245,19 +254,20 @@ class SalesforceConnector(AsyncConnector):
 
         return result
 
-    def run(self) -> None:  # pragma: no cover
-        """Runs Salesforce connector with timestepper."""
+    async def async_run(self) -> None:  # pragma: no cover
+        """Runs Salesforce connector with timestepper asynchronously."""
         while self.running:
             try:
-                loop = asyncio.get_event_loop()
-
                 for start, end in self.stepper.ranges():
                     if not self.running:
                         break
 
+                    if self.stepper.sleep_duration > 0:
+                        await asyncio.sleep(self.stepper.sleep_duration)
+
                     processing_start = time.time()
 
-                    message_ids: list[str] = loop.run_until_complete(self.get_salesforce_events(start, end))
+                    message_ids: list[str] = await self.get_salesforce_events(start, end)
 
                     processing_end = time.time()
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
@@ -283,3 +293,13 @@ class SalesforceConnector(AsyncConnector):
             except Exception as error:
                 logger.error("Error while running Salesforce", error=error)
                 self.log_exception(error, message="Failed to forward events")
+
+        if self._session:
+            await self._session.close()
+
+        await self.on_shutdown()
+
+    def run(self) -> None:  # pragma: no cover
+        """Runs Salesforce connector."""
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.async_run())

@@ -7,6 +7,7 @@ from respx import MockRouter
 from sekoia_automation.storage import PersistentJSON
 
 from ubika_modules import UbikaModule
+from ubika_modules.connector_ubika_cloud_protector_base import UbikaCloudProtectorConnectorConfiguration
 from ubika_modules.connector_ubika_cloud_protector_traffic import UbikaCloudProtectorTrafficConnector
 
 
@@ -31,13 +32,13 @@ def trigger(data_storage, patch_datetime_now):
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
-    trigger.configuration = {
-        "provider": "provider1",
-        "tenant": "tenant2",
-        "token": "some_token_here",
-        "intake_key": "intake_key",
-        "chunk_size": 100,
-    }
+    trigger.configuration = UbikaCloudProtectorConnectorConfiguration(
+        provider="provider1",
+        tenant="tenant2",
+        token="some_token_here",
+        intake_key="intake_key",
+        chunk_size=100,
+    )
     yield trigger
 
 

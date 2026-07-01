@@ -5,8 +5,8 @@ from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
 from dateutil.parser import isoparse
 from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel
 
+from asset_connector.aws_api_models import AwsApiUser, AwsApiUserGroup
 from asset_connector.users_assets import AwsUser, AwsUsersAssetConnector
-from asset_connector.aws_api_models import AwsApiUserGroup, AwsApiUser
 from aws_helpers.base import AwsModuleConfiguration
 from connectors import AwsModule
 

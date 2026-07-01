@@ -243,7 +243,7 @@
       },
       "countermeasures": {
         "type": "array",
-        "description": "Response actions (countermeasures) recommended or applied in reaction to the alert. Each countermeasure has a name, a description, a list of concrete action steps to execute, and a lifecycle status (pending → activated or denied). They can originate from three sources, reflected in the `type` field: `text` (free-form analyst note, e.g. 'Isolate the affected host'), `intelligence_center` (a course of action sourced from SEKOIA.IO's threat intelligence, e.g. 'Block IOC X on your firewall'), or `openc2` (a machine-readable OpenC2 command sent to a security actuator). Included by default; opt out with `?countermeasures=false`.",
+        "description": "Response actions (countermeasures) recommended or applied in reaction to the alert. Each countermeasure has a name, a description, a list of concrete action steps to execute, and a lifecycle status (pending \u2192 activated or denied). They can originate from three sources, reflected in the `type` field: `text` (free-form analyst note, e.g. 'Isolate the affected host'), `intelligence_center` (a course of action sourced from SEKOIA.IO's threat intelligence, e.g. 'Block IOC X on your firewall'), or `openc2` (a machine-readable OpenC2 command sent to a security actuator). Included by default; opt out with `?countermeasures=false`.",
         "items": {
           "type": "object",
           "properties": {
