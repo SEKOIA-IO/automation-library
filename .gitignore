@@ -87,4 +87,5 @@ dmypy.json
 */.github/agents/*
 */.github/copilot*
 .github/skills/*
-.github/agents
+.github/agents/*
+.devcontainer/*

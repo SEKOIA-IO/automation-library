@@ -1,4 +1,3 @@
-from asset_connector.aws_api_models import AwsApiInstance
 from datetime import datetime
 from unittest import mock
 
@@ -20,6 +19,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 )
 from sekoia_automation.asset_connector.models.ocsf.group import Group
 
+from asset_connector.aws_api_models import AwsApiInstance
 from asset_connector.device_assets import AwsDevice, AwsDeviceAssetConnector
 from aws_helpers.base import AwsModuleConfiguration
 from connectors import AwsModule
