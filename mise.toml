@@ -1,9 +1,9 @@
-[tools]
-python = "3.14"
-uv = "latest"
+# Root mise config shared by all automation modules.
+# Each module inherits these tools and tasks and only overrides what is specific
+# (its Python version and its local .venv) in its own mise.toml.
 
-[env]
-_.python.venv = { path = ".venv", create = false }
+[tools]
+uv = "latest"
 
 [tasks.test]
 description = "Run tests"
