@@ -55,9 +55,13 @@ plugins = ["pydantic.mypy"]
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = """
+    --strict-markers
+    --tb=short
     --cache-clear
     --cov=harfanglab
+    --cov-branch
     --cov-report=term-missing:skip-covered
+    --cov-fail-under=5
     -ra
 """
 testpaths = ["tests"]
