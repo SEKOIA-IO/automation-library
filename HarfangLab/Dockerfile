@@ -19,7 +19,9 @@ RUN useradd -ms /bin/bash sekoiaio-runtime
 # Some dependencies (e.g. pyrate-limiter) resolve a temp directory at import time.
 # The default system temp directories may not be writable in the runtime environment,
 # so provide a dedicated writable directory and point TMPDIR at it.
-RUN mkdir -p /app/tmp && chown sekoiaio-runtime:sekoiaio-runtime /app/tmp
+# Use mode 1777 (world-writable + sticky bit, like /tmp) so it works even when the
+# container is run with an arbitrary UID rather than the sekoiaio-runtime user.
+RUN mkdir -p /app/tmp && chmod 1777 /app/tmp
 ENV TMPDIR=/app/tmp
 
 USER sekoiaio-runtime
