@@ -114,7 +114,7 @@ def test_read_retries_on_transient_error_then_succeeds(symphony_storage, checkpo
     assert calls["n"] == 3  # two failures + one success
 
 
-def test_read_exhausts_retries_and_invokes_error_callback(symphony_storage, checkpoint):
+def test_read_exhausts_retries(symphony_storage, checkpoint):
     context = symphony_storage / f"o365_{intake_key}_last_pull"
     saved_data = datetime.now(UTC).isoformat()
     context.write_text(saved_data)
@@ -148,7 +148,7 @@ def test_write_retries_on_transient_error_then_succeeds(symphony_storage, checkp
     assert calls["n"] == 3  # two failures + one success
 
 
-def test_write_exhausts_retries_and_invokes_error_callback(symphony_storage, checkpoint):
+def test_write_exhausts_retries(symphony_storage, checkpoint):
     context = symphony_storage / f"o365_{intake_key}_last_pull"
     saved_data = datetime.now(UTC).isoformat()
 
