@@ -5,7 +5,6 @@ to OCSF Device Inventory format for asset management and security monitoring.
 """
 
 from collections.abc import Generator
-from asset_connector.aws_api_models import AwsReservationApi, AwsApiInstance
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -28,6 +27,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 
+from asset_connector.aws_api_models import AwsApiInstance, AwsReservationApi
 from asset_connector.aws_assets import AwsAssetsConnector, handle_aws_errors
 
 

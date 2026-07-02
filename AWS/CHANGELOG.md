@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-19 - 1.37.0
+
+### Added
+
+- Fix asset connector dependencies
+
+## 2026-06-19 - 1.36.0
+
+### Added
+
+- Added S3 connector (without SQS)
+
+### Changed
+
+- Upgraded dependencies
+
+## 2026-04-28 - 1.35.3
+
+### Changed
+
+- Remove useless file
+
 ## 2026-04-20 - 1.35.2
 
 ### Changed
