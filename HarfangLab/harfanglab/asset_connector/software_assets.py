@@ -1,7 +1,7 @@
 from collections.abc import Generator
 from datetime import datetime, timedelta
 from functools import cached_property
-from typing import Optional
+from typing import ClassVar
 from urllib.parse import urljoin
 
 from dateutil.parser import isoparse
@@ -32,7 +32,6 @@ from harfanglab.helpers import handle_uri
 
 
 class HarfanglabSoftwareAssetConnector(AssetConnector):
-
     # Configuration Constants
     AGENT_ENDPOINT: str = "/api/data/endpoint/Agent"
     APPLICATION_ENDPOINT_TEMPLATE: str = "/api/data/endpoint/Agent/{agent_uid}/applications/"
@@ -53,7 +52,7 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
     TYPE_UID: int = 502002
 
     # Application type mapping
-    APP_TYPE_MAP: dict[str, tuple[PackageTypeStr, PackageTypeId]] = {
+    APP_TYPE_MAP: ClassVar[dict[str, tuple[PackageTypeStr, PackageTypeId]]] = {
         "uwp": (PackageTypeStr.APPLICATION, PackageTypeId.APPLICATION),
         "win32": (PackageTypeStr.APPLICATION, PackageTypeId.APPLICATION),
         "macos": (PackageTypeStr.APPLICATION, PackageTypeId.APPLICATION),
@@ -101,7 +100,7 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
             product=Product(name=self.PRODUCT_NAME, version=self.PRODUCT_VERSION), version=self.METADATA_VERSION
         )
 
-    def build_operating_system(self, os_product_type: Optional[str], os_type: Optional[str]) -> OperatingSystem:
+    def build_operating_system(self, os_product_type: str | None, os_type: str | None) -> OperatingSystem:
         os_type = self.extract_os_type(os_type)
         return OperatingSystem(name=os_product_type, type=OSTypeStr[os_type], type_id=OSTypeId[os_type])
 
@@ -185,7 +184,7 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
             ),
         )
 
-    def _fetch_devices(self, from_date: str | None) -> Generator[list[HarfanglabAgent], None, None]:
+    def _fetch_devices(self, from_date: str | None) -> Generator[list[HarfanglabAgent]]:
         """
         Fetch devices from Harfanglab API with pagination.
         Args:
@@ -237,10 +236,10 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
                 device_response.raise_for_status()
 
         except RequestException as e:
-            self.log(f"API request failed - URL: {current_url}, Error: {str(e)}", level="error")
+            self.log(f"API request failed - URL: {current_url}, Error: {e!s}", level="error")
             raise
 
-    def _fetch_applications(self, agent_uid: str) -> Generator[list[HarfanglabApplication], None, None]:
+    def _fetch_applications(self, agent_uid: str) -> Generator[list[HarfanglabApplication]]:
         """
         Fetch applications installed on a specific agent.
         Args:
@@ -269,7 +268,7 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
                         apps.append(HarfanglabApplication.parse_obj(item))
                     except ValidationError as e:
                         self.log(
-                            f"Skipping application (ID: {item.get('id', 'unknown')}) " f"due to validation error: {e}",
+                            f"Skipping application (ID: {item.get('id', 'unknown')}) due to validation error: {e}",
                             level="warning",
                         )
 
@@ -285,11 +284,11 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
 
         except RequestException as e:
             self.log(
-                f"Failed to fetch applications for agent {agent_uid}: {str(e)}",
+                f"Failed to fetch applications for agent {agent_uid}: {e!s}",
                 level="warning",
             )
 
-    def iterate_devices(self) -> Generator[list[HarfanglabAgent], None, None]:
+    def iterate_devices(self) -> Generator[list[HarfanglabAgent]]:
         """
         Iterate over devices fetched from the Harfanglab API, updating the checkpoint timestamp.
         Yields:
@@ -324,7 +323,7 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
                 self._latest_time = max_date.isoformat()
 
         except Exception as e:
-            self.log(f"Device iteration failed - Error: {str(e)}, Devices processed: {device_count}", level="error")
+            self.log(f"Device iteration failed - Error: {e!s}, Devices processed: {device_count}", level="error")
             raise
 
     def update_checkpoint(self) -> None:
@@ -336,7 +335,7 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
         else:
             self.log("No checkpoint update needed - No new timestamp available", level="debug")
 
-    def get_assets(self) -> Generator[SoftwareOCSFModel, None, None]:
+    def get_assets(self) -> Generator[SoftwareOCSFModel]:
         self.log(f"Software asset generation started - Data path: {self._data_path.absolute()}", level="info")
 
         software_generated = 0
@@ -350,7 +349,7 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
                     except (KeyError, ValueError) as e:
                         assets_skipped += 1
                         self.log(
-                            f"Device build skipped - ID: {agent.id}, Hostname: {agent.hostname}, Reason: {str(e)}",
+                            f"Device build skipped - ID: {agent.id}, Hostname: {agent.hostname}, Reason: {e!s}",
                             level="warning",
                         )
                         continue
@@ -363,8 +362,7 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
                             except (KeyError, ValueError) as e:
                                 assets_skipped += 1
                                 self.log(
-                                    f"Software asset skipped - Agent: {agent.id}, "
-                                    f"App: {app.name}, Reason: {str(e)}",
+                                    f"Software asset skipped - Agent: {agent.id}, App: {app.name}, Reason: {e!s}",
                                     level="warning",
                                 )
                                 continue
@@ -378,7 +376,7 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
         except Exception as e:
             self.log(
                 f"Software asset generation failed - Generated: {software_generated}, "
-                f"Skipped: {assets_skipped}, Error: {str(e)}",
+                f"Skipped: {assets_skipped}, Error: {e!s}",
                 level="error",
             )
             raise

@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # natives
 import os
 from unittest.mock import MagicMock
