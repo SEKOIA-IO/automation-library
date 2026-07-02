@@ -41,13 +41,52 @@ def test_patch_alert_status_only_accept_valid_status_or_action_uuid(requests_moc
     arguments = {"status": "random_status", "uuid": alert_uuid}
 
     requests_mock.patch(f"{base_url}/{alert_uuid}/workflow", json={})
+    requests_mock.get(module_base_url + "api/v1/sic/custom_statuses", json={"items": []})
 
     results: dict = action.run(arguments)
-    assert results == None
+    assert results is None
 
-    arguments = {"status": str(uuid.uuid4()), "uuid": alert_uuid}
+    arguments = {"status": "not-a-valid-uuid", "uuid": alert_uuid}
     results: dict = action.run(arguments)
-    assert results == None
+    assert results is None
+
+
+def test_patch_alert_status_support_custom_status_uuid(requests_mock):
+    action = UpdateAlertStatus()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    alert_uuid = str(uuid.uuid4())
+    custom_status_uuid = str(uuid.uuid4())
+    arguments = {"status": custom_status_uuid, "uuid": alert_uuid}
+
+    requests_mock.patch(f"{base_url}/{alert_uuid}", json={})
+
+    results: dict = action.run(arguments)
+    assert results == {}
+
+
+def test_patch_alert_status_support_custom_status_name(requests_mock):
+    action = UpdateAlertStatus()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    alert_uuid = str(uuid.uuid4())
+    custom_status_uuid = str(uuid.uuid4())
+    arguments = {"status": "ImONit", "uuid": alert_uuid}
+
+    requests_mock.get(
+        module_base_url + "api/v1/sic/custom_statuses",
+        json={
+            "items": [
+                {
+                    "uuid": custom_status_uuid,
+                    "label": "ImONit",
+                    "description": "My in progress custom status",
+                }
+            ]
+        },
+    )
+    requests_mock.patch(f"{base_url}/{alert_uuid}", json={})
+
+    results: dict = action.run(arguments)
+    assert results == {}
 
 
 def test_patch_alert_status_fails(requests_mock):

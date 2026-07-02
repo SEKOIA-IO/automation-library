@@ -1,4 +1,5 @@
 from posixpath import join as urljoin
+from uuid import UUID
 
 from sekoia_automation.action import Action
 import requests
@@ -21,13 +22,64 @@ ACTION_UUIDS = [
 
 class UpdateAlertStatus(Action):
 
-    def url(self, alert_uuid: str) -> str:
+    def workflow_url(self, alert_uuid: str) -> str:
         return urljoin(self.module.configuration["base_url"], f"api/v1/sic/alerts/{alert_uuid}/workflow")
+
+    def alert_url(self, alert_uuid: str) -> str:
+        return urljoin(self.module.configuration["base_url"], f"api/v1/sic/alerts/{alert_uuid}")
+
+    def custom_statuses_url(self) -> str:
+        return urljoin(self.module.configuration["base_url"], "api/v1/sic/custom_statuses")
 
     @property
     def headers(self) -> dict:
         api_key = self.module.configuration["api_key"]
         return {"Authorization": f"Bearer {api_key}"}
+
+    @staticmethod
+    def _is_uuid(value: str) -> bool:
+        try:
+            UUID(value)
+            return True
+        except ValueError:
+            return False
+
+    @staticmethod
+    def _extract_custom_statuses(payload: dict) -> list[dict]:
+        if isinstance(payload.get("items"), list):
+            return payload["items"]
+        if isinstance(payload.get("data"), list):
+            return payload["data"]
+        if isinstance(payload.get("custom_statuses"), list):
+            return payload["custom_statuses"]
+        return []
+
+    def _resolve_custom_status_uuid(self, status_name: str) -> str | None:
+        response = requests.get(self.custom_statuses_url(), headers=self.headers)
+        if response.status_code >= 500:
+            self.error(f"Could not list custom statuses, status code: {response.status_code}")
+            response.raise_for_status()
+
+        payload = response.json()
+        status_name_lower = status_name.casefold()
+        for custom_status in self._extract_custom_statuses(payload):
+            label = custom_status.get("label")
+            name = custom_status.get("name")
+            if isinstance(label, str) and label.casefold() == status_name_lower:
+                return custom_status.get("uuid")
+            if isinstance(name, str) and name.casefold() == status_name_lower:
+                return custom_status.get("uuid")
+        return None
+
+    def _patch_workflow_status(self, alert_uuid: str, action_uuid: str, comment: str | None = None):
+        return requests.patch(
+            self.workflow_url(alert_uuid), headers=self.headers, json={"action_uuid": action_uuid, "comment": comment}
+        )
+
+    def _patch_custom_status(self, alert_uuid: str, custom_status_uuid: str):
+        return requests.patch(
+            self.alert_url(alert_uuid), headers=self.headers, json={"custom_status_uuid": custom_status_uuid}
+        )
 
     @retry(
         reraise=True,
@@ -36,18 +88,17 @@ class UpdateAlertStatus(Action):
     )
     def perform_request(self, alert_uuid: str, status: str, comment: str | None = None):
         if status in STATUS_UUIDS.values() or status in ACTION_UUIDS:
-            result = requests.patch(
-                self.url(alert_uuid), headers=self.headers, json={"action_uuid": status, "comment": comment}
-            )
+            result = self._patch_workflow_status(alert_uuid, status, comment)
         elif status.upper() in STATUS_UUIDS:
-            result = requests.patch(
-                self.url(alert_uuid),
-                headers=self.headers,
-                json={"action_uuid": STATUS_UUIDS[status.upper()], "comment": comment},
-            )
+            result = self._patch_workflow_status(alert_uuid, STATUS_UUIDS[status.upper()], comment)
+        elif self._is_uuid(status):
+            result = self._patch_custom_status(alert_uuid, status)
         else:
-            self.error(f"Invalid status: {status}")
-            return
+            custom_status_uuid = self._resolve_custom_status_uuid(status)
+            if custom_status_uuid is None:
+                self.error(f"Invalid status: {status}")
+                return
+            result = self._patch_custom_status(alert_uuid, custom_status_uuid)
         if result.status_code >= 500:
             self.error(f"Could not change alert {alert_uuid} status, status code: {result.status_code}")
             result.raise_for_status()
