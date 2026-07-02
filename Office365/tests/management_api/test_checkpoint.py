@@ -29,7 +29,7 @@ def test_non_existing_checkpoint(checkpoint):
         mock_datetime.now.return_value = now
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
-        # Timedelta is sligthly less than 7 days since a few microseconds elapsed between `now`
+        # Timedelta is slightly less than 7 days since a few microseconds elapsed between `now`
         # and the moment `last_pull_date` is generated
         assert now == checkpoint.offset
 
@@ -53,7 +53,7 @@ def test_checkpoint_greater_than_7_days(symphony_storage, checkpoint, intake_key
         mock_datetime.now.return_value = now
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
-        # Timedelta is sligthly less than 7 days since a few microseconds elapsed between `now`
+        # Timedelta is slightly less than 7 days since a few microseconds elapsed between `now`
         # and the moment `last_pull_date` is generated
         assert (now - checkpoint.offset).days == 7
 
@@ -68,7 +68,7 @@ def test_checkpoint_greater_than_7_days_bis(symphony_storage, checkpoint, intake
         mock_datetime.now.return_value = now
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
-        # Timedelta is sligthly less than 7 days since a few microseconds elapsed between `now`
+        # Timedelta is slightly less than 7 days since a few microseconds elapsed between `now`
         # and the moment `last_pull_date` is generated
         assert (now - checkpoint.offset).days == 7
 
