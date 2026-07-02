@@ -89,6 +89,73 @@ def test_patch_alert_status_support_custom_status_name(requests_mock):
     assert results == {}
 
 
+def test_patch_alert_status_support_custom_status_name_from_name_field(requests_mock):
+    action = UpdateAlertStatus()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    alert_uuid = str(uuid.uuid4())
+    custom_status_uuid = str(uuid.uuid4())
+    arguments = {"status": "my-custom-status", "uuid": alert_uuid}
+
+    requests_mock.get(
+        module_base_url + "api/v1/sic/custom_statuses",
+        json={
+            "data": [
+                {
+                    "uuid": custom_status_uuid,
+                    "name": "My-Custom-Status",
+                    "description": "custom status resolved from name field",
+                }
+            ]
+        },
+    )
+    requests_mock.patch(f"{base_url}/{alert_uuid}", json={})
+
+    results: dict = action.run(arguments)
+    assert results == {}
+
+
+def test_patch_alert_status_support_custom_statuses_container(requests_mock):
+    action = UpdateAlertStatus()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    alert_uuid = str(uuid.uuid4())
+    custom_status_uuid = str(uuid.uuid4())
+    arguments = {"status": "mystatus", "uuid": alert_uuid}
+
+    requests_mock.get(
+        module_base_url + "api/v1/sic/custom_statuses",
+        json={
+            "custom_statuses": [
+                {
+                    "uuid": custom_status_uuid,
+                    "label": "MyStatus",
+                    "description": "custom status from custom_statuses key",
+                }
+            ]
+        },
+    )
+    requests_mock.patch(f"{base_url}/{alert_uuid}", json={})
+
+    results: dict = action.run(arguments)
+    assert results == {}
+
+
+def test_patch_alert_status_custom_status_lookup_fails_on_server_error(requests_mock):
+    action = UpdateAlertStatus()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    alert_uuid = str(uuid.uuid4())
+    arguments = {"status": "random_status", "uuid": alert_uuid}
+
+    requests_mock.get(module_base_url + "api/v1/sic/custom_statuses", json={}, status_code=500)
+
+    with patch("tenacity.nap.time"):
+        with pytest.raises(Exception):
+            action.run(arguments)
+
+
+def test_extract_custom_statuses_fallback_returns_empty_list():
+    assert UpdateAlertStatus._extract_custom_statuses({"unexpected": "format"}) == []
+
+
 def test_patch_alert_status_fails(requests_mock):
     action = UpdateAlertStatus()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
