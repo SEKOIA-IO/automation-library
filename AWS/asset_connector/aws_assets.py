@@ -12,9 +12,10 @@ import boto3
 from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.storage import PersistentJSON
+
+from aws_helpers.base import AwsModule
 from aws_helpers.client import AwsClientConfiguration
 from aws_helpers.oidc import OidcAwsMixin
-from aws_helpers.base import AwsModule
 
 
 def handle_aws_errors(operation: str) -> Callable[..., Any]:

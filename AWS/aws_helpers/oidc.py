@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
-from typing import Protocol
+from typing import Any, Protocol
 from urllib.parse import urljoin
 
 import boto3
 import requests
+
 from aws_helpers.client import AwsClientConfiguration
 
 from .base import AwsModule
@@ -105,7 +106,7 @@ class OidcAwsMixin:
                 RoleSessionName="sekoia-automation-session",
                 WebIdentityToken=oidc_token,
             )
-            credentials = response["Credentials"]
+            credentials: dict[str, Any] = response["Credentials"]
             self._config_expiration = credentials["Expiration"]
             self._cached_aws_config = AwsClientConfiguration(
                 aws_access_key_id=credentials["AccessKeyId"],

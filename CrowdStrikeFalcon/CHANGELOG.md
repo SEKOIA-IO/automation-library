@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-23 - 1.25.17
+
+### Fixed
+
+- Use a default connector configuration inheritance
+
 ## 2026-05-19 - 1.25.16
 
 ### Fixed
