@@ -89,3 +89,72 @@ def test_checkpoint_save_last_date(symphony_storage, checkpoint, intake_key):
 
     # assert that the checkpoint was updated to the new observed date
     assert checkpoint.offset == new_observed_date
+
+
+def test_read_retries_on_transient_error_then_succeeds(symphony_storage, checkpoint):
+    context = symphony_storage / f"o365_{intake_key}_last_pull"
+    saved_data = datetime.now(UTC).isoformat()
+    context.write_text(saved_data)
+
+    calls = {"n": 0}
+
+    real_open = Path.open
+
+    def flaky_open(self, *args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise OSError("Can't access the file")
+
+        return real_open(self, *args, **kwargs)
+
+    with patch.object(Path, "open", flaky_open), patch("time.sleep") as mock_sleep:
+        result = checkpoint.read(context)
+
+    assert result == saved_data
+    assert calls["n"] == 3  # two failures + one success
+
+
+def test_read_exhausts_retries_and_invokes_error_callback(symphony_storage, checkpoint):
+    context = symphony_storage / f"o365_{intake_key}_last_pull"
+    saved_data = datetime.now(UTC).isoformat()
+    context.write_text(saved_data)
+
+    with (
+        patch.object(Path, "open", side_effect=OSError("permanent failure")),
+        patch("time.sleep") as mock_sleep,
+        pytest.raises(OSError),
+    ):
+        checkpoint.read(context)
+
+
+def test_write_retries_on_transient_error_then_succeeds(symphony_storage, checkpoint):
+    context = symphony_storage / f"o365_{intake_key}_last_pull"
+    saved_data = datetime.now(UTC).isoformat()
+
+    calls = {"n": 0}
+
+    real_open = Path.open
+
+    def flaky_open(self, *args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise OSError("Can't access the file")
+
+        return real_open(self, *args, **kwargs)
+
+    with patch.object(Path, "open", flaky_open), patch("time.sleep") as mock_sleep:
+        checkpoint.write(context, saved_data)
+
+    assert calls["n"] == 3  # two failures + one success
+
+
+def test_write_exhausts_retries_and_invokes_error_callback(symphony_storage, checkpoint):
+    context = symphony_storage / f"o365_{intake_key}_last_pull"
+    saved_data = datetime.now(UTC).isoformat()
+
+    with (
+        patch.object(Path, "open", side_effect=OSError("permanent failure")),
+        patch("time.sleep") as mock_sleep,
+        pytest.raises(OSError),
+    ):
+        checkpoint.write(context, saved_data)
