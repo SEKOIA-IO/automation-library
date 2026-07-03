@@ -144,7 +144,7 @@ class MobileThreatDefenceConnector(Connector):
         }
 
         while True:
-            response = self.client.get(url, params=params, headers=headers)
+            response = self.client.get(url, params=params, headers=headers, timeout=60)
             self.handle_response_error(response)
 
             raw = response.json()

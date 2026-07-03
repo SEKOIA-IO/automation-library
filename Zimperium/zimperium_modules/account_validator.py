@@ -1,6 +1,6 @@
 from functools import cached_property
 
-import requests.exceptions
+import requests
 from sekoia_automation.account_validator import AccountValidator
 
 from . import ZimperiumModule
@@ -24,7 +24,7 @@ class ZimperiumAccountValidator(AccountValidator):
             self.log("Credentials validated", level="info")
             return True
 
-        except requests.HTTPError as http_err:
+        except requests.exceptions.HTTPError as http_err:
             self.log(
                 f"HTTP error during credential validation: {http_err}", level="error"
             )
@@ -33,7 +33,7 @@ class ZimperiumAccountValidator(AccountValidator):
             )
             return False
 
-        except requests.RequestException as req_err:
+        except requests.exceptions.RequestException as req_err:
             self.log(
                 f"Network error during credential validation: {req_err}", level="error"
             )

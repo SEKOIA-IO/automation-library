@@ -1,6 +1,6 @@
 from prometheus_client import Counter, Gauge, Histogram
 
-# Declare google prometheus metrics
+# Declare Zimperium Prometheus metrics
 prom_namespace_zimperium = "symphony_module_zimperium"
 
 INCOMING_MESSAGES = Counter(
