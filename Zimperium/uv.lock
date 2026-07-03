@@ -2328,7 +2328,12 @@ name = "zimperium-automation-module"
 version = "0.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "cachetools" },
+    { name = "orjson" },
+    { name = "prometheus-client" },
+    { name = "python-dateutil" },
     { name = "requests" },
+    { name = "requests-ratelimiter" },
     { name = "sekoia-automation-sdk" },
     { name = "structlog" },
 ]
@@ -2344,7 +2349,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "cachetools", specifier = ">=5.0.0" },
+    { name = "orjson", specifier = ">=3.7.7" },
+    { name = "prometheus-client", specifier = ">=0.16.0" },
+    { name = "python-dateutil", specifier = ">=2.8.2" },
     { name = "requests", specifier = ">=2.34.2" },
+    { name = "requests-ratelimiter", specifier = ">=0.7.0" },
     { name = "sekoia-automation-sdk", specifier = ">=1.23.1" },
     { name = "structlog", specifier = ">=26.1.0" },
 ]
