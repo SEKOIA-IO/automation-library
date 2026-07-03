@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests_mock
+from sekoia_automation.storage import PersistentJSON
 
 from zimperium_modules import ZimperiumModule
 from zimperium_modules.connector_threats import MobileThreatDefenceConnector
@@ -23,6 +24,9 @@ def trigger(data_storage):
     trigger.push_events_to_intakes = MagicMock()
     trigger.configuration = {
         "intake_key": "intake_key",
+        "frequency": 60,
+        "start_time": 0,
+        "timedelta": 0,
     }
 
     yield trigger
@@ -690,30 +694,6 @@ def response_1():
 
 
 @pytest.fixture
-def response_empty():
-    return {
-        "content": [],
-        "pageable": {
-            "pageNumber": 0,
-            "pageSize": 1,
-            "sort": {"unsorted": True, "sorted": False, "empty": True},
-            "offset": 0,
-            "unpaged": False,
-            "paged": True,
-        },
-        "totalPages": 0,
-        "totalElements": 0,
-        "last": True,
-        "numberOfElements": 0,
-        "first": True,
-        "sort": {"unsorted": True, "sorted": False, "empty": True},
-        "number": 0,
-        "size": 1,
-        "empty": True,
-    }
-
-
-@pytest.fixture
 def trigger_activation() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -752,3 +732,57 @@ def test_fetch_events(
 
         events = batches[0]
         assert len(events) == 4
+
+
+def test_stepper_with_cursor(trigger, data_storage):
+    date = datetime.now(timezone.utc)
+    most_recent_date_requested = date - timedelta(days=6)
+    context = PersistentJSON("context.json", data_storage)
+
+    with context as cache:
+        cache["most_recent_date_requested"] = most_recent_date_requested.isoformat()
+
+    with patch("zimperium_modules.connector_threats.datetime") as mock_datetime:
+        mock_datetime.now.return_value = datetime.now(timezone.utc)
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+
+        assert trigger.stepper.start == most_recent_date_requested
+
+
+def test_stepper_with_cursor_older_than_week(trigger, data_storage):
+    context = PersistentJSON("context.json", data_storage)
+
+    fixed_now = datetime(2026, 3, 16, 1, 12, 00, tzinfo=timezone.utc)
+    most_recent_date_requested = fixed_now - timedelta(days=40)
+    expected_date = fixed_now - timedelta(days=7)
+
+    with context as cache:
+        cache["most_recent_date_requested"] = most_recent_date_requested.isoformat()
+
+    with patch("zimperium_modules.connector_threats.datetime") as mock_datetime:
+        mock_datetime.now.return_value = fixed_now
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+
+        assert trigger.stepper.start.replace(microsecond=0) == expected_date.replace(
+            microsecond=0
+        )
+
+
+def test_stepper_without_cursor(trigger, data_storage):
+    context = PersistentJSON("context.json", data_storage)
+
+    # ensure that the cursor is None
+    with context as cache:
+        cache["most_recent_date_requested"] = None
+
+    with patch(
+        "sekoia_automation.helpers.timestepper.datetime.datetime"
+    ) as mock_datetime:
+        mock_datetime.now.return_value = datetime(
+            2023, 3, 22, 11, 56, 28, tzinfo=timezone.utc
+        )
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+
+        assert trigger.stepper.start == datetime(
+            2023, 3, 22, 11, 55, 28, tzinfo=timezone.utc
+        )
