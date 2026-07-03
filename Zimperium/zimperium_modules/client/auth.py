@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from urllib.parse import urljoin
 
 import requests
@@ -73,7 +74,7 @@ class ZimperiumApiAuthentication(AuthBase):
 
             response.raise_for_status()
 
-            api_credentials: dict = response.json()
+            api_credentials: dict[str, Any] = response.json()
             credentials = ZimperiumApiCredentials()
             credentials.access_token = api_credentials["accessToken"]
             credentials.refresh_token = api_credentials["refreshToken"]
@@ -82,6 +83,6 @@ class ZimperiumApiAuthentication(AuthBase):
 
         return self.__api_credentials
 
-    def __call__(self, request):
+    def __call__(self, request: requests.PreparedRequest) -> requests.PreparedRequest:
         request.headers["Authorization"] = self.get_credentials().authorization
         return request

@@ -38,15 +38,15 @@ class MobileThreatDefenceConnector(Connector):
     module: ZimperiumModule
     configuration: MobileThreatDefenceConnectorConfiguration
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
         self.context = PersistentJSON("context.json", self.data_path)
         self.cache_size = int(os.getenv("EVENTS_CACHE_SIZE", 2000))
-        self.events_cache: Cache = self.load_events_cache()
+        self.events_cache: Cache[str, bool] = self.load_events_cache()
 
     @cached_property
-    def stepper(self):
+    def stepper(self) -> TimeStepper:
         with self.context as cache:
             most_recent_date_requested_str = cache.get("most_recent_date_requested")
 
@@ -75,11 +75,11 @@ class MobileThreatDefenceConnector(Connector):
             metric=EVENTS_LAG,
         )
 
-    def load_events_cache(self) -> Cache:
+    def load_events_cache(self) -> Cache[str, bool]:
         """
         Load the events cache.
         """
-        cache: Cache = LRUCache(maxsize=self.cache_size)
+        cache: Cache[str, bool] = LRUCache(maxsize=self.cache_size)
 
         with self.context as context:
             # load the cache from the context
@@ -168,13 +168,13 @@ class MobileThreatDefenceConnector(Connector):
             page_num += 1
             params["page"] = page_num
 
-    def is_processed(self, event: dict) -> bool:
+    def is_processed(self, event: dict[str, Any]) -> bool:
         return event["id"] in self.events_cache
 
-    def mark_processed(self, event: dict) -> None:
+    def mark_processed(self, event: dict[str, Any]) -> None:
         self.events_cache[event["id"]] = True
 
-    def run(self):  # pragma: no cover
+    def run(self) -> None:  # pragma: no cover
         self.log(message="Zimperium MTD connector has started.", level="info")
 
         for start, end in self.stepper.ranges():
@@ -186,7 +186,9 @@ class MobileThreatDefenceConnector(Connector):
                 duration_start = time.time()
                 for events in self.fetch_events(start, end):
                     batch_of_events = [
-                        event for event in events if not self.is_processed(event)
+                        orjson.dumps(event).decode("utf-8")
+                        for event in events
+                        if not self.is_processed(event)
                     ]
 
                     if len(batch_of_events) > 0:
@@ -194,11 +196,6 @@ class MobileThreatDefenceConnector(Connector):
                             message=f"Forwarding {len(batch_of_events)} events",
                             level="info",
                         )
-
-                        batch_of_events = [
-                            orjson.dumps(event).decode("utf-8")
-                            for event in batch_of_events
-                        ]
                         self.push_events_to_intakes(events=batch_of_events)
 
                         OUTCOMING_EVENTS.labels(
@@ -208,7 +205,6 @@ class MobileThreatDefenceConnector(Connector):
                         # mark sent events as processed
                         for event in events:
                             self.mark_processed(event)
-
                         self.save_events_cache()
 
                     else:

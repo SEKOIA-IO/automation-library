@@ -9,7 +9,7 @@ from zimperium_modules.connector_threats import MobileThreatDefenceConnector
 
 
 @pytest.fixture
-def trigger(data_storage) -> MobileThreatDefenceConnector:
+def trigger(data_storage):
     module = ZimperiumModule()
     module.configuration = {
         "client_id": "CLIENT_ID",
@@ -729,7 +729,7 @@ def start_time(trigger_activation: datetime) -> datetime:
 
 
 def test_fetch_events(
-    trigger: MobileThreatDefenceConnector,
+    trigger,
     response_1: dict,
     start_time: datetime,
     end_time: datetime,
