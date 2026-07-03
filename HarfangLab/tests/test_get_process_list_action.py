@@ -91,7 +91,7 @@ def test_with_two_target_groups():
     )
 
     call_kwargs = trigger_job_mock.call_args.kwargs
-    assert call_kwargs["target"] == JobTarget(group_ids=["default_policy_group_id", "mIXTwHgB9x_xfY4PJueN"])
+    assert call_kwargs["target"] == JobTarget(groups=["default_policy_group_id", "mIXTwHgB9x_xfY4PJueN"])
     assert call_kwargs["job"] == JobAction(
         value="getProcessList",
         params={
@@ -133,7 +133,7 @@ def test_with_one_target_agent():
         }
     )
     call_kwargs = trigger_job_mock.call_args.kwargs
-    assert call_kwargs["target"] == JobTarget(agent_ids=["my-agent1"])
+    assert call_kwargs["target"] == JobTarget(agents=["my-agent1"])
     assert call_kwargs["job"] == JobAction(
         value="getProcessList",
         params={

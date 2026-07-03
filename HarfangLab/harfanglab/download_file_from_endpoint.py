@@ -117,7 +117,7 @@ class DownloadFileFromEndpointAction(JobExecutor):
         agent_id: str = arguments["id"]
         path_to_download: str = arguments["path"]
 
-        job_target = JobTarget(agent_ids=[agent_id])
+        job_target = JobTarget(agents=[agent_id])
         job_action = JobAction(
             value="downloadFile",
             params=[
