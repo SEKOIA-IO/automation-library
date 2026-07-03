@@ -752,7 +752,7 @@ def test_stepper_with_cursor(trigger, data_storage):
 def test_stepper_with_cursor_older_than_week(trigger, data_storage):
     context = PersistentJSON("context.json", data_storage)
 
-    fixed_now = datetime(2026, 3, 16, 1, 12, 00, tzinfo=timezone.utc)
+    fixed_now = datetime(2026, 3, 16, 1, 12, 0, tzinfo=timezone.utc)
     most_recent_date_requested = fixed_now - timedelta(days=40)
     expected_date = fixed_now - timedelta(days=7)
 
