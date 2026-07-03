@@ -47,6 +47,10 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
                     processing_start = time.time()
                     current_lag: int = 0
 
+                    # Update heartbeat at each processing cycle so liveness reflects
+                    # that the connector loop is still actively running.
+                    self.heartbeat()
+
                     batch_result: tuple[int, list[int]] = loop.run_until_complete(self.next_batch())
                     message_count, messages_timestamp = batch_result
 
@@ -64,13 +68,19 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
 
                         # Identify delay between message timestamp ( when it was pushed to sqs )
                         # and current timestamp ( when it was processed )
-                        messages_age = [
-                            int(processing_end - message_timestamp / 1000) for message_timestamp in messages_timestamp
-                        ]
-                        current_lag = min(messages_age)
+                        if messages_timestamp:
+                            messages_age = [
+                                int(processing_end - message_timestamp / 1000)
+                                for message_timestamp in messages_timestamp
+                            ]
+                            current_lag = min(messages_age)
 
-                        for age in messages_age:
-                            MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).observe(age)
+                            for age in messages_age:
+                                MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).observe(age)
+                        else:
+                            # Some connectors might not expose source timestamps while
+                            # still forwarding events successfully.
+                            MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).observe(0)
                     else:
                         self.log(message="No records to forward", level="info")
                         MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).observe(0)
