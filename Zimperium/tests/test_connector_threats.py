@@ -72,7 +72,11 @@ def response_1():
                 "classificationName": "RISKY",
                 "state": 1,
                 "responses": [
-                    {"responseId": 0, "eventId": "99999999-9999-9999-9999-999999999999", "timestamp": 1773830431000}
+                    {
+                        "responseId": 0,
+                        "eventId": "99999999-9999-9999-9999-999999999999",
+                        "timestamp": 1773830431000,
+                    }
                 ],
                 "mitigationEvents": [],
                 "generalInfo": {
@@ -90,7 +94,11 @@ def response_1():
                         "workProfileState": "WORK_PROFILE_NOT_PRESENT",
                     },
                     "androidEnterpriseAccessNetworkState": [
-                        {"networkTransport": '["WIFI"]', "wifiSecurityLevel": "PERSONAL", "privateDnsState": "ACTIVE"}
+                        {
+                            "networkTransport": '["WIFI"]',
+                            "wifiSecurityLevel": "PERSONAL",
+                            "privateDnsState": "ACTIVE",
+                        }
                     ],
                 },
                 "locationInfo": {
@@ -163,7 +171,13 @@ def response_1():
                         "downloadedAt": 1773830428000,
                     },
                 ],
-                "triggeredActions": [{"actionType": 0, "actionTypeName": "ALERT_USER", "actionMetadata": None}],
+                "triggeredActions": [
+                    {
+                        "actionType": 0,
+                        "actionTypeName": "ALERT_USER",
+                        "actionMetadata": None,
+                    }
+                ],
                 "zeventId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
                 "zappInstance": {
                     "id": "44444444-4444-4444-4444-444444444444",
@@ -215,7 +229,11 @@ def response_1():
                 "classificationName": "RISKY",
                 "state": 1,
                 "responses": [
-                    {"responseId": 0, "eventId": "cccccccc-cccc-cccc-cccc-cccccccccccc", "timestamp": 1773830432000}
+                    {
+                        "responseId": 0,
+                        "eventId": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                        "timestamp": 1773830432000,
+                    }
                 ],
                 "mitigationEvents": [],
                 "generalInfo": {
@@ -233,7 +251,11 @@ def response_1():
                         "workProfileState": "WORK_PROFILE_NOT_PRESENT",
                     },
                     "androidEnterpriseAccessNetworkState": [
-                        {"networkTransport": '["WIFI"]', "wifiSecurityLevel": "PERSONAL", "privateDnsState": "ACTIVE"}
+                        {
+                            "networkTransport": '["WIFI"]',
+                            "wifiSecurityLevel": "PERSONAL",
+                            "privateDnsState": "ACTIVE",
+                        }
                     ],
                 },
                 "locationInfo": {
@@ -306,7 +328,13 @@ def response_1():
                         "downloadedAt": 1773830428000,
                     },
                 ],
-                "triggeredActions": [{"actionType": 0, "actionTypeName": "ALERT_USER", "actionMetadata": None}],
+                "triggeredActions": [
+                    {
+                        "actionType": 0,
+                        "actionTypeName": "ALERT_USER",
+                        "actionMetadata": None,
+                    }
+                ],
                 "zeventId": "dddddddd-dddd-dddd-dddd-dddddddddddd",
                 "zappInstance": {
                     "id": "44444444-4444-4444-4444-444444444444",
@@ -358,7 +386,11 @@ def response_1():
                 "classificationName": "RISKY",
                 "state": 1,
                 "responses": [
-                    {"responseId": 0, "eventId": "ffffffff-ffff-ffff-ffff-ffffffffffff", "timestamp": 1773830430000}
+                    {
+                        "responseId": 0,
+                        "eventId": "ffffffff-ffff-ffff-ffff-ffffffffffff",
+                        "timestamp": 1773830430000,
+                    }
                 ],
                 "mitigationEvents": [],
                 "generalInfo": {
@@ -376,7 +408,11 @@ def response_1():
                         "workProfileState": "WORK_PROFILE_NOT_PRESENT",
                     },
                     "androidEnterpriseAccessNetworkState": [
-                        {"networkTransport": '["WIFI"]', "wifiSecurityLevel": "PERSONAL", "privateDnsState": "ACTIVE"}
+                        {
+                            "networkTransport": '["WIFI"]',
+                            "wifiSecurityLevel": "PERSONAL",
+                            "privateDnsState": "ACTIVE",
+                        }
                     ],
                 },
                 "locationInfo": {
@@ -400,7 +436,10 @@ def response_1():
                     }
                 ],
                 "additionalPublicForensics": [
-                    {"key": "Reason", "value": "Strong biometric authentication not configured"}
+                    {
+                        "key": "Reason",
+                        "value": "Strong biometric authentication not configured",
+                    }
                 ],
                 "simulated": False,
                 "lastModified": 1773830430000,
@@ -452,7 +491,13 @@ def response_1():
                         "downloadedAt": 1773830428000,
                     },
                 ],
-                "triggeredActions": [{"actionType": 0, "actionTypeName": "ALERT_USER", "actionMetadata": None}],
+                "triggeredActions": [
+                    {
+                        "actionType": 0,
+                        "actionTypeName": "ALERT_USER",
+                        "actionMetadata": None,
+                    }
+                ],
                 "zeventId": "11111111-2222-3333-4444-555555555555",
                 "zappInstance": {
                     "id": "44444444-4444-4444-4444-444444444444",
@@ -504,7 +549,11 @@ def response_1():
                 "classificationName": "RISKY",
                 "state": 4,
                 "responses": [
-                    {"responseId": 0, "eventId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "timestamp": 1773830453000}
+                    {
+                        "responseId": 0,
+                        "eventId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                        "timestamp": 1773830453000,
+                    }
                 ],
                 "mitigationEvents": [],
                 "generalInfo": {
@@ -522,7 +571,11 @@ def response_1():
                         "workProfileState": "WORK_PROFILE_NOT_PRESENT",
                     },
                     "androidEnterpriseAccessNetworkState": [
-                        {"networkTransport": '["WIFI"]', "wifiSecurityLevel": "PERSONAL", "privateDnsState": "ACTIVE"}
+                        {
+                            "networkTransport": '["WIFI"]',
+                            "wifiSecurityLevel": "PERSONAL",
+                            "privateDnsState": "ACTIVE",
+                        }
                     ],
                 },
                 "locationInfo": {
@@ -597,7 +650,13 @@ def response_1():
                         "downloadedAt": 1773830428000,
                     },
                 ],
-                "triggeredActions": [{"actionType": 0, "actionTypeName": "ALERT_USER", "actionMetadata": None}],
+                "triggeredActions": [
+                    {
+                        "actionType": 0,
+                        "actionTypeName": "ALERT_USER",
+                        "actionMetadata": None,
+                    }
+                ],
                 "zeventId": "ffffffff-aaaa-bbbb-cccc-dddddddddddd",
                 "zappInstance": {
                     "id": "44444444-4444-4444-4444-444444444444",
@@ -670,7 +729,10 @@ def start_time(trigger_activation: datetime) -> datetime:
 
 
 def test_fetch_events(
-    trigger: MobileThreatDefenceConnector, response_1: dict, start_time: datetime, end_time: datetime
+    trigger: MobileThreatDefenceConnector,
+    response_1: dict,
+    start_time: datetime,
+    end_time: datetime,
 ) -> None:
     with requests_mock.Mocker() as mock_requests:
         mock_requests.post(
@@ -679,7 +741,11 @@ def test_fetch_events(
             json={"accessToken": "TOKEN1", "refreshToken": "TOKEN2"},
         )
 
-        mock_requests.get("https://example.com/api/threats/public/v1/threats", status_code=200, json=response_1)
+        mock_requests.get(
+            "https://example.com/api/threats/public/v1/threats",
+            status_code=200,
+            json=response_1,
+        )
 
         batches = list(trigger.fetch_events(from_date=start_time, to_date=end_time))
         assert len(batches) == 1

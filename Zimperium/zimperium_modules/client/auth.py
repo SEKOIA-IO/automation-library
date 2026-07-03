@@ -48,8 +48,13 @@ class ZimperiumApiAuthentication(AuthBase):
     def get_credentials(self) -> ZimperiumApiCredentials:
         current_dt = datetime.now(timezone.utc)
 
-        refresh_token = self.__api_credentials.refresh_token if self.__api_credentials else None
-        if self.__api_credentials is None or current_dt + timedelta(seconds=300) >= self.__api_credentials.expires_at:
+        refresh_token = (
+            self.__api_credentials.refresh_token if self.__api_credentials else None
+        )
+        if (
+            self.__api_credentials is None
+            or current_dt + timedelta(seconds=300) >= self.__api_credentials.expires_at
+        ):
             if refresh_token:
                 response = self.__http_session.post(
                     url=urljoin(self.__base_url, "/api/auth/v1/api_keys/access"),

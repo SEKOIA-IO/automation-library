@@ -25,16 +25,28 @@ class ZimperiumAccountValidator(AccountValidator):
             return True
 
         except requests.HTTPError as http_err:
-            self.log(f"HTTP error during credential validation: {http_err}", level="error")
-            self.error(f"Failed to validate Zimperium MTD credentials due to HTTP error: {http_err}")
+            self.log(
+                f"HTTP error during credential validation: {http_err}", level="error"
+            )
+            self.error(
+                f"Failed to validate Zimperium MTD credentials due to HTTP error: {http_err}"
+            )
             return False
 
         except requests.RequestException as req_err:
-            self.log(f"Network error during credential validation: {req_err}", level="error")
-            self.error(f"Failed to validate Zimperium MTD credentials due to network error: {req_err}")
+            self.log(
+                f"Network error during credential validation: {req_err}", level="error"
+            )
+            self.error(
+                f"Failed to validate Zimperium MTD credentials due to network error: {req_err}"
+            )
             return False
 
         except Exception as exc:
-            self.log_exception(exc, message="Unexpected error during credential validation")
-            self.error("Failed to validate Zimperium MTD credentials due to an unexpected error")
+            self.log_exception(
+                exc, message="Unexpected error during credential validation"
+            )
+            self.error(
+                "Failed to validate Zimperium MTD credentials due to an unexpected error"
+            )
             return False

@@ -15,7 +15,9 @@ class ApiClient(requests.Session):
         ratelimit_per_minute: int = 600,
     ):
         super().__init__()
-        self.auth = ZimperiumApiAuthentication(base_url=base_url, client_id=client_id, client_secret=client_secret)
+        self.auth = ZimperiumApiAuthentication(
+            base_url=base_url, client_id=client_id, client_secret=client_secret
+        )
         self.mount(
             "https://",
             LimiterAdapter(
