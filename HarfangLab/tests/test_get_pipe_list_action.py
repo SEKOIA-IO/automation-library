@@ -34,7 +34,7 @@ def test_trigger_job():
         }
     )
     call_kwargs = trigger_job_mock.call_args.kwargs
-    assert call_kwargs["target"] == JobTarget(group_ids=["default_policy_group_id"])
+    assert call_kwargs["target"] == JobTarget(groups=["default_policy_group_id"])
     assert call_kwargs["job"] == JobAction(value="getPipeList", params={})
 
 

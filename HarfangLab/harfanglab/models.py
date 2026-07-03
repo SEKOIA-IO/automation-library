@@ -10,8 +10,8 @@ from pydantic.v1 import BaseModel
 
 
 class JobTarget(BaseModel):
-    agent_ids: list[str] | None = None
-    group_ids: list[str] | None = None
+    agents: list[str] | None = None
+    groups: list[str] | None = None
 
 
 class JobAction(BaseModel):
