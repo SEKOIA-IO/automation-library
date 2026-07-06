@@ -250,8 +250,6 @@ class TestGetUserType:
         assert type_id == UserTypeId.SYSTEM
         assert type_str == UserTypeStr.SYSTEM
 
-
-
     def test_desktop_user_is_local(self):
         assert SophosUserAssetConnector._is_local_machine_account(WINDOWS_USER) is True
 
