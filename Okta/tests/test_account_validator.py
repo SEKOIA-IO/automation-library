@@ -27,11 +27,10 @@ class TestOktaAccountValidator:
     def test_validate_success_with_users(self):
         """Test successful validation when list_users() returns user data."""
         mock_client = Mock()
-        # Mock the async list_users method to return some user data
         mock_users = [{"id": "1", "email": "test@example.com"}]
 
         async def mock_list_users():
-            return mock_users
+            return mock_users, Mock(), None
 
         mock_client.list_users = mock_list_users
 
@@ -41,10 +40,9 @@ class TestOktaAccountValidator:
             assert result is True
 
     def test_validate_connection_error(self):
-        """Test validation failure when connection error occurs."""
+        """Test validation failure when connection error is raised."""
         mock_client = Mock()
 
-        # Mock the async list_users method to raise an exception
         async def mock_list_users():
             raise Exception("Connection failed")
 
@@ -55,15 +53,37 @@ class TestOktaAccountValidator:
                 result = self.validator.validate()
 
                 assert result is False
-                mock_log.assert_called_once_with("Error while validating account: Connection failed", level="error")
+                mock_log.assert_called_once_with(
+                    "Error while validating account. Authentication failed: Connection failed", level="error"
+                )
 
-    def test_validate_authentication_error(self):
-        """Test validation failure when authentication error occurs."""
+    def test_validate_authentication_error_from_sdk_tuple(self):
+        """Okta SDK returns (None, resp, error) on 401 — validator must detect it."""
+        mock_client = Mock()
+        okta_error = Mock()
+        okta_error.message = "Okta HTTP 401 E0000011 Invalid token provided"
+
+        async def mock_list_users():
+            return None, Mock(), okta_error
+
+        mock_client.list_users = mock_list_users
+
+        with patch.object(type(self.validator), "client", new_callable=PropertyMock, return_value=mock_client):
+            with patch.object(self.validator, "log") as mock_log:
+                with patch.object(self.validator, "error") as mock_error:
+                    result = self.validator.validate()
+
+                    assert result is False
+                    mock_log.assert_called_once_with(
+                        f"Error while validating account. Authentication failed: {okta_error.message}", level="error"
+                    )
+
+    def test_validate_error_without_message_attribute(self):
+        """Validator falls back to str(err) when the error has no message attribute."""
         mock_client = Mock()
 
-        # Mock the async list_users method to raise an authentication error
         async def mock_list_users():
-            raise Exception("Invalid API key")
+            return None, Mock(), "raw string error"
 
         mock_client.list_users = mock_list_users
 
@@ -72,15 +92,16 @@ class TestOktaAccountValidator:
                 result = self.validator.validate()
 
                 assert result is False
-                mock_log.assert_called_once_with("Error while validating account: Invalid API key", level="error")
+                mock_log.assert_called_once_with(
+                    "Error while validating account. Authentication failed: raw string error", level="error"
+                )
 
     def test_validate_success(self):
         """Test successful validation when list_users() completes without error."""
         mock_client = Mock()
 
-        # Create a proper async mock
         async def mock_list_users():
-            return []
+            return [], Mock(), None
 
         mock_client.list_users = mock_list_users
 
@@ -90,10 +111,9 @@ class TestOktaAccountValidator:
             assert result is True
 
     def test_validate_network_error(self):
-        """Test validation failure when network error occurs."""
+        """Test validation failure when network error is raised."""
         mock_client = Mock()
 
-        # Mock the async list_users method to raise a network error
         async def mock_list_users():
             raise Exception("Network timeout")
 
@@ -104,28 +124,12 @@ class TestOktaAccountValidator:
                 result = self.validator.validate()
 
                 assert result is False
-                mock_log.assert_called_once_with("Error while validating account: Network timeout", level="error")
-
-    def test_validate_okta_specific_error(self):
-        """Test validation failure when Okta-specific error occurs."""
-        mock_client = Mock()
-
-        # Mock the async list_users method to raise an Okta-specific error
-        async def mock_list_users():
-            raise Exception("Rate limit exceeded")
-
-        mock_client.list_users = mock_list_users
-
-        with patch.object(type(self.validator), "client", new_callable=PropertyMock, return_value=mock_client):
-            with patch.object(self.validator, "log") as mock_log:
-                result = self.validator.validate()
-
-                assert result is False
-                mock_log.assert_called_once_with("Error while validating account: Rate limit exceeded", level="error")
+                mock_log.assert_called_once_with(
+                    "Error while validating account. Authentication failed: Network timeout", level="error"
+                )
 
     def test_validate_with_different_module_configurations(self):
         """Test validation with different module configurations."""
-        # Test with different base URL
         different_mock_module = Mock()
         different_mock_module.configuration.base_url = "https://different.okta.com"
         different_mock_module.configuration.apikey = "different_api_key"
@@ -135,11 +139,10 @@ class TestOktaAccountValidator:
             mock_client_class.return_value = mock_client
 
             async def mock_list_users():
-                return []
+                return [], Mock(), None
 
             mock_client.list_users = mock_list_users
 
-            # Create new validator with different config
             validator = OktaAccountValidator(different_mock_module)
             result = validator.validate()
 
@@ -153,14 +156,14 @@ class TestOktaAccountValidator:
         mock_client = Mock()
 
         async def mock_list_users():
-            return []
+            return [], Mock(), None
 
         mock_client.list_users = mock_list_users
 
         with patch.object(type(self.validator), "client", new_callable=PropertyMock, return_value=mock_client):
-            # Test that it works with existing event loop
             with patch("asyncio.get_event_loop") as mock_get_loop:
                 mock_loop = Mock()
+                mock_loop.run_until_complete.return_value = ([], Mock(), None)
                 mock_get_loop.return_value = mock_loop
 
                 result = self.validator.validate()
@@ -183,4 +186,6 @@ class TestOktaAccountValidator:
                 result = self.validator.validate()
 
                 assert result is False
-                mock_log.assert_called_once_with(f"Error while validating account: {error_message}", level="error")
+                mock_log.assert_called_once_with(
+                    f"Error while validating account. Authentication failed: {error_message}", level="error"
+                )

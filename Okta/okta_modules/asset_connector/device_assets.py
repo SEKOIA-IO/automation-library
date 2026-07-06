@@ -11,7 +11,6 @@ from urllib.parse import urlencode
 
 from dateutil.parser import isoparse
 from okta.client import Client as OktaClient
-from pydantic import BaseModel, Field
 from sekoia_automation.asset_connector import AsyncAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.device import (
@@ -29,34 +28,24 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 from sekoia_automation.storage import PersistentJSON
 
 from okta_modules import OktaModule
+from okta_modules.asset_connector.device_models import (
+    OktaDevice,
+    OktaDeviceDisplayName,
+    OktaDeviceEmbeddedResources,
+    OktaDeviceLink,
+    OktaDeviceLinkHints,
+    OktaDeviceProfile,
+)
 
-
-class OktaDeviceProfile(BaseModel):
-    """Okta Device Profile."""
-
-    displayName: str
-    platform: str
-    registered: bool
-    secureHardwarePresent: bool
-    osVersion: Optional[str] = None
-    serialNumber: Optional[str] = None
-    sid: Optional[str] = None
-    diskEncryptionType: Optional[str] = None
-    manufacturer: Optional[str] = None
-    model: Optional[str] = None
-    imei: Optional[str] = None
-    udid: Optional[str] = None
-
-
-class OktaDevice(BaseModel):
-    """Okta Device."""
-
-    id: str
-    status: str
-    created: str
-    lastUpdated: str
-    lastSeen: Optional[str] = None
-    profile: OktaDeviceProfile
+__all__ = [
+    "OktaDevice",
+    "OktaDeviceAssetConnector",
+    "OktaDeviceDisplayName",
+    "OktaDeviceEmbeddedResources",
+    "OktaDeviceLink",
+    "OktaDeviceLinkHints",
+    "OktaDeviceProfile",
+]
 
 
 class OktaDeviceAssetConnector(AsyncAssetConnector):

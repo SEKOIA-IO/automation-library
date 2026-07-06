@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-16 - 2.10.4
+
+### Fixed
+
+- Fix duplicated events in the system logs connector: the dedup cache and the checkpoint were sharing the same `context.json` file and overwriting each other on disk, causing one of them to be lost on restart. The dedup cache is now stored in a dedicated `events_cache.json` file (with backward-compatible migration from `context.json`).
+
+## 2026-04-24 - 2.10.3
+
+### Fixed
+
+- Fix account validator to detect authentication failures.
+
+## 2026-04-21 - 2.10.2
+
+### Changed
+
+- Upgrade `sekoia-automation-sdk` to 1.22.5 and add Okta device models for full API responses
+
 ## 2026-03-29 - 2.10.1
 
 ### Changed

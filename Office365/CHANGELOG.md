@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-01 - 2.20.5
+
+### Fixed
+
+- Handle unexpected aiohttp session closures by raising `SessionClosedError` and rebuilding the Office365 client when needed.
+
+## 2026-05-22 - 2.20.4
+
+### Fixed
+
+- Ignore AF20024 error code when activating subscriptions, as it indicates the subscription is already enabled
+
+## 2026-04-27 - 2.20.3
+
+### Fixed
+
+- Log as critical when failing to activate the subscription
+- Fix the way to shut down the connector
+
 ## 2026-04-16 - 2.20.2
 
 ### Fixed

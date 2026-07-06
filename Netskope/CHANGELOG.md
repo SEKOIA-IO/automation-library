@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-10 - 1.14.0
+
+### Added
+
+- New `security_check_only` option on the Netskope Events connector to collect only security-check alerts (malware, malsite, DLP).
+
+### Changed
+
+- Removed the standalone `netskope_security_check_connector` (UUID `9e292f7e-146f-4839-926e-dac6ba8a6275`). Enable the `security_check_only` option on the Netskope Events connector instead.
+
+## 2026-06-09 - 1.13.1
+
+### Fixed
+
+- Added trigger configuration for security check.
+
+## 2026-05-11 - 1.13.0
+
+### Added
+
+- New `netskope_security_check_connector` that collects Netskope sandbox / security-check.
+
+## 2026-04-23 - 1.12.0
+
+### Fixed
+
+- Stop consumer when Netskope SDK throws Incorrect Token error
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
 ## 2024-12-13 - 1.11.1
 
 ### Fixed

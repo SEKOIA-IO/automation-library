@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-29 - 1.19.2
+
+### Fixed
+
+- Fix naming convention of the Sophos asset connectors.
+
+## 2026-06-29 - 1.19.1
+
+### Fixed
+
+- Fix anonymization of the Sophos User Asset Connector tests.
+
+## 2026-06-29 - 1.19.0
+
+### Added
+
+- Add Sophos User Asset Connector (`SophosUserAssetConnector`) that collects directory users from the Sophos Central API
+
+## 2026-06-05 - 1.18.3
+
+### Fixed
+
+- Fix the sophos api problem by using a cache to store the assets and avoid calling the API too much
+
+## 2026-05-04 - 1.18.2
+
+### Fixed
+
+- Fix the samples in the asset connector YAML file (`device_mapping.yml`)
+
+## 2026-04-27 - 1.18.1
+
+### Fixed
+
+- Fix how we register the Sophos account validator in the main module
+
 ## 2026-04-23 - 1.18.0
 
 ### Added

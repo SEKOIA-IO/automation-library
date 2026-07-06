@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-16 - 2.10.23
+
+### Fixed
+
+- Fix Account validator to check all permissions needed for the asset connector
+
+## 2026-05-21 - 2.10.22
+
+### Fixed
+
+- Fix checkpoint for sign-in events
+
+## 2026-05-05 - 2.10.21
+
+### Fixed
+
+- Fix HTTP transport resource leak in `EntraIDAssetConnector` by persisting `ClientSecretCredential` and closing it after each run
+
+## 2026-04-21 - 2.10.20
+
+### Changed
+
+- Update the sekoia-automation-sdk dependency to version 1.22.5
+
 ## 2026-03-29 - 2.10.19
 
 ### Changed

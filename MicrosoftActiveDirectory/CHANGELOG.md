@@ -7,12 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-06 - 1.5.5
+
+### Fixed
+
+- Classify machine/computer accounts (sAMAccountName or UPN local part ending with `$`) as `SYSTEM` instead of `USER`
+- Discard AD UPN-style values (e.g. `compte$@domain.ad.recouv`) from `email_addr` — they are not real email addresses
+
+## 2026-04-24 - 1.5.4
+
+### Fixed
+
+- Fix `AttributeError` on `basedn` field due to Pydantic v1/v2 mismatch in `MicrosoftADConnectorConfiguration`
+
 ## 2026-04-10 - 1.5.3
 
 ### Fixed
 
 - Fix field mappings in `user_mapping.yml` to align with the actual OCSF models
-=======
+
 ## 2026-04-14 - 1.5.2
 
 ### Changed
