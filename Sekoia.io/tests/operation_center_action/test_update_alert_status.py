@@ -6,6 +6,7 @@ import pytest
 from sekoiaio.operation_center.update_alert_status import (
     NonRetryableAlertStatusError,
     UpdateAlertStatus,
+    _is_retryable_request_exception,
 )
 
 module_base_url = "https://app.sekoia.fake/"
@@ -188,6 +189,44 @@ def test_patch_alert_status_custom_status_lookup_fails_on_invalid_json_without_r
 def test_extract_custom_statuses_unexpected_payload_raises_value_error():
     with pytest.raises(ValueError):
         UpdateAlertStatus._extract_custom_statuses({"unexpected": "format"})
+
+
+def test_extract_custom_statuses_empty_payload_returns_empty_list():
+    assert UpdateAlertStatus._extract_custom_statuses({}) == []
+
+
+def test_is_retryable_request_exception_defaults_to_true():
+    assert _is_retryable_request_exception(RuntimeError("boom")) is True
+
+
+def test_patch_alert_status_custom_status_lookup_fails_on_unexpected_payload_without_retry(requests_mock):
+    action = UpdateAlertStatus()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    alert_uuid = str(uuid.uuid4())
+    arguments = {"status": "random_status", "uuid": alert_uuid}
+
+    requests_mock.get(module_base_url + "api/v1/sic/custom_statuses", json={"unexpected": "format"})
+
+    with patch("tenacity.nap.time") as nap_mock:
+        with pytest.raises(NonRetryableAlertStatusError):
+            action.run(arguments)
+
+    nap_mock.assert_not_called()
+
+
+def test_patch_alert_status_custom_status_name_ignores_non_string_uuid(requests_mock):
+    action = UpdateAlertStatus()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    alert_uuid = str(uuid.uuid4())
+    arguments = {"status": "mystatus", "uuid": alert_uuid}
+
+    requests_mock.get(
+        module_base_url + "api/v1/sic/custom_statuses",
+        json={"items": [{"uuid": 42, "label": "mystatus"}]},
+    )
+
+    results = action.run(arguments)
+    assert results is None
 
 
 def test_patch_alert_status_fails(requests_mock):
