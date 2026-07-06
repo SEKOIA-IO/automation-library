@@ -50,9 +50,7 @@ class Checkpoint:
         if not filepath.is_file():
             return None
 
-        with filepath.open("rt") as file:
-            result = file.read()
-
+        result = filepath.read_text()
         return result
 
     @retry(
@@ -61,9 +59,5 @@ class Checkpoint:
         stop=stop_after_attempt(10),
         retry_error_callback=capture_retry_error,
     )
-    def write(self, filepath: Path, data: bytes | str) -> None:
-        if isinstance(data, str):
-            data = data.encode("utf-8")
-
-        with filepath.open("wb") as out:
-            out.write(data)
+    def write(self, filepath: Path, data: str) -> None:
+        filepath.write_text(data)
