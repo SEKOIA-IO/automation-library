@@ -7,15 +7,34 @@ from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
 
+import aiohttp
 from sekoia_automation.aio.connector import AsyncConnector
 
-from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from office365.metrics import (
+    AUTH_FAILURES,
+    FORWARD_EVENTS_DURATION,
+    NETWORK_FAILURES,
+    O365_API_FAILURES,
+    OUTCOMING_EVENTS,
+)
 
 from .checkpoint import Checkpoint
 from .configuration import Office365Configuration
-from .errors import ApplicationAuthenticationFailed, FailedToActivateO365Subscription, SessionClosedError
+from .error_handling import FailureTracker
+from .errors import (
+    ApplicationAuthenticationFailed,
+    FailedToActivateO365Subscription,
+    FailedToGetO365AuditContent,
+    FailedToGetO365SubscriptionContents,
+    FailedToListO365Subscriptions,
+    SessionClosedError,
+)
 from .helpers import split_date_range
 from .office365_client import Office365API
+
+AUTH_RECOVERY_SLEEP_MULTIPLIER = 10
+MAX_RECOVERY_SLEEP_SECONDS = 600
+MAX_BACKOFF_EXPONENT = 5
 
 
 class Office365Connector(AsyncConnector):
@@ -26,6 +45,9 @@ class Office365Connector(AsyncConnector):
         self.limit_of_events_to_push = int(os.getenv("OFFICE365_BATCH_SIZE", 10000))
         self._frequency = int(os.getenv("OFFICE365_PULL_FREQUENCY", 60))
         self.time_range_interval = int(os.getenv("OFFICE365_TIME_RANGE_INTERVAL", 30))
+        self._auth_failures = FailureTracker()
+        self._o365_failures = FailureTracker()
+        self._network_failures = FailureTracker()
 
     async def shutdown(self) -> None:
         """
@@ -194,6 +216,7 @@ class Office365Connector(AsyncConnector):
             try:
                 start_time = time.time()
                 await self.forward_next_batches(checkpoint)
+                self._reset_failure_trackers()
                 # get the ending time and compute the duration to forward the events
                 end_time = time.time()
                 batch_duration = end_time - start_time
@@ -201,6 +224,10 @@ class Office365Connector(AsyncConnector):
                 delta_sleep = self._frequency - batch_duration
                 if delta_sleep > 0:
                     await asyncio.sleep(delta_sleep)
+
+            except ApplicationAuthenticationFailed as error:
+                await self._handle_auth_failure(error)
+
             except SessionClosedError as exp:
                 if not self.running:
                     self.log(
@@ -209,15 +236,93 @@ class Office365Connector(AsyncConnector):
                     )
                     return
                 self.log_exception(
+                    exception=exp,
                     message="Office365 client session was closed unexpectedly; rebuilding client and continuing.",
                 )
                 self._reset_client()
                 if self.running:
                     await asyncio.sleep(self._frequency)
+
+            except (
+                FailedToListO365Subscriptions,
+                FailedToGetO365SubscriptionContents,
+                FailedToGetO365AuditContent,
+            ) as error:
+                await self._handle_o365_api_failure(error)
+
+            except (aiohttp.ClientError, asyncio.TimeoutError) as error:
+                await self._handle_network_failure(error)
+
             except Exception as error:
+                # Unknown / programming error: keep full traceback for debugging.
                 self.log_exception(error, message="Failed to forward events")
-                # Continue the loop to retry after logging
                 await asyncio.sleep(self._frequency)
+
+    async def _handle_auth_failure(self, error: ApplicationAuthenticationFailed) -> None:
+        AUTH_FAILURES.labels(intake_key=self.configuration.intake_key).inc()
+        count = self._auth_failures.record("auth")
+        if self._auth_failures.should_log():
+            context = getattr(error, "context", {}) or {}
+            response = context.get("response") or {}
+            details = response.get("error_description")
+            message = (
+                f"Authentication against Microsoft Entra ID failed (consecutive={count})."
+                " Verify client_id, client_secret and tenant_id."
+            )
+            if details:
+                message = f"{message} Details: {details}"
+            self.log(message=message, level=self._auth_failures.log_level)
+        await asyncio.sleep(min(self._frequency * AUTH_RECOVERY_SLEEP_MULTIPLIER, MAX_RECOVERY_SLEEP_SECONDS))
+
+    async def _handle_o365_api_failure(self, error: Exception) -> None:
+        operation = type(error).__name__
+        context = getattr(error, "context", {}) or {}
+        status_code = context.get("status_code")
+        error_code = context.get("error_code")
+
+        O365_API_FAILURES.labels(
+            intake_key=self.configuration.intake_key,
+            status=str(status_code) if status_code is not None else "unknown",
+            operation=operation,
+        ).inc()
+
+        count = self._o365_failures.record((operation, status_code, error_code))
+        if self._o365_failures.should_log():
+            self.log(
+                message=(f"Office 365 Management API call '{operation}' failed " f"(consecutive={count}): {error}"),
+                level=self._o365_failures.log_level,
+            )
+
+        await asyncio.sleep(self._compute_backoff_seconds(count))
+
+    async def _handle_network_failure(self, error: Exception) -> None:
+        exc_type = type(error).__name__
+        NETWORK_FAILURES.labels(intake_key=self.configuration.intake_key, exc_type=exc_type).inc()
+        count = self._network_failures.record(exc_type)
+        if self._network_failures.should_log():
+            self.log(
+                message=f"Network error talking to Microsoft (consecutive={count}): {exc_type}: {error}",
+                level=self._network_failures.log_level,
+            )
+        await asyncio.sleep(self._compute_backoff_seconds(count))
+
+    def _compute_backoff_seconds(self, consecutive_count: int) -> int:
+        exponent = min(max(consecutive_count - 1, 0), MAX_BACKOFF_EXPONENT)
+
+        return min(self._frequency * (2**exponent), MAX_RECOVERY_SLEEP_SECONDS)
+
+    def _reset_failure_trackers(self) -> None:
+        for label, tracker in (
+            ("authentication", self._auth_failures),
+            ("Office 365 API", self._o365_failures),
+            ("network", self._network_failures),
+        ):
+            previous = tracker.reset()
+            if previous > 0:
+                self.log(
+                    message=f"Recovered from {label} failures after {previous} consecutive errors",
+                    level="info",
+                )
 
     def _handle_stop_signal(self, loop):
         """
