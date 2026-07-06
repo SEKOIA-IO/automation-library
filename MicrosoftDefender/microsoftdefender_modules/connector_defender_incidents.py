@@ -1,13 +1,11 @@
-from typing import Any
-
-from .connector_microsoft_defender_xdr import (
+from .connector_base import (
     BaseGraphAPIConfiguration,
     BaseMicrosoftDefenderGraphAPIConnector,
 )
 
 
 class MicrosoftDefenderGraphAPIIncidentsConfiguration(BaseGraphAPIConfiguration):
-    expand_alerts: bool = False
+    pass
 
 
 class MicrosoftDefenderGraphAPIIncidents(BaseMicrosoftDefenderGraphAPIConnector):
@@ -25,8 +23,3 @@ class MicrosoftDefenderGraphAPIIncidents(BaseMicrosoftDefenderGraphAPIConnector)
     id_field = "id"
     context_cursor_key = "most_recent_date_requested_incidents"
     events_cache_context_key = "incidents_events_cache"
-
-    def extra_query_params(self) -> dict[str, Any]:
-        if self.configuration.expand_alerts:
-            return {"$expand": "alerts"}
-        return {}

@@ -7,12 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2026-04-21 - 1.3.0
+## 2026-06-10 - 1.3.0
 
 ### Added
 
 - New connector `connector_defender_incidents` fetching incidents from Microsoft Defender XDR through the Microsoft Graph Security API (`/security/incidents`). Reuses the same Graph application scope as the alerts connector; requires the `SecurityIncident.Read.All` permission.
-- The incidents connector accepts an optional `expand_alerts` parameter to include each incident's nested alerts via `$expand=alerts`.
 
 ## 2026-06-02 - 1.2.2
 

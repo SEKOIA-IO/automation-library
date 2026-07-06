@@ -27,29 +27,6 @@ def trigger(data_storage):
         "frequency": 60,
         "start_time": 0,
         "timedelta": 0,
-        "expand_alerts": False,
-    }
-    yield trigger
-
-
-@pytest.fixture
-def trigger_with_expand(data_storage):
-    module = MicrosoftDefenderModule()
-    module.configuration = {
-        "tenant_id": "tenant",
-        "app_id": "app",
-        "app_secret": "secret",
-    }
-    trigger = MicrosoftDefenderGraphAPIIncidents(module=module, data_path=data_storage)
-    trigger.log = Mock()
-    trigger.log_exception = Mock()
-    trigger.push_events_to_intakes = Mock()
-    trigger.configuration = {
-        "intake_key": "ik",
-        "frequency": 60,
-        "start_time": 0,
-        "timedelta": 0,
-        "expand_alerts": True,
     }
     yield trigger
 
@@ -109,21 +86,8 @@ def test_fetch_events_hits_incidents_endpoint(trigger, requests_mock, start_time
         # requests_mock lowercases qs keys and values
         assert "createddatetime gt" in call.qs["$filter"][0]
         assert "createddatetime le" in call.qs["$filter"][0]
-        # default: no $expand
+        # incidents are never expanded with nested alerts
         assert "$expand" not in call.qs
-
-
-def test_fetch_events_expands_alerts_when_configured(trigger_with_expand, requests_mock, start_time, end_time):
-    with _mock_msal_patch() as mock_msal:
-        mock_msal.acquire_token_silent = MagicMock(return_value={"access_token": "TOKEN"})
-        trigger_with_expand._get_access_token = Mock()  # type: ignore[attr-defined]
-
-        requests_mock.get(INCIDENTS_URL, json={"value": []})
-
-        list(trigger_with_expand.fetch_events(start_time, end_time))
-
-        call = requests_mock.last_request
-        assert call.qs["$expand"][0] == "alerts"
 
 
 def test_pagination_follows_next_link(trigger, requests_mock, start_time, end_time):
@@ -187,7 +151,7 @@ def test_stepper_uses_incidents_cursor(trigger, data_storage):
         # alerts cursor must be ignored
         cache["most_recent_date_requested"] = (fixed_now - timedelta(days=1)).isoformat()
 
-    with patch("microsoftdefender_modules.connector_microsoft_defender_xdr.datetime") as mock_datetime:
+    with patch("microsoftdefender_modules.connector_base.datetime") as mock_datetime:
         mock_datetime.now.return_value = fixed_now
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 

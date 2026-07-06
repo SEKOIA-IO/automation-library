@@ -257,7 +257,7 @@ def test_stepper_with_cursor_older_than_30_days(trigger, data_storage):
     with context as cache:
         cache["most_recent_date_requested"] = most_recent_date_requested.isoformat()
 
-    with patch("microsoftdefender_modules.connector_microsoft_defender_xdr.datetime") as mock_datetime:
+    with patch("microsoftdefender_modules.connector_base.datetime") as mock_datetime:
         mock_datetime.now.return_value = fixed_now
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 

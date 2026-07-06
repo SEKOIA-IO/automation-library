@@ -20,11 +20,6 @@
         "description": "Polling frequency in seconds",
         "default": 60
       },
-      "expand_alerts": {
-        "type": "boolean",
-        "description": "Include each incident's nested alerts via $expand=alerts. Disable if you also run the alerts connector to avoid duplicated alert data.",
-        "default": false
-      },
       "intake_server": {
         "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
         "default": "https://intake.sekoia.io",
