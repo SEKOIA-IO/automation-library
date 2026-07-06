@@ -32,7 +32,9 @@ class RemoveFromBlocklistAction(NetskopeAction):
 
         # Count requested non-empty entries that are not currently present.
         missing_count = sum(
-            1 for item in (item.strip() for item in args.items if item and item.strip()) if item not in set(existing_items)
+            1
+            for item in (item.strip() for item in args.items if item and item.strip())
+            if item not in set(existing_items)
         )
         removed_count = len(items_to_remove)
 
