@@ -16,7 +16,7 @@ class DependenciesValidator(Validator):
 
         pyproject = module_dir / "pyproject.toml"
         poetry_lock = module_dir / "poetry.lock"
-        uv_lock = module_path / "uv.lock"
+        uv_lock = module_dir / "uv.lock"
 
         if not pyproject.is_file():
             result.errors.append(
