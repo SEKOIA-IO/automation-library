@@ -57,7 +57,6 @@ class SophosUserAssetConnector(AssetConnector):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("user_context.json", self._data_path)
-        # Snapshot of the full current run: id → updatedAt (or createdAt fallback)
         self._current_run: dict[str, str] = {}
 
     @property
@@ -99,15 +98,36 @@ class SophosUserAssetConnector(AssetConnector):
         return user.updatedAt or user.createdAt
 
     @staticmethod
-    def _get_account_type(user: SophosUser) -> tuple[AccountTypeId, AccountTypeStr]:
-        """Infer account type from available fields.
+    def _extract_domain(name: str | None) -> str | None:
+        """Extract the domain prefix from 'DOMAIN\\user' or 'DOMAIN/user' formats."""
+        if not name:
+            return None
+        for sep in ("\\", "/"):
+            if sep in name:
+                domain = name.split(sep, 1)[0]
+                return domain if domain else None
+        return None
 
-        - name like 'DOMAIN\\username' (backslash) and no email → Windows account
-        - otherwise → Unknown
+    @staticmethod
+    def _is_local_machine_account(user: SophosUser) -> bool:
+        """Return True for local Windows session accounts"""
+        name = user.name or ""
+        return "\\" in name and not user.email and not user.firstName and not user.lastName
+
+    @staticmethod
+    def _get_account_type(user: SophosUser) -> tuple[AccountTypeId, AccountTypeStr]:
+        """
+        Infer account type from username.
+
+        - Local machine account (COMPUTERNAME\\username, no email/names) → Windows account
+        - AD domain account (DOMAIN/username, no email) → LDAP account
+        - Otherwise → Unknown
         """
         name = user.name or ""
-        if "\\" in name and not user.email:
+        if SophosUserAssetConnector._is_local_machine_account(user):
             return AccountTypeId.WINDOWS_ACCOUNT, AccountTypeStr.WINDOWS_ACCOUNT
+        if "/" in name and not user.email:
+            return AccountTypeId.LDAP_ACCOUNT, AccountTypeStr.LDAP_ACCOUNT
         return AccountTypeId.UNKNOWN, AccountTypeStr.UNKNOWN
 
     @staticmethod
@@ -122,6 +142,18 @@ class SophosUserAssetConnector(AssetConnector):
         if user.tenant and user.tenant.id:
             return Organization(uid=user.tenant.id, name=user.tenant.id)
         return None
+
+    @staticmethod
+    def _get_user_type(user: SophosUser) -> tuple[UserTypeId, UserTypeStr]:
+        """Return the OCSF user type based on whether this is a real directory user.
+
+        Local machine accounts (COMPUTERNAME\\username) are OS-managed accounts
+        bound to a specific machine → SYSTEM.
+        All other directory entries (named users, AD accounts) are real users → USER.
+        """
+        if SophosUserAssetConnector._is_local_machine_account(user):
+            return UserTypeId.SYSTEM, UserTypeStr.SYSTEM
+        return UserTypeId.USER, UserTypeStr.USER
 
     def _is_new_or_changed(self, user: SophosUser, known: dict[str, str]) -> bool:
         """Return True when the user is not yet cached or its timestamp has changed."""
@@ -149,8 +181,10 @@ class SophosUserAssetConnector(AssetConnector):
             return None
 
         account_type_id, account_type_str = self._get_account_type(user)
+        user_type_id, user_type_str = self._get_user_type(user)
         groups = self._get_groups(user)
         org = self._get_organization(user)
+        domain = self._extract_domain(name)
 
         # Build full name from firstName + lastName when available
         full_name: str | None = None
@@ -172,8 +206,10 @@ class SophosUserAssetConnector(AssetConnector):
             account=account,
             groups=groups,
             org=org,
-            type_id=UserTypeId.USER,
-            type=UserTypeStr.USER,
+            domain=domain,
+            uid_alt=user.exchangeLogin if user.exchangeLogin else None,
+            type_id=user_type_id,
+            type=user_type_str,
         )
 
         # Event time: prefer updatedAt, fallback to createdAt, then now
@@ -205,6 +241,7 @@ class SophosUserAssetConnector(AssetConnector):
             params: dict[str, Any] = {
                 "pageSize": self.PAGE_SIZE,
                 "page": page,
+                "includeGroupIds": True,
             }
             response = self.client.list_directory_users(params)
             response.raise_for_status()

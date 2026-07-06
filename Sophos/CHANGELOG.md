@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-06 - 1.20.0
+
+### Changed
+
+- Map `exchangeLogin` to `user.uid_alt`
+- Extract domain prefix from domain-qualified names into `user.domain`
+- Detect AD domain accounts (`DOMAIN/username` format) as `LDAP_ACCOUNT` instead of `UNKNOWN`
+- Classify local Windows machine accounts (`COMPUTERNAME\username`) as `UserTypeId.SYSTEM` instead of `USER`
+
 ## 2026-06-29 - 1.19.2
 
 ### Fixed
