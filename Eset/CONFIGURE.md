@@ -21,3 +21,17 @@
     ![Step 4](docs/assets/Step04.png){: style="max-width:100%"}
 
 9. Click `CREATE`
+
+## Asset connectors
+
+The module provides two asset connectors that collect inventory from ESET Connect into Sekoia.io asset management. All of them authenticate with the module configuration (`region`, `username`, `password`) — no extra credentials are required. Each connector needs a Sekoia.io API key (`sekoia_api_key`) with asset-management write permission.
+
+### ESET Device
+
+Collects managed devices from the Device Management API (`{region}.device-management.eset.systems/v1/devices`) and maps them to OCSF Device Inventory Info assets.
+
+### ESET User
+
+Collects users from the User Management API (`{region}.user-management.eset.systems/v1/users`) and maps them to OCSF User Inventory Info assets, inferring the account type (Microsoft 365, Google Workspace, …) from each user's identity provider.
+
+> **Note:** The User Management API is only available on accounts with an **ESET Cloud Office Security (ECOS)** subscription — ESET users are the Microsoft 365 / Google Workspace identities synced through ECOS. Without an ECOS subscription the endpoint returns `501 Not Implemented`; the connector handles this gracefully (it logs a warning and collects no users), so it is safe to enable but will only produce assets once ECOS is in place.

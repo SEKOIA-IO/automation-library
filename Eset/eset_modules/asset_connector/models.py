@@ -179,3 +179,51 @@ class EsetDeviceGroupPage(BaseModel):
 
     class Config:
         extra = "allow"
+
+
+# --- User management models (/v1/users, ECOS-gated) ---
+
+
+class EsetUserIdentity(BaseModel):
+    type: Optional[str] = None
+    format: Optional[str] = None
+    reference: Optional[str] = None
+
+    class Config:
+        extra = "allow"
+
+
+class EsetUserCloudOffice(BaseModel):
+    tenantReference: Optional[str] = None
+    hasMsLicense: Optional[bool] = None
+
+    class Config:
+        extra = "allow"
+
+
+class EsetUser(BaseModel):
+    uuid: str
+    displayName: Optional[str] = None
+    primaryEmailAddress: Optional[str] = None
+    proxyEmailAddresses: Optional[list[str]] = None
+    identities: Optional[list[EsetUserIdentity]] = None
+    activeProductIds: Optional[list[str]] = None
+    userGroupUuids: Optional[list[str]] = None
+    cloudOffice: Optional[EsetUserCloudOffice] = None
+    department: Optional[str] = None
+    jobTitle: Optional[str] = None
+    officeLocation: Optional[str] = None
+    phoneNumbers: Optional[list[str]] = None
+    protectionStatus: Optional[str] = None
+
+    class Config:
+        extra = "allow"
+
+
+class EsetUserPage(BaseModel):
+    users: list[EsetUser] = []
+    nextPageToken: Optional[str] = None
+    totalSize: Optional[int] = None
+
+    class Config:
+        extra = "allow"
