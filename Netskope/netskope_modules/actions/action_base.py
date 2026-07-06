@@ -37,24 +37,14 @@ class NetskopeAction(Action):
         Return a deduplicated blocklist with optional alphabetical sorting.
         Empty values are discarded.
         """
-        cleaned: list[str] = []
-        seen: set[str] = set()
-
-        for item in items:
-            if not item:
-                continue
-
-            normalized = item.strip()
-            if not normalized or normalized in seen:
-                continue
-
-            seen.add(normalized)
-            cleaned.append(normalized)
+        normalized_items = [item.strip() for item in items if item and item.strip()]
 
         if sort_items:
+            cleaned = set(normalized_items)
             return sorted(cleaned, key=str.lower)
 
-        return cleaned
+        # Preserve insertion order while removing duplicates.
+        return list(dict.fromkeys(normalized_items))
 
     @staticmethod
     def extract_urls(blocklist: dict) -> list[str]:
