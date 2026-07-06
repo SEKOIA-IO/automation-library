@@ -132,6 +132,23 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         user_object = UserEnrichmentObject(name="login", value="infos", data=data)
         return [user_object]
 
+    @staticmethod
+    def _upn_local_part_ends_with_dollar(value: str) -> bool:
+        """Return True if the local part (before '@') of an AD UPN-like string ends with '$'."""
+        if "@" in value:
+            return value.split("@", 1)[0].endswith("$")
+        return False
+
+    @staticmethod
+    def is_machine_account(user_attributes: LDAPUserAttributes) -> bool:
+        """Detect machine/computer accounts in AD."""
+        if user_attributes.sAMAccountName and user_attributes.sAMAccountName.endswith("$"):
+            return True
+        upn = user_attributes.userPrincipalName
+        if upn and MicrosoftADUserAssetConnector._upn_local_part_ends_with_dollar(upn):
+            return True
+        return False
+
     def compute_user_type(self, user_attributes: LDAPUserAttributes) -> tuple[UserTypeStr, UserTypeId]:
         """
         Compute user type based on LDAP user attributes.
@@ -140,6 +157,9 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         :return:
             tuple[UserTypeStr, UserTypeId]: User type string and ID.
         """
+        if self.is_machine_account(user_attributes):
+            return UserTypeStr.SYSTEM, UserTypeId.SYSTEM
+
         group_memberships = user_attributes.member_of or []
         for group_dn in group_memberships:
             if "admin" in group_dn.lower():
@@ -162,6 +182,16 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             )
             user_groups.append(group_object)
         return user_groups
+
+    @staticmethod
+    def resolve_email_addr(mail: str | None) -> str | None:
+        """
+        Return the mail value only if it is a real email address.
+        AD UPN-style values whose local part ends with '$'
+        """
+        if mail and "@" in mail and not MicrosoftADUserAssetConnector._upn_local_part_ends_with_dollar(mail):
+            return mail
+        return None
 
     def user_ocsf_object(self, user_attributes: LDAPUserAttributes) -> UserOCSF:
         """
@@ -202,13 +232,15 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             uid=user_attributes.objectSid or "Unknown",
         )
 
+        email_addr = self.resolve_email_addr(user_attributes.mail)
+
         return UserOCSF(
             name=user_name,
             uid=user_attributes.objectSid or "Unknown",
             account=account,
             groups=self.get_user_groups(user_attributes),
             full_name=user_attributes.displayName or "Unknown",
-            email_addr=user_attributes.mail or "Unknown",
+            email_addr=email_addr,
             display_name=user_attributes.displayName or "Unknown",
             domain=user_attributes.distinguishedName or "Unknown",
             type_id=user_type_id,
