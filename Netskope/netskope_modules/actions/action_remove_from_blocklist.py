@@ -23,43 +23,37 @@ class RemoveFromBlocklistAction(NetskopeAction):
         blocklist_type = current_blocklist.get("data", {}).get("type", "exact")
 
         provided_count = len(args.items)
-        cleaned_items = [item.strip() for item in args.items if item.strip()]
-
         existing_items = self.extract_urls(current_blocklist)
-        existing_set = set(existing_items)
-        missing_count = sum(1 for item in cleaned_items if item not in existing_set)
+
+        # Normalize incoming values once (trim, deduplicate, keep input order).
         normalized_items = self.normalize_urls(args.items, sort_items=False)
-        items_to_remove = [item for item in normalized_items if item in existing_set]
+        # Keep only requested entries that currently exist in the blocklist.
+        items_to_remove = [item for item in normalized_items if item in set(existing_items)]
+
+        # Count requested non-empty entries that are not currently present.
+        missing_count = sum(
+            1 for item in (item.strip() for item in args.items if item and item.strip()) if item not in set(existing_items)
+        )
         removed_count = len(items_to_remove)
 
         if not items_to_remove:
             self.log(
                 level="info",
                 message=(
-                f"No item(s) removed from blocklist {blocklist_name} "
-                f"(id = {args.blocklist_id}): 0/{provided_count} removed ({missing_count} already missing)"
+                    f"No item(s) removed from blocklist {blocklist_name} "
+                    f"(id = {args.blocklist_id}): 0/{provided_count} removed ({missing_count} already missing)"
                 ),
             )
-            return None
+            return
 
-        # Build the next full blocklist content by excluding requested entries.
+        # Rebuild the full blocklist by excluding the items to remove.
         remaining_items = [item for item in existing_items if item not in set(items_to_remove)]
         remaining_items = self.normalize_urls(remaining_items, sort_items=args.sort_items)
-
-        replace_payload = {
-            "data": {
-                "type": blocklist_type,
-                "urls": remaining_items,
-            },
-            "name": blocklist_name,
-        }
-
-        remove_response = self.execute_request(
+        blocklist_name = self.execute_request(
             "PATCH",
             f"api/v2/policy/urllist/{args.blocklist_id}/replace",
-            json=replace_payload,
-        )
-        blocklist_name = remove_response.get("name", blocklist_name)
+            json={"data": {"type": blocklist_type, "urls": remaining_items}, "name": blocklist_name},
+        ).get("name", blocklist_name)
 
         # Deploy the changes
         self.deploy_blocklist_changes()
@@ -71,4 +65,3 @@ class RemoveFromBlocklistAction(NetskopeAction):
                 f"(id = {args.blocklist_id}): {removed_count}/{provided_count} removed ({missing_count} already missing)"
             ),
         )
-        return None

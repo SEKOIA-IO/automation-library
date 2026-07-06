@@ -22,15 +22,12 @@ class ReplaceBlocklistAction(NetskopeAction):
         self.initialize_action_arguments(args)
         normalized_items = self.normalize_urls(args.items, sort_items=args.sort_items)
 
-        # Replace the entire blocklist
-        replace_payload = {
-            "data": {"type": args.blocklist_type, "urls": normalized_items},
-        }
-
-        replace_response = self.execute_request(
-            "PATCH", f"api/v2/policy/urllist/{args.blocklist_id}/replace", json=replace_payload
-        )
-        blocklist_name = replace_response.get("name", "unknown")
+        # Replace the entire blocklist.
+        blocklist_name = self.execute_request(
+            "PATCH",
+            f"api/v2/policy/urllist/{args.blocklist_id}/replace",
+            json={"data": {"type": args.blocklist_type, "urls": normalized_items}},
+        ).get("name", "unknown")
 
         # Deploy the changes
         self.deploy_blocklist_changes()
@@ -42,4 +39,3 @@ class ReplaceBlocklistAction(NetskopeAction):
                 f"(id = {args.blocklist_id}) with {len(normalized_items)} item(s)"
             ),
         )
-        return None

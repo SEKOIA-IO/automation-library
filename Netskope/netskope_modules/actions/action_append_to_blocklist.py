@@ -35,27 +35,21 @@ class AppendToBlocklistAction(NetskopeAction):
             self.log(
                 level="info",
                 message=(
-                f"No new item(s) appended to blocklist {blocklist_name} "
-                f"(id = {args.blocklist_id}): 0/{provided_count} added ({duplicates_count} duplicates)"
+                    f"No new item(s) appended to blocklist {blocklist_name} "
+                    f"(id = {args.blocklist_id}): 0/{provided_count} added ({duplicates_count} duplicates)"
                 ),
             )
-            return None
+            return
 
-        # Append items to the blocklist
-        append_payload = {
-            "data": {
-                "type": args.blocklist_type,
-                "urls": items_to_append,
-            }
-        }
-
-        append_response = self.execute_request(
-            "PATCH", f"api/v2/policy/urllist/{args.blocklist_id}/append", json=append_payload
-        )
+        # Append items to the blocklist.
+        blocklist_name = self.execute_request(
+            "PATCH",
+            f"api/v2/policy/urllist/{args.blocklist_id}/append",
+            json={"data": {"type": args.blocklist_type, "urls": items_to_append}},
+        ).get("name", blocklist_name)
 
         # Deploy the changes
         self.deploy_blocklist_changes()
-        blocklist_name = append_response.get("name", blocklist_name)
 
         self.log(
             level="info",
@@ -64,4 +58,3 @@ class AppendToBlocklistAction(NetskopeAction):
                 f"(id = {args.blocklist_id}): {added_count}/{provided_count} added ({duplicates_count} duplicates)"
             ),
         )
-        return None

@@ -16,11 +16,10 @@ class GetBlocklistAction(NetskopeAction):
         args = GetBlocklistArguments(**arguments)
         self.initialize_action_arguments(args)
 
-        blocklist = self.get_blocklist(args.blocklist_id)
-        blocklist_name = blocklist.get("name", "unknown")
-
         self.log(
             level="info",
-            message=f"Successfully fetched blocklist {blocklist_name} (id = {args.blocklist_id})",
+            message=(
+                f"Successfully fetched blocklist "
+                f"{self.get_blocklist(args.blocklist_id).get('name', 'unknown')} (id = {args.blocklist_id})"
+            ),
         )
-        return None
