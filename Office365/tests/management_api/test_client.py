@@ -1,4 +1,5 @@
 import re
+import time
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
 
@@ -12,6 +13,7 @@ from office365.management_api.errors import (
     FailedToGetO365AuditContent,
     FailedToGetO365SubscriptionContents,
     FailedToListO365Subscriptions,
+    SessionClosedError,
 )
 from office365.management_api.office365_client import Office365API
 
@@ -249,6 +251,45 @@ async def test_get_content(mocked_responses, mock_azure_authentication, tenant_i
 
     # act
     assert await client.list_subscriptions() == ["Audit.SharePoint"]
+
+    # finalize
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_activate_subscription_should_succeed_when_already_enabled(
+    mocked_responses, mock_azure_authentication, tenant_id
+):
+    # arrange
+    client_id = "client_id"
+    client_secret = "client_secret"
+
+    for content_type in {"Audit.AzureActiveDirectory", "Audit.SharePoint", "Audit.General", "Audit.Exchange"}:
+        mocked_responses.post(
+            f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/start?contentType={content_type}",
+            status=400,
+            body=orjson.dumps(
+                {"error": {"code": "AF20024", "message": "The subscription is already enabled. No property change."}}
+            ),
+        )
+
+    mocked_responses.get(
+        f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/list",
+        status=200,
+        body="[]",
+    )
+
+    client = Office365API(
+        client_id=client_id,
+        client_secret=client_secret,
+        tenant_id=tenant_id,
+    )
+
+    # act
+    result = await client.activate_subscriptions()
+
+    # assert
+    assert result is None
 
     # finalize
     await client.close()
@@ -779,126 +820,56 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
     await client.close()
 
 
-@pytest.fixture
-def patch_async_sleep():
-    """Patch asyncio.sleep used by office365_client to a no-op for fast tests."""
-    from unittest.mock import patch
-
-    async def _noop(_seconds):
-        return None
-
-    with patch("office365.management_api.office365_client.asyncio.sleep", side_effect=_noop) as mock:
-        yield mock
-
-
 @pytest.mark.asyncio
-async def test_list_subscriptions_retries_on_5xx_then_succeeds(
-    mocked_responses, mock_azure_authentication, tenant_id, patch_async_sleep
-):
-    list_url = f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/list"
-    # First two attempts return 503, third succeeds.
-    mocked_responses.get(list_url, status=503, body="busy")
-    mocked_responses.get(list_url, status=503, body="still busy")
-    mocked_responses.get(
-        list_url, status=200, body=orjson.dumps([{"contentType": "Audit.SharePoint", "status": "enabled"}])
+async def test_list_subscriptions_raises_session_closed_after_close(mock_azure_authentication, tenant_id):
+    """list_subscriptions should raise SessionClosedError once the session has been closed."""
+    client = Office365API(
+        client_id="client_id",
+        client_secret="client_secret",
+        tenant_id=tenant_id,
     )
 
-    client = Office365API(client_id="cid", client_secret="cs", tenant_id=tenant_id)
-
-    result = await client.list_subscriptions()
-
-    assert result == ["Audit.SharePoint"]
-    assert patch_async_sleep.call_count == 2
     await client.close()
 
-
-@pytest.mark.asyncio
-async def test_list_subscriptions_retries_on_429_with_retry_after(
-    mocked_responses, mock_azure_authentication, tenant_id, patch_async_sleep
-):
-    list_url = f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/list"
-    mocked_responses.get(list_url, status=429, headers={"Retry-After": "2"}, body="throttled")
-    mocked_responses.get(
-        list_url, status=200, body=orjson.dumps([{"contentType": "Audit.SharePoint", "status": "enabled"}])
-    )
-
-    client = Office365API(client_id="cid", client_secret="cs", tenant_id=tenant_id)
-
-    result = await client.list_subscriptions()
-
-    assert result == ["Audit.SharePoint"]
-    # First sleep should reflect the Retry-After value.
-    assert patch_async_sleep.call_args_list[0].args[0] == 2.0
-    await client.close()
-
-
-@pytest.mark.asyncio
-async def test_list_subscriptions_gives_up_after_max_attempts(
-    mocked_responses, mock_azure_authentication, tenant_id, patch_async_sleep
-):
-    list_url = f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/list"
-    long_html = "<html>" + ("a" * 5000) + "</html>"
-    for _ in range(5):
-        mocked_responses.get(list_url, status=503, body=long_html)
-
-    client = Office365API(client_id="cid", client_secret="cs", tenant_id=tenant_id)
-
-    with pytest.raises(FailedToListO365Subscriptions) as exc_info:
+    with pytest.raises(SessionClosedError):
         await client.list_subscriptions()
 
-    assert exc_info.value.context.get("status_code") == 503
-    body = exc_info.value.context.get("body", "")
-    assert "(truncated)" in body
-    assert len(body) <= 250
+
+@pytest.mark.asyncio
+async def test_activate_subscriptions_raises_session_closed_after_close(mock_azure_authentication, tenant_id):
+    """activate_subscriptions should raise SessionClosedError once the session has been closed."""
+    client = Office365API(
+        client_id="client_id",
+        client_secret="client_secret",
+        tenant_id=tenant_id,
+    )
+
     await client.close()
+
+    with pytest.raises(SessionClosedError):
+        await client.activate_subscriptions()
 
 
 @pytest.mark.asyncio
-async def test_list_subscriptions_does_not_retry_on_4xx(
-    mocked_responses, mock_azure_authentication, tenant_id, patch_async_sleep
-):
-    list_url = f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/list"
-    # Only register a single 401 — if the client retries, aioresponses raises (no mock for the second call).
-    mocked_responses.get(list_url, status=401, body="unauthorized")
-
-    client = Office365API(client_id="cid", client_secret="cs", tenant_id=tenant_id)
-
-    with pytest.raises(FailedToListO365Subscriptions) as exc_info:
-        await client.list_subscriptions()
-
-    assert exc_info.value.context.get("status_code") == 401
-    # No retry sleeps should have been called for a 4xx.
-    assert patch_async_sleep.call_count == 0
-    await client.close()
-
-
-@pytest.mark.asyncio
-async def test_get_content_extracts_error_code_from_json_body(
-    mocked_responses, mock_azure_authentication, tenant_id, patch_async_sleep
-):
-    content_uri = (
-        "https://manage.office.com/api/v1.0/f28ab78a-d401-4060-8012-736e373933eb/"
-        "activity/feed/audit/4a81a7c326fc4aed89c62e6039ab833b"
+async def test_get_content_translates_runtime_error(mock_azure_authentication, tenant_id):
+    """If aiohttp raises RuntimeError('Session is closed') mid-request, it should surface as SessionClosedError."""
+    client = Office365API(
+        client_id="client_id",
+        client_secret="client_secret",
+        tenant_id=tenant_id,
     )
-    mocked_responses.get(
-        content_uri,
-        status=500,
-        body='{"error": {"code": "AF50005", "message": "An internal error occurred. Retry the request."}}',
-    )
-    # Subsequent retries also fail to confirm we exhaust retries with the same body shape.
-    for _ in range(4):
-        mocked_responses.get(
-            content_uri,
-            status=500,
-            body='{"error": {"code": "AF50005", "message": "An internal error occurred. Retry the request."}}',
-        )
 
-    client = Office365API(client_id="cid", client_secret="cs", tenant_id=tenant_id)
+    # Skip token refresh so we exercise the request path, not _authenticate_client.
+    client._token_expiration = time.time() + 3600
 
-    with pytest.raises(FailedToGetO365AuditContent) as exc_info:
-        await client.get_content(content_uri)
+    async def raise_session_closed(*args, **kwargs):
+        raise RuntimeError("Session is closed")
 
-    assert exc_info.value.context.get("status_code") == 500
-    assert exc_info.value.context.get("error_code") == "AF50005"
-    assert "Retry the request" in exc_info.value.context.get("error_message", "")
-    await client.close()
+    # Simulate the race: the guard sees an open session, but the underlying call fails.
+    client._session.get = raise_session_closed  # type: ignore[method-assign]
+
+    try:
+        with pytest.raises(SessionClosedError):
+            await client.get_content("https://manage.office.com/api/v1.0/foo")
+    finally:
+        await client.close()

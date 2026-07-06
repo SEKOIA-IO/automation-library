@@ -5,15 +5,15 @@ from typing import Generic, TypeVar
 
 from aiobotocore.session import AioCredentials, AioSession, ClientCreatorContext
 from botocore.credentials import CredentialProvider
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 
 class AwsClientConfiguration(BaseModel):
     """AWS client base configuration."""
 
-    aws_access_key_id: str = Field(description="AWS access key id")
-    aws_secret_access_key: str = Field(description="AWS secret access key")
-    aws_region: str = Field(description="AWS region name")
+    aws_access_key_id: str | None = Field(default=None, description="AWS access key id")
+    aws_secret_access_key: str | None = Field(default=None, description="AWS secret access key")
+    aws_region: str = Field(..., description="AWS region name")
     aws_session_token: str | None = Field(default=None, description="AWS session token")
 
 
@@ -25,7 +25,7 @@ class _CredentialsProvider(CredentialProvider):
 
     METHOD = "_sekoia_credentials_provider"
 
-    def __init__(self, access_key: str, secret_key: str, session_token: str | None = None) -> None:
+    def __init__(self, access_key: str | None, secret_key: str | None, session_token: str | None = None) -> None:
         """
         Initialize CredentialsProvider.
 

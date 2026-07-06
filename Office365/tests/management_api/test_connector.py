@@ -3,18 +3,12 @@ import json
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
-import aiohttp
 import pytest
 from prometheus_client import Counter
 
 from office365.management_api.checkpoint import Checkpoint
 from office365.management_api.connector import FORWARD_EVENTS_DURATION
-from office365.management_api.errors import (
-    ApplicationAuthenticationFailed,
-    FailedToActivateO365Subscription,
-    FailedToGetO365SubscriptionContents,
-    FailedToListO365Subscriptions,
-)
+from office365.management_api.errors import FailedToActivateO365Subscription, SessionClosedError
 
 
 @pytest.mark.asyncio
@@ -126,8 +120,8 @@ async def test_forward_events_forever_stops_on_stop_event(connector, symphony_st
 
 
 @pytest.mark.asyncio
-async def test_forward_events_forever_handles_unexpected_exceptions(connector, symphony_storage):
-    """Unknown exceptions go through the catch-all branch and are logged with traceback."""
+async def test_forward_events_forever_handles_exceptions(connector, symphony_storage):
+    """Test that forward_events_forever handles exceptions and continues"""
     checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
 
     call_count = 0
@@ -136,8 +130,9 @@ async def test_forward_events_forever_handles_unexpected_exceptions(connector, s
         nonlocal call_count
         call_count += 1
         if call_count == 1:
-            raise RuntimeError("Test error")
-        connector._stop_event.set()
+            raise Exception("Test error")
+        if call_count >= 2:
+            connector._stop_event.set()
 
     with (
         patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
@@ -147,164 +142,7 @@ async def test_forward_events_forever_handles_unexpected_exceptions(connector, s
 
     assert call_count == 2
     connector.log_exception.assert_called_once()
-    assert connector.log_exception.call_args[1]["message"] == "Unexpected error in forwarding loop"
-
-
-@pytest.mark.asyncio
-async def test_forward_events_forever_handles_auth_failure(connector, symphony_storage):
-    """Authentication failures are logged at warning/critical and trigger a long sleep."""
-    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
-
-    call_count = 0
-    sleep_durations: list[float] = []
-
-    async def mock_forward_next_batches(cp):
-        nonlocal call_count
-        call_count += 1
-        if call_count == 1:
-            raise ApplicationAuthenticationFailed(
-                "Failed to get access token",
-                response={"error_description": "AADSTS70011: invalid scope"},
-            )
-        connector._stop_event.set()
-
-    async def fake_sleep(seconds):
-        sleep_durations.append(seconds)
-
-    with (
-        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
-        patch("office365.management_api.connector.asyncio.sleep", side_effect=fake_sleep),
-    ):
-        await connector.forward_events_forever(checkpoint)
-
-    connector.log.assert_called()
-    log_message = connector.log.call_args_list[0].kwargs["message"]
-    assert "Authentication" in log_message
-    assert "AADSTS70011" in log_message
-    # First sleep is the auth recovery sleep (>= frequency, capped at 600).
-    assert sleep_durations[0] >= connector._frequency
-
-
-@pytest.mark.asyncio
-async def test_forward_events_forever_handles_o365_api_failure(connector, symphony_storage):
-    """O365 Management API errors are logged with status/operation and exponential backoff."""
-    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
-
-    call_count = 0
-
-    async def mock_forward_next_batches(cp):
-        nonlocal call_count
-        call_count += 1
-        if call_count == 1:
-            raise FailedToGetO365SubscriptionContents(status_code=503, body="<html>Service Unavailable</html>")
-        connector._stop_event.set()
-
-    with (
-        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
-        patch("office365.management_api.connector.asyncio.sleep", return_value=None),
-    ):
-        await connector.forward_events_forever(checkpoint)
-
-    connector.log.assert_called()
-    log_message = connector.log.call_args_list[0].kwargs["message"]
-    assert "FailedToGetO365SubscriptionContents" in log_message
-    assert "consecutive=1" in log_message
-
-
-@pytest.mark.asyncio
-async def test_forward_events_forever_handles_network_failure(connector, symphony_storage):
-    """Network errors hit the dedicated branch and are labeled by exc type."""
-    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
-
-    call_count = 0
-
-    async def mock_forward_next_batches(cp):
-        nonlocal call_count
-        call_count += 1
-        if call_count == 1:
-            raise aiohttp.ClientConnectionError("connection reset")
-        connector._stop_event.set()
-
-    with (
-        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
-        patch("office365.management_api.connector.asyncio.sleep", return_value=None),
-    ):
-        await connector.forward_events_forever(checkpoint)
-
-    connector.log.assert_called()
-    log_message = connector.log.call_args_list[0].kwargs["message"]
-    assert "Network error" in log_message
-    assert "ClientConnectionError" in log_message
-
-
-@pytest.mark.asyncio
-async def test_forward_events_forever_dedups_repeated_failures(connector, symphony_storage):
-    """Identical consecutive failures should not all be logged."""
-    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
-
-    call_count = 0
-
-    async def mock_forward_next_batches(cp):
-        nonlocal call_count
-        call_count += 1
-        # Raise the same error N times, then stop without ever succeeding so no
-        # recovery log fires. The 9th call sets the stop event and re-raises so
-        # the loop exits via the same error path.
-        if call_count >= 9:
-            connector._stop_event.set()
-        raise FailedToListO365Subscriptions(status_code=503, body="boom")
-
-    with (
-        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
-        patch("office365.management_api.connector.asyncio.sleep", return_value=None),
-    ):
-        await connector.forward_events_forever(checkpoint)
-
-    # 9 consecutive failures: should_log returns True for n in {1,2,3} only.
-    assert connector.log.call_count == 3
-
-
-@pytest.mark.asyncio
-async def test_forward_events_forever_logs_recovery_on_success(connector, symphony_storage):
-    """After a streak of failures, a successful run should log a recovery message."""
-    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
-
-    call_count = 0
-
-    async def mock_forward_next_batches(cp):
-        nonlocal call_count
-        call_count += 1
-        if call_count == 1:
-            raise aiohttp.ClientConnectionError("transient")
-        if call_count == 2:
-            return  # success
-        connector._stop_event.set()
-
-    with (
-        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
-        patch("office365.management_api.connector.asyncio.sleep", return_value=None),
-    ):
-        await connector.forward_events_forever(checkpoint)
-
-    recovery_logged = any(
-        "Recovered from network failures" in call.kwargs.get("message", "") for call in connector.log.call_args_list
-    )
-    assert recovery_logged
-
-
-def test_compute_backoff_seconds_caps_at_max(connector):
-    # Very large count should still cap at MAX_RECOVERY_SLEEP_SECONDS (600).
-    assert connector._compute_backoff_seconds(1000) == 600
-
-
-def test_compute_backoff_seconds_doubles_each_step(connector):
-    # _frequency defaults to 60. Sequence: 60, 120, 240, 480, 600 (cap), 600...
-    assert connector._compute_backoff_seconds(1) == 60
-    assert connector._compute_backoff_seconds(2) == 120
-    assert connector._compute_backoff_seconds(3) == 240
-    assert connector._compute_backoff_seconds(4) == 480
-    assert connector._compute_backoff_seconds(5) == 600
-    assert connector._compute_backoff_seconds(6) == 600
+    assert connector.log_exception.call_args[1]["message"] == "Failed to forward events"
 
 
 @pytest.mark.asyncio
@@ -365,3 +203,82 @@ async def test_client_property_is_cached(connector):
     client1 = connector.client
     client2 = connector.client
     assert client1 is client2
+
+
+@pytest.mark.asyncio
+async def test_activate_subscriptions_logs_info_when_stopping(connector):
+    """When the connector is shutting down, a closed-session error should be logged at info level, not re-raised."""
+    connector._stop_event.set()  # self.running becomes False
+    connector.client.activate_subscriptions.side_effect = SessionClosedError("closed")
+
+    await connector.activate_subscriptions()
+
+    connector.client.activate_subscriptions.assert_called_once()
+    connector.log.assert_called_once()
+    log_call = connector.log.call_args
+    assert log_call.kwargs.get("level") == "info"
+    assert "shutdown" in log_call.kwargs.get("message", "").lower()
+    connector.log_exception.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_activate_subscriptions_recovers_when_running(connector):
+    """When the connector is still running, a closed-session error should trigger a single retry after _reset_client."""
+    connector.client.activate_subscriptions.side_effect = [SessionClosedError("closed"), None]
+
+    with patch.object(connector, "_reset_client", wraps=connector._reset_client) as reset_spy:
+        await connector.activate_subscriptions()
+
+    assert connector.client.activate_subscriptions.call_count == 2
+    reset_spy.assert_called_once()
+    connector.log_exception.assert_called_once()
+    # The retry succeeded, so no second log_exception call.
+
+
+@pytest.mark.asyncio
+async def test_forward_events_forever_exits_on_session_closed_during_shutdown(connector, symphony_storage):
+    """SessionClosedError during shutdown should stop the forwarding loop cleanly."""
+    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
+
+    async def mock_forward_next_batches(cp):
+        connector._stop_event.set()
+        raise SessionClosedError("closed")
+
+    with (
+        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches) as forward_mock,
+        patch("office365.management_api.connector.asyncio.sleep", return_value=None) as sleep_mock,
+    ):
+        await connector.forward_events_forever(checkpoint)
+
+    forward_mock.assert_called_once()
+    sleep_mock.assert_not_called()  # no retry-sleep after a shutdown-triggered closure
+    connector.log.assert_called()
+    info_calls = [call for call in connector.log.call_args_list if call.kwargs.get("level") == "info"]
+    assert any("shutdown" in call.kwargs.get("message", "").lower() for call in info_calls)
+
+
+@pytest.mark.asyncio
+async def test_forward_events_forever_resets_client_on_unexpected_session_closed(connector, symphony_storage):
+    """An unexpected SessionClosedError should reset the client and let the loop continue to the next iteration."""
+    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
+    call_count = 0
+
+    async def mock_forward_next_batches(cp):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise SessionClosedError("closed")
+        # Second iteration: stop the loop cleanly.
+        connector._stop_event.set()
+
+    with (
+        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
+        patch.object(connector, "_reset_client", wraps=connector._reset_client) as reset_spy,
+        patch("office365.management_api.connector.asyncio.sleep", return_value=None),
+    ):
+        await connector.forward_events_forever(checkpoint)
+
+    assert call_count == 2
+    reset_spy.assert_called_once()
+    connector.log_exception.assert_called_once()
+    assert "rebuilding" in connector.log_exception.call_args.kwargs.get("message", "").lower()

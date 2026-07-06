@@ -1,15 +1,15 @@
 import json
+import os
 import queue
 import threading
 import time
-import os
 from collections.abc import Generator
 from functools import cached_property
 
 import orjson
 from requests.auth import AuthBase
 from requests.exceptions import HTTPError, StreamConsumedError
-from sekoia_automation.connector import Connector
+from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 from sekoia_automation.timer import RepeatedTimer
 
@@ -436,9 +436,11 @@ class EventForwarder(threading.Thread):
     def __init__(
         self,
         connector: "EventStreamTrigger",
+        stream_root_urls: set[str],
     ):
         super().__init__()
         self.connector = connector
+        self.stream_root_urls = stream_root_urls
         self.events_queue = connector.events_queue
         self._stop_event = threading.Event()
 
@@ -497,8 +499,10 @@ class EventForwarder(threading.Thread):
 
                             last_event_offset = metadata.get("offset")
                             if last_event_offset:
-                                # update the offset in the cache file
-                                cache[stream_root_url] = last_event_offset
+                                current_offset = cache.get(stream_root_url, 0)
+                                if last_event_offset > current_offset:
+                                    # update the offset in the cache file
+                                    cache[stream_root_url] = last_event_offset
 
                             creation_time = metadata.get("eventCreationTime")
                             if creation_time:
@@ -507,9 +511,17 @@ class EventForwarder(threading.Thread):
                                     intake_key=self.connector.configuration.intake_key, stream=stream_root_url
                                 ).set(lag)
             except queue.Empty:
+                for stream_root_url in self.stream_root_urls:
+                    EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, stream=stream_root_url).set(
+                        0
+                    )
                 pass
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
+
+
+class EventStreamTriggerConfiguration(DefaultConnectorConfiguration):
+    pass
 
 
 class EventStreamTrigger(Connector):
@@ -518,6 +530,7 @@ class EventStreamTrigger(Connector):
     """
 
     module: CrowdStrikeFalconModule
+    configuration: EventStreamTriggerConfiguration
 
     seconds_without_events = 3600 * 24  # Time to wait without events before restarting the pod
 
@@ -659,7 +672,7 @@ class EventStreamTrigger(Connector):
             streams: dict[str, dict] = self.get_streams(app_id)
 
             # start a thread to consume the internal event queue
-            read_queue_thread = EventForwarder(self)
+            read_queue_thread = EventForwarder(self, set(streams.keys()))
             read_queue_thread.start()
 
             # start threads to consume streams
@@ -670,7 +683,7 @@ class EventStreamTrigger(Connector):
                     # if the read queue thread is down, we spawn a new one
                     if not read_queue_thread.is_alive():
                         self.log(message="Event forwarder failed", level="error")
-                        read_queue_thread = EventForwarder(self)
+                        read_queue_thread = EventForwarder(self, set(streams.keys()))
                         read_queue_thread.start()
 
                     self.supervise_streams(streams, stream_threads)

@@ -26,7 +26,7 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     UserTypeStr,
 )
 
-from asset_connector.aws_api_models import AwsApiUserGroup, AwsApiUser
+from asset_connector.aws_api_models import AwsApiUser, AwsApiUserGroup
 from asset_connector.aws_assets import AwsAssetsConnector, handle_aws_errors
 
 

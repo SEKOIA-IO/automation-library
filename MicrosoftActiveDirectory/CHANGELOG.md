@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-06 - 1.5.5
+
+### Fixed
+
+- Classify machine/computer accounts (sAMAccountName or UPN local part ending with `$`) as `SYSTEM` instead of `USER`
+- Discard AD UPN-style values (e.g. `compte$@domain.ad.recouv`) from `email_addr` — they are not real email addresses
+
 ## 2026-04-24 - 1.5.4
 
 ### Fixed
