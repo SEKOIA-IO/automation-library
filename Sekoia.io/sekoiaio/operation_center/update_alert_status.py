@@ -3,7 +3,7 @@ from uuid import UUID
 
 from sekoia_automation.action import Action
 import requests
-from tenacity import retry, wait_exponential, stop_after_attempt
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
 
 STATUS_UUIDS = {
     "PENDING": "2efc4930-1442-4abb-acf2-58ba219a4fd0",
@@ -18,6 +18,18 @@ ACTION_UUIDS = [
     "ade85d7b-7507-4026-bfc6-cc006d10ddac",
     "1390be4e-ced8-4dd6-9bed-573471b235ab",
 ]
+
+
+class NonRetryableAlertStatusError(Exception):
+    """Raised when status resolution fails due to a persistent client-side issue."""
+
+
+def _is_retryable_request_exception(exc: BaseException) -> bool:
+    if isinstance(exc, NonRetryableAlertStatusError):
+        return False
+    if isinstance(exc, requests.HTTPError) and exc.response is not None:
+        return exc.response.status_code >= 500
+    return True
 
 
 class UpdateAlertStatus(Action):
@@ -46,29 +58,59 @@ class UpdateAlertStatus(Action):
 
     @staticmethod
     def _extract_custom_statuses(payload: dict) -> list[dict]:
+        """Extract custom statuses from supported API payload containers.
+
+        The current endpoint returns statuses in `items`. We keep `data` and
+        `custom_statuses` support for backward compatibility with older payloads.
+        """
         if isinstance(payload.get("items"), list):
-            return payload["items"]
+            return [item for item in payload["items"] if isinstance(item, dict)]
         if isinstance(payload.get("data"), list):
-            return payload["data"]
+            return [item for item in payload["data"] if isinstance(item, dict)]
         if isinstance(payload.get("custom_statuses"), list):
-            return payload["custom_statuses"]
+            return [item for item in payload["custom_statuses"] if isinstance(item, dict)]
+        if payload:
+            raise ValueError("Unexpected custom statuses payload format")
         return []
 
     def _resolve_custom_status_uuid(self, status_name: str) -> str | None:
         response = requests.get(self.custom_statuses_url(), headers=self.headers)
+        if 400 <= response.status_code < 500:
+            message = (
+                "Could not list custom statuses due to a client error "
+                f"(check configuration and permissions), status code: {response.status_code}"
+            )
+            self.error(message)
+            raise NonRetryableAlertStatusError(message)
         if response.status_code >= 500:
             self.error(f"Could not list custom statuses, status code: {response.status_code}")
             response.raise_for_status()
 
-        payload = response.json()
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            message = "Could not list custom statuses, response body is not valid JSON"
+            self.error(message)
+            raise NonRetryableAlertStatusError(message) from exc
+
+        try:
+            custom_statuses = self._extract_custom_statuses(payload)
+        except ValueError as exc:
+            message = "Could not list custom statuses, unexpected payload format"
+            self.error(message)
+            raise NonRetryableAlertStatusError(message) from exc
+
         status_name_lower = status_name.casefold()
-        for custom_status in self._extract_custom_statuses(payload):
+        for custom_status in custom_statuses:
             label = custom_status.get("label")
             name = custom_status.get("name")
+            custom_status_uuid = custom_status.get("uuid")
+            if not isinstance(custom_status_uuid, str):
+                continue
             if isinstance(label, str) and label.casefold() == status_name_lower:
-                return custom_status.get("uuid")
+                return custom_status_uuid
             if isinstance(name, str) and name.casefold() == status_name_lower:
-                return custom_status.get("uuid")
+                return custom_status_uuid
         return None
 
     def _patch_workflow_status(self, alert_uuid: str, action_uuid: str, comment: str | None = None):
@@ -83,6 +125,7 @@ class UpdateAlertStatus(Action):
 
     @retry(
         reraise=True,
+        retry=retry_if_exception(_is_retryable_request_exception),
         wait=wait_exponential(max=300),
         stop=stop_after_attempt(10),
     )

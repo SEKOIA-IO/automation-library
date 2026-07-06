@@ -3,7 +3,10 @@ import uuid
 from unittest.mock import patch
 
 import pytest
-from sekoiaio.operation_center.update_alert_status import UpdateAlertStatus
+from sekoiaio.operation_center.update_alert_status import (
+    NonRetryableAlertStatusError,
+    UpdateAlertStatus,
+)
 
 module_base_url = "https://app.sekoia.fake/"
 base_url = module_base_url + "api/v1/sic/alerts"
@@ -34,7 +37,7 @@ def test_patch_alert_status_support_action_uuid(requests_mock):
     assert results == {}
 
 
-def test_patch_alert_status_only_accept_valid_status_or_action_uuid(requests_mock):
+def test_patch_alert_status_rejects_unknown_status_values(requests_mock):
     action = UpdateAlertStatus()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
     alert_uuid = str(uuid.uuid4())
@@ -43,11 +46,11 @@ def test_patch_alert_status_only_accept_valid_status_or_action_uuid(requests_moc
     requests_mock.patch(f"{base_url}/{alert_uuid}/workflow", json={})
     requests_mock.get(module_base_url + "api/v1/sic/custom_statuses", json={"items": []})
 
-    results: dict = action.run(arguments)
+    results: dict | None = action.run(arguments)
     assert results is None
 
     arguments = {"status": "not-a-valid-uuid", "uuid": alert_uuid}
-    results: dict = action.run(arguments)
+    results = action.run(arguments)
     assert results is None
 
 
@@ -152,8 +155,39 @@ def test_patch_alert_status_custom_status_lookup_fails_on_server_error(requests_
             action.run(arguments)
 
 
-def test_extract_custom_statuses_fallback_returns_empty_list():
-    assert UpdateAlertStatus._extract_custom_statuses({"unexpected": "format"}) == []
+def test_patch_alert_status_custom_status_lookup_fails_on_client_error_without_retry(requests_mock):
+    action = UpdateAlertStatus()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    alert_uuid = str(uuid.uuid4())
+    arguments = {"status": "random_status", "uuid": alert_uuid}
+
+    requests_mock.get(module_base_url + "api/v1/sic/custom_statuses", text="forbidden", status_code=403)
+
+    with patch("tenacity.nap.time") as nap_mock:
+        with pytest.raises(NonRetryableAlertStatusError):
+            action.run(arguments)
+
+    nap_mock.assert_not_called()
+
+
+def test_patch_alert_status_custom_status_lookup_fails_on_invalid_json_without_retry(requests_mock):
+    action = UpdateAlertStatus()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    alert_uuid = str(uuid.uuid4())
+    arguments = {"status": "random_status", "uuid": alert_uuid}
+
+    requests_mock.get(module_base_url + "api/v1/sic/custom_statuses", text="not-json")
+
+    with patch("tenacity.nap.time") as nap_mock:
+        with pytest.raises(NonRetryableAlertStatusError):
+            action.run(arguments)
+
+    nap_mock.assert_not_called()
+
+
+def test_extract_custom_statuses_unexpected_payload_raises_value_error():
+    with pytest.raises(ValueError):
+        UpdateAlertStatus._extract_custom_statuses({"unexpected": "format"})
 
 
 def test_patch_alert_status_fails(requests_mock):
