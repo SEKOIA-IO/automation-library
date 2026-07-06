@@ -189,7 +189,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         Return the mail value only if it is a real email address.
         AD UPN-style values whose local part ends with '$'
         """
-        if mail and not MicrosoftADUserAssetConnector._upn_local_part_ends_with_dollar(mail):
+        if mail and "@" in mail and not MicrosoftADUserAssetConnector._upn_local_part_ends_with_dollar(mail):
             return mail
         return None
 
