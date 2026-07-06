@@ -17,7 +17,7 @@ class AppendToBlocklistAction(NetskopeAction):
     Append IP addresses, domains, or URLs to an existing Netskope blocklist.
     """
 
-    def run(self, arguments: dict) -> str:
+    def run(self, arguments: dict) -> None:
         args = AppendToBlocklistArguments(**arguments)
         self.initialize_action_arguments(args)
 
@@ -32,10 +32,14 @@ class AppendToBlocklistAction(NetskopeAction):
         duplicates_count = provided_count - added_count
 
         if not items_to_append:
-            return (
+            self.log(
+                level="info",
+                message=(
                 f"No new item(s) appended to blocklist {blocklist_name} "
                 f"(id = {args.blocklist_id}): 0/{provided_count} added ({duplicates_count} duplicates)"
+                ),
             )
+            return None
 
         # Append items to the blocklist
         append_payload = {
@@ -53,7 +57,11 @@ class AppendToBlocklistAction(NetskopeAction):
         self.deploy_blocklist_changes()
         blocklist_name = append_response.get("name", blocklist_name)
 
-        return (
-            f"Successfully appended to blocklist {blocklist_name} "
-            f"(id = {args.blocklist_id}): {added_count}/{provided_count} added ({duplicates_count} duplicates)"
+        self.log(
+            level="info",
+            message=(
+                f"Successfully appended to blocklist {blocklist_name} "
+                f"(id = {args.blocklist_id}): {added_count}/{provided_count} added ({duplicates_count} duplicates)"
+            ),
         )
+        return None

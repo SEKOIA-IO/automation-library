@@ -83,8 +83,10 @@ def test_remove_from_blocklist_success(remove_action):
 
         result = remove_action.run(arguments)
 
-        assert (
-            "Successfully removed from blocklist Test Blocklist (id = 123): 1/1 removed (0 already missing)" in result
+        assert result is None
+        remove_action.log.assert_any_call(
+            level="info",
+            message="Successfully removed from blocklist Test Blocklist (id = 123): 1/1 removed (0 already missing)",
         )
 
 
@@ -109,5 +111,9 @@ def test_remove_from_blocklist_noop_when_items_are_absent(remove_action):
 
         result = remove_action.run(arguments)
 
-        assert "No item(s) removed from blocklist Test Blocklist (id = 123): 0/2 removed (2 already missing)" in result
+        assert result is None
+        remove_action.log.assert_any_call(
+            level="info",
+            message="No item(s) removed from blocklist Test Blocklist (id = 123): 0/2 removed (2 already missing)",
+        )
         assert len(mock_requests.request_history) == 1

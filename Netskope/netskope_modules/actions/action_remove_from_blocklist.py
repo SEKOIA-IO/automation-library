@@ -14,7 +14,7 @@ class RemoveFromBlocklistAction(NetskopeAction):
     Remove URL entries from an existing Netskope blocklist.
     """
 
-    def run(self, arguments: dict) -> str:
+    def run(self, arguments: dict) -> None:
         args = RemoveFromBlocklistArguments(**arguments)
         self.initialize_action_arguments(args)
 
@@ -33,10 +33,14 @@ class RemoveFromBlocklistAction(NetskopeAction):
         removed_count = len(items_to_remove)
 
         if not items_to_remove:
-            return (
+            self.log(
+                level="info",
+                message=(
                 f"No item(s) removed from blocklist {blocklist_name} "
                 f"(id = {args.blocklist_id}): 0/{provided_count} removed ({missing_count} already missing)"
+                ),
             )
+            return None
 
         # Build the next full blocklist content by excluding requested entries.
         remaining_items = [item for item in existing_items if item not in set(items_to_remove)]
@@ -60,7 +64,11 @@ class RemoveFromBlocklistAction(NetskopeAction):
         # Deploy the changes
         self.deploy_blocklist_changes()
 
-        return (
-            f"Successfully removed from blocklist {blocklist_name} "
-            f"(id = {args.blocklist_id}): {removed_count}/{provided_count} removed ({missing_count} already missing)"
+        self.log(
+            level="info",
+            message=(
+                f"Successfully removed from blocklist {blocklist_name} "
+                f"(id = {args.blocklist_id}): {removed_count}/{provided_count} removed ({missing_count} already missing)"
+            ),
         )
+        return None

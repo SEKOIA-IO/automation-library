@@ -75,7 +75,11 @@ def test_append_to_blocklist_success(append_action):
 
         result = append_action.run(arguments)
 
-        assert "Successfully appended to blocklist Test Blocklist (id = 123): 2/2 added (0 duplicates)" in result
+        assert result is None
+        append_action.log.assert_any_call(
+            level="info",
+            message="Successfully appended to blocklist Test Blocklist (id = 123): 2/2 added (0 duplicates)",
+        )
 
 
 def test_append_to_blocklist_api_error(append_action):
@@ -229,7 +233,11 @@ def test_append_to_blocklist_should_skip_existing_and_duplicates(append_action):
 
         result = append_action.run(arguments)
 
-        assert "(id = 123): 1/3 added (2 duplicates)" in result
+        assert result is None
+        append_action.log.assert_any_call(
+            level="info",
+            message="Successfully appended to blocklist unknown (id = 123): 1/3 added (2 duplicates)",
+        )
         assert len(mock_requests.request_history) == 3
         append_request_body = mock_requests.request_history[1].json()
         assert append_request_body == {"data": {"type": "exact", "urls": ["www.new.com"]}}
@@ -255,8 +263,11 @@ def test_append_to_blocklist_noop_when_all_items_exist(append_action):
 
         result = append_action.run(arguments)
 
-        assert "No new item(s) appended" in result
-        assert "(id = 123): 0/2 added (2 duplicates)" in result
+        assert result is None
+        append_action.log.assert_any_call(
+            level="info",
+            message="No new item(s) appended to blocklist unknown (id = 123): 0/2 added (2 duplicates)",
+        )
         assert len(mock_requests.request_history) == 1
 
 

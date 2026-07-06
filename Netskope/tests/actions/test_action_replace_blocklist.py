@@ -59,7 +59,11 @@ def test_replace_blocklist_success(replace_action):
         result = replace_action.run(arguments)
         replace_request_body = mock_requests.request_history[0].json()
 
-        assert "Successfully replaced blocklist Updated Blocklist (id = 456) with 2 item(s)" in result
+        assert result is None
+        replace_action.log.assert_any_call(
+            level="info",
+            message="Successfully replaced blocklist Updated Blocklist (id = 456) with 2 item(s)",
+        )
         assert replace_request_body == {"data": {"type": "exact", "urls": ["another-blocked.com", "new-blocked.com"]}}
 
 

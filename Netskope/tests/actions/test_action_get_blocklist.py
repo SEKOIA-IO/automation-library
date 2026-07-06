@@ -24,4 +24,8 @@ def test_get_blocklist_success(symphony_storage, trigger):
 
         result = action.run({"api_token": "fake_api_token", "blocklist_id": "123"})
 
-        assert result == "Successfully fetched blocklist Test Blocklist (id = 123)"
+        assert result is None
+        action.log.assert_any_call(
+            level="info",
+            message="Successfully fetched blocklist Test Blocklist (id = 123)",
+        )

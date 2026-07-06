@@ -17,7 +17,7 @@ class ReplaceBlocklistAction(NetskopeAction):
     Replace an entire Netskope blocklist with new items.
     """
 
-    def run(self, arguments: dict) -> str:
+    def run(self, arguments: dict) -> None:
         args = ReplaceBlocklistArguments(**arguments)
         self.initialize_action_arguments(args)
         normalized_items = self.normalize_urls(args.items, sort_items=args.sort_items)
@@ -35,7 +35,11 @@ class ReplaceBlocklistAction(NetskopeAction):
         # Deploy the changes
         self.deploy_blocklist_changes()
 
-        return (
-            f"Successfully replaced blocklist {blocklist_name} "
-            f"(id = {args.blocklist_id}) with {len(normalized_items)} item(s)"
+        self.log(
+            level="info",
+            message=(
+                f"Successfully replaced blocklist {blocklist_name} "
+                f"(id = {args.blocklist_id}) with {len(normalized_items)} item(s)"
+            ),
         )
+        return None
