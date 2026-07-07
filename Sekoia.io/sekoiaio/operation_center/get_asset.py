@@ -87,4 +87,7 @@ class GetAsset(Action):
 
     def run(self, arguments: dict):
         asset_uuid = arguments.get("uuid")
+        if not asset_uuid:
+            self.error("Asset uuid is required")
+            return None
         return self.transform_asset(self.perform_request(asset_uuid))
