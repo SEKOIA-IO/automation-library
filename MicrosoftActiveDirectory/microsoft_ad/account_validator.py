@@ -4,7 +4,6 @@ from microsoft_ad.client.ldap_client import LDAPClient
 from sekoia_automation.account_validator import AccountValidator
 
 
-
 class MicrosoftADAccountValidator(AccountValidator, LDAPClient):
     """Account validator for Microsoft AD asset connector."""
 
