@@ -3,6 +3,7 @@ from collections.abc import Generator
 from typing import Any
 
 from ldap3 import ALL_ATTRIBUTES, ALL_OPERATIONAL_ATTRIBUTES
+from ldap3.core.exceptions import LDAPSocketOpenError
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.group import Group
@@ -284,13 +285,8 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
 
         return user_ocsf_model
 
-    def get_users_generator(self) -> Generator[dict[str, Any], None, None]:
-
-        self.log("Starting LDAP paged search for users...", level="info")
-
-        # Create paged search generator
-        # pagination is handled internally by ldap3
-        paged_search = self.ldap_client.extend.standard.paged_search(
+    def _run_paged_search(self) -> Generator[dict[str, Any], None, None]:
+        return self.ldap_client.extend.standard.paged_search(
             search_base=self.configuration.basedn,
             search_filter=self.user_ldap_query,
             attributes=self.QUERY_ATTRIBUTES,
@@ -298,7 +294,20 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             generator=True,
         )
 
-        for entry in paged_search:
+    def get_users_generator(self) -> Generator[dict[str, Any], None, None]:
+
+        self.log("Starting LDAP paged search for users...", level="info")
+
+        try:
+            paged_search = self._run_paged_search()
+            entries = list(paged_search)
+        except LDAPSocketOpenError:
+            self.log("LDAP socket closed, reconnecting...", level="warning")
+            self._reset_ldap_connection()
+            paged_search = self._run_paged_search()
+            entries = list(paged_search)
+
+        for entry in entries:
             user_attributes = entry.get("attributes", {})
             if not user_attributes:
                 self.log("No user attributes found for user", level="error")

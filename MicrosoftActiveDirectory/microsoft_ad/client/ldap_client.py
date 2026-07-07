@@ -1,6 +1,7 @@
 from functools import cached_property
 
 from ldap3 import Connection, Server
+from ldap3.core.exceptions import LDAPSocketOpenError
 
 from microsoft_ad.models.common_models import MicrosoftADModule
 
@@ -28,6 +29,13 @@ class LDAPClient:
 
     @property
     def ldap_client(self) -> Connection:
-        if self._ldap_client is None or not self._ldap_client.bound:
+        if self._ldap_client is None:
             self._ldap_client = self._create_ldap_connection()
         return self._ldap_client
+
+    @ldap_client.setter
+    def ldap_client(self, value: Connection) -> None:
+        self._ldap_client = value
+
+    def _reset_ldap_connection(self) -> None:
+        self._ldap_client = None
