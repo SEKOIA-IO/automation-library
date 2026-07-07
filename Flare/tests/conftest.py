@@ -1,7 +1,7 @@
-from shutil import rmtree
 import sys
-from tempfile import mkdtemp
 from pathlib import Path
+from shutil import rmtree
+from tempfile import mkdtemp
 
 import pytest
 from sekoia_automation import constants

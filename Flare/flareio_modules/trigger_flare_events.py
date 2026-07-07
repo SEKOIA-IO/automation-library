@@ -1,4 +1,5 @@
 import time
+from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from typing import Any
@@ -13,6 +14,7 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from urllib3.util import Retry
 
 from flareio_modules import FlareIOModule
+from flareio_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
 class FlareEventsConnectorConfiguration(DefaultConnectorConfiguration):
@@ -80,25 +82,28 @@ class FlareEventsConnector(Connector):
             return None
 
         # The SDK may return hydrated events wrapped under "activity".
-        if isinstance(event.get("activity"), dict):
-            return event["activity"]
+        activity = event.get("activity")
+        if isinstance(activity, dict):
+            return dict(activity)
 
-        return event
+        return dict(event)
 
-    def _iter_flare_events(self):
+    def _iter_flare_events(self) -> Iterator[tuple[dict[str, Any] | None, Any]]:
         payload = self._build_payload()
 
+        # Reuse the connector's own configured limiter as the SDK's per-event limiter so
+        # `throttle_seconds` is the single source of truth for pacing (avoids double throttling).
         for result in self.client.scroll_events(
             method="POST",
             pages_url="/firework/v4/events/tenant/_search",
             events_url="/firework/v2/activities/",
             json=payload,
+            _events_limiter=self.limiter,
         ):
-            self.limiter.tick()
-
             next_cursor = getattr(result, "next", None)
             event = getattr(result, "event", None)
 
+            # Defensive: tolerate a plain dict shape as well as the SDK's ScrollEventsResult.
             if isinstance(result, dict):
                 next_cursor = result.get("next", next_cursor)
                 event = result.get("event", event)
@@ -119,17 +124,23 @@ class FlareEventsConnector(Connector):
             if next_cursor:
                 latest_next_cursor = next_cursor
 
+        intake_key = self.configuration.intake_key
+
         if batch_of_events:
             self.push_events_to_intakes(events=batch_of_events)
             self.log(f"Forwarded {len(batch_of_events)} events to the intake", level="info")
+            OUTCOMING_EVENTS.labels(intake_key=intake_key).inc(len(batch_of_events))
+            EVENTS_LAG.labels(intake_key=intake_key).set(time.time() - batch_start_time)
         else:
             self.log("No events to forward", level="info")
 
         if latest_next_cursor and latest_next_cursor != self.cursor.offset:
             self.cursor.offset = latest_next_cursor
 
-        batch_duration = int(time.time() - batch_start_time)
-        delta_sleep = self.configuration.frequency - batch_duration
+        batch_duration = time.time() - batch_start_time
+        FORWARD_EVENTS_DURATION.labels(intake_key=intake_key).observe(batch_duration)
+
+        delta_sleep = self.configuration.frequency - int(batch_duration)
         if delta_sleep > 0:
             time.sleep(delta_sleep)
 

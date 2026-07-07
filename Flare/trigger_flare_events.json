@@ -28,7 +28,7 @@
       },
       "throttle_seconds": {
         "type": "number",
-        "description": "Delay in seconds between paged requests",
+        "description": "Delay in seconds between individual event requests",
         "default": 0.25,
         "minimum": 0.25
       },
