@@ -80,6 +80,16 @@ def test_get_asset_by_uuid_returns_none_if_http_error(requests_mock):
     assert results == None
 
 
+def test_get_asset_by_uuid_returns_none_if_uuid_empty(requests_mock):
+    action = GetAsset()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    arguments = {"uuid": ""}
+
+    results: dict = action.run(arguments)
+    assert results is None
+    assert requests_mock.call_count == 0
+
+
 def test_get_asset_transforms_criticity_levels(requests_mock):
     action = GetAsset()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
