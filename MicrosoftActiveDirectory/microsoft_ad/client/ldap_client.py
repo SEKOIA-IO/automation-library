@@ -36,9 +36,9 @@ class LDAPClient:
     def ldap_client(self, value: Connection) -> None:
         self._ldap_client = value
 
-def _reset_ldap_connection(self) -> None:
-    if self._ldap_client is not None:
-        try:
-            self._ldap_client.unbind()
-        finally:
-            self._ldap_client = None
+    def _reset_ldap_connection(self) -> None:
+        if self._ldap_client is not None:
+            try:
+                self._ldap_client.unbind()
+            finally:
+                self._ldap_client = None

@@ -119,16 +119,12 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             list[UserEnrichmentObject]: List of user enrichment objects.
         """
         pwd_last_set = user_attributes.pwdLastSet
-        last_time_password_change = (
-            float(int(pwd_last_set.timestamp())) if pwd_last_set and pwd_last_set.year > 1601 else None
-        )
 
         data = UserDataObject(
             is_enabled=self.compute_enabling_condition(user_attributes),
             last_logon=self.convert_last_logon_to_timestamp(user_attributes.lastLogon),
             bad_password_count=user_attributes.badPwdCount,
             number_of_logons=user_attributes.logonCount,
-            last_time_password_change=last_time_password_change,
         )
         user_object = UserEnrichmentObject(name="login", value="infos", data=data)
         return [user_object]
@@ -294,31 +290,31 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             generator=True,
         )
 
+    def _entries(self) -> Generator[dict[str, Any], None, None]:
+
+        seen_dn: set[str] = set()
+
+        for attempt in range(2):
+            try:
+                for entry in self._run_paged_search():
+                    dn = entry.get("dn")
+                    if dn is not None:
+                        if dn in seen_dn:
+                            continue
+                        seen_dn.add(dn)
+                    yield entry
+                return
+            except LDAPSocketOpenError as exc:
+                if attempt == 1:
+                    raise
+                self.log(f"LDAP socket closed, reconnecting... ({exc})", level="warning")
+                self._reset_ldap_connection()
+
     def get_users_generator(self) -> Generator[dict[str, Any], None, None]:
 
         self.log("Starting LDAP paged search for users...", level="info")
 
-        seen_dns: set[str] = set()
-
-        def _entries() -> Generator[dict[str, Any], None, None]:
-            for attempt in range(2):
-                try:
-                    for entry in self._run_paged_search():
-                        dn = entry.get("dn")
-                        if dn is not None:
-                            if dn in seen_dns:
-                                continue
-                            seen_dns.add(dn)
-                        yield entry
-                    return
-                except LDAPSocketOpenError as exc:
-                    if attempt == 1:
-                        raise
-                    self.log(f"LDAP socket closed, reconnecting... ({exc})", level="warning")
-                    self._reset_ldap_connection()
-
-        entries = _entries()
-        for entry in entries:
+        for entry in self._entries():
             user_attributes = entry.get("attributes", {})
             if not user_attributes:
                 self.log("No user attributes found for user", level="error")
