@@ -247,6 +247,31 @@ mapping:
       logic: "Direct mapping of on-premises SAM account name"
       description: "Alternate user identifier (on-premises SAM account name)"
 
+    # LDAP PERSON - STRUCTURED IDENTITY ATTRIBUTES
+    - source: "jobTitle"
+      target: "user.ldap_person.job_title"
+      type: "string"
+      logic: "Direct mapping of job title when department, jobTitle or employeeId is present"
+      description: "User job title / role (surfaced in the user asset detail view)"
+
+    - source: "department"
+      target: "user.ldap_person.department"
+      type: "string"
+      logic: "Direct mapping of department when department, jobTitle or employeeId is present"
+      description: "User department (surfaced in the user asset detail view)"
+
+    - source: "employeeId"
+      target: "user.ldap_person.employee_uid"
+      type: "string"
+      logic: "Direct mapping of employee ID when department, jobTitle or employeeId is present"
+      description: "Employee unique identifier"
+
+    - source: "officeLocation"
+      target: "user.ldap_person.office_location"
+      type: "string"
+      logic: "Direct mapping of office location when department, jobTitle or employeeId is present"
+      description: "Office location of the user"
+
     # OCSF ENRICHMENT - USER ACCESS INFORMATION
     - source: "static: account"
       target: "enrichments[0].name"
@@ -331,6 +356,12 @@ mapping:
             "org": {
               "name": "Example Corp",
               "ou_name": "New York, NY"
+            },
+            "ldap_person": {
+              "job_title": "Financial Analyst",
+              "department": "Finance",
+              "employee_uid": "EMP456",
+              "office_location": "New York, NY"
             }
           },
           "enrichments": [

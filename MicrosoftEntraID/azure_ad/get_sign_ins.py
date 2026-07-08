@@ -3,7 +3,7 @@ import asyncio
 from kiota_abstractions.native_response_handler import NativeResponseHandler
 from kiota_http.middleware.options import ResponseHandlerOption
 from msgraph.generated.users.item.messages.messages_request_builder import MessagesRequestBuilder
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 from .base import IdArguments, MicrosoftGraphAction, SingleUserArguments
 

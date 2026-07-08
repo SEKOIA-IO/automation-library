@@ -22,6 +22,9 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     AccountTypeStr,
 )
 from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
+from sekoia_automation.asset_connector.models.ocsf.user import (
+    LdapPerson,
+)
 from sekoia_automation.asset_connector.models.ocsf.user import User as UserOCSF
 from sekoia_automation.asset_connector.models.ocsf.user import (
     UserDataObject,
@@ -143,6 +146,19 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             type=AccountTypeStr.AZURE_AD_ACCOUNT,
             uid=user.id,
         )
+
+        # Structured identity attributes (job title, department) so they are indexed
+        # and surfaced in the user asset detail view and available to enrichment consumers,
+        # instead of only living in the free-text employment enrichment value.
+        ldap_person = None
+        if user.department or user.job_title or user.employee_id:
+            ldap_person = LdapPerson(
+                job_title=user.job_title,
+                department=user.department,
+                employee_uid=user.employee_id,
+                office_location=user.office_location,
+            )
+
         user_data = UserOCSF(
             has_mfa=has_mfa,
             name=user.user_principal_name or "Unknown",
@@ -157,6 +173,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             type=user_type_str,
             org=org,
             uid_alt=user.on_premises_sam_account_name,
+            ldap_person=ldap_person,
         )
 
         # Build enrichment data

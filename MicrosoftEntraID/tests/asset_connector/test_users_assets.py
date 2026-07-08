@@ -976,6 +976,48 @@ def test_map_fields_enrichment_with_employment_info(test_entra_id_asset_connecto
     assert "Engineering" in employment_enrichment.value or "Senior Engineer" in employment_enrichment.value
 
 
+def test_map_fields_populates_ldap_person(test_entra_id_asset_connector):
+    """Job title and department must land in structured user.ldap_person, not only free-text enrichment."""
+    from msgraph.generated.models.user import User
+
+    asset_user = User(
+        user_principal_name="ir.analyst@example.com",
+        id="user_id",
+        display_name="IR Analyst",
+        mail="ir.analyst@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+        department="Incident Response",
+        job_title="Managing Consultant, Incident Response",
+        employee_id="EMP456",
+        office_location="London",
+    )
+
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
+
+    assert result.user.ldap_person is not None
+    assert result.user.ldap_person.job_title == "Managing Consultant, Incident Response"
+    assert result.user.ldap_person.department == "Incident Response"
+    assert result.user.ldap_person.employee_uid == "EMP456"
+    assert result.user.ldap_person.office_location == "London"
+
+
+def test_map_fields_ldap_person_none_when_absent(test_entra_id_asset_connector):
+    """ldap_person stays None when no identity attributes are present."""
+    from msgraph.generated.models.user import User
+
+    asset_user = User(
+        user_principal_name="plain@example.com",
+        id="user_id",
+        display_name="Plain User",
+        mail="plain@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+    )
+
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
+
+    assert result.user.ldap_person is None
+
+
 def test_map_fields_enrichment_without_optional_fields(test_entra_id_asset_connector):
     """Test that enrichments are created with minimal data."""
     from msgraph.generated.models.user import User

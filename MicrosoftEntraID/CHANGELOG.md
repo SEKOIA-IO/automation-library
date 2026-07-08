@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Map Entra ID `jobTitle` and `department` (plus `employeeId` and `officeLocation`) into the structured OCSF `user.ldap_person` object in the user asset connector, so role and department are surfaced in the Reveal user asset detail view and available as user context to downstream consumers
+
+### Changed
+
+- Require `sekoia-automation-sdk >= 1.24.0` for the OCSF `user.ldap_person` field
+- Migrate the module's models and action arguments from the `pydantic.v1` compatibility shim to native Pydantic v2 (`model_validator`, `model_json_schema`, `json_schema_extra`) for compatibility with `sekoia-automation-sdk >= 1.23`
+
 ## 2026-06-16 - 2.10.23
 
 ### Fixed
