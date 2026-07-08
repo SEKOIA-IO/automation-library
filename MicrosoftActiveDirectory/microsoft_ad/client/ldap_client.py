@@ -1,7 +1,6 @@
 from functools import cached_property
 
 from ldap3 import Connection, Server
-from ldap3.core.exceptions import LDAPSocketOpenError
 
 from microsoft_ad.models.common_models import MicrosoftADModule
 
