@@ -31,7 +31,7 @@ class MobileThreatDefenceConnectorConfiguration(DefaultConnectorConfiguration):
 
     frequency: int = 60
     timedelta: int = 5
-    start_time: int = 10
+    start_time: int = 1
 
 
 class MobileThreatDefenceConnector(Connector):
@@ -143,7 +143,7 @@ class MobileThreatDefenceConnector(Connector):
             "sort": "timestamp,asc",
         }
 
-        while True:
+        while self.running:
             response = self.client.get(url, params=params, headers=headers, timeout=60)
             self.handle_response_error(response)
 
