@@ -298,15 +298,26 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
 
         self.log("Starting LDAP paged search for users...", level="info")
 
-        try:
-            paged_search = self._run_paged_search()
-            entries = list(paged_search)
-        except LDAPSocketOpenError:
-            self.log("LDAP socket closed, reconnecting...", level="warning")
-            self._reset_ldap_connection()
-            paged_search = self._run_paged_search()
-            entries = list(paged_search)
+        seen_dns: set[str] = set()
 
+        def _entries() -> Generator[dict[str, Any], None, None]:
+            for attempt in range(2):
+                try:
+                    for entry in self._run_paged_search():
+                        dn = entry.get("dn")
+                        if dn is not None:
+                            if dn in seen_dns:
+                                continue
+                            seen_dns.add(dn)
+                        yield entry
+                    return
+                except LDAPSocketOpenError as exc:
+                    if attempt == 1:
+                        raise
+                    self.log(f"LDAP socket closed, reconnecting... ({exc})", level="warning")
+                    self._reset_ldap_connection()
+
+        entries = _entries()
         for entry in entries:
             user_attributes = entry.get("attributes", {})
             if not user_attributes:
