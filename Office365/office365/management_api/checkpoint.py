@@ -2,6 +2,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from dateutil.parser import isoparse
+from sekoia_automation.utils import capture_retry_error
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 
 class Checkpoint:
@@ -14,12 +16,11 @@ class Checkpoint:
         now = datetime.now(UTC)
 
         if self._most_recent_date_seen is None:
-
-            try:
-                # read the most recent date seen from the context
-                most_recent_date_seen_str = self._context.read_text()
+            most_recent_date_seen_str: str | None = self.read(filepath=self._context)
+            if most_recent_date_seen_str:
                 most_recent_date_seen = isoparse(most_recent_date_seen_str)
-            except Exception:
+
+            else:
                 # if not defined, set the most recent date seen to now
                 most_recent_date_seen = now
 
@@ -37,4 +38,26 @@ class Checkpoint:
         if last_message_date is not None:
             if self.offset is None or last_message_date > self.offset:
                 self._most_recent_date_seen = last_message_date
-                self._context.write_text(last_message_date.isoformat())
+                self.write(filepath=self._context, data=last_message_date.isoformat())
+
+    @retry(
+        reraise=True,
+        wait=wait_exponential(max=6),
+        stop=stop_after_attempt(10),
+        retry_error_callback=capture_retry_error,
+    )
+    def read(self, filepath: Path) -> str | None:
+        if not filepath.is_file():
+            return None
+
+        result = filepath.read_text()
+        return result
+
+    @retry(
+        reraise=True,
+        wait=wait_exponential(max=6),
+        stop=stop_after_attempt(10),
+        retry_error_callback=capture_retry_error,
+    )
+    def write(self, filepath: Path, data: str) -> None:
+        filepath.write_text(data)
