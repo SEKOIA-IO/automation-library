@@ -48,11 +48,17 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._latest_time: str | None = None
+        self._seen_sids: set[str] = set()
 
     @property
     def most_recent_datetime(self) -> str | None:
         with self.context as cache:
             return cache.get("most_recent_datetime", None)
+
+    @property
+    def seen_sids_at_checkpoint(self) -> set[str]:
+        with self.context as cache:
+            return set(cache.get("seen_sids_at_checkpoint", []))
 
     @property
     def user_ldap_query(self) -> str:
@@ -64,13 +70,15 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         if self._latest_time is None:
             return
 
-        # Increment latest_time by 1 millisecond to avoid duplicates
-        to_datetime = datetime.datetime.strptime(self._latest_time, "%Y%m%d%H%M%S.0Z")
-        to_datetime += datetime.timedelta(milliseconds=1)
-        updated_time = to_datetime.strftime("%Y%m%d%H%M%S.0Z")
-
         with self.context as cache:
-            cache["most_recent_datetime"] = updated_time
+            previous_checkpoint = cache.get("most_recent_datetime")
+
+            if self._latest_time == previous_checkpoint:
+                existing_sids = set(cache.get("seen_sids_at_checkpoint", []))
+                cache["seen_sids_at_checkpoint"] = list(existing_sids | self._seen_sids)
+            else:
+                cache["most_recent_datetime"] = self._latest_time
+                cache["seen_sids_at_checkpoint"] = list(self._seen_sids)
 
     def user_metadata_object(self) -> Metadata:
         """
@@ -314,23 +322,40 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
 
         self.log("Starting LDAP paged search for users...", level="info")
 
+        checkpoint_time = self.most_recent_datetime
+        already_seen_sids = self.seen_sids_at_checkpoint
+
         for entry in self._entries():
             user_attributes = entry.get("attributes", {})
             if not user_attributes:
                 self.log("No user attributes found for user", level="error")
                 raise Exception("No user attributes found for user")
 
+            user_created_at = user_attributes.get("whenCreated")
+            if user_created_at:
+                user_created_str = user_created_at.strftime("%Y%m%d%H%M%S.0Z")
+                if user_created_str == checkpoint_time:
+                    sid = user_attributes.get("objectSid")
+                    if sid and sid in already_seen_sids:
+                        self.log(
+                            f"Skipping already-seen user (SID={sid}) at boundary second {checkpoint_time}",
+                            level="debug",
+                        )
+                        continue
+
             self.log(f"User with DN {entry.get('dn')} retrieved.", level="debug")
             yield entry
 
-            user_created_at = user_attributes.get("whenCreated")
             self.log(f"Start updating checkpoint with the new date {user_created_at}", level="debug")
 
-            # Update latest time for checkpointing
             if user_created_at:
                 user_created_str = user_created_at.strftime("%Y%m%d%H%M%S.0Z")
+                sid = user_attributes.get("objectSid")
                 if not self._latest_time or user_created_str > self._latest_time:
                     self._latest_time = user_created_str
+                    self._seen_sids = {sid} if sid else set()
+                elif user_created_str == self._latest_time and sid:
+                    self._seen_sids.add(sid)
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
         """

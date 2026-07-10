@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-09 - 1.5.7
+
+### Fixed
+
+- Fix duplication of assets by adding a cache in the context
+
 ## 2026-07-07 - 1.5.6
 
 ### Fixed
