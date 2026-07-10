@@ -1,11 +1,11 @@
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 
 class AkamaiModuleConfiguration(BaseModel):
     host: str = Field(..., description="Host of the tenant")
     client_token: str = Field(..., description="Client token")
-    client_secret: str = Field(..., description="Client secret", secret=True)
-    access_token: str = Field(..., description="Access Token", secret=True)
+    client_secret: str = Field(..., description="Client secret", json_schema_extra={"secret": True})
+    access_token: str = Field(..., description="Access Token", json_schema_extra={"secret": True})
 
     @property
     def base_url(self):

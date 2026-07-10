@@ -3,14 +3,15 @@ import os
 import re
 import time
 import urllib.parse
-from datetime import datetime, timedelta, timezone
+from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from typing import Any, Generator
+from typing import Any
 
 import orjson
 import requests
 from cachetools import Cache, LRUCache
-from pydantic.v1 import Field
+from pydantic import Field
 from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
@@ -136,7 +137,7 @@ class AkamaiWAFLogsConnector(Connector):
         if "responseHeaders" in event.get("httpMessage", {}):
             event["httpMessage"]["responseHeaders"] = response_headers
 
-    def __fetch_next_events(self, from_date: int) -> Generator[list, None, None]:
+    def __fetch_next_events(self, from_date: int) -> Generator[list]:
         url = f"{self.module.configuration.base_url}/siem/v1/configs/{self.configuration.config_id}"
         response = self.client.get(
             url=url, params={"from": from_date, "limit": self.page_size}, timeout=60, stream=True
@@ -186,7 +187,7 @@ class AkamaiWAFLogsConnector(Connector):
                 url=url, params={"offset": offset, "limit": self.page_size}, timeout=60, stream=True
             )
 
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list]:
         most_recent_date_seen: int = self.from_timestamp
 
         for next_events in self.__fetch_next_events(most_recent_date_seen):
@@ -205,7 +206,7 @@ class AkamaiWAFLogsConnector(Connector):
             self.from_timestamp = most_recent_date_seen
             self.cursor.offset = most_recent_date_seen
 
-            delta_time = datetime.now(timezone.utc).timestamp() - most_recent_date_seen
+            delta_time = datetime.now(UTC).timestamp() - most_recent_date_seen
             current_lag = int(delta_time)
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
@@ -239,7 +240,7 @@ class AkamaiWAFLogsConnector(Connector):
 
             response.raise_for_status()
 
-    def filter_processed_events(self, events: list[dict]) -> Generator[dict, None, None]:
+    def filter_processed_events(self, events: list[dict]) -> Generator[dict]:
         for event in events:
             event_id = event["httpMessage"]["requestId"]
             if event_id in self.events_cache:
