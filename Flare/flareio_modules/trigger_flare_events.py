@@ -1,6 +1,6 @@
 import time
 from collections.abc import Iterator
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from typing import Any
 
@@ -67,7 +67,7 @@ class FlareEventsConnector(Connector):
             payload["from"] = self.cursor.offset
             return payload
 
-        start_timestamp = datetime.now(tz=timezone.utc) - timedelta(hours=self.configuration.initial_hours_lookback)
+        start_timestamp = datetime.now(tz=UTC) - timedelta(hours=self.configuration.initial_hours_lookback)
         payload["from"] = None
         payload["filters"] = {
             "estimated_created_at": {

@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Prometheus metrics (`OUTCOMING_EVENTS`, `EVENTS_LAG`, `FORWARD_EVENTS_DURATION`) for the Flare events trigger
 - Mark `api_key` as a secret field on `FlareIOModuleConfiguration`
 
+## 2026-07-10 - 0.3.0
+
+### Changed
+
+- Migrated module from Poetry to uv
+
 ## 2026-06-08 - 0.2.0
 
 ### Added
