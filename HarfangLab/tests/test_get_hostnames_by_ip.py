@@ -3,7 +3,10 @@
 # coding: utf-8
 
 # natives
+
+import pytest
 import requests_mock
+from pydantic import ValidationError
 
 # internals
 from harfanglab.get_hostnames_by_ip_action import GetHostnamesByIP
@@ -80,3 +83,32 @@ def test_get_hostnames_by_ip():
             ]
         ).dict()
         assert res == expected_result
+
+
+@pytest.mark.parametrize("target_ip", ["", "   "])
+def test_get_hostnames_by_ip_requires_target_ip(target_ip):
+    instance_url = "https://test.hurukau.io"
+    api_token = "11111111111111111111111111111111"
+
+    action = GetHostnamesByIP()
+    action.module.configuration = {"url": instance_url, "api_token": api_token}
+
+    with requests_mock.Mocker() as mock:
+        with pytest.raises(ValidationError):
+            action.run({"target_ip": target_ip, "get_only_last_seen": False})
+
+    assert len(mock.request_history) == 0
+
+
+def test_get_hostnames_by_ip_rejects_invalid_target_ip_shape():
+    instance_url = "https://test.hurukau.io"
+    api_token = "11111111111111111111111111111111"
+
+    action = GetHostnamesByIP()
+    action.module.configuration = {"url": instance_url, "api_token": api_token}
+
+    with requests_mock.Mocker() as mock:
+        with pytest.raises(ValidationError):
+            action.run({"target_ip": "not-an-ip", "get_only_last_seen": False})
+
+    assert len(mock.request_history) == 0

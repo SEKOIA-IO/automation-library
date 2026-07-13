@@ -1,7 +1,13 @@
+from pydantic import BaseModel, Field, IPvAnyAddress
 from sekoia_automation.action import Action
 
 from .client import ApiClient
 from .models import HostnameEntry, HostnamesResult
+
+
+class GetHostnamesByIPArguments(BaseModel):
+    target_ip: IPvAnyAddress = Field(..., description="IP address to look up")
+    get_only_last_seen: bool = Field(default=False, description="Only return the most recently seen hostname")
 
 
 class GetHostnamesByIP(Action):
@@ -9,16 +15,16 @@ class GetHostnamesByIP(Action):
     Action to analyze a HarfangLab job that lists the process
     """
 
-    def run(self, arguments) -> dict:
-        target_ip = arguments.get("target_ip", "")
-        get_only_last_seen = arguments.get("get_only_last_seen", False)
+    def run(self, arguments: GetHostnamesByIPArguments) -> dict | None:
+        target_ip = arguments.target_ip
+        get_only_last_seen = arguments.get_only_last_seen
 
         client: ApiClient = ApiClient(
             instance_url=self.module.configuration["url"], token=self.module.configuration["api_token"]
         )
 
         job_url = f"{client.instance_url}/api/data/endpoint/Agent/"
-        params: dict = {"ipaddress": target_ip}
+        params: dict = {"ipaddress": str(target_ip)}
 
         response = client.get(url=job_url, params=params)
         response.raise_for_status()
