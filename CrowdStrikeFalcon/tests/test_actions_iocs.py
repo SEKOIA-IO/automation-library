@@ -3,6 +3,7 @@ from datetime import date, timedelta
 
 import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.action import CrowdstrikeAction
@@ -777,3 +778,22 @@ def test_run_block_ioc_type_not_supported():
     action = configured_action(CrowdstrikeActionBlockIOC)
     action.run({"value": "77.91.78.118", "type": "ipv4"})
     assert action._error is not None
+
+
+def test_run_monitor_ioc_value_required(requests_mock):
+    action = configured_action(CrowdstrikeActionMonitorIOC)
+
+    with pytest.raises(ValidationError):
+        action.run({"type": "ipv4"})
+
+    assert requests_mock.call_count == 0
+
+
+@pytest.mark.parametrize("value", ["", "   "])
+def test_run_monitor_ioc_value_blank(requests_mock, value):
+    action = configured_action(CrowdstrikeActionMonitorIOC)
+
+    with pytest.raises(ValidationError):
+        action.run({"value": value, "type": "ipv4"})
+
+    assert requests_mock.call_count == 0

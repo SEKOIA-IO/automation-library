@@ -1,7 +1,15 @@
-from pydantic.v1 import BaseModel, Field
+from typing import Annotated
+
+from pydantic import BaseModel, Field, StringConstraints
+
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class CrowdStrikeFalconModuleConfiguration(BaseModel):
     client_id: str = Field(..., description="OAuth2 Client Identifier as provided by CrowdStrike Falcon")
-    client_secret: str = Field(secret=True, description="OAuth2 Client Secret as provided by CrowdStrike Falcon")
+    client_secret: str = Field(
+        ...,
+        description="OAuth2 Client Secret as provided by CrowdStrike Falcon",
+        json_schema_extra={"secret": True},
+    )
     base_url: str = Field(..., description="Base URL of the CrowdStrike Falcon platform")

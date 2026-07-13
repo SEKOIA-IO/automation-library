@@ -3,8 +3,11 @@ from datetime import date, timedelta
 from posixpath import join as urljoin
 from typing import Dict, List
 
+from pydantic import BaseModel, Field
+
 from crowdstrike_falcon.action import CrowdstrikeAction
 from crowdstrike_falcon.helpers import stix_to_indicators
+from crowdstrike_falcon.models import NonEmptyStr
 
 
 class CrowdstrikeActionIOC(CrowdstrikeAction):
@@ -182,13 +185,18 @@ class CrowdstrikeActionPushIOCsDetect(CrowdstrikeActionPushIOCs):
     }
 
 
+class CrowdstrikeActionAddIOCArguments(BaseModel):
+    value: NonEmptyStr = Field(..., description="IOC value")
+    type: str = Field(default="", description="IOC type")
+
+
 class CrowdstrikeActionAddIOC(CrowdstrikeActionIOC):
     SUPPORTED_TYPES: List[str] = []
     ACTION = ""
 
-    def run(self, arguments):
-        ioc_value = arguments.get("value", "")
-        ioc_type = arguments.get("type", "").lower()
+    def run(self, arguments: CrowdstrikeActionAddIOCArguments):
+        ioc_value = arguments.value
+        ioc_type = arguments.type.lower()
         if ioc_type not in self.SUPPORTED_TYPES:
             self.error(f"Type {ioc_type} is not supported. Refer to the documentation for supported types.")
             return
