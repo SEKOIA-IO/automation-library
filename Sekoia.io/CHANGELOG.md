@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-10 - 2.74.2
+
+### Changed
+
+- Upgraded `sekoia-automation-sdk` to `1.23.1` and migrated `UpdateAsset`, `UpdateAlertStatus`, `AssetsMerge`, `SynchronizeAssetsWithAD`, `CreateDataset`, `DeleteDataset`, `ExecuteAQuery`, and `ListQueries` action argument models from the `pydantic.v1` compatibility shim to native Pydantic v2, avoiding a v1/v2 model mixing error triggered by the newer SDK
+
+### Fixed
+
+- `UpdateAsset` and `UpdateAlertStatus` action arguments are now validated with Pydantic, rejecting missing, empty, or malformed `uuid` values before any HTTP request is issued by upgrading both actions to the native `UUID` type; `UpdateAlertStatus.status` remains an open non-empty string so custom/user-defined alert statuses continue to work
+
 ## 2026-07-07 - 2.74.1
 
 ### Fixed
@@ -777,4 +787,3 @@ Support for file input - action synchronize asset
 ### Added
 
 - Add the action that let us get reports from a specific term
-

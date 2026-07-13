@@ -1,8 +1,13 @@
 from posixpath import join as urljoin
+from typing import Annotated, Optional
+from uuid import UUID
 
-from sekoia_automation.action import Action
 import requests
+from pydantic import BaseModel, Field, StringConstraints
+from sekoia_automation.action import Action
 from tenacity import retry, wait_exponential, stop_after_attempt
+
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 STATUS_UUIDS = {
     "PENDING": "2efc4930-1442-4abb-acf2-58ba219a4fd0",
@@ -17,6 +22,12 @@ ACTION_UUIDS = [
     "ade85d7b-7507-4026-bfc6-cc006d10ddac",
     "1390be4e-ced8-4dd6-9bed-573471b235ab",
 ]
+
+
+class UpdateAlertStatusArguments(BaseModel):
+    uuid: UUID = Field(..., description="The identifier of the alert")
+    status: NonEmptyStr = Field(..., description="The status/action to apply to the alert")
+    comment: Optional[str] = None
 
 
 class UpdateAlertStatus(Action):
@@ -34,14 +45,15 @@ class UpdateAlertStatus(Action):
         wait=wait_exponential(max=300),
         stop=stop_after_attempt(10),
     )
-    def perform_request(self, alert_uuid: str, status: str, comment: str | None = None):
+    def perform_request(self, alert_uuid: UUID, status: str, comment: str | None = None):
+        alert_uuid_str = str(alert_uuid)
         if status in STATUS_UUIDS.values() or status in ACTION_UUIDS:
             result = requests.patch(
-                self.url(alert_uuid), headers=self.headers, json={"action_uuid": status, "comment": comment}
+                self.url(alert_uuid_str), headers=self.headers, json={"action_uuid": status, "comment": comment}
             )
         elif status.upper() in STATUS_UUIDS:
             result = requests.patch(
-                self.url(alert_uuid),
+                self.url(alert_uuid_str),
                 headers=self.headers,
                 json={"action_uuid": STATUS_UUIDS[status.upper()], "comment": comment},
             )
@@ -49,12 +61,12 @@ class UpdateAlertStatus(Action):
             self.error(f"Invalid status: {status}")
             return
         if result.status_code >= 500:
-            self.error(f"Could not change alert {alert_uuid} status, status code: {result.status_code}")
+            self.error(f"Could not change alert {alert_uuid_str} status, status code: {result.status_code}")
             result.raise_for_status()
         return result.json()
 
-    def run(self, arguments: dict):
-        status = arguments["status"]
-        alert_uuid = arguments["uuid"]
-        comment = arguments.get("comment")
+    def run(self, arguments: UpdateAlertStatusArguments):
+        alert_uuid = arguments.uuid
+        status = arguments.status
+        comment = arguments.comment
         return self.perform_request(alert_uuid, status, comment)

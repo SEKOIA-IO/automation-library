@@ -1,5 +1,8 @@
 import uuid
 
+import pytest
+from pydantic import ValidationError
+
 from sekoiaio.operation_center.update_asset import UpdateAsset
 
 module_base_url = "https://app.sekoia.fake/"
@@ -47,6 +50,26 @@ def test_update_asset_by_uuid_returns_none_if_http_error(requests_mock):
 
     results: dict = action.run(arguments)
     assert results is None
+
+
+def test_update_asset_by_uuid_returns_none_if_uuid_empty(requests_mock):
+    action = UpdateAsset()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    arguments = {"uuid": ""}
+
+    with pytest.raises(ValidationError):
+        action.run(arguments)
+    assert requests_mock.call_count == 0
+
+
+def test_update_asset_by_uuid_returns_none_if_uuid_invalid(requests_mock):
+    action = UpdateAsset()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    arguments = {"uuid": "not-a-uuid"}
+
+    with pytest.raises(ValidationError):
+        action.run(arguments)
+    assert requests_mock.call_count == 0
 
 
 def test_update_asset_with_tags_as_list(requests_mock):

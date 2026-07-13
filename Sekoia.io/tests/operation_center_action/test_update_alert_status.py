@@ -3,6 +3,7 @@ import uuid
 from unittest.mock import patch
 
 import pytest
+from pydantic import ValidationError
 from sekoiaio.operation_center.update_alert_status import UpdateAlertStatus
 
 module_base_url = "https://app.sekoia.fake/"
@@ -60,3 +61,33 @@ def test_patch_alert_status_fails(requests_mock):
     with patch("tenacity.nap.time"):
         with pytest.raises(Exception):
             action.run(arguments)
+
+
+def test_patch_alert_status_returns_none_if_uuid_empty(requests_mock):
+    action = UpdateAlertStatus()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    arguments = {"status": "PENDING", "uuid": ""}
+
+    with pytest.raises(ValidationError):
+        action.run(arguments)
+    assert requests_mock.call_count == 0
+
+
+def test_patch_alert_status_returns_none_if_uuid_invalid(requests_mock):
+    action = UpdateAlertStatus()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    arguments = {"status": "PENDING", "uuid": "not-a-uuid"}
+
+    with pytest.raises(ValidationError):
+        action.run(arguments)
+    assert requests_mock.call_count == 0
+
+
+def test_patch_alert_status_returns_none_if_status_empty(requests_mock):
+    action = UpdateAlertStatus()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    arguments = {"status": "", "uuid": str(uuid.uuid4())}
+
+    with pytest.raises(ValidationError):
+        action.run(arguments)
+    assert requests_mock.call_count == 0
