@@ -1,15 +1,25 @@
-from typing import Any
+from typing import Any, List
+
+from pydantic import BaseModel, Field
 
 from .action_base import MicrosoftGraphActionBase
+from .models import NonEmptyStr
+
+
+class ForwardMessageArguments(BaseModel):
+    user: NonEmptyStr = Field(..., description="User id or user principal name")
+    message_id: NonEmptyStr = Field(..., description="Message id")
+    recipients: List[str] = Field(..., description="Recipients to forward the message to")
+    comment: str = Field(default="", description="Comment to add to the forwarded message")
 
 
 class ForwardMessageAction(MicrosoftGraphActionBase):
-    def run(self, arguments: Any) -> Any:
-        user_id_or_principal_name = arguments["user"]
-        message_id = arguments["message_id"]
-        recipients: list[str] = arguments["recipients"]
+    def run(self, arguments: ForwardMessageArguments) -> Any:
+        user_id_or_principal_name = arguments.user
+        message_id = arguments.message_id
+        recipients = arguments.recipients
 
-        comment = arguments.get("comment", "")
+        comment = arguments.comment
 
         payload = {
             "comment": comment,

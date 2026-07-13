@@ -1,6 +1,24 @@
-from typing import Any
+from typing import Any, List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from .action_base import MicrosoftGraphActionBase
+from .models import NonEmptyStr
+
+
+class UpdateMessageArguments(BaseModel):
+    user: NonEmptyStr = Field(..., description="User id or user principal name")
+    message_id: NonEmptyStr = Field(..., description="Message id")
+    content: Optional[str] = None
+    bcc: Optional[List[str]] = None
+    cc: Optional[List[str]] = None
+    sender: Optional[str] = None
+    from_: Optional[str] = Field(default=None, alias="from")
+    subject: Optional[str] = None
+    recipients: Optional[List[str]] = None
+    importance: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class UpdateMessageAction(MicrosoftGraphActionBase):
@@ -12,18 +30,18 @@ class UpdateMessageAction(MicrosoftGraphActionBase):
     def generate_recipient(email: str) -> dict[str, Any]:
         return {"emailAddress": {"name": email, "address": email}}
 
-    def run(self, arguments: Any) -> Any:
-        user_id_or_principal_name = arguments["user"]
-        message_id = arguments["message_id"]
+    def run(self, arguments: UpdateMessageArguments) -> Any:
+        user_id_or_principal_name = arguments.user
+        message_id = arguments.message_id
 
-        content = arguments.get("content")
-        bcc: list[str] | None = arguments.get("bcc")
-        cc: list[str] | None = arguments.get("cc")
-        sender = arguments.get("sender")
-        mailbox_owner = arguments.get("from")
-        subject = arguments.get("subject")
-        recipients: list[str] | None = arguments.get("recipients")
-        importance = arguments.get("importance")
+        content = arguments.content
+        bcc = arguments.bcc
+        cc = arguments.cc
+        sender = arguments.sender
+        mailbox_owner = arguments.from_
+        subject = arguments.subject
+        recipients = arguments.recipients
+        importance = arguments.importance
 
         payload: dict[str, Any] = self.fill_non_empty(
             {

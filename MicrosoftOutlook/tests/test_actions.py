@@ -1,7 +1,9 @@
 from typing import Type
+from unittest.mock import Mock
 
 import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from microsoft_outlook_modules import MicrosoftOutlookModule
 from microsoft_outlook_modules.action_base import MicrosoftGraphActionBase
@@ -204,3 +206,98 @@ def test_send_message(message_2):
                 "recipients": ["jane.doe@example.com"],
             }
         )
+
+
+@pytest.mark.parametrize("field_name", ["from", "from_"])
+def test_update_message_accepts_from_alias_and_field_name(message_2, field_name):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock.register_uri(
+            "PATCH", "https://graph.microsoft.com/v1.0/users/1111/messages/2222", status_code=204, json=message_2
+        )
+
+        action = configured_action(UpdateMessageAction)
+        action.run(arguments={"user": "1111", "message_id": "2222", field_name: "john.doe@example.com"})
+
+        assert mock.request_history[-1].json()["from"]["emailAddress"]["address"] == "john.doe@example.com"
+
+
+@pytest.mark.parametrize("field_name", ["from", "from_"])
+def test_send_message_accepts_from_alias_and_field_name(field_name):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock.register_uri("POST", "https://graph.microsoft.com/v1.0/users/1111/sendMail", status_code=202)
+
+        action = configured_action(SendMessageAction)
+        action.run(arguments={"user": "1111", field_name: "john.doe@example.com", "subject": "Subject"})
+
+        assert mock.request_history[-1].json()["message"]["from"]["emailAddress"]["address"] == "john.doe@example.com"
+
+
+@pytest.mark.parametrize("missing_value", [None, "", "   "])
+@pytest.mark.parametrize(
+    ("action_class", "arguments"),
+    [
+        (GetMessageAction, {"user": "1111", "message_id": "2222"}),
+        (DeleteMessageAction, {"user": "1111", "message_id": "2222"}),
+        (ForwardMessageAction, {"user": "1111", "message_id": "2222", "recipients": ["john.doe@example.com"]}),
+        (UpdateMessageAction, {"user": "1111", "message_id": "2222", "subject": "Changed Subject"}),
+        (SendMessageAction, {"user": "1111", "subject": "Subject"}),
+    ],
+)
+def test_actions_require_user(action_class, arguments, missing_value):
+    action = configured_action(action_class)
+
+    if missing_value is None:
+        arguments = {key: value for key, value in arguments.items() if key != "user"}
+    else:
+        arguments = {**arguments, "user": missing_value}
+
+    with requests_mock.Mocker() as mock:
+        with pytest.raises(ValidationError):
+            action.run(arguments=arguments)
+
+    assert mock.call_count == 0
+
+
+@pytest.mark.parametrize("missing_value", [None, "", "   "])
+@pytest.mark.parametrize(
+    ("action_class", "arguments"),
+    [
+        (GetMessageAction, {"user": "1111", "message_id": "2222"}),
+        (DeleteMessageAction, {"user": "1111", "message_id": "2222"}),
+        (ForwardMessageAction, {"user": "1111", "message_id": "2222", "recipients": ["john.doe@example.com"]}),
+        (UpdateMessageAction, {"user": "1111", "message_id": "2222", "subject": "Changed Subject"}),
+    ],
+)
+def test_message_actions_require_message_id(action_class, arguments, missing_value):
+    action = configured_action(action_class)
+
+    if missing_value is None:
+        arguments = {key: value for key, value in arguments.items() if key != "message_id"}
+    else:
+        arguments = {**arguments, "message_id": missing_value}
+
+    with requests_mock.Mocker() as mock:
+        with pytest.raises(ValidationError):
+            action.run(arguments=arguments)
+
+    assert mock.call_count == 0
