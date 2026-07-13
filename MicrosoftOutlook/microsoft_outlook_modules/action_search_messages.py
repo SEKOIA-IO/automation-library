@@ -8,7 +8,7 @@ from .action_base import GraphAPIException, MicrosoftGraphActionBase
 class SearchMessagesArguments(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    user: str
+    user: str = Field(..., min_length=1)
     email_message_id: str | None = None
     email_local_id: str | None = None
     top: int = Field(default=10, ge=1, le=100)

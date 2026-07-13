@@ -9,8 +9,8 @@ from .action_base import MicrosoftGraphActionBase
 class UpdateMessageArguments(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
-    user: str
-    message_id: str
+    user: str = Field(..., min_length=1)
+    message_id: str = Field(..., min_length=1)
     content: str | None = None
     bcc: list[str] | None = None
     cc: list[str] | None = None
