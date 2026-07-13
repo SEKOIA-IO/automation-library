@@ -1,8 +1,13 @@
 from posixpath import join as urljoin
 
 import requests
+from pydantic import BaseModel, Field, IPvAnyAddress
 from requests import Response
 from sekoia_automation.action import Action
+
+
+class IKnowIPHistoryArguments(BaseModel):
+    ip: IPvAnyAddress = Field(..., description="IP address to look up")
 
 
 class IKnowIPHistoryAction(Action):
@@ -10,13 +15,13 @@ class IKnowIPHistoryAction(Action):
     Action to fetch the Torrent history of a specified IP
     """
 
-    def run(self, arguments) -> dict:
+    def run(self, arguments: IKnowIPHistoryArguments) -> dict | None:
         url: str = self.module.configuration["host"]
 
         get_url: str = urljoin(url, "history/peer/")
         params: dict = {
             "key": self.module.configuration.get("key"),
-            "ip": arguments["ip"],
+            "ip": str(arguments.ip),
         }
 
         # Fetch the report
