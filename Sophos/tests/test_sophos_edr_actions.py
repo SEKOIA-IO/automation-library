@@ -1,6 +1,8 @@
 import pytest
 import requests.exceptions
 import requests_mock
+from unittest.mock import Mock
+from pydantic import ValidationError
 
 from sophos_module.action_sophos_edr_deisolate import ActionSophosEDRDeIsolateEndpoint
 from sophos_module.action_sophos_edr_isolate import ActionSophosEDRIsolateEndpoint
@@ -66,6 +68,17 @@ def test_run_scan(module) -> None:
         scan_action.run({"endpoint_id": "0b44b37f-2299-47c8-bf5d-589995f8de96"})
 
 
+@pytest.mark.parametrize("arguments", [{}, {"endpoint_id": ""}, {"endpoint_id": "   "}, {"endpoint_id": "not-a-uuid"}])
+def test_run_scan_requires_endpoint_id(module, arguments) -> None:
+    scan_action = ActionSophosEDRScan(module)
+    scan_action.call_endpoint = Mock()
+
+    with pytest.raises(ValidationError):
+        scan_action.run(arguments)
+
+    scan_action.call_endpoint.assert_not_called()
+
+
 def test_isolate_endpoint(module):
     message = {
         "enabled": True,
@@ -89,6 +102,17 @@ def test_isolate_endpoint(module):
         )
         isolate_action = ActionSophosEDRIsolateEndpoint(module)
         isolate_action.run({"endpoint_id": "0b44b37f-2299-47c8-bf5d-589995f8de96"})
+
+
+@pytest.mark.parametrize("arguments", [{}, {"endpoint_id": ""}, {"endpoint_id": "   "}])
+def test_isolate_endpoint_requires_endpoint_id(module, arguments) -> None:
+    isolate_action = ActionSophosEDRIsolateEndpoint(module)
+    isolate_action.set_isolation_status = Mock()
+
+    with pytest.raises(ValidationError):
+        isolate_action.run(arguments)
+
+    isolate_action.set_isolation_status.assert_not_called()
 
 
 def test_deisolate_endpoint(module):
@@ -115,6 +139,17 @@ def test_deisolate_endpoint(module):
 
         deisolate_action = ActionSophosEDRDeIsolateEndpoint(module)
         deisolate_action.run({"endpoint_id": "0b44b37f-2299-47c8-bf5d-589995f8de96"})
+
+
+@pytest.mark.parametrize("arguments", [{}, {"endpoint_id": ""}, {"endpoint_id": "   "}])
+def test_deisolate_endpoint_requires_endpoint_id(module, arguments) -> None:
+    deisolate_action = ActionSophosEDRDeIsolateEndpoint(module)
+    deisolate_action.set_isolation_status = Mock()
+
+    with pytest.raises(ValidationError):
+        deisolate_action.run(arguments)
+
+    deisolate_action.set_isolation_status.assert_not_called()
 
 
 def test_error(module):
