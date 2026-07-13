@@ -1,9 +1,20 @@
-# natives
 from datetime import datetime, timedelta
 from typing import Any
+from uuid import UUID
 
 import requests
+from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
+
+
+class GetAgentTelemetryArguments(BaseModel):
+    agent_id: UUID = Field(..., description="Identifier of the HarfangLab agent")
+    alert_created: str = Field(..., description="ISO-8601 timestamp used as the center of the search timerange")
+    event_types: list[str] = Field(
+        default=["processes", "windows_authentications", "linux_authentications", "macos_authentications"],
+        description="Telemetry event types to retrieve",
+    )
+    timerange: int = Field(default=15, description="Number of minutes before/after alert_created to search")
 
 
 class GetAgentTelemetry(Action):
@@ -21,7 +32,7 @@ class GetAgentTelemetry(Action):
         resp.raise_for_status()
         return resp
 
-    def run(self, arguments) -> dict[str, Any]:
+    def run(self, arguments: GetAgentTelemetryArguments) -> dict[str, Any] | None:
 
         telemetry_urls = {
             "processes": "/api/data/telemetry/Processes/",
@@ -34,12 +45,10 @@ class GetAgentTelemetry(Action):
             "macos_authentications": "/api/data/telemetry/authentication/AuthenticationMacos/",
         }
 
-        agent_id = arguments.get("agent_id", "")
-        event_types = arguments.get(
-            "event_types", ["processes", "windows_authentications", "linux_authentications", "macos_authentications"]
-        )
-        alert_created = arguments.get("alert_created", "")
-        timerange = arguments.get("timerange", 15)
+        agent_id = arguments.agent_id
+        event_types = arguments.event_types
+        alert_created = arguments.alert_created
+        timerange = arguments.timerange
         dt = datetime.fromisoformat(alert_created.replace("Z", "+00:00"))
         start = (dt - timedelta(minutes=timerange)).isoformat().replace("+00:00", "Z")
         end = (dt + timedelta(minutes=timerange)).isoformat().replace("+00:00", "Z")
@@ -57,7 +66,7 @@ class GetAgentTelemetry(Action):
                     api_endpoint=telemetry_urls[event_type],
                     api_token=api_token,
                     params={
-                        "agent.agentid": agent_id,
+                        "agent.agentid": str(agent_id),
                         "@event_create_date__gte": start,
                         "@event_create_date__lte": end,
                         "limit": 50,

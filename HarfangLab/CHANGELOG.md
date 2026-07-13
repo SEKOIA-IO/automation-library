@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-09 - 1.31.7
+
+### Fixed
+
+- Validate `Hostname by IP` and `Get agent telemetry` action arguments with Pydantic, using `IPvAnyAddress` for `target_ip` and `UUID` for `agent_id` to reject missing, empty, or malformed values before issuing HarfangLab API requests
+
 ## 2026-07-03 - 1.31.6
 
 ### Fixed
