@@ -1,5 +1,9 @@
 # third parties
+from unittest.mock import MagicMock
+
+import pytest
 import requests_mock
+from pydantic import ValidationError
 
 # internals
 from fortigate.action_fortigate_disable_local_user import FortigateDisableLocalUserAction
@@ -76,3 +80,15 @@ def test_fortigate_disable_local_user():
                 )
                 assert history[cpt_mock].json()["json"]["status"] == status
                 assert history[cpt_mock].json()["json"]["name"] == name
+
+
+@pytest.mark.parametrize("arguments", [{}, {"name": ""}, {"name": "   "}])
+def test_fortigate_disable_local_user_requires_name(arguments):
+    mt: FortigateDisableLocalUserAction = FortigateDisableLocalUserAction()
+    mt.module.configuration = {"firewalls": [{"api_key": "key", "base_ip": "31.70.249.199", "base_port": "4443"}]}
+
+    with requests_mock.Mocker() as mock:
+        with pytest.raises(ValidationError):
+            mt.run(arguments)
+
+    assert mock.call_count == 0
