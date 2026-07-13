@@ -17,6 +17,10 @@ from graph_api.client import GraphApi
 from .base import AzureADModule
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
+# Catches TimeoutError, asyncio.TimeoutError and httpx timeout subclasses
+# (including PoolTimeout, ConnectTimeout, ReadTimeout, WriteTimeout).
+GRAPH_TIMEOUT_EXCEPTIONS = (TimeoutError, asyncio.TimeoutError, httpx.TimeoutException)
+
 
 class MicrosoftEntraIdGraphApiConnectorConfig(DefaultConnectorConfiguration):
     """Connector configuration."""
@@ -203,12 +207,15 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
                 if result == 0:
                     await asyncio.sleep(self.configuration.frequency)
 
-            except (TimeoutError, asyncio.TimeoutError, httpx.TimeoutException) as error:
+            except GRAPH_TIMEOUT_EXCEPTIONS as error:
                 self.log(
                     message=f"A timeout was raised by the client ({type(error).__name__}), resetting Graph client",
                     level="warning",
                 )
-                await self._reset_graph_client()
+                try:
+                    await self._reset_graph_client()
+                except Exception as reset_error:
+                    self.log(message=f"Failed to reset Graph client cleanly: {reset_error}", level="warning")
                 await asyncio.sleep(self.configuration.frequency)
 
             except Exception as error:

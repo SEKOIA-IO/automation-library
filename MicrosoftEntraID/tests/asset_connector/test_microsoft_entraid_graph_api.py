@@ -80,7 +80,10 @@ async def test_entraid_connector_async_run_handles_pool_timeout(entraid_connecto
         await entraid_connector.async_run()
 
     entraid_connector.log_exception.assert_not_called()
-    entraid_connector.log.assert_called()
+    entraid_connector.log.assert_called_once()
+    _, kwargs = entraid_connector.log.call_args
+    assert kwargs["level"] == "warning"
+    assert "PoolTimeout" in kwargs["message"]
     mocked_close.assert_awaited_once()
     assert entraid_connector._client is None
 
@@ -100,7 +103,10 @@ async def test_entraid_connector_async_run_handles_timeout_exception(entraid_con
         await entraid_connector.async_run()
 
     entraid_connector.log_exception.assert_not_called()
-    entraid_connector.log.assert_called()
+    entraid_connector.log.assert_called_once()
+    _, kwargs = entraid_connector.log.call_args
+    assert kwargs["level"] == "warning"
+    assert "TimeoutException" in kwargs["message"]
     mocked_close.assert_awaited_once()
     assert entraid_connector._client is None
 
@@ -120,7 +126,10 @@ async def test_entraid_connector_async_run_handles_asyncio_timeout(entraid_conne
         await entraid_connector.async_run()
 
     entraid_connector.log_exception.assert_not_called()
-    entraid_connector.log.assert_called()
+    entraid_connector.log.assert_called_once()
+    _, kwargs = entraid_connector.log.call_args
+    assert kwargs["level"] == "warning"
+    assert "TimeoutError" in kwargs["message"]
     mocked_close.assert_awaited_once()
     assert entraid_connector._client is None
 
