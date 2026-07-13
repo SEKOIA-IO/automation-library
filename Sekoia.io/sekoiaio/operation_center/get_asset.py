@@ -1,6 +1,8 @@
 from posixpath import join as urljoin
+from uuid import UUID
 
 import requests
+from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
 
 ASSETV2_TYPE_TO_V1_TYPE = {
@@ -26,6 +28,10 @@ ASSETV2_ATOM_OR_PROP_TO_V1_KEY = {
     "lastname": {"uuid": "d54da6bd-ed4f-47f4-b49b-f2f3abdb4580", "name": "lastname"},
     "username": {"uuid": "d4ad816e-6c6f-4c96-b366-4939e67e20b6", "name": "name"},
 }
+
+
+class GetAssetArguments(BaseModel):
+    uuid: UUID = Field(..., description="UUID of the asset to retrieve")
 
 
 class GetAsset(Action):
@@ -85,9 +91,5 @@ class GetAsset(Action):
             ],
         }
 
-    def run(self, arguments: dict):
-        asset_uuid = arguments.get("uuid")
-        if not asset_uuid:
-            self.error("Asset uuid is required")
-            return None
-        return self.transform_asset(self.perform_request(asset_uuid))
+    def run(self, arguments: GetAssetArguments):
+        return self.transform_asset(self.perform_request(str(arguments.uuid)))
