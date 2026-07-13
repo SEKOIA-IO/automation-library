@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+## 2026-10-12 - 1.31.1
+
+### Changed
+
+- Upgraded sekoia-automation-sdk to 1.23.1, aligned the module with Python 3.11, and migrated Pydantic argument models from the `pydantic.v1` shim to native Pydantic v2 to avoid v1/v2 model-mixing errors
+
+### Fixed
+
+- Validate the FQDN, IP address, local user name, and address group name entrypoint arguments via Pydantic models, using `IPvAnyAddress` for `add_ip_address.ip` and non-empty strings for FQDN/name fields where no stricter built-in Fortigate-safe type is available
+
 ## 2026-07-15 - 1.31.0
 
 ### Added
@@ -16,8 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added action fortigate_disable_local_user
-
-## Unreleased
 
 ## 2025-04-07 - 1.29.1
 

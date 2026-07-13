@@ -1,5 +1,9 @@
 # third parties
+from unittest.mock import MagicMock
+
+import pytest
 import requests_mock
+from pydantic import ValidationError
 
 # internals
 from fortigate.action_fortigate_add_fqdn import FortigateAddFQDNAction
@@ -79,3 +83,17 @@ def test_fortigate_set_fqdn():
                 assert history[cpt_mock].json()["json"]["fqdn"] == fqdn
                 assert history[cpt_mock].json()["json"]["associated-interface"] == associated_interface
                 assert history[cpt_mock].json()["json"]["comment"] == comment
+
+
+@pytest.mark.parametrize(
+    "arguments", [{"name": "test4"}, {"name": "test4", "fqdn": ""}, {"name": "test4", "fqdn": "   "}]
+)
+def test_fortigate_set_fqdn_requires_fqdn(arguments):
+    mt: FortigateAddFQDNAction = FortigateAddFQDNAction()
+    mt.module.configuration = {"firewalls": [{"api_key": "key", "base_ip": "31.70.249.199", "base_port": "4443"}]}
+
+    with requests_mock.Mocker() as mock:
+        with pytest.raises(ValidationError):
+            mt.run(arguments)
+
+    assert mock.call_count == 0

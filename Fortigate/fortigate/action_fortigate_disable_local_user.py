@@ -1,8 +1,16 @@
 import json
+from typing import Annotated
 
 import requests
+from pydantic import BaseModel, Field, StringConstraints
 from requests import Response
 from sekoia_automation.action import Action
+
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class FortigateDisableLocalUserArguments(BaseModel):
+    name: NonEmptyStr = Field(..., description="the fw local user account name")
 
 
 class FortigateDisableLocalUserAction(Action):
@@ -10,7 +18,7 @@ class FortigateDisableLocalUserAction(Action):
     Action to disable a local user on a remote fortigate
     """
 
-    def run(self, arguments: dict) -> None:
+    def run(self, arguments: FortigateDisableLocalUserArguments) -> None:
         """
         Parameters
         ----------
@@ -21,7 +29,7 @@ class FortigateDisableLocalUserAction(Action):
         Http status code: 200 if ok, 4xx if an error occurs
         """
 
-        name = arguments["name"]
+        name = arguments.name
 
         payload: dict = {
             "json": {
