@@ -1,8 +1,8 @@
 import pytest
+from pydantic import ValidationError
 from generic_onyphe_tests import *  # noqa: F401, F403
 
 from onyphe.action_onyphe_datascan import OnypheDatascanAction
-from onyphe.errors import InvalidArgument
 
 
 @pytest.fixture
@@ -28,10 +28,10 @@ def arguments():
 @pytest.fixture
 def bad_arguments():
     return [
-        (InvalidArgument, {"ip": "8.8.8"}),
-        (InvalidArgument, {"ip": 8}),
-        (TypeError, {}),
-        (TypeError, {"ip": "93.184.216.34", "string": "example"}),
+        (ValidationError, {"ip": "8.8.8"}),
+        (ValidationError, {"ip": "not-an-ip"}),
+        (ValidationError, {"ip": 8}),
+        (ValidationError, {"ip": "93.184.216.34", "string": "example"}),
     ]
 
 
@@ -164,3 +164,39 @@ def result_page_0():
 @pytest.fixture
 def result_page_1():
     return {}
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        {},
+        {"string": ""},
+        {"string": "   "},
+        {"string": None},
+    ],
+)
+def test_missing_string_argument_does_not_call_api(arguments):
+    action = OnypheDatascanAction()
+    action.module.configuration = {"apikey": apikey}
+
+    with requests_mock.Mocker() as mock:
+        with pytest.raises(ValidationError):
+            action.run(arguments)
+
+    assert mock.call_count == 0
+
+
+def test_ip_argument_uses_validated_ip_in_request_url():
+    action = OnypheDatascanAction()
+    action.module.configuration = {"apikey": apikey}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(
+            f"https://www.onyphe.io/api/v2/simple/datascan/93.184.216.34?page=1&apikey={apikey}",
+            json=datascan_result,
+        )
+
+        result = action.run({"ip": "93.184.216.34"})
+
+    assert result == datascan_result
+    assert mock.call_count == 1

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-09 - 1.23.2
+
+### Fixed
+
+- Validate the datascan action's required argument via a Pydantic v2 model while preserving the existing XOR validator unchanged and upgrading the optional `ip` field to `IPvAnyAddress`
+
+### Changed
+
+- Bump sekoia-automation-sdk to 1.23.1
+
 ## 2024-05-28 - 1.23.0
 
 ### Changed
