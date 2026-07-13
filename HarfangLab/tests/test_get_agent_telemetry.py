@@ -1,5 +1,6 @@
 import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from harfanglab.get_agent_telemetry import GetAgentTelemetry
 
@@ -111,3 +112,52 @@ def test_integration_get_agent_telemetry_wrong_event_type():
     }
     with pytest.raises(ValueError):
         action.run(arguments)
+
+
+@pytest.mark.parametrize("agent_id", ["", "   "])
+def test_integration_get_agent_telemetry_requires_agent_id(agent_id):
+    instance_url = "https://test.hurukau.io"
+    api_token = "sss"
+
+    module_configuration = {
+        "api_token": api_token,
+        "url": instance_url,
+    }
+    action = GetAgentTelemetry()
+    action.module.configuration = module_configuration
+
+    arguments = {
+        "agent_id": agent_id,
+        "alert_created": "2025-04-29T17:54:49.326Z",
+        "event_types": ["processes"],
+    }
+
+    with requests_mock.Mocker() as mock:
+        with pytest.raises(ValidationError):
+            action.run(arguments)
+
+    assert len(mock.request_history) == 0
+
+
+def test_integration_get_agent_telemetry_rejects_invalid_agent_id_shape():
+    instance_url = "https://test.hurukau.io"
+    api_token = "sss"
+
+    module_configuration = {
+        "api_token": api_token,
+        "url": instance_url,
+    }
+    action = GetAgentTelemetry()
+    action.module.configuration = module_configuration
+
+    arguments = {
+        "agent_id": "not-a-uuid",
+        "alert_created": "2025-04-29T17:54:49.326Z",
+        "event_types": ["processes"],
+    }
+
+    with requests_mock.Mocker() as mock:
+        with pytest.raises(ValidationError):
+            action.run(arguments)
+
+    assert len(mock.request_history) == 0
