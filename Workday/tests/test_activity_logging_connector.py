@@ -1,9 +1,11 @@
 import pytest
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 from aioresponses import aioresponses
 import re
 
 from workday.workday_activity_logging_connector import WorkdayActivityLoggingConnector
+from workday.client.errors import WorkdayAuthError
 from workday.metrics import events_truncated
 
 TOKEN_URL = "https://wd3-services1.myworkday.com/ccx/oauth2/test_tenant/token"
@@ -213,3 +215,152 @@ def test_cleanup_event_cache_drops_malformed_timestamps(activity_logging_connect
     with activity_logging_connector.event_cache_store as s:
         assert "invalid-key" not in s
         assert "valid-key" in s
+
+
+# ---------------------------------------------------------------------------
+# fetch_events pagination edge cases
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_fetch_events_retries_on_transient_error(activity_logging_connector):
+    """A transient fetch error is retried (slept over) rather than aborting the cycle."""
+    activity_logging_connector.save_checkpoint(datetime(2025, 1, 1, tzinfo=timezone.utc))
+
+    client = MagicMock()
+    # First call raises, retry succeeds with a short last page, then the loop ends.
+    client.fetch_activity_logs = AsyncMock(
+        side_effect=[
+            RuntimeError("boom"),
+            [{"taskId": "t1", "requestTime": "2025-10-14T15:30:00.000Z"}],
+        ]
+    )
+
+    batches = []
+    with patch("workday.workday_activity_logging_connector.asyncio.sleep", new=AsyncMock()):
+        async for batch in activity_logging_connector.fetch_events(client):
+            batches.append(batch)
+
+    # The transient error was retried and the single event was still yielded.
+    assert client.fetch_activity_logs.await_count == 2
+    assert [e["taskId"] for b in batches for e in b] == ["t1"]
+
+
+@pytest.mark.asyncio
+async def test_fetch_events_yields_remaining_batch_on_short_page(activity_logging_connector):
+    """A final page shorter than the limit flushes the pending batch and stops paginating."""
+    activity_logging_connector.configuration.chunk_size = 10_000  # keep everything in one batch
+    activity_logging_connector.configuration.limit = 1000
+    activity_logging_connector.save_checkpoint(datetime(2025, 1, 1, tzinfo=timezone.utc))
+
+    short_page = [{"taskId": f"t{i}", "requestTime": "2025-10-14T15:30:00.000Z"} for i in range(3)]
+    client = MagicMock()
+    client.fetch_activity_logs = AsyncMock(return_value=short_page)
+
+    batches = []
+    async for batch in activity_logging_connector.fetch_events(client):
+        batches.append(batch)
+
+    # Only one page fetched (short page < limit ends pagination) and the batch was flushed.
+    assert client.fetch_activity_logs.await_count == 1
+    assert sum(len(b) for b in batches) == 3
+
+
+@pytest.mark.asyncio
+async def test_fetch_events_short_page_all_duplicates_yields_nothing(activity_logging_connector):
+    """A short final page containing only duplicates ends the cycle without yielding an empty batch."""
+    activity_logging_connector.configuration.limit = 1000
+    activity_logging_connector.save_checkpoint(datetime(2025, 1, 1, tzinfo=timezone.utc))
+
+    dup = {"taskId": "seen", "requestTime": "2025-10-14T15:30:00.000Z"}
+    # Prime the cache so the event is already a known duplicate.
+    activity_logging_connector._is_new_event(dup)
+
+    client = MagicMock()
+    client.fetch_activity_logs = AsyncMock(return_value=[dup])
+
+    batches = [b async for b in activity_logging_connector.fetch_events(client)]
+
+    assert client.fetch_activity_logs.await_count == 1
+    assert batches == []  # nothing new -> no batch yielded on the short page
+
+
+@pytest.mark.asyncio
+async def test_async_run_push_failure_propagates(activity_logging_connector):
+    """A failure while pushing a batch to the intake is logged and re-raised (then retried)."""
+    activity_logging_connector.next_batch = MagicMock(return_value=_one_batch_generator())
+    activity_logging_connector.push_data_to_intakes = AsyncMock(side_effect=RuntimeError("intake down"))
+
+    with patch.object(type(activity_logging_connector), "running", new_callable=PropertyMock) as running, patch(
+        "workday.workday_activity_logging_connector.sleep", new=AsyncMock()
+    ):
+        running.side_effect = _running_then_stop()
+        await activity_logging_connector._async_run()
+
+    # The push error path logged the failure and the outer handler logged the retry.
+    error_logs = [
+        c
+        for c in activity_logging_connector.log.call_args_list
+        if c.kwargs.get("level") == "error" and "Failed to push batch" in c.kwargs.get("message", "")
+    ]
+    assert error_logs
+    activity_logging_connector.log_exception.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# _async_run loop
+# ---------------------------------------------------------------------------
+
+
+def _running_then_stop():
+    """PropertyMock side effect: True on the first read, False afterwards (single iteration)."""
+    yield True
+    while True:
+        yield False
+
+
+async def _one_batch_generator():
+    yield [{"taskId": "t1"}]
+
+
+@pytest.mark.asyncio
+async def test_async_run_pushes_batches_then_sleeps(activity_logging_connector):
+    """One loop iteration forwards each batch to the intake, then sleeps for `frequency`."""
+    activity_logging_connector.next_batch = MagicMock(return_value=_one_batch_generator())
+
+    with patch.object(type(activity_logging_connector), "running", new_callable=PropertyMock) as running, patch(
+        "workday.workday_activity_logging_connector.sleep", new=AsyncMock()
+    ) as slept:
+        running.side_effect = _running_then_stop()
+        await activity_logging_connector._async_run()
+
+    activity_logging_connector.push_data_to_intakes.assert_awaited_once_with(events=[{"taskId": "t1"}])
+    slept.assert_awaited()  # slept for the configured frequency between iterations
+
+
+@pytest.mark.asyncio
+async def test_async_run_reraises_auth_error(activity_logging_connector):
+    """A WorkdayAuthError is fatal and propagates out of the loop."""
+    activity_logging_connector.next_batch = MagicMock(side_effect=WorkdayAuthError("bad creds"))
+
+    with patch.object(type(activity_logging_connector), "running", new_callable=PropertyMock) as running, patch(
+        "workday.workday_activity_logging_connector.sleep", new=AsyncMock()
+    ):
+        running.side_effect = _running_then_stop()
+        with pytest.raises(WorkdayAuthError):
+            await activity_logging_connector._async_run()
+
+
+@pytest.mark.asyncio
+async def test_async_run_retries_on_generic_error(activity_logging_connector):
+    """A generic error is logged and retried after a backoff sleep rather than crashing the loop."""
+    activity_logging_connector.next_batch = MagicMock(side_effect=RuntimeError("transient"))
+
+    with patch.object(type(activity_logging_connector), "running", new_callable=PropertyMock) as running, patch(
+        "workday.workday_activity_logging_connector.sleep", new=AsyncMock()
+    ) as slept:
+        running.side_effect = _running_then_stop()
+        await activity_logging_connector._async_run()
+
+    activity_logging_connector.log_exception.assert_called_once()
+    slept.assert_awaited()  # the 60s retry backoff

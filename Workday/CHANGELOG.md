@@ -17,7 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - HTTP client retry tests no longer perform real 60s sleeps on 401/429 responses, cutting the
   client test suite from minutes to under a second.
-- Added tests for event-cache TTL cleanup and malformed-timestamp resilience.
+
+### Added
+
+- Expanded the test suite to 99% coverage: event-cache TTL cleanup and malformed-timestamp
+  resilience, HTTP-client response-shape parsing and error paths (token refresh, 401/429/5xx,
+  session guards), and the `_async_run` loop (nominal, auth failure, generic-error retry, and
+  intake push failure).
 
 ## 0.2.0 - 2026-06-25
 
