@@ -12,6 +12,16 @@ from workday.client.http_client import WorkdayClient
 from workday.client.errors import WorkdayAuthError, WorkdayRateLimitError
 
 
+@pytest.fixture(autouse=True)
+def no_sleep(monkeypatch):
+    """Neutralize retry/backoff sleeps so 401/429 tests don't wait real seconds."""
+
+    async def _instant_sleep(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr("workday.client.http_client.sleep", _instant_sleep)
+
+
 @pytest.fixture
 def workday_client_faker(faker: Faker) -> WorkdayClient:
     """Return a WorkdayClient instance with fake credentials."""

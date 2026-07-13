@@ -176,3 +176,40 @@ async def test_event_deduplication(activity_logging_connector):
     # Second time should be duplicate
     assert activity_logging_connector._is_new_event(event1) is False
     assert activity_logging_connector._is_new_event(event2) is False
+
+
+def _iso(dt: datetime) -> str:
+    """Serialize a datetime the same way the connector stores cache entries."""
+    return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def test_cleanup_event_cache_removes_expired_entries(activity_logging_connector):
+    """Entries older than event_cache_ttl are dropped by _cleanup_event_cache."""
+    now = datetime.now(timezone.utc)
+    expired = now - activity_logging_connector.event_cache_ttl - timedelta(seconds=1)
+    fresh = now - timedelta(seconds=1)
+
+    with activity_logging_connector.event_cache_store as s:
+        s["expired-key"] = _iso(expired)
+        s["fresh-key"] = _iso(fresh)
+
+    activity_logging_connector._cleanup_event_cache()
+
+    with activity_logging_connector.event_cache_store as s:
+        assert "expired-key" not in s
+        assert "fresh-key" in s
+
+
+def test_cleanup_event_cache_drops_malformed_timestamps(activity_logging_connector):
+    """Unparsable cache timestamps are removed instead of raising."""
+    fresh = datetime.now(timezone.utc) - timedelta(seconds=1)
+
+    with activity_logging_connector.event_cache_store as s:
+        s["valid-key"] = _iso(fresh)
+        s["invalid-key"] = "not-a-timestamp"
+
+    activity_logging_connector._cleanup_event_cache()
+
+    with activity_logging_connector.event_cache_store as s:
+        assert "invalid-key" not in s
+        assert "valid-key" in s

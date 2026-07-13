@@ -6,7 +6,7 @@ from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.storage import PersistentJSON
 from workday.client.http_client import WorkdayClient
 from workday.client.errors import WorkdayAuthError
-from workday.metrics import events_truncated
+from workday.metrics import checkpoint_age, events_duplicated, events_forwarded, events_truncated
 import asyncio
 import signal
 
@@ -61,6 +61,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             ts = c.get("last_collection_end_time")
             if ts:
                 last_date = datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(timezone.utc)
+                checkpoint_age.set((datetime.now(timezone.utc) - last_date).total_seconds())
                 self.log(
                     message=f"Checkpoint found - Last collection end time: {ts} ({last_date.isoformat()})",
                     level="info",
@@ -82,6 +83,8 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
         with self.context as c:
             c["last_collection_end_time"] = checkpoint_time
             c["last_successful_run"] = run_time
+
+        checkpoint_age.set((datetime.now(timezone.utc) - last_event_date.astimezone(timezone.utc)).total_seconds())
 
         self.log(
             message=f"Checkpoint saved - Last collection end time: {checkpoint_time}, "
@@ -221,6 +224,8 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             duplicate_count = len(events) - len(new_events)
             total_new_events += len(new_events)
             total_duplicate_events += duplicate_count
+            if duplicate_count:
+                events_duplicated.inc(duplicate_count)
 
             self.log(
                 message=f"Page {page_count} filtering - New: {len(new_events)}, Duplicates: {duplicate_count}",
@@ -361,6 +366,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
 
                     try:
                         await self.push_data_to_intakes(events=batch)
+                        events_forwarded.inc(batch_size)
                         self.log(
                             message=f"Batch {batch_count} successfully forwarded to intake ({batch_size} events)",
                             level="info",

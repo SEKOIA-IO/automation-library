@@ -43,6 +43,8 @@
         "maximum": 25
       }
     },
-    "required": ["intake_key"]
+    "required": [
+      "intake_key"
+    ]
   }
 }

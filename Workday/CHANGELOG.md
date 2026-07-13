@@ -5,7 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.1 - 2026-07-13
+
+### Changed
+
+- Wire up the previously-unused Prometheus metrics: `workday_checkpoint_age_seconds` is now
+  updated on every checkpoint load and save, and `workday_activity_logs_duplicated_total` /
+  `workday_activity_logs_forwarded_total` are incremented during collection and intake forwarding.
+
+### Fixed
+
+- HTTP client retry tests no longer perform real 60s sleeps on 401/429 responses, cutting the
+  client test suite from minutes to under a second.
+- Added tests for event-cache TTL cleanup and malformed-timestamp resilience.
 
 ## 0.2.0 - 2026-06-25
 
