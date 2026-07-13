@@ -1,11 +1,22 @@
-# natives
-
 import requests
+from typing import Annotated
+from uuid import UUID
 
 # third parties
 from colour import Color
+from pydantic import BaseModel, Field, HttpUrl, StringConstraints
 from requests import Response
 from sekoia_automation.action import Action
+
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class MattermostPostAlertArguments(BaseModel):
+    alert_uuid: UUID = Field(..., description="The Unique identifier of the alert")
+    api_key: NonEmptyStr = Field(..., description="The Sekoia.io API-Key to read the alert content.")
+    base_url: HttpUrl = Field(..., description="Base URL of Sekoia.io api (e.g. https://api.sekoia.io/).")
+    channel: str | None = None
+    pretext: str | None = None
 
 
 class MattermostPostAlertAction(Action):
@@ -16,34 +27,32 @@ class MattermostPostAlertAction(Action):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _get_alert(self, alert_uuid: str, api_key: str, base_url: str) -> dict:
+    def _get_alert(self, alert_uuid: UUID, api_key: str, base_url: HttpUrl) -> dict:
         """
         Returns the definition of an alert
         """
 
-        url = f"{base_url}v1/sic/alerts/{alert_uuid}"
+        url = f"{str(base_url)}v1/sic/alerts/{str(alert_uuid)}"
 
         response: Response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
         response.raise_for_status()
         return response.json()
 
-    def run(self, arguments) -> dict:
-        alert_uuid = arguments["alert_uuid"]
-
+    def run(self, arguments: MattermostPostAlertArguments) -> dict | None:
         alert_info = self._get_alert(
-            alert_uuid=alert_uuid,
-            api_key=arguments["api_key"],
-            base_url=arguments["base_url"],
+            alert_uuid=arguments.alert_uuid,
+            api_key=arguments.api_key,
+            base_url=arguments.base_url,
         )
 
         hook_url: str = self.module.configuration.get("hook_url")
-        channel: str = arguments.get("channel")
+        channel: str | None = arguments.channel
 
         # the color value depends on the urgency of the alert
         alert_urgency: int = alert_info["urgency"]["current_value"]
         left_border_color: str = list(Color("green").range_to(Color("red"), 101))[alert_urgency].hex
 
-        pretext = arguments.get("pretext")
+        pretext = arguments.pretext
         author_name = alert_info["entity"]["name"]
         title = alert_info["title"]
         title_link = f"https://app.sekoia.io/sic/alerts/{alert_info['short_id']}"
