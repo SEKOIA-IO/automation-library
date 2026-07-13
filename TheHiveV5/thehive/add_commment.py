@@ -1,13 +1,21 @@
-from typing import Any, Optional, List
+from typing import Annotated, Optional
 
+from pydantic import BaseModel, Field, StringConstraints
 from sekoia_automation.action import Action
 from thehive4py.types.comment import InputComment, OutputComment
 
 from .thehiveconnector import TheHiveConnector
 
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class TheHiveCreateCommentArguments(BaseModel):
+    alert_id: NonEmptyStr = Field(..., description="The Unique identifier of the alert")
+    message: NonEmptyStr = Field(..., description="Comment message")
+
 
 class TheHiveCreateCommentV5(Action):
-    def run(self, arguments: dict[str, Any]) -> Optional[OutputComment]:
+    def run(self, arguments: TheHiveCreateCommentArguments) -> Optional[OutputComment]:
         api = TheHiveConnector(
             self.module.configuration["base_url"],
             self.module.configuration["apikey"],
@@ -17,8 +25,8 @@ class TheHiveCreateCommentV5(Action):
             log_fn=self.log,
         )
 
-        arg_alert_id = arguments["alert_id"]
-        arg_message = arguments["message"]
+        arg_alert_id = arguments.alert_id
+        arg_message = arguments.message
 
         comment = InputComment(message=arg_message)
         return api.comment_add_in_alert(arg_alert_id, comment)
