@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import pytest
+from pydantic import ValidationError
 from whois.parser import WhoisEntry
 
 from whois_module.whois_action import WhoisAction, extract_domain_from_url, is_ip_adress
@@ -195,3 +196,14 @@ def test_whois_action(whois_results, raw_google_whois):
         assert whois_data["Registrar"]["AbuseEmail"] == "abusecomplaints@markmonitor.com"
         assert whois_data["Registrant"]["Name"] == "None"
         assert whois_data["Registrant"]["Email"] == "whoisrequest@markmonitor.com"
+
+
+@pytest.mark.parametrize("arguments", [{}, {"query": ""}, {"query": "   "}, {"query": None}])
+def test_whois_action_requires_query(arguments):
+    action = WhoisAction()
+
+    with patch("whois.whois") as mock_whois:
+        with pytest.raises(ValidationError):
+            action.run(arguments)
+
+    mock_whois.assert_not_called()
