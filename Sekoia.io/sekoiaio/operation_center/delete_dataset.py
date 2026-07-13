@@ -3,7 +3,7 @@ from posixpath import join as urljoin
 
 from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
 
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 from requests import Session
 
