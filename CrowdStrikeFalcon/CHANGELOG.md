@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-10 - 1.25.18
+
+### Fixed
+
+- Validate the `value` argument via a Pydantic model using `StringConstraints`/`NonEmptyStr`, rejecting missing/empty/blank IOC values before uploading indicators; `value` was deliberately kept as a plain non-empty string rather than an IP/hash/domain-specific type because its valid shape is polymorphic and depends on the sibling IOC `type`
+
+### Changed
+
+- Upgraded `sekoia-automation-sdk` to 1.23.1 and migrated `pydantic.v1` shim models to native Pydantic v2 to avoid v1/v2 model-mixing errors
+
 ## 2026-06-23 - 1.25.17
 
 ### Fixed

@@ -231,7 +231,7 @@ class CrowdstrikeFalconClient(ApiClient):
             "/alerts/entities/alerts/v3",
             json={
                 "composite_ids": ids,
-                "action_parameters": [action_param.dict() for action_param in action_parameters],
+                "action_parameters": [action_param.model_dump() for action_param in action_parameters],
             },
         )
 
