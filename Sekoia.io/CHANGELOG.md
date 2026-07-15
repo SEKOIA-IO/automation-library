@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-10 - 2.74.2
+
+### Changed
+
+- Upgraded `sekoia-automation-sdk` to `1.23.1` and migrated `GetAlert`, `CreateDataset`, `DeleteDataset`, `ExecuteAQuery`, and `ListQueries` action argument models from the `pydantic.v1` compatibility shim to native Pydantic v2, avoiding a v1/v2 model mixing error triggered by the newer SDK
+
+### Fixed
+
+- `GetAlert` action no longer issues an HTTP request when called with an empty or missing `uuid`; it validates the argument via a Pydantic model, now using a proper `uuid.UUID` type instead of a hand-written blank-check validator, and fails with a clear error instead
+
 ## 2026-07-07 - 2.74.1
 
 ### Fixed
