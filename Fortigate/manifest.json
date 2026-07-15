@@ -34,6 +34,11 @@
             "base_port"
           ]
         }
+      },
+      "verify_certificate": {
+        "description": "Verify the firewall TLS certificate",
+        "type": "boolean",
+        "default": true
       }
     },
     "required": [
@@ -49,7 +54,7 @@
   "name": "Fortigate Firewalls",
   "uuid": "ca9a9497-bcd2-4d0c-b0c1-72699231feb2",
   "slug": "fortigate",
-  "version": "1.30.0",
+  "version": "1.31.0",
   "categories": [
     "Network"
   ]
