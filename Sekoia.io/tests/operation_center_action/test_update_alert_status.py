@@ -103,36 +103,11 @@ def test_patch_alert_status_support_custom_status_name_from_name_field(requests_
     requests_mock.get(
         module_base_url + "api/v1/sic/custom_statuses",
         json={
-            "data": [
+            "items": [
                 {
                     "uuid": custom_status_uuid,
                     "name": "My-Custom-Status",
                     "description": "custom status resolved from name field",
-                }
-            ]
-        },
-    )
-    requests_mock.patch(f"{base_url}/{alert_uuid}", json={})
-
-    results: dict = action.run(arguments)
-    assert results == {}
-
-
-def test_patch_alert_status_support_custom_statuses_container(requests_mock):
-    action = UpdateAlertStatus()
-    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
-    alert_uuid = str(uuid.uuid4())
-    custom_status_uuid = str(uuid.uuid4())
-    arguments = {"status": "mystatus", "uuid": alert_uuid}
-
-    requests_mock.get(
-        module_base_url + "api/v1/sic/custom_statuses",
-        json={
-            "custom_statuses": [
-                {
-                    "uuid": custom_status_uuid,
-                    "label": "MyStatus",
-                    "description": "custom status from custom_statuses key",
                 }
             ]
         },
@@ -212,21 +187,6 @@ def test_patch_alert_status_custom_status_lookup_fails_on_unexpected_payload_wit
             action.run(arguments)
 
     nap_mock.assert_not_called()
-
-
-def test_patch_alert_status_custom_status_name_ignores_non_string_uuid(requests_mock):
-    action = UpdateAlertStatus()
-    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
-    alert_uuid = str(uuid.uuid4())
-    arguments = {"status": "mystatus", "uuid": alert_uuid}
-
-    requests_mock.get(
-        module_base_url + "api/v1/sic/custom_statuses",
-        json={"items": [{"uuid": 42, "label": "mystatus"}]},
-    )
-
-    results = action.run(arguments)
-    assert results is None
 
 
 def test_patch_alert_status_fails(requests_mock):

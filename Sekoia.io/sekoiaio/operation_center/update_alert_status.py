@@ -58,17 +58,9 @@ class UpdateAlertStatus(Action):
 
     @staticmethod
     def _extract_custom_statuses(payload: dict) -> list[dict]:
-        """Extract custom statuses from supported API payload containers.
-
-        The current endpoint returns statuses in `items`. We keep `data` and
-        `custom_statuses` support for backward compatibility with older payloads.
-        """
+        """Extract custom statuses from the API payload."""
         if isinstance(payload.get("items"), list):
             return [item for item in payload["items"] if isinstance(item, dict)]
-        if isinstance(payload.get("data"), list):
-            return [item for item in payload["data"] if isinstance(item, dict)]
-        if isinstance(payload.get("custom_statuses"), list):
-            return [item for item in payload["custom_statuses"] if isinstance(item, dict)]
         if payload:
             raise ValueError("Unexpected custom statuses payload format")
         return []
@@ -102,13 +94,11 @@ class UpdateAlertStatus(Action):
 
         status_name_lower = status_name.casefold()
         for custom_status in custom_statuses:
-            label = custom_status.get("label")
-            name = custom_status.get("name")
             custom_status_uuid = custom_status.get("uuid")
-            if not isinstance(custom_status_uuid, str):
-                continue
+            label = custom_status.get("label")
             if isinstance(label, str) and label.casefold() == status_name_lower:
                 return custom_status_uuid
+            name = custom_status.get("name")
             if isinstance(name, str) and name.casefold() == status_name_lower:
                 return custom_status_uuid
         return None
