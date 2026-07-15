@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -101,3 +102,40 @@ async def test_client_get_directory_audits_empty_1(graph_api_client: GraphApi, d
 
     assert [i.id for i in items] == ["3"]
     assert items[0].activity_display_name == "Add user"
+
+
+@pytest.mark.asyncio
+async def test_client_close_closes_http_transport_and_credentials(graph_api_client: GraphApi) -> None:
+    request_adapter = MagicMock()
+    request_adapter.http_client = MagicMock()
+    request_adapter.http_client.aclose = AsyncMock()
+    credentials_close = AsyncMock()
+
+    graph_api_client._client.request_adapter = request_adapter
+    graph_api_client._credentials.close = credentials_close
+
+    await graph_api_client.close()
+
+    request_adapter.http_client.aclose.assert_awaited_once()
+    credentials_close.assert_awaited_once()
+    assert graph_api_client._client is None
+    assert graph_api_client._credentials is None
+
+
+@pytest.mark.asyncio
+async def test_client_close_clears_refs_even_if_transport_close_fails(graph_api_client: GraphApi) -> None:
+    request_adapter = MagicMock()
+    request_adapter.http_client = MagicMock()
+    request_adapter.http_client.aclose = AsyncMock(side_effect=RuntimeError("boom"))
+    credentials_close = AsyncMock()
+
+    graph_api_client._client.request_adapter = request_adapter
+    graph_api_client._credentials.close = credentials_close
+
+    with pytest.raises(RuntimeError, match="boom"):
+        await graph_api_client.close()
+
+    request_adapter.http_client.aclose.assert_awaited_once()
+    credentials_close.assert_awaited_once()
+    assert graph_api_client._client is None
+    assert graph_api_client._credentials is None
