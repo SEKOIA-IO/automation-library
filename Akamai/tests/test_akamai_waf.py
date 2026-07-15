@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -12,7 +12,7 @@ from akamai_modules.connector_akamai_waf import AkamaiWAFLogsConnector
 
 @pytest.fixture
 def fake_time():
-    yield datetime(2025, 4, 1, 11, 59, 59, tzinfo=timezone.utc)
+    yield datetime(2025, 4, 1, 11, 59, 59, tzinfo=UTC)
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def trigger(data_storage, fake_time):
     with freeze_time(fake_time):
         trigger = AkamaiWAFLogsConnector(module=module, data_path=data_storage)
 
-    trigger.configuration = {"config_id": 1, "intake_key": "intake_key", "frequency": 60}
+    trigger.configuration = {"config_id": "1", "intake_key": "intake_key", "frequency": 60}
 
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()

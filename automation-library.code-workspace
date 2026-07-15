@@ -11,6 +11,10 @@
 		{
 			"name": "1Password",
 			"path": "1Password"
+		},
+		{
+			"name": "Akamai",
+			"path": "Akamai"
 		}
 	],
 	"settings": {
