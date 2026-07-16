@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `GetAlert` action no longer issues an HTTP request when called with an empty or missing `uuid`; it validates the argument via a Pydantic model, now using a proper `uuid.UUID` type instead of a hand-written blank-check validator, and fails with a clear error instead
 
+## 2026-07-11 - 2.74.3
+
+### Changed
+
+- `GetAsset` action now validates its `uuid` argument as a native `UUID` via Pydantic instead of a hand-written blank-check validator, and no longer issues an HTTP request when called with an empty, malformed, or missing `asset_uuid`
+- Migrate `AssetsMerge` and `SynchronizeAssetsWithAD` argument models from the `pydantic.v1` compatibility shim to native Pydantic v2, required to avoid a "Mixing V1 and V2 models" runtime error now that the SDK is bumped to `1.23.1`
+
 ## 2026-07-07 - 2.74.1
 
 ### Fixed
