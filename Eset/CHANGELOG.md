@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add ESET vulnerability asset connector.
+- Map ESET `patchAvailable` and `riskScore` to OCSF `is_fix_available` and `risk_score` (requires sekoia-automation-sdk >= 1.24.0).
 
 ## 2025-06-28 - 1.0.2
 
