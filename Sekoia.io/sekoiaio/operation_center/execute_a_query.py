@@ -6,7 +6,7 @@ from time import sleep, time
 
 from typing import Any, Callable, Literal
 
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
 

@@ -24,6 +24,7 @@ def connector(tmp_path, mock_module):
     connector.log = Mock()
     connector.error = Mock()
     connector._latest_time = None
+    connector._seen_sids = set()
     connector.ldap_client = Mock()
     connector.context = MagicMock()
     return connector
@@ -50,7 +51,9 @@ def test_update_checkpoint_with_latest_time(connector):
 
     connector.update_checkpoint()
 
-    connector.context.__enter__().__setitem__.assert_called_once_with("most_recent_datetime", "20240101120000.0Z")
+    cache = connector.context.__enter__()
+    cache.__setitem__.assert_any_call("most_recent_datetime", "20240101120000.0Z")
+    cache.__setitem__.assert_any_call("seen_sids_at_checkpoint", [])
 
 
 def test_update_checkpoint_without_latest_time(connector):

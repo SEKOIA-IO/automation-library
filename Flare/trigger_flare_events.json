@@ -1,0 +1,56 @@
+{
+  "name": "Fetch new events from Flare",
+  "description": "Fetch events from Flare tenant feed",
+  "uuid": "8f7b3778-f999-4b63-81c6-4b8ed3428aaf",
+  "docker_parameters": "flare_events_trigger",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60,
+        "minimum": 1
+      },
+      "page_size": {
+        "type": "integer",
+        "description": "Number of events requested per page",
+        "default": 100,
+        "minimum": 1,
+        "maximum": 1000
+      },
+      "initial_hours_lookback": {
+        "type": "integer",
+        "description": "Lookback in hours",
+        "default": 1,
+        "minimum": 1
+      },
+      "throttle_seconds": {
+        "type": "number",
+        "description": "Delay in seconds between individual event requests",
+        "default": 0.25,
+        "minimum": 0.25
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "title": "Flare events trigger"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {},
+    "title": "The events"
+  }
+}

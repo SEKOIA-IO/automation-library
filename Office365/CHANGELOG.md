@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-06-10 - 2.21.0
+## 2026-07-10 - 2.21.0
 
 ### Changed
 
@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `FailureTracker` for deduplicated logging during sustained outages.
 - Split the generic `except Exception` in the management API forward loop into multiple branches.
 - Truncate error response bodies when raising O365 exceptions.
+
+## 2026-07-01 - 2.20.6
+
+### Changed
+
+- Add retries for reading and writing context file
 
 ## 2026-06-01 - 2.20.5
 
