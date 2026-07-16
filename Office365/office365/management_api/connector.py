@@ -238,7 +238,6 @@ class Office365Connector(AsyncConnector):
                 self.log_exception(
                     exception=exp,
                     message="Office365 client session was closed unexpectedly; rebuilding client and continuing.",
-                    exception=exp,
                 )
                 self._reset_client()
                 if self.running:
