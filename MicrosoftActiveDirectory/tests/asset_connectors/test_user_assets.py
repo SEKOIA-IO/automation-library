@@ -24,6 +24,7 @@ def connector(tmp_path, mock_module):
     connector.log = Mock()
     connector.error = Mock()
     connector._latest_time = None
+    connector._seen_sids = set()
     connector.ldap_client = Mock()
     connector.context = MagicMock()
     return connector
@@ -50,7 +51,9 @@ def test_update_checkpoint_with_latest_time(connector):
 
     connector.update_checkpoint()
 
-    connector.context.__enter__().__setitem__.assert_called_once_with("most_recent_datetime", "20240101120000.0Z")
+    cache = connector.context.__enter__()
+    cache.__setitem__.assert_any_call("most_recent_datetime", "20240101120000.0Z")
+    cache.__setitem__.assert_any_call("seen_sids_at_checkpoint", [])
 
 
 def test_update_checkpoint_without_latest_time(connector):
@@ -127,6 +130,40 @@ def test_compute_user_type_regular_user(connector):
     assert user_type_id == UserTypeId.USER
 
 
+def test_compute_user_type_machine_account_via_sam(connector):
+    user_attr = LDAPUserAttributes(sAMAccountName="COMPUTERNAME$", member_of=[])
+
+    user_type, user_type_id = connector.compute_user_type(user_attr)
+
+    assert user_type == UserTypeStr.SYSTEM
+    assert user_type_id == UserTypeId.SYSTEM
+
+
+def test_compute_user_type_machine_account_via_upn(connector):
+    user_attr = LDAPUserAttributes(sAMAccountName=None, userPrincipalName="compte$@test.ad.recouv", member_of=[])
+
+    user_type, user_type_id = connector.compute_user_type(user_attr)
+
+    assert user_type == UserTypeStr.SYSTEM
+    assert user_type_id == UserTypeId.SYSTEM
+
+
+def test_resolve_email_addr_valid(connector):
+    assert connector.resolve_email_addr("user@example.com") == "user@example.com"
+
+
+def test_resolve_email_addr_machine_upn(connector):
+    assert connector.resolve_email_addr("compte$@urdom.ad.recouv") is None
+
+
+def test_resolve_email_addr_none(connector):
+    assert connector.resolve_email_addr(None) is None
+
+
+def test_resolve_email_addr_no_at_sign(connector):
+    assert connector.resolve_email_addr("notanemail") is None
+
+
 def test_get_user_groups(connector):
     user_attr = LDAPUserAttributes(member_of=["CN=Group1,DC=example,DC=com", "CN=Group2,DC=example,DC=com"])
 
@@ -157,6 +194,22 @@ def test_user_ocsf_object(connector):
     assert user_ocsf.account.name == "john.doe@example.com"
     assert user_ocsf.account.type_id == AccountTypeId.LDAP_ACCOUNT
     assert user_ocsf.email_addr == "john.doe@example.com"
+
+
+def test_user_ocsf_object_machine_account_email_not_set(connector):
+    # AD UPN-style mail values (local part ends with '$') must not be stored as email_addr
+    user_attr = LDAPUserAttributes(
+        sAMAccountName="compte$",
+        userPrincipalName="compte$@urdom.ad.recouv",
+        mail="compte$@urdom.ad.recouv",
+        objectSid="S-1-5-21-999",
+        distinguishedName="CN=compte,DC=urdom,DC=ad,DC=recouv",
+    )
+
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.type_id == UserTypeId.SYSTEM
+    assert user_ocsf.email_addr is None
 
 
 def test_map_user_fields(connector):

@@ -20,6 +20,7 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     AccountTypeId,
     AccountTypeStr,
     UserTypeId,
+    UserTypeStr,
 )
 
 NAMED_USER = SophosUser(
@@ -44,6 +45,17 @@ WINDOWS_USER = SophosUser(
     source=SophosUserSource(type="custom"),
     createdAt="2025-12-10T12:49:12.371Z",
     updatedAt="2025-12-11T12:22:37.223Z",
+)
+
+AD_USER = SophosUser(
+    id="aaaaaaaa-0000-0000-0000-000000000005",
+    name="test/AC00008700",
+    exchangeLogin="AC00008700",
+    groups=SophosUserGroups(total=0, itemsCount=0, items=[]),
+    tenant=SophosTenant(id="bbbbbbbb-0000-0000-0000-000000000001"),
+    source=SophosUserSource(type="active_directory"),
+    createdAt="2024-01-10T08:00:00.000Z",
+    updatedAt="2024-01-10T08:00:00.000Z",
 )
 
 USER_WITH_GROUPS = SophosUser(
@@ -167,7 +179,7 @@ def connector(symphony_storage):
 
 
 def _mock_list_users(connector, pages: list[dict]) -> None:
-    """Wire connector.client to return successive page responses."""
+    """Wire connector.client to return successive page responses for users."""
     connector.client = MagicMock()
     responses = []
     for page in pages:
@@ -185,18 +197,34 @@ def _seed_cache(connector, data: dict[str, str]) -> None:
 
 
 class TestGetAccountType:
-    def test_windows_local_account(self):
+    def test_local_machine_account_backslash_no_names(self):
         type_id, type_str = SophosUserAssetConnector._get_account_type(WINDOWS_USER)
         assert type_id == AccountTypeId.WINDOWS_ACCOUNT
         assert type_str == AccountTypeStr.WINDOWS_ACCOUNT
+
+    def test_backslash_but_has_first_name_is_not_windows(self):
+        """A real named user whose name happens to contain a backslash is not a local account."""
+        user = SophosUser(id="x", name="DOMAIN\\user", firstName="John")
+        type_id, _ = SophosUserAssetConnector._get_account_type(user)
+        assert type_id == AccountTypeId.UNKNOWN
+
+    def test_backslash_but_has_email_is_not_windows(self):
+        user = SophosUser(id="x", name="DOMAIN\\user", email="user@example.com")
+        type_id, _ = SophosUserAssetConnector._get_account_type(user)
+        assert type_id == AccountTypeId.UNKNOWN
+
+    def test_ad_user_with_forward_slash(self):
+        type_id, type_str = SophosUserAssetConnector._get_account_type(AD_USER)
+        assert type_id == AccountTypeId.LDAP_ACCOUNT
+        assert type_str == AccountTypeStr.LDAP_ACCOUNT
 
     def test_named_user_with_email_is_unknown(self):
         type_id, type_str = SophosUserAssetConnector._get_account_type(NAMED_USER)
         assert type_id == AccountTypeId.UNKNOWN
         assert type_str == AccountTypeStr.UNKNOWN
 
-    def test_backslash_but_has_email_is_unknown(self):
-        user = SophosUser(id="x", name="DOMAIN\\user", email="user@example.com")
+    def test_forward_slash_but_has_email_is_unknown(self):
+        user = SophosUser(id="x", name="DOMAIN/user", email="user@example.com")
         type_id, _ = SophosUserAssetConnector._get_account_type(user)
         assert type_id == AccountTypeId.UNKNOWN
 
@@ -204,6 +232,57 @@ class TestGetAccountType:
         user = SophosUser(id="x", name=None)
         type_id, _ = SophosUserAssetConnector._get_account_type(user)
         assert type_id == AccountTypeId.UNKNOWN
+
+
+class TestGetUserType:
+    def test_named_user_is_user_type(self):
+        type_id, type_str = SophosUserAssetConnector._get_user_type(NAMED_USER)
+        assert type_id == UserTypeId.USER
+        assert type_str == UserTypeStr.USER
+
+    def test_ad_user_is_user_type(self):
+        type_id, type_str = SophosUserAssetConnector._get_user_type(AD_USER)
+        assert type_id == UserTypeId.USER
+        assert type_str == UserTypeStr.USER
+
+    def test_local_machine_account_is_system(self):
+        type_id, type_str = SophosUserAssetConnector._get_user_type(WINDOWS_USER)
+        assert type_id == UserTypeId.SYSTEM
+        assert type_str == UserTypeStr.SYSTEM
+
+    def test_desktop_user_is_local(self):
+        assert SophosUserAssetConnector._is_local_machine_account(WINDOWS_USER) is True
+
+    def test_named_user_is_not_local(self):
+        assert SophosUserAssetConnector._is_local_machine_account(NAMED_USER) is False
+
+    def test_ad_user_forward_slash_is_not_local(self):
+        assert SophosUserAssetConnector._is_local_machine_account(AD_USER) is False
+
+    def test_backslash_with_email_is_not_local(self):
+        user = SophosUser(id="x", name="DOMAIN\\user", email="user@example.com")
+        assert SophosUserAssetConnector._is_local_machine_account(user) is False
+
+    def test_backslash_with_first_name_is_not_local(self):
+        user = SophosUser(id="x", name="DOMAIN\\user", firstName="John")
+        assert SophosUserAssetConnector._is_local_machine_account(user) is False
+
+
+class TestExtractDomain:
+    def test_backslash_format(self):
+        assert SophosUserAssetConnector._extract_domain("DESKTOP-ABC1234\\jdoe") == "DESKTOP-ABC1234"
+
+    def test_forward_slash_format(self):
+        assert SophosUserAssetConnector._extract_domain("URDOM/AC75008715") == "URDOM"
+
+    def test_no_separator_returns_none(self):
+        assert SophosUserAssetConnector._extract_domain("Jane Doe") is None
+
+    def test_none_input_returns_none(self):
+        assert SophosUserAssetConnector._extract_domain(None) is None
+
+    def test_empty_string_returns_none(self):
+        assert SophosUserAssetConnector._extract_domain("") is None
 
 
 class TestGetGroups:
@@ -317,8 +396,28 @@ class TestMapUserFields:
         result = connector.map_user_fields(WINDOWS_USER)
         assert result is not None
         assert result.user.account.type_id == AccountTypeId.WINDOWS_ACCOUNT
+        assert result.user.type_id == UserTypeId.SYSTEM
         assert result.user.email_addr is None
         assert result.user.full_name is None
+        assert result.user.domain == "DESKTOP-ABC1234"
+
+    def test_ad_user_mapping(self, connector):
+        result = connector.map_user_fields(AD_USER)
+        assert result is not None
+        assert result.user.account.type_id == AccountTypeId.LDAP_ACCOUNT
+        assert result.user.domain == "test"
+        assert result.user.uid_alt == "AC00008700"
+
+    def test_exchange_login_mapped_to_uid_alt(self, connector):
+        user = NAMED_USER.model_copy(update={"exchangeLogin": "AC00008700"})
+        result = connector.map_user_fields(user)
+        assert result is not None
+        assert result.user.uid_alt == "AC00008700"
+
+    def test_empty_exchange_login_produces_no_uid_alt(self, connector):
+        result = connector.map_user_fields(NAMED_USER)
+        assert result is not None
+        assert result.user.uid_alt is None
 
     def test_user_with_groups(self, connector):
         result = connector.map_user_fields(USER_WITH_GROUPS)
@@ -369,6 +468,15 @@ class TestFetchAllPages:
         items = list(connector._fetch_all_pages())
         assert len(items) == 2
         connector.client.list_directory_users.assert_called_once()
+
+    def test_include_group_ids_param_is_sent(self, connector):
+        _mock_list_users(
+            connector,
+            [{"items": [NAMED_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}}],
+        )
+        list(connector._fetch_all_pages())
+        call_params = connector.client.list_directory_users.call_args[0][0]
+        assert call_params.get("includeGroupIds") is True
 
     def test_multi_page(self, connector):
         _mock_list_users(connector, [API_RESPONSE_PAGE1, API_RESPONSE_PAGE2])
@@ -524,6 +632,17 @@ class TestGetAssets:
         )
         assets = list(connector.get_assets())
         assert len(assets) == 2
+
+    def test_desktop_user_domain_in_user(self, connector):
+        """Local machine account has its computer name as user.domain."""
+        _mock_list_users(
+            connector,
+            [{"items": [WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}}],
+        )
+        assets = list(connector.get_assets())
+        assert len(assets) == 1
+        assert assets[0].user.domain == "DESKTOP-ABC1234"
+        assert assets[0].user.type_id == UserTypeId.SYSTEM
 
     def test_second_run_yields_nothing_when_unchanged(self, connector):
         _seed_cache(

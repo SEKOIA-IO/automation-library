@@ -1,6 +1,7 @@
 from sekoia_automation.action import GenericAPIAction
 
-base_url = "api/v1/sic/"
+from sekoiaio.operation_center.constants import base_url
+from sekoiaio.operation_center.get_alert import GetAlert
 
 PatchAlert = type(
     "PatchAlert",
@@ -146,16 +147,6 @@ PostCommentOnAlert = type(
     },
 )
 
-
-GetAlert = type(
-    "GetAlert",
-    (GenericAPIAction,),
-    {
-        "verb": "get",
-        "endpoint": base_url + "alerts/{uuid}",
-        "query_parameters": ["stix", "cases"],
-    },
-)
 
 UpdateIncident = type(
     "UpdateIncident",
