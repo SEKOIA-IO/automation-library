@@ -32,4 +32,4 @@ Collects managed devices from the Device Management API (`{region}.device-manage
 
 ### ESET Vulnerability
 
-Collects device vulnerabilities from the Vulnerability Management API (`{region}.vulnerability-management.eset.systems/v1/device-vulnerabilities`) and maps them to OCSF Vulnerability Finding assets. Application, operating system and package vulnerabilities are all supported, with the affected host, CVE and severity attached to each finding. Requires ESET Vulnerability & Patch Management to be enabled on the account.
+Collects device vulnerabilities from the Vulnerability Management API (`{region}.vulnerability-management.eset.systems/v1/device-vulnerabilities`) and maps them to OCSF Vulnerability Finding assets.
