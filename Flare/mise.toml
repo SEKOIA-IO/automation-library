@@ -1,22 +1,10 @@
+# Module-specific mise config.
+# Common tools and tasks (uv, test, lint, format) are inherited from the
+# repository root mise.toml. Only the Python version and the local .venv are
+# declared here, since both are module-specific.
+
 [tools]
 python = "3.14"
-uv = "latest"
 
-[tasks.test]
-description = "Run tests"
-run = "uv run pytest tests/"
-
-[tasks.lint]
-description = "Check code style and types"
-run = [
-    "uv run ruff check .",
-    "uv run ruff format --check .",
-    "uv run mypy .",
-]
-
-[tasks.format]
-description = "Format and auto-fix code"
-run = [
-    "uv run ruff check --fix .",
-    "uv run ruff format .",
-]
+[env]
+_.python.venv = { path = ".venv", create = false }
