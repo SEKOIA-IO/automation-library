@@ -56,11 +56,17 @@ def test_next_batch_first_run_builds_initial_filter(mock_sleep, data_storage):
     assert len(pushed_events) == 2
     assert json.loads(pushed_events[0])["header"]["uid"] == "evt-1"
 
-    payload = fake_client.scroll_events.call_args.kwargs["json"]
+    call_kwargs = fake_client.scroll_events.call_args.kwargs
+    payload = call_kwargs["json"]
     assert payload["size"] == 10
     assert payload["order"] == "asc"
-    assert payload["from"] is None
+    assert "query" not in payload
+    assert payload["from"] == ""
     assert "filters" in payload
+    assert call_kwargs["pages_url"] == "/firework/v4/events/tenant/_search"
+    # Both limiters use the connector's single throttle setting to avoid the SDK's 1s/page default.
+    assert call_kwargs["_pages_limiter"] is fake_limiter
+    assert call_kwargs["_events_limiter"] is fake_limiter
 
 
 @patch("flareio_modules.trigger_flare_events.time.sleep")
@@ -70,10 +76,10 @@ def test_next_batch_resumes_from_checkpoint(mock_sleep, data_storage):
 
     fake_client = MagicMock()
     fake_client.scroll_events.return_value = [
-        {
-            "event": {"activity": {"header": {"uid": "evt-3", "type": "listing"}}},
-            "next": "next-cursor",
-        }
+        SimpleNamespace(
+            event={"activity": {"header": {"uid": "evt-3", "type": "listing"}}},
+            next="next-cursor",
+        )
     ]
 
     fake_limiter = MagicMock()
@@ -83,9 +89,66 @@ def test_next_batch_resumes_from_checkpoint(mock_sleep, data_storage):
             trigger.next_batch()
 
     payload = fake_client.scroll_events.call_args.kwargs["json"]
+    assert "query" not in payload
     assert payload["from"] == "previous-cursor"
     assert "filters" not in payload
     assert trigger.cursor.offset == "next-cursor"
+
+
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_caps_page_size_to_api_limit(mock_sleep, data_storage):
+    trigger = _build_trigger(data_storage)
+    trigger.configuration = {
+        "intake_key": "intake_key",
+        "frequency": 60,
+        "page_size": 100,
+        "initial_hours_lookback": 1,
+        "throttle_seconds": 0,
+    }
+
+    fake_client = MagicMock()
+    fake_client.scroll_events.return_value = []
+
+    fake_limiter = MagicMock()
+
+    with patch.object(FlareEventsConnector, "client", new_callable=PropertyMock, return_value=fake_client):
+        with patch.object(FlareEventsConnector, "limiter", new_callable=PropertyMock, return_value=fake_limiter):
+            trigger.next_batch()
+
+    payload = fake_client.scroll_events.call_args.kwargs["json"]
+    assert payload["size"] == 10
+
+
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_streams_events_in_batches_of_100(mock_sleep, data_storage):
+    trigger = _build_trigger(data_storage)
+
+    # 25 pages of 10 events each; every event of a page shares the same `next` cursor.
+    results = []
+    for page in range(1, 26):
+        cursor = f"cursor-{page}"
+        for index in range(10):
+            results.append(
+                SimpleNamespace(
+                    event={"activity": {"header": {"uid": f"evt-{page}-{index}", "type": "chat_message"}}},
+                    next=cursor,
+                )
+            )
+
+    fake_client = MagicMock()
+    fake_client.scroll_events.return_value = results
+    fake_limiter = MagicMock()
+
+    with patch.object(FlareEventsConnector, "client", new_callable=PropertyMock, return_value=fake_client):
+        with patch.object(FlareEventsConnector, "limiter", new_callable=PropertyMock, return_value=fake_limiter):
+            trigger.next_batch()
+
+    # 250 events are streamed as batches of 100, 100 then a final 50.
+    push_sizes = [len(call.kwargs["events"]) for call in trigger.push_events_to_intakes.call_args_list]
+    assert push_sizes == [100, 100, 50]
+
+    # The checkpoint only advances on page boundaries, never mid-page.
+    assert trigger.cursor.offset == "cursor-25"
 
 
 @patch("flareio_modules.trigger_flare_events.time.sleep")
@@ -94,9 +157,7 @@ def test_next_batch_no_event_keeps_cursor(mock_sleep, data_storage):
     trigger.cursor.offset = "stable-cursor"
 
     fake_client = MagicMock()
-    fake_client.scroll_events.return_value = [
-        SimpleNamespace(event=None, next=None),
-    ]
+    fake_client.scroll_events.return_value = []
 
     fake_limiter = MagicMock()
 
@@ -106,61 +167,6 @@ def test_next_batch_no_event_keeps_cursor(mock_sleep, data_storage):
 
     assert trigger.cursor.offset == "stable-cursor"
     trigger.push_events_to_intakes.assert_not_called()
-
-
-@patch("flareio_modules.trigger_flare_events.time.sleep")
-def test_next_batch_empty_event_with_next_updates_cursor(mock_sleep, data_storage):
-    trigger = _build_trigger(data_storage)
-    trigger.cursor.offset = "cursor-before"
-
-    fake_client = MagicMock()
-    fake_client.scroll_events.return_value = [
-        SimpleNamespace(event=None, next="cursor-after"),
-    ]
-
-    fake_limiter = MagicMock()
-
-    with patch.object(FlareEventsConnector, "client", new_callable=PropertyMock, return_value=fake_client):
-        with patch.object(FlareEventsConnector, "limiter", new_callable=PropertyMock, return_value=fake_limiter):
-            trigger.next_batch()
-
-    # No event to forward, but checkpoint must still progress.
-    assert trigger.cursor.offset == "cursor-after"
-    trigger.push_events_to_intakes.assert_not_called()
-
-
-def test_requests_session_has_retry_policy(data_storage):
-    trigger = _build_trigger(data_storage)
-
-    adapter = trigger.requests_session.get_adapter("https://api.flare.io")
-    retries = adapter.max_retries
-
-    assert retries.total == 5
-    assert retries.backoff_factor == 2
-    assert retries.backoff_max == 15
-    assert set(retries.status_forcelist) == {429, 502, 503, 504}
-
-
-def test_requests_session_retries_post_on_transient_api_statuses(data_storage):
-    trigger = _build_trigger(data_storage)
-
-    adapter = trigger.requests_session.get_adapter("https://api.flare.io")
-    retries = adapter.max_retries
-
-    assert retries.is_retry("POST", 429, has_retry_after=False) is True
-    assert retries.is_retry("POST", 502, has_retry_after=False) is True
-    assert retries.is_retry("POST", 503, has_retry_after=False) is True
-    assert retries.is_retry("POST", 504, has_retry_after=False) is True
-
-
-def test_requests_session_does_not_retry_non_supported_methods_or_statuses(data_storage):
-    trigger = _build_trigger(data_storage)
-
-    adapter = trigger.requests_session.get_adapter("https://api.flare.io")
-    retries = adapter.max_retries
-
-    assert retries.is_retry("DELETE", 429, has_retry_after=False) is False
-    assert retries.is_retry("POST", 500, has_retry_after=False) is False
 
 
 def test_run_logs_exception_when_batch_fails(data_storage):

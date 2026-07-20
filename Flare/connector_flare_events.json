@@ -16,9 +16,9 @@
       "page_size": {
         "type": "integer",
         "description": "Number of events requested per page",
-        "default": 100,
+        "default": 10,
         "minimum": 1,
-        "maximum": 1000
+        "maximum": 10
       },
       "initial_hours_lookback": {
         "type": "integer",
@@ -28,9 +28,9 @@
       },
       "throttle_seconds": {
         "type": "number",
-        "description": "Delay in seconds between individual event requests",
+        "description": "Delay in seconds between individual event requests (lower is faster; the API retries on rate limiting)",
         "default": 0.25,
-        "minimum": 0.25
+        "minimum": 0
       },
       "intake_server": {
         "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",

@@ -1,17 +1,13 @@
 import time
-from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from typing import Any
 
 import orjson
-import requests
 from flareio import FlareApiClient
 from flareio.ratelimit import Limiter
-from requests.adapters import HTTPAdapter
 from sekoia_automation.checkpoint import CheckpointCursor
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
-from urllib3.util import Retry
 
 from flareio_modules import FlareIOModule
 from flareio_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
@@ -19,7 +15,7 @@ from flareio_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMI
 
 class FlareEventsConnectorConfiguration(DefaultConnectorConfiguration):
     frequency: int = 60
-    page_size: int = 100
+    page_size: int = 10
     initial_hours_lookback: int = 1
     throttle_seconds: float = 0.25
 
@@ -28,29 +24,21 @@ class FlareEventsConnector(Connector):
     module: FlareIOModule
     configuration: FlareEventsConnectorConfiguration
 
+    EVENTS_PAGES_URL = "/firework/v4/events/tenant/_search"
+    EVENTS_DETAILS_URL = "/firework/v2/activities/"
+    MAX_PAGE_SIZE = 10
+    BATCH_SIZE = 100
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.cursor = CheckpointCursor(path=self.data_path)
 
     @cached_property
-    def requests_session(self) -> requests.Session:
-        session = requests.Session()
-        retries = Retry(
-            total=5,
-            backoff_factor=2,
-            status_forcelist=[429, 502, 503, 504],
-            allowed_methods={"GET", "POST"},
-            backoff_max=15,
-        )
-        session.mount("https://", HTTPAdapter(max_retries=retries))
-        return session
-
-    @cached_property
     def client(self) -> FlareApiClient:
+        # The SDK builds its own session with retries on 429/502/503/504, scoped to the tenant.
         return FlareApiClient(
             api_key=self.module.configuration.api_key,
             tenant_id=self.module.configuration.tenant_id,
-            session=self.requests_session,
         )
 
     @cached_property
@@ -59,83 +47,63 @@ class FlareEventsConnector(Connector):
 
     def _build_payload(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
-            "size": self.configuration.page_size,
+            "size": min(self.configuration.page_size, self.MAX_PAGE_SIZE),
             "order": "asc",
+            "from": self.cursor.offset if self.cursor.offset else ""
         }
 
-        if self.cursor.offset:
-            payload["from"] = self.cursor.offset
-            return payload
+        if not self.cursor.offset:
+            start = datetime.now(tz=UTC) - timedelta(hours=self.configuration.initial_hours_lookback)
+            payload["filters"] = {"estimated_created_at": {"gte": start.isoformat()}}
 
-        start_timestamp = datetime.now(tz=UTC) - timedelta(hours=self.configuration.initial_hours_lookback)
-        payload["from"] = None
-        payload["filters"] = {
-            "estimated_created_at": {
-                "gte": start_timestamp.isoformat(),
-            }
-        }
         return payload
 
-    @staticmethod
-    def _extract_event(event: Any) -> dict[str, Any] | None:
-        if not isinstance(event, dict):
-            return None
-
-        # The SDK may return hydrated events wrapped under "activity".
-        activity = event.get("activity")
-        if isinstance(activity, dict):
-            return dict(activity)
-
-        return dict(event)
-
-    def _iter_flare_events(self) -> Iterator[tuple[dict[str, Any] | None, Any]]:
-        payload = self._build_payload()
-
-        # Reuse the connector's own configured limiter as the SDK's per-event limiter so
-        # `throttle_seconds` is the single source of truth for pacing (avoids double throttling).
-        for result in self.client.scroll_events(
-            method="POST",
-            pages_url="/firework/v4/events/tenant/_search",
-            events_url="/firework/v2/activities/",
-            json=payload,
-            _events_limiter=self.limiter,
-        ):
-            next_cursor = getattr(result, "next", None)
-            event = getattr(result, "event", None)
-
-            # Defensive: tolerate a plain dict shape as well as the SDK's ScrollEventsResult.
-            if isinstance(result, dict):
-                next_cursor = result.get("next", next_cursor)
-                event = result.get("event", event)
-
-            extracted_event = self._extract_event(event)
-            yield extracted_event, next_cursor
+    def _push(self, events: list[str], cursor: str | None) -> int:
+        self.push_events_to_intakes(events=events)
+        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
+        if cursor:
+            self.cursor.offset = cursor
+        return len(events)
 
     def next_batch(self) -> None:
         batch_start_time = time.time()
 
-        latest_next_cursor = self.cursor.offset
-        batch_of_events: list[str] = []
+        batch: list[str] = []
+        # Cursor of the page currently accumulated in `batch`. Every event of a page shares
+        # the same `next`, so the checkpoint is only committed on page boundaries to avoid
+        # skipping events that were not yet forwarded when resuming.
+        page_cursor = self.cursor.offset
+        total = 0
 
-        for event, next_cursor in self._iter_flare_events():
-            if event is not None:
-                batch_of_events.append(orjson.dumps(event).decode("utf-8"))
+        for result in self.client.scroll_events(
+            method="POST",
+            pages_url=self.EVENTS_PAGES_URL,
+            events_url=self.EVENTS_DETAILS_URL,
+            json=self._build_payload(),
+            _pages_limiter=self.limiter,
+            _events_limiter=self.limiter,
+        ):
+            # Page boundary reached: flush if we already gathered a full batch.
+            if result.next != page_cursor:
+                if len(batch) >= self.BATCH_SIZE:
+                    total += self._push(batch, page_cursor)
+                    batch = []
+                page_cursor = result.next
 
-            if next_cursor:
-                latest_next_cursor = next_cursor
+            event = result.event
+            if isinstance(event, dict):
+                batch.append(orjson.dumps(event.get("activity", event)).decode("utf-8"))
+
+        if batch:
+            total += self._push(batch, page_cursor)
 
         intake_key = self.configuration.intake_key
 
-        if batch_of_events:
-            self.push_events_to_intakes(events=batch_of_events)
-            self.log(f"Forwarded {len(batch_of_events)} events to the intake", level="info")
-            OUTCOMING_EVENTS.labels(intake_key=intake_key).inc(len(batch_of_events))
+        if total:
+            self.log(f"Forwarded {total} events to the intake", level="info")
             EVENTS_LAG.labels(intake_key=intake_key).set(time.time() - batch_start_time)
         else:
             self.log("No events to forward", level="info")
-
-        if latest_next_cursor and latest_next_cursor != self.cursor.offset:
-            self.cursor.offset = latest_next_cursor
 
         batch_duration = time.time() - batch_start_time
         FORWARD_EVENTS_DURATION.labels(intake_key=intake_key).observe(batch_duration)
