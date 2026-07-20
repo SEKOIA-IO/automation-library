@@ -1,5 +1,5 @@
 from datetime import datetime
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from ldap3.core.exceptions import LDAPException, LDAPSessionTerminatedByServerError
