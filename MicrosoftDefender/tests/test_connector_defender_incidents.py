@@ -156,3 +156,20 @@ def test_stepper_uses_incidents_cursor(trigger, data_storage):
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
         assert trigger.stepper.start == cursor
+
+
+def test_run_does_not_advance_cursor_on_push_error(trigger, data_storage):
+    start = datetime(2026, 4, 10, 11, 59, 0, tzinfo=timezone.utc)
+    end = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+
+    trigger.__dict__["stepper"] = Mock()
+    trigger.stepper.ranges.return_value = [(start, end)]
+    trigger.fetch_events = Mock(return_value=[[_incident("1", "2026-04-09T09:02:23.25Z")]])
+    trigger.push_events_to_intakes.side_effect = RuntimeError("push failed")
+
+    with pytest.raises(RuntimeError):
+        trigger.run()
+
+    context = PersistentJSON("context.json", data_storage)
+    with context as cache:
+        assert cache.get("most_recent_date_requested_incidents") is None

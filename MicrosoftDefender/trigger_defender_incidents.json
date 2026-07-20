@@ -36,5 +36,6 @@
     "title": "Events",
     "type": "object"
   },
+  "results": {},
   "uuid": "35700bd5-72bc-4dc5-9ca8-b905bcc180ee"
 }

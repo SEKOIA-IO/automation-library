@@ -187,6 +187,7 @@ class BaseMicrosoftDefenderGraphAPIConnector(Connector):
             if not self.running:
                 break
 
+            should_advance_cursor = False
             try:
                 duration_start = time.time()
                 for events in self.fetch_events(start, end):
@@ -213,6 +214,7 @@ class BaseMicrosoftDefenderGraphAPIConnector(Connector):
                 FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
                     time.time() - duration_start
                 )
+                should_advance_cursor = True
 
             except AuthenticationError as e:
                 if e.result:
@@ -224,9 +226,9 @@ class BaseMicrosoftDefenderGraphAPIConnector(Connector):
 
             except Exception as ex:
                 self.log_exception(ex, message="Failed to fetch events.")
-                raise ex
+                raise
 
-            finally:
+            if should_advance_cursor:
                 # save in context the most recent date seen
                 with self.context as cache:
                     cache[self.context_cursor_key] = end.isoformat()
