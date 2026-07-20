@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-20 - 0.5.0
+
+### Changed
+
+- Speed up event collection by streaming events to the intake in batches of 100 (instead of a single push at the end) and advancing the checkpoint on page boundaries
+- Remove the SDK's default 1s-per-page delay by pacing both page and event requests with the configured `throttle_seconds`, and lower its minimum to `0`
+- Rely on the Flare SDK's built-in session/retry policy and drop the redundant custom `requests.Session`
+- Simplify the connector by removing the stale-cursor retry and verbose diagnostics helpers
+
+### Fixed
+
+- Align event feed paging with the Flare SDK documentation by using `/firework/v4/events/tenant/_search`
+- Comply with Flare v4 global search validation by always capping `page_size` to 10
+
 ## 2026-07-20 - 0.4.0
 
 ### Fixed
