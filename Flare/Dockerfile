@@ -16,12 +16,11 @@ COPY . .
 
 RUN useradd -ms /bin/bash sekoiaio-runtime
 
-# Some dependencies (e.g. pyrate-limiter, used by requests-ratelimiter) resolve a temp
-# directory at import time via tempfile.gettempdir(). The default system temp directories
-# (/tmp, /var/tmp, /usr/tmp) may not be writable by the non-root runtime user in the
-# deployment environment, so provide a dedicated writable directory and point TMPDIR at it.
-RUN mkdir -p /app/tmp && chown sekoiaio-runtime:sekoiaio-runtime /app/tmp
-ENV TMPDIR=/app/tmp
+# The sekoia_automation SDK hardcodes writes to /tmp/tls.
+# Since the K8s environment enforces a read-only root filesystem,
+# we replace /tmp with a symlink to /dev/shm (which K8s always mounts as a writable tmpfs).
+# This transparently redirects all hardcoded /tmp writes into memory.
+RUN rm -rf /tmp && ln -s /dev/shm /tmp
 
 USER sekoiaio-runtime
 
