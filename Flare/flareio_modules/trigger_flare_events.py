@@ -49,7 +49,7 @@ class FlareEventsConnector(Connector):
         payload: dict[str, Any] = {
             "size": min(self.configuration.page_size, self.MAX_PAGE_SIZE),
             "order": "asc",
-            "from": self.cursor.offset if self.cursor.offset else ""
+            "from": self.cursor.offset if self.cursor.offset else "",
         }
 
         if not self.cursor.offset:
