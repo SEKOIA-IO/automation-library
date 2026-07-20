@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-20 - 2.74.3
+
+### Fixed
+
+- `Update Alert Status` now supports alert custom statuses by UUID and by name.
+
 ## 2026-07-10 - 2.74.2
 
 ### Changed
