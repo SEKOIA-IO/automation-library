@@ -313,9 +313,7 @@ def test_entries_reconnects_on_ldap_exception_and_succeeds(connector, mock_entry
 
     assert entries == [mock_entry]
     connector._reset_ldap_connection.assert_called_once()
-    connector.log.assert_any_call(
-        "LDAP error, reconnecting... (session terminated by server)", level="warning"
-    )
+    connector.log.assert_any_call("LDAP error, reconnecting... (session terminated by server)", level="warning")
 
 
 def test_entries_raises_on_second_ldap_exception(connector):
@@ -352,4 +350,3 @@ def test_entries_deduplicates_by_dn(connector):
     entries = list(connector._entries())
 
     assert len(entries) == 1
-
