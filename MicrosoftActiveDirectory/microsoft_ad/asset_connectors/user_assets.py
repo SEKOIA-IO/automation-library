@@ -3,6 +3,7 @@ from collections.abc import Generator
 from typing import Any
 
 from ldap3 import ALL_ATTRIBUTES, ALL_OPERATIONAL_ATTRIBUTES
+from ldap3.core.exceptions import LDAPException
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.group import Group
@@ -18,13 +19,12 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
 from sekoia_automation.storage import PersistentJSON
 
 from microsoft_ad.client.ldap_client import LDAPClient
-from microsoft_ad.models.common_models import MicrosoftADConnectorConfiguration, MicrosoftADModule
+from microsoft_ad.models.common_models import LDAPUserAttributes, MicrosoftADConnectorConfiguration, MicrosoftADModule
 
 
 class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
     module: MicrosoftADModule
     configuration: MicrosoftADConnectorConfiguration
-    _latest_time: str | None
 
     PRODUCT_NAME: str = "Microsoft Active Directory"
     VENDOR_NAME: str = "Microsoft"
@@ -47,11 +47,18 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+        self._latest_time: str | None = None
+        self._seen_sids: set[str] = set()
 
     @property
     def most_recent_datetime(self) -> str | None:
         with self.context as cache:
             return cache.get("most_recent_datetime", None)
+
+    @property
+    def seen_sids_at_checkpoint(self) -> set[str]:
+        with self.context as cache:
+            return set(cache.get("seen_sids_at_checkpoint", []))
 
     @property
     def user_ldap_query(self) -> str:
@@ -63,13 +70,15 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         if self._latest_time is None:
             return
 
-        # Increment latest_time by 1 millisecond to avoid duplicates
-        to_datetime = datetime.datetime.strptime(self._latest_time, "%Y%m%d%H%M%S.0Z")
-        to_datetime += datetime.timedelta(milliseconds=1)
-        updated_time = to_datetime.strftime("%Y%m%d%H%M%S.0Z")
-
         with self.context as cache:
-            cache["most_recent_datetime"] = updated_time
+            previous_checkpoint = cache.get("most_recent_datetime")
+
+            if self._latest_time == previous_checkpoint:
+                existing_sids = set(cache.get("seen_sids_at_checkpoint", []))
+                cache["seen_sids_at_checkpoint"] = list(existing_sids | self._seen_sids)
+            else:
+                cache["most_recent_datetime"] = self._latest_time
+                cache["seen_sids_at_checkpoint"] = list(self._seen_sids)
 
     def user_metadata_object(self) -> Metadata:
         """
@@ -84,15 +93,15 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         )
         return Metadata(product=product, version="1.6.0")
 
-    def compute_enabling_condition(self, user_attributes: dict[str, Any]) -> bool:
+    def compute_enabling_condition(self, user_attributes: LDAPUserAttributes) -> bool:
         """
         Compute if the user account is enabled based on userAccountControl attribute.
         :param
-            user_attribute: dict[str, Any]: LDAP user attributes.
+            user_attribute: LDAPUserAttributes: LDAP user attributes.
         :return:
             bool: True if the account is enabled, False otherwise.
         """
-        user_account_control = user_attributes.get("userAccountControl", 0)
+        user_account_control = user_attributes.userAccountControl or 0
         return not bool(user_account_control & 2)
 
     def convert_last_logon_to_timestamp(self, last_logon: datetime.datetime | None) -> str | None:
@@ -109,46 +118,68 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             return None
         return str(int(last_logon.timestamp()))
 
-    def enrich_metadata(self, user_attributes: dict[str, Any]) -> list[UserEnrichmentObject]:
+    def enrich_metadata(self, user_attributes: LDAPUserAttributes) -> list[UserEnrichmentObject]:
         """
         Enrich user metadata with additional information.
         :param
-            user_attributes: dict[str, Any]: LDAP user attributes.
+            user_attributes: LDAPUserAttributes: LDAP user attributes.
         :return:
             list[UserEnrichmentObject]: List of user enrichment objects.
         """
+        pwd_last_set = user_attributes.pwdLastSet
+
         data = UserDataObject(
             is_enabled=self.compute_enabling_condition(user_attributes),
-            last_logon=self.convert_last_logon_to_timestamp(user_attributes.get("lastLogon")),
-            bad_password_count=user_attributes.get("badPwdCount"),
-            number_of_logons=user_attributes.get("logonCount"),
+            last_logon=self.convert_last_logon_to_timestamp(user_attributes.lastLogon),
+            bad_password_count=user_attributes.badPwdCount,
+            number_of_logons=user_attributes.logonCount,
         )
         user_object = UserEnrichmentObject(name="login", value="infos", data=data)
         return [user_object]
 
-    def compute_user_type(self, user_attributes: dict[str, Any]) -> tuple[UserTypeStr, UserTypeId]:
+    @staticmethod
+    def _upn_local_part_ends_with_dollar(value: str) -> bool:
+        """Return True if the local part (before '@') of an AD UPN-like string ends with '$'."""
+        if "@" in value:
+            return value.split("@", 1)[0].endswith("$")
+        return False
+
+    @staticmethod
+    def is_machine_account(user_attributes: LDAPUserAttributes) -> bool:
+        """Detect machine/computer accounts in AD."""
+        if user_attributes.sAMAccountName and user_attributes.sAMAccountName.endswith("$"):
+            return True
+        upn = user_attributes.userPrincipalName
+        if upn and MicrosoftADUserAssetConnector._upn_local_part_ends_with_dollar(upn):
+            return True
+        return False
+
+    def compute_user_type(self, user_attributes: LDAPUserAttributes) -> tuple[UserTypeStr, UserTypeId]:
         """
         Compute user type based on LDAP user attributes.
         :param
-            user_attributes: dict[str, Any]: LDAP user attributes.
+            user_attributes: LDAPUserAttributes: LDAP user attributes.
         :return:
             tuple[UserTypeStr, UserTypeId]: User type string and ID.
         """
-        group_memberships = user_attributes.get("member_of", [])
+        if self.is_machine_account(user_attributes):
+            return UserTypeStr.SYSTEM, UserTypeId.SYSTEM
+
+        group_memberships = user_attributes.member_of or []
         for group_dn in group_memberships:
             if "admin" in group_dn.lower():
                 return UserTypeStr.ADMIN, UserTypeId.ADMIN
         return UserTypeStr.USER, UserTypeId.USER
 
-    def get_user_groups(self, user_attributes: dict[str, Any]) -> list[Group]:
+    def get_user_groups(self, user_attributes: LDAPUserAttributes) -> list[Group]:
         """
         Extract user groups from LDAP user attributes.
         :param
-            user_attributes: dict[str, Any]: LDAP user attributes.
+            user_attributes: LDAPUserAttributes: LDAP user attributes.
         :return:
             list[Group]: List of user groups.
         """
-        group_memberships = user_attributes.get("member_of", [])
+        group_memberships = user_attributes.member_of or []
         user_groups: list[Group] = []
         for group_dn in group_memberships:
             group_object = Group(
@@ -157,11 +188,21 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             user_groups.append(group_object)
         return user_groups
 
-    def user_ocsf_object(self, user_attributes: dict[str, Any]) -> UserOCSF:
+    @staticmethod
+    def resolve_email_addr(mail: str | None) -> str | None:
+        """
+        Return the mail value only if it is a real email address.
+        AD UPN-style values whose local part ends with '$'
+        """
+        if mail and "@" in mail and not MicrosoftADUserAssetConnector._upn_local_part_ends_with_dollar(mail):
+            return mail
+        return None
+
+    def user_ocsf_object(self, user_attributes: LDAPUserAttributes) -> UserOCSF:
         """
         Build OCSF User object from LDAP user attributes.
         :param
-            user_attributes: dict[str, Any]: LDAP user attributes.
+            user_attributes: LDAPUserAttributes: LDAP user attributes.
         :return:
             UserOCSF: OCSF User object.
         """
@@ -170,8 +211,8 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         user_type, user_type_id = self.compute_user_type(user_attributes)
 
         # Build user name
-        first_name = user_attributes.get("givenName")
-        last_name = user_attributes.get("sn")
+        first_name = user_attributes.givenName
+        last_name = user_attributes.sn
 
         if first_name and last_name:
             user_name = f"{first_name} {last_name}".strip()
@@ -183,28 +224,30 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             user_name = "Unknown"
 
         # Parse alternative UID
-        if uid_alt := user_attributes.get("objectGUID"):
+        if uid_alt := user_attributes.objectGUID:
             uid_alt = uid_alt.strip("{}")
         else:
             uid_alt = None
 
         # Build account object
         account = Account(
-            name=user_attributes.get("userPrincipalName", "Unknown"),
+            name=user_attributes.userPrincipalName or "Unknown",
             type_id=AccountTypeId.LDAP_ACCOUNT,
             type=AccountTypeStr.LDAP_ACCOUNT,
-            uid=user_attributes.get("objectSid", "Unknown"),
+            uid=user_attributes.objectSid or "Unknown",
         )
+
+        email_addr = self.resolve_email_addr(user_attributes.mail)
 
         return UserOCSF(
             name=user_name,
-            uid=user_attributes.get("objectSid", "Unknown"),
+            uid=user_attributes.objectSid or "Unknown",
             account=account,
             groups=self.get_user_groups(user_attributes),
-            full_name=user_attributes.get("displayName", "Unknown"),
-            email_addr=user_attributes.get("mail", "Unknown"),
-            display_name=user_attributes.get("displayName", "Unknown"),
-            domain=user_attributes.get("distinguishedName", "Unknown"),
+            full_name=user_attributes.displayName or "Unknown",
+            email_addr=email_addr,
+            display_name=user_attributes.displayName or "Unknown",
+            domain=user_attributes.distinguishedName or "Unknown",
             type_id=user_type_id,
             type=user_type,
             uid_alt=uid_alt,
@@ -218,15 +261,15 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         :return:
             UserOCSFModel: Mapped OCSF User model.
         """
+        raw_attributes = user.get("attributes", {})
 
-        user_attributes_data = user.get("attributes", {})
-
-        # Check if user_attributes_data is not empty
-        if not user_attributes_data:
+        # Check if raw_attributes is not empty
+        if not raw_attributes:
             self.log("No user attributes found for user", level="error")
             raise Exception("No user attributes found for user")
 
-        user_created_at = user_attributes_data.get("whenCreated")
+        user_attributes = LDAPUserAttributes(**raw_attributes)
+
         user_ocsf_model = UserOCSFModel(
             activity_id=self.OCSF_ACTIVITY_ID,
             activity_name=self.OCSF_ACTIVITY_NAME,
@@ -237,22 +280,17 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             type_uid=self.OCSF_TYPE_UID,
             severity=self.OCSF_SEVERITY,
             severity_id=self.OCSF_SEVERITY_ID,
-            time=int(user_created_at.timestamp()) if user_created_at else 0,
+            time=int(user_attributes.whenCreated.timestamp()) if user_attributes.whenCreated else 0,
             metadata=self.user_metadata_object(),
-            user=self.user_ocsf_object(user_attributes_data),
-            enrichments=self.enrich_metadata(user_attributes_data),
+            user=self.user_ocsf_object(user_attributes),
+            enrichments=self.enrich_metadata(user_attributes),
             type_name=self.OCSF_TYPE_NAME,
         )
 
         return user_ocsf_model
 
-    def get_users_generator(self) -> Generator[dict[str, Any], None, None]:
-
-        self.log("Starting LDAP paged search for users...", level="info")
-
-        # Create paged search generator
-        # pagination is handled internally by ldap3
-        paged_search = self.ldap_client.extend.standard.paged_search(
+    def _run_paged_search(self) -> Generator[dict[str, Any], None, None]:
+        return self.ldap_client.extend.standard.paged_search(
             search_base=self.configuration.basedn,
             search_filter=self.user_ldap_query,
             attributes=self.QUERY_ATTRIBUTES,
@@ -260,23 +298,64 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             generator=True,
         )
 
-        for entry in paged_search:
+    def _entries(self) -> Generator[dict[str, Any], None, None]:
+
+        seen_dn: set[str] = set()
+
+        for attempt in range(2):
+            try:
+                for entry in self._run_paged_search():
+                    dn = entry.get("dn")
+                    if dn is not None:
+                        if dn in seen_dn:
+                            continue
+                        seen_dn.add(dn)
+                    yield entry
+                return
+            except LDAPException as exc:
+                if attempt == 1:
+                    raise
+                self.log(f"LDAP error, reconnecting... ({exc})", level="warning")
+                self._reset_ldap_connection()
+
+    def get_users_generator(self) -> Generator[dict[str, Any], None, None]:
+
+        self.log("Starting LDAP paged search for users...", level="info")
+
+        checkpoint_time = self.most_recent_datetime
+        already_seen_sids = self.seen_sids_at_checkpoint
+
+        for entry in self._entries():
             user_attributes = entry.get("attributes", {})
             if not user_attributes:
                 self.log("No user attributes found for user", level="error")
                 raise Exception("No user attributes found for user")
 
+            user_created_at = user_attributes.get("whenCreated")
+            if user_created_at:
+                user_created_str = user_created_at.strftime("%Y%m%d%H%M%S.0Z")
+                if user_created_str == checkpoint_time:
+                    sid = user_attributes.get("objectSid")
+                    if sid and sid in already_seen_sids:
+                        self.log(
+                            f"Skipping already-seen user (SID={sid}) at boundary second {checkpoint_time}",
+                            level="debug",
+                        )
+                        continue
+
             self.log(f"User with DN {entry.get('dn')} retrieved.", level="debug")
             yield entry
 
-            user_created_at = user_attributes.get("whenCreated")
             self.log(f"Start updating checkpoint with the new date {user_created_at}", level="debug")
 
-            # Update latest time for checkpointing
             if user_created_at:
                 user_created_str = user_created_at.strftime("%Y%m%d%H%M%S.0Z")
+                sid = user_attributes.get("objectSid")
                 if not self._latest_time or user_created_str > self._latest_time:
                     self._latest_time = user_created_str
+                    self._seen_sids = {sid} if sid else set()
+                elif user_created_str == self._latest_time and sid:
+                    self._seen_sids.add(sid)
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
         """
