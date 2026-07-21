@@ -2,10 +2,12 @@ from datetime import datetime
 from unittest.mock import MagicMock, Mock
 
 import pytest
+from ldap3.core.exceptions import LDAPException, LDAPSessionTerminatedByServerError
 from ldap3.core.timezone import OffsetTzInfo
 from sekoia_automation.asset_connector.models.ocsf.user import AccountTypeId, UserOCSFModel, UserTypeId, UserTypeStr
 
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
+from microsoft_ad.models.common_models import LDAPUserAttributes
 
 
 @pytest.fixture
@@ -23,6 +25,7 @@ def connector(tmp_path, mock_module):
     connector.log = Mock()
     connector.error = Mock()
     connector._latest_time = None
+    connector._seen_sids = set()
     connector.ldap_client = Mock()
     connector.context = MagicMock()
     return connector
@@ -49,7 +52,9 @@ def test_update_checkpoint_with_latest_time(connector):
 
     connector.update_checkpoint()
 
-    connector.context.__enter__().__setitem__.assert_called_once_with("most_recent_datetime", "20240101120000.0Z")
+    cache = connector.context.__enter__()
+    cache.__setitem__.assert_any_call("most_recent_datetime", "20240101120000.0Z")
+    cache.__setitem__.assert_any_call("seen_sids_at_checkpoint", [])
 
 
 def test_update_checkpoint_without_latest_time(connector):
@@ -69,7 +74,7 @@ def test_user_metadata_object(connector):
 
 
 def test_compute_enabling_condition_enabled(connector):
-    user_attr = {"userAccountControl": 512}
+    user_attr = LDAPUserAttributes(userAccountControl=512)
 
     result = connector.compute_enabling_condition(user_attr)
 
@@ -77,7 +82,7 @@ def test_compute_enabling_condition_enabled(connector):
 
 
 def test_compute_enabling_condition_disabled(connector):
-    user_attr = {"userAccountControl": 514}
+    user_attr = LDAPUserAttributes(userAccountControl=514)
 
     result = connector.compute_enabling_condition(user_attr)
 
@@ -97,7 +102,7 @@ def test_convert_last_logon_to_timestamp(connector):
 
 def test_enrich_metadata(connector):
     last_logon = datetime(2024, 1, 1, 12, 0, 0, tzinfo=OffsetTzInfo(offset=0, name="UTC"))
-    user_attr = {"userAccountControl": 512, "lastLogon": last_logon, "badPwdCount": 0, "logonCount": 10}
+    user_attr = LDAPUserAttributes(userAccountControl=512, lastLogon=last_logon, badPwdCount=0, logonCount=10)
 
     enrichments = connector.enrich_metadata(user_attr)
 
@@ -109,7 +114,7 @@ def test_enrich_metadata(connector):
 
 
 def test_compute_user_type_admin(connector):
-    user_attr = {"member_of": ["CN=Domain Admins,DC=example,DC=com"]}
+    user_attr = LDAPUserAttributes(member_of=["CN=Domain Admins,DC=example,DC=com"])
 
     user_type, user_type_id = connector.compute_user_type(user_attr)
 
@@ -118,7 +123,7 @@ def test_compute_user_type_admin(connector):
 
 
 def test_compute_user_type_regular_user(connector):
-    user_attr = {"member_of": ["CN=Users,DC=example,DC=com"]}
+    user_attr = LDAPUserAttributes(member_of=["CN=Users,DC=example,DC=com"])
 
     user_type, user_type_id = connector.compute_user_type(user_attr)
 
@@ -126,8 +131,42 @@ def test_compute_user_type_regular_user(connector):
     assert user_type_id == UserTypeId.USER
 
 
+def test_compute_user_type_machine_account_via_sam(connector):
+    user_attr = LDAPUserAttributes(sAMAccountName="COMPUTERNAME$", member_of=[])
+
+    user_type, user_type_id = connector.compute_user_type(user_attr)
+
+    assert user_type == UserTypeStr.SYSTEM
+    assert user_type_id == UserTypeId.SYSTEM
+
+
+def test_compute_user_type_machine_account_via_upn(connector):
+    user_attr = LDAPUserAttributes(sAMAccountName=None, userPrincipalName="compte$@test.ad.recouv", member_of=[])
+
+    user_type, user_type_id = connector.compute_user_type(user_attr)
+
+    assert user_type == UserTypeStr.SYSTEM
+    assert user_type_id == UserTypeId.SYSTEM
+
+
+def test_resolve_email_addr_valid(connector):
+    assert connector.resolve_email_addr("user@example.com") == "user@example.com"
+
+
+def test_resolve_email_addr_machine_upn(connector):
+    assert connector.resolve_email_addr("compte$@urdom.ad.recouv") is None
+
+
+def test_resolve_email_addr_none(connector):
+    assert connector.resolve_email_addr(None) is None
+
+
+def test_resolve_email_addr_no_at_sign(connector):
+    assert connector.resolve_email_addr("notanemail") is None
+
+
 def test_get_user_groups(connector):
-    user_attr = {"member_of": ["CN=Group1,DC=example,DC=com", "CN=Group2,DC=example,DC=com"]}
+    user_attr = LDAPUserAttributes(member_of=["CN=Group1,DC=example,DC=com", "CN=Group2,DC=example,DC=com"])
 
     groups = connector.get_user_groups(user_attr)
 
@@ -137,17 +176,17 @@ def test_get_user_groups(connector):
 
 
 def test_user_ocsf_object(connector):
-    user_attr = {
-        "givenName": "John",
-        "sn": "Doe",
-        "userPrincipalName": "john.doe@example.com",
-        "objectSid": "S-1-5-21-123456",
-        "objectGUID": "guid-123",
-        "displayName": "John Doe",
-        "mail": "john.doe@example.com",
-        "distinguishedName": "CN=John Doe,DC=example,DC=com",
-        "member_of": ["CN=Users,DC=example,DC=com"],
-    }
+    user_attr = LDAPUserAttributes(
+        givenName="John",
+        sn="Doe",
+        userPrincipalName="john.doe@example.com",
+        objectSid="S-1-5-21-123456",
+        objectGUID="guid-123",
+        displayName="John Doe",
+        mail="john.doe@example.com",
+        distinguishedName="CN=John Doe,DC=example,DC=com",
+        member_of=["CN=Users,DC=example,DC=com"],
+    )
 
     user_ocsf = connector.user_ocsf_object(user_attr)
 
@@ -156,6 +195,22 @@ def test_user_ocsf_object(connector):
     assert user_ocsf.account.name == "john.doe@example.com"
     assert user_ocsf.account.type_id == AccountTypeId.LDAP_ACCOUNT
     assert user_ocsf.email_addr == "john.doe@example.com"
+
+
+def test_user_ocsf_object_machine_account_email_not_set(connector):
+    # AD UPN-style mail values (local part ends with '$') must not be stored as email_addr
+    user_attr = LDAPUserAttributes(
+        sAMAccountName="compte$",
+        userPrincipalName="compte$@urdom.ad.recouv",
+        mail="compte$@urdom.ad.recouv",
+        objectSid="S-1-5-21-999",
+        distinguishedName="CN=compte,DC=urdom,DC=ad,DC=recouv",
+    )
+
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.type_id == UserTypeId.SYSTEM
+    assert user_ocsf.email_addr is None
 
 
 def test_map_user_fields(connector):
@@ -231,3 +286,67 @@ def test_get_assets_handles_exception(connector):
     assets = list(connector.get_assets())
 
     assert len(assets) == 0
+
+
+@pytest.fixture
+def mock_entry():
+    return {"dn": "CN=User1,DC=example,DC=com", "attributes": {"userPrincipalName": "user1@example.com"}}
+
+
+def test_entries_reconnects_on_ldap_exception_and_succeeds(connector, mock_entry):
+    """On LDAPException at attempt 0, should reconnect and yield entries on retry."""
+    connector._reset_ldap_connection = Mock()
+    connector.context.__enter__().get.return_value = None
+
+    call_count = 0
+
+    def paged_search_side_effect(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise LDAPSessionTerminatedByServerError("session terminated by server")
+        return iter([mock_entry])
+
+    connector.ldap_client.extend.standard.paged_search.side_effect = paged_search_side_effect
+
+    entries = list(connector._entries())
+
+    assert entries == [mock_entry]
+    connector._reset_ldap_connection.assert_called_once()
+    connector.log.assert_any_call("LDAP error, reconnecting... (session terminated by server)", level="warning")
+
+
+def test_entries_raises_on_second_ldap_exception(connector):
+    """If both attempts fail with LDAPException, the exception should propagate."""
+    connector._reset_ldap_connection = Mock()
+    connector.context.__enter__().get.return_value = None
+
+    connector.ldap_client.extend.standard.paged_search.side_effect = LDAPException("persistent error")
+
+    with pytest.raises(LDAPException, match="persistent error"):
+        list(connector._entries())
+
+    assert connector._reset_ldap_connection.call_count == 1
+
+
+def test_entries_succeeds_without_error(connector, mock_entry):
+    """Normal path: no exception, all entries yielded."""
+    connector.context.__enter__().get.return_value = None
+
+    connector.ldap_client.extend.standard.paged_search.return_value = iter([mock_entry])
+
+    entries = list(connector._entries())
+
+    assert entries == [mock_entry]
+
+
+def test_entries_deduplicates_by_dn(connector):
+    """Duplicate DNs across pages should only be yielded once."""
+    connector.context.__enter__().get.return_value = None
+
+    entry = {"dn": "CN=User1,DC=example,DC=com", "attributes": {}}
+    connector.ldap_client.extend.standard.paged_search.return_value = iter([entry, entry])
+
+    entries = list(connector._entries())
+
+    assert len(entries) == 1
