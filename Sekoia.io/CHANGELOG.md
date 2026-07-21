@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-20 - 2.74.3
+
+### Fixed
+
+- `Update Alert Status` now supports alert custom statuses by UUID and by name.
+
+## 2026-07-10 - 2.74.2
+
+### Changed
+
+- Upgraded `sekoia-automation-sdk` to `1.23.1` and migrated `GetAlert`, `CreateDataset`, `DeleteDataset`, `ExecuteAQuery`, and `ListQueries` action argument models from the `pydantic.v1` compatibility shim to native Pydantic v2, avoiding a v1/v2 model mixing error triggered by the newer SDK
+- `GetAsset` action now validates its `uuid` argument as a native `UUID` via Pydantic instead of a hand-written blank-check validator, and no longer issues an HTTP request when called with an empty, malformed, or missing `asset_uuid`
+- Migrate `AssetsMerge` and `SynchronizeAssetsWithAD` argument models from the `pydantic.v1` compatibility shim to native Pydantic v2, required to avoid a "Mixing V1 and V2 models" runtime error now that the SDK is bumped to `1.23.1`
+
+### Fixed
+
+- `GetAlert` action no longer issues an HTTP request when called with an empty or missing `uuid`; it validates the argument via a Pydantic model, now using a proper `uuid.UUID` type instead of a hand-written blank-check validator, and fails with a clear error instead
+
+## 2026-07-07 - 2.74.1
+
+### Fixed
+
+- `GetAsset` action no longer issues an HTTP request when called with an empty `asset_uuid`; it now returns `None` with an error instead
+
+## 2026-06-23 - 2.74.0
+
+### Added
+
+- Add Manual trigger for cases
+
 ## 2026-06-23 - 2.73.4
 
 ### Changed
