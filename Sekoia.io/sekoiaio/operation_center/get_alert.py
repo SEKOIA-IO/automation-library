@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from sekoia_automation.action import GenericAPIAction
 
@@ -9,9 +9,29 @@ from sekoiaio.operation_center.constants import base_url
 
 
 class GetAlertArguments(BaseModel):
-    uuid: UUID = Field(..., description="UUID of the alert to retrieve")
+    uuid: str = Field(..., description="UUID of the alert to retrieve")
     stix: Optional[bool] = None
     cases: Optional[bool] = None
+
+    @model_validator(mode="after")
+    def validate_uuid(self) -> "GetAlertArguments":
+
+        # emptyness check
+        if not self.uuid:
+            raise ValueError("UUID must not be empty")
+
+        # short id validation
+        if self.uuid.startswith("AL") and len(self.uuid) == 12:
+            # If the UUID starts with "AL", we assume it's a short ID
+            return self
+
+        # UUID validation
+        try:
+            UUID(self.uuid)
+        except ValueError:
+            raise ValueError(f"Invalid UUID: {self.uuid}")
+
+        return self
 
 
 class GetAlert(GenericAPIAction):
