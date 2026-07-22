@@ -38,9 +38,7 @@ def _stop_after_first_iteration(connector):
 
 
 def test_run_pushes_parsed_csv_rows(connector):
-    csv_body = (
-        "host;cve;severity\r\n" "host-a;CVE-2024-0001;high\r\n" 'host-b;"CVE-2024-0002\nCVE-2024-0003";medium\r\n'
-    )
+    csv_body = 'host;cve;severity\r\nhost-a;CVE-2024-0001;high\r\nhost-b;"CVE-2024-0002\nCVE-2024-0003";medium\r\n'
 
     with requests_mock.Mocker() as mock_requests, _stop_after_first_iteration(connector):
         mock_requests.get(CSV_URL, status_code=200, text=csv_body)

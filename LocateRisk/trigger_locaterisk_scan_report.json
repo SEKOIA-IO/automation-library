@@ -25,5 +25,11 @@
     "required": ["intake_key"],
     "secrets": ["intake_key"],
     "title": "LocateRisk Scan Report configuration"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {},
+    "title": "The events"
   }
 }

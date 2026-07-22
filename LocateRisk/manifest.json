@@ -27,6 +27,6 @@
   "name": "LocateRisk",
   "slug": "locaterisk",
   "categories": ["Threat Intelligence"],
-  "uuid": "4d493ab9-ab75-4a27-90c5-b7157e6d085b",
-  "version": "0.4.0"
+  "uuid": "5173f31f-13b7-4418-bf3b-3b18b196a8e2",
+  "version": "0.5.0"
 }
