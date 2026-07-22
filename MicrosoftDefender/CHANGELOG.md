@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-07-20 - 1.3.1
+
+### Fixed
+
+- Prevent Graph API connector cursor advancement when forwarding fails, avoiding potential event loss on retries.
+- Preserve original traceback by re-raising connector exceptions with `raise`.
+- Add incidents trigger `results` schema and regression coverage for failed push cursor behavior.
+
+## 2026-06-10 - 1.3.0
+
+### Added
+
+- New connector `connector_defender_incidents` fetching incidents from Microsoft Defender XDR through the Microsoft Graph Security API (`/security/incidents`). Reuses the same Graph application scope as the alerts connector; requires the `SecurityIncident.Read.All` permission.
+
 ## 2026-06-02 - 1.2.2
 
 ### Fixed
