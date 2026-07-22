@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-20
+
+### Added
+
+- Vulnerability asset connector, correlates them with managed devices from, and maps them to the OCSF Vulnerability Finding model.
+
+### Changed
+
+- Account validator updates to reflect vulnerability setup
+
 ## [1.0.0] - 2026-07-17
 
 ### Added

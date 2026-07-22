@@ -13,14 +13,11 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceTypeId,
     DeviceTypeStr,
     NetworkInterface,
-    NetworkInterfaceTypeId,
-    NetworkInterfaceTypeStr,
     OperatingSystem,
-    OSTypeId,
-    OSTypeStr,
 )
 from sekoia_automation.storage import PersistentJSON
 
+from holm_security.asset_connector import mappers
 from holm_security.asset_connector.models import HolmDevice, HolmDevicePage
 from holm_security.client import ApiClient
 
@@ -47,16 +44,6 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
     CLASS_UID: int = 5001
     TYPE_NAME: str = "Device Inventory Info: Collect"
     TYPE_UID: int = 500102
-
-    # Holm os_family -> OCSF OS type mapping
-    OS_FAMILY_MAP: dict[str, tuple[OSTypeStr, OSTypeId]] = {
-        "windows": (OSTypeStr.WINDOWS, OSTypeId.WINDOWS),
-        "linux": (OSTypeStr.LINUX, OSTypeId.LINUX),
-        "macos": (OSTypeStr.MACOS, OSTypeId.MACOS),
-        "mac": (OSTypeStr.MACOS, OSTypeId.MACOS),
-        "android": (OSTypeStr.ANDROID, OSTypeId.ANDROID),
-        "ios": (OSTypeStr.IOS, OSTypeId.IOS),
-    }
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -85,64 +72,20 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
     @staticmethod
     def _to_epoch(value: str | None) -> float | None:
         """Convert an ISO 8601 timestamp to a Unix epoch float."""
-        if not value:
-            return None
-        return isoparse(value).timestamp()
+        return mappers.to_epoch(value)
 
     @staticmethod
     def build_device_type(os_is_server: bool | None) -> tuple[DeviceTypeStr, DeviceTypeId]:
         """Map ``os_is_server`` to an OCSF device type."""
-        if os_is_server:
-            return DeviceTypeStr.SERVER, DeviceTypeId.SERVER
-
-        if os_is_server is False:
-            return DeviceTypeStr.DESKTOP, DeviceTypeId.DESKTOP
-
-        return DeviceTypeStr.UNKNOWN, DeviceTypeId.UNKNOWN
+        return mappers.map_device_type(os_is_server)
 
     def build_operating_system(self, device: HolmDevice) -> OperatingSystem | None:
         """Map the Holm OS fields to an OCSF ``OperatingSystem`` object."""
-        if device.os_name is None and device.os_family is None:
-            return None
-
-        os_type: OSTypeStr = OSTypeStr.UNKNOWN
-        os_type_id: OSTypeId = OSTypeId.UNKNOWN
-        if device.os_family:
-            os_type, os_type_id = self.OS_FAMILY_MAP.get(
-                device.os_family.strip().lower(), (OSTypeStr.OTHER, OSTypeId.OTHER)
-            )
-
-        return OperatingSystem(name=device.os_name, type=os_type, type_id=os_type_id)
+        return mappers.build_operating_system(device.os_name, device.os_family)
 
     def build_network_interfaces(self, device: HolmDevice) -> list[NetworkInterface] | None:
         """Build the primary IPv4 and secondary IPv6 network interfaces."""
-        network = device.network
-        if network is None:
-            return None
-
-        interfaces: list[NetworkInterface] = []
-
-        if network.ip_address:
-            interfaces.append(
-                NetworkInterface(
-                    ip=network.ip_address,
-                    mac=network.mac_address,
-                    hostname=device.hostname,
-                    type=NetworkInterfaceTypeStr.WIRED,
-                    type_id=NetworkInterfaceTypeId.WIRED,
-                )
-            )
-
-        if network.ip_address_v6:
-            interfaces.append(
-                NetworkInterface(
-                    ip=network.ip_address_v6,
-                    type=NetworkInterfaceTypeStr.WIRED,
-                    type_id=NetworkInterfaceTypeId.WIRED,
-                )
-            )
-
-        return interfaces or None
+        return mappers.build_network_interfaces(device.network, device.hostname)
 
     def build_device(self, device: HolmDevice) -> Device:
         """Map a Holm device record to an OCSF ``Device`` object."""
