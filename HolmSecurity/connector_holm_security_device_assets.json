@@ -1,0 +1,37 @@
+{
+  "name": "Holm Security Devices",
+  "description": "Fetch agent-managed devices enrolled in Holm Security as OCSF device assets",
+  "uuid": "4df342f5-9fb0-4d45-97c0-bdae48e2e7c2",
+  "docker_parameters": "holm_security_device_asset_connector",
+  "type": "asset",
+  "capability": "host_detection",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "sekoia_base_url": {
+        "description": "Sekoia base URL",
+        "type": "string"
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "minimum": 1,
+        "default": 60
+      },
+      "sekoia_api_key": {
+        "description": "API key to use from sekoia.io",
+        "type": "string"
+      },
+      "batch_size": {
+        "type": "integer",
+        "description": "Number of assets to process in one batch",
+        "minimum": 1,
+        "default": 100
+      }
+    },
+    "required": ["sekoia_api_key"],
+    "secrets": ["sekoia_api_key"],
+    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"]
+  }
+}
