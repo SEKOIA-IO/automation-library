@@ -56,6 +56,7 @@ def test_securityalertstrigger_handle_alert_invalid_message(alert_trigger):
     invalid_messages = [
         {"event_version": "1", "event_type": "alert"},
         {"event_version": "1", "event_type": "alert", "attributes": {}},
+        {"event_version": "1", "event_type": "alert", "attributes": None},
         {
             "event_version": "1",
             "event_type": "alert",
@@ -198,6 +199,83 @@ def test_single_event_triggers_updated(
         trigger.send_event.assert_called_once()
 
 
+@pytest.mark.parametrize(
+    "sample",
+    [
+        {
+            "uuid": "af0a370f-2e44-433c-99b2-2d0e4b348d0c",
+            "source": "10.227.10.91",
+            "target": "192.0.0.241",
+            "short_id": "ALakbd8NXp9W",
+            "status": None,
+            "rule": {"name": "Suspicious PowerShell Activity", "uuid": "f3e1c8a0-4b2d-4e5b-9f3c-1a2b3c4d5e6f"},
+            "urgency": {"current_value": 70},
+            "entity": {"uuid": "e1f2g3h4-5i6j-7k8l-9m0n-o1p2q3r4s5t6", "name": "Test Entity"},
+            "alert_type": {"value": "malware"},
+        },
+        {
+            "uuid": "af0a370f-2e44-433c-99b2-2d0e4b348d0c",
+            "source": "10.227.10.91",
+            "target": "192.0.0.241",
+            "short_id": "ALakbd8NXp9W",
+            "status": {"uuid": "1f2f88d5-ff5b-48bf-bbbc-00c2fff82d9f", "name": "Ongoing"},
+            "rule": None,
+            "urgency": {"current_value": 70},
+            "entity": {"uuid": "e1f2g3h4-5i6j-7k8l-9m0n-o1p2q3r4s5t6", "name": "Test Entity"},
+            "alert_type": {"value": "malware"},
+        },
+        {
+            "uuid": "af0a370f-2e44-433c-99b2-2d0e4b348d0c",
+            "source": "10.227.10.91",
+            "target": "192.0.0.241",
+            "short_id": "ALakbd8NXp9W",
+            "status": {"uuid": "1f2f88d5-ff5b-48bf-bbbc-00c2fff82d9f", "name": "Ongoing"},
+            "rule": {"name": "Suspicious PowerShell Activity", "uuid": "f3e1c8a0-4b2d-4e5b-9f3c-1a2b3c4d5e6f"},
+            "verdict": None,
+            "urgency": {"current_value": 70},
+            "entity": {"uuid": "e1f2g3h4-5i6j-7k8l-9m0n-o1p2q3r4s5t6", "name": "Test Entity"},
+            "alert_type": {"value": "malware"},
+        },
+        {
+            "uuid": "af0a370f-2e44-433c-99b2-2d0e4b348d0c",
+            "source": "10.227.10.91",
+            "target": "192.0.0.241",
+            "short_id": "ALakbd8NXp9W",
+            "status": {"uuid": "1f2f88d5-ff5b-48bf-bbbc-00c2fff82d9f", "name": "Ongoing"},
+            "rule": {"name": "Suspicious PowerShell Activity", "uuid": "f3e1c8a0-4b2d-4e5b-9f3c-1a2b3c4d5e6f"},
+            "custom_status": None,
+            "urgency": {"current_value": 70},
+            "entity": {"uuid": "e1f2g3h4-5i6j-7k8l-9m0n-o1p2q3r4s5t6", "name": "Test Entity"},
+            "alert_type": {"value": "malware"},
+        },
+    ],
+)
+def test_trigger_updated_alert_with_null_parameters(
+    module_configuration, symphony_storage, samplenotif_alert_updated, sample_notifications, sample
+):
+    trigger = AlertUpdatedTrigger()
+    trigger.configuration = {}
+    trigger._data_path = symphony_storage
+    trigger.module.configuration = module_configuration
+    trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+    trigger.send_event = MagicMock()
+
+    alert_uuid = sample.get("uuid")
+    with requests_mock.Mocker() as mock:
+        mock.get(f"http://fake.url/api/v1/sic/alerts/{alert_uuid}", json=sample)
+
+        # Calling the trigger with an alert updated notification should create an event
+        trigger.handle_event(samplenotif_alert_updated)
+        trigger.send_event.assert_called_once()
+
+        # All other notification types should not
+        for notification in sample_notifications:
+            if not (notification["action"] == "updated" and notification["type"] == "alert"):
+                trigger.handle_event(notification)
+
+        trigger.send_event.assert_called_once()
+
+
 def test_single_event_triggers_status_changed(
     alert_created_trigger,
     sample_sicalertapi_mock,
@@ -246,6 +324,78 @@ def test_single_event_triggers_comments_added(
 
     with requests_mock.Mocker() as mock:
         mock.get(f"http://fake.url/api/v1/sic/alerts/{alert_uuid}", json=sample_sicalertapi)
+
+        mock.get(
+            f"http://fake.url/api/v1/sic/alerts/{alert_uuid}/comments/{comment_uuid}",
+            json={
+                "uuid": "095be615-a8ad-4c33-8e9c-c7612fbf6c9f",
+                "content": "string",
+                "author": "string",
+                "date": 0,
+                "created_by": "string",
+                "created_by_type": "string",
+                "unseen": True,
+            },
+        )
+        # Calling the trigger with an alert commentadded notification should create an event
+        trigger.handle_event(samplenotif_alert_comment_created)
+        trigger.send_event.assert_called_once()
+
+        # All other notification types should not
+        for notification in sample_notifications:
+            if notification != samplenotif_alert_comment_created:
+                trigger.handle_event(notification)
+
+        trigger.send_event.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "sample",
+    [
+        {
+            "uuid": "af0a370f-2e44-433c-99b2-2d0e4b348d0c",
+            "source": "10.227.10.91",
+            "target": "192.0.0.241",
+            "short_id": "ALakbd8NXp9W",
+            "status": None,
+            "rule": {"name": "Suspicious PowerShell Activity", "uuid": "f3e1c8a0-4b2d-4e5b-9f3c-1a2b3c4d5e6f"},
+            "urgency": {"current_value": 70},
+            "entity": {"uuid": "e1f2g3h4-5i6j-7k8l-9m0n-o1p2q3r4s5t6", "name": "Test Entity"},
+            "alert_type": {"value": "malware"},
+        },
+        {
+            "uuid": "af0a370f-2e44-433c-99b2-2d0e4b348d0c",
+            "source": "10.227.10.91",
+            "target": "192.0.0.241",
+            "short_id": "ALakbd8NXp9W",
+            "status": {"uuid": "1f2f88d5-ff5b-48bf-bbbc-00c2fff82d9f", "name": "Ongoing"},
+            "rule": None,
+            "urgency": {"current_value": 70},
+            "entity": {"uuid": "e1f2g3h4-5i6j-7k8l-9m0n-o1p2q3r4s5t6", "name": "Test Entity"},
+            "alert_type": {"value": "malware"},
+        },
+    ],
+)
+def test_trigger_comment_created_with_null_parameters(
+    sample_sicalertapi,
+    module_configuration,
+    symphony_storage,
+    samplenotif_alert_comment_created,
+    sample_notifications,
+    sample,
+):
+    trigger = AlertCommentCreatedTrigger()
+    trigger.configuration = {}
+    trigger._data_path = symphony_storage
+    trigger.module.configuration = module_configuration
+    trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+    trigger.send_event = MagicMock()
+
+    alert_uuid = samplenotif_alert_comment_created.get("attributes").get("alert_uuid")
+    comment_uuid = samplenotif_alert_comment_created.get("attributes").get("uuid")
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"http://fake.url/api/v1/sic/alerts/{alert_uuid}", json=sample)
 
         mock.get(
             f"http://fake.url/api/v1/sic/alerts/{alert_uuid}/comments/{comment_uuid}",

@@ -33,7 +33,7 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
         Symphony workflow.
 
         """
-        alert_attrs = message.get("attributes", {})
+        alert_attrs = message.get("attributes") or {}
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
 
@@ -80,26 +80,26 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
             "alert_uuid": alert_uuid,
             "short_id": alert_short_id,
             "status": {
-                "name": alert.get("status", {}).get("name"),
-                "uuid": alert.get("status", {}).get("uuid"),
+                "name": (alert.get("status") or {}).get("name"),
+                "uuid": (alert.get("status") or {}).get("uuid"),
             },
             "custom_status": {
-                "name": alert.get("custom_status", {}).get("label"),
-                "level": alert.get("custom_status", {}).get("level"),
-                "stage": alert.get("custom_status", {}).get("stage"),
+                "name": (alert.get("custom_status") or {}).get("label"),
+                "level": (alert.get("custom_status") or {}).get("level"),
+                "stage": (alert.get("custom_status") or {}).get("stage"),
                 "uuid": alert.get("custom_status_uuid"),
             },
             "verdict": {
-                "name": alert.get("verdict", {}).get("label"),
-                "level": alert.get("verdict", {}).get("level"),
-                "stage": alert.get("verdict", {}).get("stage"),
+                "name": (alert.get("verdict") or {}).get("label"),
+                "level": (alert.get("verdict") or {}).get("level"),
+                "stage": (alert.get("verdict") or {}).get("stage"),
                 "uuid": alert.get("verdict_uuid"),
             },
             "created_at": alert.get("created_at"),
-            "urgency": alert.get("urgency", {}).get("current_value"),
-            "entity": alert.get("entity", {}),
-            "alert_type": alert.get("alert_type", {}),
-            "rule": {"name": alert.get("rule", {}).get("name"), "uuid": alert.get("rule", {}).get("uuid")},
+            "urgency": (alert.get("urgency") or {}).get("current_value"),
+            "entity": (alert.get("entity") or {}),
+            "alert_type": (alert.get("alert_type") or {}),
+            "rule": {"name": (alert.get("rule") or {}).get("name"), "uuid": (alert.get("rule") or {}).get("uuid")},
             "last_seen_at": alert.get("last_seen_at"),
             "first_seen_at": alert.get("first_seen_at"),
         }
@@ -193,7 +193,7 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
         Symphony workflow.
 
         """
-        alert_attrs = message.get("attributes", {})
+        alert_attrs = message.get("attributes") or {}
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
 
@@ -251,14 +251,14 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
             "alert_uuid": alert_uuid,
             "short_id": alert_short_id,
             "status": {
-                "name": alert.get("status", {}).get("name"),
-                "uuid": alert.get("status", {}).get("uuid"),
+                "name": (alert.get("status") or {}).get("name"),
+                "uuid": (alert.get("status") or {}).get("uuid"),
             },
             "created_at": alert.get("created_at"),
-            "urgency": alert.get("urgency", {}).get("current_value"),
-            "entity": alert.get("entity", {}),
-            "alert_type": alert.get("alert_type", {}),
-            "rule": {"name": alert.get("rule", {}).get("name"), "uuid": alert.get("rule", {}).get("uuid")},
+            "urgency": (alert.get("urgency") or {}).get("current_value"),
+            "entity": (alert.get("entity") or {}),
+            "alert_type": (alert.get("alert_type") or {}),
+            "rule": {"name": (alert.get("rule") or {}).get("name"), "uuid": (alert.get("rule") or {}).get("uuid")},
             "last_seen_at": alert.get("last_seen_at"),
             "first_seen_at": alert.get("first_seen_at"),
         }
@@ -605,8 +605,8 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 self.state_manager.update_alert_state(
                     alert_uuid=alert_uuid,
                     alert_short_id=alert_short_id,
-                    rule_uuid=alert.get("rule", {}).get("uuid", ""),
-                    rule_name=alert.get("rule", {}).get("name", ""),
+                    rule_uuid=(alert.get("rule") or {}).get("uuid", ""),
+                    rule_name=(alert.get("rule") or {}).get("name", ""),
                     event_count=current_count,
                 )
             except Exception as exp:
@@ -681,7 +681,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         # and stale locks. The method self-throttles to once per day.
         self._cleanup_old_states()
 
-        alert_attrs = message.get("attributes", {})
+        alert_attrs = message.get("attributes") or {}
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
 
@@ -824,8 +824,8 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         if not config.rule_filter and not config.rule_names_filter:
             return True
 
-        rule_name = alert.get("rule", {}).get("name")
-        rule_uuid = alert.get("rule", {}).get("uuid")
+        rule_name = (alert.get("rule") or {}).get("name")
+        rule_uuid = (alert.get("rule") or {}).get("uuid")
 
         if config.rule_filter:
             return rule_name == config.rule_filter or rule_uuid == config.rule_filter
@@ -946,28 +946,28 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             "alert_uuid": alert.get("uuid"),
             "short_id": alert_short_id,
             "status": {
-                "name": alert.get("status", {}).get("name"),
-                "uuid": alert.get("status", {}).get("uuid"),
+                "name": (alert.get("status") or {}).get("name"),
+                "uuid": (alert.get("status") or {}).get("uuid"),
             },
             "custom_status": {
-                "name": alert.get("custom_status", {}).get("label"),
-                "level": alert.get("custom_status", {}).get("level"),
-                "stage": alert.get("custom_status", {}).get("stage"),
+                "name": (alert.get("custom_status") or {}).get("label"),
+                "level": (alert.get("custom_status") or {}).get("level"),
+                "stage": (alert.get("custom_status") or {}).get("stage"),
                 "uuid": alert.get("custom_status_uuid"),
             },
             "verdict": {
-                "name": alert.get("verdict", {}).get("label"),
-                "level": alert.get("verdict", {}).get("level"),
-                "stage": alert.get("verdict", {}).get("stage"),
+                "name": (alert.get("verdict") or {}).get("label"),
+                "level": (alert.get("verdict") or {}).get("level"),
+                "stage": (alert.get("verdict") or {}).get("stage"),
                 "uuid": alert.get("verdict_uuid"),
             },
             "created_at": alert.get("created_at"),
-            "urgency": alert.get("urgency", {}).get("current_value"),
-            "entity": alert.get("entity", {}),
-            "alert_type": alert.get("alert_type", {}),
+            "urgency": (alert.get("urgency") or {}).get("current_value"),
+            "entity": (alert.get("entity") or {}),
+            "alert_type": (alert.get("alert_type") or {}),
             "rule": {
-                "name": alert.get("rule", {}).get("name"),
-                "uuid": alert.get("rule", {}).get("uuid"),
+                "name": (alert.get("rule") or {}).get("name"),
+                "uuid": (alert.get("rule") or {}).get("uuid"),
             },
             "last_seen_at": alert.get("last_seen_at"),
             "first_seen_at": alert.get("first_seen_at"),
