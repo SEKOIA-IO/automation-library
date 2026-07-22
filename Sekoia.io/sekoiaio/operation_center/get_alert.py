@@ -9,19 +9,19 @@ from sekoiaio.operation_center.constants import base_url
 
 
 class GetAlertArguments(BaseModel):
-    uuid: str = Field(..., description="UUID of the alert to retrieve")
+    uuid: str = Field(..., description="The identifier (UUID or short id) of the alert to retrieve")
     stix: Optional[bool] = None
     cases: Optional[bool] = None
 
     @model_validator(mode="after")
     def validate_uuid(self) -> "GetAlertArguments":
 
-        # emptyness check
-        if not self.uuid:
-            raise ValueError("UUID must not be empty")
+        # emptiness check
+        if self.uuid is None or not self.uuid.strip():
+            raise ValueError("The alert identifier must not be empty")
 
         # short id validation
-        if self.uuid.startswith("AL") and len(self.uuid) == 12:
+        if self.uuid.startswith("AL"):
             # If the UUID starts with "AL", we assume it's a short ID
             return self
 
@@ -29,7 +29,7 @@ class GetAlertArguments(BaseModel):
         try:
             UUID(self.uuid)
         except ValueError:
-            raise ValueError(f"Invalid UUID: {self.uuid}")
+            raise ValueError(f"Invalid alert identifier: {self.uuid}")
 
         return self
 
