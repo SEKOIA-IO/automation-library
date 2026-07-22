@@ -4,6 +4,7 @@ from datetime import timedelta
 from typing import Any, Optional
 
 from cachetools import Cache, LRUCache
+import httpx
 from loguru import logger
 from msgraph.generated.models.directory_audit import DirectoryAudit
 from msgraph.generated.models.sign_in import SignIn
@@ -15,6 +16,10 @@ from graph_api.client import GraphApi
 
 from .base import AzureADModule
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+
+# Catches TimeoutError, asyncio.TimeoutError and httpx timeout subclasses
+# (including PoolTimeout, ConnectTimeout, ReadTimeout, WriteTimeout).
+GRAPH_TIMEOUT_EXCEPTIONS = (TimeoutError, asyncio.TimeoutError, httpx.TimeoutException)
 
 
 class MicrosoftEntraIdGraphApiConnectorConfig(DefaultConnectorConfiguration):
@@ -87,6 +92,13 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
         Temporary redefine the method to avoid known SDK issues.
         """
         super(Connector, self).stop(*args, **kwargs)
+
+    async def _reset_graph_client(self) -> None:
+        if self._client is not None:
+            try:
+                await self._client.close()
+            finally:
+                self._client = None
 
     async def run_directory(self) -> int:
         events: list[DirectoryAudit] = []
@@ -195,8 +207,15 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
                 if result == 0:
                     await asyncio.sleep(self.configuration.frequency)
 
-            except TimeoutError:
-                self.log(message="A timeout was raised by the client", level="warning")
+            except GRAPH_TIMEOUT_EXCEPTIONS as error:
+                self.log(
+                    message=f"A timeout was raised by the client ({type(error).__name__}), resetting Graph client",
+                    level="warning",
+                )
+                try:
+                    await self._reset_graph_client()
+                except Exception as reset_error:
+                    self.log(message=f"Failed to reset Graph client cleanly: {reset_error}", level="warning")
                 await asyncio.sleep(self.configuration.frequency)
 
             except Exception as error:
@@ -205,9 +224,7 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
                 # Reset client if HTTP transport is closed
                 if "HTTP transport has already been closed" in str(error) or "transport" in str(error).lower():
                     self.log(message="Looks like http transport closed, resetting client....", level="warning")
-                    if self._client:
-                        await self._client.close()
-                        self._client = None
+                    await self._reset_graph_client()
 
                 await asyncio.sleep(self.configuration.frequency)
 

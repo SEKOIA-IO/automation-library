@@ -6,7 +6,7 @@ from threading import Event, Thread
 import orjson
 from netskope_api.iterator.const import Const
 from netskope_api.iterator.netskope_iterator import NetskopeIterator
-from pydantic.v1 import Field
+from pydantic import Field
 from requests.exceptions import ConnectionError
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.exceptions import ModuleConfigurationError

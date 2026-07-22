@@ -1,0 +1,32 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Flare.io Configuration",
+    "type": "object",
+    "properties": {
+      "api_key": {
+        "description": "Flare API key used to authenticate against the API",
+        "type": "string"
+      },
+      "tenant_id": {
+        "description": "Optional tenant ID when the API key is scoped to multiple tenants",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "api_key"
+    ],
+    "secrets": [
+      "api_key"
+    ]
+  },
+  "description": "Automation module for Flare.io integrations.",
+  "name": "Flare.io",
+  "slug": "flare-io",
+  "uuid": "90ec90da-8065-4229-ab3c-298ffe140772",
+  "version": "0.5.0",
+  "supports_validation": true,
+  "categories": [
+    "Threat Intelligence"
+  ]
+}

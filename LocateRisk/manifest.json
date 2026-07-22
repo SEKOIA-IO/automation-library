@@ -1,0 +1,32 @@
+{
+  "configuration": {
+    "properties": {
+      "api_key": {
+        "description": "API Key",
+        "title": "Api Key",
+        "type": "string"
+      },
+      "scan_id": {
+        "description": "Scan ID",
+        "title": "Scan Id",
+        "type": "string"
+      },
+      "report_url": {
+        "default": "https://app.locaterisk.com/api/rest/report/export",
+        "description": "Base URL of the LocateRisk report export endpoint",
+        "title": "Report Url",
+        "type": "string"
+      }
+    },
+    "required": ["api_key", "scan_id"],
+    "title": "LocateRiskModuleConfiguration",
+    "type": "object",
+    "secrets": ["api_key", "scan_id"]
+  },
+  "description": "Specialist for automated IT risk analysis and monitoring",
+  "name": "LocateRisk",
+  "slug": "locaterisk",
+  "categories": ["Threat Intelligence"],
+  "uuid": "5173f31f-13b7-4418-bf3b-3b18b196a8e2",
+  "version": "0.5.0"
+}

@@ -1,4 +1,3 @@
-# coding: utf-8
 import hashlib
 import io
 import pathlib
@@ -6,7 +5,7 @@ import shutil
 import tempfile
 import urllib.parse
 import uuid
-from typing import Any, TypeAlias
+from typing import Any
 
 import requests
 import tenacity
@@ -15,7 +14,7 @@ from tenacity import retry_if_exception_message, stop_after_delay, wait_exponent
 from .job_executor import JobExecutor
 from .models import JobAction, JobTarget
 
-StrOrUUID4: TypeAlias = str | uuid.UUID
+type StrOrUUID4 = str | uuid.UUID
 
 
 class DownloadFileFromEndpointAction(JobExecutor):
@@ -98,7 +97,6 @@ class DownloadFileFromEndpointAction(JobExecutor):
         buffer.seek(0)
 
         if verify_digest:
-
             hasher = hashlib.sha256()
 
             while chunk := buffer.read(io.DEFAULT_BUFFER_SIZE):
@@ -119,7 +117,7 @@ class DownloadFileFromEndpointAction(JobExecutor):
         agent_id: str = arguments["id"]
         path_to_download: str = arguments["path"]
 
-        job_target = JobTarget(agent_ids=[agent_id])
+        job_target = JobTarget(agents=[agent_id])
         job_action = JobAction(
             value="downloadFile",
             params=[

@@ -37,6 +37,7 @@ pydantic = "2.10"
 msgraph-sdk = "^1.45.0"
 cachetools = "^6.2.0"
 loguru = "^0.7.3"
+httpx = "0.28.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

@@ -1,56 +1,75 @@
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
-name = "Automation module for HarfangLab"
-description = ""
+[project]
+name = "automation-module-harfanglab"
 version = "0.0"
+description = ""
 authors = []
-package-mode = false
+requires-python = ">=3.14,<4"
+dependencies = [
+    "sekoia-automation-sdk>=1.23.1,<2",
+    "pydantic>=2.10,<3",
+    "requests",
+    "requests-ratelimiter>=0.7.0,<1",
+    "stix2-patterns>=2.0.0,<3",
+    "structlog>=24.4.0,<25",
+    "findpython>=0.7.0,<1",
+    "aiolimiter>=1.2.1,<2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "requests-mock",
+    "types-requests",
+    "aiohttp>=3.12.14,<4",
+]
+lint = [
+    "ruff>=0.14",
+    "mypy",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "lint"]
+
+[tool.ruff]
+line-length = 119
+target-version = "py314"
+fix = true
+
+[tool.ruff.lint]
+select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]
 
 [tool.mypy]
+python_version = "3.14"
+install_types = true
+non_interactive = true
+ignore_missing_imports = true
+show_column_numbers = true
+exclude = ["tests/"]
 plugins = ["pydantic.mypy"]
-
-[tool.black]
-line-length = 119
-target-version = ["py38"]
-include = "\\.pyi?$"
-
-[tool.isort]
-profile = "black"
-line_length = 119
-
-[tool.poetry.dependencies]
-python = ">=3.11,<3.12"
-sekoia-automation-sdk = "^1.22.5"
-pydantic = "2.10"
-requests = "*"
-requests-ratelimiter = "^0.7.0"
-stix2-patterns = "^2.0.0"
-structlog = "^24.4.0"
-findpython = "^0.7.0"
-aiolimiter = "^1.2.1"
-
-[tool.poetry.dev-dependencies]
-pytest = "*"
-pytest-cov = "*"
-requests-mock = "*"
-mypy = "*"
-types-requests = "*"
-
-[tool.coverage.run]
-omit = ["tests/*", "main.py"]
-
-[tool.poetry.group.dev.dependencies]
-aiohttp = "^3.12.14"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
+addopts = """
+    --strict-markers
+    --tb=short
+    --cache-clear
+    --cov=harfanglab
+    --cov-branch
+    --cov-report=term-missing:skip-covered
+    --cov-fail-under=5
+    -ra
+"""
 testpaths = ["tests"]
 filterwarnings = [
   "error",
   "ignore::DeprecationWarning",
   "ignore:.*unclosed.*:ResourceWarning",
 ]
-addopts = "  --strict-markers\n  --tb=short\n  --cov=harfanglab\n --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n"
+
+[tool.coverage.run]
+omit = ["tests/*", "main.py"]

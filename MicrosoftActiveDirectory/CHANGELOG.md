@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-13 - 1.5.8
+
+### Fixed
+
+- Reconnect LDAP connection on any `LDAPException` (including `LDAPSessionTerminatedByServerError`) during paged search, not only on socket errors
+
+## 2026-07-09 - 1.5.7
+
+### Fixed
+
+- Fix duplication of assets by adding a cache in the context
+
+## 2026-07-07 - 1.5.6
+
+### Fixed
+
+- Reconnect LDAP connection automatically when the socket is closed between asset fetch cycles
+
+## 2026-07-06 - 1.5.5
+
+### Fixed
+
+- Classify machine/computer accounts (sAMAccountName or UPN local part ending with `$`) as `SYSTEM` instead of `USER`
+- Discard AD UPN-style values (e.g. `compte$@domain.ad.recouv`) from `email_addr` — they are not real email addresses
+
 ## 2026-04-24 - 1.5.4
 
 ### Fixed
