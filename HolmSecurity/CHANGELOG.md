@@ -12,5 +12,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Holm Security module with API token authentication
-- Account validator that pings `GET /v2/devices?page_size=1`
+- Account validator
 - Device asset connector that collects agent-managed devices from `GET /v2/devices` and maps them to the OCSF Device Inventory Info model
