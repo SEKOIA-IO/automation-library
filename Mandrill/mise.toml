@@ -1,0 +1,22 @@
+[tools]
+python = "3.14"
+uv = "latest"
+
+[tasks.test]
+description = "Run tests"
+run = "uv run pytest tests/"
+
+[tasks.lint]
+description = "Check code style and types"
+run = [
+    "uv run ruff check .",
+    "uv run ruff format --check .",
+    "uv run mypy .",
+]
+
+[tasks.format]
+description = "Format and auto-fix code"
+run = [
+    "uv run ruff check --fix .",
+    "uv run ruff format .",
+]

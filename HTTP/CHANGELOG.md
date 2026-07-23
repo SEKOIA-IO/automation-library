@@ -29,12 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ensure `Download File` action also uses centralized URL validation and HTTP response handling from `HTTPActionBase`
 - Increase automated test coverage to 100%
 
-## [1.120.4] - 2026-03-26
-
-### Fixed
-
-- Move URL field validation to the module
-
 ## [1.120.3] - 2026-03-19
 
 ### Changed

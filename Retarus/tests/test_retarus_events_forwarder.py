@@ -1,6 +1,6 @@
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from threading import Thread
 from unittest.mock import Mock
 
@@ -11,7 +11,14 @@ from retarus_modules.connector import RetarusConnector
 
 @pytest.fixture
 def sample_retarus_message():
-    yield '{"direction": "OUTBOUND", "class": "EVENT", "version": "1.0", "type": "MTA", "ts": "2021-05-18 16:50:30 +0200", "host": "events.retarus.com", "customer": "45987FR", "metaData": {}, "sender": "utilisateur@mail.fr", "status": "ACCEPTED", "mimeId": "<d12b9brrfd3c89723ee5@STZE007.super.corp>", "rmxId": "20210518-32464-yvrfukcZEcd-0@out33.fg", "sourceIp": "255.255.255.1", "recipient": "recepient@mail.com"}'
+    yield (
+        '{"direction": "OUTBOUND", "class": "EVENT", "version": "1.0", "type": "MTA", '
+        '"ts": "2021-05-18 16:50:30 +0200", "host": "events.retarus.com", "customer": "45987FR", '
+        '"metaData": {}, "sender": "utilisateur@mail.fr", "status": "ACCEPTED", '
+        '"mimeId": "<d12b9brrfd3c89723ee5@STZE007.super.corp>", '
+        '"rmxId": "20210518-32464-yvrfukcZEcd-0@out33.fg", "sourceIp": "255.255.255.1", '
+        '"recipient": "recepient@mail.com"}'
+    )
 
 
 def test_forward_on_message(connector, queue, sample_retarus_message):
@@ -37,7 +44,7 @@ def test_forward_on_message_empty_queue(connector):
 
 @pytest.mark.skipif("{'RETARUS_APIKEY'}.issubset(os.environ.keys()) == False")
 def test_forward_events_integration(symphony_storage):
-    one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    one_hour_ago = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
     trigger = RetarusConnector(data_path=symphony_storage)
     trigger.module.configuration = {}
     trigger.configuration = {

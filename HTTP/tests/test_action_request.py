@@ -7,8 +7,7 @@ from unittest.mock import Mock
 import pytest
 import requests_mock
 from pydantic import ValidationError
-from requests import Response
-from requests.exceptions import ConnectionError, HTTPError
+from requests.exceptions import ConnectionError as RequestsConnectionError
 from tenacity import Retrying, wait_none
 
 from http_module.action_request import RequestAction
@@ -170,7 +169,7 @@ def test_get_request_retry(symphony_storage, requests_mock):
     requests_mock.get(
         "https://api.sekoia.io",
         [
-            {"exc": ConnectionError},
+            {"exc": RequestsConnectionError},
             {
                 "json": {"foo": "bar"},
                 "status_code": 500,

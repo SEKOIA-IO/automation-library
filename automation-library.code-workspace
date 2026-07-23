@@ -23,6 +23,66 @@
 		{
 			"name": "Upwind",
 			"path": "Upwind"
+		},
+		{
+			"name": "LocateRisk",
+			"path": "LocateRisk"
+		},
+		{
+			"name": "DNS",
+			"path": "DNS"
+		},
+		{
+			"name": "Tranco",
+			"path": "Tranco"
+		},
+		{
+			"name": "Whois",
+			"path": "Whois"
+		},
+		{
+			"name": "HTTP",
+			"path": "HTTP"
+		},
+		{
+			"name": "IKnowWhatYouDownload",
+			"path": "IKnowWhatYouDownload"
+		},
+		{
+			"name": "IPInfo",
+			"path": "IPInfo"
+		},
+		{
+			"name": "IPtoASN",
+			"path": "IPtoASN"
+		},
+		{
+			"name": "Ilert",
+			"path": "Ilert"
+		},
+		{
+			"name": "Mandrill",
+			"path": "Mandrill"
+		},
+		{
+			"name": "MokN",
+			"path": "MokN"
+		},
+		{
+			"name": "PublicSuffix",
+			"path": "PublicSuffix"
+		},
+		{
+			"name": "RSS",
+			"path": "RSS"
+		},
+		{
+			"name": "Retarus",
+			"path": "Retarus"
+		},
+		{
+			"name": "USTA",
+			"path": "USTA"
 		}
 	],
 	"settings": {
@@ -30,6 +90,7 @@
 		"mise.configureExtensionsAutomatically": true,
 		"mise.automaticallyTrustMiseConfigFiles": true,
 		"mise.updateEnvAutomatically": true,
-		"mise.updateOpenTerminalsEnvAutomatically": true
+		"mise.updateOpenTerminalsEnvAutomatically": true,
+		"python.defaultInterpreterPath": "/home/vscode/.local/share/mise/installs/python/3.14/bin/python"
 	}
 }

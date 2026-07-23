@@ -9,7 +9,7 @@
   "name": "DNS",
   "uuid": "33e52bf6-642f-4230-acd5-751699077b84",
   "slug": "dns",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "categories": [
     "Network"
   ]

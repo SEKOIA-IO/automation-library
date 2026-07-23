@@ -1,4 +1,3 @@
-from pathlib import Path
 import pytest
 import requests_mock
 
@@ -6,11 +5,11 @@ from tranco_module.triggers import FetchTrancoListTrigger
 
 
 @pytest.fixture
-def trigger(symphony_storage, config_storage: Path):
+def trigger(symphony_storage, monkeypatch):
     trigger = FetchTrancoListTrigger(data_path=symphony_storage)
     trigger.configuration = {"interval": 0, "chunk_size": 5}
     trigger._token = "token"
-    config_storage.joinpath(FetchTrancoListTrigger.CALLBACK_URL_FILE_NAME).write_text("https://callback.url/")
+    monkeypatch.setenv("URL_CALLBACK", "https://callback.url/")
     return trigger
 
 

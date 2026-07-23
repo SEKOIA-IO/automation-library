@@ -9,6 +9,10 @@ python = "3.14"
 [env]
 _.python.venv = { path = ".venv", create = false }
 
+[tasks.test]
+description = "Run tests"
+run = "uv run pytest tests/"
+
 [tasks.lint]
 description = "Check code style and types"
 run = [
