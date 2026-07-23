@@ -7,7 +7,8 @@ from locaterisk_modules import LocateRiskModule
 from locaterisk_modules.connector_locaterisk_scan_report import LocateRiskScanReportConnector
 from locaterisk_modules.metrics import INCOMING_MESSAGES, OUTCOMING_EVENTS
 
-REPORT_URL = "https://app.locaterisk.com/api/rest/report/export"
+BASE_URL = "https://app.locaterisk.com/api/rest/report"
+REPORT_URL = f"{BASE_URL}/export"
 SCAN_ID = "scan-123"
 CSV_URL = f"{REPORT_URL}/{SCAN_ID}/csv"
 
@@ -21,10 +22,14 @@ def connector(data_storage):
     connector.push_events_to_intakes = MagicMock()
     connector.module.configuration = {
         "api_key": "test-api-key",
+        "base_url": BASE_URL,
+    }
+    connector.configuration = {
+        "intake_key": "intake-key",
         "scan_id": SCAN_ID,
         "report_url": REPORT_URL,
+        "polling_interval": 1,
     }
-    connector.configuration = {"intake_key": "intake-key", "polling_interval": 1}
     yield connector
 
 

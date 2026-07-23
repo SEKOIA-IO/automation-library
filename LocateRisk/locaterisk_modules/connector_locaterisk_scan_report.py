@@ -5,7 +5,7 @@ import json
 import time
 
 import requests
-from pydantic import Field
+from pydantic import Field, field_validator
 from requests.adapters import HTTPAdapter
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
@@ -19,6 +19,18 @@ class LocateRiskScanReportConnectorConfiguration(DefaultConnectorConfiguration):
     """Connector-specific configuration for the LocateRisk scan report poller."""
 
     polling_interval: int = Field(5, description="Polling interval in minutes")
+    scan_id: str = Field(..., description="Scan ID", json_schema_extra={"secret": True})
+    report_url: str = Field(
+        "https://app.locaterisk.com/api/rest/report/export",
+        description="Report export URL used to fetch scan findings",
+    )
+
+    @field_validator("report_url")
+    @classmethod
+    def _require_https_report_url(cls, value: str) -> str:
+        if not value.lower().startswith("https://"):
+            raise ValueError("report_url must use HTTPS")
+        return value
 
 
 class LocateRiskScanReportConnector(Connector):
@@ -44,7 +56,7 @@ class LocateRiskScanReportConnector(Connector):
 
     def _build_report_url(self) -> str:
         """Build the CSV report URL for the configured scan."""
-        return f"{self.module.configuration.report_url}/{self.module.configuration.scan_id}/csv"
+        return f"{self.configuration.report_url.rstrip('/')}/{self.configuration.scan_id}/csv"
 
     @staticmethod
     def _row_hash(row: dict) -> str:
