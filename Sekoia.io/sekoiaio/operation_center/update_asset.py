@@ -1,5 +1,5 @@
 from posixpath import join as urljoin
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any, Literal, Optional
 from uuid import UUID
 
 import requests
@@ -8,18 +8,22 @@ from sekoia_automation.action import Action
 
 NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
+AssetType = Literal["host", "account", "network"]
+AtomScalar = str | int | float | bool | None
+AtomsDict = dict[str, list[AtomScalar] | AtomScalar]
+
 
 class UpdateAssetArguments(BaseModel):
     uuid: UUID = Field(..., description="The identifier of the asset")
-    entity_uuid: Optional[str] = None
-    name: Optional[str] = None
+    entity_uuid: Optional[UUID] = None
+    name: Optional[str] = Field(None, min_length=2)
     description: Optional[str] = None
-    type: Optional[str] = None
+    type: Optional[AssetType] = None
     category: Optional[str] = None
-    criticality: Optional[int] = None
+    criticality: Optional[int] = Field(None, ge=0, le=100)
     props: Optional[dict] = None
-    atoms: Optional[dict] = None
-    tags: Optional[list] = None
+    atoms: Optional[AtomsDict] = None
+    tags: Optional[list[str]] = None
     revoked: Optional[bool] = None
     reviewed: Optional[bool] = None
 
@@ -58,7 +62,14 @@ class UpdateAsset(Action):
     def run(self, arguments: UpdateAssetArguments) -> Any:
         asset_uuid = arguments.uuid
 
-        payload = {field: getattr(arguments, field) for field in self.ALLOWED_FIELDS if getattr(arguments, field)}
+        payload = {}
+        for field in self.ALLOWED_FIELDS:
+            value = getattr(arguments, field)
+            if not value:
+                continue
+            if field == "entity_uuid":
+                value = str(value)
+            payload[field] = value
 
         if arguments.revoked is not None:
             payload["revoked"] = arguments.revoked

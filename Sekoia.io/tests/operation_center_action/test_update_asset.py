@@ -102,3 +102,51 @@ def test_update_asset_with_tags_as_list(requests_mock):
     results: dict = action.run(arguments)
     assert results == response
     assert requests_mock.last_request.json()["tags"] == tags_list
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("entity_uuid", "not-a-uuid"),
+        ("name", "a"),
+        ("type", "not-a-valid-type"),
+        ("criticality", -1),
+        ("criticality", 101),
+        ("atoms", {"cidrv4": {"nested": "not-a-scalar"}}),
+    ],
+)
+def test_update_asset_rejects_invalid_optional_fields(requests_mock, field, value):
+    action = UpdateAsset()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    asset_uuid = uuid.uuid4()
+    arguments = {"uuid": str(asset_uuid), field: value}
+
+    with pytest.raises(ValidationError):
+        action.run(arguments)
+    assert requests_mock.call_count == 0
+
+
+def test_update_asset_accepts_valid_optional_fields(requests_mock):
+    action = UpdateAsset()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    asset_uuid = uuid.uuid4()
+    entity_uuid = uuid.uuid4()
+    arguments = {
+        "uuid": str(asset_uuid),
+        "entity_uuid": str(entity_uuid),
+        "name": "ok",
+        "type": "host",
+        "criticality": 50,
+        "atoms": {"cidrv4": ["10.0.0.0/24"], "hostname": "example"},
+    }
+    response = {"uuid": str(asset_uuid)}
+    requests_mock.put(base_url + str(asset_uuid), json=response)
+
+    results: dict = action.run(arguments)
+    assert results == response
+    sent = requests_mock.last_request.json()
+    assert sent["entity_uuid"] == str(entity_uuid)
+    assert sent["name"] == "ok"
+    assert sent["type"] == "host"
+    assert sent["criticality"] == 50
+    assert sent["atoms"] == {"cidrv4": ["10.0.0.0/24"], "hostname": "example"}

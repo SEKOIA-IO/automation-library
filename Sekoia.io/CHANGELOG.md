@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `UpdateAsset` and `UpdateAlertStatus` action arguments are now validated with Pydantic, rejecting missing, empty, or malformed `uuid` values before any HTTP request is issued; `UpdateAlertStatus.status` remains an open non-empty string so custom/user-defined alert statuses continue to work
 - Broadened `UpdateAlertStatus` `uuid` argument validation
+- Tightened `UpdateAsset` optional argument validation to more closely match the API contract
 
 ## 2026-07-07 - 2.74.1
 
