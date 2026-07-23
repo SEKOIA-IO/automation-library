@@ -3,7 +3,7 @@ from typing import Annotated, Optional
 from uuid import UUID
 
 import requests
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 from sekoia_automation.action import Action
 from tenacity import retry, wait_exponential, stop_after_attempt
 
@@ -25,9 +25,28 @@ ACTION_UUIDS = [
 
 
 class UpdateAlertStatusArguments(BaseModel):
-    uuid: UUID = Field(..., description="The identifier of the alert")
+    uuid: str = Field(..., description="The identifier (UUID or short id) of the alert")
     status: NonEmptyStr = Field(..., description="The status/action to apply to the alert")
     comment: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_uuid(self) -> "UpdateAlertStatusArguments":
+        # emptiness check
+        if self.uuid is None or not self.uuid.strip():
+            raise ValueError("The alert identifier must not be empty")
+
+        # short id validation
+        if self.uuid.startswith("AL"):
+            # If the identifier starts with "AL", we assume it's a short ID
+            return self
+
+        # UUID validation
+        try:
+            UUID(self.uuid)
+        except ValueError:
+            raise ValueError(f"Invalid alert identifier: {self.uuid}")
+
+        return self
 
 
 class UpdateAlertStatus(Action):
@@ -45,8 +64,8 @@ class UpdateAlertStatus(Action):
         wait=wait_exponential(max=300),
         stop=stop_after_attempt(10),
     )
-    def perform_request(self, alert_uuid: UUID, status: str, comment: str | None = None):
-        alert_uuid_str = str(alert_uuid)
+    def perform_request(self, alert_uuid: str, status: str, comment: str | None = None):
+        alert_uuid_str = alert_uuid
         if status in STATUS_UUIDS.values() or status in ACTION_UUIDS:
             result = requests.patch(
                 self.url(alert_uuid_str), headers=self.headers, json={"action_uuid": status, "comment": comment}

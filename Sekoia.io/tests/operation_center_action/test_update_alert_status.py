@@ -91,3 +91,15 @@ def test_patch_alert_status_returns_none_if_status_empty(requests_mock):
     with pytest.raises(ValidationError):
         action.run(arguments)
     assert requests_mock.call_count == 0
+
+
+def test_patch_alert_status_accepts_short_id(requests_mock):
+    action = UpdateAlertStatus()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    alert_short_id = "AL1234567"
+    arguments = {"status": "PENDING", "uuid": alert_short_id}
+
+    requests_mock.patch(f"{base_url}/{alert_short_id}/workflow", json={})
+
+    results: dict = action.run(arguments)
+    assert results == {}
