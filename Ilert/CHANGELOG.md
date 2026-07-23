@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Validate the `alert_uuid`, `api_key`, and `base_url` arguments via a Pydantic model, with `alert_uuid` parsed as `UUID`, `base_url` parsed as `HttpUrl`, and `api_key` kept as a non-empty string while still rejecting missing/empty/blank values before fetching and forwarding the alert
+- Validate the `alert_uuid`, `api_key`, and `base_url` arguments via a Pydantic model, rejecting missing/empty/blank values before fetching and forwarding the alert
+- Broadened `alert_uuid` argument validation
 
 ## 2026-04-10 - 1.0.0
 
