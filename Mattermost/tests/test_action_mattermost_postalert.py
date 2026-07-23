@@ -122,3 +122,35 @@ def test_mattermost_postalert_rejects_invalid_arguments(field, value):
             mt.run(arguments)
 
     assert mock.call_count == 0
+
+
+def test_mattermost_postalert_accepts_short_id():
+    hook_url: str = "https://my.chat.mattermost/hooks/123456"
+
+    mt: MattermostPostAlertAction = MattermostPostAlertAction()
+    mt.module.configuration = {"hook_url": hook_url}
+
+    alert_short_id = "AL13426AYUU"
+    base_url = "https://api.sekoia.io/"
+    api_key = "AZERTYUI987654345678"
+
+    alert_info = {
+        "urgency": {"current_value": 10, "display": "low"},
+        "short_id": alert_short_id,
+        "entity": {"name": "Blue boat"},
+        "title": "Super test alert",
+        "alert_type": {"category": "malicious-code", "value": "malware"},
+        "source": "10.10.10.10",
+        "target": "test.com.fake",
+        "details": "no detail provided",
+    }
+    with requests_mock.Mocker() as mock:
+        mock.get(
+            f"{base_url}v1/sic/alerts/{alert_short_id}",
+            json=alert_info,
+        )
+        mock.post(hook_url, text="ok")
+
+        mt.run({"alert_uuid": alert_short_id, "api_key": api_key, "base_url": base_url})
+
+        assert mock.call_count == 2
