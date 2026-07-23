@@ -9,6 +9,7 @@ dependencies = [
     "requests-ratelimiter>=0.7.0,<1",
     "orjson>=3.11.9,<4",
     "python-dateutil>=2.9.0,<3",
+    "cachetools>=7.1.4",
 ]
 
 [dependency-groups]
