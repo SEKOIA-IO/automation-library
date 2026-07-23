@@ -45,6 +45,7 @@ class VaronisSaaSAlertsConnector(Connector):
         self.context = PersistentJSON("context.json", self.data_path)
         self.cache_size = int(os.getenv("EVENTS_CACHE_SIZE", 2000))
         self.events_cache: Cache[str, bool] = self.load_events_cache()
+        self.max_job_timeout = int(os.getenv("MAX_JOB_TIMEOUT", 300))
 
     @cached_property
     def stepper(self) -> TimeStepper:
@@ -124,6 +125,7 @@ class VaronisSaaSAlertsConnector(Connector):
         response = self.client.alerts_async(from_date=from_str, to_date=to_str)
         job_id = response["data"]["alertsAsync"]["jobId"]
 
+        start_time = time.monotonic()
         while self.running:
             response = self.client.alerts_query_job(job_id=job_id)
             raw = response["data"]["alertsQueryJob"]
@@ -134,6 +136,11 @@ class VaronisSaaSAlertsConnector(Connector):
 
             elif status in ("CANCELED", "FAILED"):
                 raise VaronisJobError(f"Job {job_id} is {status}")
+
+            if time.monotonic() - start_time > self.max_job_timeout:
+                raise VaronisJobError(
+                    f"Job {job_id} did not complete within {self.max_job_timeout} seconds (last status: {status})"
+                )
 
             # otherwise - its pending, and we should wait a bit and ask again
             time.sleep(1)

@@ -39,9 +39,13 @@ class ApiClient(requests.Session):
         response = self.post(url=url, json={"query": query, "variables": variables}, timeout=60)
 
         if not response.ok:
-            raw = response.json()
-            if "errors" in raw:
-                raise VaronisApiError(raw)
+            try:
+                raw = response.json()
+                if "errors" in raw:
+                    raise VaronisApiError(raw)
+
+            except requests.exceptions.JSONDecodeError:
+                response.raise_for_status()
 
         return response.json()
 
