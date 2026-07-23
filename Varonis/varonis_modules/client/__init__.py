@@ -38,16 +38,13 @@ class ApiClient(requests.Session):
         url = f"{self.base_url}/api/graphql"
         response = self.post(url=url, json={"query": query, "variables": variables}, timeout=60)
 
-        if not response.ok:
-            try:
-                raw = response.json()
-                if "errors" in raw:
-                    raise VaronisApiError(raw)
+        raw = response.json()
+        if "errors" in raw:
+            raise VaronisApiError(raw)
 
-            except requests.exceptions.JSONDecodeError:
-                response.raise_for_status()
+        response.raise_for_status()
 
-        return response.json()
+        return raw
 
     def alerts_async(self, from_date: str, to_date: str) -> dict[str, Any]:
         query = """query AlertsAsync($where: Alert_FilterInput!)  {

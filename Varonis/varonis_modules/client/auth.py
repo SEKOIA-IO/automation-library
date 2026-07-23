@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from urllib.parse import urljoin
 
 import requests
-from requests.auth import AuthBase, HTTPBasicAuth
+from requests.auth import AuthBase
 from requests_ratelimiter import LimiterAdapter
 from urllib3.util.retry import Retry
 

@@ -43,6 +43,9 @@
       "base_url",
       "api_key"
     ],
+    "secrets": [
+      "api_key"
+    ],
     "title": "VaronisSaaSAlertsConfiguration",
     "type": "object"
   }
