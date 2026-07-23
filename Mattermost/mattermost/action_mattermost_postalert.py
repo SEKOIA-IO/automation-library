@@ -4,7 +4,7 @@ from uuid import UUID
 
 # third parties
 from colour import Color
-from pydantic import BaseModel, Field, HttpUrl, StringConstraints
+from pydantic import BaseModel, Field, HttpUrl, StringConstraints, model_validator
 from requests import Response
 from sekoia_automation.action import Action
 
@@ -12,11 +12,30 @@ NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length
 
 
 class MattermostPostAlertArguments(BaseModel):
-    alert_uuid: UUID = Field(..., description="The Unique identifier of the alert")
+    alert_uuid: str = Field(..., description="The identifier (UUID or short id) of the alert")
     api_key: NonEmptyStr = Field(..., description="The Sekoia.io API-Key to read the alert content.")
     base_url: HttpUrl = Field(..., description="Base URL of Sekoia.io api (e.g. https://api.sekoia.io/).")
     channel: str | None = None
     pretext: str | None = None
+
+    @model_validator(mode="after")
+    def validate_alert_uuid(self) -> "MattermostPostAlertArguments":
+        # emptiness check
+        if self.alert_uuid is None or not self.alert_uuid.strip():
+            raise ValueError("The alert identifier must not be empty")
+
+        # short id validation
+        if self.alert_uuid.startswith("AL"):
+            # If the identifier starts with "AL", we assume it's a short ID
+            return self
+
+        # UUID validation
+        try:
+            UUID(self.alert_uuid)
+        except ValueError:
+            raise ValueError(f"Invalid alert identifier: {self.alert_uuid}")
+
+        return self
 
 
 class MattermostPostAlertAction(Action):
@@ -27,12 +46,12 @@ class MattermostPostAlertAction(Action):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _get_alert(self, alert_uuid: UUID, api_key: str, base_url: HttpUrl) -> dict:
+    def _get_alert(self, alert_uuid: str, api_key: str, base_url: HttpUrl) -> dict:
         """
         Returns the definition of an alert
         """
 
-        url = f"{str(base_url)}v1/sic/alerts/{str(alert_uuid)}"
+        url = f"{str(base_url)}v1/sic/alerts/{alert_uuid}"
 
         response: Response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
         response.raise_for_status()
