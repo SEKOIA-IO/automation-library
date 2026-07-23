@@ -15,7 +15,8 @@ from sekoia_automation.storage import PersistentJSON
 from tenacity import retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from . import VaronisModule
-from .client import ApiClient, VaronisApiError, VaronisAuthenticationError
+from .client import ApiClient, VaronisApiError
+from .client.auth import VaronisAuthenticationError
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
