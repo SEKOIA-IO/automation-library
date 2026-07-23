@@ -4,7 +4,7 @@ import requests
 from requests.adapters import Retry
 from requests_ratelimiter import LimiterAdapter
 
-from .auth import VaronisApiAuthentication, VaronisAuthenticationError
+from .auth import VaronisApiAuthentication
 
 
 class VaronisApiError(Exception):
@@ -89,8 +89,8 @@ class ApiClient(requests.Session):
     def alerts_query_job(self, job_id: str) -> dict[str, Any]:
         query = """query alertsQueryJob($jobId: ID!) {
             alertsQueryJob(jobId: $jobId) {
-                jobId 
-                jobStatus 
+                jobId
+                jobStatus
                 jobProgress
                 results {
                     escalationType
@@ -113,7 +113,7 @@ class ApiClient(requests.Session):
                     }
                     generationTime {
                         dateTimeUtc
-                    }    
+                    }
                 }
             }
         }"""
