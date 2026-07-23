@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-23 - 0.6.0
+
+### Changed
+
+- Moved `scan_id` from module configuration to the LocateRisk scan connector/trigger configuration.
+- Replaced the module-level `report_url` setting with `base_url` (default: `https://app.locaterisk.com/`) and added `report_url` to connector/trigger arguments for report export configuration.
+
 ## 2026-07-22 - 0.5.0
 
 ### Changed
