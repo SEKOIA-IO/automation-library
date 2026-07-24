@@ -217,6 +217,9 @@ def test_fetch_events(trigger, requests_mock, message, start_time, end_time):
         for events in gen:
             assert type(events) is list
 
+        call = requests_mock.last_request
+        assert call.qs["$top"][0] == "1000"
+
 
 def test_fetch_events_wrong_json(trigger, requests_mock, start_time, end_time):
     with patch("microsoftdefender_modules.client.auth.msal.ConfidentialClientApplication") as mock_msal:
