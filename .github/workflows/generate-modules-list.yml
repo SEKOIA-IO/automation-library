@@ -5,28 +5,34 @@ on:
   push:
     branches:
       - main
+      - develop
+
+permissions: {}
 
 jobs:
   generate-modules-list:
+    permissions:
+      contents: read  # for actions/checkout to fetch code
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     steps:
       - name: Check-out the repo under $GITHUB_WORKSPACE
-        uses: actions/checkout@v3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - id: list-modules
         name: List modules
         run: |
-          echo "modules=$((cut -d "/" -f1 <<< "$(ls -a */manifest.json)") | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_ENV
+          echo "modules=$( (cut -d "/" -f1 <<< "$(ls -a -- */manifest.json)") | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_ENV"
 
       - name: my-app-install token
         id: my-app
-        uses: getsentry/action-github-app-token@v1
+        uses: getsentry/action-github-app-token@5c1e90706fe007857338ac1bfbd7a4177db2f789 # v4.0.0
         with:
           app_id: ${{ secrets.APP_ID }}
           private_key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v1
+        uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4.0.1
         with:
           token: ${{ steps.my-app.outputs.token }}
           event-type: refresh-automation-modules-list

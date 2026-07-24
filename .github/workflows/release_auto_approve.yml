@@ -1,0 +1,24 @@
+name: Integration release auto-approve
+
+# Controls when the action will run.
+on:
+  pull_request:
+    branches: [production]
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  auto-approve:
+    permissions:
+      pull-requests: write  # for run step (declared via comment)
+    runs-on: ubuntu-latest
+    if: |
+      github.event.pull_request.user.login == 'integration-release-to-production' &&
+      github.event.pull_request.user.type == 'Bot'
+    steps:
+      - name: Approve a PR
+        run: gh pr review --repo "${{ github.repository }}" --approve "$PR_NUMBER"
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # gha-perms:permissions=pull-requests:write
