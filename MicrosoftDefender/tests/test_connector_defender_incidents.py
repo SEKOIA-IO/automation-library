@@ -86,6 +86,7 @@ def test_fetch_events_hits_incidents_endpoint(trigger, requests_mock, start_time
         # requests_mock lowercases qs keys and values
         assert "createddatetime gt" in call.qs["$filter"][0]
         assert "createddatetime le" in call.qs["$filter"][0]
+        assert call.qs["$top"][0] == "50"
         # incidents are never expanded with nested alerts
         assert "$expand" not in call.qs
 

@@ -23,3 +23,4 @@ class MicrosoftDefenderGraphAPIIncidents(BaseMicrosoftDefenderGraphAPIConnector)
     id_field = "id"
     context_cursor_key = "most_recent_date_requested_incidents"
     events_cache_context_key = "incidents_events_cache"
+    top_query_limit = 50

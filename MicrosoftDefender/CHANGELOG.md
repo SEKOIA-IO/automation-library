@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-07-24 - 1.3.2
+
+### Fixed
+
+- Limit incidents connector `$top` query size to 50 (while keeping alerts at 1000) to match Microsoft Graph API limits and prevent incidents request failures.
+
 ## 2026-07-20 - 1.3.1
 
 ### Fixed

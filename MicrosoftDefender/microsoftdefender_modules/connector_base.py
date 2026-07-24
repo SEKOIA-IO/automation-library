@@ -44,6 +44,7 @@ class BaseMicrosoftDefenderGraphAPIConnector(Connector):
     id_field: str = "id"
     context_cursor_key: str = "most_recent_date_requested"
     events_cache_context_key: str = "events_cache"
+    top_query_limit: int = 1000
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -137,7 +138,7 @@ class BaseMicrosoftDefenderGraphAPIConnector(Connector):
                 f"{self.timestamp_field} gt {start.strftime(self.RFC3339_STRICT_FORMAT)}"
                 f" and {self.timestamp_field} le {end.strftime(self.RFC3339_STRICT_FORMAT)}"
             ),
-            "$top": 1000,
+            "$top": self.top_query_limit,
         }
         params.update(self.extra_query_params())
         return params
