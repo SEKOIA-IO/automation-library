@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-11 - 1.20.2
+
+### Fixed
+
+- Validate `endpoint_id` as a UUID via native Pydantic v2 models across the Sophos EDR deisolate, isolate, and run scan actions instead of the `pydantic.v1` compatibility shim or manual guards
+
+### Changed
+
+- Bump `sekoia-automation-sdk` to 1.23.1
+
 ## 2026-07-06 - 1.20.0
 
 ### Changed

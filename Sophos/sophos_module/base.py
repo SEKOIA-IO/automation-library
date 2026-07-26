@@ -1,4 +1,6 @@
-from pydantic.v1 import BaseModel, Field
+from uuid import UUID
+
+from pydantic import BaseModel, Field
 from sekoia_automation.connector import Connector
 from sekoia_automation.module import Module
 
@@ -10,7 +12,11 @@ class SophosConfiguration(BaseModel):
         description="API Url of the Sophos Central API (e.g. 'https://api-{dataRegion}.central.sophos.com')",
     )
     client_id: str = Field(..., description="OAuth2 client identifier")
-    client_secret: str = Field(secret=True, description="OAuth2 client secret")
+    client_secret: str = Field(..., description="OAuth2 client secret", json_schema_extra={"secret": True})
+
+
+class SophosEndpointArguments(BaseModel):
+    endpoint_id: UUID = Field(..., description="Endpoint ID")
 
 
 class SophosModule(Module):

@@ -3,6 +3,11 @@ from typing import Any
 import requests
 
 from sophos_module.action_base import SophosEDRAction
+from sophos_module.base import SophosEndpointArguments
+
+
+class SophosEndpointIsolationArguments(SophosEndpointArguments):
+    comment: str | None = None
 
 
 class ActionSophosEDRIsolateEndpoint(SophosEDRAction):
@@ -54,8 +59,7 @@ class ActionSophosEDRIsolateEndpoint(SophosEDRAction):
                 result.update(current_status)
                 return result
 
-    def run(self, arguments: dict[str, Any]) -> Any:
-        endpoint_id = arguments["endpoint_id"]
-        comment = arguments.get("comment")
-
-        return self.set_isolation_status(endpoint_id=endpoint_id, enabled=True, comment=comment)
+    def run(self, arguments: SophosEndpointIsolationArguments) -> Any:
+        return self.set_isolation_status(
+            endpoint_id=str(arguments.endpoint_id), enabled=True, comment=arguments.comment
+        )
