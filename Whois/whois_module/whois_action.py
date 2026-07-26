@@ -1,11 +1,14 @@
-from datetime import datetime
-
 import ipaddress
-from tldextract import extract
+from datetime import datetime
+from typing import Annotated
 
 import whois
+from pydantic import BaseModel, Field, StringConstraints
+from tldextract import extract
 from whois.parser import PywhoisError
 from sekoia_automation.action import Action
+
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 # Returns an item in a list at a given index
@@ -53,10 +56,14 @@ def extract_domain_from_url(arg: str) -> str:
     return f"{extract_domain.domain}.{extract_domain.suffix}"
 
 
+class WhoisArguments(BaseModel):
+    query: NonEmptyStr = Field(..., description="Domain, URL or IP address to look up")
+
+
 class WhoisAction(Action):
-    def run(self, arguments):
+    def run(self, arguments: WhoisArguments):
         try:
-            get_domain = extract_domain_from_url(arguments["query"])
+            get_domain = extract_domain_from_url(arguments.query)
             whois_result = whois.whois(get_domain)
             return {
                 "Domain": {
