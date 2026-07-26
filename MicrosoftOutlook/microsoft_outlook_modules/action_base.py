@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import Any
 from functools import cached_property
 
 from requests import Response

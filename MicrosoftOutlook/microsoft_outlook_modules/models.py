@@ -1,4 +1,8 @@
-from pydantic.v1 import BaseModel, Field
+from typing import Annotated
+
+from pydantic import BaseModel, Field, StringConstraints
+
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class MicrosoftOutlookModuleConfiguration(BaseModel):
@@ -10,8 +14,8 @@ class MicrosoftOutlookModuleConfiguration(BaseModel):
         # noqa: E501
     )
     client_secret: str = Field(
-        secret=True,
         description="Client Secret associated with the registered application. Admin Consent has to be granted to the "
         "application for it to work.",
+        json_schema_extra={"secret": True},
         # noqa: E501
     )
