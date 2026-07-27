@@ -729,3 +729,106 @@ class TestFullHttpRoundTrip:
         names = {a.user.name for a in assets}
         assert "Jane Doe" in names
         assert "DESKTOP-ABC1234\\jdoe" in names
+
+
+class TestGetMappedFields:
+    def test_returns_dict(self, connector):
+        result = connector.get_mapped_fields()
+        assert isinstance(result, dict)
+
+    def test_is_non_empty(self, connector):
+        assert len(connector.get_mapped_fields()) > 0
+
+    def test_all_keys_and_values_are_strings(self, connector):
+        mapping = connector.get_mapped_fields()
+        for k, v in mapping.items():
+            assert isinstance(k, str), f"Key {k!r} is not a string"
+            assert isinstance(v, str), f"Value {v!r} is not a string"
+
+    def test_contains_name_mapping(self, connector):
+        assert "name" in connector.get_mapped_fields()
+
+    def test_contains_email_mapping(self, connector):
+        assert "email" in connector.get_mapped_fields()
+
+    def test_contains_timestamp_mappings(self, connector):
+        mapping = connector.get_mapped_fields()
+        assert "updatedAt" in mapping
+        assert "createdAt" in mapping
+
+    def test_deterministic_across_calls(self, connector):
+        assert connector.get_mapped_fields() == connector.get_mapped_fields()
+
+    def test_values_reference_user_namespace_or_time(self, connector):
+        """All OCSF paths must point into the user object or top-level time field."""
+        for v in connector.get_mapped_fields().values():
+            assert v.startswith("user.") or v == "time", (
+                f"Expected OCSF path to start with 'user.' or be 'time', got {v!r}"
+            )
+
+
+class TestResetCheckpoint:
+    def test_clears_known_users_from_context(self, connector):
+        _seed_cache(connector, {NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"]})
+
+        connector.reset_checkpoint()
+
+        with connector.context as cache:
+            assert cache.get(_CACHE_KEY) is None
+
+    def test_resets_current_run_in_memory(self, connector):
+        connector._current_run = {NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"]}
+        connector.reset_checkpoint()
+        assert connector._current_run == {}
+
+    def test_logs_info_message(self, connector):
+        connector.reset_checkpoint()
+        log_calls = [str(call) for call in connector.log.call_args_list]
+        assert any("reset" in call.lower() for call in log_calls)
+
+    def test_noop_on_empty_context(self, connector):
+        """reset_checkpoint must not raise when the context is already empty."""
+        connector.reset_checkpoint()  # must not raise
+
+    def test_full_refetch_after_reset(self, connector):
+        """After reset, the next get_assets() run must re-yield all users."""
+        _mock_list_users(
+            connector,
+            [{"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}}],
+        )
+        list(connector.get_assets())  # seeds cache
+
+        connector.reset_checkpoint()
+
+        _mock_list_users(
+            connector,
+            [{"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}}],
+        )
+        assets = list(connector.get_assets())
+        assert len(assets) == 2
+
+    def test_second_run_after_reset_treats_all_as_new(self, connector):
+        """A reset must make _is_new_or_changed return True for every user."""
+        _seed_cache(
+            connector,
+            {
+                NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],
+                WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],
+            },
+        )
+        # Without reset, second run should yield nothing
+        _mock_list_users(
+            connector,
+            [{"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}}],
+        )
+        no_changes = list(connector.get_assets())
+        assert no_changes == []
+
+        connector.reset_checkpoint()
+
+        _mock_list_users(
+            connector,
+            [{"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}}],
+        )
+        after_reset = list(connector.get_assets())
+        assert len(after_reset) == 2
