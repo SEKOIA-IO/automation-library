@@ -997,3 +997,54 @@ def test_map_fields_enrichment_without_optional_fields(test_entra_id_asset_conne
     # Employment enrichment should not be present when no employment data is available
     employment_enrichment = next((e for e in result.enrichments if e.name == "employment"), None)
     assert employment_enrichment is None
+
+
+@pytest.mark.asyncio
+async def test_reset_checkpoint(test_entra_id_asset_connector):
+    """Test that reset_checkpoint clears most_recent_date_seen and _latest_time."""
+    # Arrange: set a checkpoint first
+    test_entra_id_asset_connector._latest_time = 1640995200.0
+    await test_entra_id_asset_connector.update_checkpoint()
+    assert test_entra_id_asset_connector.most_recent_date_seen is not None
+
+    # Act
+    await test_entra_id_asset_connector.reset_checkpoint()
+
+    # Assert
+    assert test_entra_id_asset_connector.most_recent_date_seen is None
+    assert test_entra_id_asset_connector._latest_time is None
+
+
+@pytest.mark.asyncio
+async def test_reset_checkpoint_when_no_checkpoint_set(test_entra_id_asset_connector):
+    """Test that reset_checkpoint is a no-op when no checkpoint has been saved."""
+    # Arrange: ensure no checkpoint is set
+    assert test_entra_id_asset_connector.most_recent_date_seen is None
+
+    # Act — should not raise
+    await test_entra_id_asset_connector.reset_checkpoint()
+
+    # Assert
+    assert test_entra_id_asset_connector.most_recent_date_seen is None
+    assert test_entra_id_asset_connector._latest_time is None
+
+
+def test_get_mapped_fields(test_entra_id_asset_connector):
+    """Test that get_mapped_fields returns a non-empty dict of field mappings."""
+    fields = test_entra_id_asset_connector.get_mapped_fields()
+
+    assert isinstance(fields, dict)
+    assert len(fields) > 0
+
+    # Verify key source fields are mapped
+    assert "id" in fields
+    assert "displayName" in fields
+    assert "mail" in fields
+    assert "userPrincipalName" in fields
+    assert "accountEnabled" in fields
+    assert "createdDateTime" in fields
+
+    # Verify OCSF paths are non-empty strings
+    for source_field, ocsf_path in fields.items():
+        assert isinstance(ocsf_path, str)
+        assert len(ocsf_path) > 0

@@ -98,6 +98,30 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 .isoformat()
             )
 
+    async def reset_checkpoint(self) -> None:
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self._latest_time = None
+
+    def get_mapped_fields(self) -> dict[str, str]:
+        return {
+            "id": "user.uid",
+            "displayName": "user.full_name",
+            "mail": "user.email_addr",
+            "userPrincipalName": "user.name",
+            "accountEnabled": "enrichments.account.data.is_enabled",
+            "createdDateTime": "time",
+            "department": "enrichments.employment.value",
+            "jobTitle": "enrichments.employment.value",
+            "employeeId": "enrichments.employment.data",
+            "employeeType": "enrichments.employment.data",
+            "signInActivity": "enrichments.account.data.last_logon",
+            "companyName": "user.org.name",
+            "officeLocation": "user.org.ou_name",
+            "lastPasswordChangeDateTime": "enrichments.account.data.last_time_password_change",
+            "onPremisesSamAccountName": "user.uid_alt",
+        }
+
     def map_fields(self, user: User, has_mfa: bool, groups: list[UserOCSFGroup], is_admin: bool) -> UserOCSFModel:
         """Map fields from User to UserOCSFModel.
 

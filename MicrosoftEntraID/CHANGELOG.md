@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-27 - 2.10.24
+
+### Added
+
+- Implement `get_mapped_fields` and `reset_checkpoint` abstract methods on `EntraIDAssetConnector` to support automatic checkpoint reset on field mapping changes
+
 ## 2026-06-16 - 2.10.23
 
 ### Fixed
