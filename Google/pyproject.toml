@@ -29,7 +29,7 @@ google-auth-oauthlib = "^1.0.0"
 google-api-core = "^2.11.1"
 google-auth = "^2.22.0"
 googleapis-common-protos = "^1.59.1"
-httplib2 = "^0.22.0"
+httplib2 = ">=0.22,<0.33"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
