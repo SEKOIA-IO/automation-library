@@ -96,3 +96,11 @@ async def test_aws_s3_logs_trigger_parse_data(connector: AwsS3FlowLogsTrigger, t
 async def test_aws_s3_logs_trigger_parse_empty_data(connector: AwsS3FlowLogsTrigger):
     async with async_temporary_file(b"") as f:
         assert await async_list(connector._parse_content(f)) == []
+
+
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_parse_parquet_data(connector: AwsS3FlowLogsTrigger):
+    parquet_content = b"PAR1\x15\x04\x15\x08\x150cbPAR1"
+
+    async with async_temporary_file(parquet_content) as f:
+        assert await async_list(connector._parse_content(f)) == []

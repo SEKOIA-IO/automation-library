@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-28 - 1.37.1
+
+### Fixed
+
+- Detect Apache Parquet-type VPC flow logs in the AWS S3 text flow logs trigger, and exit gracefully with a warning message instead of attempting a UTF-8 decoding
+
 ## 2026-06-19 - 1.37.0
 
 ### Added

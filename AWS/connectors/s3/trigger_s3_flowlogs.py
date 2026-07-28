@@ -4,7 +4,7 @@ import ipaddress
 from collections.abc import AsyncGenerator
 from itertools import islice
 
-from aws_helpers.utils import AsyncReader, unescape_string
+from aws_helpers.utils import AsyncReader, is_parquet_content, unescape_string
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3LogsBaseConfiguration, AwsS3QueuedConfiguration
 from connectors.s3.provider import AwsAccountProvider
@@ -53,6 +53,16 @@ class BaseAwsS3FlowLogsTrigger:
              Generator:
         """
         content = await stream.read()
+
+        if is_parquet_content(content):
+            self.log(
+                message=(
+                    "Parquet content detected in AWS S3 Flow Logs text trigger. "
+                    "Use the AWS S3 parquet flow logs trigger for .parquet objects."
+                ),
+                level="warning",
+            )
+            return
 
         records: list[str] = []
         for record in content.decode("utf-8").split(self.configuration.sep):
