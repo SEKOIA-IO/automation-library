@@ -1,0 +1,59 @@
+[project]
+name = "automation-module-upwind"
+version = "0.0"
+description = ""
+authors = []
+requires-python = ">=3.14,<4"
+dependencies = [
+  "sekoia-automation-sdk>=1.23.1,<2",
+  "orjson>=3.11.1,<4",
+  "cachetools>=6.2.3,<7",
+  "python-dateutil>=2.9.0,<3",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=7.0",
+  "pytest-asyncio>=0.23",
+  "pytest-cov",
+]
+lint = [
+  "ruff>=0.14",
+  "mypy",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "lint"]
+
+[tool.ruff]
+line-length = 119
+target-version = "py314"
+fix = true
+
+[tool.ruff.lint]
+select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]
+
+[tool.mypy]
+python_version = "3.14"
+install_types = true
+non_interactive = true
+ignore_missing_imports = true
+show_column_numbers = true
+exclude = ["tests/"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = """
+  --cache-clear
+  --cov=upwind
+  --cov-report=term-missing:skip-covered
+  -ra
+"""
+testpaths = ["tests"]
+
+[tool.coverage.run]
+omit = ["tests/*", "main.py"]
