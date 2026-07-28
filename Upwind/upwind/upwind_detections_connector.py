@@ -22,9 +22,10 @@ class UpwindDetectionsConnector(UpwindConnector):
 
         url = f"{self.module.configuration.base_url}/v1alpha1/detections"
 
-        async with self.session.get(url=url, params=params, headers=headers, timeout=self.request_timeout) as response:
-            response.raise_for_status()
-            payload = await response.json()
+        async with self.session() as session:
+            async with session.get(url=url, params=params, headers=headers, timeout=self.request_timeout) as response:
+                response.raise_for_status()
+                payload = await response.json()
 
         if isinstance(payload, list):
             return UpwindPage(items=payload)

@@ -64,13 +64,9 @@ class UpwindConnector(AsyncConnector):
             if not page.items:
                 break
 
+            new_events = filter_new_events(page.items, self.events_cache)
             outgoing: list[str] = []
-            for event in page.items:
-                event_id = event.get("id")
-                if not event_id or event_id in self.events_cache:
-                    continue
-
-                self.events_cache[event_id] = True
+            for event in new_events:
                 outgoing.append(orjson.dumps(event).decode("utf-8"))
 
                 event_dt = extract_upwind_detection_datetime(event)
@@ -99,7 +95,9 @@ class UpwindConnector(AsyncConnector):
                     self.log(message=f"Pushed {pushed_count} records in {duration:.2f}s", level="info")
                 else:
                     self.log(message="No records to forward", level="info")
-                    await asyncio.sleep(self.configuration.frequency)
+
+                wait_time = max(0.0, self.configuration.frequency - duration)
+                await asyncio.sleep(wait_time)
 
             except Exception as error:
                 self.log_exception(error)
@@ -132,7 +130,7 @@ def extract_upwind_detection_datetime(event: dict[str, Any]) -> datetime | None:
     return None
 
 
-def filter_new_events(events: Sequence[dict[str, Any]], cache: Cache) -> list[dict[str, Any]]:
+def _select_new_events(events: Sequence[dict[str, Any]], cache: Cache) -> list[dict[str, Any]]:
     selected: list[dict[str, Any]] = []
     for event in events:
         key = event.get("id")
@@ -141,3 +139,7 @@ def filter_new_events(events: Sequence[dict[str, Any]], cache: Cache) -> list[di
         cache[key] = True
         selected.append(event)
     return selected
+
+
+def filter_new_events(events: Sequence[dict[str, Any]], cache: Cache) -> list[dict[str, Any]]:
+    return _select_new_events(events, cache)

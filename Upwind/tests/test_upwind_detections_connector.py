@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from typing import Any
 
@@ -61,7 +62,12 @@ def build_connector(response: FakeResponse) -> tuple[UpwindDetectionsConnector, 
     )
     connector.request_timeout = 30
     session = FakeSession(response)
-    connector.session = session
+
+    @asynccontextmanager
+    async def fake_session_context() -> Any:
+        yield session
+
+    connector.session = fake_session_context
     return connector, session
 
 
