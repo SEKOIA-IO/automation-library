@@ -111,7 +111,8 @@ async def test_aws_s3_logs_trigger_parse_parquet_data(connector: AwsS3FlowLogsTr
     connector.log.assert_called_once_with(
         message=(
             "Parquet content detected in AWS S3 Flow Logs text trigger. "
-            "Use the AWS S3 Parquet records trigger for .parquet objects."
+            "Use the AWS S3 Parquet records trigger (Fetch new FlowLogs Parquet records on S3) "
+            "for .parquet objects."
         ),
         level="warning",
     )

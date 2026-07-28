@@ -28,7 +28,8 @@ class BaseAwsS3FlowLogsTrigger:
         cast(Any, self).log(
             message=(
                 "Parquet content detected in AWS S3 Flow Logs text trigger. "
-                "Use the AWS S3 Parquet records trigger for .parquet objects."
+                "Use the AWS S3 Parquet records trigger (Fetch new FlowLogs Parquet records on S3) "
+                "for .parquet objects."
             ),
             level="warning",
         )
