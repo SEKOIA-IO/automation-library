@@ -1,6 +1,7 @@
 """Tests related to AwsS3FlowLogsTrigger."""
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 from faker import Faker
@@ -100,7 +101,17 @@ async def test_aws_s3_logs_trigger_parse_empty_data(connector: AwsS3FlowLogsTrig
 
 @pytest.mark.asyncio
 async def test_aws_s3_logs_trigger_parse_parquet_data(connector: AwsS3FlowLogsTrigger):
-    parquet_content = b"PAR1\x15\x04\x15\x08\x150cbPAR1"
+    # Include invalid UTF-8 bytes to ensure text decoding is never attempted.
+    parquet_content = b"PAR1\xc2\x15\x04\x15\x08\x150cbPAR1"
+    connector.log = MagicMock()
 
     async with async_temporary_file(parquet_content) as f:
         assert await async_list(connector._parse_content(f)) == []
+
+    connector.log.assert_called_once_with(
+        message=(
+            "Parquet content detected in AWS S3 Flow Logs text trigger. "
+            "Use the AWS S3 parquet flow logs trigger for .parquet objects."
+        ),
+        level="warning",
+    )
