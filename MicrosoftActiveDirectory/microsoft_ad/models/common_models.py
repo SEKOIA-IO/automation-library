@@ -1,6 +1,6 @@
 import datetime
 
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sekoia_automation.asset_connector.models.connector import DefaultAssetConnectorConfiguration
 from sekoia_automation.module import Module
 
@@ -8,7 +8,7 @@ from sekoia_automation.module import Module
 class MicrosoftADConfiguration(BaseModel):
     servername: str = Field(..., description="Remote machine IP or Name")
     admin_username: str = Field(..., description="Admin username")
-    admin_password: str = Field(..., secret=True, description="Admin password")  # type: ignore
+    admin_password: str = Field(..., description="Admin password", json_schema_extra={"secret": True})
 
 
 class MicrosoftADModule(Module):
@@ -55,7 +55,4 @@ class LDAPUserAttributes(BaseModel):
     mail: str | None = None
     member_of: list[str] | None = Field(None, alias="memberOf")
 
-    class Config:
-        # Accept datetime objects with any tzinfo (e.g. ldap3's OffsetTzInfo)
-        arbitrary_types_allowed = True
-        allow_population_by_field_name = True
+    model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)

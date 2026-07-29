@@ -1,10 +1,9 @@
 from datetime import datetime
-from typing import List
 from uuid import uuid4
 
 import orjson
 from ldap3 import ALL_ATTRIBUTES
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 from .actions_base import MicrosoftADAction
 
@@ -12,7 +11,7 @@ from .actions_base import MicrosoftADAction
 class SearchArguments(BaseModel):
     search_filter: str
     basedn: str
-    attributes: List[str] | None
+    attributes: list[str] | None = None
     to_file: bool = False
 
 
