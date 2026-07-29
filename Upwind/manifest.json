@@ -10,11 +10,16 @@
       "api_token": {
         "description": "API token used to authenticate to Upwind API",
         "type": "string"
+      },
+      "organization_id": {
+        "description": "Upwind Organization ID",
+        "type": "string"
       }
     },
     "required": [
       "base_url",
-      "api_token"
+      "api_token",
+      "organization_id"
     ],
     "secrets": [
       "api_token"

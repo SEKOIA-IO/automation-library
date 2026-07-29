@@ -19,6 +19,7 @@ from sekoia_automation.module import Module
 class UpwindModuleConfig(BaseModel):
     base_url: HttpUrl
     api_token: SecretStr
+    organization_id: str
 
 
 class UpwindModule(Module):

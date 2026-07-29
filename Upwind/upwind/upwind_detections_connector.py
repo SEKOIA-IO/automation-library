@@ -20,7 +20,7 @@ class UpwindDetectionsConnector(UpwindConnector):
             "Accept": "application/json",
         }
 
-        url = f"{self.module.configuration.base_url}/v1alpha1/detections"
+        url = f"{self.module.configuration.base_url}/v1/organizations/{self.module.configuration.organization_id}/threat-detections"
 
         async with self.session() as session:
             async with session.get(url=url, params=params, headers=headers, timeout=self.request_timeout) as response:
@@ -31,8 +31,9 @@ class UpwindDetectionsConnector(UpwindConnector):
             return UpwindPage(items=payload)
 
         if isinstance(payload, dict):
-            items = payload.get("items") or payload.get("detections") or payload.get("results") or []
-            next_page_token = payload.get("next_page_token") or payload.get("next")
+            # API v1 returns threat-detections array in dict response
+            items = payload.get("threat-detections", [])
+            next_page_token = payload.get("next_page_token")
             if isinstance(items, list):
                 return UpwindPage(items=items, next_page_token=next_page_token)
 
