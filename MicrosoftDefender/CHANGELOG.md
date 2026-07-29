@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-07-29 - 1.3.3
+
+### Fixed
+
+- Fix `'NoneType' object has no attribute 'lower'` when a network interface entry has an explicit `None` type in the device asset connector.
+- Fix `HTTP transport has already been closed` error when enriching multiple devices via the Graph API by properly managing the `GraphServiceClient` lifecycle with an async context manager.
+
 ## 2026-07-24 - 1.3.2
 
 ### Fixed

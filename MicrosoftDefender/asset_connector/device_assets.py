@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from functools import cached_property
 from urllib.parse import urlencode, urljoin
@@ -93,6 +94,15 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
         with self.context as cache:
             return cache.get("most_recent_date_seen")
 
+    @asynccontextmanager
+    async def _graph_client(self) -> AsyncGenerator[GraphServiceClient, None]:
+        async with ClientSecretCredential(
+            tenant_id=self.module.configuration.tenant_id,
+            client_id=self.module.configuration.app_id,
+            client_secret=self.module.configuration.app_secret,
+        ) as credential:
+            yield GraphServiceClient(credentials=credential, scopes=GRAPH_SCOPES)
+
     @cached_property
     def defender_client(self) -> ApiClient:
         return ApiClient(
@@ -100,21 +110,6 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
             app_id=self.module.configuration.app_id,
             app_secret=self.module.configuration.app_secret,
             tenant_id=self.module.configuration.tenant_id,
-        )
-
-    @cached_property
-    def credential(self) -> ClientSecretCredential:
-        return ClientSecretCredential(
-            tenant_id=self.module.configuration.tenant_id,
-            client_id=self.module.configuration.app_id,
-            client_secret=self.module.configuration.app_secret,
-        )
-
-    @cached_property
-    def graph_client(self) -> GraphServiceClient:
-        return GraphServiceClient(
-            credentials=self.credential,
-            scopes=GRAPH_SCOPES,
         )
 
     @cached_property
@@ -238,7 +233,7 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
             for iface in machine.ipAddresses:
                 mac = iface.get("macAddress")
                 ip_addr = iface.get("ipAddress")
-                iface_type = iface.get("type", "").lower()
+                iface_type = (iface.get("type") or "").lower()
                 type_str, type_id = NETWORK_INTERFACE_TYPE_MAP.get(
                     iface_type, (NetworkInterfaceTypeStr.OTHER, NetworkInterfaceTypeId.OTHER)
                 )
@@ -372,11 +367,12 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
         )
 
         try:
-            response = await self.graph_client.device_management.managed_devices.get(
-                request_configuration=request_config,
-            )
-            if response and response.value:
-                return response.value[0]
+            async with self._graph_client() as client:
+                response = await client.device_management.managed_devices.get(
+                    request_configuration=request_config,
+                )
+                if response and response.value:
+                    return response.value[0]
         except Exception as e:
             self.log(message=f"Error fetching managed device for aadDeviceId={aad_device_id}: {e}", level="warning")
 
