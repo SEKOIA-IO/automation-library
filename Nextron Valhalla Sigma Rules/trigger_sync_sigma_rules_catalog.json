@@ -1,0 +1,47 @@
+{
+  "uuid": "349e50ff-f44f-420d-a09e-7567997ddd62",
+  "name": "Sync Valhalla Sigma rules into Sekoia Rules Catalog",
+  "description": "Periodically pulls the Valhalla Sigma feed and POSTs each rule to the Sekoia Rules Catalog so it executes in the detection engine. POST on first seen, PUT on subsequent pulls.",
+  "docker_parameters": "sync-sigma-rules-catalog",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "title": "Pull frequency in seconds",
+        "default": 86400,
+        "minimum": 3600
+      },
+      "enabled": {
+        "type": "boolean",
+        "title": "Enable rules on push",
+        "description": "When false (default), rules land in the catalog disabled — users opt in per rule.",
+        "default": false
+      },
+      "min_sigma_level": {
+        "type": "string",
+        "title": "Minimum Sigma level",
+        "description": "Only rules with a Sigma `level` at least this severe are imported. Rules missing the `level` field are always skipped.",
+        "enum": ["informational", "low", "medium", "high", "critical"],
+        "enumNames": ["informational", "low", "medium", "high", "critical"],
+        "default": "informational"
+      },
+      "min_sigma_status": {
+        "type": "string",
+        "title": "Minimum Sigma status",
+        "description": "Only rules with a Sigma `status` at least this mature are imported (ordering: experimental < test < stable). Rules with status `deprecated` or `unsupported` are never imported. Rules missing the `status` field are always skipped.",
+        "enum": ["experimental", "test", "stable"],
+        "enumNames": ["experimental", "test", "stable"],
+        "default": "experimental"
+      }
+    },
+    "required": []
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "created": { "type": "integer" },
+      "updated": { "type": "integer" }
+    }
+  }
+}
