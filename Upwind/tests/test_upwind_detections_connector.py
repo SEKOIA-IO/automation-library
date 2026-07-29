@@ -1,5 +1,5 @@
-from datetime import UTC, datetime
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
 
@@ -171,7 +171,7 @@ async def test_fetch_page_rejects_wrong_keys() -> None:
 @pytest.mark.asyncio
 async def test_fetch_page_pagination_with_next_page_token() -> None:
     """Test that pagination token is correctly extracted from API response."""
-    connector, session = build_connector(
+    connector, _ = build_connector(
         FakeResponse(
             payload={
                 "threat-detections": [{"id": "det-1"}],

@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
-from cachetools import LRUCache
 import pytest
+from cachetools import LRUCache
 
 import upwind
 from upwind import extract_upwind_detection_datetime, filter_new_events

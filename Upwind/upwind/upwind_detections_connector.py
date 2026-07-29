@@ -20,7 +20,9 @@ class UpwindDetectionsConnector(UpwindConnector):
             "Accept": "application/json",
         }
 
-        url = f"{self.module.configuration.base_url}/v1/organizations/{self.module.configuration.organization_id}/threat-detections"
+        base_url = self.module.configuration.base_url
+        org_id = self.module.configuration.organization_id
+        url = f"{base_url}/v1/organizations/{org_id}/threat-detections"
 
         async with self.session() as session:
             async with session.get(url=url, params=params, headers=headers, timeout=self.request_timeout) as response:
