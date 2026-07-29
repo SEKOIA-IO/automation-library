@@ -1,13 +1,13 @@
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class TagsObject(BaseModel):
     tag_uuid: str
     tag_key: str
     tag_value: str
-    added_by: str
+    added_by: Optional[str] = None
     added_at: str
 
 
@@ -35,8 +35,8 @@ class AssetInfo(BaseModel):
     updated_at: Optional[str] = None
     terminated_at: Optional[str] = None
     deleted_at: Optional[str] = None
-    aes_score_v3: Optional[str] = None
-    acr_score_v3: Optional[str] = None
+    aes_score_v3: Optional[float] = None
+    acr_score_v3: Optional[float] = None
     first_seen: Optional[str] = None
     last_seen: Optional[str] = None
     last_scan_target: Optional[str] = None
