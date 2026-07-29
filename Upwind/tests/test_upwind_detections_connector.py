@@ -59,9 +59,7 @@ def build_connector(response: FakeResponse) -> tuple[UpwindDetectionsConnector, 
     }
     connector.module = SimpleNamespace(
         configuration=SimpleNamespace(
-            base_url="https://api.upwind.io",
-            api_token=FakeSecret("token"),
-            organization_id="org_test123"
+            base_url="https://api.upwind.io", api_token=FakeSecret("token"), organization_id="org_test123"
         )
     )
     connector.request_timeout = 30
@@ -156,7 +154,7 @@ async def test_fetch_page_rejects_wrong_keys() -> None:
         FakeResponse(
             payload={
                 "detections": [{"id": "wrong-key"}],  # Wrong key, should be ignored
-                "results": [{"id": "also-wrong"}],    # Wrong key, should be ignored
+                "results": [{"id": "also-wrong"}],  # Wrong key, should be ignored
             }
         )
     )
@@ -213,9 +211,7 @@ async def test_fetch_page_handles_missing_next_page_token() -> None:
 @pytest.mark.asyncio
 async def test_fetch_page_with_empty_threat_detections_array() -> None:
     """Test that empty threat-detections array is handled correctly."""
-    connector, _ = build_connector(
-        FakeResponse(payload={"threat-detections": []})
-    )
+    connector, _ = build_connector(FakeResponse(payload={"threat-detections": []}))
 
     page = await connector.fetch_page(since=datetime(2026, 7, 27, tzinfo=UTC))
 
