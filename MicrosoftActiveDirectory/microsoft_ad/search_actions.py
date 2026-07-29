@@ -3,7 +3,7 @@ from uuid import uuid4
 
 import orjson
 from ldap3 import ALL_ATTRIBUTES
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 
 from .actions_base import MicrosoftADAction
 
