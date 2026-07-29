@@ -5,12 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 2026-06-02 - 1.5.5
+## 2026-07-29 - 1.5.8
 
-### Fixed
+### Added
 
-- Reuse a single LDAP connection in AD user actions when a `domain_controller` override is used to avoid duplicate binds and ensure searches and modifications use the same connection.
-- Minor formatting changes (Black) and tests verified locally.
+- Add multi-domain LDAP discovery: user actions now support a `domain_controller` override to route operations to a specific domain controller.
+- Add `from_module` and `for_domain_controller` factory helpers on `LDAPClient` for explicit connection creation to named hosts.
 
 ## 2026-07-09 - 1.5.7
 
