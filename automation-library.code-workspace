@@ -83,6 +83,10 @@
 		{
 			"name": "USTA",
 			"path": "USTA"
+		},
+		{
+			"name": "Zimperium",
+			"path": "Zimperium"
 		}
 	],
 	"settings": {

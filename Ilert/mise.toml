@@ -1,6 +1,12 @@
+# Module-specific mise config.
+# Tools and tasks are declared locally so commands can run directly from this
+# module folder in isolated workspace contexts.
+
 [tools]
 python = "3.14"
-uv = "latest"
+
+[env]
+_.python.venv = { path = ".venv", create = false }
 
 [tasks.test]
 description = "Run tests"
