@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Upgraded `sekoia-automation-sdk` to 1.23.1 and migrated `pydantic.v1`-shim models to native Pydantic v2 to avoid a v1/v2 model-mixing error
+
+## 2026-07-09 - 1.0.1
+
+### Fixed
+
+- Validate the `alert_uuid`, `api_key`, and `base_url` arguments via a Pydantic model, rejecting missing/empty/blank values before fetching and forwarding the alert
+- Broadened `alert_uuid` argument validation
+
 ## 2026-04-10 - 1.0.0
 
 ### Added
