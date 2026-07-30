@@ -342,7 +342,7 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
         machines: list[DefenderMachine] = []
         endpoint = self.MACHINES_ENDPOINT
         if self.most_recent_date_seen:
-            params = urlencode({"$filter": f"lastSeen ge {self.most_recent_date_seen}"})
+            params = urlencode({"$filter": f"lastSeen gt {self.most_recent_date_seen}"})
             endpoint = f"{endpoint}?{params}"
         url: str | None = urljoin(self.defender_client.base_url, endpoint)
 
@@ -420,4 +420,4 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
         if self._latest_time:
             dt_utc = self._latest_time.astimezone(timezone.utc).replace(tzinfo=None)
             with self.context as cache:
-                cache["most_recent_date_seen"] = dt_utc.isoformat(timespec="milliseconds") + "Z"
+                cache["most_recent_date_seen"] = dt_utc.isoformat(timespec="microseconds") + "Z"
