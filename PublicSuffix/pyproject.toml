@@ -27,7 +27,6 @@ default-groups = ["dev", "lint"]
 [tool.ruff]
 line-length = 119
 target-version = "py314"
-fix = true
 
 [tool.ruff.lint]
 select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
