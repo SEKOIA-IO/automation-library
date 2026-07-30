@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-07-30 - 1.3.5
+
+### Changed
+
+- Device asset connector: change default `frequency` from 60 s to 86400 s (24 h).
+
 ## 2026-07-30 - 1.3.4
 
 ### Fixed
