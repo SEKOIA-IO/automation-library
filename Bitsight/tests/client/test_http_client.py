@@ -92,9 +92,7 @@ async def test_get_url_3(company_id: str, session_faker: Faker) -> None:
     last_seen = session_faker.word()
     url = BitsightClient.get_url(company_id, last_seen=last_seen, offset=offset)
 
-    expected = "https://api.bitsighttech.com/ratings/v1/companies/{0}/findings?last_seen={1}&offset={2}".format(
-        company_id, last_seen, offset
-    )
+    expected = f"https://api.bitsighttech.com/ratings/v1/companies/{company_id}/findings?last_seen={last_seen}&offset={offset}"
 
     assert str(url) == expected
 

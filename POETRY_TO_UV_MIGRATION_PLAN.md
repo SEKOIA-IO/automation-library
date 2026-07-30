@@ -31,9 +31,16 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 - Retarus
 - USTA
 
+### Wave 2 first batch completed in this session
+- BinaryEdges
+- Bitsight
+- Censys
+- CertificateTransparency
+- Duo
+
 ### Remaining scope
-- Remaining modules to migrate: 91
-- Remaining planned effort: about 400.0 hours
+- Remaining modules to migrate: 86
+- Remaining planned effort: about 385.0 hours
 - Criticity scale: 1 (easiest) to 10 (hardest)
 
 ## Incremental Delivery Strategy
@@ -74,12 +81,7 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 
 Estimated wave effort: 27.5h (completed)
 
-### Wave 2: Criticity 5 (estimated 3h each)
-- BinaryEdges
-- Bitsight
-- Censys
-- CertificateTransparency
-- Duo
+### Wave 2: Criticity 5 (estimated 3h each) - In progress
 - Fastly
 - Git
 - Glimps
@@ -98,7 +100,7 @@ Estimated wave effort: 27.5h (completed)
 - Virustotal
 - WatchGuard
 
-Estimated wave effort: 66h
+Estimated wave effort: 66h total, 51h remaining
 
 ### Wave 3: Criticity 6 (estimated 4h each)
 - Akamai
@@ -191,10 +193,10 @@ Estimated wave effort: 28h
 - Large session: 4 modules from current wave.
 
 ## Resume Point For Next Session
-Start with the first small batch from Wave 2:
-1. BinaryEdges
-2. Bitsight
-3. Censys
+Start with the next small batch from Wave 2:
+1. Fastly
+2. Git
+3. Glimps
 
 After that, continue through the remaining Criticity 5 modules in order.
 

@@ -87,6 +87,26 @@
 		{
 			"name": "Zimperium",
 			"path": "Zimperium"
+		},
+		{
+			"name": "BinaryEdges",
+			"path": "BinaryEdges"
+		},
+		{
+			"name": "Bitsight",
+			"path": "Bitsight"
+		},
+		{
+			"name": "Censys",
+			"path": "Censys"
+		},
+		{
+			"name": "CertificateTransparency",
+			"path": "CertificateTransparency"
+		},
+		{
+			"name": "Duo",
+			"path": "Duo"
 		}
 	],
 	"settings": {
