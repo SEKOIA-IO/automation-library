@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -456,16 +456,97 @@ class TestGetAssets:
 class TestUpdateCheckpoint:
     @pytest.mark.asyncio
     async def test_updates_context(self, connector):
-        connector._latest_time = datetime(2025, 4, 20, 14, 22, 0, 123456, tzinfo=timezone.utc)
+        connector._latest_time_raw = "2025-04-20T14:22:00.123456Z"
         await connector.update_checkpoint()
 
         with connector.context as cache:
             assert cache["most_recent_date_seen"] == "2025-04-20T14:22:00.123456Z"
 
     @pytest.mark.asyncio
+    async def test_preserves_seven_digit_precision(self, connector):
+        # Defender timestamps can have 7 fractional digits (.NET 100-nanosecond precision).
+        # Storing the raw string avoids truncation to microseconds which would make the
+        # checkpoint slightly behind the real value and cause the last asset to pass the
+        # `gt` filter again on the next run (duplication).
+        raw = "2025-04-20T14:22:00.1234567Z"
+        connector._latest_time_raw = raw
+        await connector.update_checkpoint()
+
+        with connector.context as cache:
+            assert cache["most_recent_date_seen"] == raw
+
+    @pytest.mark.asyncio
     async def test_no_update_when_no_latest(self, connector):
-        connector._latest_time = None
+        connector._latest_time_raw = None
         await connector.update_checkpoint()
 
         with connector.context as cache:
             assert "most_recent_date_seen" not in cache
+
+
+class TestGetAssetsCheckpointTracking:
+    def _make_mock_response(self, machines: list):
+        mock_response = MagicMock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"value": [m.dict() for m in machines]}
+        return mock_response
+
+    @pytest.mark.asyncio
+    async def test_latest_time_raw_set_to_most_recent_last_seen(self, connector):
+        machines = [
+            DefenderMachine(id="a", lastSeen="2024-06-01T10:00:00.0000000Z"),
+            DefenderMachine(id="b", lastSeen="2024-06-03T10:00:00.0000000Z"),
+            DefenderMachine(id="c", lastSeen="2024-06-02T10:00:00.0000000Z"),
+        ]
+
+        with patch.object(connector, "defender_client", create=True) as mock_client:
+            mock_client.base_url = "https://api.securitycenter.microsoft.com"
+            mock_client.get = Mock(return_value=self._make_mock_response(machines))
+            async for _ in connector.get_assets():
+                pass
+
+        assert connector._latest_time_raw == "2024-06-03T10:00:00.0000000Z"
+
+    @pytest.mark.asyncio
+    async def test_latest_time_raw_preserves_seven_digit_precision(self, connector):
+        # Ensure the raw string with 7 fractional digits is kept verbatim.
+        raw = "2024-12-01T10:00:00.1234567Z"
+        machine = DefenderMachine(id="precise", lastSeen=raw)
+
+        with patch.object(connector, "defender_client", create=True) as mock_client:
+            mock_client.base_url = "https://api.securitycenter.microsoft.com"
+            mock_client.get = Mock(return_value=self._make_mock_response([machine]))
+            async for _ in connector.get_assets():
+                pass
+
+        assert connector._latest_time_raw == raw
+
+    @pytest.mark.asyncio
+    async def test_latest_time_raw_none_when_no_last_seen(self, connector):
+        machine = DefenderMachine(id="no-date")
+
+        with patch.object(connector, "defender_client", create=True) as mock_client:
+            mock_client.base_url = "https://api.securitycenter.microsoft.com"
+            mock_client.get = Mock(return_value=self._make_mock_response([machine]))
+            async for _ in connector.get_assets():
+                pass
+
+        assert connector._latest_time_raw is None
+
+    @pytest.mark.asyncio
+    async def test_checkpoint_persisted_after_get_assets_and_update(self, connector):
+        # Full cycle: get_assets sets _latest_time_raw, update_checkpoint persists it,
+        # next _fetch_machines call uses it as filter.
+        raw = "2024-12-01T10:00:00.1234567Z"
+        machine = DefenderMachine(id="m1", lastSeen=raw)
+
+        response = self._make_mock_response([machine])
+        with patch.object(connector, "defender_client", create=True) as mock_client:
+            mock_client.base_url = "https://api.securitycenter.microsoft.com"
+            mock_client.get = Mock(return_value=response)
+            async for _ in connector.get_assets():
+                pass
+            await connector.update_checkpoint()
+
+        with connector.context as cache:
+            assert cache["most_recent_date_seen"] == raw

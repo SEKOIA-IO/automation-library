@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-07-30 - 1.3.4
+
+### Fixed
+
+- Store the raw `lastSeen` string from the API directly as checkpoint instead of converting to `datetime` and back.
+
 ## 2026-07-30 - 1.3.3
 
 ### Fixed

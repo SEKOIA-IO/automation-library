@@ -1,5 +1,5 @@
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import datetime
 from functools import cached_property
 from urllib.parse import urlencode, urljoin
 
@@ -87,6 +87,7 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("device_context.json", self._data_path)
+        self._latest_time_raw: str | None = None
 
     @property
     def most_recent_date_seen(self) -> str | None:
@@ -384,7 +385,7 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
 
     async def get_assets(self) -> AsyncGenerator[DeviceOCSFModel, None]:
         """Yield OCSF DeviceOCSFModel: fetch Defender machines, enrich with Graph managed devices."""
-        most_recent: datetime | None = None
+        most_recent_raw: str | None = None
 
         machines = self._fetch_machines()
 
@@ -406,18 +407,15 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
                 )
                 continue
 
-            # Track most recent lastSeen for checkpoint
             if machine.lastSeen:
-                last_seen_dt = isoparse(machine.lastSeen)
-                if most_recent is None or last_seen_dt > most_recent:
-                    most_recent = last_seen_dt
+                if most_recent_raw is None or isoparse(machine.lastSeen) > isoparse(most_recent_raw):
+                    most_recent_raw = machine.lastSeen
 
             yield ocsf_device
 
-        self._latest_time = most_recent
+        self._latest_time_raw = most_recent_raw
 
     async def update_checkpoint(self) -> None:
-        if self._latest_time:
-            dt_utc = self._latest_time.astimezone(timezone.utc).replace(tzinfo=None)
+        if self._latest_time_raw:
             with self.context as cache:
-                cache["most_recent_date_seen"] = dt_utc.isoformat(timespec="microseconds") + "Z"
+                cache["most_recent_date_seen"] = self._latest_time_raw
