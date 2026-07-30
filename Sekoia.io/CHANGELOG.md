@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-22 - 2.74.5
+
+### Fixed
+
+- Fix the way to handle absent or null values in the triggers
+
 ## 2026-07-22 - 2.74.4
 
 ### Fixed
