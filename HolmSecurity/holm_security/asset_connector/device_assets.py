@@ -211,9 +211,10 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
     def _fetch_device_pages(self, last_sync_from: str | None = None) -> Generator[HolmDevicePage, None, None]:
         """Fetch device pages, following the ``next`` URL until it is null."""
         url: str | None = f"{self.base_url}{self.DEVICES_ENDPOINT}"
-        params: dict[str, int | str] = {"page_size": self.DEFAULT_PAGE_SIZE}
-        if last_sync_from:
-            params["last_sync_from"] = last_sync_from
+        params: dict[str, int | str] | None = {
+            "page_size": self.DEFAULT_PAGE_SIZE,
+            **({"last_sync_from": last_sync_from} if last_sync_from else {}),
+        }
 
         try:
             while url and self.running:
