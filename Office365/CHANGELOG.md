@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Split the generic `except Exception` in the management API forward loop into multiple branches.
 - Truncate error response bodies when raising O365 exceptions.
 
+## 2026-07-02 - 2.20.7
+
+### Fixed
+
+- Add intake_server to connector's manifests
+
 ## 2026-07-01 - 2.20.6
 
 ### Changed

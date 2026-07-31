@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-13 - 1.5.8
+
+### Fixed
+
+- Reconnect LDAP connection on any `LDAPException` (including `LDAPSessionTerminatedByServerError`) during paged search, not only on socket errors
+
 ## 2026-07-09 - 1.5.7
 
 ### Fixed
