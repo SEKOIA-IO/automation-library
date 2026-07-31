@@ -203,18 +203,29 @@ class ExecuteAQuery(BaseSolAction):
         stop=stop_after_attempt(10),
         retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
     )
-    def download_query_result(self, run_uuid: str, result_format: str) -> str:
+    def download_query_result(self, run_uuid: str, result_format: str) -> str | None:
         """Download the result of a completed query run.
 
         :param run_uuid: UUID of the query run whose result should be downloaded
         :param result_format: Desired output format, either "jsonl" or "csv"
-        :return: Raw result content as a string
+        :return: Raw result content as a string, or None if the query returned no results
         """
         response_download_result = self.http_session.get(
             url=urljoin(self.query_runs_api_path, f"{run_uuid}/download"),
             timeout=60,
             params={"download_format": result_format},
         )
+        if response_download_result.status_code == 404:
+            try:
+                error_code = response_download_result.json().get("detail", {}).get("code")
+            except Exception:
+                error_code = None
+            if error_code == "NO_RESULTS":
+                self.log(
+                    f"Query run '{run_uuid}' returned no results.",
+                    level="info",
+                )
+                return None
         try:
             response_download_result.raise_for_status()
         except HTTPError as e:
@@ -353,6 +364,8 @@ class ExecuteAQuery(BaseSolAction):
             query_uuid=query["uuid"],
             run_uuid=run_uuid,
         )
+        if result is None:
+            return ExecuteAQueryResults(query_result=None, output_path=None)
         if arguments.to_file:
             filepath = self.save_to_file(result, arguments.result_format)
             return ExecuteAQueryResults(query_result=None, output_path=filepath)

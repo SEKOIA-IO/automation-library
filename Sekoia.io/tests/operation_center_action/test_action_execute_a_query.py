@@ -400,6 +400,68 @@ def test_download_query_result_http_error(requests_mock):
     assert "Gone: result expired" in action._logs[0]["message"]
 
 
+
+def test_download_query_result_no_results_returns_none(requests_mock):
+    """A 404 with NO_RESULTS code should return None instead of raising."""
+    action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
+
+    requests_mock.get(
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
+        status_code=404,
+        json={"detail": {"message": "There is no results to download", "code": "NO_RESULTS"}},
+    )
+
+    result = action.download_query_result(SAMPLE_QUERY_RUN["uuid"], "jsonl")
+
+    assert result is None
+    assert len(action._logs) == 1
+    assert action._logs[0]["level"] == "info"
+    assert "no results" in action._logs[0]["message"].lower()
+
+
+def test_download_query_result_404_non_no_results_raises(requests_mock):
+    """A 404 without NO_RESULTS code should still raise an HTTPError."""
+    action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
+
+    requests_mock.get(
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
+        status_code=404,
+        json={"detail": {"message": "Run not found", "code": "NOT_FOUND"}},
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        action.download_query_result(SAMPLE_QUERY_RUN["uuid"], "jsonl")
+
+    assert len(action._logs) == 1
+    assert action._logs[0]["level"] == "error"
+    assert "HTTP error when downloading query result" in action._logs[0]["message"]
+
+
+def test_run_no_results_returns_gracefully(requests_mock):
+    """When the query run has no results the action should finish without error."""
+    action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
+
+    requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", json=SAMPLE_QUERY)
+    requests_mock.post(QUERY_RUNS_URL, json=SAMPLE_QUERY_RUN)
+    requests_mock.get(f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "done"})
+    requests_mock.get(
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
+        status_code=404,
+        json={"detail": {"message": "There is no results to download", "code": "NO_RESULTS"}},
+    )
+
+    result = action.run({"query_uuid": SAMPLE_QUERY["uuid"], "result_format": "jsonl"})
+
+    assert result["query_result"] is None
+    assert result["output_path"] is None
+
+
 # ---------------------------------------------------------------------------
 # run() — full polling cycle (pending → running → done)
 # ---------------------------------------------------------------------------
