@@ -400,7 +400,6 @@ def test_download_query_result_http_error(requests_mock):
     assert "Gone: result expired" in action._logs[0]["message"]
 
 
-
 def test_download_query_result_no_results_returns_none(requests_mock):
     """A 404 with NO_RESULTS code should return None instead of raising."""
     action = make_action()
