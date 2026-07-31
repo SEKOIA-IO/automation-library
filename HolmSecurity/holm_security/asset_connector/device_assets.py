@@ -83,7 +83,6 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
         with self.context as cache:
             return set(cache.get("seen_device_ids", []))
 
-
     @cached_property
     def base_url(self) -> str:
         return str(self.module.configuration["base_url"]).rstrip("/")
@@ -166,9 +165,11 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
         device_type, device_type_id = self.build_device_type(device.os_is_server)
         network = device.network
 
-        risk_level, risk_level_id = self.MAX_SEVERITY_MAP.get(
-            (device.max_severity or "").lower(), (None, None)
-        ) if device.max_severity else (None, None)
+        risk_level, risk_level_id = (
+            self.MAX_SEVERITY_MAP.get((device.max_severity or "").lower(), (None, None))
+            if device.max_severity
+            else (None, None)
+        )
 
         return Device(
             type=device_type,
@@ -246,7 +247,9 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
         skipped = 0
         cached_ids = self.seen_device_ids
 
-        for page in self._fetch_device_pages(last_sync_from=checkpoint_dt.date().isoformat() if checkpoint_dt else None):
+        for page in self._fetch_device_pages(
+            last_sync_from=checkpoint_dt.date().isoformat() if checkpoint_dt else None
+        ):
             for device in page.results:
                 device_dt = isoparse(device.last_sync) if device.last_sync else None
 
