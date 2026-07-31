@@ -762,9 +762,9 @@ class TestGetMappedFields:
     def test_values_reference_user_namespace_or_time(self, connector):
         """All OCSF paths must point into the user object or top-level time field."""
         for v in connector.get_mapped_fields().values():
-            assert v.startswith("user.") or v == "time", (
-                f"Expected OCSF path to start with 'user.' or be 'time', got {v!r}"
-            )
+            assert (
+                v.startswith("user.") or v == "time"
+            ), f"Expected OCSF path to start with 'user.' or be 'time', got {v!r}"
 
 
 class TestResetCheckpoint:
