@@ -1048,6 +1048,7 @@ def test_get_mapped_fields(test_entra_id_asset_connector):
 
     assert test_entra_id_asset_connector.get_mapped_fields() == expected
 
+
 def test_get_mapped_fields_failed(test_entra_id_asset_connector):
     not_expected = {
         "id": "user.uid",
