@@ -1084,9 +1084,9 @@ class TestGetMappedFields:
     def test_values_reference_device_namespace(self, connector):
         """All OCSF paths must point into the device object or enrichments."""
         for v in connector.get_mapped_fields().values():
-            assert v.startswith("device.") or v.startswith("enrichments."), (
-                f"Expected OCSF path to start with 'device.' or 'enrichments.', got {v!r}"
-            )
+            assert v.startswith("device.") or v.startswith(
+                "enrichments."
+            ), f"Expected OCSF path to start with 'device.' or 'enrichments.', got {v!r}"
 
 
 class TestResetCheckpoint:
