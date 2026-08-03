@@ -39,7 +39,7 @@ class ActionSophosEDRIsolateEndpoint(SophosEDRAction):
             return response
 
         except requests.exceptions.HTTPError as err:
-            if err.response.status_code == 400:
+            if err.response is not None and err.response.status_code == 400:
                 # returned as "bad request" in two cases:
                 # 1. endpoint is already in the desired state - we checked for that before
                 # 2. too little time passed since an isolation state was changed - need to wait
