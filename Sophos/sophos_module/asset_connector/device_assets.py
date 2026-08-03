@@ -422,7 +422,7 @@ class SophosDeviceAssetConnector(AssetConnector):
             "ipv6Addresses": "device.network_interfaces.ip",
             "macAddresses": "device.network_interfaces.mac",
             "health.overall": "device.is_compliant",
-            "tamperProtectionEnabled": "device.enrichments.Firewall_status",
+            "tamperProtectionEnabled": "enrichments.data.Firewall_status",
             "tenant.id": "device.org.uid",
             "isolation.status": "device.is_trusted",
             "group.name": "device.groups",
