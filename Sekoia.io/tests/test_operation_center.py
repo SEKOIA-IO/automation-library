@@ -1,3 +1,4 @@
+import uuid
 from urllib.parse import unquote as url_decoder
 
 import pytest
@@ -127,7 +128,8 @@ def test_get_alert_success():
     action: GetAlert = GetAlert()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
-    ressource = "alerts/fake_uuid"
+    alert_uuid = uuid.uuid4()
+    ressource = f"alerts/{alert_uuid}"
     expected_response = {
         "community_uuid": "string",
         "countermeasures": [],
@@ -169,7 +171,7 @@ def test_get_alert_success():
             "current_value": 0,
         },
     }
-    arguments = {"uuid": "fake_uuid"}
+    arguments = {"uuid": str(alert_uuid)}
 
     with requests_mock.Mocker() as mock:
         mock.get(f"{base_url}{ressource}", json=expected_response)
@@ -184,13 +186,16 @@ def test_get_alert_success():
 
 
 def test_get_alert_missing_arg():
+    from pydantic import ValidationError
+
     action: GetAlert = GetAlert()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
     arguments = {}
 
     with requests_mock.Mocker() as mock:
-        pytest.raises(KeyError, action.run, arguments)
+        with pytest.raises(ValidationError):
+            action.run(arguments)
 
         assert mock.call_count == 0
 

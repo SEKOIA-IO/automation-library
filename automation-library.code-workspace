@@ -11,6 +11,10 @@
 		{
 			"name": "1Password",
 			"path": "1Password"
+		},
+		{
+			"name": "Flare",
+			"path": "Flare"
 		}
 	],
 	"settings": {
