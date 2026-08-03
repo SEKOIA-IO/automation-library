@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-07-22 - 2.74.4
+## 2026-07-31 - 2.74.5
+
+### Fixed
+
+- `Execute a Query` action now handles the case where a query run returns no results.
 
 ### Fixed
 
