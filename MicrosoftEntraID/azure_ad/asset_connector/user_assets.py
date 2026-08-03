@@ -106,20 +106,18 @@ class EntraIDAssetConnector(AsyncAssetConnector):
     def get_mapped_fields(self) -> dict[str, str]:
         return {
             "id": "user.uid",
-            "displayName": "user.full_name",
+            "display_name": "user.full_name",
             "mail": "user.email_addr",
-            "userPrincipalName": "user.name",
-            "accountEnabled": "enrichments.account.data.is_enabled",
-            "createdDateTime": "time",
+            "user_principal_name": "user.name",
+            "company_name": "user.org.name",
+            "office_location": "user.org.ou_name",
+            "on_premises_sam_account_name": "user.uid_alt",
+            "account_enabled": "enrichments.account.data.is_enabled",
             "department": "enrichments.employment.value",
-            "jobTitle": "enrichments.employment.value",
-            "employeeId": "enrichments.employment.data",
-            "employeeType": "enrichments.employment.data",
-            "signInActivity": "enrichments.account.data.last_logon",
-            "companyName": "user.org.name",
-            "officeLocation": "user.org.ou_name",
-            "lastPasswordChangeDateTime": "enrichments.account.data.last_time_password_change",
-            "onPremisesSamAccountName": "user.uid_alt",
+            "job_title": "enrichments.employment.value",
+            "sign_in_activity.last_sign_in_date_time": "enrichments.account.data.last_logon",
+            "last_password_change_date_time": "enrichments.account.data.last_time_password_change",
+            "created_date_time": "time",
         }
 
     def map_fields(self, user: User, has_mfa: bool, groups: list[UserOCSFGroup], is_admin: bool) -> UserOCSFModel:

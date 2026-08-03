@@ -1030,21 +1030,28 @@ async def test_reset_checkpoint_when_no_checkpoint_set(test_entra_id_asset_conne
 
 
 def test_get_mapped_fields(test_entra_id_asset_connector):
-    """Test that get_mapped_fields returns a non-empty dict of field mappings."""
-    fields = test_entra_id_asset_connector.get_mapped_fields()
+    expected = {
+        "id": "user.uid",
+        "display_name": "user.full_name",
+        "mail": "user.email_addr",
+        "user_principal_name": "user.name",
+        "company_name": "user.org.name",
+        "office_location": "user.org.ou_name",
+        "on_premises_sam_account_name": "user.uid_alt",
+        "account_enabled": "enrichments.account.data.is_enabled",
+        "department": "enrichments.employment.value",
+        "job_title": "enrichments.employment.value",
+        "sign_in_activity.last_sign_in_date_time": "enrichments.account.data.last_logon",
+        "last_password_change_date_time": "enrichments.account.data.last_time_password_change",
+        "created_date_time": "time",
+    }
 
-    assert isinstance(fields, dict)
-    assert len(fields) > 0
+    assert test_entra_id_asset_connector.get_mapped_fields() == expected
 
-    # Verify key source fields are mapped
-    assert "id" in fields
-    assert "displayName" in fields
-    assert "mail" in fields
-    assert "userPrincipalName" in fields
-    assert "accountEnabled" in fields
-    assert "createdDateTime" in fields
+def test_get_mapped_fields_failed(test_entra_id_asset_connector):
+    not_expected = {
+        "id": "user.uid",
+        "display_name": "user.full_name",
+    }
 
-    # Verify OCSF paths are non-empty strings
-    for source_field, ocsf_path in fields.items():
-        assert isinstance(ocsf_path, str)
-        assert len(ocsf_path) > 0
+    assert test_entra_id_asset_connector.get_mapped_fields() != not_expected
