@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Include customer and representative IP addresses (public/private) in events from the PRA platform connector
+
 ## 2026-04-30 - 1.3.0
 
 ### Added

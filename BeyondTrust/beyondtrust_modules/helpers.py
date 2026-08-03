@@ -1,6 +1,37 @@
+import re
 from typing import Any
 
 from lxml import etree
+
+# BeyondTrust reports IPs as "<ip>[:<port>]", with IPv6 addresses bracketed
+# (e.g. "4.231.237.19:61606" or "[2a01:e34:...]:56722"), or the string "Unknown".
+IP_PATTERN = re.compile(r"^\[(?P<ipv6>[0-9a-fA-F:]+)\](?::\d+)?$|^(?P<ipv4>\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?$")
+
+
+def _extract_ip(raw: str | None) -> str | None:
+    """Extract the bare IP address from a BeyondTrust '<ip>[:<port>]' value."""
+    if not raw or raw.strip().lower() == "unknown":
+        return None
+
+    match = IP_PATTERN.match(raw.strip())
+    if not match:
+        return None
+
+    return match.group("ipv6") or match.group("ipv4")
+
+
+def _parse_endpoints(root: Any, xpath_expr: str, namespace: dict[str, str]) -> list[dict[str, str]]:
+    """Parse a list of customer/representative elements into username + IP dicts."""
+    result = []
+    for elem in root.xpath(xpath_expr, namespaces=namespace):
+        endpoint = {
+            "username": elem.findtext("ns:username", namespaces=namespace),
+            "public_ip": _extract_ip(elem.findtext("ns:public_ip", namespaces=namespace)),
+            "private_ip": _extract_ip(elem.findtext("ns:private_ip", namespaces=namespace)),
+        }
+        result.append({key: value for key, value in endpoint.items() if value})
+
+    return result
 
 
 def parse_session_list(raw: bytes) -> list[str]:
@@ -33,6 +64,14 @@ def parse_session(raw: bytes) -> list[dict[str, Any]]:
             "type": root.xpath("/ns:session_list/ns:session/ns:jump_group/@type", namespaces=namespace)[0],
         },
     }
+
+    customers = _parse_endpoints(root, "/ns:session_list/ns:session/ns:customer_list/ns:customer", namespace)
+    if customers:
+        events_header["customers"] = customers
+
+    representatives = _parse_endpoints(root, "/ns:session_list/ns:session/ns:rep_list/ns:representative", namespace)
+    if representatives:
+        events_header["representatives"] = representatives
 
     result = []
     events = root.xpath("/ns:session_list/ns:session/ns:session_details/ns:event", namespaces=namespace)
