@@ -187,9 +187,6 @@ class SentinelOneLogsConsumer(Thread):
         while self.running:
             self.next_batch()
 
-        # save sessions cache to the context
-        self.save_events_cache(self.session_events_cache)
-
         self.connector._executor.shutdown(wait=True)
 
 
@@ -252,6 +249,9 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
                 current_lag = int((datetime.now(UTC) - latest_event_timestamp).total_seconds())
 
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(current_lag)
+
+            # Persist cache after each page so it survives unexpected pod restarts
+            self.save_events_cache(self.session_events_cache)
 
             if activities_response.pagination["nextCursor"] is None:
                 break
@@ -318,6 +318,9 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
                 current_lag = int((datetime.now(UTC) - latest_event_timestamp).total_seconds())
 
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(current_lag)
+
+            # Persist cache after each page so it survives unexpected pod restarts
+            self.save_events_cache(self.session_events_cache)
 
             if threat_response.pagination["nextCursor"] is None:
                 break
