@@ -20,11 +20,11 @@
       "api_key"
     ]
   },
-  "description": "Automation module for Flare.io integrations.",
+  "description": "Flare.io is a threat intelligence platform that provides actionable insights into cyber threats. This integration allows you to query Flare.io for threat intelligence data, including indicators of compromise (IOCs), threat actors, and related information.",
   "name": "Flare.io",
   "slug": "flare-io",
   "uuid": "90ec90da-8065-4229-ab3c-298ffe140772",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "supports_validation": true,
   "categories": [
     "Threat Intelligence"
