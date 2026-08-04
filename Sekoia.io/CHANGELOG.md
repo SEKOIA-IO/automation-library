@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-04 - 2.75.0
+
+- Update Sekoia Automation SDK to 1.24.0
+
 ## 2026-07-31 - 2.74.5
 
 ### Fixed
