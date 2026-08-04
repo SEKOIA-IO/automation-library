@@ -1,0 +1,34 @@
+{
+  "description": "Assign a Netskope user to a restricted SCIM group",
+  "docker_parameters": "restrict_user_to_group",
+  "name": "Restrict User to Group",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_token": {
+        "type": "string",
+        "description": "API token for authentication"
+      },
+      "user_name": {
+        "type": "string",
+        "description": "The user name or email to restrict"
+      },
+      "group_ids": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "The restrictive Netskope group identifiers"
+      }
+    },
+    "required": ["api_token", "user_name", "group_ids"],
+    "title": "Restrict user to group",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "cfd86d74-85fd-4044-989f-dcbda0ebd9b2"
+}

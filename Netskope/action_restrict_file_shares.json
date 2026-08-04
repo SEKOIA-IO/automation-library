@@ -1,0 +1,33 @@
+{
+  "description": "Remove public or external sharing from a SaaS file",
+  "docker_parameters": "restrict_file_shares",
+  "name": "Restrict File Shares",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_token": {
+        "type": "string",
+        "description": "API token for authentication"
+      },
+      "file_id": {
+        "type": "string",
+        "description": "The SaaS file identifier"
+      },
+      "operation": {
+        "type": "string",
+        "default": "unshare",
+        "enum": ["unshare", "restrict-access"],
+        "description": "The remediation operation to run"
+      }
+    },
+    "required": ["api_token", "file_id"],
+    "title": "Restrict file shares",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "176c95a3-52c4-4da7-a0af-ccb2af4b6e91"
+}
