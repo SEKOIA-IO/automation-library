@@ -4,7 +4,9 @@ from urllib.parse import urlparse
 from netskope_modules.types import NetskopeAlertType, NetskopeEventType
 
 
-def get_iterator_name(event_type: NetskopeEventType, alert_type: NetskopeAlertType | None) -> str:
+def get_iterator_name(
+    event_type: NetskopeEventType, alert_type: NetskopeAlertType | None
+) -> str:
     """
     return a name for an iterator
 
@@ -21,7 +23,9 @@ def get_iterator_name(event_type: NetskopeEventType, alert_type: NetskopeAlertTy
     return "-".join(parts)
 
 
-def get_index_name(prefix: str, event_type: NetskopeEventType, alert_type: NetskopeAlertType | None) -> str:
+def get_index_name(
+    prefix: str, event_type: NetskopeEventType, alert_type: NetskopeAlertType | None
+) -> str:
     """
     return a index name for the iterator
 

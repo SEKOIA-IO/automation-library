@@ -5,7 +5,9 @@ from netskope_modules.actions.action_base import NetskopeAction, NetskopeActionA
 
 class RemoveFromBlocklistArguments(NetskopeActionArguments):
     blocklist_id: str = Field(..., description="The ID of the blocklist")
-    items: list[str] = Field(..., description="List of items in the blocklist (IPs, domains, or URLs)")
+    items: list[str] = Field(
+        ..., description="List of items in the blocklist (IPs, domains, or URLs)"
+    )
     sort_items: bool = Field(True, description="Sort items alphabetically")
 
 
@@ -28,7 +30,9 @@ class RemoveFromBlocklistAction(NetskopeAction):
         # Normalize incoming values once (trim, deduplicate, keep input order).
         normalized_items = self.normalize_urls(args.items, sort_items=False)
         # Keep only requested entries that currently exist in the blocklist.
-        items_to_remove = [item for item in normalized_items if item in set(existing_items)]
+        items_to_remove = [
+            item for item in normalized_items if item in set(existing_items)
+        ]
 
         # Count requested non-empty entries that are not currently present.
         missing_count = sum(
@@ -49,12 +53,19 @@ class RemoveFromBlocklistAction(NetskopeAction):
             return
 
         # Rebuild the full blocklist by excluding the items to remove.
-        remaining_items = [item for item in existing_items if item not in set(items_to_remove)]
-        remaining_items = self.normalize_urls(remaining_items, sort_items=args.sort_items)
+        remaining_items = [
+            item for item in existing_items if item not in set(items_to_remove)
+        ]
+        remaining_items = self.normalize_urls(
+            remaining_items, sort_items=args.sort_items
+        )
         blocklist_name = self.execute_request(
             "PATCH",
             f"api/v2/policy/urllist/{args.blocklist_id}/replace",
-            json={"data": {"type": blocklist_type, "urls": remaining_items}, "name": blocklist_name},
+            json={
+                "data": {"type": blocklist_type, "urls": remaining_items},
+                "name": blocklist_name,
+            },
         ).get("name", blocklist_name)
 
         # Deploy the changes

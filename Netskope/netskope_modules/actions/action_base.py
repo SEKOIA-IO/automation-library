@@ -25,7 +25,9 @@ class NetskopeAction(Action):
     @property
     def api_token(self) -> str:
         if not self._api_token:
-            raise ModuleConfigurationError("The API token is undefined. Please set it in action arguments")
+            raise ModuleConfigurationError(
+                "The API token is undefined. Please set it in action arguments"
+            )
         return self._api_token
 
     def initialize_action_arguments(self, arguments: NetskopeActionArguments) -> None:
@@ -59,7 +61,10 @@ class NetskopeAction(Action):
         """
         Retrieve the current blocklist payload from Netskope.
         """
-        return cast(dict[str, Any], self.execute_request("GET", f"api/v2/policy/urllist/{blocklist_id}"))
+        return cast(
+            dict[str, Any],
+            self.execute_request("GET", f"api/v2/policy/urllist/{blocklist_id}"),
+        )
 
     @cached_property
     def base_url(self) -> str:
@@ -74,12 +79,16 @@ class NetskopeAction(Action):
                 base_url = getattr(configuration, "base_url", None)
         except ModuleConfigurationError:
             # Backward-compatibility path: read raw config when model validation fails
-            raw_configuration = self.module.load_config(self.module.MODULE_CONFIGURATION_FILE_NAME, "json")
+            raw_configuration = self.module.load_config(
+                self.module.MODULE_CONFIGURATION_FILE_NAME, "json"
+            )
             if isinstance(raw_configuration, dict):
                 base_url = raw_configuration.get("base_url")
 
         if not base_url:
-            raise ModuleConfigurationError("The base url is undefined. Please set the url of the Netskope API")
+            raise ModuleConfigurationError(
+                "The base url is undefined. Please set the url of the Netskope API"
+            )
         return base_url.rstrip("/")
 
     def _handle_response_error(self, response: Response) -> None:

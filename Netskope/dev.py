@@ -8,10 +8,15 @@ from pathlib import Path
 
 from pydantic import Field
 
-from netskope_modules.connectors.connector_pubsub_lite import PubSubLite, PubSubLiteConfig
+from netskope_modules.connectors.connector_pubsub_lite import (
+    PubSubLite,
+    PubSubLiteConfig,
+)
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - [%(levelname)s] - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
+    level=logging.INFO,
+    format="%(asctime)s - [%(levelname)s] - %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
@@ -47,7 +52,9 @@ if __name__ == "__main__":
         intake_key = args.intake_key
 
         # https://intake.test.sekoia.io or https://intake.sekoia.io
-        intake_server: str = "https://intake.test.sekoia.io" if args.test else "https://intake.sekoia.io"
+        intake_server: str = (
+            "https://intake.test.sekoia.io" if args.test else "https://intake.sekoia.io"
+        )
 
     connector_conf = DumbConnectorConfiguration()
 

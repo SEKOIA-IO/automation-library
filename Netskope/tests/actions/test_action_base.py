@@ -54,7 +54,9 @@ def test_normalize_urls_sorts_by_default():
 
 def test_normalize_urls_preserves_order_when_sort_false():
     """Test normalize_urls preserves insertion order when sort_items=False."""
-    result = NetskopeAction.normalize_urls(["z.com", "a.com", "m.com"], sort_items=False)
+    result = NetskopeAction.normalize_urls(
+        ["z.com", "a.com", "m.com"], sort_items=False
+    )
     assert result == ["z.com", "a.com", "m.com"]
 
 
@@ -83,21 +85,29 @@ def test_base_url_with_dict_config(symphony_storage, trigger):
 
 def test_base_url_with_object_config(symphony_storage, trigger):
     """Test base_url extracts from object-style module configuration via getattr."""
-    trigger.module.configuration = {"base_url": "https://object.example.com", "api_token": "token"}
+    trigger.module.configuration = {
+        "base_url": "https://object.example.com",
+        "api_token": "token",
+    }
     action = AppendToBlocklistAction(module=trigger.module, data_path=symphony_storage)
     assert action.base_url == "https://object.example.com"
 
 
 def test_base_url_strips_trailing_slash(symphony_storage, trigger):
     """Test base_url removes trailing slash from URL."""
-    trigger.module.configuration = {"base_url": "https://example.com/", "api_token": "token"}
+    trigger.module.configuration = {
+        "base_url": "https://example.com/",
+        "api_token": "token",
+    }
     action = AppendToBlocklistAction(module=trigger.module, data_path=symphony_storage)
     assert action.base_url == "https://example.com"
 
 
 def test_base_url_raises_when_undefined(symphony_storage, trigger):
     """Test base_url raises error when not found in configuration."""
-    trigger.module.configuration = {"base_url": None}  # NULL value should still allow assignment
+    trigger.module.configuration = {
+        "base_url": None
+    }  # NULL value should still allow assignment
     action = AppendToBlocklistAction(module=trigger.module, data_path=symphony_storage)
     with pytest.raises(
         ModuleConfigurationError,
@@ -106,11 +116,15 @@ def test_base_url_raises_when_undefined(symphony_storage, trigger):
         _ = action.base_url
 
 
-def test_base_url_fallback_from_raw_config_on_validation_error(symphony_storage, trigger):
+def test_base_url_fallback_from_raw_config_on_validation_error(
+    symphony_storage, trigger
+):
     """Test base_url falls back to raw config file when model validation fails."""
     action = AppendToBlocklistAction(module=trigger.module, data_path=symphony_storage)
 
-    trigger.module.load_config = MagicMock(return_value={"base_url": "https://fallback.example.com"})
+    trigger.module.load_config = MagicMock(
+        return_value={"base_url": "https://fallback.example.com"}
+    )
 
     with patch.object(
         trigger.module.__class__,
