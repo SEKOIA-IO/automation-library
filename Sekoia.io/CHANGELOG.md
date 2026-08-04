@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-04 - 2.75.0
+
+### Fixed
+
+- Update Sekoia Automation SDK to 1.24.0
+## 2026-07-31 - 2.74.5
+
+### Fixed
+
+- `Execute a Query` action now handles the case where a query run returns no results.
+
+### Fixed
+
+- Allow short ids when validating the arguments for the GetAlert action
+
 ## 2026-07-20 - 2.74.3
 
 ### Fixed
