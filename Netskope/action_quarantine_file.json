@@ -1,0 +1,27 @@
+{
+  "description": "Quarantine a SaaS file using Netskope remediation",
+  "docker_parameters": "quarantine_file",
+  "name": "Quarantine File",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_token": {
+        "type": "string",
+        "description": "API token for authentication"
+      },
+      "file_id": {
+        "type": "string",
+        "description": "The SaaS file identifier"
+      }
+    },
+    "required": ["api_token", "file_id"],
+    "title": "Quarantine file",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "a9755997-a119-4567-8056-62807e1ef40b"
+}
