@@ -7,12 +7,8 @@ from netskope_modules.actions.action_base import NetskopeAction, NetskopeActionA
 
 class AppendToBlocklistArguments(NetskopeActionArguments):
     blocklist_id: str = Field(..., description="The ID of the blocklist")
-    blocklist_type: Literal["exact", "regex"] = Field(
-        "exact", description="The type of the blocklist (exact, regex)"
-    )
-    items: list[str] = Field(
-        ..., description="List of items in the blocklist (IPs, domains, or URLs)"
-    )
+    blocklist_type: Literal["exact", "regex"] = Field("exact", description="The type of the blocklist (exact, regex)")
+    items: list[str] = Field(..., description="List of items in the blocklist (IPs, domains, or URLs)")
     sort_items: bool = Field(True, description="Sort items alphabetically")
 
 
@@ -30,9 +26,7 @@ class AppendToBlocklistAction(NetskopeAction):
         provided_count = len(args.items)
         existing_urls = set(self.extract_urls(current_blocklist))
         normalized_items = self.normalize_urls(args.items, sort_items=args.sort_items)
-        items_to_append = [
-            item for item in normalized_items if item not in existing_urls
-        ]
+        items_to_append = [item for item in normalized_items if item not in existing_urls]
         added_count = len(items_to_append)
         # Count duplicates/matches against existing entries for clear operator feedback.
         duplicates_count = provided_count - added_count

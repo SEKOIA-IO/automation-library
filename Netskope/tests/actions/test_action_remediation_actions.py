@@ -39,9 +39,7 @@ def test_deploy_url_policy_success(symphony_storage, trigger):
         result = action.run({"api_token": "fake_api_token"})
 
         assert result is None
-        action.log.assert_any_call(
-            level="info", message="Successfully deployed pending URL policy changes"
-        )
+        action.log.assert_any_call(level="info", message="Successfully deployed pending URL policy changes")
 
 
 def test_restrict_user_to_group_success(symphony_storage, trigger):
@@ -68,9 +66,7 @@ def test_restrict_user_to_group_success(symphony_storage, trigger):
         )
 
         assert result is None
-        assert mock_requests.request_history[1].json() == {
-            "groups": [{"value": "group-1"}, {"value": "group-2"}]
-        }
+        assert mock_requests.request_history[1].json() == {"groups": [{"value": "group-1"}, {"value": "group-2"}]}
         action.log.assert_any_call(
             level="info",
             message='Successfully restricted Netskope user "alice@example.com" (id = user-123) to 2 group(s)',
@@ -87,14 +83,10 @@ def test_revoke_user_sessions_success(symphony_storage, trigger):
             json={},
         )
 
-        result = action.run(
-            {"api_token": "fake_api_token", "user_name": "alice@example.com"}
-        )
+        result = action.run({"api_token": "fake_api_token", "user_name": "alice@example.com"})
 
         assert result is None
-        assert mock_requests.request_history[0].json() == {
-            "userName": "alice@example.com"
-        }
+        assert mock_requests.request_history[0].json() == {"userName": "alice@example.com"}
         action.log.assert_any_call(
             level="info",
             message='Successfully revoked active Netskope sessions for "alice@example.com"',
@@ -115,9 +107,7 @@ def test_quarantine_file_success(symphony_storage, trigger):
 
         assert result is None
         assert mock_requests.request_history[0].json() == {"file_id": "file-123"}
-        action.log.assert_any_call(
-            level="info", message='Successfully quarantined file "file-123"'
-        )
+        action.log.assert_any_call(level="info", message='Successfully quarantined file "file-123"')
 
 
 def test_restrict_file_shares_unshare_success(symphony_storage, trigger):

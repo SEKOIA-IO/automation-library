@@ -16,6 +16,4 @@ class DeployUrlPolicyAction(NetskopeAction):
 
         self.deploy_blocklist_changes()
 
-        self.log(
-            level="info", message="Successfully deployed pending URL policy changes"
-        )
+        self.log(level="info", message="Successfully deployed pending URL policy changes")
