@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-10-13 - 1.16.1
+## 2026-11-17 - 1.16.2
 
 ### Fixed
 
@@ -18,11 +18,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add an optional `start_timestamp` parameter to start the collection of a new consumer group from a given date. Changing it repositions the existing indexes at the new date
 - Log an explicit warning when Netskope reports a concurrency conflict (409) on an index
 
-## 2026-10-13 - 1.16.0
+## 2026-10-13 - 1.16.1
 
 ### Changed
 
 - Migrated module from Poetry to uv
+
+## 2026-08-04 - 1.16.0
+
+### Added
+
+- Add playbook remediation actions for Netskope:
+    - `deploy_url_policy`
+    - `restrict_user_to_group`
+    - `revoke_user_sessions`
+    - `quarantine_file`
+    - `restrict_file_shares`
+    - `update_dlp_incident_status`
 
 ## 2026-07-16 - 1.15.0
 
