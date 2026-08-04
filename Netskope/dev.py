@@ -50,9 +50,7 @@ if __name__ == "__main__":
         intake_key = args.intake_key
 
         # https://intake.test.sekoia.io or https://intake.sekoia.io
-        intake_server: str = (
-            "https://intake.test.sekoia.io" if args.test else "https://intake.sekoia.io"
-        )
+        intake_server: str = "https://intake.test.sekoia.io" if args.test else "https://intake.sekoia.io"
 
     connector_conf = DumbConnectorConfiguration()
 

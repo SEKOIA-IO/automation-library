@@ -115,6 +115,4 @@ def test_replace_blocklist_should_not_sort_when_sort_items_false(replace_action)
         replace_action.run(arguments)
 
         replace_request_body = mock_requests.request_history[0].json()
-        assert replace_request_body == {
-            "data": {"type": "exact", "urls": ["www.z.com", "www.a.com"]}
-        }
+        assert replace_request_body == {"data": {"type": "exact", "urls": ["www.z.com", "www.a.com"]}}

@@ -58,9 +58,7 @@ def test_configuration(trigger):
 def test_execute_calls_set_credentials_and_super_execute(trigger):
     with (
         patch.object(PubSubLite, "set_credentials") as mock_set_credentials,
-        patch(
-            "sekoia_automation.aio.connector.AsyncConnector.execute"
-        ) as mock_super_execute,
+        patch("sekoia_automation.aio.connector.AsyncConnector.execute") as mock_super_execute,
     ):
         trigger.execute()
 
@@ -100,14 +98,10 @@ def test_save_checkpoint_persists_last_seen_timestamp(trigger):
 
 
 def test_stop_logs_and_calls_super_stop(trigger):
-    with patch(
-        "sekoia_automation.aio.connector.AsyncConnector.stop"
-    ) as mock_super_stop:
+    with patch("sekoia_automation.aio.connector.AsyncConnector.stop") as mock_super_stop:
         trigger.stop()
 
-    trigger.log.assert_called_once_with(
-        message="Stopping Google Cloud PubSub connector", level="info"
-    )
+    trigger.log.assert_called_once_with(message="Stopping Google Cloud PubSub connector", level="info")
     mock_super_stop.assert_called_once()
 
 
@@ -166,9 +160,7 @@ def test_run(trigger):
     trigger.configuration.chunk_size = 1
 
     with (
-        patch(
-            "netskope_modules.connectors.connector_pubsub_lite.AsyncSubscriberClient"
-        ) as mock,
+        patch("netskope_modules.connectors.connector_pubsub_lite.AsyncSubscriberClient") as mock,
         patch(
             "netskope_modules.connectors.connector_pubsub_lite.PubSubLite.subscription_path",
             new_callable=PropertyMock,
@@ -187,9 +179,7 @@ def test_run(trigger):
         ),
         patch("netskope_modules.connectors.connector_pubsub_lite.AdminClient"),
     ):
-        trigger.last_seen_timestamp = datetime(
-            year=2023, month=3, day=11, hour=13, minute=21, second=23
-        )
+        trigger.last_seen_timestamp = datetime(year=2023, month=3, day=11, hour=13, minute=21, second=23)
         mock_sub_path.return_value = "projects/13212241/subscriptions/6"
         instance = mock.return_value
 

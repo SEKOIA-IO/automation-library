@@ -34,18 +34,12 @@ SECURITY_CHECK_DATAEXPORTS: list[tuple[NetskopeEventType, NetskopeAlertType | No
 
 class NetskopeEventConnectorConfiguration(DefaultConnectorConfiguration):
     api_token: str = Field(..., description="The API token")
-    consumer_group: str | None = Field(
-        None, description="A unique name to track events consumption"
-    )
-    security_check_only: bool = Field(
-        False, description="Collect only security-check alerts (malware, malsite, DLP)"
-    )
+    consumer_group: str | None = Field(None, description="A unique name to track events consumption")
+    security_check_only: bool = Field(False, description="Collect only security-check alerts (malware, malsite, DLP)")
 
 
 class NetskopeEventConsumer(Thread):
-    def __init__(
-        self, connector: "NetskopeEventConnector", name: str, iterator: NetskopeIterator
-    ):
+    def __init__(self, connector: "NetskopeEventConnector", name: str, iterator: NetskopeIterator):
         super().__init__()
         self.connector = connector
         self.name = name
@@ -85,9 +79,7 @@ class NetskopeEventConsumer(Thread):
             raise
 
         if response.status_code == 204:
-            self.connector.log(
-                message=f"No events to forward for {self.name}", level="info"
-            )
+            self.connector.log(message=f"No events to forward for {self.name}", level="info")
         if response.status_code == 403:
             try:
                 message = response.json().get("message")
@@ -123,9 +115,9 @@ class NetskopeEventConsumer(Thread):
             batch_of_events.append(orjson.dumps(event).decode("utf-8"))
             if event.get("timestamp", 0) > most_recent_timestamp:
                 most_recent_timestamp = event["timestamp"]
-        OUTCOMING_EVENTS.labels(
-            intake_key=self.connector.configuration.intake_key, type=self.name
-        ).inc(len(batch_of_events))
+        OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.name).inc(
+            len(batch_of_events)
+        )
 
         if len(batch_of_events) > 0:
             self.connector.push_events_to_intakes(events=batch_of_events)
@@ -137,9 +129,9 @@ class NetskopeEventConsumer(Thread):
             message=f"Fetch and forward {len(batch_of_events)} events in {batch_duration} seconds",
             level="info",
         )
-        FORWARD_EVENTS_DURATION.labels(
-            intake_key=self.connector.configuration.intake_key, type=self.name
-        ).observe(batch_end_time)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.name).observe(
+            batch_end_time
+        )
 
         # compute the lag
         current_lag: int = 0
@@ -148,9 +140,7 @@ class NetskopeEventConsumer(Thread):
             current_lag = int(now - most_recent_timestamp)
 
         # report the lag
-        EVENTS_LAG.labels(
-            intake_key=self.connector.configuration.intake_key, type=self.name
-        ).set(current_lag)
+        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(current_lag)
 
         # get the sleeping time from the response. Otherwise, compute the remaining sleeping time.
         delta_sleep = content.get("wait_time", 30 - batch_duration)
@@ -167,9 +157,7 @@ class NetskopeEventConsumer(Thread):
             while self.running:
                 self.next_batch()
         except Exception as error:
-            self.connector.log_exception(
-                error, message=f"Failed to forward events for {self.name}"
-            )
+            self.connector.log_exception(error, message=f"Failed to forward events for {self.name}")
 
 
 class NetskopeEventConnector(Connector):
@@ -226,9 +214,7 @@ class NetskopeEventConnector(Connector):
 
         return self.module.trigger_configuration_uuid
 
-    def get_index_name(
-        self, event_type: NetskopeEventType, alert_type: NetskopeAlertType | None
-    ) -> str:
+    def get_index_name(self, event_type: NetskopeEventType, alert_type: NetskopeAlertType | None) -> str:
         """
         return a index name for the iterator
 
@@ -236,17 +222,12 @@ class NetskopeEventConnector(Connector):
         :param NetskopeAlertType or None alert_type: the type of alert
         """
         # if a global consumer group is defined, return it
-        if (
-            self.configuration.consumer_group
-            and len(self.configuration.consumer_group) > 0
-        ):
+        if self.configuration.consumer_group and len(self.configuration.consumer_group) > 0:
             return self.configuration.consumer_group
 
         return get_index_name(self.configuration_uuid, event_type, alert_type)
 
-    def create_iterator(
-        self, event_type: NetskopeEventType, alert_type: NetskopeAlertType | None
-    ) -> NetskopeIterator:
+    def create_iterator(self, event_type: NetskopeEventType, alert_type: NetskopeAlertType | None) -> NetskopeIterator:
         params: dict[str, str] = {
             Const.NSKP_TOKEN: self.configuration.api_token,
             Const.NSKP_TENANT_HOSTNAME: self.tenant_hostname,
@@ -257,9 +238,7 @@ class NetskopeEventConnector(Connector):
 
         if event_type == NetskopeEventType.ALERT:
             if alert_type is None:
-                raise ValueError(
-                    "alert_type cannot be null when event_type set to 'alert'"
-                )
+                raise ValueError("alert_type cannot be null when event_type set to 'alert'")
 
             params[Const.NSKP_ALERT_TYPE] = alert_type.value
 
@@ -287,9 +266,7 @@ class NetskopeEventConnector(Connector):
 
         return iterators
 
-    def start_consumers(
-        self, iterators: dict[str, NetskopeIterator]
-    ) -> dict[str, NetskopeEventConsumer]:
+    def start_consumers(self, iterators: dict[str, NetskopeIterator]) -> dict[str, NetskopeEventConsumer]:
         """
         Start the consumers from the list of iterators
 
@@ -358,9 +335,7 @@ class NetskopeEventConnector(Connector):
     def run(self):
         # raise a configuration error if the base_url is not defined
         if self.module.configuration.base_url is None:
-            raise ModuleConfigurationError(
-                "The base url is undefined. Please set the url of the netskope api"
-            )
+            raise ModuleConfigurationError("The base url is undefined. Please set the url of the netskope api")
 
         try:
             # create iterators from data exports

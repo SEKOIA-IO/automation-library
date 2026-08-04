@@ -22,9 +22,7 @@ class UpdateDlpIncidentStatusAction(NetskopeAction):
         if args.notes:
             payload["notes"] = args.notes
 
-        self.execute_request(
-            "PATCH", f"api/v2/dlp/incident/{args.incident_id}", json=payload
-        )
+        self.execute_request("PATCH", f"api/v2/dlp/incident/{args.incident_id}", json=payload)
 
         self.log(
             level="info",

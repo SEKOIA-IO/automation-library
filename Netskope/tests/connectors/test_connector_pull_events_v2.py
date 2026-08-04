@@ -50,9 +50,7 @@ def test_next_batch_sleep_until_next_round(trigger):
                 ],
             },
         )
-        iterator = trigger.create_iterator(
-            NetskopeEventType.ALERT, NetskopeAlertType.DLP
-        )
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
         consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
         batch_duration = 16  # the batch lasts 16 seconds
         start_time = 1666711174.0
@@ -97,9 +95,7 @@ def test_next_batch_sleep_according_the_response(trigger):
                 "wait_time": response_wait_time,
             },
         )
-        iterator = trigger.create_iterator(
-            NetskopeEventType.ALERT, NetskopeAlertType.DLP
-        )
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
         consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
         batch_duration = 16  # the batch lasts 16 seconds
         start_time = 1666711174.0
@@ -142,9 +138,7 @@ def test_long_next_batch_should_not_sleep(trigger):
                 ],
             },
         )
-        iterator = trigger.create_iterator(
-            NetskopeEventType.ALERT, NetskopeAlertType.DLP
-        )
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
         consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
         batch_duration = 45  # the batch lasts 45 seconds
         start_time = 1666711174.0
@@ -167,9 +161,7 @@ def test_next_batch_with_no_content(trigger):
             status_code=204,
             text="",
         )
-        iterator = trigger.create_iterator(
-            NetskopeEventType.ALERT, NetskopeAlertType.DLP
-        )
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
         consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
         batch_duration = 16  # the batch lasts 16 seconds
         start_time = 1666711174.0
@@ -192,9 +184,7 @@ def test_next_batch_with_error(trigger):
             status_code=404,
             text="This dataexporter does not exist",
         )
-        iterator = trigger.create_iterator(
-            NetskopeEventType.ALERT, NetskopeAlertType.DLP
-        )
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
         consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
         batch_duration = 16  # the batch lasts 16 seconds
         start_time = 1666711174.0
@@ -217,9 +207,7 @@ def test_next_batch_no_consume_service(trigger):
             status_code=403,
             json={"message": MESSAGE_CANNOT_CONSUME_SERVICE},
         )
-        iterator = trigger.create_iterator(
-            NetskopeEventType.ALERT, NetskopeAlertType.DLP
-        )
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
         consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
         consumer.stop = Mock()
         mock_time.time.return_value = 1666711174.0
@@ -232,12 +220,8 @@ def test_next_batch_no_consume_service(trigger):
 
 
 def test_next_batch_invalid_api_token(trigger):
-    with patch(
-        "netskope_modules.connectors.connector_pull_events_v2.time"
-    ) as mock_time:
-        iterator = trigger.create_iterator(
-            NetskopeEventType.ALERT, NetskopeAlertType.DLP
-        )
+    with patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time:
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
         iterator.client.get = MagicMock(
             side_effect=ValueError(
                 "Invalid API token TOKEN configured to access the endpoint https://my.fake.sekoia/api/v2/events/dataexport/alerts/dlp"
@@ -265,9 +249,7 @@ def test_consumer_stop_changes_running_state(trigger):
 
 def test_next_batch_connection_aborted_is_ignored(trigger):
     iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
-    iterator.client.get = MagicMock(
-        side_effect=ConnectionError("Connection aborted by peer")
-    )
+    iterator.client.get = MagicMock(side_effect=ConnectionError("Connection aborted by peer"))
 
     consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
 
@@ -278,9 +260,7 @@ def test_next_batch_connection_aborted_is_ignored(trigger):
 
 def test_next_batch_connection_error_is_raised(trigger):
     iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
-    iterator.client.get = MagicMock(
-        side_effect=ConnectionError("TLS handshake failure")
-    )
+    iterator.client.get = MagicMock(side_effect=ConnectionError("TLS handshake failure"))
 
     consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
 
@@ -308,9 +288,7 @@ def test_next_batch_403_service(trigger):
             status_code=403,
             text="message",
         )
-        iterator = trigger.create_iterator(
-            NetskopeEventType.ALERT, NetskopeAlertType.DLP
-        )
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
         consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
         consumer.stop = Mock()
         mock_time.time.return_value = 1666711174.0
@@ -331,9 +309,7 @@ def test_next_batch_403_service_with_json_error_message(trigger):
             status_code=403,
             json={"message": "custom 403 error"},
         )
-        iterator = trigger.create_iterator(
-            NetskopeEventType.ALERT, NetskopeAlertType.DLP
-        )
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
         consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
         mock_time.time.return_value = 1666711174.0
 
@@ -391,9 +367,7 @@ def test_create_iterator_alert_requires_alert_type(trigger):
 
 def test_start_consumers(trigger):
     with patch.object(NetskopeEventConsumer, "start") as mock_start:
-        iterator = trigger.create_iterator(
-            NetskopeEventType.ALERT, NetskopeAlertType.DLP
-        )
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
         iterators = {"alert-dlp": iterator}
 
         consumers = trigger.start_consumers(iterators)
@@ -405,16 +379,10 @@ def test_start_consumers(trigger):
 
 def test_supervise_consumers(trigger):
     with patch.object(NetskopeEventConsumer, "start") as mock_start:
-        alert_dlp_iterator = trigger.create_iterator(
-            NetskopeEventType.ALERT, NetskopeAlertType.DLP
-        )
+        alert_dlp_iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
         event_page_iterator = trigger.create_iterator(NetskopeEventType.PAGE, None)
-        event_incident_iterator = trigger.create_iterator(
-            NetskopeEventType.INCIDENT, None
-        )
-        event_network_iterator = trigger.create_iterator(
-            NetskopeEventType.NETWORK, None
-        )
+        event_incident_iterator = trigger.create_iterator(NetskopeEventType.INCIDENT, None)
+        event_network_iterator = trigger.create_iterator(NetskopeEventType.NETWORK, None)
         iterators = {
             "alert-dlp": alert_dlp_iterator,
             "page": event_page_iterator,
@@ -435,9 +403,7 @@ def test_supervise_consumers(trigger):
 
 
 def test_stop_consumers(trigger):
-    alert_dlp_iterator = trigger.create_iterator(
-        NetskopeEventType.ALERT, NetskopeAlertType.DLP
-    )
+    alert_dlp_iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
     event_page_iterator = trigger.create_iterator(NetskopeEventType.PAGE, None)
     event_incident_iterator = trigger.create_iterator(NetskopeEventType.INCIDENT, None)
     iterators = {
@@ -486,13 +452,9 @@ def test_run_supervises_consumers_and_stops_them(trigger):
     with (
         patch.object(trigger, "create_iterators", return_value=iterators),
         patch.object(trigger, "start_consumers", return_value=consumers),
-        patch.object(
-            trigger, "supervise_consumers", side_effect=stop_after_first_supervision
-        ) as mock_supervise,
+        patch.object(trigger, "supervise_consumers", side_effect=stop_after_first_supervision) as mock_supervise,
         patch.object(trigger, "stop_consumers") as mock_stop,
-        patch(
-            "netskope_modules.connectors.connector_pull_events_v2.time.sleep"
-        ) as mock_sleep,
+        patch("netskope_modules.connectors.connector_pull_events_v2.time.sleep") as mock_sleep,
     ):
         trigger.run()
 
@@ -502,37 +464,27 @@ def test_run_supervises_consumers_and_stops_them(trigger):
 
 
 def test_run_logs_exception_when_consumer_start_fails(trigger):
-    with patch.object(
-        trigger, "create_iterators", side_effect=RuntimeError("iterators failed")
-    ):
+    with patch.object(trigger, "create_iterators", side_effect=RuntimeError("iterators failed")):
         trigger.run()
 
     trigger.log_exception.assert_called_once()
 
 
-@pytest.mark.skipif(
-    "{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}.issubset(os.environ.keys()) == False"
-)
+@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}.issubset(os.environ.keys()) == False")
 def test_fetch_next_batch_integration(integration_trigger):
     trigger = integration_trigger
     iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
     consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
 
-    with patch(
-        "netskope_modules.connectors.connector_pull_events_v2.time"
-    ) as mock_time:
+    with patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time:
         mock_time.time.return_value = 1666711174.0
         consumer.next_batch()
 
-    calls = [
-        call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list
-    ]
+    calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
     assert len(calls) > 0
 
 
-@pytest.mark.skipif(
-    "{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}.issubset(os.environ.keys()) == False"
-)
+@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}.issubset(os.environ.keys()) == False")
 def test_run_integration(integration_trigger):
     trigger = integration_trigger
     main_thread = Thread(target=trigger.run)
@@ -542,7 +494,5 @@ def test_run_integration(integration_trigger):
     time.sleep(5)
     trigger._stop_event.set()
 
-    calls = [
-        call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list
-    ]
+    calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
     assert len(calls) > 0

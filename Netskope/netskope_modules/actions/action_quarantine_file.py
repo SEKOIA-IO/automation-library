@@ -22,6 +22,4 @@ class QuarantineFileAction(NetskopeAction):
             json={"file_id": args.file_id},
         )
 
-        self.log(
-            level="info", message=f'Successfully quarantined file "{args.file_id}"'
-        )
+        self.log(level="info", message=f'Successfully quarantined file "{args.file_id}"')
