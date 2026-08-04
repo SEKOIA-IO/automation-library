@@ -1,9 +1,10 @@
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from posixpath import join as urljoin
-from typing import Any, Generator
+from typing import Any
 
 import orjson
 import requests
@@ -62,7 +63,7 @@ class MobileThreatDefenceConnector(Connector):
         # parse the most recent requested date
         most_recent_date_requested = isoparse(most_recent_date_requested_str)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         one_week_ago = now - timedelta(days=7)
         if most_recent_date_requested < one_week_ago:
             most_recent_date_requested = one_week_ago
@@ -108,7 +109,10 @@ class MobileThreatDefenceConnector(Connector):
 
     def handle_response_error(self, response: requests.Response) -> None:
         if not response.ok:
-            message = f"Request on Zimperium MTD API to fetch events failed with status {response.status_code} - {response.reason}"
+            message = (
+                "Request on Zimperium MTD API to fetch events failed with status "
+                f"{response.status_code} - {response.reason}"
+            )
 
             # enrich error logs with detail from the Zimperium MTD API
             try:
@@ -125,19 +129,15 @@ class MobileThreatDefenceConnector(Connector):
             )
             response.raise_for_status()
 
-    def fetch_events(
-        self, from_date: datetime, to_date: datetime
-    ) -> Generator[list[dict[str, Any]], None, None]:
+    def fetch_events(self, from_date: datetime, to_date: datetime) -> Generator[list[dict[str, Any]]]:
         page_num = 0
 
         headers = {"Accept": "application/json"}
-        url = urljoin(
-            self.module.configuration.base_url, "api/threats/public/v1/threats"
-        )
+        url = urljoin(self.module.configuration.base_url, "api/threats/public/v1/threats")
         params: dict[str, str | int] = {
             "module": "ZIPS",
-            "after": from_date.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "before": to_date.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "after": from_date.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "before": to_date.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "page": page_num,
             "size": self.configuration.chunk_size,
             "sort": "timestamp,asc",
@@ -151,15 +151,11 @@ class MobileThreatDefenceConnector(Connector):
             events = raw.get("content", [])
 
             if len(events) > 0:
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(
-                    len(events)
-                )
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
                 yield events
 
             else:
-                self.log(
-                    "Last page was empty. Waiting for the next batch", level="info"
-                )
+                self.log("Last page was empty. Waiting for the next batch", level="info")
                 return
 
             if raw["last"] is True:
@@ -186,9 +182,7 @@ class MobileThreatDefenceConnector(Connector):
                 duration_start = time.time()
                 for events in self.fetch_events(start, end):
                     batch_of_events = [
-                        orjson.dumps(event).decode("utf-8")
-                        for event in events
-                        if not self.is_processed(event)
+                        orjson.dumps(event).decode("utf-8") for event in events if not self.is_processed(event)
                     ]
 
                     if len(batch_of_events) > 0:
@@ -198,9 +192,7 @@ class MobileThreatDefenceConnector(Connector):
                         )
                         self.push_events_to_intakes(events=batch_of_events)
 
-                        OUTCOMING_EVENTS.labels(
-                            intake_key=self.configuration.intake_key
-                        ).inc(len(batch_of_events))
+                        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
 
                         # mark sent events as processed
                         for event in events:
@@ -210,9 +202,9 @@ class MobileThreatDefenceConnector(Connector):
                     else:
                         self.log(message="No events to forward", level="info")
 
-                FORWARD_EVENTS_DURATION.labels(
-                    intake_key=self.configuration.intake_key
-                ).observe(time.time() - duration_start)
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                    time.time() - duration_start
+                )
 
             except Exception as ex:
                 self.log_exception(ex, message="Failed to fetch events.")
