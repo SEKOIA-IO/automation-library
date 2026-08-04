@@ -10,13 +10,24 @@ from typing import Any
 
 from google.cloud.pubsublite import AdminClient
 from google.cloud.pubsublite.cloudpubsub import AsyncSubscriberClient
-from google.cloud.pubsublite.types import CloudRegion, CloudZone, FlowControlSettings, PublishTime, SubscriptionPath
+from google.cloud.pubsublite.types import (
+    CloudRegion,
+    CloudZone,
+    FlowControlSettings,
+    PublishTime,
+    SubscriptionPath,
+)
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from ..logging import get_logger
-from ..metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from ..metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 logger = get_logger()
 
@@ -44,8 +55,8 @@ class PubSubLite(AsyncConnector):
         self.context = PersistentJSON("context.json", self._data_path)
         self.context_lock = asyncio.Lock()
 
-        self.last_seen_timestamp: datetime.datetime = datetime.datetime.now().astimezone() - datetime.timedelta(
-            minutes=5
+        self.last_seen_timestamp: datetime.datetime = (
+            datetime.datetime.now().astimezone() - datetime.timedelta(minutes=5)
         )
         self.latest_event_lag: float = -1
 
@@ -70,13 +81,17 @@ class PubSubLite(AsyncConnector):
         self.context_lock.release()
 
         if last_seen_timestamp:
-            self.last_seen_timestamp = datetime.datetime.fromtimestamp(float(last_seen_timestamp)).astimezone()
+            self.last_seen_timestamp = datetime.datetime.fromtimestamp(
+                float(last_seen_timestamp)
+            ).astimezone()
 
     async def save_checkpoint(self) -> None:
         await self.context_lock.acquire()
 
         with self.context as cache:
-            cache["last_timestamp"] = self.last_seen_timestamp.replace(tzinfo=datetime.timezone.utc).timestamp()
+            cache["last_timestamp"] = self.last_seen_timestamp.replace(
+                tzinfo=datetime.timezone.utc
+            ).timestamp()
 
         self.context_lock.release()
 
@@ -87,7 +102,9 @@ class PubSubLite(AsyncConnector):
     @cached_property
     def location(self) -> CloudZone | CloudRegion:
         if self.configuration.zone_id:
-            return CloudZone(CloudRegion(self.configuration.cloud_region), self.configuration.zone_id)
+            return CloudZone(
+                CloudRegion(self.configuration.cloud_region), self.configuration.zone_id
+            )
 
         else:
             return CloudRegion(self.configuration.cloud_region)
@@ -121,7 +138,9 @@ class PubSubLite(AsyncConnector):
 
             batch.append(event)
 
-            if len(batch) >= batch_size or (len(batch) > 0 and time.time() - batch_start > batch_max_wait):
+            if len(batch) >= batch_size or (
+                len(batch) > 0 and time.time() - batch_start > batch_max_wait
+            ):
                 self.log(
                     message=f"Forward {len(batch)} events to the intake",
                     level="info",
@@ -130,19 +149,22 @@ class PubSubLite(AsyncConnector):
                 await self.push_data_to_intakes(events=batch)
                 await self.save_checkpoint()
 
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type).inc(
-                    len(batch)
-                )
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key,
+                    type=self.metric_label_type,
+                ).inc(len(batch))
 
                 batch_end = time.time()
                 batch_duration = batch_end - batch_start
                 FORWARD_EVENTS_DURATION.labels(
-                    intake_key=self.configuration.intake_key, type=self.metric_label_type
+                    intake_key=self.configuration.intake_key,
+                    type=self.metric_label_type,
                 ).observe(batch_duration)
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type).set(
-                    self.latest_event_lag
-                )
+                EVENTS_LAG.labels(
+                    intake_key=self.configuration.intake_key,
+                    type=self.metric_label_type,
+                ).set(self.latest_event_lag)
 
                 batch = []
                 batch_start = time.time()
@@ -158,9 +180,9 @@ class PubSubLite(AsyncConnector):
         async with AsyncSubscriberClient() as subscriber_client:
             if self.last_seen_timestamp:
                 admin_client = AdminClient(CloudRegion(self.configuration.cloud_region))
-                ts_datetime = self.last_seen_timestamp.astimezone(datetime.timezone.utc) + datetime.timedelta(
-                    microseconds=1
-                )
+                ts_datetime = self.last_seen_timestamp.astimezone(
+                    datetime.timezone.utc
+                ) + datetime.timedelta(microseconds=1)
                 self.log("Getting events from %s" % ts_datetime.isoformat())
 
                 ts = PublishTime(ts_datetime)
@@ -173,16 +195,22 @@ class PubSubLite(AsyncConnector):
 
             async for message in subscriber:
                 self.last_seen_timestamp = message.publish_time
-                self.latest_event_lag = time.time() - self.last_seen_timestamp.timestamp()
+                self.latest_event_lag = (
+                    time.time() - self.last_seen_timestamp.timestamp()
+                )
 
                 message_content = (
-                    gzip.decompress(message.data) if self.is_gzip_compressed(message.data) else message.data
+                    gzip.decompress(message.data)
+                    if self.is_gzip_compressed(message.data)
+                    else message.data
                 )
                 events = self.process_messages(message_content)
 
                 # Put events in the forwarding queue
                 if events is not None:
-                    INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                    INCOMING_MESSAGES.labels(
+                        intake_key=self.configuration.intake_key
+                    ).inc(len(events))
                     for event in events:
                         await self.events_queue.put(event)
 
@@ -191,7 +219,9 @@ class PubSubLite(AsyncConnector):
     def process_messages(self, content: bytes) -> list[str] | None:
         # Netskope is putting multiple transaction events in 1 PubSub Lite message
         try:
-            return [event for event in content.decode("utf-8").split("\n") if len(event) > 0]
+            return [
+                event for event in content.decode("utf-8").split("\n") if len(event) > 0
+            ]
         except Exception:
             self.log(level="error", message="Unable to decode the content of a message")
             logger.error("Failed to decode the content of a message", content=content)
