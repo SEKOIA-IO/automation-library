@@ -73,7 +73,7 @@ version = "^1.22.1"
 extras = ["all"]
 
 [tool.poetry.dev-dependencies.black]
-version = "^24.3.0"
+version = "^26.3.1"
 extras = ["colorama"]
 
 [tool.poetry.dev-dependencies.poethepoet]
