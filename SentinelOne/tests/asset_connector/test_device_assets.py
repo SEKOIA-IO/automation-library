@@ -1,8 +1,8 @@
 """Unit tests for SentinelOneDeviceAssetConnector."""
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
+import pytest
 from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceOCSFModel,
     DeviceTypeId,
@@ -15,7 +15,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 from sekoia_automation.module import Module
 
 from sentinelone_module.asset_connector.device_assets import SentinelOneDeviceAssetConnector
-from sentinelone_module.asset_connector.models import SentinelOneAgent, NetworkInterface, Location
+from sentinelone_module.asset_connector.models import Location, NetworkInterface, SentinelOneAgent
 
 
 @pytest.fixture
