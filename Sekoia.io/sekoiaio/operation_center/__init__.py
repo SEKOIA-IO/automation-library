@@ -2,6 +2,7 @@ from sekoia_automation.action import GenericAPIAction
 
 from sekoiaio.operation_center.constants import base_url
 from sekoiaio.operation_center.get_alert import GetAlert
+from sekoiaio.operation_center.update_case import UpdateCase
 
 PatchAlert = type(
     "PatchAlert",
@@ -217,16 +218,6 @@ GetCase = type(
         "verb": "get",
         "endpoint": base_url + "cases/{uuid}",
         "query_parameters": ["community_uuid", "render"],
-    },
-)
-
-UpdateCase = type(
-    "UpdateCase",
-    (GenericAPIAction,),
-    {
-        "verb": "patch",
-        "endpoint": base_url + "cases/{uuid}",
-        "query_parameters": [],
     },
 )
 

@@ -7,11 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-04 - 2.75.1
+
+### Fixed
+
+- Harden playbook action `Edit case` (`update_case`) for large-description timeouts and empty descriptions:
+  - Use a dedicated implementation with a longer read timeout and retries for transient network/server errors
+  - Avoid opaque 5-second read-timeout failures when the API is slow to process large updates
+  - Ignore empty `description` updates, so reopening a case with `description=""` does not fail because of the description field
+  - Fall back to updating non-description fields when a large description update times out, so status/metadata updates still succeed and emit an explicit warning
+  - Skip the API call entirely when nothing is left to update after payload normalization
+
 ## 2026-08-04 - 2.75.0
 
 ### Fixed
 
 - Update Sekoia Automation SDK to 1.24.0
+
 ## 2026-07-31 - 2.74.5
 
 ### Fixed
