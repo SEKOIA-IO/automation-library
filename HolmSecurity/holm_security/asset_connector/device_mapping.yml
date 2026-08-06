@@ -199,6 +199,24 @@ mapping:
       logic: "Convert ISO 8601 last_sync to Unix epoch"
       description: "Device last seen timestamp"
 
+    - source: "max_severity"
+      target: "device.risk_level"
+      type: "string"
+      logic: "Normalize via MAX_SEVERITY_MAP to OCSF RiskLevelStr; unknown values -> null"
+      description: "Highest vulnerability severity found on the device"
+
+    - source: "max_severity"
+      target: "device.risk_level_id"
+      type: "integer"
+      logic: "Normalize via MAX_SEVERITY_MAP to OCSF RiskLevelId; unknown values -> null"
+      description: "OCSF risk level ID"
+
+    - source: "risk_score"
+      target: "device.risk_score"
+      type: "integer"
+      logic: "Direct mapping; omitted when 0"
+      description: "Device risk score"
+
   ocsf_samples:
     - name: "Device Inventory Info: Collect"
       description: "Transformed Holm Security device record to OCSF Device Inventory Info event"

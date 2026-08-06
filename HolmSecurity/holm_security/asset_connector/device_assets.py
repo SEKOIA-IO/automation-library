@@ -55,19 +55,10 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
         "critical": (RiskLevelStr.CRITICAL, RiskLevelId.CRITICAL),
     }
 
-    # Holm os_family -> OCSF OS type mapping
-    OS_FAMILY_MAP: dict[str, tuple[OSTypeStr, OSTypeId]] = {
-        "windows": (OSTypeStr.WINDOWS, OSTypeId.WINDOWS),
-        "linux": (OSTypeStr.LINUX, OSTypeId.LINUX),
-        "macos": (OSTypeStr.MACOS, OSTypeId.MACOS),
-        "mac": (OSTypeStr.MACOS, OSTypeId.MACOS),
-        "android": (OSTypeStr.ANDROID, OSTypeId.ANDROID),
-        "ios": (OSTypeStr.IOS, OSTypeId.IOS),
-    }
-
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("device_context.json", self._data_path)
+        self._latest_time: str | None = None
         self._new_device_ids: set[str] = set()
 
     @property
@@ -240,6 +231,33 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
             message=f"Asset generation complete - generated: {generated}, skipped: {skipped}",
             level="info",
         )
+
+    def get_mapped_fields(self) -> dict[str, str]:
+        """Return the Holm -> OCSF field mapping used for schema-change fingerprinting."""
+        return {
+            "uid": "device.uid",
+            "device_name": "device.name",
+            "hostname": "device.hostname",
+            "os_is_server": "device.type",
+            "os_name": "device.os.name",
+            "os_family": "device.os.type",
+            "network.ip_address": "device.ip",
+            "network.ip_address_v6": "device.network_interfaces.ip",
+            "network.mac_address": "device.network_interfaces.mac",
+            "created": "device.created_time",
+            "last_sync": "device.last_seen_time",
+            "max_severity": "device.risk_level",
+            "risk_score": "device.risk_score",
+        }
+
+    def reset_checkpoint(self) -> None:
+        """Clear the checkpoint and dedup cache so all devices are re-fetched from scratch."""
+        with self.context as cache:
+            cache.pop("most_recent_last_sync", None)
+            cache.pop("seen_device_ids", None)
+        self._latest_time = None
+        self._new_device_ids = set()
+        self.log(message="Checkpoint reset - all devices will be re-fetched on the next cycle", level="info")
 
     def update_checkpoint(self) -> None:
         if self._new_device_ids or self._latest_time:

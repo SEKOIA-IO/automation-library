@@ -7,15 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.0] - 2026-07-20
+## [1.2.0] - 2026-08-03
 
 ### Added
 
-- Vulnerability asset connector, correlates them with managed devices from, and maps them to the OCSF Vulnerability Finding model.
+- Vulnerability asset connector that collects findings from `GET /v2/net-assets/report/vulnerabilities/`, correlates them with managed devices from `GET /v2/devices`, and maps them to the OCSF Vulnerability Finding model
+- `get_mapped_fields` and `reset_checkpoint` on both asset connectors, enabling automatic checkpoint reset when the field mapping changes (required by sekoia-automation-sdk 1.24.0)
 
 ### Changed
 
 - Account validator updates to reflect vulnerability setup
+- Bump `sekoia-automation-sdk` to 1.24.0
 
 ## [1.1.0] - 2026-07-31
 
