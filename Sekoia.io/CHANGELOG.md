@@ -7,11 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-04 - 2.75.1
+
+### Changed
+
+- Debug large/empty `description` field errors in `Edit case` (`update_case`) playbook action:
+  - Raise `timeout` default value to `120` in `UpdateCase` class
+
 ## 2026-08-04 - 2.75.0
 
 ### Fixed
 
 - Update Sekoia Automation SDK to 1.24.0
+
 ## 2026-07-31 - 2.74.5
 
 ### Fixed
