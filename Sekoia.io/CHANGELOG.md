@@ -9,10 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2026-08-04 - 2.75.1
 
-### Changed
+### Fixed
 
-- Debug large/empty `description` field errors in `Edit case` (`update_case`) playbook action:
-  - Raise `timeout` default value to `120` in `UpdateCase` class
+- Fix large/empty `description` field timeout errors in `Edit case` (`update_case`) playbook action:
+  - Raise `timeout` default value from `5` to `60` seconds in `UpdateCase` class
 
 ## 2026-08-04 - 2.75.0
 

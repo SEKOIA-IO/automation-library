@@ -227,7 +227,7 @@ UpdateCase = type(
         "verb": "patch",
         "endpoint": base_url + "cases/{uuid}",
         "query_parameters": [],
-        "timeout": 120,
+        "timeout": 60,
     },
 )
 
