@@ -3,7 +3,7 @@ from posixpath import join as urljoin
 
 from typing import Any
 
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
 
@@ -79,7 +79,7 @@ class ListQueries(BaseSolAction):
                     "match[uuid]": argument.match_uuid,
                     "match[name]": argument.match_name,
                     "match[visualization]": argument.match_visualization,
-                    "match[is_shared_run]": bool_to_param(argument.match_isshared),
+                    "match[is_shared]": bool_to_param(argument.match_isshared),
                     "match[created_by]": argument.match_created_by,
                     "parameters": argument.parameters,
                 },

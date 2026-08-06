@@ -1,6 +1,6 @@
 from posixpath import join as urljoin
 
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 from requests import Session
 from requests.exceptions import Timeout, HTTPError
@@ -56,7 +56,7 @@ class CreateDataset(BaseSolAction):
         """
         response_create = self.http_session.post(
             self.dataset_api_path,
-            data={"name": name},
+            data={"name": name, "community_uuid": self.module.community_uuid},
             files={"file": ("dataset.csv", dataset, "text/csv")},
             timeout=60,
         )

@@ -1,7 +1,7 @@
 {
   "name": "Create Dataset",
   "description": "Create a new dataset",
-  "uuid": "e8982a08-207f-5a2b-ba7a-b90e10c1a661",
+  "uuid": "289de371-e78f-429c-a52b-0142780f8212",
   "docker_parameters": "create-dataset",
   "arguments": {
     "title": "CreateDatasetArguments",

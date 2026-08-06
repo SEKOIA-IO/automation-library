@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-05-15 - 1.1.2
+
+### Added
+
+- Add a different waiting flow for retries due to network errors
+
+## 2026-06-04 - 1.1.1
+
+### Fixed
+
+- Refactor NextGen HTTP client lifecycle: change from `@cached_property` to explicit `@property` with `_client` state management, ensuring proper cleanup and preventing closed-client reuse errors on connector restart
+
 ## 2026-05-22 - 1.1.0
 
 ### Added
