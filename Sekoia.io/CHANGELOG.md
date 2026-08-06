@@ -11,12 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Harden playbook action `Edit case` (`update_case`) for large-description timeouts and empty descriptions:
-  - Use a dedicated implementation with a longer read timeout and retries for transient network/server errors
-  - Avoid opaque 5-second read-timeout failures when the API is slow to process large updates
-  - Ignore empty `description` updates, so reopening a case with `description=""` does not fail because of the description field
-  - Fall back to updating non-description fields when a large description update times out, so status/metadata updates still succeed and emit an explicit warning
-  - Skip the API call entirely when nothing is left to update after payload normalization
+- Migrate `UpdateCase` to `GenericAPIAction` so it inherits the SDK 1.25.0 retry/error-reporting and payload-control improvements (status code context, retry metadata, underlying exception details, empty-field normalization, and reduced-body retry)
+- Configure SDK-level payload controls on `update_case` (`strip_empty_string_fields`, `retry_without_fields_on_failure`, `skip_request_if_body_empty`) so the behavior can be reused by other actions without duplicating request/retry code
+- Increase request timeout for `update_case` to avoid opaque 5-second read-timeout failures when the API is slow to process large updates
+- Ignore empty `description` updates, so reopening a case with `description=""` does not fail because of the description field
+- Fall back to updating non-description fields when the first update fails, so status/metadata updates still succeed and emit an explicit warning
+- Skip the API call entirely when nothing is left to update after payload normalization
 
 ## 2026-08-04 - 2.75.0
 
