@@ -218,3 +218,73 @@ def test_get_assets_raises_on_api_error(connector, requests_mock):
 
     with pytest.raises(Exception):
         list(connector.get_assets())
+
+
+def test_seen_device_ids_empty_by_default(connector):
+    assert connector.seen_device_ids == set()
+
+
+def test_get_assets_skips_already_cached_device(connector, requests_mock):
+    """A device whose UID is in seen_device_ids must not be yielded."""
+    with connector.context as cache:
+        cache["seen_device_ids"] = ["0123456789abcdef0123456789abcdef"]
+
+    requests_mock.get(
+        DEVICES_URL,
+        json={"count": 1, "next": None, "previous": None, "results": [make_device()]},
+    )
+
+    assets = list(connector.get_assets())
+
+    assert assets == []
+
+
+def test_get_assets_new_device_tracked_in_memory(connector, requests_mock):
+    """A newly seen device UID is added to _new_device_ids before checkpoint is saved."""
+    requests_mock.get(
+        DEVICES_URL,
+        json={"count": 1, "next": None, "previous": None, "results": [make_device()]},
+    )
+
+    list(connector.get_assets())
+
+    assert "0123456789abcdef0123456789abcdef" in connector._new_device_ids
+
+
+def test_update_checkpoint_persists_new_device_ids(connector):
+    """update_checkpoint merges _new_device_ids into the context."""
+    connector._new_device_ids = {"uid-aaa", "uid-bbb"}
+
+    connector.update_checkpoint()
+
+    assert connector.seen_device_ids == {"uid-aaa", "uid-bbb"}
+    assert connector._new_device_ids == set()
+
+
+def test_update_checkpoint_merges_with_existing_cached_ids(connector):
+    """Existing cached IDs are kept when new ones are added."""
+    with connector.context as cache:
+        cache["seen_device_ids"] = ["uid-existing"]
+
+    connector._new_device_ids = {"uid-new"}
+    connector.update_checkpoint()
+
+    assert connector.seen_device_ids == {"uid-existing", "uid-new"}
+
+
+def test_get_assets_deduplication_across_cycles(connector, requests_mock):
+    """Simulate two consecutive cycles: device pushed once, skipped on second cycle."""
+    requests_mock.get(
+        DEVICES_URL,
+        json={"count": 1, "next": None, "previous": None, "results": [make_device()]},
+    )
+
+    # First cycle
+    assets_cycle_1 = list(connector.get_assets())
+    connector.update_checkpoint()
+
+    # Second cycle
+    assets_cycle_2 = list(connector.get_assets())
+
+    assert len(assets_cycle_1) == 1
+    assert len(assets_cycle_2) == 0

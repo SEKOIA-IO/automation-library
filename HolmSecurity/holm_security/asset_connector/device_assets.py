@@ -15,6 +15,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     NetworkInterface,
     OperatingSystem,
 )
+from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId, RiskLevelStr
 from sekoia_automation.storage import PersistentJSON
 
 from holm_security.asset_connector import mappers
@@ -45,14 +46,39 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
     TYPE_NAME: str = "Device Inventory Info: Collect"
     TYPE_UID: int = 500102
 
+    # Holm max_severity -> OCSF risk level mapping
+    MAX_SEVERITY_MAP: dict[str, tuple[RiskLevelStr, RiskLevelId]] = {
+        "info": (RiskLevelStr.INFO, RiskLevelId.INFO),
+        "low": (RiskLevelStr.LOW, RiskLevelId.LOW),
+        "medium": (RiskLevelStr.MEDIUM, RiskLevelId.MEDIUM),
+        "high": (RiskLevelStr.HIGH, RiskLevelId.HIGH),
+        "critical": (RiskLevelStr.CRITICAL, RiskLevelId.CRITICAL),
+    }
+
+    # Holm os_family -> OCSF OS type mapping
+    OS_FAMILY_MAP: dict[str, tuple[OSTypeStr, OSTypeId]] = {
+        "windows": (OSTypeStr.WINDOWS, OSTypeId.WINDOWS),
+        "linux": (OSTypeStr.LINUX, OSTypeId.LINUX),
+        "macos": (OSTypeStr.MACOS, OSTypeId.MACOS),
+        "mac": (OSTypeStr.MACOS, OSTypeId.MACOS),
+        "android": (OSTypeStr.ANDROID, OSTypeId.ANDROID),
+        "ios": (OSTypeStr.IOS, OSTypeId.IOS),
+    }
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("device_context.json", self._data_path)
+        self._new_device_ids: set[str] = set()
 
     @property
     def most_recent_last_sync(self) -> str | None:
         with self.context as cache:
             return cache.get("most_recent_last_sync")
+
+    @property
+    def seen_device_ids(self) -> set[str]:
+        with self.context as cache:
+            return set(cache.get("seen_device_ids", []))
 
     @cached_property
     def base_url(self) -> str:
@@ -92,6 +118,12 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
         device_type, device_type_id = self.build_device_type(device.os_is_server)
         network = device.network
 
+        risk_level, risk_level_id = (
+            self.MAX_SEVERITY_MAP.get((device.max_severity or "").lower(), (None, None))
+            if device.max_severity
+            else (None, None)
+        )
+
         return Device(
             type=device_type,
             type_id=device_type_id,
@@ -103,6 +135,10 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
             network_interfaces=self.build_network_interfaces(device),
             created_time=self._to_epoch(device.created),
             last_seen_time=self._to_epoch(device.last_sync),
+            is_managed=True,
+            risk_score=device.risk_score if device.risk_score else None,
+            risk_level=risk_level,
+            risk_level_id=risk_level_id,
         )
 
     def map_fields(self, device: HolmDevice) -> DeviceOCSFModel:
@@ -125,10 +161,13 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
             device=self.build_device(device),
         )
 
-    def _fetch_device_pages(self) -> Generator[HolmDevicePage, None, None]:
+    def _fetch_device_pages(self, last_sync_from: str | None = None) -> Generator[HolmDevicePage, None, None]:
         """Fetch device pages, following the ``next`` URL until it is null."""
         url: str | None = f"{self.base_url}{self.DEVICES_ENDPOINT}"
-        params: dict[str, int] | None = {"page_size": self.DEFAULT_PAGE_SIZE}
+        params: dict[str, int | str] | None = {
+            "page_size": self.DEFAULT_PAGE_SIZE,
+            **({"last_sync_from": last_sync_from} if last_sync_from else {}),
+        }
 
         try:
             while url and self.running:
@@ -160,10 +199,18 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
 
         generated = 0
         skipped = 0
+        cached_ids = self.seen_device_ids
 
-        for page in self._fetch_device_pages():
+        for page in self._fetch_device_pages(
+            last_sync_from=checkpoint_dt.date().isoformat() if checkpoint_dt else None
+        ):
             for device in page.results:
                 device_dt = isoparse(device.last_sync) if device.last_sync else None
+
+                # Deduplicate: skip devices already pushed in a previous run.
+                if device.uid in cached_ids:
+                    skipped += 1
+                    continue
 
                 # Client-side checkpoint filter: skip devices not modified since last run.
                 if checkpoint_dt is not None and device_dt is not None and device_dt <= checkpoint_dt:
@@ -181,6 +228,7 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
                     self.log(message=f"Skipping device {device.uid}: {error}", level="warning")
                     continue
 
+                self._new_device_ids.add(device.uid)
                 generated += 1
                 yield asset
 
@@ -194,9 +242,18 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
         )
 
     def update_checkpoint(self) -> None:
-        if self._latest_time:
+        if self._new_device_ids or self._latest_time:
             with self.context as cache:
-                cache["most_recent_last_sync"] = self._latest_time
-            self.log(message=f"Checkpoint updated to {self._latest_time}", level="debug")
+                if self._latest_time:
+                    cache["most_recent_last_sync"] = self._latest_time
+                existing_ids: set[str] = set(cache.get("seen_device_ids", []))
+                existing_ids.update(self._new_device_ids)
+                cache["seen_device_ids"] = list(existing_ids)
+            self._new_device_ids = set()
+            self.log(
+                message=f"Checkpoint updated - last_sync={self._latest_time}, "
+                f"total cached IDs={len(existing_ids)}",
+                level="debug",
+            )
         else:
             self.log(message="No checkpoint update needed", level="debug")

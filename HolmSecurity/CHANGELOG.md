@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.0] - 2026-07-20
+## [1.2.0] - 2026-07-20
 
 ### Added
 
@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Account validator updates to reflect vulnerability setup
+
+## [1.1.0] - 2026-07-31
+
+### Added
+
+- Add holm logo to the module folder
+- Update the connector description
 
 ## [1.0.0] - 2026-07-17
 
