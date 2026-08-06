@@ -1,8 +1,10 @@
 """Unit tests for SentinelOneClient."""
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 import requests
+
 from sentinelone_module.client import SentinelOneClient
 
 
