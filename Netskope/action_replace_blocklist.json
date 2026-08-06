@@ -1,0 +1,49 @@
+{
+  "description": "Replace an entire Netskope blocklist with new items",
+  "docker_parameters": "replace_blocklist",
+  "name": "Replace Blocklist",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_token": {
+        "type": "string",
+        "description": "API token for authentication"
+      },
+      "blocklist_id": {
+        "type": "string",
+        "description": "The ID of the blocklist"
+      },
+      "blocklist_type": {
+        "type": "string",
+        "default": "exact",
+        "enum": ["exact", "regex"],
+        "description": "The type of the blocklist (exact, regex)"
+      },
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of items in the blocklist (IPs, domains, or URLs)"
+      },
+      "sort_items": {
+        "type": "boolean",
+        "default": true,
+        "description": "Sort items alphabetically"
+      }
+    },
+    "required": [
+      "api_token",
+      "items",
+      "blocklist_id"
+    ],
+    "title": "Replace blocklist",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "73b83266-604b-466d-b7f5-8f3c17a84173"
+}

@@ -3,7 +3,7 @@ from collections.abc import Generator
 from typing import Any
 
 from ldap3 import ALL_ATTRIBUTES, ALL_OPERATIONAL_ATTRIBUTES
-from ldap3.core.exceptions import LDAPSocketOpenError
+from ldap3.core.exceptions import LDAPException
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.group import Group
@@ -312,10 +312,10 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
                         seen_dn.add(dn)
                     yield entry
                 return
-            except LDAPSocketOpenError as exc:
+            except LDAPException as exc:
                 if attempt == 1:
                     raise
-                self.log(f"LDAP socket closed, reconnecting... ({exc})", level="warning")
+                self.log(f"LDAP error, reconnecting... ({exc})", level="warning")
                 self._reset_ldap_connection()
 
     def get_users_generator(self) -> Generator[dict[str, Any], None, None]:

@@ -10,10 +10,10 @@ base_url = module_base_url + "api/v1/sic/alerts/"
 apikey = "fake_api_key"
 
 
-def test_get_alert_by_uuid(requests_mock):
+@pytest.mark.parametrize("alert_uuid", ["781b21f0-4961-450e-b7ed-80e66b04ac87", "ALEhcq5cVfVZ"])
+def test_get_alert_by_uuid(requests_mock, alert_uuid):
     action = GetAlert()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
-    alert_uuid = uuid.uuid4()
     arguments = {"uuid": str(alert_uuid), "stix": True, "cases": True}
     expected_response = {"uuid": str(alert_uuid), "short_id": "ALtest", "status": {"name": "Ongoing"}}
 

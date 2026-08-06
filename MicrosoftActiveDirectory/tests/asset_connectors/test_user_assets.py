@@ -2,6 +2,7 @@ from datetime import datetime
 from unittest.mock import MagicMock, Mock
 
 import pytest
+from ldap3.core.exceptions import LDAPException, LDAPSessionTerminatedByServerError
 from ldap3.core.timezone import OffsetTzInfo
 from sekoia_automation.asset_connector.models.ocsf.user import AccountTypeId, UserOCSFModel, UserTypeId, UserTypeStr
 
@@ -285,3 +286,67 @@ def test_get_assets_handles_exception(connector):
     assets = list(connector.get_assets())
 
     assert len(assets) == 0
+
+
+@pytest.fixture
+def mock_entry():
+    return {"dn": "CN=User1,DC=example,DC=com", "attributes": {"userPrincipalName": "user1@example.com"}}
+
+
+def test_entries_reconnects_on_ldap_exception_and_succeeds(connector, mock_entry):
+    """On LDAPException at attempt 0, should reconnect and yield entries on retry."""
+    connector._reset_ldap_connection = Mock()
+    connector.context.__enter__().get.return_value = None
+
+    call_count = 0
+
+    def paged_search_side_effect(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise LDAPSessionTerminatedByServerError("session terminated by server")
+        return iter([mock_entry])
+
+    connector.ldap_client.extend.standard.paged_search.side_effect = paged_search_side_effect
+
+    entries = list(connector._entries())
+
+    assert entries == [mock_entry]
+    connector._reset_ldap_connection.assert_called_once()
+    connector.log.assert_any_call("LDAP error, reconnecting... (session terminated by server)", level="warning")
+
+
+def test_entries_raises_on_second_ldap_exception(connector):
+    """If both attempts fail with LDAPException, the exception should propagate."""
+    connector._reset_ldap_connection = Mock()
+    connector.context.__enter__().get.return_value = None
+
+    connector.ldap_client.extend.standard.paged_search.side_effect = LDAPException("persistent error")
+
+    with pytest.raises(LDAPException, match="persistent error"):
+        list(connector._entries())
+
+    assert connector._reset_ldap_connection.call_count == 1
+
+
+def test_entries_succeeds_without_error(connector, mock_entry):
+    """Normal path: no exception, all entries yielded."""
+    connector.context.__enter__().get.return_value = None
+
+    connector.ldap_client.extend.standard.paged_search.return_value = iter([mock_entry])
+
+    entries = list(connector._entries())
+
+    assert entries == [mock_entry]
+
+
+def test_entries_deduplicates_by_dn(connector):
+    """Duplicate DNs across pages should only be yielded once."""
+    connector.context.__enter__().get.return_value = None
+
+    entry = {"dn": "CN=User1,DC=example,DC=com", "attributes": {}}
+    connector.ldap_client.extend.standard.paged_search.return_value = iter([entry, entry])
+
+    entries = list(connector._entries())
+
+    assert len(entries) == 1
