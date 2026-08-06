@@ -11,6 +11,14 @@
 		{
 			"name": "1Password",
 			"path": "1Password"
+		},
+		{
+			"name": "Flare",
+			"path": "Flare"
+		},
+		{
+			"name": "Zimperium",
+			"path": "Zimperium"
 		}
 	],
 	"settings": {

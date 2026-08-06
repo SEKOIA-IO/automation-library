@@ -3,7 +3,6 @@ from functools import cached_property
 from traceback import format_exc
 
 import sentry_sdk
-from azure.identity import UsernamePasswordCredential
 from azure.identity.aio import ClientSecretCredential  # async credentials only
 from kiota_authentication_azure.azure_identity_authentication_provider import AzureIdentityAuthenticationProvider
 from msgraph import GraphRequestAdapter, GraphServiceClient
@@ -64,17 +63,19 @@ class MicrosoftGraphAction(AsyncAction):
 
 
 class ApplicationArguments(BaseModel):
-    objectId: str | None = Field(None, description="ID object of the app. you can find it in the app overview.")
+    objectId: str | None = Field(
+        default=None, description="ID object of the app. you can find it in the app overview."
+    )
 
 
 class IdArguments(BaseModel):
-    id: str | None = Field(None, description="ID of the user. id should be specified.")
+    id: str | None = Field(default=None, description="ID of the user. id should be specified.")
 
 
 class SingleUserArguments(BaseModel):
-    id: str | None = Field(None, description="ID of the user. id or userPrincipalName should be specified.")
+    id: str | None = Field(default=None, description="ID of the user. id or userPrincipalName should be specified.")
     userPrincipalName: str | None = Field(
-        None,
+        default=None,
         description="Principal Name of the user. id or userPrincipalName should be specified.",
     )
 
@@ -85,13 +86,12 @@ class RequiredSingleUserArguments(SingleUserArguments):
     def validate_id_or_userPrincipalName(cls, values):
         if not (values.get("id") or values.get("userPrincipalName")):
             raise ValueError("'id' or 'userPrincipalName' should be specified")
-
         return values
 
 
 class RequiredTwoUserArguments(SingleUserArguments):
     userNewPassword: str | None = Field(
-        None,
+        default=None,
         description="New password required to reset the old one of course.",
     )
 
@@ -106,17 +106,17 @@ class RequiredTwoUserArguments(SingleUserArguments):
 
 class RequiredTwoUserArgumentsV2(SingleUserArguments):
     userNewPassword: str | None = Field(
-        None,
+        default=None,
         description="New password. If not specified, it will be auto generated.",
     )
 
     forceChangePasswordNextSignIn: bool = Field(
-        True,
+        default=True,
         description="Force change password next sign in",
     )
 
     forceChangePasswordNextSignInWithMfa: bool | None = Field(
-        None,
+        default=None,
         description="Force change password next sign in with Mfa",
     )
 
@@ -126,5 +126,4 @@ class RequiredTwoUserArgumentsV2(SingleUserArguments):
         user_principal_name = values.get("id") or values.get("userPrincipalName")
         if not user_principal_name:
             raise ValueError("'id' or 'userPrincipalName' should be specified")
-
         return values

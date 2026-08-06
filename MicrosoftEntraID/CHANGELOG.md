@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-07-07 - 2.11.1
+## 2026-07-28 - 2.11.1
 
 ### Added
 
@@ -16,6 +16,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Migrate the module's models and action arguments from the `pydantic.v1` compatibility shim to native Pydantic v2 (`model_validator`, `model_json_schema`, `json_schema_extra`) for compatibility with `sekoia-automation-sdk >= 1.23`
+
+## 2026-07-27 - 2.10.26
+
+### Added
+
+- Implement `get_mapped_fields` and `reset_checkpoint` abstract methods on `EntraIDAssetConnector` to support automatic checkpoint reset on field mapping changes
+
+## 2026-07-29 - 2.10.25
+
+### Fixed
+
+- Update the capability of the user asset connector
+
+## 2026-07-08 - 2.10.24
+
+### Fixed
+
+- Reset the Microsoft Graph client when timeout-related exceptions occur in the asset connector loop
+- Add a regression test for Graph `PoolTimeout` handling and client reset behavior
+
 
 ## 2026-06-16 - 2.10.23
 
