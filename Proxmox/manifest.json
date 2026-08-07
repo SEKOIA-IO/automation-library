@@ -1,0 +1,15 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Proxmox",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Proxmox is an infrastructure software vendor.",
+  "name": "Proxmox",
+  "uuid": "05c11c6b-4839-44a1-8cd5-15bed8152048",
+  "version": "1.0.0",
+  "slug": "proxmox",
+  "categories": ["Endpoint"]
+}
