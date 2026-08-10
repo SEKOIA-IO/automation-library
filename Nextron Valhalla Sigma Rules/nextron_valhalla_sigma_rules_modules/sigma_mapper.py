@@ -319,8 +319,9 @@ def convert_parsed_to_ecs(
     if unmapped:
         return None, sorted(set(unmapped))
 
-    parsed["detection"] = new_detection
-    return parsed, []
+    result = dict(parsed)
+    result["detection"] = new_detection
+    return result, []
 
 
 def convert_payload_to_ecs(
