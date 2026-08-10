@@ -28,6 +28,7 @@ if __name__ == "__main__":
     module.register(FlowlogRecordsTrigger, "flowlog_records_trigger")
     module.register(AwsS3LogsTrigger, "aws_s3_logs_trigger")
     module.register(AwsS3RecordsTrigger, "aws_s3_cloudtrail_records_trigger")
+    module.register(AwsS3FlowLogsParquetRecordsTrigger, "aws_s3_flowlogs_parquet_records_connector")
     module.register(AwsS3FlowLogsParquetRecordsTrigger, "aws_s3_flowlogs_parquet_records_trigger")
     module.register(AwsSqsMessagesTrigger, "aws_sqs_messages_trigger")
     module.register(AwsS3FlowLogsTrigger, "aws_s3_flowlogs_trigger")
