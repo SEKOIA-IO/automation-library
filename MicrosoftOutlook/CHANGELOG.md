@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-08-11
+
+### Added
+
+- Added a `Search messages` action to resolve messages by Internet Message-ID or NetworkMessageId
+- Added a `Resolve a message` action to select a unique Graph item ID from search candidates
+
 ## 2025-09-22 - 0.1.2
 
 ### Added
