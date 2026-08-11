@@ -50,8 +50,8 @@
         "type": "string"
       },
       "json": {
-        "type": "object",
-        "description": "The JSON to attach as body of the request"
+        "description": "The JSON to attach as the request body",
+        "type": "object"
       },
       "params": {
         "description": "Query string parameters to append to the URL",
@@ -70,7 +70,7 @@
         "default": true
       },
       "verify_ssl": {
-        "description": "Wether the SSL certificate must be verified. Default to true.",
+        "description": "Whether the SSL certificate must be verified. Default to true.",
         "type": "boolean",
         "default": true
       }
@@ -90,35 +90,35 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "reason": {
-        "description": "Textual reason of responded HTTP Status, e.g. 'Not Found' or 'OK'.",
+        "description": "Textual reason phrase of the HTTP status (for example: Not Found, OK).",
         "type": "string"
       },
       "status_code": {
-        "description": "Integer code of responded HTTP Status",
+        "description": "Numeric HTTP status code returned by the server.",
         "type": "integer"
       },
       "url": {
-        "description": "Final URL of the triggered resource",
+        "description": "Final URL of the requested resource.",
         "type": "string"
       },
       "headers": {
-        "description": "Headers used by the server in the response",
+        "description": "Response headers returned by the server.",
         "type": "object"
       },
       "encoding": {
-        "description": "Encoding of the response",
+        "description": "Character encoding detected for the response body.",
         "type": "string"
       },
       "elapsed": {
-        "description": "The amount of seconds elapsed between sending the request and the arrival of the response",
+        "description": "Elapsed time in seconds between sending the request and receiving the response.",
         "type": "number"
       },
       "text": {
-        "description": "Content of the response in unicode",
+        "description": "Response body as text.",
         "type": "string"
       },
       "json": {
-        "description": "JSON-encoded value of the response",
+        "description": "Response body parsed as JSON when available.",
         "type": "object"
       }
     },

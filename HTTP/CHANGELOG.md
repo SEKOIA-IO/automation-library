@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add `HTTPActionBase` to centralize HTTP response handling logic shared by HTTP actions
 
+### Changed
+
+- Migrate argument and configuration models to Pydantic v2
+
 ### Fixed
 
 - Ensure Request URL action now effectively enforces `fail_on_http_error` parameter:
