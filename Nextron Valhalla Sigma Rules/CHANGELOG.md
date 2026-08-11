@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2 - 2026-08-11
+
+- Replaced `logo.svg` with the official Valhalla brand mark.
+
 ## 1.0.1 - 2026-08-10
 
 - `convert_parsed_to_ecs` no longer mutates the caller's parsed rule dict.
