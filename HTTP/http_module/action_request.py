@@ -15,6 +15,11 @@ from .helpers import params_as_dict
 
 @lru_cache(maxsize=1)
 def _load_action_request_enums() -> tuple[set[str], set[str]]:
+    """Load enum values from the JSON schema to keep schema and Python validation in sync.
+
+    This avoids duplicating enum definitions in code and schema by using the schema
+    as the single source of truth.
+    """
     schema_path = Path(__file__).resolve().parent.parent / "action_request.json"
     with schema_path.open("r", encoding="utf-8") as f:
         schema = json.load(f)
