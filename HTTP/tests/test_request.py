@@ -7,7 +7,7 @@ from unittest.mock import Mock
 import pytest
 import requests_mock
 from pydantic import ValidationError
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError, HTTPError
 from tenacity import Retrying, wait_none
 
 from http_module.request_action import RequestAction
@@ -166,7 +166,9 @@ def test_get_request_retry(symphony_storage, requests_mock):
         ],
     )
 
-    result = action.run({"method": "get", "url": "https://api.sekoia.io", "raise_errors": False})
+    result = action.run(
+        {"method": "get", "url": "https://api.sekoia.io", "raise_errors": False, "fail_on_http_error": False}
+    )
     del result["elapsed"]
     json.dumps(result)
     assert result == {
@@ -319,3 +321,54 @@ def test_bearer_auth_miss_credentials(symphony_storage):
 
     with pytest.raises(ValueError):
         action.run({"method": "get", "url": "https://api.sekoia.io", "auth_type": "Bearer"})
+
+
+def test_request_fail_on_http_error_true(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(
+            "https://api.sekoia.io",
+            json={"error": "not_found"},
+            status_code=404,
+            reason="Not Found",
+            headers={"Content-Type": "application/json"},
+        )
+
+        with pytest.raises(HTTPError):
+            action.run({"method": "get", "url": "https://api.sekoia.io"})
+
+
+def test_request_fail_on_http_error_false(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(
+            "https://api.sekoia.io",
+            json={"error": "not_found"},
+            status_code=404,
+            reason="Not Found",
+            headers={"Content-Type": "application/json"},
+        )
+
+        result = action.run(
+            {"method": "get", "url": "https://api.sekoia.io", "fail_on_http_error": False}
+        )
+
+        assert result["status_code"] == 404
+        assert result["reason"] == "Not Found"
+        assert result["json"] == {"error": "not_found"}
+
+
+def test_request_redirection_response_is_successful(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+    response = Mock()
+    response.status_code = 302
+    response.reason = "Found"
+    response.text = ""
+    response.ok = True
+
+    action.handle_response(response=response, url="https://api.sekoia.io", fail_on_http_error=True)
