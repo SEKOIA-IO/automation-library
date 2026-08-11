@@ -10,14 +10,14 @@ class SendMessageArguments(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     user: str
-    content: str | None = None
+    content: str
     content_type: Literal["text", "html"] = "text"
     bcc: list[str] | None = None
     cc: list[str] | None = None
-    sender: str | None = None
-    from_: str | None = Field(default=None, alias="from")
-    subject: str | None = None
-    recipients: list[str] | None = None
+    sender: str
+    from_: str = Field(alias="from")
+    subject: str
+    recipients: list[str]
     importance: Literal["Low", "Normal", "High"] | None = None
     save_to_sent_items: bool = True
 
@@ -42,21 +42,17 @@ class SendMessageAction(MicrosoftGraphActionBase):
         recipients = validated_arguments.recipients
         importance = validated_arguments.importance
 
-        message: dict[str, Any] = {}
-        if content:
-            message["body"] = {"content": content, "contentType": content_type}
-        if recipients:
-            message["toRecipients"] = [self.generate_recipient(r) for r in recipients]
+        message: dict[str, Any] = {
+            "body": {"content": content, "contentType": content_type},
+            "toRecipients": [self.generate_recipient(r) for r in recipients],
+            "sender": self.generate_recipient(sender),
+            "from": self.generate_recipient(mailbox_owner),
+            "subject": subject,
+        }
         if cc:
             message["ccRecipients"] = [self.generate_recipient(c) for c in cc]
         if bcc:
             message["bccRecipients"] = [self.generate_recipient(b) for b in bcc]
-        if sender:
-            message["sender"] = self.generate_recipient(sender)
-        if mailbox_owner:
-            message["from"] = self.generate_recipient(mailbox_owner)
-        if subject:
-            message["subject"] = subject
         if importance:
             message["importance"] = importance
 

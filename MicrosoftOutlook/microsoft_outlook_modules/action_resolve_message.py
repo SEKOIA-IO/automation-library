@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from .action_base import MicrosoftGraphActionBase
 
@@ -11,8 +11,8 @@ class ResolveMessageArguments(BaseModel):
     user: str
     email_message_id: str | None = None
     email_local_id: str | None = None
-    top: int = 10
-    item_index: int = 0
+    top: int = Field(default=10, ge=1, le=100)
+    item_index: int = Field(default=0, ge=0)
     most_recent: bool = False
 
 
@@ -34,9 +34,6 @@ class ResolveMessageAction(MicrosoftGraphActionBase):
 
         if not email_message_id and not email_local_id:
             raise ValueError("Either email_message_id or email_local_id must be provided")
-
-        if item_index < 0:
-            raise ValueError("item_index must be greater than or equal to 0")
 
         filters: list[str] = []
         if email_message_id:
