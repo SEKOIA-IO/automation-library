@@ -118,8 +118,8 @@
         "type": "string"
       },
       "json": {
-        "description": "Response body parsed as JSON when available.",
-        "type": "object"
+        "description": "Response body parsed as JSON when available; can be an object, array, scalar, or null.",
+        "type": ["object", "array", "string", "number", "boolean", "null"]
       }
     },
     "required": [

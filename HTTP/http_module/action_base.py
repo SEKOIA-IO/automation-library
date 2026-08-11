@@ -2,6 +2,7 @@ from abc import ABC
 
 from pydantic import HttpUrl, TypeAdapter
 from requests import Response
+from requests.exceptions import HTTPError
 from sekoia_automation.action import Action
 
 
@@ -57,5 +58,8 @@ class HTTPActionBase(Action, ABC):
             level="warning",
         )
 
-        if fail_on_http_error and not response.ok:
-            response.raise_for_status()
+        if fail_on_http_error:
+            raise HTTPError(
+                f"Unexpected HTTP status for {url}: {status_code} - {response.reason}",
+                response=response,
+            )

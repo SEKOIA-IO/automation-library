@@ -7,6 +7,7 @@ from unittest.mock import Mock
 import pytest
 import requests_mock
 from pydantic import ValidationError
+from requests import Response
 from requests.exceptions import ConnectionError, HTTPError
 from tenacity import Retrying, wait_none
 
@@ -466,12 +467,10 @@ def test_request_server_error_raises_when_fail_on_http_error_true(symphony_stora
 def test_request_unexpected_status_handling(symphony_storage, fail_on_http_error, expected_exception):
     action = RequestAction(data_path=symphony_storage)
     action.module.configuration = {}
-    response = Mock()
+    response = Response()
     response.status_code = 700
+    response.url = "https://api.sekoia.io"
     response.reason = "Out Of Range"
-    response.text = ""
-    response.ok = False
-    response.raise_for_status.side_effect = HTTPError("700 Unexpected Error")
 
     if expected_exception:
         with pytest.raises(expected_exception):
