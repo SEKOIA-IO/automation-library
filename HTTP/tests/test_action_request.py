@@ -142,6 +142,23 @@ def test_request_no_json_response(symphony_storage):
         assert action.log_exception.call_count == 0
 
 
+def test_request_invalid_json_response_body(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(
+            "https://api.sekoia.io",
+            text="not-a-json-payload",
+            status_code=200,
+            reason="OK",
+            headers={"Content-Type": "application/json"},
+        )
+
+        result = action.run({"method": "get", "url": "https://api.sekoia.io"})
+        assert result["json"] is None
+
+
 def test_get_request_retry(symphony_storage, requests_mock):
     action = RequestAction(data_path=symphony_storage)
     action.module.configuration = {}
@@ -372,3 +389,53 @@ def test_request_redirection_response_is_successful(symphony_storage):
     response.ok = True
 
     action.handle_response(response=response, url="https://api.sekoia.io", fail_on_http_error=True)
+
+
+def test_request_informational_response_is_successful(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+    response = Mock()
+    response.status_code = 101
+    response.reason = "Switching Protocols"
+    response.text = ""
+    response.ok = True
+
+    action.handle_response(response=response, url="https://api.sekoia.io", fail_on_http_error=True)
+
+
+def test_request_server_error_raises_when_fail_on_http_error_true(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+    response = Mock()
+    response.status_code = 503
+    response.reason = "Service Unavailable"
+    response.text = "upstream timeout"
+    response.ok = False
+    response.raise_for_status.side_effect = HTTPError("503 Server Error")
+
+    with pytest.raises(HTTPError):
+        action.handle_response(response=response, url="https://api.sekoia.io", fail_on_http_error=True)
+
+
+@pytest.mark.parametrize(
+    "fail_on_http_error, expected_exception",
+    [
+        (True, HTTPError),
+        (False, None),
+    ],
+)
+def test_request_unexpected_status_handling(symphony_storage, fail_on_http_error, expected_exception):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+    response = Mock()
+    response.status_code = 700
+    response.reason = "Out Of Range"
+    response.text = ""
+    response.ok = False
+    response.raise_for_status.side_effect = HTTPError("700 Unexpected Error")
+
+    if expected_exception:
+        with pytest.raises(expected_exception):
+            action.handle_response(response=response, url="https://api.sekoia.io", fail_on_http_error=fail_on_http_error)
+    else:
+        action.handle_response(response=response, url="https://api.sekoia.io", fail_on_http_error=fail_on_http_error)
