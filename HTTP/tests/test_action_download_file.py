@@ -6,7 +6,7 @@ from tempfile import mkdtemp
 import pytest
 import requests_mock
 
-from http_module.download_file_action import DownloadFileAction
+from http_module.action_download_file import DownloadFileAction
 
 URL = "https://fake.url/my_file.json"
 FILE = os.urandom(128)

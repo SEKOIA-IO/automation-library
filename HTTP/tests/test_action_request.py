@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from requests.exceptions import ConnectionError, HTTPError
 from tenacity import Retrying, wait_none
 
-from http_module.request_action import RequestAction
+from http_module.action_request import RequestAction
 
 
 @pytest.fixture(autouse=True, scope="session")
