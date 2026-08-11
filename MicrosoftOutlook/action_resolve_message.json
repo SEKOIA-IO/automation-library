@@ -1,6 +1,6 @@
 {
   "name": "Resolve a message",
-  "description": "Resolve a unique Graph message ID from email_message_id (internetMessageId) or email_local_id (NetworkMessageId)",
+  "description": "Resolve a unique Graph message item ID from email_message_id (internetMessageId) or email_local_id (NetworkMessageId)",
   "uuid": "7f2cc912-f264-4f08-b3e7-5cf10d76715a",
   "docker_parameters": "action_resolve_message",
   "arguments": {
@@ -9,29 +9,36 @@
     "anyOf": [
       {
         "required": [
-          "user",
-          "email_message_id"
+          "email_message_id",
+          "user"
         ]
       },
       {
         "required": [
-          "user",
-          "email_local_id"
+          "email_local_id",
+          "user"
         ]
       }
     ],
     "properties": {
-      "user": {
-        "description": "The identifier or the principal name of the user",
+      "email_local_id": {
+        "description": "The local message identifier mapped from email.local_id (Graph NetworkMessageId)",
         "type": "string"
       },
       "email_message_id": {
-        "description": "The email message identifier mapped from email.message_id (Graph internetMessageId / Internet Message-ID RFC 5322)",
+        "description": "The message identifier mapped from email.message_id (Graph internetMessageId / Internet Message-ID RFC 5322)",
         "type": "string"
       },
-      "email_local_id": {
-        "description": "The local email identifier mapped from email.local_id (Graph NetworkMessageId)",
-        "type": "string"
+      "item_index": {
+        "description": "Zero-based index of the candidate to select",
+        "type": "integer",
+        "minimum": 0,
+        "default": 0
+      },
+      "most_recent": {
+        "description": "When true, sort candidates by receivedDateTime descending before applying item_index",
+        "type": "boolean",
+        "default": false
       },
       "top": {
         "description": "Maximum number of candidate messages to fetch before selecting one",
@@ -40,16 +47,9 @@
         "maximum": 100,
         "default": 10
       },
-      "most_recent": {
-        "description": "When true, sort candidates by receivedDateTime descending before applying item_index",
-        "type": "boolean",
-        "default": false
-      },
-      "item_index": {
-        "description": "Index of the candidate to select (0-based)",
-        "type": "integer",
-        "minimum": 0,
-        "default": 0
+      "user": {
+        "description": "The user identifier or user principal name (UPN)",
+        "type": "string"
       }
     }
   },
