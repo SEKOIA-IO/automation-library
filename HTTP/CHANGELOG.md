@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - when `fail_on_http_error` is `true` (default), HTTP client and server errors (4xx/5xx) fail the action
     - when `fail_on_http_error` is `false`, the action returns the response payload and status code
 - Extend and centralize HTTP status class handling for informational (1xx), success (2xx), redirection (3xx), client error (4xx), and server error (5xx) responses
+- Increase automated test coverage to 100%
 
 ## [1.120.4] - 2026-03-26
 
