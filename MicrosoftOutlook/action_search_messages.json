@@ -1,6 +1,6 @@
 {
   "name": "Search messages",
-  "description": "Search messages in a user's mailbox using InternetMessageId or NetworkMessageId",
+  "description": "Search messages in a user's mailbox using InternetMessageId and/or NetworkMessageId",
   "uuid": "9cd0dbfd-1ceb-40bf-a49f-28ca70e61165",
   "docker_parameters": "action_search_messages",
   "arguments": {
@@ -9,28 +9,24 @@
     "anyOf": [
       {
         "required": [
-          "user",
-          "email_message_id"
+          "email_message_id",
+          "user"
         ]
       },
       {
         "required": [
-          "user",
-          "email_local_id"
+          "email_local_id",
+          "user"
         ]
       }
     ],
     "properties": {
-      "user": {
-        "description": "The identifier or the principal name of the user",
+      "email_local_id": {
+        "description": "The local message identifier mapped from email.local_id (Graph NetworkMessageId)",
         "type": "string"
       },
       "email_message_id": {
-        "description": "The email message identifier mapped from email.message_id (Graph internetMessageId / Internet Message-ID RFC 5322)",
-        "type": "string"
-      },
-      "email_local_id": {
-        "description": "The local email identifier mapped from email.local_id (Graph NetworkMessageId)",
+        "description": "The message identifier mapped from email.message_id (Graph internetMessageId / Internet Message-ID RFC 5322)",
         "type": "string"
       },
       "top": {
@@ -39,6 +35,10 @@
         "minimum": 1,
         "maximum": 100,
         "default": 10
+      },
+      "user": {
+        "description": "The user identifier or user principal name (UPN)",
+        "type": "string"
       }
     }
   },

@@ -7,16 +7,16 @@
     "title": "ApplicationArguments",
     "type": "object",
     "required": [
-      "user",
-      "message_id"
+      "message_id",
+      "user"
     ],
     "properties": {
-      "user": {
-        "description": "The identifier or the principal name of the user",
+      "message_id": {
+        "description": "The Microsoft Graph message item ID",
         "type": "string"
       },
-      "message_id": {
-        "description": "The identifier of the message to get",
+      "user": {
+        "description": "The user identifier or user principal name (UPN)",
         "type": "string"
       }
     }

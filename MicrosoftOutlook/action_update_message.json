@@ -9,115 +9,120 @@
     "anyOf": [
       {
         "required": [
-          "user",
+          "content",
           "message_id",
-          "content"
+          "user"
         ]
       },
       {
         "required": [
-          "user",
+          "bcc",
           "message_id",
-          "recipients"
+          "user"
         ]
       },
       {
         "required": [
-          "user",
+          "cc",
           "message_id",
-          "bcc"
+          "user"
         ]
       },
       {
         "required": [
-          "user",
+          "from",
           "message_id",
-          "cc"
+          "user"
         ]
       },
       {
         "required": [
-          "user",
+          "importance",
           "message_id",
-          "sender"
+          "user"
         ]
       },
       {
         "required": [
-          "user",
           "message_id",
-          "from"
+          "recipients",
+          "user"
         ]
       },
       {
         "required": [
-          "user",
           "message_id",
-          "subject"
+          "sender",
+          "user"
         ]
       },
       {
         "required": [
-          "user",
           "message_id",
-          "importance"
+          "subject",
+          "user"
         ]
       }
     ],
     "properties": {
-      "user": {
-        "description": "The identifier or the principal name of the user",
-        "type": "string"
-      },
-      "message_id": {
-        "description": "The identifier of the message to delete",
-        "type": "string"
-      },
-      "content": {
-        "description": "The new content of the message",
-        "type": "string"
-      },
-      "recipients": {
-        "description": "The new list of recipients",
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      },
       "bcc": {
-        "description": "The new list of BCC recipients",
+        "description": "The new list of BCC recipient email addresses",
         "type": "array",
         "items": {
-          "type": "string"
+          "type": "string",
+          "format": "email"
         }
       },
       "cc": {
-        "description": "The new list of CC recipients",
+        "description": "The new list of CC recipient email addresses",
         "type": "array",
         "items": {
-          "type": "string"
+          "type": "string",
+          "format": "email"
         }
       },
-      "sender": {
-        "description": "The new sender of the message",
+      "content": {
+        "description": "The new plain-text content of the message",
         "type": "string"
       },
       "from": {
-        "description": "The new mailbox owner of the message (from header)",
-        "type": "string"
-      },
-      "subject": {
-        "description": "The new subject of the message",
-        "type": "string"
+        "description": "The new mailbox owner email address (From header)",
+        "type": "string",
+        "format": "email"
       },
       "importance": {
-        "description": "The importance of the message",
+        "description": "The importance level of the message",
         "type": "string",
         "enum": [
           "Low",
           "Normal",
           "High"
         ]
+      },
+      "message_id": {
+        "description": "The Microsoft Graph message item ID",
+        "type": "string"
+      },
+      "recipients": {
+        "description": "The new list of recipient email addresses",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "sender": {
+        "description": "The new sender email address of the message",
+        "type": "string",
+        "format": "email"
+      },
+      "subject": {
+        "description": "The new subject of the message",
+        "type": "string"
+      },
+      "user": {
+        "description": "The user identifier or user principal name (UPN)",
+        "type": "string"
       }
     }
   },
