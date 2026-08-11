@@ -1,6 +1,19 @@
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict
+
 from .action_base import MicrosoftGraphActionBase
+
+
+class ResolveMessageArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    user: str
+    email_message_id: str | None = None
+    email_local_id: str | None = None
+    top: int = 10
+    item_index: int = 0
+    most_recent: bool = False
 
 
 class ResolveMessageAction(MicrosoftGraphActionBase):
@@ -11,12 +24,13 @@ class ResolveMessageAction(MicrosoftGraphActionBase):
         return value.replace("'", "''")
 
     def run(self, arguments: Any) -> Any:
-        user_id_or_principal_name = arguments["user"]
-        email_message_id: str | None = arguments.get("email_message_id")
-        email_local_id: str | None = arguments.get("email_local_id")
-        top: int = arguments.get("top", 10)
-        item_index: int = arguments.get("item_index", 0)
-        most_recent: bool = arguments.get("most_recent", False)
+        validated_arguments = ResolveMessageArguments.model_validate(arguments)
+        user_id_or_principal_name = validated_arguments.user
+        email_message_id = validated_arguments.email_message_id
+        email_local_id = validated_arguments.email_local_id
+        top = validated_arguments.top
+        item_index = validated_arguments.item_index
+        most_recent = validated_arguments.most_recent
 
         if not email_message_id and not email_local_id:
             raise ValueError("Either email_message_id or email_local_id must be provided")

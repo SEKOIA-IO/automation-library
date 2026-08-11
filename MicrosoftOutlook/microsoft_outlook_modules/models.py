@@ -1,4 +1,4 @@
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 
 class MicrosoftOutlookModuleConfiguration(BaseModel):
@@ -9,8 +9,7 @@ class MicrosoftOutlookModuleConfiguration(BaseModel):
         "permissions. Its Client ID should then be used in this configuration.",
         # noqa: E501
     )
-    client_secret: str = Field(
-        secret=True,
+    client_secret: SecretStr = Field(
         description="Client Secret associated with the registered application. Admin Consent has to be granted to the "
         "application for it to work.",
         # noqa: E501
