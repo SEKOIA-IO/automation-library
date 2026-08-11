@@ -1,6 +1,23 @@
-from typing import Any
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from .action_base import MicrosoftGraphActionBase
+
+
+class UpdateMessageArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    user: str
+    message_id: str
+    content: str | None = None
+    bcc: list[str] | None = None
+    cc: list[str] | None = None
+    sender: str | None = None
+    from_: str | None = Field(default=None, alias="from")
+    subject: str | None = None
+    recipients: list[str] | None = None
+    importance: Literal["Low", "Normal", "High"] | None = None
 
 
 class UpdateMessageAction(MicrosoftGraphActionBase):
@@ -13,17 +30,18 @@ class UpdateMessageAction(MicrosoftGraphActionBase):
         return {"emailAddress": {"name": email, "address": email}}
 
     def run(self, arguments: Any) -> Any:
-        user_id_or_principal_name = arguments["user"]
-        message_id = arguments["message_id"]
+        validated_arguments = UpdateMessageArguments.model_validate(arguments)
+        user_id_or_principal_name = validated_arguments.user
+        message_id = validated_arguments.message_id
 
-        content = arguments.get("content")
-        bcc: list[str] | None = arguments.get("bcc")
-        cc: list[str] | None = arguments.get("cc")
-        sender = arguments.get("sender")
-        mailbox_owner = arguments.get("from")
-        subject = arguments.get("subject")
-        recipients: list[str] | None = arguments.get("recipients")
-        importance = arguments.get("importance")
+        content = validated_arguments.content
+        bcc = validated_arguments.bcc
+        cc = validated_arguments.cc
+        sender = validated_arguments.sender
+        mailbox_owner = validated_arguments.from_
+        subject = validated_arguments.subject
+        recipients = validated_arguments.recipients
+        importance = validated_arguments.importance
 
         payload: dict[str, Any] = self.fill_non_empty(
             {

@@ -1,15 +1,26 @@
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict
+
 from .action_base import MicrosoftGraphActionBase
+
+
+class ForwardMessageArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    user: str
+    message_id: str
+    recipients: list[str]
+    comment: str = ""
 
 
 class ForwardMessageAction(MicrosoftGraphActionBase):
     def run(self, arguments: Any) -> Any:
-        user_id_or_principal_name = arguments["user"]
-        message_id = arguments["message_id"]
-        recipients: list[str] = arguments["recipients"]
-
-        comment = arguments.get("comment", "")
+        validated_arguments = ForwardMessageArguments.model_validate(arguments)
+        user_id_or_principal_name = validated_arguments.user
+        message_id = validated_arguments.message_id
+        recipients = validated_arguments.recipients
+        comment = validated_arguments.comment
 
         payload = {
             "comment": comment,
