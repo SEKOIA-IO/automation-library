@@ -22,7 +22,7 @@ class ForwardMessageAction(MicrosoftGraphActionBase):
         recipients = validated_arguments.recipients
         comment = validated_arguments.comment
 
-        payload = {
+        payload: dict[str, Any] = {
             "comment": comment,
             "toRecipients": [{"emailAddress": {"name": recipient, "address": recipient}} for recipient in recipients],
         }
