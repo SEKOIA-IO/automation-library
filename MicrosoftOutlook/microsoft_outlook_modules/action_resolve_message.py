@@ -62,11 +62,7 @@ class ResolveMessageAction(MicrosoftGraphActionBase):
 
         if email_local_id:
             escaped_property = self._escape_odata_literal(self.NETWORK_MESSAGE_ID_EXTENDED_PROPERTY)
-            params["$expand"] = (
-                "singleValueExtendedProperties("
-                f"$filter=id eq '{escaped_property}'"
-                ")"
-            )
+            params["$expand"] = "singleValueExtendedProperties(" f"$filter=id eq '{escaped_property}'" ")"
 
         response = self.client.get(
             f"https://graph.microsoft.com/v1.0/users/{user_id_or_principal_name}/messages",
