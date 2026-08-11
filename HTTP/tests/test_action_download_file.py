@@ -104,7 +104,7 @@ def test_download_file_url_validation(symphony_storage, url):
     "content_disposition, expected_filename",
     [
         ('attachment; filename="report.json"', "report.json"),
-        ('attachment; filename=report.csv', "report.csv"),
+        ("attachment; filename=report.csv", "report.csv"),
     ],
 )
 def test_get_file_name_from_content_disposition(content_disposition, expected_filename):

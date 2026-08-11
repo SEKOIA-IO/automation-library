@@ -411,9 +411,7 @@ def test_request_fail_on_http_error_false(symphony_storage):
             headers={"Content-Type": "application/json"},
         )
 
-        result = action.run(
-            {"method": "get", "url": "https://api.sekoia.io", "fail_on_http_error": False}
-        )
+        result = action.run({"method": "get", "url": "https://api.sekoia.io", "fail_on_http_error": False})
 
         assert result["status_code"] == 404
         assert result["reason"] == "Not Found"
@@ -477,7 +475,9 @@ def test_request_unexpected_status_handling(symphony_storage, fail_on_http_error
 
     if expected_exception:
         with pytest.raises(expected_exception):
-            action.handle_response(response=response, url="https://api.sekoia.io", fail_on_http_error=fail_on_http_error)
+            action.handle_response(
+                response=response, url="https://api.sekoia.io", fail_on_http_error=fail_on_http_error
+            )
     else:
         action.handle_response(response=response, url="https://api.sekoia.io", fail_on_http_error=fail_on_http_error)
 
