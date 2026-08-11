@@ -1,4 +1,6 @@
+import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from microsoft_outlook_modules.action_update_message import UpdateMessageAction
 
@@ -56,3 +58,10 @@ def test_update_message_with_all_optional_fields(configured_action, message_2):
         assert payload["ccRecipients"][0]["emailAddress"]["address"] == "cc@example.com"
         assert payload["sender"]["emailAddress"]["address"] == "sender@example.com"
         assert payload["from"]["emailAddress"]["address"] == "owner@example.com"
+
+
+def test_update_message_requires_at_least_one_update_field(configured_action):
+    action = configured_action(UpdateMessageAction)
+
+    with pytest.raises(ValidationError, match="At least one updatable field must be provided"):
+        action.run(arguments={"user": "1111", "message_id": "2222"})

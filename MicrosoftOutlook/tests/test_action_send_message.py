@@ -76,5 +76,14 @@ def test_send_message_returns_empty_dict_when_response_is_not_json(configured_ac
         )
 
         action = configured_action(SendMessageAction)
-        result = action.run(arguments={"user": "1111"})
+        result = action.run(
+            arguments={
+                "user": "1111",
+                "subject": "Subject",
+                "content": "Hello there",
+                "sender": "john.doe@example.com",
+                "from": "john.doe@example.com",
+                "recipients": ["jane.doe@example.com"],
+            }
+        )
         assert result == {}

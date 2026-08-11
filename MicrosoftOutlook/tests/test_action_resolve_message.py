@@ -1,5 +1,6 @@
 import pytest
 import requests_mock
+from urllib.parse import unquote_plus
 
 from microsoft_outlook_modules.action_resolve_message import ResolveMessageAction
 
@@ -9,6 +10,14 @@ from microsoft_outlook_modules.action_resolve_message import ResolveMessageActio
     [
         ({"user": "1111"}, "Either email_message_id or email_local_id"),
         ({"user": "1111", "email_message_id": "<sample-message-id@example.com>", "item_index": -1}, "item_index"),
+        (
+            {"user": "1111", "email_message_id": "<sample-message-id@example.com>", "top": 0},
+            "greater than or equal to 1",
+        ),
+        (
+            {"user": "1111", "email_message_id": "<sample-message-id@example.com>", "top": 101},
+            "less than or equal to 100",
+        ),
     ],
 )
 def test_resolve_message_validation_errors(configured_action, arguments, expected_match):
@@ -81,5 +90,6 @@ def test_resolve_message_most_recent_and_item_index(configured_action):
         )
 
         request = mock.request_history[1]
-        assert request.qs["$orderby"] == ["receiveddatetime desc"]
+        decoded_query = unquote_plus(request.url.split("?", maxsplit=1)[1])
+        assert "$orderby=receivedDateTime desc" in decoded_query
         assert result["graph_message_id"] == "graph-item-id-2"

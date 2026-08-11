@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .action_base import MicrosoftGraphActionBase
 
@@ -18,6 +18,24 @@ class UpdateMessageArguments(BaseModel):
     subject: str | None = None
     recipients: list[str] | None = None
     importance: Literal["Low", "Normal", "High"] | None = None
+
+    @model_validator(mode="after")
+    def validate_at_least_one_update_field(self) -> "UpdateMessageArguments":
+        if all(
+            value is None
+            for value in (
+                self.content,
+                self.bcc,
+                self.cc,
+                self.sender,
+                self.from_,
+                self.subject,
+                self.recipients,
+                self.importance,
+            )
+        ):
+            raise ValueError("At least one updatable field must be provided")
+        return self
 
 
 class UpdateMessageAction(MicrosoftGraphActionBase):
@@ -45,13 +63,15 @@ class UpdateMessageAction(MicrosoftGraphActionBase):
 
         payload: dict[str, Any] = self.fill_non_empty(
             {
-                "body": {"content": content, "contentType": "text"} if content else None,  # plain text
-                "bccRecipients": [self.generate_recipient(item) for item in bcc] if bcc else None,
-                "ccRecipients": [self.generate_recipient(item) for item in cc] if cc else None,
-                "sender": self.generate_recipient(sender) if sender else None,
-                "from": self.generate_recipient(mailbox_owner) if mailbox_owner else None,
+                "body": {"content": content, "contentType": "text"} if content is not None else None,
+                "bccRecipients": [self.generate_recipient(item) for item in bcc] if bcc is not None else None,
+                "ccRecipients": [self.generate_recipient(item) for item in cc] if cc is not None else None,
+                "sender": self.generate_recipient(sender) if sender is not None else None,
+                "from": self.generate_recipient(mailbox_owner) if mailbox_owner is not None else None,
                 "subject": subject,
-                "toRecipients": [self.generate_recipient(item) for item in recipients] if recipients else None,
+                "toRecipients": (
+                    [self.generate_recipient(item) for item in recipients] if recipients is not None else None
+                ),
                 "importance": importance,
             }
         )

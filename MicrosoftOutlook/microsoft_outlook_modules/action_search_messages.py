@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from .action_base import MicrosoftGraphActionBase
 
@@ -11,7 +11,7 @@ class SearchMessagesArguments(BaseModel):
     user: str
     email_message_id: str | None = None
     email_local_id: str | None = None
-    top: int = 10
+    top: int = Field(default=10, ge=1, le=100)
 
 
 class SearchMessagesAction(MicrosoftGraphActionBase):
