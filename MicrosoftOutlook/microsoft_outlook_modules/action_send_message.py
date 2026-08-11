@@ -60,7 +60,7 @@ class SendMessageAction(MicrosoftGraphActionBase):
         if importance:
             message["importance"] = importance
 
-        payload = {"message": message, "saveToSentItems": save_to_sent_items}
+        payload: dict[str, Any] = {"message": message, "saveToSentItems": save_to_sent_items}
 
         response = self.client.post(
             f"https://graph.microsoft.com/v1.0/users/{user_id_or_principal_name}/sendMail",
