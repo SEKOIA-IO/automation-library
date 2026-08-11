@@ -7,20 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2026-08-11
+## [0.2.0] - 2026-08-11
 
 ### Added
 
 - Added a `Search messages` action to resolve messages by Internet Message-ID or NetworkMessageId
 - Added a `Resolve a message` action to select a unique Graph item ID from search candidates
 
-## 2025-09-22 - 0.1.2
+### Changed
+
+- Migrate argument and configuration models to Pydantic v2
+
+### Fixed
+
+- Increase automated test coverage to 100%
+
+## [0.1.2] - 2025-09-22
 
 ### Added
 
 - Added action to send emails
 
-## 2025-02-07 - 0.1.1
+## [0.1.1] - 2025-02-07
 
 ### Changed
 
