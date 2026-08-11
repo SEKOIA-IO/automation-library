@@ -15,14 +15,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Migrate argument and configuration models to Pydantic v2
+- Rename action Python files to align with action schema files (`action_request.py`, `action_download_file.py`)
+- Migrate action argument and result validation to Pydantic v2 models
+- Use action schema enums as the single source of truth for `method` and `auth_type` validation in Request URL
+- Harmonize JSON schema field descriptions and formatting across action definitions (without changing field names)
 
 ### Fixed
 
-- Ensure Request URL action now effectively enforces `fail_on_http_error` parameter:
+- Ensure `Request URL` action now effectively enforces `fail_on_http_error` parameter:
     - when `fail_on_http_error` is `true` (default), HTTP client and server errors (4xx/5xx) fail the action
     - when `fail_on_http_error` is `false`, the action returns the response payload and status code
 - Extend and centralize HTTP status class handling for informational (1xx), success (2xx), redirection (3xx), client error (4xx), and server error (5xx) responses
+- Ensure `Download File` action also uses centralized URL validation and HTTP response handling from `HTTPActionBase`
 - Increase automated test coverage to 100%
 
 ## [1.120.4] - 2026-03-26
