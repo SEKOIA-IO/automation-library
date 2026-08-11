@@ -163,7 +163,7 @@ class RequestAction(HTTPActionBase):
             encoding=response.encoding,
             elapsed=response.elapsed.total_seconds(),
             text=response.text,
-            json_=json_response,
+            json=json_response,
         )
 
         return result.model_dump(by_alias=True)
