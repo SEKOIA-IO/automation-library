@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added a `Search messages` action to resolve messages by Internet Message-ID or NetworkMessageId
+- Added a `Search messages` action to search messages by Internet Message-ID or NetworkMessageId
 - Added a `Resolve a message` action to select a unique Graph item ID from search candidates
 
 ### Changed
