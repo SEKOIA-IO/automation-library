@@ -1,11 +1,18 @@
 from abc import ABC
 
+from pydantic import HttpUrl, TypeAdapter
 from requests import Response
 from sekoia_automation.action import Action
 
 
 class HTTPActionBase(Action, ABC):
     """Base class for HTTP actions with shared response handling."""
+
+    @staticmethod
+    def validate_url(u: str) -> None:
+        # Validate URL with pydantic
+        url_adapter = TypeAdapter(HttpUrl)
+        url_adapter.validate_python(u)
 
     def handle_response(self, response: Response, url: str, fail_on_http_error: bool = True) -> None:
         status_code = response.status_code

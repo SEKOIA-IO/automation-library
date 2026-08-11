@@ -1,5 +1,4 @@
 import requests
-from pydantic import HttpUrl, TypeAdapter
 from requests.auth import AuthBase, HTTPBasicAuth, HTTPDigestAuth
 from requests.exceptions import JSONDecodeError
 from tenacity import Retrying, stop_after_attempt, wait_exponential
@@ -28,12 +27,6 @@ class RequestAction(HTTPActionBase):
             wait=wait_exponential(multiplier=1, min=1, max=10),
             reraise=True,
         )
-
-    @staticmethod
-    def validate_url(u: str) -> None:
-        # Validate URL with pydantic
-        url_adapter = TypeAdapter(HttpUrl)
-        url_adapter.validate_python(u)
 
     def run(self, arguments) -> dict:
         url = arguments.get("url")
