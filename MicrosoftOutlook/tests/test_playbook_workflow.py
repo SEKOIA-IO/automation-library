@@ -1,24 +1,10 @@
-from typing import Type
-
 import pytest
 import requests_mock
 
-from microsoft_outlook_modules import MicrosoftOutlookModule
-from microsoft_outlook_modules.action_base import MicrosoftGraphActionBase
 from microsoft_outlook_modules.action_delete_message import DeleteMessageAction
 from microsoft_outlook_modules.action_get_message import GetMessageAction
 from microsoft_outlook_modules.action_resolve_message import ResolveMessageAction
 from microsoft_outlook_modules.action_search_messages import SearchMessagesAction
-
-
-def configured_action(action: Type[MicrosoftGraphActionBase]):
-    module = MicrosoftOutlookModule()
-    module.configuration = {
-        "tenant_id": "test_tenant_id",
-        "client_id": "32747e7c-2eff-43ea-a9c7-e783b9d2f930",
-        "client_secret": "client_secret",
-    }
-    return action(module)
 
 
 @pytest.mark.parametrize(
@@ -28,7 +14,7 @@ def configured_action(action: Type[MicrosoftGraphActionBase]):
         {"email_local_id": "00000000-0000-4000-8000-000000000123"},
     ],
 )
-def test_playbook_workflow_detect_confirm_resolve_delete(message_identifier):
+def test_playbook_workflow_detect_confirm_resolve_delete(configured_action, message_identifier):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
@@ -92,7 +78,7 @@ def test_playbook_workflow_detect_confirm_resolve_delete(message_identifier):
         delete_action.run(arguments={"user": "1111", "message_id": graph_message_id})
 
 
-def test_resolve_message_item_index_out_of_range():
+def test_resolve_message_item_index_out_of_range(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",

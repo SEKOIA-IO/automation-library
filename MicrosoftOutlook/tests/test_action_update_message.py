@@ -1,0 +1,58 @@
+import requests_mock
+
+from microsoft_outlook_modules.action_update_message import UpdateMessageAction
+
+
+def test_update_message(configured_action, message_2):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "PATCH", "https://graph.microsoft.com/v1.0/users/1111/messages/2222", status_code=204, json=message_2
+        )
+
+        action = configured_action(UpdateMessageAction)
+        action.run(arguments={"user": "1111", "message_id": "2222", "subject": "Changed Subject"})
+
+
+def test_update_message_with_all_optional_fields(configured_action, message_2):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "PATCH",
+            "https://graph.microsoft.com/v1.0/users/1111/messages/2222",
+            status_code=200,
+            json=message_2,
+        )
+
+        action = configured_action(UpdateMessageAction)
+        action.run(
+            arguments={
+                "user": "1111",
+                "message_id": "2222",
+                "content": "Updated content",
+                "recipients": ["recipient@example.com"],
+                "bcc": ["bcc@example.com"],
+                "cc": ["cc@example.com"],
+                "sender": "sender@example.com",
+                "from": "owner@example.com",
+                "subject": "Updated subject",
+                "importance": "Normal",
+            }
+        )
+
+        request = mock.request_history[1]
+        payload = request.json()
+        assert payload["body"]["content"] == "Updated content"
+        assert payload["toRecipients"][0]["emailAddress"]["address"] == "recipient@example.com"
+        assert payload["bccRecipients"][0]["emailAddress"]["address"] == "bcc@example.com"
+        assert payload["ccRecipients"][0]["emailAddress"]["address"] == "cc@example.com"
+        assert payload["sender"]["emailAddress"]["address"] == "sender@example.com"
+        assert payload["from"]["emailAddress"]["address"] == "owner@example.com"
