@@ -8,6 +8,8 @@ from microsoft_outlook_modules.action_base import MicrosoftGraphActionBase
 from microsoft_outlook_modules.action_delete_message import DeleteMessageAction
 from microsoft_outlook_modules.action_forward_message import ForwardMessageAction
 from microsoft_outlook_modules.action_get_message import GetMessageAction
+from microsoft_outlook_modules.action_resolve_message import ResolveMessageAction
+from microsoft_outlook_modules.action_search_messages import SearchMessagesAction
 from microsoft_outlook_modules.action_send_message import SendMessageAction
 from microsoft_outlook_modules.action_update_message import UpdateMessageAction
 
@@ -36,7 +38,7 @@ def get_message_1():
         "receivedDateTime": "2018-09-09T03:15:08Z",
         "sentDateTime": "2018-09-09T03:15:06Z",
         "hasAttachments": False,
-        "internetMessageId": "<MWHPR6E1BE060@MWHPR1120.namprd22.prod.outlook.com>",
+        "internetMessageId": "<sample-message-id@example.com>",
         "subject": "9/9/2018: concert",
         "bodyPreview": "The group represents Nevada.",
         "importance": "normal",
@@ -52,9 +54,9 @@ def get_message_1():
             "contentType": "html",
             "content": '<html>\r\n<head>\r\n<meta http-equiv="Content-Type" content="text/html; charset=utf-8">\r\n<meta content="text/html; charset=us-ascii">\r\n</head>\r\n<body>\r\nThe group represents Nevada.\r\n</body>\r\n</html>\r\n',
         },
-        "sender": {"emailAddress": {"name": "Adele Vance", "address": "adelev@contoso.com"}},
-        "from": {"emailAddress": {"name": "Adele Vance", "address": "adelev@contoso.com"}},
-        "toRecipients": [{"emailAddress": {"name": "Alex Wilber", "address": "AlexW@contoso.com"}}],
+        "sender": {"emailAddress": {"name": "Example Sender", "address": "sender@example.com"}},
+        "from": {"emailAddress": {"name": "Example Sender", "address": "sender@example.com"}},
+        "toRecipients": [{"emailAddress": {"name": "Example Recipient", "address": "recipient@example.com"}}],
         "ccRecipients": [],
         "bccRecipients": [],
         "replyTo": [],
@@ -75,7 +77,7 @@ def message_2():
         "receivedDateTime": "2018-09-09T03:15:08Z",
         "sentDateTime": "2018-09-09T03:15:06Z",
         "hasAttachments": False,
-        "internetMessageId": "<MWHPR6E1BE060@MWHPR1120.namprd22.prod.outlook.com>",
+        "internetMessageId": "<sample-message-id@example.com>",
         "subject": "Changed Subject",
         "bodyPreview": "The group represents Nevada.",
         "importance": "normal",
@@ -91,9 +93,9 @@ def message_2():
             "contentType": "html",
             "content": '<html>\r\n<head>\r\n<meta http-equiv="Content-Type" content="text/html; charset=utf-8">\r\n<meta content="text/html; charset=us-ascii">\r\n</head>\r\n<body>\r\nThe group represents Nevada.\r\n</body>\r\n</html>\r\n',
         },
-        "sender": {"emailAddress": {"name": "Adele Vance", "address": "adelev@contoso.com"}},
-        "from": {"emailAddress": {"name": "Adele Vance", "address": "adelev@contoso.com"}},
-        "toRecipients": [{"emailAddress": {"name": "Alex Wilber", "address": "AlexW@contoso.com"}}],
+        "sender": {"emailAddress": {"name": "Example Sender", "address": "sender@example.com"}},
+        "from": {"emailAddress": {"name": "Example Sender", "address": "sender@example.com"}},
+        "toRecipients": [{"emailAddress": {"name": "Example Recipient", "address": "recipient@example.com"}}],
         "ccRecipients": [],
         "bccRecipients": [],
         "replyTo": [],
@@ -204,3 +206,139 @@ def test_send_message(message_2):
                 "recipients": ["jane.doe@example.com"],
             }
         )
+
+
+def test_search_messages_by_internet_message_id(get_message_1):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages",
+            json={"value": [get_message_1]},
+        )
+
+        action = configured_action(SearchMessagesAction)
+        action.run(
+            arguments={
+                "user": "1111",
+                "email_message_id": "<sample-message-id@example.com>",
+                "top": 5,
+            }
+        )
+
+        request = mock.request_history[1]
+        assert request.qs["$filter"] == [
+            "internetmessageid eq '<sample-message-id@example.com>'"
+        ]
+        assert request.qs["$top"] == ["5"]
+
+
+def test_search_messages_by_network_message_id(get_message_1):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages",
+            json={"value": [get_message_1]},
+        )
+
+        action = configured_action(SearchMessagesAction)
+        action.run(
+            arguments={
+                "user": "1111",
+                "email_local_id": "00000000-0000-4000-8000-000000000001",
+            }
+        )
+
+        request = mock.request_history[1]
+        assert request.qs["$filter"] == [
+            "singlevalueextendedproperties/any(ep:ep/id eq "
+            "'string {41f28f13-83f4-4114-a584-eedb5a6b0bff} name networkmessageid' "
+            "and ep/value eq '00000000-0000-4000-8000-000000000001')"
+        ]
+        assert request.qs["$expand"] == [
+            "singlevalueextendedproperties($filter=id eq "
+            "'string {41f28f13-83f4-4114-a584-eedb5a6b0bff} name networkmessageid')"
+        ]
+
+
+def test_resolve_message_defaults_to_first_result():
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages",
+            json={"value": [{"id": "graph-item-id-1"}, {"id": "graph-item-id-2"}]},
+        )
+
+        action = configured_action(ResolveMessageAction)
+        result = action.run(arguments={"user": "1111", "email_message_id": "<sample-message-id@example.com>"})
+
+        assert result["graph_message_id"] == "graph-item-id-1"
+        assert result["selected_index"] == 0
+        assert result["total_results"] == 2
+
+
+def test_resolve_message_most_recent_and_item_index():
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages",
+            json={
+                "value": [
+                    {"id": "graph-item-id-1", "receivedDateTime": "2026-08-10T09:20:25Z"},
+                    {"id": "graph-item-id-2", "receivedDateTime": "2026-08-10T09:10:25Z"},
+                ]
+            },
+        )
+
+        action = configured_action(ResolveMessageAction)
+        result = action.run(
+            arguments={
+                "user": "1111",
+                "email_local_id": "00000000-0000-4000-8000-000000000001",
+                "most_recent": True,
+                "item_index": 1,
+            }
+        )
+
+        request = mock.request_history[1]
+        assert request.qs["$orderby"] == ["receiveddatetime desc"]
+        assert result["graph_message_id"] == "graph-item-id-2"
