@@ -5,10 +5,11 @@ from uuid import uuid4
 
 import requests
 from requests import Response
-from sekoia_automation.action import Action
+
+from .action_base import HTTPActionBase
 
 
-class DownloadFileAction(Action):
+class DownloadFileAction(HTTPActionBase):
     """
     Action to download a file
     """
@@ -47,9 +48,11 @@ class DownloadFileAction(Action):
         """
         headers = self._get_headers(arguments)
         verify = arguments.get("verify_ssl", True)
+        url = arguments["url"]
+        self.validate_url(url)
 
-        r = requests.get(arguments["url"], headers=headers, stream=True, verify=verify)
-        r.raise_for_status()
+        r = requests.get(url, headers=headers, stream=True, verify=verify)
+        self.handle_response(response=r, url=url, fail_on_http_error=True)
         return r
 
     def _save_file(self, response: Response) -> dict:

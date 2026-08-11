@@ -5,6 +5,7 @@ from tempfile import mkdtemp
 
 import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from http_module.action_download_file import DownloadFileAction
 
@@ -84,3 +85,15 @@ def test_download_file_no_verify(symphony_storage, file_mock):
     assert "file_path" in result
     assert "file_relative_path" in result
     assert file_mock._adapter.last_request.verify is False
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["C:\\Windows\\system32\\virus.exe", "google.com"],
+)
+def test_download_file_url_validation(symphony_storage, url):
+    action = DownloadFileAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with pytest.raises(ValidationError):
+        action.run(dict(url=url))
