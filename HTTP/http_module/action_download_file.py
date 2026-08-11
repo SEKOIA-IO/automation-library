@@ -1,12 +1,27 @@
 import re
 from functools import cached_property
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 import requests
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from requests import Response
 
 from .action_base import HTTPActionBase
+
+
+class DownloadFileActionArguments(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    url: HttpUrl
+    headers: dict[str, Any] = Field(default_factory=dict)
+    verify_ssl: bool = True
+
+
+class DownloadFileActionResult(BaseModel):
+    file_path: str
+    file_relative_path: str
 
 
 class DownloadFileAction(HTTPActionBase):
@@ -28,28 +43,27 @@ class DownloadFileAction(HTTPActionBase):
             ),
         }
 
-    def _get_headers(self, arguments: dict) -> dict:
+    def _get_headers(self, arguments: DownloadFileActionArguments) -> dict:
         """
         Get headers to use in the requests.
 
         It merges the argument's headers and the module's ones.
         """
         headers = self.module.configuration.get("headers", {}).copy()
-        headers.update(arguments.get("headers", {}))
+        headers.update(arguments.headers)
         headers.update(self._http_default_headers)
 
         return headers
 
-    def _perform_stream_request(self, arguments: dict) -> Response:
+    def _perform_stream_request(self, arguments: DownloadFileActionArguments) -> Response:
         """
         Perform the request.
 
         The response will be a stream so it can handle big files.
         """
         headers = self._get_headers(arguments)
-        verify = arguments.get("verify_ssl", True)
-        url = arguments["url"]
-        self.validate_url(url)
+        verify = arguments.verify_ssl
+        url = str(arguments.url)
 
         r = requests.get(url, headers=headers, stream=True, verify=verify)
         self.handle_response(response=r, url=url, fail_on_http_error=True)
@@ -82,5 +96,7 @@ class DownloadFileAction(HTTPActionBase):
         return str(uuid4())
 
     def run(self, arguments: dict) -> dict:
-        response = self._perform_stream_request(arguments)
-        return self._save_file(response)
+        validated_arguments = DownloadFileActionArguments.model_validate(arguments)
+        response = self._perform_stream_request(validated_arguments)
+        result = DownloadFileActionResult.model_validate(self._save_file(response))
+        return result.model_dump()

@@ -235,6 +235,47 @@ def test_url_validation(symphony_storage, url):
         action.run({"method": "get", "url": url})
 
 
+@pytest.mark.parametrize(
+    "method",
+    ["trace", "options", "GET"],
+)
+def test_method_validation_against_schema_enum(symphony_storage, method):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with pytest.raises(ValidationError):
+        action.run({"method": method, "url": "https://api.sekoia.io"})
+
+
+@pytest.mark.parametrize(
+    "auth_type",
+    ["ApiKey", "BearerToken", "basic"],
+)
+def test_auth_type_validation_against_schema_enum(symphony_storage, auth_type):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with pytest.raises(ValidationError):
+        action.run({"method": "get", "url": "https://api.sekoia.io", "auth_type": auth_type})
+
+
+def test_auth_type_none_is_accepted(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(
+            "https://api.sekoia.io",
+            status_code=200,
+            reason="OK",
+            headers={"Content-Type": "application/json"},
+            json={"ok": True},
+        )
+
+        result = action.run({"method": "get", "url": "https://api.sekoia.io", "auth_type": None})
+        assert result["status_code"] == 200
+
+
 def test_basic_auth(symphony_storage):
     action = RequestAction(data_path=symphony_storage)
     action.module.configuration = {}
@@ -439,3 +480,10 @@ def test_request_unexpected_status_handling(symphony_storage, fail_on_http_error
             action.handle_response(response=response, url="https://api.sekoia.io", fail_on_http_error=fail_on_http_error)
     else:
         action.handle_response(response=response, url="https://api.sekoia.io", fail_on_http_error=fail_on_http_error)
+
+
+def test_validate_url_accepts_valid_url(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    action.validate_url("https://api.sekoia.io")
