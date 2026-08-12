@@ -1,14 +1,40 @@
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from asyncio import sleep
+from cachetools import LRUCache
 from datetime import datetime, timedelta, timezone
 from typing import AsyncGenerator, Dict, Any, List, Optional
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.storage import PersistentJSON
 from workday.client.http_client import WorkdayClient
 from workday.client.errors import WorkdayAuthError
-from workday.metrics import checkpoint_age, events_duplicated, events_forwarded, events_truncated
+from workday.metrics import (
+    CHECKPOINT_AGE,
+    EVENTS_DUPLICATED,
+    EVENTS_LAG,
+    EVENTS_TRUNCATED,
+    FORWARD_EVENTS_DURATION,
+    OUTCOMING_EVENTS,
+)
 import asyncio
 import signal
+import time
+
+# Internal tuning constants. These are deliberately NOT connector settings: they cannot be chosen
+# meaningfully without knowing the connector's internals, and a wrong value reintroduces the very
+# problems they guard against (an oversized cache throttles collection, an oversized window is
+# silently truncated by the API). Saturation is reported through EVENTS_TRUNCATED and EVENTS_LAG,
+# so operators get a signal instead of a knob.
+
+# Cap on a single collection window, so a late checkpoint catches up gradually instead of asking
+# for a gap larger than the instancesReturned pool.
+MAX_WINDOW_MINUTES = 60
+
+# Bounded dedup cache. Windows do not overlap, so it only has to cover events straddling a window
+# edge; the bound is what keeps deduplication at a constant cost whatever the volume collected.
+EVENT_CACHE_SIZE = 100_000
+
+# Attempts on a single page before the cycle is aborted and retried from the same checkpoint.
+MAX_PAGE_ATTEMPTS = 5
 
 
 class WorkdayActivityLoggingConfiguration(DefaultConnectorConfiguration):
@@ -35,9 +61,16 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
 
         # persistent checkpoint store
         self.context = PersistentJSON("context.json", self._data_path)
-        # persistent event cache store (key -> iso timestamp)
+        # persistent event cache store, holding the dedup keys of the most recent events
         self.event_cache_store = PersistentJSON("event_cache.json", self._data_path)
-        self.event_cache_ttl = timedelta(hours=48)
+        # set by fetch_events: True while the checkpoint is behind and windows are being capped
+        self._window_was_capped = False
+
+        # Dedup cache held in memory and bounded by construction. It used to be an unbounded dict
+        # rewritten to disk on every single event, which made collection slower as it grew and
+        # ultimately throttled it below the tenant's real event rate. An LRU cache cannot grow past
+        # EVENT_CACHE_SIZE, so the cost of deduplication stays flat no matter the volume.
+        self.events_cache: LRUCache = self._load_events_cache()
 
         self.log(
             message=f"WorkdayActivityLoggingConnector initialized - "
@@ -61,7 +94,9 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             ts = c.get("last_collection_end_time")
             if ts:
                 last_date = datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(timezone.utc)
-                checkpoint_age.set((datetime.now(timezone.utc) - last_date).total_seconds())
+                CHECKPOINT_AGE.labels(intake_key=self.configuration.intake_key).set(
+                    (datetime.now(timezone.utc) - last_date).total_seconds()
+                )
                 self.log(
                     message=f"Checkpoint found - Last collection end time: {ts} ({last_date.isoformat()})",
                     level="info",
@@ -84,7 +119,9 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             c["last_collection_end_time"] = checkpoint_time
             c["last_successful_run"] = run_time
 
-        checkpoint_age.set((datetime.now(timezone.utc) - last_event_date.astimezone(timezone.utc)).total_seconds())
+        CHECKPOINT_AGE.labels(intake_key=self.configuration.intake_key).set(
+            (datetime.now(timezone.utc) - last_event_date.astimezone(timezone.utc)).total_seconds()
+        )
 
         self.log(
             message=f"Checkpoint saved - Last collection end time: {checkpoint_time}, "
@@ -92,70 +129,66 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             level="info",
         )
 
-    def _cleanup_event_cache(self):
-        """Remove events older than TTL from cache"""
-        cutoff = datetime.now(timezone.utc) - self.event_cache_ttl
-
-        self.log(
-            message=f"Starting event cache cleanup - Cutoff time: {cutoff.isoformat()} "
-            f"(TTL: {self.event_cache_ttl})",
-            level="debug",
-        )
+    def _load_events_cache(self) -> LRUCache:
+        """Restore the dedup cache from disk into a bounded LRU cache."""
+        cache: LRUCache = LRUCache(maxsize=EVENT_CACHE_SIZE)
 
         with self.event_cache_store as s:
-            initial_count = len(s)
-            keys = [k for k, v in s.items()]
-            removed_count = 0
+            if "events_cache" in s:
+                cached_keys = list(s["events_cache"])
+            else:
+                # Cache written by <=0.2.x: dedup keys were stored at the top level, mapped to the
+                # timestamp at which they were seen. Keep the most recent ones so an in-place
+                # upgrade does not re-forward the last collected window.
+                cached_keys = [key for key, _ in sorted(s.items(), key=lambda kv: str(kv[1]))]
 
-            for k in keys:
-                try:
-                    ts = datetime.fromisoformat(s[k].replace("Z", "+00:00")).astimezone(timezone.utc)
-                    if ts < cutoff:
-                        del s[k]
-                        removed_count += 1
-                except Exception as e:
-                    self.log(
-                        message=f"Error parsing cache timestamp for key '{k}': {e} - Removing entry", level="warning"
-                    )
-                    del s[k]
-                    removed_count += 1
+        # An LRU keeps the *last* inserted keys, so the tail of the list is what survives eviction.
+        for key in cached_keys[-EVENT_CACHE_SIZE:]:
+            cache[key] = True
 
-            final_count = len(s)
-            self.log(
-                message=f"Event cache cleanup complete - "
-                f"Initial: {initial_count}, Removed: {removed_count}, Remaining: {final_count}",
-                level="info",
-            )
+        return cache
+
+    def _save_events_cache(self) -> None:
+        """Persist the dedup cache so restarts do not re-forward the events of the last window."""
+        with self.event_cache_store as s:
+            s["events_cache"] = list(self.events_cache.keys())
+
+    @staticmethod
+    def _cache_key(event: Dict[str, Any]) -> str:
+        """Build the dedup cache key for an event: {taskId}:{requestTime}"""
+        return f"{event.get('taskId', 'unknown')}:{event.get('requestTime', 'unknown')}"
+
+    def _filter_new_events(self, events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Filter out events already seen, and remember the new ones.
+
+        Purely in-memory: the cache is loaded once at startup and persisted once per cycle. The
+        0.2.x implementation opened a PersistentJSON context per event, and leaving that context
+        rewrites the whole cache file -- at ~490,000 entries that measured ~0.38s per event in
+        production (~6 minutes per 1,000-event page), throttling collection below the tenant's real
+        event rate.
+        """
+        new_events: List[Dict[str, Any]] = []
+
+        for event in events:
+            cache_key = self._cache_key(event)
+            if cache_key in self.events_cache:
+                continue
+
+            self.events_cache[cache_key] = True
+            new_events.append(event)
+
+        return new_events
 
     def _is_new_event(self, event: Dict[str, Any]) -> bool:
-        """
-        Check if event is new using persistent cache
-        Cache key: {taskId}:{requestTime}
-        """
-        task_id = event.get("taskId", "unknown")
-        request_time = event.get("requestTime", "unknown")
-        cache_key = f"{task_id}:{request_time}"
-
-        with self.event_cache_store as s:
-            if cache_key in s:
-                self.log(message=f"Duplicate event detected - Cache key: {cache_key}", level="debug")
-                return False
-
-            timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-            s[cache_key] = timestamp
-
-            self.log(message=f"New event cached - Key: {cache_key}, Timestamp: {timestamp}", level="debug")
-
-        return True
+        """Check whether a single event has not been collected yet."""
+        return bool(self._filter_new_events([event]))
 
     async def fetch_events(self, client: WorkdayClient) -> AsyncGenerator[List[Dict[str, Any]], None]:
         """
         Fetch activity logs from Workday API with pagination
         """
         self.log(message="Starting event fetch cycle", level="info")
-
-        # Clean up old cache entries at start
-        self._cleanup_event_cache()
 
         from_time = self.last_event_date()
         to_time = datetime.now(timezone.utc) - timedelta(minutes=2)  # 2-minute buffer
@@ -164,12 +197,34 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
         # been fetched and yielded), so an interrupted or truncated collection never advances past
         # events that were not actually collected.
 
+        # Cap the window. When the checkpoint is far behind (after an outage or a slow-collection
+        # backlog), asking for the whole gap at once would exceed the instancesReturned pool and be
+        # silently truncated. Collecting one bounded slice per cycle lets the connector walk the
+        # backlog forward without losing the surplus.
+        max_window = timedelta(minutes=MAX_WINDOW_MINUTES)
+        capped = False
+        if to_time - from_time > max_window:
+            to_time = from_time + max_window
+            capped = True
+        self._window_was_capped = capped
+
         self.log(
             message=f"Fetch parameters - From: {from_time.isoformat()}, "
             f"To: {to_time.isoformat()}, "
             f"Time window: {(to_time - from_time).total_seconds() / 60:.1f} minutes",
             level="info",
         )
+
+        if capped:
+            backlog = datetime.now(timezone.utc) - timedelta(minutes=2) - to_time
+            self.log(
+                message=(
+                    f"Collection window capped at {MAX_WINDOW_MINUTES} minutes - "
+                    f"still {backlog.total_seconds() / 60:.1f} minutes behind real time; "
+                    f"the backlog is caught up one window per cycle."
+                ),
+                level="info",
+            )
 
         offset = 0
         limit = self.configuration.limit
@@ -179,9 +234,12 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
         total_duplicate_events = 0
         page_count = 0
 
+        page_attempts = 0
+
         while True:
-            page_count += 1
-            self.log(message=f"Fetching page {page_count} - Offset: {offset}, Limit: {limit}", level="info")
+            if page_attempts == 0:
+                page_count += 1
+                self.log(message=f"Fetching page {page_count} - Offset: {offset}, Limit: {limit}", level="info")
 
             try:
                 events = await client.fetch_activity_logs(
@@ -194,18 +252,39 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
 
                 events_received = len(events) if events else 0
                 total_events_fetched += events_received
+                page_attempts = 0
 
                 self.log(message=f"Page {page_count} received - Events: {events_received}", level="info")
 
-                if events_received > 0:
-                    self.log(
-                        message=f"Sample event from page {page_count}: {events[0] if events else 'None'}",
-                        level="debug",
-                    )
-
             except Exception as e:
-                self.log(message=f"Transient error fetching page {page_count} at offset {offset}: {e}", level="error")
-                await asyncio.sleep(2)
+                # Bounded retry. An unbounded `continue` here used to spin forever on a durably
+                # failing page, never advancing the checkpoint and never surfacing a fatal error.
+                page_attempts += 1
+                if page_attempts >= MAX_PAGE_ATTEMPTS:
+                    self.log(
+                        message=(
+                            f"Page {page_count} at offset {offset} failed "
+                            f"{page_attempts} times, aborting this cycle: {e}"
+                        ),
+                        level="error",
+                    )
+                    # Flush what was already collected so the successful pages are not discarded,
+                    # then abort WITHOUT saving the checkpoint: the window is retried in full next
+                    # cycle rather than silently skipping the events we could not fetch.
+                    if batch:
+                        yield batch
+                    return
+
+                backoff = 2**page_attempts
+                self.log(
+                    message=(
+                        f"Transient error fetching page {page_count} at offset {offset} "
+                        f"(attempt {page_attempts}/{MAX_PAGE_ATTEMPTS}), "
+                        f"retrying in {backoff}s: {e}"
+                    ),
+                    level="warning",
+                )
+                await asyncio.sleep(backoff)
                 continue
 
             if not events:
@@ -220,12 +299,12 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
                     yield batch
                 break
 
-            new_events = [event for event in events if self._is_new_event(event)]
+            new_events = self._filter_new_events(events)
             duplicate_count = len(events) - len(new_events)
             total_new_events += len(new_events)
             total_duplicate_events += duplicate_count
             if duplicate_count:
-                events_duplicated.inc(duplicate_count)
+                EVENTS_DUPLICATED.labels(intake_key=self.configuration.intake_key).inc(duplicate_count)
 
             self.log(
                 message=f"Page {page_count} filtering - New: {len(new_events)}, Duplicates: {duplicate_count}",
@@ -276,7 +355,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
         # have truncated extra events for this window -> surface it instead of failing silently.
         pool_size = self.configuration.instances_returned * 10000
         if total_events_fetched >= pool_size:
-            events_truncated.inc()
+            EVENTS_TRUNCATED.labels(intake_key=self.configuration.intake_key).inc()
             self.log(
                 message=(
                     f"Activity window {from_time.isoformat()} -> {to_time.isoformat()} reached the "
@@ -288,6 +367,15 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
 
         # Advance the checkpoint only now that the full window has been fetched and yielded.
         self.save_checkpoint(to_time)
+        # Persist the dedup cache once per cycle so a restart does not re-forward the last window.
+        self._save_events_cache()
+
+        # Report how far behind real time the collection is. This is the standard signal used across
+        # the automation library to tell "collecting slowly" from "collecting everything": a lag that
+        # keeps growing means the connector is not keeping up with the tenant's event rate.
+        lag = (datetime.now(timezone.utc) - to_time).total_seconds()
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(lag)
+        self.log(message=f"Collection lag: {lag:.0f}s behind real time", level="info")
 
     async def next_batch(self) -> AsyncGenerator[List[Dict[str, Any]], None]:
         """
@@ -308,6 +396,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             client_id=self.module.configuration.client_id,
             client_secret=self.module.configuration.client_secret,
             refresh_token=self.module.configuration.refresh_token,
+            intake_key=self.configuration.intake_key,
         ) as client:
             self.log(message="WorkdayClient context entered successfully", level="info")
 
@@ -315,7 +404,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
                 self.log(message=f"Batch ready for intake - Events: {len(batch)}", level="info")
                 yield batch
 
-    def run(self):  # pragma: no cover
+    def run(self):
         """
         Main execution loop
         Runs the async event collection in a synchronous wrapper
@@ -353,6 +442,11 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             iteration += 1
             self.log(message=f"=== Starting iteration {iteration} ===", level="info")
 
+            # Mark the connector alive on every cycle. A collection window can legitimately yield no
+            # event (or fail), and `_last_events_time` is only refreshed by a successful intake push;
+            # without this, a long quiet stretch would look indistinguishable from a hung process.
+            self.heartbeat()
+
             try:
                 batch_count = 0
                 total_events = 0
@@ -365,8 +459,12 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
                     self.log(message=f"Pushing batch {batch_count} to intake - Events: {batch_size}", level="info")
 
                     try:
+                        push_start = time.time()
                         await self.push_data_to_intakes(events=batch)
-                        events_forwarded.inc(batch_size)
+                        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                            time.time() - push_start
+                        )
+                        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(batch_size)
                         self.log(
                             message=f"Batch {batch_count} successfully forwarded to intake ({batch_size} events)",
                             level="info",
@@ -380,6 +478,15 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
                     f"Total batches: {batch_count}, Total events: {total_events}",
                     level="info",
                 )
+
+                # While catching up on a backlog the window is capped and the collected slice is
+                # already in the past, so waiting a full `frequency` would only widen the gap.
+                # Still yield to the event loop rather than spinning straight into the next cycle,
+                # so the liveness/metrics servers and the stop signal keep getting scheduled.
+                if self._window_was_capped:
+                    self.log(message="Backlog in progress - starting next iteration immediately", level="info")
+                    await sleep(1)
+                    continue
 
                 self.log(message=f"Sleeping for {self.configuration.frequency}s until next iteration", level="info")
                 await sleep(self.configuration.frequency)

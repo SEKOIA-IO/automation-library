@@ -1,33 +1,73 @@
 from prometheus_client import Counter, Gauge, Histogram
 
-# Event metrics
-events_collected = Counter(
-    "workday_activity_logs_collected_total",
-    "Total number of activity logs collected",
+# Common metrics, shared across the automation library. Names, namespace and the `intake_key` label
+# must stay aligned with the other connectors: the platform dashboards and alerting are built on
+# them, so a connector using its own naming is effectively invisible to standard monitoring.
+prom_namespace = "symphony_module_common"
+
+OUTCOMING_EVENTS = Counter(
+    name="forwarded_events",
+    documentation="Number of events forwarded to Sekoia.io",
+    namespace=prom_namespace,
+    labelnames=["intake_key"],
 )
 
-events_forwarded = Counter(
-    "workday_activity_logs_forwarded_total",
-    "Total number of activity logs forwarded to intake",
+EVENTS_LAG = Gauge(
+    name="events_lags",
+    documentation="The delay, in seconds, from the date of the last event",
+    namespace=prom_namespace,
+    labelnames=["intake_key"],
 )
 
-events_duplicated = Counter(
-    "workday_activity_logs_duplicated_total",
-    "Total number of duplicate activity logs filtered",
+FORWARD_EVENTS_DURATION = Histogram(
+    name="forward_events_duration",
+    documentation="Duration to collect and forward events from Workday",
+    namespace=prom_namespace,
+    labelnames=["intake_key"],
 )
 
-events_truncated = Counter(
-    "workday_activity_logs_truncated_total",
-    "Number of collection cycles where the time window saturated the instancesReturned pool "
-    "(events may have been truncated by the API)",
+# Workday-specific metrics
+prom_namespace_workday = "symphony_module_workday"
+
+INCOMING_EVENTS = Counter(
+    name="collected_events",
+    documentation="Number of events collected from the Workday Activity Logging API",
+    namespace=prom_namespace_workday,
+    labelnames=["intake_key"],
 )
 
-# API metrics
-api_requests = Counter("workday_api_requests_total", "Total number of API requests", ["endpoint", "status_code"])
-
-api_request_duration = Histogram(
-    "workday_api_request_duration_seconds", "API request duration in seconds", ["endpoint"]
+EVENTS_DUPLICATED = Counter(
+    name="duplicated_events",
+    documentation="Number of duplicate activity logs filtered out before forwarding",
+    namespace=prom_namespace_workday,
+    labelnames=["intake_key"],
 )
 
-# Checkpoint metrics
-checkpoint_age = Gauge("workday_checkpoint_age_seconds", "Age of the last checkpoint in seconds")
+EVENTS_TRUNCATED = Counter(
+    name="truncated_windows",
+    documentation="Number of collection cycles where the time window saturated the instancesReturned "
+    "pool (events may have been truncated by the API)",
+    namespace=prom_namespace_workday,
+    labelnames=["intake_key"],
+)
+
+CHECKPOINT_AGE = Gauge(
+    name="checkpoint_age_seconds",
+    documentation="Age, in seconds, of the collection checkpoint",
+    namespace=prom_namespace_workday,
+    labelnames=["intake_key"],
+)
+
+API_REQUESTS = Counter(
+    name="api_requests",
+    documentation="Number of requests sent to the Workday API",
+    namespace=prom_namespace_workday,
+    labelnames=["intake_key", "endpoint", "status_code"],
+)
+
+API_REQUEST_DURATION = Histogram(
+    name="api_request_duration_seconds",
+    documentation="Duration of the requests sent to the Workday API",
+    namespace=prom_namespace_workday,
+    labelnames=["intake_key", "endpoint"],
+)

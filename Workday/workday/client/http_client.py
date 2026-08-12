@@ -7,9 +7,9 @@ from aiolimiter import AsyncLimiter
 from workday.client.errors import WorkdayError, WorkdayAuthError, WorkdayRateLimitError
 from sekoia_automation.trigger import Trigger
 from workday.metrics import (
-    api_requests,
-    api_request_duration,
-    events_collected,
+    API_REQUESTS,
+    API_REQUEST_DURATION,
+    INCOMING_EVENTS,
 )
 
 
@@ -23,6 +23,7 @@ class WorkdayClient:
         refresh_token: str,
         token_endpoint: Optional[str] = None,
         trigger: Optional[Trigger] = None,
+        intake_key: str = "",
     ):
         self.workday_host = workday_host
         self.tenant_name = tenant_name
@@ -31,6 +32,7 @@ class WorkdayClient:
         self.refresh_token = refresh_token
         self._explicit_token_endpoint = token_endpoint
         self.trigger = trigger
+        self.intake_key = intake_key
 
         self._access_token: Optional[str] = None
         self._token_expires_at: Optional[datetime] = None
@@ -54,7 +56,6 @@ class WorkdayClient:
 
     async def _get_access_token(self) -> str:
         if self._session is None:
-            # self.log("HTTP session not initialized when trying to get access token")
             raise WorkdayError("HTTP session not initialized")
 
         if self._access_token and self._token_expires_at:
@@ -62,10 +63,7 @@ class WorkdayClient:
             if now < self._token_expires_at:
                 return self._access_token
             else:
-                # self.log(f"Access token expired at {self._token_expires_at.isoformat()}, refreshing...")
                 pass
-
-        # self.log(f"Requesting new access token from {self.token_endpoint}")
 
         data = {
             "grant_type": "refresh_token",
@@ -73,11 +71,6 @@ class WorkdayClient:
             "client_id": self.client_id,
             "client_secret": self.client_secret,
         }
-
-        # self.log(
-        #     f"Token request payload: grant_type={data['grant_type']}, "
-        #     f"client_id={self.client_id[:8]}..., refresh_token={self.refresh_token[:8]}..."
-        # )
 
         async with self._rate_limiter:
             start = datetime.now().timestamp()
@@ -90,8 +83,8 @@ class WorkdayClient:
                 duration = datetime.now().timestamp() - start
                 status = resp.status
                 # Prometheus API metrics for token exchange
-                api_requests.labels(endpoint="token", status_code=status).inc()
-                api_request_duration.labels(endpoint="token").observe(duration)
+                API_REQUESTS.labels(intake_key=self.intake_key, endpoint="token", status_code=status).inc()
+                API_REQUEST_DURATION.labels(intake_key=self.intake_key, endpoint="token").observe(duration)
 
                 if status == 401:
                     text = await resp.text()
@@ -107,12 +100,6 @@ class WorkdayClient:
         expires_in = int(token_data.get("expires_in", 3600))
         self._token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in - 300)
 
-        # self.log(
-        #     f"Access token obtained successfully - "
-        #     f"Token: {self._access_token[:12] if self._access_token else 'None'}..., "
-        #     f"Expires in: {expires_in}s (cached until {self._token_expires_at.isoformat()})"
-        # )
-
         return self._access_token
 
     async def fetch_activity_logs(
@@ -124,7 +111,6 @@ class WorkdayClient:
         instances_returned: int = 1,
     ) -> List[Dict[str, Any]]:
         if not self._session:
-            # self.log("HTTP session not initialized when fetching activity logs")
             raise WorkdayError("HTTP session not initialized")
 
         url = f"{self.base_url}/activityLogging"
@@ -159,8 +145,12 @@ class WorkdayClient:
                     status = resp.status
 
                     # Prometheus API metrics
-                    api_requests.labels(endpoint="activityLogging", status_code=status).inc()
-                    api_request_duration.labels(endpoint="activityLogging").observe(duration)
+                    API_REQUESTS.labels(
+                        intake_key=self.intake_key, endpoint="activityLogging", status_code=status
+                    ).inc()
+                    API_REQUEST_DURATION.labels(intake_key=self.intake_key, endpoint="activityLogging").observe(
+                        duration
+                    )
 
                     if status == 401:
                         self._access_token = None
@@ -197,46 +187,34 @@ class WorkdayClient:
                                 events = data[key] or []
                                 break
                         else:
-                            # self.log(
-                            #     f"WARNING: No event list found in ActivityLogging response. Keys={list(data.keys())}",
-                            #     level="warning",
-                            # )
                             events = []
 
                     elif isinstance(data, list):
                         events = data
                     else:
-                        # self.log(f"WARNING: Unexpected response type {type(data)}; treating as empty", level="warning")
                         events = []
 
                     if not isinstance(events, list):
-                        # self.log(f"WARNING: Event container not list (type={type(events)}). Forcing empty list.")
                         events = []
 
                     # Prometheus: events collected
                     if isinstance(events, list):
-                        events_collected.inc(len(events))
+                        INCOMING_EVENTS.labels(intake_key=self.intake_key).inc(len(events))
 
                     return events
 
         raise WorkdayRateLimitError("Exceeded maximum retry attempts while fetching activity logs")
 
     async def __aenter__(self):
-        # self.log("Entering WorkdayClient context - Creating aiohttp session")
         self._session = aiohttp.ClientSession(trust_env=True)
 
-        # self.log("Validating credentials by requesting initial access token")
         try:
             await self._get_access_token()
-            # self.log("Initial token validation successful")
         except Exception as e:
-            # self.log(f"Initial token validation FAILED: {e}")
             raise
 
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        # self.log(f"Exiting WorkdayClient context - Exception: {exc_type.__name__ if exc_type else 'None'}")
         if self._session:
             await self._session.close()
-            # self.log("aiohttp session closed")
