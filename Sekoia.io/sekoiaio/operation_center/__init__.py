@@ -430,6 +430,7 @@ ListAssets = type(
             "rule_version",
             "sort",
             "direction",
+            "include_revoked",
         ],
     },
 )

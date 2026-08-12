@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-06-15 - 2.75.2
+
+### Added
+
+- Add `Include revoked` parameter to `List Assets V2` action
+
 ## 2026-08-04 - 2.75.1
 
 ### Fixed
