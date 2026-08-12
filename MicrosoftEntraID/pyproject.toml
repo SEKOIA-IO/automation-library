@@ -37,6 +37,7 @@ pydantic = "2.10"
 msgraph-sdk = "^1.45.0"
 cachetools = "^6.2.0"
 loguru = "^0.7.3"
+httpx = "0.28.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -57,7 +58,7 @@ addopts = "  --strict-markers\n  --tb=short\n  --cov=graph_api\n  --cov=azure_ad
 omit = ["tests/*", "main.py"]
 
 [tool.poetry.dependencies.sekoia-automation-sdk]
-version = "^1.22.5"
+version = "^1.24.0"
 extras = ["all"]
 
 [tool.poetry.dev-dependencies.black]

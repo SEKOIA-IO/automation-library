@@ -1,6 +1,7 @@
 from sekoia_automation.action import GenericAPIAction
 
-base_url = "api/v1/sic/"
+from sekoiaio.operation_center.constants import base_url
+from sekoiaio.operation_center.get_alert import GetAlert
 
 PatchAlert = type(
     "PatchAlert",
@@ -147,16 +148,6 @@ PostCommentOnAlert = type(
 )
 
 
-GetAlert = type(
-    "GetAlert",
-    (GenericAPIAction,),
-    {
-        "verb": "get",
-        "endpoint": base_url + "alerts/{uuid}",
-        "query_parameters": ["stix", "cases"],
-    },
-)
-
 UpdateIncident = type(
     "UpdateIncident",
     (GenericAPIAction,),
@@ -236,6 +227,7 @@ UpdateCase = type(
         "verb": "patch",
         "endpoint": base_url + "cases/{uuid}",
         "query_parameters": [],
+        "timeout": 60,
     },
 )
 
@@ -479,6 +471,16 @@ DeletesAssetV2 = type(
     {
         "verb": "delete",
         "endpoint": assets_v2_base_url + "assets/{uuid}",
+        "query_parameters": [],
+    },
+)
+
+RevokesAssetV2 = type(
+    "RevokesAssetV2",
+    (GenericAPIAction,),
+    {
+        "verb": "put",
+        "endpoint": assets_v2_base_url + "assets/{uuid}/revoke",
         "query_parameters": [],
     },
 )

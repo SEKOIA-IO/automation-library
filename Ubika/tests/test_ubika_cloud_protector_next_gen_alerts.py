@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call, patch
 
 import httpx
 import pytest
@@ -275,9 +275,10 @@ def test_authorization_timeout_error(respx_mock: MockRouter, trigger):
     start = datetime.fromtimestamp(1747326560, tz=timezone.utc)
     end = datetime.fromtimestamp(1747326660, tz=timezone.utc)
 
-    with pytest.raises(AuthorizationTimeoutError):
+    with patch("time.sleep") as mock_sleep, pytest.raises(AuthorizationTimeoutError):
         trigger.next_batch(start=start, end=end)
 
+    mock_sleep.assert_has_calls([call(600.0), call(600.0), call(600.0), call(600.0)])
     assert route.call_count == 5
 
 

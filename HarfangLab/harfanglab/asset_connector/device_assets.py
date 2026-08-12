@@ -1,7 +1,6 @@
 from collections.abc import Generator
 from datetime import datetime, timedelta
 from functools import cached_property
-from typing import Any, Optional
 from urllib.parse import urljoin
 
 from dateutil.parser import isoparse
@@ -32,7 +31,6 @@ from harfanglab.helpers import handle_uri
 
 
 class HarfanglabAssetConnector(AssetConnector):
-
     # Configuration Constants
     AGENT_ENDPOINT: str = "/api/data/endpoint/Agent"
     DEVICE_ORDERING_FIELD: str = "firstseen"
@@ -110,7 +108,7 @@ class HarfanglabAssetConnector(AssetConnector):
             product=Product(name=self.PRODUCT_NAME, version=self.PRODUCT_VERSION), version=self.METADATA_VERSION
         )
 
-    def build_operating_system(self, os_product_type: Optional[str], os_type: Optional[str]) -> OperatingSystem:
+    def build_operating_system(self, os_product_type: str | None, os_type: str | None) -> OperatingSystem:
         """
         Build OperatingSystem object from Harfanglab asset data.
         Args:
@@ -297,10 +295,10 @@ class HarfanglabAssetConnector(AssetConnector):
                 enrichments=[enrichments] if enrichments else None,
             )
         except (KeyError, ValueError) as e:
-            self.log(f"Failed to map asset - ID: {agent.id}, Error: {str(e)}", level="error")
+            self.log(f"Failed to map asset - ID: {agent.id}, Error: {e!s}", level="error")
             raise
 
-    def _fetch_devices(self, from_date: str | None) -> Generator[list[HarfanglabAgent], None, None]:
+    def _fetch_devices(self, from_date: str | None) -> Generator[list[HarfanglabAgent]]:
         """
         Fetch devices from Harfanglab API with pagination.
         Args:
@@ -365,10 +363,10 @@ class HarfanglabAssetConnector(AssetConnector):
                 device_response.raise_for_status()
 
         except RequestException as e:
-            self.log(f"API request failed - URL: {current_url}, Error: {str(e)}", level="error")
+            self.log(f"API request failed - URL: {current_url}, Error: {e!s}", level="error")
             raise
 
-    def iterate_devices(self) -> Generator[list[HarfanglabAgent], None, None]:
+    def iterate_devices(self) -> Generator[list[HarfanglabAgent]]:
         """
         Iterate over devices fetched from the Harfanglab API, updating the checkpoint timestamp as needed.
         Yields:
@@ -382,7 +380,6 @@ class HarfanglabAssetConnector(AssetConnector):
         device_count = 0
 
         try:
-
             for agents in self._fetch_devices(from_date=self.most_recent_date_seen):
                 if not agents:
                     continue
@@ -402,13 +399,14 @@ class HarfanglabAssetConnector(AssetConnector):
 
             if max_date and (orig_date is None or max_date > orig_date):
                 self.log(
-                    f"Updating checkpoint - New date: {max_date.isoformat()}, Previous date: {orig_date.isoformat() if orig_date else 'None'}",
+                    f"Updating checkpoint - New date: {max_date.isoformat()}, "
+                    f"Previous date: {orig_date.isoformat() if orig_date else 'None'}",
                     level="info",
                 )
                 self._latest_time = max_date.isoformat()
 
         except Exception as e:
-            self.log(f"Device iteration failed - Error: {str(e)}, Devices processed: {device_count}", level="error")
+            self.log(f"Device iteration failed - Error: {e!s}, Devices processed: {device_count}", level="error")
             raise
 
     def update_checkpoint(self) -> None:
@@ -420,7 +418,7 @@ class HarfanglabAssetConnector(AssetConnector):
         else:
             self.log("No checkpoint update needed - No new timestamp available", level="debug")
 
-    def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
+    def get_assets(self) -> Generator[DeviceOCSFModel]:
         self.log(f"Asset generation started - Data path: {self._data_path.absolute()}", level="info")
 
         assets_generated = 0
@@ -435,7 +433,7 @@ class HarfanglabAssetConnector(AssetConnector):
                     except (KeyError, ValueError) as e:
                         assets_skipped += 1
                         self.log(
-                            f"Asset skipped - ID: {agent.id}, Hostname: {agent.hostname}, Reason: {str(e)}",
+                            f"Asset skipped - ID: {agent.id}, Hostname: {agent.hostname}, Reason: {e!s}",
                             level="warning",
                         )
                         continue
@@ -447,7 +445,7 @@ class HarfanglabAssetConnector(AssetConnector):
 
         except Exception as e:
             self.log(
-                f"Asset generation failed - Generated: {assets_generated}, Skipped: {assets_skipped}, Error: {str(e)}",
+                f"Asset generation failed - Generated: {assets_generated}, Skipped: {assets_skipped}, Error: {e!s}",
                 level="error",
             )
             raise

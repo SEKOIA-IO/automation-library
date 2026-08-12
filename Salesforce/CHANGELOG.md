@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-24 - 1.8.4
+
+### Changed
+
+- Increase file processing, in memory, to 500Mb
+
+## 2026-05-04 - 1.8.3
+
+### Changed
+
+- Make the Salesforce connector run loop fully asynchronous
+
 ## 2026-05-04 - 1.8.2
 
 ### Changed
