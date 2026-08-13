@@ -49,8 +49,9 @@ def activity_logging_connector(mock_data_path):
     # Create connector instance
     connector = WorkdayActivityLoggingConnector(module=mock_module, data_path=mock_data_path)
 
-    # Mock push_data_to_intakes
-    connector.push_data_to_intakes = AsyncMock()
+    # Mock push_data_to_intakes. It returns the ids accepted by the intake, and the connector
+    # counts them to decide whether the batch really landed, so the default must be a list.
+    connector.push_data_to_intakes = AsyncMock(return_value=["evt-1"])
     connector.log = MagicMock()
     connector.log_exception = MagicMock()
 

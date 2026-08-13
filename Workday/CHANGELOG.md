@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Raised the SDK floor to `^1.21.2`. Up to 1.21.1, `AsyncConnector._async_send_chunk` logged intake
+  HTTP errors without raising, so the SDK's own one-hour retry never engaged and rejected batches
+  were dropped. From 1.21.2 the error is raised inside the retry block, so a batch refused while
+  the intake key is still propagating is retried with exponential backoff instead of being lost.
+  Now resolved to 1.24.0.
 - The deduplication cache was rewritten to disk once per event, capping the connector at
   ~227,000 events/day. Deduplication is now in-memory and persisted once per cycle.
 - Page fetches were retried in an unbounded loop, so a durably failing page never advanced the
@@ -18,6 +23,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The heartbeat is now refreshed on every cycle, not only on a successful intake push, so a slow
   or quiet window no longer makes the connector look hung.
 - Removed the per-event debug logs (hundreds of thousands of lines per cycle).
+- Capped the length of log messages sent to the platform. The batch API answers a rejected chunk
+  with one error object per event, so a refused 1,000-event chunk produced a ~90,000 character
+  log line repeating `INVALID_INTAKE_KEY` a thousand times. The SDK forwards that body verbatim
+  from `_async_send_chunk`, which cannot be overridden, so the cap is applied in `log`.
+- Split logging in two, aligning with the rest of the automation library: `self.log` (customer
+  GUI) is now reserved for the cycle outcome, actionable states and errors, while pagination,
+  batching and client internals go to `loguru` (pod logs, still available in Loki). The connector
+  emitted 29 `info` lines per cycle against a library median of 2, which both buried the
+  actionable lines and hit the SDK's 60s same-text log deduplication, making the GUI look as
+  though it had stopped displaying logs. A cycle now ends on a single summary
+  (`Collected N events in M batch(es) - up to date` / `catching up, X min behind real time`).
 
 ### Changed
 

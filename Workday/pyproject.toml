@@ -7,7 +7,9 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.14"
-sekoia-automation-sdk = {version = "^1.21.1", extras= ["all"]}
+# >=1.21.2 is required: earlier versions logged intake HTTP errors without raising, so a rejected
+# batch was never retried and was reported as a success (see CHANGELOG 0.3.0).
+sekoia-automation-sdk = {version = "^1.21.2", extras= ["all"]}
 cachetools = "^6.0.0"
 
 [tool.poetry.group.dev.dependencies]

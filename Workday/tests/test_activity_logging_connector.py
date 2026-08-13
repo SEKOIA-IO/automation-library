@@ -2,12 +2,16 @@ import pytest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 from aioresponses import aioresponses
+import json
 import re
 
 from types import SimpleNamespace
 
+from sekoia_automation.aio.connector import AsyncConnector
+
 from workday.workday_activity_logging_connector import (
     EVENT_CACHE_SIZE,
+    MAX_LOG_MESSAGE_CHARS,
     WorkdayActivityLoggingConfiguration,
     WorkdayActivityLoggingConnector,
 )
@@ -525,6 +529,10 @@ async def _one_batch_generator():
     yield [{"taskId": "t1"}]
 
 
+async def _two_event_batch_generator():
+    yield [{"taskId": "t1"}, {"taskId": "t2"}]
+
+
 @pytest.mark.asyncio
 async def test_async_run_pushes_batches_then_sleeps(activity_logging_connector):
     """One loop iteration forwards each batch to the intake, then sleeps for `frequency`."""
@@ -538,6 +546,138 @@ async def test_async_run_pushes_batches_then_sleeps(activity_logging_connector):
 
     activity_logging_connector.push_data_to_intakes.assert_awaited_once_with(events=[{"taskId": "t1"}])
     slept.assert_awaited()  # slept for the configured frequency between iterations
+
+
+@pytest.mark.asyncio
+async def test_async_run_reports_rejected_batch_as_error(activity_logging_connector):
+    """A batch the intake rejects is logged as an error, not as a success.
+
+    The SDK's async chunk sender logs HTTP errors instead of raising, so a rejected push returns
+    an empty id list. Counting the submitted batch size here used to report success for events
+    that were never ingested (e.g. an intake key not yet propagated, HTTP 422).
+    """
+    activity_logging_connector.next_batch = MagicMock(return_value=_one_batch_generator())
+    activity_logging_connector.push_data_to_intakes = AsyncMock(return_value=[])
+
+    with patch.object(type(activity_logging_connector), "running", new_callable=PropertyMock) as running, patch(
+        "workday.workday_activity_logging_connector.sleep", new=AsyncMock()
+    ):
+        running.side_effect = _running_then_stop()
+        await activity_logging_connector._async_run()
+
+    logged = [call.kwargs for call in activity_logging_connector.log.call_args_list]
+    rejections = [c for c in logged if c.get("level") == "error" and "rejected by the intake" in c.get("message", "")]
+    assert len(rejections) == 1, "a fully rejected batch must be logged once as an error"
+    assert "0/1 events accepted" in rejections[0]["message"]
+
+    successes = [c for c in logged if "successfully forwarded" in c.get("message", "")]
+    assert not successes, "no success must be logged when the intake accepted nothing"
+
+
+@pytest.mark.asyncio
+async def test_async_run_counts_accepted_events_not_submitted_ones(activity_logging_connector):
+    """A partially accepted batch is reported with the count returned by the intake."""
+    activity_logging_connector.next_batch = MagicMock(return_value=_two_event_batch_generator())
+    activity_logging_connector.push_data_to_intakes = AsyncMock(return_value=["evt-1"])
+
+    with patch.object(type(activity_logging_connector), "running", new_callable=PropertyMock) as running, patch(
+        "workday.workday_activity_logging_connector.sleep", new=AsyncMock()
+    ):
+        running.side_effect = _running_then_stop()
+        await activity_logging_connector._async_run()
+
+    logged = [call.kwargs for call in activity_logging_connector.log.call_args_list]
+    rejections = [c for c in logged if c.get("level") == "error" and "rejected by the intake" in c.get("message", "")]
+    assert len(rejections) == 1
+    assert "1/2 events accepted" in rejections[0]["message"]
+
+
+@pytest.mark.asyncio
+async def test_async_run_emits_one_customer_facing_summary_per_cycle(activity_logging_connector):
+    """Pagination and batching internals go to the pod logs; the customer gets a single summary.
+
+    The GUI only receives `self.log` calls, and the SDK drops any line whose exact text repeats
+    within 60s. Keeping the mechanics out of `self.log` is what stops the actionable lines from
+    being crowded out.
+    """
+    activity_logging_connector.next_batch = MagicMock(return_value=_one_batch_generator())
+    activity_logging_connector._last_lag = 30.0
+
+    with patch.object(type(activity_logging_connector), "running", new_callable=PropertyMock) as running, patch(
+        "workday.workday_activity_logging_connector.sleep", new=AsyncMock()
+    ):
+        running.side_effect = _running_then_stop()
+        await activity_logging_connector._async_run()
+
+    messages = [c.kwargs.get("message", "") for c in activity_logging_connector.log.call_args_list]
+
+    summaries = [m for m in messages if "Collected" in m or "No new events" in m]
+    assert len(summaries) == 1, f"expected exactly one cycle summary, got {summaries}"
+    assert "up to date" in summaries[0]
+
+    # Mechanics must not reach the customer-facing logger.
+    for noise in ("Batch ready for intake", "Moving to next page", "context entered", "Fetching page"):
+        assert not any(noise in m for m in messages), f"{noise!r} should stay in the pod logs"
+
+
+@pytest.mark.asyncio
+async def test_lag_summary_flags_a_backlog(activity_logging_connector):
+    """The summary distinguishes 'up to date' from a backlog being caught up."""
+    activity_logging_connector._last_lag = 30.0
+    activity_logging_connector._window_was_capped = False
+    assert activity_logging_connector._lag_summary() == "up to date"
+
+    activity_logging_connector._last_lag = 7200.0
+    activity_logging_connector._window_was_capped = True
+    assert activity_logging_connector._lag_summary() == "catching up, 120 min behind real time"
+
+    activity_logging_connector._window_was_capped = False
+    assert activity_logging_connector._lag_summary() == "120 min behind real time"
+
+
+def _rejection_payload(count: int) -> str:
+    """Rebuild the batch API's answer to a fully rejected chunk: one error object per event."""
+    return json.dumps(
+        {
+            "event_ids": [],
+            "errors": True,
+            "summary": {"total": count, "success": 0, "error": count},
+            "results": [{"status": 422, "error": {"message": "Invalid intake key", "code": "INVALID_INTAKE_KEY"}}]
+            * count,
+        }
+    )
+
+
+def test_log_truncates_oversized_intake_errors(activity_logging_connector):
+    """A rejected 1,000-event chunk must not reach the platform as a ~90,000 character line.
+
+    The SDK builds that message inside `_async_send_chunk` (not overridable) and hands it to
+    `log_exception`, which funnels into `log` -- the only seam where it can be capped.
+    """
+    message = f"Chunk 0 error (422) on attempt 1: {_rejection_payload(1000)}"
+    assert len(message) > 50_000  # the raw line really is that big
+
+    sent = []
+    with patch.object(AsyncConnector, "log", side_effect=lambda msg, *a, **k: sent.append(msg)):
+        # `log` is mocked on the fixture, so call the real implementation explicitly.
+        WorkdayActivityLoggingConnector.log(activity_logging_connector, message, "error")
+
+    assert len(sent) == 1
+    assert len(sent[0]) < MAX_LOG_MESSAGE_CHARS + 100
+    assert sent[0].startswith("Chunk 0 error (422) on attempt 1")  # cause still identifiable
+    assert "INVALID_INTAKE_KEY" in sent[0]
+    assert f"truncated, {len(message)} chars total" in sent[0]
+
+
+def test_log_leaves_normal_messages_untouched(activity_logging_connector):
+    """Ordinary log lines pass through unchanged."""
+    message = "Batch 3 successfully forwarded to intake (1000 events)"
+
+    sent = []
+    with patch.object(AsyncConnector, "log", side_effect=lambda msg, *a, **k: sent.append(msg)):
+        WorkdayActivityLoggingConnector.log(activity_logging_connector, message, "info")
+
+    assert sent == [message]
 
 
 @pytest.mark.asyncio
