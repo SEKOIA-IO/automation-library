@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-13 - 2.75.3
+
+### Added
+
+- Add concise docstrings to all methods in `Add IOC to IOC Collection`
+- Extend `Add IOC to IOC Collection` tests with edge cases (nested flattening, blank values, empty list, HTTP failure path) to reach 100% coverage on `sekoiaio/intelligence_center/add_ioc_to_ioc_collection.py`
+
+### Changed
+
+- Anonymize IOC/IP test samples with RFC 5737 and documentation IPv6 ranges to keep examples non-identifying while preserving input shapes
+- Refactor `Add IOC to IOC Collection` tests to use `pytest.mark.parametrize` for repeated success and IP validation scenarios
+- Use Pydantic v2 `TypeAdapter` to validate IPv4/IPv6 inputs in `add_IP_action` while preserving existing action behavior
+
+### Fixed
+
+- Fail explicitly in `Add IOC to IOC Collection` action when IP indicators are invalid (including CIDR notation like `/32`) instead of silently succeeding without creating indicators
+- Add stricter IP validation to prevent green runs with empty `Results`/`Errors` when no valid IPv4/IPv6 indicator is actually submitted
+
 ## 2026-06-15 - 2.75.2
 
 ### Added

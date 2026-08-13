@@ -3,23 +3,23 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "indicator": {
-        "description": "Single indicator to add to an IOC collection.",
+        "description": "Single indicator to add to an IOC collection. For IP address type, provide a plain IPv4 or IPv6 value (CIDR is not supported).",
         "type": "string"
       },
       "indicators": {
-        "description": "List of indicators to add to an IOC collection",
+        "description": "List of indicators to add to an IOC collection. For IP address type, provide plain IPv4 or IPv6 values (CIDR is not supported).",
         "type": "array"
       },
       "indicators_path": {
-        "description": "Path of the indicators file to add to an IOC collection",
+        "description": "Path to an indicators file to add to an IOC collection.",
         "type": "string"
       },
       "ioc_collection_id": {
-        "description": "Identifier of the IOC collection",
+        "description": "Identifier of the target IOC collection.",
         "type": "string"
       },
       "indicator_type": {
-        "description": "Type of IOC",
+        "description": "Type of indicator to add. For IP address type, only plain IPv4 or IPv6 values are supported (CIDR is not supported).",
         "example": "IP address, domain, url, email or hash",
         "type": "string",
         "enum": [
@@ -32,7 +32,7 @@
       },
       "valid_for": {
         "type": "integer",
-        "description": "Validity period for the created indicators (in days)",
+        "description": "Validity period in days for the created indicators.",
         "minimum": 1
       }
     },
@@ -60,7 +60,7 @@
     "title": "Arguments",
     "type": "object"
   },
-  "description": "Add indicators to an IOC Collection",
+  "description": "Add indicators to an IOC collection.",
   "docker_parameters": "add_ioc_to_ioc_collection",
   "name": "Add IOC to IOC Collection",
   "results": {},
