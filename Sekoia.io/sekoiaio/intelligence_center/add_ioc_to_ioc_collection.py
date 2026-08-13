@@ -94,8 +94,15 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
         indicator_type = arguments.get("indicator_type")
         valid_for = int(arguments.get("valid_for", 0))
 
-        checked_indicators = self.flatten_and_validate(indicators) if indicators else []
-        result_indicators = checked_indicators or [single_indicator]
+        indicators_was_provided = "indicators" in arguments
+        single_indicator_was_provided = "indicator" in arguments and single_indicator is not None
+
+        if indicators_was_provided:
+            result_indicators = self.flatten_and_validate(indicators) if indicators is not None else []
+        elif single_indicator_was_provided:
+            result_indicators = [single_indicator]
+        else:
+            result_indicators = []
 
         if str(indicator_type) == "IP address":
             if not isinstance(indicators, list) and not single_indicator:

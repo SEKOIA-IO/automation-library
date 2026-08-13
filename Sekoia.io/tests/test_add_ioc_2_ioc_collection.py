@@ -4,7 +4,7 @@ import requests_mock
 from sekoiaio.intelligence_center.add_ioc_to_ioc_collection import AddIOCtoIOCCollectionAction
 
 IOC_COLLECTION_ID = "ioc-collection--00000000-0000-0000-0000-000000000000"
-INDICATORS_TEXT_ENDPOINT = "http://fake.url/api/v2/inthreat/ioc-collections/" + IOC_COLLECTION_ID + "/indicators/text"
+INDICATORS_TEXT_ENDPOINT = f"http://fake.url/api/v2/inthreat/ioc-collections/{IOC_COLLECTION_ID}/indicators/text"
 
 
 @pytest.mark.parametrize(
@@ -150,6 +150,14 @@ def test_add_ioc_incorrect_type():
         ),
         (
             {
+                "indicators": [],
+                "ioc_collection_id": IOC_COLLECTION_ID,
+                "indicator_type": "IP address",
+            },
+            "No valid IP indicators were provided",
+        ),
+        (
+            {
                 "indicators": ["198.51.100.65/32", "198.51.100.67/32"],
                 "ioc_collection_id": IOC_COLLECTION_ID,
                 "indicator_type": "IP address",
@@ -165,7 +173,7 @@ def test_add_ioc_incorrect_type():
             "Invalid IP indicator",
         ),
     ],
-    ids=["missing-indicators", "cidr-input", "mixed-valid-and-invalid"],
+    ids=["missing-indicators", "empty-indicators-list", "cidr-input", "mixed-valid-and-invalid"],
 )
 def test_add_ioc_ip_validation_errors(arguments, error_match):
     action: AddIOCtoIOCCollectionAction = AddIOCtoIOCCollectionAction()
