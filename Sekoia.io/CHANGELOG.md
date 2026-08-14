@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fail explicitly in `Add IOC to IOC Collection` action when IP indicators are invalid (including CIDR notation like `/32`) instead of silently succeeding without creating indicators
 - Add stricter IP validation to prevent green runs with empty `Results`/`Errors` when no valid IPv4/IPv6 indicator is actually submitted
 
+### Removed
+
+- Remove `indicators_path` from `Add IOC to IOC Collection` action JSON arguments because it was declared but not supported by the Python implementation
+
 ## 2026-06-15 - 2.75.2
 
 ### Added

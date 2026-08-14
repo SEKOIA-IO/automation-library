@@ -10,10 +10,6 @@
         "description": "List of indicators to add to an IOC collection. For IP address type, provide plain IPv4 or IPv6 values (CIDR is not supported).",
         "type": "array"
       },
-      "indicators_path": {
-        "description": "Path to an indicators file to add to an IOC collection.",
-        "type": "string"
-      },
       "ioc_collection_id": {
         "description": "Identifier of the target IOC collection.",
         "type": "string"
@@ -45,11 +41,6 @@
       {
         "required": [
           "indicators"
-        ]
-      },
-      {
-        "required": [
-          "indicators_path"
         ]
       }
     ],
