@@ -1,8 +1,9 @@
 # Changelog
 
-## 0.1.0
+## 0.2.0
 
-- Initial version of Upwind automation module.
-- Added Upwind detections connector to collect detections and forward events to intake.
+- Initial version of the Upwind automation module.
+- Added the Upwind detections connector to collect detections and forward events to Sekoia.io intake.
+- Authenticated to the Upwind API using OAuth2 client credentials.
 - Added connector and trigger definitions.
-- Added unit tests for event timestamp extraction and deduplication.
+- Added unit tests.

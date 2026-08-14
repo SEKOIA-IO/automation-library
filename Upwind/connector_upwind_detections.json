@@ -8,7 +8,8 @@
       "frequency": {
         "type": "integer",
         "description": "Batch frequency in seconds",
-        "default": 60
+        "default": 60,
+        "minimum": 1
       },
       "intake_server": {
         "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
@@ -19,12 +20,12 @@
         "description": "Intake key to use when sending events",
         "type": "string"
       },
-      "page_size": {
+      "batch_size": {
         "type": "integer",
-        "description": "Maximum number of detections requested per API call",
+        "description": "Maximum number of detections pushed per intake batch",
         "default": 100,
         "minimum": 1,
-        "maximum": 500
+        "maximum": 1000
       }
     },
     "required": [

@@ -1,10 +1,9 @@
 from datetime import UTC, datetime
 
 import pytest
-from cachetools import LRUCache
 
 import upwind
-from upwind import extract_upwind_detection_datetime, filter_new_events
+from upwind import extract_upwind_detection_datetime
 
 
 def test_extract_detection_datetime_prefers_last_seen_time() -> None:
@@ -26,23 +25,6 @@ def test_extract_detection_datetime_fallbacks_to_first_seen_time() -> None:
     actual = extract_upwind_detection_datetime(event)
 
     assert actual == datetime(2026, 3, 17, 11, 58, 50, tzinfo=UTC)
-
-
-def test_filter_new_events_deduplicates_by_id() -> None:
-    cache = LRUCache(maxsize=100)
-
-    events = [
-        {"id": "uwd-11111111111111aa", "category": "CLOUD_TRAIL"},
-        {"id": "uwd-11111111111111aa", "category": "CLOUD_TRAIL"},
-        {"id": "uwd-22222222222222bb", "category": "API_SECURITY"},
-    ]
-
-    selected = filter_new_events(events, cache)
-
-    assert [event["id"] for event in selected] == [
-        "uwd-11111111111111aa",
-        "uwd-22222222222222bb",
-    ]
 
 
 def test_extract_detection_datetime_handles_naive_timestamp() -> None:
@@ -84,10 +66,5 @@ def test_extract_detection_datetime_ignores_non_datetime_parsed_values(monkeypat
     assert actual == datetime(2026, 6, 1, 8, 0, 0, tzinfo=UTC)
 
 
-def test_filter_new_events_skips_entries_without_id() -> None:
-    cache = LRUCache(maxsize=10)
-    events = [{"category": "no-id"}, {"id": "uwd-33333333333333cc"}]
-
-    selected = filter_new_events(events, cache)
-
-    assert [event["id"] for event in selected] == ["uwd-33333333333333cc"]
+def test_extract_detection_datetime_returns_none_without_timestamps() -> None:
+    assert extract_upwind_detection_datetime({"category": "no-date"}) is None

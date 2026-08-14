@@ -225,7 +225,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
-    { name = "pytest-asyncio" },
     { name = "pytest-cov" },
 ]
 lint = [
@@ -238,13 +237,12 @@ requires-dist = [
     { name = "cachetools", specifier = ">=6.2.3,<7" },
     { name = "orjson", specifier = ">=3.11.1,<4" },
     { name = "python-dateutil", specifier = ">=2.9.0,<3" },
-    { name = "sekoia-automation-sdk", specifier = ">=1.23.1,<2" },
+    { name = "sekoia-automation-sdk", specifier = ">=1.24.0,<2" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "pytest", specifier = ">=7.0" },
-    { name = "pytest-asyncio", specifier = ">=0.23" },
     { name = "pytest-cov" },
 ]
 lint = [
@@ -971,18 +969,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pytest-asyncio"
-version = "1.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pytest" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/43/7c/d36d04db312ecf4298932ef77e6e4a9e8ad017906e24e34f0b0c361a2473/pytest_asyncio-1.4.0.tar.gz", hash = "sha256:c6c0d2259945122819f171a32ecea2c349ead889ee28176caaf492143424be42", size = 58514, upload-time = "2026-05-26T09:56:04.083Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl", hash = "sha256:933ca923a23075a87fb7070c0ec272a6848489824d887c85c812670932835aa1", size = 16930, upload-time = "2026-05-26T09:56:02.576Z" },
-]
-
-[[package]]
 name = "pytest-cov"
 version = "7.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1236,8 +1222,20 @@ wheels = [
 ]
 
 [[package]]
+name = "sekoia-automation-models"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/51/b9/7cb7a8e200e2487a3b4b9efd5c6445eba02afbecb3421ecec5717ae9e5a5/sekoia_automation_models-1.2.0.tar.gz", hash = "sha256:085d843fe0148a103927fbb6520ec865964b7552cd4c3c37f10d6196ac8a13ce", size = 8417, upload-time = "2026-07-21T13:24:21.085Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/82/a2/cf9977065c43ffbf24075d5004bd232cd45621d536b9bc658faca2536645/sekoia_automation_models-1.2.0-py3-none-any.whl", hash = "sha256:028afe35160fcfba1b25361f414e4f19dbb427a75b9830831f55d6b93e559c32", size = 12708, upload-time = "2026-07-21T13:24:20.01Z" },
+]
+
+[[package]]
 name = "sekoia-automation-sdk"
-version = "1.23.1"
+version = "1.24.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiocsv" },
@@ -1260,14 +1258,15 @@ dependencies = [
     { name = "requests" },
     { name = "requests-ratelimiter" },
     { name = "s3path" },
+    { name = "sekoia-automation-models" },
     { name = "sentry-sdk" },
     { name = "tenacity" },
     { name = "typer" },
     { name = "uv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a6/ec/469ab1751f1375075d6c488e475be0c2f90b8643b6bc21be12a5a02fd3ac/sekoia_automation_sdk-1.23.1.tar.gz", hash = "sha256:500d2b27ba836411387cf9f339539bfdb4f976d709b9847e10c64d9724ad3e05", size = 65281, upload-time = "2026-06-08T07:32:57.52Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cd/6c/d15bd717255fe493747b24bc8e63a5929231c011ca2f28608bef5a53d9a4/sekoia_automation_sdk-1.24.0.tar.gz", hash = "sha256:09d7a08263354d7494bf94300fadf640d970d0585b9a0e7fdaeab13380ce7fd2", size = 62692, upload-time = "2026-07-30T10:44:42.045Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/28/cd/ba6fe6bb924d0969986ee0d74c852bf64a1375383652c9a197600c06fb30/sekoia_automation_sdk-1.23.1-py3-none-any.whl", hash = "sha256:b13a143b8794c188bb900b3e2c3ecbf3b4eeb38b476790f3bdefe6ed52075ebc", size = 96485, upload-time = "2026-06-08T07:32:56.321Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/b0/c218b5a9dc1545b12e9814c6377adc6b7fa5930e04437116ca41d824e330/sekoia_automation_sdk-1.24.0-py3-none-any.whl", hash = "sha256:52b4545cb3bce9a5d14cd1bb1e104b889ab0ae98288f85099b02e9404b39e50f", size = 94507, upload-time = "2026-07-30T10:44:40.955Z" },
 ]
 
 [[package]]

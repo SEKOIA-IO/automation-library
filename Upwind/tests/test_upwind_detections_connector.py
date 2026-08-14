@@ -1,19 +1,11 @@
-from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
-from upwind.upwind_detections_connector import UpwindDetectionsConnector
-
-
-class FakeSecret:
-    def __init__(self, value: str) -> None:
-        self.value = value
-
-    def get_secret_value(self) -> str:
-        return self.value
+from upwind import UpwindConnectorConfig
+from upwind.upwind_detections_connector import OAuthTokenProvider, UpwindDetectionsConnector
 
 
 class FakeResponse:
@@ -25,213 +17,189 @@ class FakeResponse:
         if self.should_fail:
             raise RuntimeError("boom")
 
-    async def json(self) -> Any:
+    def json(self) -> Any:
         return self.payload
 
 
-class FakeRequestContext:
-    def __init__(self, response: FakeResponse) -> None:
-        self.response = response
-
-    async def __aenter__(self) -> FakeResponse:
-        return self.response
-
-    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> bool:
-        return False
-
-
 class FakeSession:
-    def __init__(self, response: FakeResponse) -> None:
-        self.response = response
-        self.calls: list[dict[str, Any]] = []
+    def __init__(
+        self,
+        get_response: FakeResponse,
+        *,
+        auth_responses: list[FakeResponse] | None = None,
+    ) -> None:
+        self.get_response = get_response
+        self.auth_responses = (
+            list(auth_responses)
+            if auth_responses is not None
+            else [
+                FakeResponse(
+                    payload={
+                        "access_token": "token",
+                        "token_type": "Bearer",
+                        "expires_in": 3600,
+                    }
+                )
+            ]
+        )
+        self.get_calls: list[dict[str, Any]] = []
+        self.post_calls: list[dict[str, Any]] = []
 
-    def get(self, **kwargs: Any) -> FakeRequestContext:
-        self.calls.append(kwargs)
-        return FakeRequestContext(self.response)
+    def get(self, **kwargs: Any) -> FakeResponse:
+        self.get_calls.append(kwargs)
+        return self.get_response
+
+    def post(self, **kwargs: Any) -> FakeResponse:
+        self.post_calls.append(kwargs)
+        if not self.auth_responses:
+            raise RuntimeError("No fake auth response available")
+        return self.auth_responses.pop(0)
 
 
-def build_connector(response: FakeResponse) -> tuple[UpwindDetectionsConnector, FakeSession]:
+def build_connector(
+    response: FakeResponse,
+    *,
+    auth_responses: list[FakeResponse] | None = None,
+    configuration: UpwindConnectorConfig | None = None,
+) -> tuple[UpwindDetectionsConnector, FakeSession]:
     connector = object.__new__(UpwindDetectionsConnector)
-    connector.configuration = {
-        "frequency": 60,
-        "intake_key": "intake-key",
-        "page_size": 42,
-    }
+    connector.configuration = configuration or UpwindConnectorConfig(frequency=60, intake_key="intake-key")
     connector.module = SimpleNamespace(
         configuration=SimpleNamespace(
-            base_url="https://api.upwind.io", api_token=FakeSecret("token"), organization_id="org_test123"
+            base_url="https://api.upwind.io",
+            auth_url="https://auth.upwind.io/oauth/token",
+            client_id="client-id",
+            client_secret="client-secret",
+            organization_id="org_test123",
         )
     )
     connector.request_timeout = 30
-    session = FakeSession(response)
+    connector._oauth_provider = OAuthTokenProvider()
 
-    @asynccontextmanager
-    async def fake_session_context() -> Any:
-        yield session
-
-    connector.session = fake_session_context
+    session = FakeSession(response, auth_responses=auth_responses)
+    connector._http_session = session
     return connector, session
 
 
-@pytest.mark.asyncio
-async def test_fetch_page_handles_list_payload() -> None:
-    connector, session = build_connector(FakeResponse(payload=[{"id": "a"}]))
-
-    page = await connector.fetch_page(since=datetime(2026, 7, 27, tzinfo=UTC))
-
-    assert page.items == [{"id": "a"}]
-    assert page.next_page_token is None
-
-    call = session.calls[0]
-    assert call["url"] == "https://api.upwind.io/v1/organizations/org_test123/threat-detections"
-    assert call["params"]["limit"] == 42
-    assert call["params"]["updated_after"].endswith("Z")
-
-
-@pytest.mark.asyncio
-async def test_fetch_page_handles_dict_payload_and_pagination() -> None:
+def test_fetch_detections_uses_time_window_and_array_contract() -> None:
     connector, session = build_connector(
-        FakeResponse(payload={"threat-detections": [{"id": "b"}], "next_page_token": "next-token"})
+        FakeResponse(payload=[{"id": "a"}]),
+        configuration=UpwindConnectorConfig(
+            frequency=60,
+            intake_key="intake-key",
+            batch_size=100,
+        ),
     )
 
-    page = await connector.fetch_page(since=datetime(2026, 7, 27, tzinfo=UTC), page_token="cursor")
+    since = datetime(2026, 7, 27, 10, 0, tzinfo=UTC)
 
-    assert page.items == [{"id": "b"}]
-    assert page.next_page_token == "next-token"
+    detections = connector.fetch_detections(since=since)
 
-    call = session.calls[0]
+    assert detections == [{"id": "a"}]
+
+    call = session.get_calls[0]
     assert call["url"] == "https://api.upwind.io/v1/organizations/org_test123/threat-detections"
-    assert call["params"]["limit"] == 42
-    assert call["params"]["page_token"] == "cursor"
-    assert call["params"]["updated_after"].endswith("Z")
+    assert call["headers"]["Authorization"] == "Bearer token"
+    assert call["params"]["min-last-seen-time"] == "2026-07-27T10:00:00Z"
+    assert set(call["params"]) == {"min-last-seen-time"}
+    assert "max-last-seen-time" not in call["params"]
+    assert "updated_after" not in call["params"]
+    assert "page_token" not in call["params"]
+    assert "limit" not in call["params"]
+
+    auth_call = session.post_calls[0]
+    assert auth_call["url"] == "https://auth.upwind.io/oauth/token"
+    assert auth_call["data"] == {
+        "client_id": "client-id",
+        "client_secret": "client-secret",
+        "audience": "https://api.upwind.io",
+        "grant_type": "client_credentials",
+    }
 
 
-@pytest.mark.asyncio
-async def test_fetch_page_returns_empty_when_payload_shape_is_unknown() -> None:
+def test_fetch_detections_drops_microseconds_from_time_window() -> None:
+    connector, session = build_connector(FakeResponse(payload=[]))
+
+    since = datetime(2026, 8, 7, 13, 50, 17, 110669, tzinfo=UTC)
+
+    connector.fetch_detections(since=since)
+
+    call = session.get_calls[0]
+    assert call["params"]["min-last-seen-time"] == "2026-08-07T13:50:17Z"
+
+
+def test_fetch_detections_reuses_cached_access_token() -> None:
+    connector, session = build_connector(FakeResponse(payload=[]))
+
+    connector.fetch_detections(
+        since=datetime(2026, 7, 27, 0, 0, tzinfo=UTC),
+    )
+    connector.fetch_detections(
+        since=datetime(2026, 7, 27, 0, 0, tzinfo=UTC),
+    )
+
+    assert len(session.post_calls) == 1
+    assert len(session.get_calls) == 2
+
+
+def test_fetch_detections_refreshes_access_token_before_expiry() -> None:
+    connector, session = build_connector(
+        FakeResponse(payload=[]),
+        auth_responses=[
+            FakeResponse(
+                payload={
+                    "access_token": "refreshed-token",
+                    "token_type": "Bearer",
+                    "expires_in": 3600,
+                }
+            )
+        ],
+    )
+    connector._oauth_provider.access_token = "Bearer stale-token"
+    connector._oauth_provider.expires_at = datetime.now(UTC) + timedelta(seconds=120)
+
+    connector.fetch_detections(
+        since=datetime(2026, 7, 27, 0, 0, tzinfo=UTC),
+    )
+
+    assert len(session.post_calls) == 1
+    assert session.get_calls[0]["headers"]["Authorization"] == "Bearer refreshed-token"
+
+
+def test_fetch_detections_raises_on_invalid_auth_payload() -> None:
+    connector, _ = build_connector(
+        FakeResponse(payload=[]),
+        auth_responses=[FakeResponse(payload={"expires_in": 3600})],
+    )
+
+    with pytest.raises(ValueError, match="access_token"):
+        connector.fetch_detections(
+            since=datetime(2026, 7, 27, 0, 0, tzinfo=UTC),
+        )
+
+
+def test_fetch_detections_rejects_non_list_payload() -> None:
     connector, _ = build_connector(FakeResponse(payload={"foo": "bar"}))
 
-    page = await connector.fetch_page(since=datetime(2026, 7, 27, tzinfo=UTC))
+    with pytest.raises(ValueError, match="JSON array"):
+        connector.fetch_detections(
+            since=datetime(2026, 7, 27, 0, 0, tzinfo=UTC),
+        )
 
-    assert page.items == []
-    assert page.next_page_token is None
+
+def test_fetch_detections_rejects_non_object_event_items() -> None:
+    connector, _ = build_connector(FakeResponse(payload=["bad-item"]))
+
+    with pytest.raises(ValueError, match="contain objects"):
+        connector.fetch_detections(
+            since=datetime(2026, 7, 27, 0, 0, tzinfo=UTC),
+        )
 
 
-@pytest.mark.asyncio
-async def test_fetch_page_propagates_http_errors() -> None:
+def test_fetch_detections_propagates_http_errors() -> None:
     connector, _ = build_connector(FakeResponse(payload={}, should_fail=True))
 
     with pytest.raises(RuntimeError, match="boom"):
-        await connector.fetch_page(since=datetime(2026, 7, 27, tzinfo=UTC))
-
-
-# Integration tests - validating API v1 format compliance
-@pytest.mark.asyncio
-async def test_fetch_page_with_threat_detections_key_in_dict() -> None:
-    """Test that API v1 dict response format is correctly parsed."""
-    connector, _ = build_connector(
-        FakeResponse(
-            payload={
-                "threat-detections": [
-                    {"id": "det-001", "severity": "high"},
-                    {"id": "det-002", "severity": "critical"},
-                ],
-                "next_page_token": "page-2-token",
-            }
+        connector.fetch_detections(
+            since=datetime(2026, 7, 27, 0, 0, tzinfo=UTC),
         )
-    )
-
-    page = await connector.fetch_page(since=datetime(2026, 7, 27, tzinfo=UTC))
-
-    assert len(page.items) == 2
-    assert page.items[0]["id"] == "det-001"
-    assert page.next_page_token == "page-2-token"
-
-
-@pytest.mark.asyncio
-async def test_fetch_page_rejects_wrong_keys() -> None:
-    """Test that parsing is strict and only accepts 'threat-detections' key."""
-    connector, _ = build_connector(
-        FakeResponse(
-            payload={
-                "detections": [{"id": "wrong-key"}],  # Wrong key, should be ignored
-                "results": [{"id": "also-wrong"}],  # Wrong key, should be ignored
-            }
-        )
-    )
-
-    page = await connector.fetch_page(since=datetime(2026, 7, 27, tzinfo=UTC))
-
-    # Should be empty because threat-detections key is missing
-    assert page.items == []
-    assert page.next_page_token is None
-
-
-@pytest.mark.asyncio
-async def test_fetch_page_pagination_with_next_page_token() -> None:
-    """Test that pagination token is correctly extracted from API response."""
-    connector, _ = build_connector(
-        FakeResponse(
-            payload={
-                "threat-detections": [{"id": "det-1"}],
-                "next_page_token": "cursor-abc123",
-            }
-        )
-    )
-
-    page = await connector.fetch_page(since=datetime(2026, 7, 27, tzinfo=UTC))
-
-    assert page.next_page_token == "cursor-abc123"
-
-    # Verify the pagination token is used in next request
-    connector2, session2 = build_connector(FakeResponse(payload={"threat-detections": []}))
-    await connector2.fetch_page(since=datetime(2026, 7, 27, tzinfo=UTC), page_token="cursor-abc123")
-
-    call = session2.calls[0]
-    assert call["params"]["page_token"] == "cursor-abc123"
-
-
-@pytest.mark.asyncio
-async def test_fetch_page_handles_missing_next_page_token() -> None:
-    """Test that missing next_page_token is handled gracefully."""
-    connector, _ = build_connector(
-        FakeResponse(
-            payload={
-                "threat-detections": [{"id": "det-1"}],
-                # No next_page_token field - end of pagination
-            }
-        )
-    )
-
-    page = await connector.fetch_page(since=datetime(2026, 7, 27, tzinfo=UTC))
-
-    assert page.items == [{"id": "det-1"}]
-    assert page.next_page_token is None
-
-
-@pytest.mark.asyncio
-async def test_fetch_page_with_empty_threat_detections_array() -> None:
-    """Test that empty threat-detections array is handled correctly."""
-    connector, _ = build_connector(FakeResponse(payload={"threat-detections": []}))
-
-    page = await connector.fetch_page(since=datetime(2026, 7, 27, tzinfo=UTC))
-
-    assert page.items == []
-    assert page.next_page_token is None
-
-
-@pytest.mark.asyncio
-async def test_fetch_page_validates_threat_detections_is_list() -> None:
-    """Test that threat-detections must be a list, not other types."""
-    connector, _ = build_connector(
-        FakeResponse(
-            payload={
-                "threat-detections": "not-a-list",  # Invalid: should be list
-            }
-        )
-    )
-
-    page = await connector.fetch_page(since=datetime(2026, 7, 27, tzinfo=UTC))
-
-    # Should return empty because threat-detections is not a list
-    assert page.items == []
-    assert page.next_page_token is None

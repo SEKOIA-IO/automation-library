@@ -1,10 +1,10 @@
 from datetime import UTC, datetime
 
 import pytest
-from cachetools import LRUCache
 
-import upwind
-from upwind import UpwindConnector, UpwindConnectorConfig, UpwindPage
+import upwind.upwind_detections_connector as connector_module
+from upwind import UpwindConnectorConfig
+from upwind.upwind_detections_connector import OAuthTokenProvider, UpwindDetectionsConnector
 
 
 class OffsetStore:
@@ -12,90 +12,121 @@ class OffsetStore:
         self.offset = offset
 
 
-def build_base_connector(offset: datetime) -> UpwindConnector:
-    connector = object.__new__(UpwindConnector)
-    connector.last_event_date = OffsetStore(offset)
-    connector.events_cache = LRUCache(maxsize=100)
+class FakeContext:
+    def __init__(self, data: dict | None = None) -> None:
+        self.data = data if data is not None else {}
+
+    def __enter__(self) -> dict:
+        return self.data
+
+    def __exit__(self, *args: object) -> bool:
+        return False
+
+
+def build_connector(
+    offset: datetime, *, batch_size: int = 2, boundary_ids: list[str] | None = None
+) -> UpwindDetectionsConnector:
+    connector = object.__new__(UpwindDetectionsConnector)
+    connector.last_detection_date = OffsetStore(offset)
+    connector._context = FakeContext(
+        {"boundary_detection_ids": sorted(boundary_ids)} if boundary_ids is not None else {}
+    )
+    connector.configuration = UpwindConnectorConfig(
+        frequency=60,
+        intake_key="test-key",
+        batch_size=batch_size,
+    )
+    connector._oauth_provider = OAuthTokenProvider()
     return connector
 
 
-@pytest.mark.asyncio
-async def test_base_fetch_page_raises_not_implemented() -> None:
-    connector = build_base_connector(datetime(2026, 7, 1, tzinfo=UTC))
-
-    with pytest.raises(NotImplementedError):
-        await UpwindConnector.fetch_page(connector, since=datetime(2026, 7, 1, tzinfo=UTC))
-
-
-@pytest.mark.asyncio
-async def test_single_run_handles_pagination_dedup_and_checkpoint_update() -> None:
+def test_next_batch_batches_new_detections_and_updates_checkpoint() -> None:
     since = datetime(2026, 7, 1, tzinfo=UTC)
-    connector = build_base_connector(since)
+    connector = build_connector(since, batch_size=2)
 
-    calls: list[str | None] = []
-    pages = [
-        UpwindPage(
-            items=[
-                {"id": "evt-1", "last_seen_time": "2026-07-02T08:30:00Z"},
-                {"id": "evt-1", "last_seen_time": "2026-07-02T08:30:00Z"},
-                {"category": "missing-id"},
-                {"id": "evt-2", "first_seen_time": "2026-07-03T10:00:00Z"},
-            ],
-            next_page_token="next-token",
-        ),
-        UpwindPage(items=[{"id": "evt-3", "last_seen_time": "2026-06-30T09:00:00Z"}]),
+    detections = [
+        {"id": "evt-1", "last_seen_time": "2026-07-02T08:30:00Z"},
+        {"category": "missing-date"},
+        {"id": "evt-2", "first_seen_time": "2026-07-03T10:00:00Z"},
+        {"id": "evt-3", "last_seen_time": "2026-07-03T10:05:00Z"},
     ]
 
-    async def fake_fetch_page(*, since: datetime, page_token: str | None = None) -> UpwindPage:
+    calls: list[datetime] = []
+
+    def fake_fetch_detections(*, since: datetime) -> list[dict[str, str]]:
         assert since == datetime(2026, 7, 1, tzinfo=UTC)
-        calls.append(page_token)
-        return pages.pop(0)
+        calls.append(since)
+        return detections
 
     pushed_payloads: list[list[str]] = []
 
-    async def fake_push_data_to_intakes(outgoing: list[str]) -> list[str]:
+    def fake_push_events_to_intakes(outgoing: list[str]) -> list[str]:
         pushed_payloads.append(outgoing)
         return outgoing
 
-    connector.fetch_page = fake_fetch_page
-    connector.push_data_to_intakes = fake_push_data_to_intakes
+    connector.fetch_detections = fake_fetch_detections
+    connector.push_events_to_intakes = fake_push_events_to_intakes
 
-    sent = await UpwindConnector.single_run(connector)
+    sent = UpwindDetectionsConnector.next_batch(connector)
 
+    # The detection without a parseable timestamp is skipped.
     assert sent == 3
-    assert calls == [None, "next-token"]
+    assert len(calls) == 1
     assert len(pushed_payloads) == 2
     assert len(pushed_payloads[0]) == 2
     assert len(pushed_payloads[1]) == 1
-    assert connector.last_event_date.offset == datetime(2026, 7, 3, 10, 0, tzinfo=UTC)
+    assert connector.last_detection_date.offset == datetime(2026, 7, 3, 10, 5, tzinfo=UTC)
+    # Only the detection at the new watermark is retained for boundary dedup.
+    assert connector._context.data["boundary_detection_ids"] == ["evt-3"]
 
 
-@pytest.mark.asyncio
-async def test_single_run_stops_on_empty_page_without_pushing() -> None:
-    since = datetime(2026, 7, 1, tzinfo=UTC)
-    connector = build_base_connector(since)
+def test_next_batch_skips_detections_at_or_before_checkpoint() -> None:
+    since = datetime(2026, 7, 2, 8, 30, tzinfo=UTC)
+    connector = build_connector(since, boundary_ids=["evt-1"])
 
-    async def fake_fetch_page(*, since: datetime, page_token: str | None = None) -> UpwindPage:
-        return UpwindPage(items=[])
+    def fake_fetch_detections(*, since: datetime) -> list[dict[str, str]]:
+        return [
+            {"id": "evt-1", "last_seen_time": "2026-07-02T08:30:00Z"},
+            {"id": "evt-2", "last_seen_time": "2026-07-01T00:00:00Z"},
+        ]
 
-    async def fake_push_data_to_intakes(outgoing: list[str]) -> list[str]:
-        raise AssertionError("push_data_to_intakes should not be called")
+    def fake_push_events_to_intakes(outgoing: list[str]) -> list[str]:
+        raise AssertionError("push_events_to_intakes should not be called")
 
-    connector.fetch_page = fake_fetch_page
-    connector.push_data_to_intakes = fake_push_data_to_intakes
+    connector.fetch_detections = fake_fetch_detections
+    connector.push_events_to_intakes = fake_push_events_to_intakes
 
-    sent = await UpwindConnector.single_run(connector)
+    sent = UpwindDetectionsConnector.next_batch(connector)
 
     assert sent == 0
-    assert connector.last_event_date.offset == since
+    assert connector.last_detection_date.offset == since
 
 
-class DummySession:
-    def __init__(self) -> None:
-        self.closed = False
+def test_next_batch_forwards_new_detection_at_checkpoint_boundary() -> None:
+    since = datetime(2026, 7, 2, 8, 30, tzinfo=UTC)
+    connector = build_connector(since, boundary_ids=["evt-1"])
 
-    async def close(self) -> None:
-        self.closed = True
+    def fake_fetch_detections(*, since: datetime) -> list[dict[str, str]]:
+        return [
+            {"id": "evt-1", "last_seen_time": "2026-07-02T08:30:00Z"},
+            {"id": "evt-2", "last_seen_time": "2026-07-02T08:30:00Z"},
+        ]
+
+    pushed: list[str] = []
+
+    def fake_push_events_to_intakes(outgoing: list[str]) -> list[str]:
+        pushed.extend(outgoing)
+        return outgoing
+
+    connector.fetch_detections = fake_fetch_detections
+    connector.push_events_to_intakes = fake_push_events_to_intakes
+
+    sent = UpwindDetectionsConnector.next_batch(connector)
+
+    # evt-1 is deduped by boundary id, evt-2 is new at the same timestamp.
+    assert sent == 1
+    assert connector.last_detection_date.offset == since
+    assert connector._context.data["boundary_detection_ids"] == ["evt-1", "evt-2"]
 
 
 class DummyStopEvent:
@@ -109,45 +140,40 @@ class DummyStopEvent:
         self._is_set = True
 
 
-@pytest.mark.asyncio
-async def test_async_run_sleeps_remaining_frequency_and_closes_session(monkeypatch: pytest.MonkeyPatch) -> None:
-    connector = object.__new__(UpwindConnector)
+def test_run_sleeps_remaining_frequency(monkeypatch: pytest.MonkeyPatch) -> None:
+    connector = object.__new__(UpwindDetectionsConnector)
     connector._stop_event = DummyStopEvent()
     connector._configuration = UpwindConnectorConfig(frequency=30, intake_key="test-key")
-    connector._session = DummySession()
 
     logs: list[str] = []
     connector.log = lambda *, message, level: logs.append(f"{level}:{message}")
     connector.log_exception = lambda error: None
 
-    async def fake_single_run() -> int:
+    def fake_next_batch() -> int:
         connector._stop_event.set()
         return 3
 
-    connector.single_run = fake_single_run
+    connector.next_batch = fake_next_batch
 
     sleep_calls: list[float] = []
 
-    async def fake_sleep(delay: float) -> None:
+    def fake_sleep(delay: float) -> None:
         sleep_calls.append(delay)
 
     clock = iter([100.0, 112.5])
-    monkeypatch.setattr(upwind.time, "time", lambda: next(clock))
-    monkeypatch.setattr(upwind.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(connector_module.time, "time", lambda: next(clock))
+    monkeypatch.setattr(connector_module.time, "sleep", fake_sleep)
 
-    await UpwindConnector.async_run(connector)
+    UpwindDetectionsConnector.run(connector)
 
     assert sleep_calls == [17.5]
-    assert any("Pushed 3 records" in entry for entry in logs)
-    assert connector._session.closed is True
+    assert any("Pushed 3 detections" in entry for entry in logs)
 
 
-@pytest.mark.asyncio
-async def test_async_run_on_error_sleeps_full_frequency(monkeypatch: pytest.MonkeyPatch) -> None:
-    connector = object.__new__(UpwindConnector)
+def test_run_on_error_sleeps_full_frequency(monkeypatch: pytest.MonkeyPatch) -> None:
+    connector = object.__new__(UpwindDetectionsConnector)
     connector._stop_event = DummyStopEvent()
     connector._configuration = UpwindConnectorConfig(frequency=45, intake_key="test-key")
-    connector._session = None
 
     captured_errors: list[str] = []
     connector.log = lambda *, message, level: None
@@ -158,19 +184,19 @@ async def test_async_run_on_error_sleeps_full_frequency(monkeypatch: pytest.Monk
 
     connector.log_exception = fake_log_exception
 
-    async def fake_single_run() -> int:
+    def fake_next_batch() -> int:
         raise RuntimeError("boom")
 
-    connector.single_run = fake_single_run
+    connector.next_batch = fake_next_batch
 
     sleep_calls: list[float] = []
 
-    async def fake_sleep(delay: float) -> None:
+    def fake_sleep(delay: float) -> None:
         sleep_calls.append(delay)
 
-    monkeypatch.setattr(upwind.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(connector_module.time, "sleep", fake_sleep)
 
-    await UpwindConnector.async_run(connector)
+    UpwindDetectionsConnector.run(connector)
 
     assert captured_errors == ["boom"]
     assert sleep_calls == [45]
