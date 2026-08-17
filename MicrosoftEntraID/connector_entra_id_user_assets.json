@@ -28,10 +28,16 @@
           "description": "Batch size",
           "minimum": 1,
           "default": 100
+      },
+      "full_resync_frequency": {
+          "type": "integer",
+          "description": "Seconds between two full re-collections of the tenant. 0 disables the periodic resync",
+          "minimum": 0,
+          "default": 604800
       }
     },
     "required": ["sekoia_api_key"],
     "secrets": ["sekoia_api_key"],
-    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"]
+    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size", "full_resync_frequency"]
   }
 }
