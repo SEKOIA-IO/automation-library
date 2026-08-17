@@ -1,6 +1,5 @@
 import os
 import threading
-import time
 from collections.abc import Generator
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -87,6 +86,10 @@ class UpwindDetectionsConnector(Connector):
         self.request_timeout = int(os.environ.get("UPWIND_CLIENT_TIMEOUT", "60"))
         self._oauth_provider = OAuthTokenProvider()
 
+    @property
+    def frequency(self) -> int:
+        return self.configuration.frequency
+
     @staticmethod
     def _derive_oauth_audience(base_url: str) -> str:
         parsed = urlsplit(base_url)
@@ -142,11 +145,6 @@ class UpwindDetectionsConnector(Connector):
 
         return detections
 
-    def _iter_batches(self, outgoing: list[str]) -> Generator[list[str]]:
-        batch_size = self.configuration.batch_size
-        for idx in range(0, len(outgoing), batch_size):
-            yield outgoing[idx : idx + batch_size]
-
     def _load_boundary_ids(self) -> set[str]:
         with self._context as cache:
             stored = cache.get("boundary_detection_ids", [])
@@ -185,39 +183,17 @@ class UpwindDetectionsConnector(Connector):
 
         return outgoing, most_recent, boundary_ids
 
-    def next_batch(self) -> int:
+    def iterate(self) -> Generator[tuple[list[str], datetime | None], None]:
         since = self.last_detection_date.offset
         seen_ids = self._load_boundary_ids()
         detections = self.fetch_detections(since=since)
 
         outgoing, most_recent, boundary_ids = self._select_new_detections(detections, since, seen_ids)
         if not outgoing:
-            return 0
+            return
 
-        total_sent = 0
-        for chunk in self._iter_batches(outgoing):
-            pushed = self.push_events_to_intakes(chunk)
-            total_sent += len(pushed)
+        # Yield before advancing the checkpoint so events are pushed first.
+        yield outgoing, most_recent
 
         self.last_detection_date.offset = most_recent
         self._save_boundary_ids(boundary_ids)
-        return total_sent
-
-    def run(self) -> None:  # pragma: no cover
-        while self.running:
-            try:
-                started = time.time()
-                pushed_count = self.next_batch()
-                duration = time.time() - started
-
-                if pushed_count > 0:
-                    self.log(message=f"Pushed {pushed_count} detections in {duration:.2f}s", level="info")
-                else:
-                    self.log(message="No detections to forward", level="info")
-
-                wait_time = max(0.0, self.configuration.frequency - duration)
-                time.sleep(wait_time)
-
-            except Exception as error:
-                self.log_exception(error)
-                time.sleep(self.configuration.frequency)

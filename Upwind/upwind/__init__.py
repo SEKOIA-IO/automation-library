@@ -24,7 +24,6 @@ class UpwindModule(Module):
 
 class UpwindConnectorConfig(DefaultConnectorConfiguration):
     frequency: int = Field(default=60, ge=1)
-    batch_size: int = Field(default=100, ge=1, le=1000)
 
 
 def _parse_upwind_datetime(raw_value: Any) -> datetime | None:

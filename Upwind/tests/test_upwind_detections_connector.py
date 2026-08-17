@@ -87,7 +87,6 @@ def test_fetch_detections_uses_time_window_and_array_contract() -> None:
         configuration=UpwindConnectorConfig(
             frequency=60,
             intake_key="intake-key",
-            batch_size=100,
         ),
     )
 

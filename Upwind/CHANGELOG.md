@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+- Refactored the detections connector onto the SDK `iterate()` loop to restore forwarded/lag/duration metrics.
+- Removed the redundant `batch_size` connector setting (the SDK chunks events by size).
+
 ## 0.2.0
 
 - Initial version of the Upwind automation module.
