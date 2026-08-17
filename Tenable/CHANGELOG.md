@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-14 - 1.1.0
+
+### Added
+
+- Map the Tenable VPR to the OCSF risk fields (`risk_score`, `risk_level`, `risk_level_id`) of the vulnerability findings, so vulnerabilities are reported with a vendor risk score. VPR v2 is preferred over VPR v1 and the 0-10 VPR score is rescaled to the 0-100 OCSF scale
+- Map the plugin `has_patch` flag to `vulnerabilities[].is_fix_available`
+- Declare the collected fields with `get_mapped_fields` and implement `reset_checkpoint`, so vulnerabilities already collected are sent again when the mapping changes
+
+### Fixed
+
+- Report `confidence_score` when the VPR score is 0 instead of leaving it empty
+
 ## 2026-05-20 - 1.0.17
 
 ### Changed
