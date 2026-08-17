@@ -183,7 +183,7 @@ class UpwindDetectionsConnector(Connector):
 
         return outgoing, most_recent, boundary_ids
 
-    def iterate(self) -> Generator[tuple[list[str], datetime | None], None]:
+    def iterate(self) -> Generator[tuple[list[str], datetime | None]]:
         since = self.last_detection_date.offset
         seen_ids = self._load_boundary_ids()
         detections = self.fetch_detections(since=since)

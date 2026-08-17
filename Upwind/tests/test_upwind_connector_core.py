@@ -112,4 +112,3 @@ def test_iterate_forwards_new_detection_at_checkpoint_boundary() -> None:
     assert most_recent == since
     assert connector.last_detection_date.offset == since
     assert connector._context.data["boundary_detection_ids"] == ["evt-1", "evt-2"]
-
