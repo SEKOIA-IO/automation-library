@@ -165,40 +165,48 @@ def test_fetch_detections_refreshes_access_token_before_expiry() -> None:
     assert session.get_calls[0]["headers"]["Authorization"] == "Bearer refreshed-token"
 
 
-def test_fetch_detections_raises_on_invalid_auth_payload() -> None:
-    connector, _ = build_connector(
-        FakeResponse(payload=[]),
-        auth_responses=[FakeResponse(payload={"expires_in": 3600})],
-    )
+@pytest.mark.parametrize(
+    ("response", "auth_responses", "expected_exc", "match"),
+    [
+        pytest.param(
+            FakeResponse(payload=[]),
+            [FakeResponse(payload={"expires_in": 3600})],
+            ValueError,
+            "access_token",
+            id="invalid_auth_payload",
+        ),
+        pytest.param(
+            FakeResponse(payload={"foo": "bar"}),
+            None,
+            ValueError,
+            "JSON array",
+            id="non_list_payload",
+        ),
+        pytest.param(
+            FakeResponse(payload=["bad-item"]),
+            None,
+            ValueError,
+            "contain objects",
+            id="non_object_event_items",
+        ),
+        pytest.param(
+            FakeResponse(payload={}, should_fail=True),
+            None,
+            RuntimeError,
+            "boom",
+            id="http_errors",
+        ),
+    ],
+)
+def test_fetch_detections_error_paths(
+    response: FakeResponse,
+    auth_responses: list[FakeResponse] | None,
+    expected_exc: type[Exception],
+    match: str,
+) -> None:
+    connector, _ = build_connector(response, auth_responses=auth_responses)
 
-    with pytest.raises(ValueError, match="access_token"):
-        connector.fetch_detections(
-            since=datetime(2026, 7, 27, 0, 0, tzinfo=UTC),
-        )
-
-
-def test_fetch_detections_rejects_non_list_payload() -> None:
-    connector, _ = build_connector(FakeResponse(payload={"foo": "bar"}))
-
-    with pytest.raises(ValueError, match="JSON array"):
-        connector.fetch_detections(
-            since=datetime(2026, 7, 27, 0, 0, tzinfo=UTC),
-        )
-
-
-def test_fetch_detections_rejects_non_object_event_items() -> None:
-    connector, _ = build_connector(FakeResponse(payload=["bad-item"]))
-
-    with pytest.raises(ValueError, match="contain objects"):
-        connector.fetch_detections(
-            since=datetime(2026, 7, 27, 0, 0, tzinfo=UTC),
-        )
-
-
-def test_fetch_detections_propagates_http_errors() -> None:
-    connector, _ = build_connector(FakeResponse(payload={}, should_fail=True))
-
-    with pytest.raises(RuntimeError, match="boom"):
+    with pytest.raises(expected_exc, match=match):
         connector.fetch_detections(
             since=datetime(2026, 7, 27, 0, 0, tzinfo=UTC),
         )
