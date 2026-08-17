@@ -107,17 +107,25 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         self._latest_time = None
 
     def get_mapped_fields(self) -> dict[str, str]:
+        """Return the Entra ID → OCSF field mapping used for schema-change fingerprinting.
+
+        Every source field written by :meth:`map_fields` must be declared here: the base
+        connector hashes this mapping and resets the checkpoint when it changes, which is
+        what makes a new mapping backfill onto already-collected users. A source field
+        feeding several OCSF targets lists them comma-separated.
+        """
         return {
             "id": "user.uid",
             "display_name": "user.full_name",
             "mail": "user.email_addr",
             "user_principal_name": "user.name",
             "company_name": "user.org.name",
-            "office_location": "user.org.ou_name",
+            "office_location": "user.org.ou_name,user.ldap_person.office_location",
             "on_premises_sam_account_name": "user.uid_alt",
             "account_enabled": "enrichments.account.data.is_enabled",
-            "department": "enrichments.employment.value",
-            "job_title": "enrichments.employment.value",
+            "department": "user.ldap_person.department,enrichments.employment.value",
+            "job_title": "user.ldap_person.job_title,enrichments.employment.value",
+            "employee_id": "user.ldap_person.employee_uid",
             "sign_in_activity.last_sign_in_date_time": "enrichments.account.data.last_logon",
             "last_password_change_date_time": "enrichments.account.data.last_time_password_change",
             "created_date_time": "time",

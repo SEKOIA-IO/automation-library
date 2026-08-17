@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Map Entra ID `jobTitle` and `department` (plus `employeeId` and `officeLocation`) into the structured OCSF `user.ldap_person` object in the user asset connector, so role and department are surfaced in the Reveal user asset detail view and available as user context to downstream consumers
+- Declare the new `user.ldap_person` targets in `get_mapped_fields` so the schema fingerprint changes and the checkpoint is reset, backfilling the structured fields onto users that were already collected instead of only new ones
 
 ### Changed
 
