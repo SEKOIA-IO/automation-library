@@ -1,10 +1,12 @@
 import datetime
 import hashlib
 import json
+import time
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 import requests_mock
+from msgraph.generated.models.user import User
 from sekoia_automation.module import Module
 
 from azure_ad.asset_connector.user_assets import EntraIDAssetConnector
@@ -1165,3 +1167,157 @@ async def test_unchanged_schema_keeps_checkpoint(test_entra_id_asset_connector):
 
     # Assert
     assert test_entra_id_asset_connector.most_recent_date_seen == "2022-01-01T00:00:01+00:00"
+
+
+def set_checkpoint(connector, timestamp=1640995200.0):
+    """Give the connector a checkpoint, as if a previous cycle had collected users."""
+    connector._latest_time = timestamp
+    with connector.context as cache:
+        cache["most_recent_date_seen"] = (
+            datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc).replace(microsecond=0).isoformat()
+        )
+
+
+def set_last_full_resync(connector, seconds_ago):
+    with connector.context as cache:
+        cache["last_full_resync"] = time.time() - seconds_ago
+
+
+def get_last_full_resync(connector):
+    with connector.context as cache:
+        return cache.get("last_full_resync")
+
+
+def test_full_resync_frequency_defaults_to_seven_days(test_entra_id_asset_connector):
+    """The connector must resync at least weekly without any explicit configuration."""
+    assert test_entra_id_asset_connector.configuration.full_resync_frequency == 604800
+
+
+@pytest.mark.asyncio
+async def test_maybe_full_resync_first_run_stamps_without_resetting(test_entra_id_asset_connector):
+    """A first run is already a full scan, so it must be stamped but must not drop the checkpoint."""
+    # Arrange
+    set_checkpoint(test_entra_id_asset_connector)
+    assert get_last_full_resync(test_entra_id_asset_connector) is None
+
+    # Act
+    await test_entra_id_asset_connector.maybe_full_resync()
+
+    # Assert
+    assert test_entra_id_asset_connector.most_recent_date_seen is not None
+    assert get_last_full_resync(test_entra_id_asset_connector) is not None
+
+
+@pytest.mark.asyncio
+async def test_maybe_full_resync_resets_checkpoint_once_window_elapsed(test_entra_id_asset_connector):
+    """Past the resync window the checkpoint is dropped, so skipped users get collected again."""
+    # Arrange
+    set_checkpoint(test_entra_id_asset_connector)
+    set_last_full_resync(test_entra_id_asset_connector, seconds_ago=604801)
+    previous_stamp = get_last_full_resync(test_entra_id_asset_connector)
+
+    # Act
+    await test_entra_id_asset_connector.maybe_full_resync()
+
+    # Assert
+    assert test_entra_id_asset_connector.most_recent_date_seen is None
+    assert test_entra_id_asset_connector._latest_time is None
+    assert get_last_full_resync(test_entra_id_asset_connector) > previous_stamp
+
+
+@pytest.mark.asyncio
+async def test_maybe_full_resync_keeps_checkpoint_inside_window(test_entra_id_asset_connector):
+    """Inside the window the connector stays incremental."""
+    # Arrange
+    set_checkpoint(test_entra_id_asset_connector)
+    set_last_full_resync(test_entra_id_asset_connector, seconds_ago=3600)
+    previous_stamp = get_last_full_resync(test_entra_id_asset_connector)
+
+    # Act
+    await test_entra_id_asset_connector.maybe_full_resync()
+
+    # Assert
+    assert test_entra_id_asset_connector.most_recent_date_seen == "2022-01-01T00:00:00+00:00"
+    assert get_last_full_resync(test_entra_id_asset_connector) == previous_stamp
+
+
+@pytest.mark.asyncio
+async def test_maybe_full_resync_disabled_by_zero_frequency(test_entra_id_asset_connector):
+    """A frequency of 0 opts out of periodic resync entirely."""
+    # Arrange
+    test_entra_id_asset_connector.configuration.full_resync_frequency = 0
+    set_checkpoint(test_entra_id_asset_connector)
+    set_last_full_resync(test_entra_id_asset_connector, seconds_ago=100 * 86400)
+
+    # Act
+    await test_entra_id_asset_connector.maybe_full_resync()
+
+    # Assert
+    assert test_entra_id_asset_connector.most_recent_date_seen == "2022-01-01T00:00:00+00:00"
+
+
+@pytest.mark.asyncio
+async def test_get_assets_fetches_unfiltered_after_resync(test_entra_id_asset_connector):
+    """After a resync is due, get_assets must query without the createdDateTime filter."""
+    # Arrange
+    set_checkpoint(test_entra_id_asset_connector)
+    set_last_full_resync(test_entra_id_asset_connector, seconds_ago=604801)
+
+    seen_dates = []
+
+    async def record_last_run_date(last_run_date=None):
+        seen_dates.append(last_run_date)
+        return
+        yield  # make it an async generator
+
+    test_entra_id_asset_connector.fetch_new_users = record_last_run_date
+    test_entra_id_asset_connector.close_client = AsyncMock()
+
+    # Act
+    _ = [user async for user in test_entra_id_asset_connector.get_assets()]
+
+    # Assert
+    assert seen_dates == [None]
+
+
+@pytest.mark.asyncio
+async def test_fetch_new_users_skips_user_whose_enrichment_fails(test_entra_id_asset_connector):
+    """One user failing enrichment must not abort the cycle for the users behind it."""
+    # Arrange
+    mock_users = [
+        User(id="user1", user_principal_name="user1@example.com"),
+        User(id="broken", user_principal_name="broken@example.com"),
+        User(id="user3", user_principal_name="user3@example.com"),
+    ]
+    mock_users_response = MagicMock()
+    mock_users_response.value = mock_users
+    mock_users_response.odata_next_link = None
+    test_entra_id_asset_connector.client = mock_graph_service_client()
+    test_entra_id_asset_connector.client.users.get = AsyncMock(return_value=mock_users_response)
+
+    first, third = MagicMock(time=1.0), MagicMock(time=3.0)
+    test_entra_id_asset_connector.fetch_user = AsyncMock(
+        side_effect=[first, ValueError("Error fetching user MFA: 403"), third]
+    )
+
+    # Act
+    result = [user async for user in test_entra_id_asset_connector.fetch_new_users()]
+
+    # Assert
+    assert result == [first, third]
+    logged = [call.kwargs for call in test_entra_id_asset_connector.log.call_args_list]
+    assert any(entry.get("level") == "error" and "broken" in entry.get("message", "") for entry in logged)
+
+
+@pytest.mark.asyncio
+async def test_fetch_new_users_still_raises_when_listing_fails(test_entra_id_asset_connector):
+    """Tolerating per-user failures must not swallow a failure of the users listing itself."""
+    # Arrange
+    mock_client = mock_graph_service_client()
+    mock_client.users.get = AsyncMock(side_effect=Exception("API Error"))
+    test_entra_id_asset_connector._client = mock_client
+
+    # Act & Assert
+    with pytest.raises(ValueError, match="Error fetching users"):
+        async for _ in test_entra_id_asset_connector.fetch_new_users():
+            pass

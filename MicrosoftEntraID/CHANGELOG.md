@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-13 - 2.12.0
+
+### Added
+
+- Add a `full_resync_frequency` argument (default 7 days, 0 to disable) to the user asset connector: the checkpoint is dropped once the window has elapsed so the whole tenant is collected again. The checkpoint only moves forward on `createdDateTime`, so a user missed by one cycle was previously never collected again
+
+### Fixed
+
+- Skip a user whose enrichment calls fail (typically a 403 on a restricted account) instead of aborting the whole collection cycle. The connector used to stop on that user on every run and never reach the users behind it. Skipped users are logged and collected again on the next full resync
+
 ## 2026-07-28 - 2.11.1
 
 ### Added

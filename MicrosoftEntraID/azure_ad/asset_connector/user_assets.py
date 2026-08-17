@@ -1,3 +1,4 @@
+import time
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 
@@ -12,8 +13,10 @@ from msgraph.generated.models.microsoft_authenticator_authentication_method impo
 from msgraph.generated.models.phone_authentication_method import PhoneAuthenticationMethod
 from msgraph.generated.models.software_oath_authentication_method import SoftwareOathAuthenticationMethod
 from msgraph.generated.models.user import User
+from msgraph.generated.models.user_collection_response import UserCollectionResponse
 from msgraph.generated.users.users_request_builder import UsersRequestBuilder
 from sekoia_automation.asset_connector import AsyncAssetConnector
+from sekoia_automation.asset_connector.models.connector import DefaultAssetConnectorConfiguration
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.asset_connector.models.ocsf.user import (
@@ -38,6 +41,18 @@ from sekoia_automation.storage import PersistentJSON
 from azure_ad.base import AzureADModule
 
 
+class EntraIDAssetConnectorConfiguration(DefaultAssetConnectorConfiguration):
+    """Configuration of the Entra ID user asset connector.
+
+    Attributes:
+        full_resync_frequency (int): Seconds between two full re-collections of the
+            tenant. 0 disables periodic resync and keeps the connector purely
+            incremental.
+    """
+
+    full_resync_frequency: int = 604800  # 7 days
+
+
 class EntraIDAssetConnector(AsyncAssetConnector):
     """Asset connector for Microsoft Entra ID user inventory.
 
@@ -46,6 +61,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
     """
 
     module: AzureADModule
+    configuration: EntraIDAssetConnectorConfiguration
 
     PRODUCT_NAME = "Microsoft Entra ID"
     PRODUCT_VERSION = "1.0"
@@ -105,6 +121,41 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         with self.context as cache:
             cache.pop("most_recent_date_seen", None)
         self._latest_time = None
+
+    async def maybe_full_resync(self) -> None:
+        """Drop the checkpoint periodically so the next cycle re-collects the whole tenant.
+
+        The checkpoint only ever moves forward on `createdDateTime`, so a user missed once
+        - a failed batch, an aborted cycle, an enrichment error - would never be collected
+        again. Re-collecting everything every `full_resync_frequency` seconds bounds how
+        long such a gap can last.
+        """
+        full_resync_frequency = self.configuration.full_resync_frequency
+        if full_resync_frequency <= 0:
+            return
+
+        now = time.time()
+        with self.context as cache:
+            last_full_resync: float | None = cache.get("last_full_resync")
+
+        # First run: the cycle about to start is already a full collection.
+        if last_full_resync is None:
+            with self.context as cache:
+                cache["last_full_resync"] = now
+
+            return
+
+        if now - last_full_resync < full_resync_frequency:
+            return
+
+        self.log(
+            message=f"Last full resync was {int(now - last_full_resync)} seconds ago, "
+            f"resetting the checkpoint to re-collect all users",
+            level="info",
+        )
+        await self.reset_checkpoint()
+        with self.context as cache:
+            cache["last_full_resync"] = now
 
     def get_mapped_fields(self) -> dict[str, str]:
         """Return the Entra ID → OCSF field mapping used for schema-change fingerprinting.
@@ -371,12 +422,8 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         try:
             users = await self.client.users.get(request_configuration=request_configuration)
 
-            if users and users.value:
-                for user in users.value:
-                    # Fetch user details including MFA status
-                    new_user = await self.fetch_user(user)
-                    yield new_user
-                    self._latest_time = new_user.time
+            async for new_user in self.fetch_users_page(users):
+                yield new_user
 
             # Handle pagination for multiple pages of results
             while users is not None and users.odata_next_link is not None:
@@ -386,13 +433,35 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 users = await self.client.users.with_url(users.odata_next_link).get(
                     request_configuration=pagination_config
                 )
-                if users and users.value:
-                    for user in users.value:
-                        new_user = await self.fetch_user(user)
-                        yield new_user
-                        self._latest_time = new_user.time
+                async for new_user in self.fetch_users_page(users):
+                    yield new_user
         except Exception as e:
             raise ValueError(f"Error fetching users: {e}") from e
+
+    async def fetch_users_page(self, users: UserCollectionResponse | None) -> AsyncGenerator[UserOCSFModel, None]:
+        """Enrich and yield every user of a single page of results.
+
+        A user whose enrichment calls fail - typically a 403 on a restricted account - is
+        logged and skipped instead of aborting the cycle: otherwise the connector stops on
+        that user on every run and never reaches the users behind it. The skipped user is
+        collected again on the next full resync (see :meth:`maybe_full_resync`).
+        """
+        if not users or not users.value:
+            return
+
+        for user in users.value:
+            try:
+                # Fetch user details including MFA status
+                new_user = await self.fetch_user(user)
+            except Exception as e:
+                self.log(
+                    message=f"Skipping user {user.id} - it will be collected again " f"on the next full resync: {e}",
+                    level="error",
+                )
+                continue
+
+            yield new_user
+            self._latest_time = new_user.time
 
     async def get_assets(self) -> AsyncGenerator[UserOCSFModel, None]:
         """Fetch user assets from Microsoft Graph API.
@@ -400,6 +469,9 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         Yields:
             UserOCSFModel: OCSF-formatted user inventory data.
         """
+        # Periodically drop the checkpoint so users missed by a previous cycle come back
+        await self.maybe_full_resync()
+
         # Fetch users from Microsoft Graph API
         last_run_date: str | None = self.most_recent_date_seen
         try:
