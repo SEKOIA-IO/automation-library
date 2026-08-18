@@ -8,7 +8,7 @@ from holm_security.account_validator import HolmSecurityAccountValidator
 
 BASE_URL = "https://se-api.holmsecurity.com"
 DEVICES_URL = f"{BASE_URL}/v2/devices"
-VULNS_URL = f"{BASE_URL}/v2/net-assets/report/vulnerabilities/"
+NET_ASSETS_URL = f"{BASE_URL}/v2/net-assets"
 
 
 @pytest.fixture
@@ -26,23 +26,25 @@ def account_validator():
 
 def test_validate_success(account_validator, requests_mock):
     devices = requests_mock.get(DEVICES_URL, json={"count": 1, "results": []}, status_code=200)
-    vulns = requests_mock.get(VULNS_URL, json={"count": 1, "results": []}, status_code=200)
+    net_assets = requests_mock.get(NET_ASSETS_URL, json={"count": 1, "results": []}, status_code=200)
 
     assert account_validator.validate() is True
-    assert devices.last_request.qs.get("page_size") == ["1"]
-    assert vulns.last_request.qs.get("limit") == ["1"]
+    # The Holm API paginates with `limit`; `page_size` is silently ignored.
+    assert devices.last_request.qs.get("limit") == ["1"]
+    assert devices.last_request.qs.get("page_size") is None
+    assert net_assets.last_request.qs.get("limit") == ["1"]
 
 
 def test_validate_devices_authentication_failure(account_validator, requests_mock):
     requests_mock.get(DEVICES_URL, json={"detail": "Invalid token."}, status_code=401)
-    requests_mock.get(VULNS_URL, json={"count": 1, "results": []}, status_code=200)
+    requests_mock.get(NET_ASSETS_URL, json={"count": 1, "results": []}, status_code=200)
 
     assert account_validator.validate() is False
 
 
-def test_validate_vulnerabilities_failure(account_validator, requests_mock):
+def test_validate_net_assets_failure(account_validator, requests_mock):
     requests_mock.get(DEVICES_URL, json={"count": 1, "results": []}, status_code=200)
-    requests_mock.get(VULNS_URL, json={"detail": "Forbidden"}, status_code=403)
+    requests_mock.get(NET_ASSETS_URL, json={"detail": "Forbidden"}, status_code=403)
 
     assert account_validator.validate() is False
 

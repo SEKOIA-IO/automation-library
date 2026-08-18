@@ -10,15 +10,18 @@ from holm_security.client import ApiClient
 class HolmSecurityAccountValidator(AccountValidator):
     """Validate Holm Security credentials against the endpoints used by the connectors.
 
-    The token is confirmed valid only when both ``GET /v2/devices`` and
-    ``GET /v2/net-assets/report/vulnerabilities/`` return ``200 OK``.
+    The token is confirmed valid only when both inventories, ``GET /v2/devices`` and
+    ``GET /v2/net-assets``, return ``200 OK``. The vulnerability report endpoint is not
+    probed: it only answers for an explicit set of assets, so it cannot tell a valid
+    token from a tenant without network assets.
     """
 
     TIMEOUT = 30
-    # (endpoint, query parameters) pairs that must each return 200.
+    # (endpoint, query parameters) pairs that must each return 200. The Holm API
+    # paginates with `limit`/`offset`; `page_size` is silently ignored.
     VALIDATION_ENDPOINTS: list[tuple[str, dict[str, int]]] = [
-        ("/v2/devices", {"page_size": 1}),
-        ("/v2/net-assets/report/vulnerabilities/", {"limit": 1}),
+        ("/v2/devices", {"limit": 1}),
+        ("/v2/net-assets", {"limit": 1}),
     ]
 
     @cached_property
