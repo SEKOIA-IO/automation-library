@@ -359,9 +359,7 @@ class TestFetchManagedDeviceByAadId:
         mock_client = MagicMock()
         mock_client.device_management = mock_device_management
 
-        result = await connector._fetch_managed_device_by_aad_id(
-            mock_client, "80fe8ff8-2624-418e-9591-41f0491218f9"
-        )
+        result = await connector._fetch_managed_device_by_aad_id(mock_client, "80fe8ff8-2624-418e-9591-41f0491218f9")
 
         assert result is not None
         assert result.id == sample_managed_device.id
