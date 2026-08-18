@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-29 - 1.0.18
+
+### Fixed
+
+- Fix `AssetInfo` model to accept float values for `aes_score_v3` and `acr_score_v3` fields returned by the Tenable API
+- Fix `TagsObject` model to accept `None` for the `added_by` field
+
+## 2026-05-20 - 1.0.17
+
+### Changed
+
+- Update asset connector name to "Tenable Vulnerability Management"
+- Skip vulnerabilities with no CVE IDs to avoid creating assets with incomplete information
+- Increment the polling interval of the connector
+
 ## 2026-04-20 - 1.0.16
 
 ### Changed
