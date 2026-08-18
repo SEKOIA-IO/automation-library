@@ -1,6 +1,6 @@
 """Contains the models for configuration of the github connector."""
 
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 
 class GithubModuleConfiguration(BaseModel):
