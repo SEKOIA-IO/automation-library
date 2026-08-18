@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.4.0] - 2026-08-18
+
+- Fix Upwind category in manifest.json to be "Network" instead of "Cloud".
+
 ## [0.3.0] - 2026-08-17
 
 - Refactored the detections connector onto the SDK `iterate()` loop to restore forwarded/lag/duration metrics.
