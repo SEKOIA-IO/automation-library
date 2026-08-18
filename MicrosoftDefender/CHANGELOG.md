@@ -7,12 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2026-07-29 - 1.3.3
+## 2026-08-18 - 1.3.6
 
 ### Fixed
 
 - Fix `'NoneType' object has no attribute 'lower'` when a network interface entry has an explicit `None` type in the device asset connector.
 - Fix `HTTP transport has already been closed` error when enriching multiple devices via the Graph API by properly managing the `GraphServiceClient` lifecycle with an async context manager.
+
+## 2026-07-30 - 1.3.5
+
+### Changed
+
+- Device asset connector: change default `frequency` from 60 s to 86400 s (24 h).
+
+## 2026-07-30 - 1.3.4
+
+### Fixed
+
+- Store the raw `lastSeen` string from the API directly as checkpoint instead of converting to `datetime` and back.
+
+## 2026-07-30 - 1.3.3
+
+### Fixed
+
+- Device asset connector: use a strict `lastSeen gt <checkpoint>` filter (instead of `ge`) and store the checkpoint with microsecond precision, so the most recently seen device is no longer re-collected on every cycle. This kept the connector running back-to-back (no idle sleep) and re-pushing the same devices, driving compliance ingestion lag.
 
 ## 2026-07-24 - 1.3.2
 

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+
+## 2026-07-20 - 0.6.0
+
+### Changed
+
+- Update Flare description in `manifest.json` to provide a more detailed overview of the integration's capabilities and purpose.
+
 ## 2026-07-20 - 0.5.0
 
 ### Changed

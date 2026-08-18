@@ -272,6 +272,27 @@ class SophosUserAssetConnector(AssetConnector):
             if self._is_new_or_changed(user, known):
                 yield user
 
+    def get_mapped_fields(self) -> dict[str, str]:
+        """Return the Sophos → OCSF field mapping for schema-change fingerprinting."""
+        return {
+            "name": "user.name",
+            "firstName": "user.full_name",
+            "lastName": "user.full_name",
+            "email": "user.email_addr",
+            "exchangeLogin": "user.uid_alt",
+            "groups": "user.groups",
+            "tenant.id": "user.org.uid",
+            "updatedAt": "time",
+            "createdAt": "time",
+        }
+
+    def reset_checkpoint(self) -> None:
+        """Clear the user cache so all users are re-fetched from scratch."""
+        with self.context as cache:
+            cache.pop(_CACHE_KEY, None)
+        self._current_run = {}
+        self.log("Checkpoint reset – full user re-fetch will occur on next cycle", level="info")
+
     def update_checkpoint(self) -> None:
         """Persist the full id→timestamp snapshot from the current run."""
         if self._current_run:

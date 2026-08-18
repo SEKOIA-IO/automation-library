@@ -997,3 +997,62 @@ def test_map_fields_enrichment_without_optional_fields(test_entra_id_asset_conne
     # Employment enrichment should not be present when no employment data is available
     employment_enrichment = next((e for e in result.enrichments if e.name == "employment"), None)
     assert employment_enrichment is None
+
+
+@pytest.mark.asyncio
+async def test_reset_checkpoint(test_entra_id_asset_connector):
+    """Test that reset_checkpoint clears most_recent_date_seen and _latest_time."""
+    # Arrange: set a checkpoint first
+    test_entra_id_asset_connector._latest_time = 1640995200.0
+    await test_entra_id_asset_connector.update_checkpoint()
+    assert test_entra_id_asset_connector.most_recent_date_seen is not None
+
+    # Act
+    await test_entra_id_asset_connector.reset_checkpoint()
+
+    # Assert
+    assert test_entra_id_asset_connector.most_recent_date_seen is None
+    assert test_entra_id_asset_connector._latest_time is None
+
+
+@pytest.mark.asyncio
+async def test_reset_checkpoint_when_no_checkpoint_set(test_entra_id_asset_connector):
+    """Test that reset_checkpoint is a no-op when no checkpoint has been saved."""
+    # Arrange: ensure no checkpoint is set
+    assert test_entra_id_asset_connector.most_recent_date_seen is None
+
+    # Act — should not raise
+    await test_entra_id_asset_connector.reset_checkpoint()
+
+    # Assert
+    assert test_entra_id_asset_connector.most_recent_date_seen is None
+    assert test_entra_id_asset_connector._latest_time is None
+
+
+def test_get_mapped_fields(test_entra_id_asset_connector):
+    expected = {
+        "id": "user.uid",
+        "display_name": "user.full_name",
+        "mail": "user.email_addr",
+        "user_principal_name": "user.name",
+        "company_name": "user.org.name",
+        "office_location": "user.org.ou_name",
+        "on_premises_sam_account_name": "user.uid_alt",
+        "account_enabled": "enrichments.account.data.is_enabled",
+        "department": "enrichments.employment.value",
+        "job_title": "enrichments.employment.value",
+        "sign_in_activity.last_sign_in_date_time": "enrichments.account.data.last_logon",
+        "last_password_change_date_time": "enrichments.account.data.last_time_password_change",
+        "created_date_time": "time",
+    }
+
+    assert test_entra_id_asset_connector.get_mapped_fields() == expected
+
+
+def test_get_mapped_fields_failed(test_entra_id_asset_connector):
+    not_expected = {
+        "id": "user.uid",
+        "display_name": "user.full_name",
+    }
+
+    assert test_entra_id_asset_connector.get_mapped_fields() != not_expected

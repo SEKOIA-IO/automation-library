@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -695,7 +695,7 @@ def response_1():
 
 @pytest.fixture
 def trigger_activation() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @pytest.fixture
@@ -735,7 +735,7 @@ def test_fetch_events(
 
 
 def test_stepper_with_cursor(trigger, data_storage):
-    date = datetime.now(timezone.utc)
+    date = datetime.now(UTC)
     most_recent_date_requested = date - timedelta(days=6)
     context = PersistentJSON("context.json", data_storage)
 
@@ -743,7 +743,7 @@ def test_stepper_with_cursor(trigger, data_storage):
         cache["most_recent_date_requested"] = most_recent_date_requested.isoformat()
 
     with patch("zimperium_modules.connector_threats.datetime") as mock_datetime:
-        mock_datetime.now.return_value = datetime.now(timezone.utc)
+        mock_datetime.now.return_value = datetime.now(UTC)
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
         assert trigger.stepper.start == most_recent_date_requested
@@ -752,7 +752,7 @@ def test_stepper_with_cursor(trigger, data_storage):
 def test_stepper_with_cursor_older_than_week(trigger, data_storage):
     context = PersistentJSON("context.json", data_storage)
 
-    fixed_now = datetime(2026, 3, 16, 1, 12, 0, tzinfo=timezone.utc)
+    fixed_now = datetime(2026, 3, 16, 1, 12, 0, tzinfo=UTC)
     most_recent_date_requested = fixed_now - timedelta(days=40)
     expected_date = fixed_now - timedelta(days=7)
 
@@ -763,9 +763,7 @@ def test_stepper_with_cursor_older_than_week(trigger, data_storage):
         mock_datetime.now.return_value = fixed_now
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
-        assert trigger.stepper.start.replace(microsecond=0) == expected_date.replace(
-            microsecond=0
-        )
+        assert trigger.stepper.start.replace(microsecond=0) == expected_date.replace(microsecond=0)
 
 
 def test_stepper_without_cursor(trigger, data_storage):
@@ -775,14 +773,8 @@ def test_stepper_without_cursor(trigger, data_storage):
     with context as cache:
         cache["most_recent_date_requested"] = None
 
-    with patch(
-        "sekoia_automation.helpers.timestepper.datetime.datetime"
-    ) as mock_datetime:
-        mock_datetime.now.return_value = datetime(
-            2023, 3, 22, 11, 56, 28, tzinfo=timezone.utc
-        )
+    with patch("sekoia_automation.helpers.timestepper.datetime.datetime") as mock_datetime:
+        mock_datetime.now.return_value = datetime(2023, 3, 22, 11, 56, 28, tzinfo=UTC)
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
-        assert trigger.stepper.start == datetime(
-            2023, 3, 22, 11, 55, 28, tzinfo=timezone.utc
-        )
+        assert trigger.stepper.start == datetime(2023, 3, 22, 11, 55, 28, tzinfo=UTC)
