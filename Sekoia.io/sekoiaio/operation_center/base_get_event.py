@@ -58,7 +58,7 @@ class BaseGetEvents(Action):
     def trigger_event_search_job(
         self, query: str, earliest_time: str, latest_time: str, limit: int | None = None
     ) -> str:
-        data = {
+        data: dict[str, str | bool | int] = {
             "term": query,
             "earliest_time": earliest_time,
             "latest_time": latest_time,

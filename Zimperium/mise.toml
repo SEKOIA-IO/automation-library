@@ -1,32 +1,27 @@
+# Module-specific mise config.
+# Common tools are inherited from the repository root mise.toml.
+
 [tools]
-python = '3.14'
-uv = '0.11.19'
+python = "3.14"
 
 [env]
-_.python.venv = { path = ".venv" }
+_.python.venv = { path = ".venv", create = false }
 
 [tasks.test]
 description = "Run tests"
-run = "uv run pytest tests"
+run = "uv run pytest tests/"
 
 [tasks.lint]
-description = "lint the automation module"
-dir = ".."
-run = "python linter.py check --changes"
+description = "Check code style and types"
+run = [
+	"uv run ruff check .",
+	"uv run ruff format --check .",
+	"uv run mypy .",
+]
 
 [tasks.format]
-description = "Format the python code in the automation module"
-run = "uvx black ."
-
-[tasks.check]
-description = "Check typing"
-run = "uvx mypy --install-types --non-interactive --ignore-missing-imports --show-column-numbers --hide-error-context ."
-
-[tasks.compliance]
-description = "check the compliance of the automation module"
-dir = "../utils"
-run = "uv run python compliance check --changes"
-
-[tasks.validate]
-description = "Check the automation module"
-depends = ["lint", "format", "check", "compliance"]
+description = "Format and auto-fix code"
+run = [
+	"uv run ruff check --fix .",
+	"uv run ruff format .",
+]

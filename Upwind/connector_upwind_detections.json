@@ -1,0 +1,31 @@
+{
+  "description": "Collect detections from Upwind",
+  "docker_parameters": "upwind_detections_connector",
+  "name": "Collect Upwind Detections",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60,
+        "minimum": 1
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "title": "Upwind detections connector",
+    "type": "object"
+  },
+  "uuid": "95c0f252-2168-4acd-9e9f-6645ca75d43d"
+}

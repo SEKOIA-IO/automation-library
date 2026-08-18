@@ -227,6 +227,7 @@ UpdateCase = type(
         "verb": "patch",
         "endpoint": base_url + "cases/{uuid}",
         "query_parameters": [],
+        "timeout": 60,
     },
 )
 
@@ -429,6 +430,7 @@ ListAssets = type(
             "rule_version",
             "sort",
             "direction",
+            "include_revoked",
         ],
     },
 )

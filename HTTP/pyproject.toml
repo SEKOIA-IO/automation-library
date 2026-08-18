@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "HTTP Automation Module"
 description = ""
-version = "0.0"
+version = "1.120.5"
 authors = []
 package-mode = false
 
