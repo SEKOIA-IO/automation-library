@@ -8,7 +8,7 @@ import pytest
 from aioresponses import aioresponses
 
 from github_modules import GithubModule, GithubModuleConfiguration
-from github_modules.async_client.http_client import BadCredentialsError
+from github_modules.async_client.http_client import AuthenticationError
 from github_modules.audit_log_trigger import AuditLogConnector
 
 

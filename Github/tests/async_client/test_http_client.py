@@ -3,7 +3,7 @@
 import pytest
 from aioresponses import aioresponses
 
-from github_modules.async_client.http_client import AsyncGithubClient, BadCredentialsError
+from github_modules.async_client.http_client import AsyncGithubClient, AuthenticationError
 
 
 @pytest.mark.asyncio
@@ -15,7 +15,14 @@ async def test_github_client_init_error(session_faker):
         session_faker: Faker
     """
     try:
-        AsyncGithubClient("https://api.github.com", session_faker.word(), None, None, session_faker.pyint(), None)
+        AsyncGithubClient(
+            "https://api.github.com",
+            session_faker.word(),
+            None,
+            None,
+            session_faker.pyint(),
+            None,
+        )
 
         assert False
     except ValueError:
@@ -35,10 +42,18 @@ async def test_github_client_token_refresher(session_faker, pem_content):
         "https://api.github.com", session_faker.word(), session_faker.word(), None, None
     )
     github_client_2 = AsyncGithubClient(
-        "https://api.github.com", session_faker.word(), session_faker.word(), pem_content, None
+        "https://api.github.com",
+        session_faker.word(),
+        session_faker.word(),
+        pem_content,
+        None,
     )
     github_client_3 = AsyncGithubClient(
-        "https://api.github.com", session_faker.word(), session_faker.word(), pem_content, session_faker.pyint()
+        "https://api.github.com",
+        session_faker.word(),
+        session_faker.word(),
+        pem_content,
+        session_faker.pyint(),
     )
 
     try:
@@ -175,7 +190,11 @@ async def test_github_client_get_audit_logs_with_pem_file_content(
     """
     organization = session_faker.word()
     github_client = AsyncGithubClient(
-        "https://api.github.com", organization, session_faker.word(), pem_content, session_faker.pyint()
+        "https://api.github.com",
+        organization,
+        session_faker.word(),
+        pem_content,
+        session_faker.pyint(),
     )
 
     with aioresponses() as mocked_responses:
@@ -221,7 +240,11 @@ async def test_github_client_get_audit_logs_with_pem_file_content_1(
     """
     organization = session_faker.word()
     github_client = AsyncGithubClient(
-        "https://api.github.com", organization, session_faker.word(), pem_content, session_faker.pyint()
+        "https://api.github.com",
+        organization,
+        session_faker.word(),
+        pem_content,
+        session_faker.pyint(),
     )
     next_page_link = session_faker.uri()
 
@@ -275,7 +298,11 @@ async def test_github_client_get_audit_logs_with_pem_file_content_3(
     """
     organization = session_faker.word()
     github_client = AsyncGithubClient(
-        "https://api.github.com", organization, session_faker.word(), pem_content, session_faker.pyint()
+        "https://api.github.com",
+        organization,
+        session_faker.word(),
+        pem_content,
+        session_faker.pyint(),
     )
     next_page_link_1 = session_faker.uri()
     next_page_link_2 = session_faker.uri()
@@ -329,7 +356,11 @@ async def test_github_client_get_audit_logs_with_incorrect_creds(
 ):
     organization = session_faker.word()
     github_client = AsyncGithubClient(
-        "https://api.github.com", organization, session_faker.word(), pem_content, session_faker.pyint()
+        "https://api.github.com",
+        organization,
+        session_faker.word(),
+        pem_content,
+        session_faker.pyint(),
     )
 
     with aioresponses() as mocked_responses:
@@ -339,17 +370,25 @@ async def test_github_client_get_audit_logs_with_incorrect_creds(
 
         mocked_responses.get(audit_logs_url, status=401, payload=github_bad_creds_response, repeat=2)
 
-        with pytest.raises(BadCredentialsError):
+        with pytest.raises(AuthenticationError):
             await github_client.get_audit_logs(last_timestamp)
 
 
 @pytest.mark.asyncio
 async def test_github_client_get_audit_logs_retry_after_401(
-    github_bad_creds_response, github_response, session_faker, pem_content, last_timestamp
+    github_bad_creds_response,
+    github_response,
+    session_faker,
+    pem_content,
+    last_timestamp,
 ):
     organization = session_faker.word()
     github_client = AsyncGithubClient(
-        "https://api.github.com", organization, session_faker.word(), pem_content, session_faker.pyint()
+        "https://api.github.com",
+        organization,
+        session_faker.word(),
+        pem_content,
+        session_faker.pyint(),
     )
 
     with aioresponses() as mocked_responses:

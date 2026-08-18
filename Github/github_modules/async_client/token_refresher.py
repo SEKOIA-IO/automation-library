@@ -9,6 +9,8 @@ import jwt
 from aiohttp import ClientSession
 from jwt import JWT
 
+from github_modules.async_client import AuthenticationError
+
 
 class PemGithubTokenRefresher(object):
     """Github token refresher that uses pem file content and org name to get access token."""
@@ -17,7 +19,14 @@ class PemGithubTokenRefresher(object):
     _locks: dict[str, Lock] = {}
     _session: ClientSession | None = None
 
-    def __init__(self, base_url: str, pem_file: str, organization: str, app_id: int, token_ttl: int = 300):
+    def __init__(
+        self,
+        base_url: str,
+        pem_file: str,
+        organization: str,
+        app_id: int,
+        token_ttl: int = 300,
+    ):
         """
         Initialize GithubTokenRefresher.
 
@@ -60,7 +69,12 @@ class PemGithubTokenRefresher(object):
 
     @classmethod
     async def instance(
-        cls, base_url: str, pem_file: str, organization: str, app_id: int, token_ttl: int = 300
+        cls,
+        base_url: str,
+        pem_file: str,
+        organization: str,
+        app_id: int,
+        token_ttl: int = 300,
     ) -> "PemGithubTokenRefresher":
         """
         Get singleton PemGithubTokenRefresher instance for specified input params.
@@ -139,6 +153,9 @@ class PemGithubTokenRefresher(object):
         async with session.get(self.installation_request_url, headers=headers) as installation_response:
             installation_info = await installation_response.json()
             access_token_url = installation_info.get("access_tokens_url")
+            if not access_token_url:
+                raise AuthenticationError(f"Authentication failed: {str(installation_info)}")
+
             async with session.post(access_token_url, headers=headers) as access_token_response:
                 access_token_info = await access_token_response.json()
 
