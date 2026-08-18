@@ -1,0 +1,50 @@
+{
+  "configuration": {
+    "title": "Upwind",
+    "type": "object",
+    "properties": {
+      "base_url": {
+        "description": "Base URL of the Upwind API (e.g. https://api.upwind.io)",
+        "type": "string",
+        "format": "uri",
+        "default": "https://api.upwind.io"
+      },
+      "auth_url": {
+        "description": "OAuth2 token endpoint (e.g. https://auth.upwind.io/oauth/token)",
+        "type": "string",
+        "format": "uri",
+        "default": "https://auth.upwind.io/oauth/token"
+      },
+      "client_id": {
+        "description": "OAuth2 client ID used to authenticate to Upwind API",
+        "type": "string"
+      },
+      "client_secret": {
+        "description": "OAuth2 client secret used to authenticate to Upwind API",
+        "type": "string"
+      },
+      "organization_id": {
+        "description": "Upwind Organization ID",
+        "type": "string"
+      }
+    },
+    "required": [
+      "base_url",
+      "auth_url",
+      "client_id",
+      "client_secret",
+      "organization_id"
+    ],
+    "secrets": [
+      "client_secret"
+    ]
+  },
+  "description": "Upwind provides cloud runtime and API security detections. This module collects Upwind detections and forwards them to Sekoia.io intake.",
+  "name": "Upwind",
+  "uuid": "2f9602ef-bf5f-4a2a-b401-c8e3549ff34f",
+  "slug": "upwind",
+  "version": "0.3.0",
+  "categories": [
+    "Cloud"
+  ]
+}

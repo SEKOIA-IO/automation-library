@@ -19,6 +19,10 @@
 		{
 			"name": "Zimperium",
 			"path": "Zimperium"
+		},
+		{
+			"name": "Upwind",
+			"path": "Upwind"
 		}
 	],
 	"settings": {
