@@ -356,7 +356,9 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
 
         return machines
 
-    async def _fetch_managed_device_by_aad_id(self, aad_device_id: str) -> ManagedDevice | None:
+    async def _fetch_managed_device_by_aad_id(
+        self, client: GraphServiceClient, aad_device_id: str
+    ) -> ManagedDevice | None:
         """Fetch a managed device from Graph API by its Azure AD device ID."""
         query_params = ManagedDevicesRequestBuilder.ManagedDevicesRequestBuilderGetQueryParameters(
             filter=f"azureADDeviceId eq '{aad_device_id}'",
@@ -367,12 +369,11 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
         )
 
         try:
-            async with self._graph_client() as client:
-                response = await client.device_management.managed_devices.get(
-                    request_configuration=request_config,
-                )
-                if response and response.value:
-                    return response.value[0]
+            response = await client.device_management.managed_devices.get(
+                request_configuration=request_config,
+            )
+            if response and response.value:
+                return response.value[0]
         except Exception as e:
             self.log(message=f"Error fetching managed device for aadDeviceId={aad_device_id}: {e}", level="warning")
 
@@ -384,31 +385,32 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
 
         machines = self._fetch_machines()
 
-        for machine in machines:
-            if not self.running:
-                break
+        async with self._graph_client() as client:
+            for machine in machines:
+                if not self.running:
+                    break
 
-            # Enrich with managed device data if aadDeviceId available
-            managed_device: ManagedDevice | None = None
-            if machine.aadDeviceId:
-                managed_device = await self._fetch_managed_device_by_aad_id(machine.aadDeviceId)
+                # Enrich with managed device data if aadDeviceId available
+                managed_device: ManagedDevice | None = None
+                if machine.aadDeviceId:
+                    managed_device = await self._fetch_managed_device_by_aad_id(client, machine.aadDeviceId)
 
-            try:
-                ocsf_device = self.map_to_ocsf(machine, managed_device)
-            except Exception as e:
-                self.log(
-                    message=f"Error mapping device {machine.id}: {e}",
-                    level="warning",
-                )
-                continue
+                try:
+                    ocsf_device = self.map_to_ocsf(machine, managed_device)
+                except Exception as e:
+                    self.log(
+                        message=f"Error mapping device {machine.id}: {e}",
+                        level="warning",
+                    )
+                    continue
 
-            # Track most recent lastSeen for checkpoint
-            if machine.lastSeen:
-                last_seen_dt = isoparse(machine.lastSeen)
-                if most_recent is None or last_seen_dt > most_recent:
-                    most_recent = last_seen_dt
+                # Track most recent lastSeen for checkpoint
+                if machine.lastSeen:
+                    last_seen_dt = isoparse(machine.lastSeen)
+                    if most_recent is None or last_seen_dt > most_recent:
+                        most_recent = last_seen_dt
 
-            yield ocsf_device
+                yield ocsf_device
 
         self._latest_time = most_recent
 
