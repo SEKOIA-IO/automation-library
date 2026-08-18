@@ -407,9 +407,8 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
 
                 # Track most recent lastSeen for checkpoint
                 if machine.lastSeen:
-                    last_seen_dt = isoparse(machine.lastSeen)
-                    if most_recent is None or last_seen_dt > most_recent:
-                        most_recent = last_seen_dt
+                    if most_recent_raw is None or machine.lastSeen > most_recent_raw:
+                        most_recent_raw = machine.lastSeen
 
                 yield ocsf_device
 
