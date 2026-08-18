@@ -82,7 +82,9 @@ class UpwindDetectionsConnector(Connector):
             start_at=timedelta(days=7),
             ignore_older_than=timedelta(days=30),
         )
-        self._context = PersistentJSON("context.json", self.data_path)
+        # Use a dedicated file: CheckpointDatetime already owns context.json, and two
+        # PersistentJSON instances on the same file overwrite each other on dump.
+        self._context = PersistentJSON("boundary_context.json", self.data_path)
         self.request_timeout = int(os.environ.get("UPWIND_CLIENT_TIMEOUT", "60"))
         self._oauth_provider = OAuthTokenProvider()
 
@@ -193,7 +195,8 @@ class UpwindDetectionsConnector(Connector):
             return
 
         # Yield before advancing the checkpoint so events are pushed first.
-        yield outgoing, most_recent
+        # The SDK computes lag against a naive UTC ``now``, so strip the tzinfo here.
+        yield outgoing, most_recent.astimezone(UTC).replace(tzinfo=None)
 
         self.last_detection_date.offset = most_recent
         self._save_boundary_ids(boundary_ids)

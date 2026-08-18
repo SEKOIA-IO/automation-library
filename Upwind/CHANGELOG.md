@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.4.1] - 2026-08-18
+
+- Store the boundary checkpoint in a dedicated `boundary_context.json` file to avoid overwriting the SDK checkpoint that owns `context.json`.
+- Strip the timezone from the checkpoint datetime yielded to the SDK so lag metrics are computed correctly.
+
 ## [0.4.0] - 2026-08-18
 
 - Fix Upwind category in manifest.json to be "Network" instead of "Cloud".
