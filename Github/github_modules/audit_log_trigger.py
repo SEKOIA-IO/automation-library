@@ -215,6 +215,12 @@ class AuditLogConnector(AsyncConnector):
             try:
                 loop = asyncio.get_event_loop()
 
+            except RuntimeError:
+                # Fallback
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            try:
                 while self.running:
                     loop.run_until_complete(self.next_batch())
 
