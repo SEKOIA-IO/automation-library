@@ -154,11 +154,15 @@ class AsyncGithubClient(object):
         async with self.session() as session:
             headers = await self.get_auth_headers()
 
-            async with session.get(request_url, params=params, headers=headers) as response:
+            async with session.get(
+                request_url, params=params, headers=headers
+            ) as response:
                 if response.status != 200:
                     headers = await self.get_auth_headers(refresh_token=True)
 
-                    async with session.get(request_url, params=params, headers=headers) as refreshed_response:
+                    async with session.get(
+                        request_url, params=params, headers=headers
+                    ) as refreshed_response:
                         if refreshed_response.status == 401:
                             raise AuthenticationError(
                                 "The authentication Failed. Please check you credendial. error=Bad credential status_code=401"

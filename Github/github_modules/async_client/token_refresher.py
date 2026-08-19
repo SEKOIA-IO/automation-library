@@ -150,13 +150,19 @@ class PemGithubTokenRefresher(object):
 
         session = self.session()
 
-        async with session.get(self.installation_request_url, headers=headers) as installation_response:
+        async with session.get(
+            self.installation_request_url, headers=headers
+        ) as installation_response:
             installation_info = await installation_response.json()
             access_token_url = installation_info.get("access_tokens_url")
             if not access_token_url:
-                raise AuthenticationError(f"Authentication failed: {str(installation_info)}")
+                raise AuthenticationError(
+                    f"Authentication failed: {str(installation_info)}"
+                )
 
-            async with session.post(access_token_url, headers=headers) as access_token_response:
+            async with session.post(
+                access_token_url, headers=headers
+            ) as access_token_response:
                 access_token_info = await access_token_response.json()
 
                 self._token = access_token_info.get("token")

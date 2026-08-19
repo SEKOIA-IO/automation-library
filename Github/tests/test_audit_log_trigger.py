@@ -52,7 +52,9 @@ def connector_with_api_key(symphony_storage, session_faker, intake_response):
 
 
 @pytest.fixture
-def connector_with_pem_file(symphony_storage, pem_content, session_faker, intake_response):
+def connector_with_pem_file(
+    symphony_storage, pem_content, session_faker, intake_response
+):
     """
     Create a AuditLogConnector instance.
 
@@ -82,7 +84,9 @@ def connector_with_pem_file(symphony_storage, pem_content, session_faker, intake
 
 
 @pytest.fixture
-def connector_with_api_key_no_base_url(symphony_storage, session_faker, intake_response):
+def connector_with_api_key_no_base_url(
+    symphony_storage, session_faker, intake_response
+):
     """
     Create a AuditLogConnector instance.
 
@@ -125,7 +129,9 @@ async def test_connector_get_github_client_instance(connector_with_api_key):
 
 
 @pytest.mark.asyncio
-async def test_next_batch_with_api_key(connector_with_api_key, github_response, intake_response):
+async def test_next_batch_with_api_key(
+    connector_with_api_key, github_response, intake_response
+):
     """
     Test AuditLogConnector next_batch.
 
@@ -136,7 +142,9 @@ async def test_next_batch_with_api_key(connector_with_api_key, github_response, 
     with aioresponses() as mocked_responses:
         audit_logs_url = (
             connector_with_api_key.github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(connector_with_api_key.last_ts)
+            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
+                connector_with_api_key.last_ts
+            )
         )
 
         mocked_responses.get(
@@ -155,7 +163,9 @@ async def test_next_batch_with_api_key(connector_with_api_key, github_response, 
 
 
 @pytest.mark.asyncio
-async def test_next_batch_with_pem_file(connector_with_pem_file, github_response, session_faker, intake_response):
+async def test_next_batch_with_pem_file(
+    connector_with_pem_file, github_response, session_faker, intake_response
+):
     """
     Test AuditLogConnector next_batch.
 
@@ -174,11 +184,15 @@ async def test_next_batch_with_pem_file(connector_with_pem_file, github_response
             payload={"access_tokens_url": access_tokens_url},
         )
 
-        mocked_responses.post(access_tokens_url, status=200, payload={"token": access_token})
+        mocked_responses.post(
+            access_tokens_url, status=200, payload={"token": access_token}
+        )
 
         audit_logs_url = (
             connector_with_pem_file.github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(connector_with_pem_file.last_ts)
+            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
+                connector_with_pem_file.last_ts
+            )
         )
 
         mocked_responses.get(
@@ -210,7 +224,9 @@ async def test_next_batch_with_api_key_no_base_url(
     with aioresponses() as mocked_responses:
         audit_logs_url = (
             connector_with_api_key_no_base_url.github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(connector_with_api_key_no_base_url.last_ts)
+            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
+                connector_with_api_key_no_base_url.last_ts
+            )
         )
 
         mocked_responses.get(
@@ -220,7 +236,9 @@ async def test_next_batch_with_api_key_no_base_url(
         )
 
         mocked_responses.post(
-            urljoin(connector_with_api_key_no_base_url.configuration.intake_server, "batch"),
+            urljoin(
+                connector_with_api_key_no_base_url.configuration.intake_server, "batch"
+            ),
             status=200,
             payload=intake_response,
         )
