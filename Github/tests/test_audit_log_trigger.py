@@ -141,7 +141,7 @@ async def test_next_batch_with_api_key(
     with aioresponses() as mocked_responses:
         audit_logs_url = (
             connector_with_api_key.github_client.audit_logs_url
-            + f"?order=asc&per_page=100&phrase=created%253A%253E{connector_with_api_key.last_ts}"
+            + f"?order=asc&per_page=100&phrase=created:%3E{connector_with_api_key.last_ts}"
         )
 
         mocked_responses.get(
@@ -185,7 +185,7 @@ async def test_next_batch_with_pem_file(
 
         audit_logs_url = (
             connector_with_pem_file.github_client.audit_logs_url
-            + f"?order=asc&per_page=100&phrase=created%253A%253E{connector_with_pem_file.last_ts}"
+            + f"?order=asc&per_page=100&phrase=created:%3E{connector_with_pem_file.last_ts}"
         )
 
         mocked_responses.get(
@@ -217,7 +217,7 @@ async def test_next_batch_with_api_key_no_base_url(
     with aioresponses() as mocked_responses:
         audit_logs_url = (
             connector_with_api_key_no_base_url.github_client.audit_logs_url
-            + f"?order=asc&per_page=100&phrase=created%253A%253E{connector_with_api_key_no_base_url.last_ts}"
+            + f"?order=asc&per_page=100&phrase=created:%3E{connector_with_api_key_no_base_url.last_ts}"
         )
 
         mocked_responses.get(

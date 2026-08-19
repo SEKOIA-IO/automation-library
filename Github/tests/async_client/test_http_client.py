@@ -191,7 +191,7 @@ async def test_github_client_get_audit_logs_with_api_key(
     with aioresponses() as mocked_responses:
         mocked_responses.get(
             github_client.audit_logs_url
-            + f"?order=asc&per_page=100&phrase=created%253A%253E{last_timestamp}",
+            + f"?order=asc&per_page=100&phrase=created:%3E{last_timestamp}",
             status=200,
             payload=github_response,
         )
@@ -241,7 +241,7 @@ async def test_github_client_get_audit_logs_with_pem_file_content(
 
         mocked_responses.get(
             github_client.audit_logs_url
-            + f"?order=asc&per_page=100&phrase=created%253A%253E{last_timestamp}",
+            + f"?order=asc&per_page=100&phrase=created:%3E{last_timestamp}",
             status=200,
             payload=github_response,
         )
@@ -294,7 +294,7 @@ async def test_github_client_get_audit_logs_with_pem_file_content_1(
 
         mocked_responses.get(
             github_client.audit_logs_url
-            + f"?order=asc&per_page=100&phrase=created%253A%253E{last_timestamp}",
+            + f"?order=asc&per_page=100&phrase=created:%3E{last_timestamp}",
             status=200,
             payload=github_response,
             headers={"Link": f'<{next_page_link}>; rel="next"'},
@@ -358,7 +358,7 @@ async def test_github_client_get_audit_logs_with_pem_file_content_3(
 
         mocked_responses.get(
             github_client.audit_logs_url
-            + f"?order=asc&per_page=100&phrase=created%253A%253E{last_timestamp}",
+            + f"?order=asc&per_page=100&phrase=created:%3E{last_timestamp}",
             status=200,
             payload=github_response,
             headers={"Link": f'<{next_page_link_1}>; rel="next"'},
@@ -403,7 +403,7 @@ async def test_github_client_get_audit_logs_with_incorrect_creds(
     with aioresponses() as mocked_responses:
         audit_logs_url = (
             github_client.audit_logs_url
-            + f"?order=asc&per_page=100&phrase=created%253A%253E{last_timestamp}"
+            + f"?order=asc&per_page=100&phrase=created:%3E{last_timestamp}"
         )
 
         mocked_responses.get(
@@ -434,7 +434,7 @@ async def test_github_client_get_audit_logs_retry_after_401(
     with aioresponses() as mocked_responses:
         audit_logs_url = (
             github_client.audit_logs_url
-            + f"?order=asc&per_page=100&phrase=created%253A%253E{last_timestamp}"
+            + f"?order=asc&per_page=100&phrase=created:%3E{last_timestamp}"
         )
 
         mocked_responses.get(
