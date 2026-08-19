@@ -7,14 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-### Changed
-
-- Deduplicate ESET vulnerability findings by identity (device UUID, scope, vulnerability id and CVE) instead of by `lastDetectTime`. The `/v1/device-vulnerabilities` endpoint has no time filter, and ESET refreshes `lastDetectTime` on every rescan, so the previous high-water mark either skipped nothing or hid findings whose severity or patch status had changed. The stored checkpoint is now pruned on each cycle to the findings ESET still reports, so it stays bounded by the live inventory. Existing deployments collect the full vulnerability inventory once on upgrade.
-
-### Fixed
-
-- Collect every vulnerability variant carried by a `/v1/device-vulnerabilities` item. An item exposing an application, an operating system and a package vulnerability at the same time previously produced a single finding and silently dropped the others.
-
 ## 2026-08-06 - 1.2.0
 
 ### Added
