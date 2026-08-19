@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Accommodate for async loop behaviour in python 3.14
+- Adjust for async loop behaviour in Python 3.14
 
 ## 2026-08-18 - 1.12.0
 
