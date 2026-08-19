@@ -548,3 +548,44 @@ def test_net_asset_without_severity_has_no_risk_level(connector):
 
     assert device.risk_level is None
     assert device.risk_level_id is None
+
+
+def test_device_checkpoint_is_not_advanced_when_the_connector_stops(connector, requests_mock):
+    """A run cut short may have left older devices unvisited."""
+
+    def devices(request, context):
+        connector.stop()
+        return {"count": 2, "next": f"{DEVICES_URL}?offset=1&limit=1", "previous": None, "results": [make_device()]}
+
+    requests_mock.get(DEVICES_URL, json=devices)
+
+    assets = list(connector.get_assets())
+
+    assert len(assets) == 1
+    assert connector._latest_time is None
+
+    connector.update_checkpoint()
+    assert connector.most_recent_last_sync is None
+
+
+def test_net_asset_checkpoint_is_not_advanced_when_the_connector_stops(connector, requests_mock):
+    requests_mock.get(DEVICES_URL, json=empty_page())
+
+    def net_assets(request, context):
+        connector.stop()
+        return {
+            "count": 2,
+            "next": f"{NET_ASSETS_URL}?offset=1&limit=1",
+            "previous": None,
+            "results": [make_net_asset()],
+        }
+
+    requests_mock.get(NET_ASSETS_URL, json=net_assets)
+
+    assets = list(connector.get_assets())
+
+    assert len(assets) == 1
+    assert connector._latest_net_asset_time is None
+
+    connector.update_checkpoint()
+    assert connector.most_recent_net_asset_last_detected is None

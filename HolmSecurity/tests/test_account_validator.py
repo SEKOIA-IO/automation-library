@@ -9,6 +9,7 @@ from holm_security.account_validator import HolmSecurityAccountValidator
 BASE_URL = "https://se-api.holmsecurity.com"
 DEVICES_URL = f"{BASE_URL}/v2/devices"
 NET_ASSETS_URL = f"{BASE_URL}/v2/net-assets"
+VULNS_URL = f"{BASE_URL}/v2/net-assets/report/vulnerabilities/"
 
 
 @pytest.fixture
@@ -27,17 +28,22 @@ def account_validator():
 def test_validate_success(account_validator, requests_mock):
     devices = requests_mock.get(DEVICES_URL, json={"count": 1, "results": []}, status_code=200)
     net_assets = requests_mock.get(NET_ASSETS_URL, json={"count": 1, "results": []}, status_code=200)
+    vulns = requests_mock.get(VULNS_URL, json={"count": 0, "results": []}, status_code=200)
 
     assert account_validator.validate() is True
     # The Holm API paginates with `limit`; `page_size` is silently ignored.
     assert devices.last_request.qs.get("limit") == ["1"]
     assert devices.last_request.qs.get("page_size") is None
     assert net_assets.last_request.qs.get("limit") == ["1"]
+    # The vulnerability report is probed for authorization; without the `assets`
+    # filter it answers 200 with an empty page, which still proves access.
+    assert vulns.last_request.qs.get("limit") == ["1"]
 
 
 def test_validate_devices_authentication_failure(account_validator, requests_mock):
     requests_mock.get(DEVICES_URL, json={"detail": "Invalid token."}, status_code=401)
     requests_mock.get(NET_ASSETS_URL, json={"count": 1, "results": []}, status_code=200)
+    requests_mock.get(VULNS_URL, json={"count": 0, "results": []}, status_code=200)
 
     assert account_validator.validate() is False
 
@@ -45,6 +51,16 @@ def test_validate_devices_authentication_failure(account_validator, requests_moc
 def test_validate_net_assets_failure(account_validator, requests_mock):
     requests_mock.get(DEVICES_URL, json={"count": 1, "results": []}, status_code=200)
     requests_mock.get(NET_ASSETS_URL, json={"detail": "Forbidden"}, status_code=403)
+    requests_mock.get(VULNS_URL, json={"count": 0, "results": []}, status_code=200)
+
+    assert account_validator.validate() is False
+
+
+def test_validate_vulnerability_report_failure(account_validator, requests_mock):
+    """A token allowed on the inventories but not on the report must be rejected."""
+    requests_mock.get(DEVICES_URL, json={"count": 1, "results": []}, status_code=200)
+    requests_mock.get(NET_ASSETS_URL, json={"count": 1, "results": []}, status_code=200)
+    requests_mock.get(VULNS_URL, json={"detail": "Forbidden"}, status_code=403)
 
     assert account_validator.validate() is False
 

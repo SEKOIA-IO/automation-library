@@ -310,7 +310,9 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
                 self._generated += 1
                 yield asset
 
-        if max_raw and max_raw != checkpoint:
+        # Only a complete traversal may advance the cursor: a run cut short by a
+        # shutdown may have left older records unvisited.
+        if self.running and max_raw and max_raw != checkpoint:
             self._latest_time = max_raw
 
     def _collect_net_assets(self, cached_ids: set[str]) -> Generator[DeviceOCSFModel, None, None]:
@@ -350,7 +352,9 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
                 self._generated += 1
                 yield asset
 
-        if max_raw and max_raw != checkpoint:
+        # Only a complete traversal may advance the cursor: a run cut short by a
+        # shutdown may have left older records unvisited.
+        if self.running and max_raw and max_raw != checkpoint:
             self._latest_net_asset_time = max_raw
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
