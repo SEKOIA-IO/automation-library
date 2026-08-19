@@ -3,7 +3,7 @@
 import asyncio
 import time
 import traceback
-from typing import Any, Optional
+from typing import Any
 
 import orjson
 from aiohttp import ClientSession
@@ -13,9 +13,17 @@ from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from github_modules import GithubModule
-from github_modules.async_client.http_client import AsyncGithubClient, BadCredentialsError
+from github_modules.async_client.http_client import (
+    AsyncGithubClient,
+    AuthenticationError,
+)
 from github_modules.logging import get_logger
-from github_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from github_modules.metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 logger = get_logger()
 
@@ -41,7 +49,7 @@ class AuditLogConnector(AsyncConnector):
     module: GithubModule
     configuration: AuditLogConnectorConfiguration
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         """
         Initialize connector and load the context
 
@@ -115,7 +123,9 @@ class AuditLogConnector(AsyncConnector):
         """
         return await self.github_client.get_audit_logs(start_from=last_ts)
 
-    def _refine_batch(self, batch: list[dict[str, Any]], batch_start_time: float) -> list[dict[str, Any]]:
+    def _refine_batch(
+        self, batch: list[dict[str, Any]], batch_start_time: float
+    ) -> list[dict[str, Any]]:
         """
         Remove events that are in the time buffer.
 
@@ -129,7 +139,9 @@ class AuditLogConnector(AsyncConnector):
             list[dict[str, Any]]:
         """
         for index, event in enumerate(batch):
-            if event["@timestamp"] > int((batch_start_time * 1000) - self.configuration.timebuffer):
+            if event["@timestamp"] > int(
+                (batch_start_time * 1000) - self.configuration.timebuffer
+            ):
                 return batch[0:index]
 
         return batch
@@ -140,7 +152,9 @@ class AuditLogConnector(AsyncConnector):
         current_lag: int = 0
         batch_start_time = time.time()
         audit_events = await self.get_audit_events(self.last_ts)
-        INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(audit_events))
+        INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(
+            len(audit_events)
+        )
 
         if type(audit_events) is list:
             filtered_data = self._refine_batch(audit_events, batch_start_time)
@@ -148,8 +162,12 @@ class AuditLogConnector(AsyncConnector):
             # if the response is not empty, push it
             if filtered_data:
                 self.last_ts = filtered_data[-1]["@timestamp"]
-                batch_of_events = [orjson.dumps(event).decode("utf-8") for event in filtered_data]
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                batch_of_events = [
+                    orjson.dumps(event).decode("utf-8") for event in filtered_data
+                ]
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(
+                    len(batch_of_events)
+                )
 
                 await self.push_data_to_intakes(events=batch_of_events)
 
@@ -178,7 +196,9 @@ class AuditLogConnector(AsyncConnector):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.configuration.intake_key
+        ).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
@@ -198,11 +218,10 @@ class AuditLogConnector(AsyncConnector):
                 while self.running:
                     loop.run_until_complete(self.next_batch())
 
-            except BadCredentialsError as exc:
-                self.log(
-                    message="The authentication Failed. Please check you credendial. error=Bad credential status_code=401",
-                    level="critical",
-                )
-            except Exception as error:
+            except AuthenticationError as exc:
+                self.log_exception(exc)
+                self.log(message=str(exc), level="critical")
+
+            except Exception as error:  # noqa: BLE001
                 traceback.print_exc()
                 self.log_exception(error, message="Failed to forward events")
