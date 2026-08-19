@@ -21,15 +21,3 @@
     ![Step 4](docs/assets/Step04.png){: style="max-width:100%"}
 
 9. Click `CREATE`
-
-## Asset connectors
-
-The module provides two asset connectors that collect inventory from ESET Connect into Sekoia.io asset management. All of them authenticate with the module configuration (`region`, `username`, `password`) — no extra credentials are required. Each connector needs a Sekoia.io API key (`sekoia_api_key`) with asset-management write permission.
-
-### ESET Device
-
-Collects managed devices from the Device Management API (`{region}.device-management.eset.systems/v1/devices`) and maps them to OCSF Device Inventory Info assets.
-
-### ESET Vulnerability
-
-Collects device vulnerabilities from the Vulnerability Management API (`{region}.vulnerability-management.eset.systems/v1/device-vulnerabilities`) and maps them to OCSF Vulnerability Finding assets.
