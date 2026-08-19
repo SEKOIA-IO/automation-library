@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-19 - 1.0.19
+
+### Fixed
+
+- Fix checkpoint using `first_found` instead of `last_found`, causing the connector to re-fetch all vulnerabilities on every run
+- Add finding ID deduplication cache to prevent duplicate assets from Tenable's inclusive `since` filter
+
 ## 2026-07-29 - 1.0.18
 
 ### Fixed
