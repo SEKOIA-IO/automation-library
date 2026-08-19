@@ -7,24 +7,20 @@ class GithubModuleConfiguration(BaseModel):
     """Contains all necessary configuration to interact with Github API."""
 
     base_url: str = Field(
+        "https://api.github.com",
         description="The base URL (e.g https://api.SUBDOMAIN.ghe.com)",
-        default="https://api.github.com",
     )
-    org_name: str = Field(description="The name of your Github organization")
+    org_name: str = Field(..., description="The name of your Github organization")
     apikey: str | None = Field(
-        default=None,
-        required=False,
-        secret=True,
+        None,
         description="The APIkey to authenticate call to the Github API",
+        json_schema_extra={"secret": True},
     )
     pem_file: str | None = Field(
-        default=None,
-        required=False,
-        secret=True,
+        None,
         description="Pem file to interact with Github API",
+        json_schema_extra={"secret": True},
     )
     app_id: int | None = Field(
-        default=None,
-        required=False,
-        description="Github app id to interact with Github API",
+        None, description="Github app id to interact with Github API"
     )
