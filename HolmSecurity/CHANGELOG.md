@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-19
+
+### Added
+
+- Device asset connector now also collects the scanned network assets from
+  `GET /v2/net-assets` and publishes them as OCSF Device Inventory Info events
+  alongside the agent-managed devices. They share the deduplication cache but keep
+  their own `last_detected` cursor
+
 ## [1.2.0] - 2026-08-18
 
 ### Added

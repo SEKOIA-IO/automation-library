@@ -1,7 +1,7 @@
 """Shared helpers to map Holm Security records to OCSF objects.
 
-Used by the device inventory connector and the vulnerability connector so timestamps
-and device sub-objects are built consistently from Holm records.
+Used by the device inventory connector and the vulnerability connector so device
+sub-objects are built consistently from Holm device agents and network assets.
 """
 
 from datetime import datetime
@@ -17,8 +17,9 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeId,
     OSTypeStr,
 )
+from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId, RiskLevelStr
 
-from holm_security.asset_connector.models import HolmNetwork
+from holm_security.asset_connector.models import HolmNetwork, HolmSeverityBreakdown
 
 # Holm os_family -> (OCSF OSTypeStr, OCSF OSTypeId)
 OS_FAMILY_MAP: dict[str, tuple[OSTypeStr, OSTypeId]] = {
@@ -29,6 +30,48 @@ OS_FAMILY_MAP: dict[str, tuple[OSTypeStr, OSTypeId]] = {
     "android": (OSTypeStr.ANDROID, OSTypeId.ANDROID),
     "ios": (OSTypeStr.IOS, OSTypeId.IOS),
 }
+
+# Keywords found in the free-form ``operating_system`` field of a network asset.
+# Ordered: the first keyword contained in the lowercased value wins.
+OS_NAME_KEYWORDS: list[tuple[str, tuple[OSTypeStr, OSTypeId]]] = [
+    ("windows", (OSTypeStr.WINDOWS, OSTypeId.WINDOWS)),
+    ("android", (OSTypeStr.ANDROID, OSTypeId.ANDROID)),
+    ("ipados", (OSTypeStr.IPADOS, OSTypeId.IPADOS)),
+    ("ios", (OSTypeStr.IOS, OSTypeId.IOS)),
+    ("macos", (OSTypeStr.MACOS, OSTypeId.MACOS)),
+    ("mac os", (OSTypeStr.MACOS, OSTypeId.MACOS)),
+    ("darwin", (OSTypeStr.MACOS, OSTypeId.MACOS)),
+    ("solaris", (OSTypeStr.SOLARIS, OSTypeId.SOLARIS)),
+    ("aix", (OSTypeStr.AIX, OSTypeId.AIX)),
+    ("hp-ux", (OSTypeStr.HPUX, OSTypeId.HPUX)),
+    ("ubuntu", (OSTypeStr.LINUX, OSTypeId.LINUX)),
+    ("debian", (OSTypeStr.LINUX, OSTypeId.LINUX)),
+    ("centos", (OSTypeStr.LINUX, OSTypeId.LINUX)),
+    ("red hat", (OSTypeStr.LINUX, OSTypeId.LINUX)),
+    ("redhat", (OSTypeStr.LINUX, OSTypeId.LINUX)),
+    ("rhel", (OSTypeStr.LINUX, OSTypeId.LINUX)),
+    ("fedora", (OSTypeStr.LINUX, OSTypeId.LINUX)),
+    ("suse", (OSTypeStr.LINUX, OSTypeId.LINUX)),
+    ("alpine", (OSTypeStr.LINUX, OSTypeId.LINUX)),
+    ("linux", (OSTypeStr.LINUX, OSTypeId.LINUX)),
+]
+
+# Holm network asset ``type`` -> (OCSF DeviceTypeStr, OCSF DeviceTypeId).
+# Holm exposes no server/desktop signal for scanned assets, so a single host
+# stays Unknown rather than being guessed, and an IP range maps to Other.
+NET_ASSET_TYPE_MAP: dict[str, tuple[DeviceTypeStr, DeviceTypeId]] = {
+    "host": (DeviceTypeStr.UNKNOWN, DeviceTypeId.UNKNOWN),
+    "network": (DeviceTypeStr.OTHER, DeviceTypeId.OTHER),
+}
+
+# Severity buckets of a Holm severity breakdown, from the most to the least severe.
+SEVERITY_BREAKDOWN_RISK: list[tuple[str, tuple[RiskLevelStr, RiskLevelId]]] = [
+    ("critical", (RiskLevelStr.CRITICAL, RiskLevelId.CRITICAL)),
+    ("high", (RiskLevelStr.HIGH, RiskLevelId.HIGH)),
+    ("medium", (RiskLevelStr.MEDIUM, RiskLevelId.MEDIUM)),
+    ("low", (RiskLevelStr.LOW, RiskLevelId.LOW)),
+    ("info", (RiskLevelStr.INFO, RiskLevelId.INFO)),
+]
 
 
 def parse_datetime(value: str | None) -> datetime | None:
@@ -67,6 +110,13 @@ def map_device_type(os_is_server: bool | None) -> tuple[DeviceTypeStr, DeviceTyp
     return DeviceTypeStr.UNKNOWN, DeviceTypeId.UNKNOWN
 
 
+def map_net_asset_type(asset_type: str | None) -> tuple[DeviceTypeStr, DeviceTypeId]:
+    """Map the Holm network asset ``type`` to an OCSF device type."""
+    if not asset_type:
+        return DeviceTypeStr.UNKNOWN, DeviceTypeId.UNKNOWN
+    return NET_ASSET_TYPE_MAP.get(asset_type.strip().lower(), (DeviceTypeStr.OTHER, DeviceTypeId.OTHER))
+
+
 def build_operating_system(os_name: str | None, os_family: str | None) -> OperatingSystem | None:
     """Map the Holm device agent OS fields to an OCSF ``OperatingSystem`` object."""
     if os_name is None and os_family is None:
@@ -78,6 +128,37 @@ def build_operating_system(os_name: str | None, os_family: str | None) -> Operat
         os_type, os_type_id = OS_FAMILY_MAP.get(os_family.strip().lower(), (OSTypeStr.OTHER, OSTypeId.OTHER))
 
     return OperatingSystem(name=os_name, type=os_type, type_id=os_type_id)
+
+
+def build_operating_system_from_name(operating_system: str | None) -> OperatingSystem | None:
+    """Map the free-form ``operating_system`` of a network asset to an OCSF object.
+
+    Holm reports scanned assets with a display string such as ``Ubuntu 16.04`` or
+    ``Debian GNU/Linux 12``, so the OS type is derived from known keywords.
+    """
+    if not operating_system:
+        return None
+
+    lowered = operating_system.strip().lower()
+    for keyword, (os_type, os_type_id) in OS_NAME_KEYWORDS:
+        if keyword in lowered:
+            return OperatingSystem(name=operating_system, type=os_type, type_id=os_type_id)
+
+    return OperatingSystem(name=operating_system, type=OSTypeStr.OTHER, type_id=OSTypeId.OTHER)
+
+
+def map_severity_breakdown(
+    severity: HolmSeverityBreakdown | None,
+) -> tuple[RiskLevelStr | None, RiskLevelId | None]:
+    """Derive an OCSF risk level from the most severe non-empty bucket of a breakdown."""
+    if severity is None:
+        return None, None
+
+    for bucket, risk_level in SEVERITY_BREAKDOWN_RISK:
+        if getattr(severity, bucket, 0):
+            return risk_level
+
+    return None, None
 
 
 def build_network_interfaces(network: HolmNetwork | None, hostname: str | None) -> list[NetworkInterface] | None:
