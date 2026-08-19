@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-18
+
+### Added
+
+- Vulnerability asset connector that collects the vulnerability findings.
+
+### Changed
+
+- Account validator now checks both inventories, `GET /v2/devices` and `GET /v2/net-assets`
+- Bump `sekoia-automation-sdk` to 1.24.0
+
+### Fixed
+
+- Pagination now uses the `limit` query parameter on every endpoint.
+- CVSS base scores of `0.0` are no longer dropped from the emitted vulnerabilities
+
 ## [1.1.0] - 2026-07-31
 
 ### Added

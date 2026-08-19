@@ -39,6 +39,10 @@ def make_device(**overrides) -> dict:
     return device
 
 
+def empty_page() -> dict:
+    return {"count": 0, "next": None, "previous": None, "results": []}
+
+
 @pytest.fixture
 def connector(symphony_storage):
     module = Module()
@@ -261,6 +265,31 @@ def test_update_checkpoint_persists_new_device_ids(connector):
     assert connector._new_device_ids == set()
 
 
+def test_get_mapped_fields_declares_mapping(connector):
+    fields = connector.get_mapped_fields()
+
+    assert fields["uid"] == "device.uid"
+    assert fields["hostname"] == "device.hostname"
+    assert fields["os_family"] == "device.os.type"
+    assert fields["last_sync"] == "device.last_seen_time"
+    assert fields["max_severity"] == "device.risk_level"
+
+
+def test_reset_checkpoint_clears_context(connector):
+    connector._latest_time = "2026-07-01T20:30:36Z"
+    connector._new_device_ids = {"uid-aaa"}
+    connector.update_checkpoint()
+    assert connector.most_recent_last_sync == "2026-07-01T20:30:36Z"
+    assert connector.seen_device_ids == {"uid-aaa"}
+
+    connector.reset_checkpoint()
+
+    assert connector.most_recent_last_sync is None
+    assert connector.seen_device_ids == set()
+    assert connector._latest_time is None
+    assert connector._new_device_ids == set()
+
+
 def test_update_checkpoint_merges_with_existing_cached_ids(connector):
     """Existing cached IDs are kept when new ones are added."""
     with connector.context as cache:
@@ -288,3 +317,42 @@ def test_get_assets_deduplication_across_cycles(connector, requests_mock):
 
     assert len(assets_cycle_1) == 1
     assert len(assets_cycle_2) == 0
+
+
+def test_devices_pagination_uses_limit(connector, requests_mock):
+    devices = requests_mock.get(DEVICES_URL, json=empty_page())
+
+    list(connector.get_assets())
+
+    # The Holm API paginates with `limit`/`offset` and silently ignores `page_size`.
+    assert devices.last_request.qs.get("limit") == ["100"]
+    assert devices.last_request.qs.get("page_size") is None
+
+
+def test_max_severity_accepts_the_integer_reported_by_the_api(connector):
+    device = connector.build_device(HolmDevice.model_validate(make_device(max_severity=4)))
+    assert device.risk_level == "Critical"
+
+    named = connector.build_device(HolmDevice.model_validate(make_device(max_severity="high")))
+    assert named.risk_level == "High"
+
+    absent = connector.build_device(HolmDevice.model_validate(make_device(max_severity=None)))
+    assert absent.risk_level is None
+
+
+def test_device_checkpoint_is_not_advanced_when_the_connector_stops(connector, requests_mock):
+    """A run cut short may have left older devices unvisited."""
+
+    def devices(request, context):
+        connector.stop()
+        return {"count": 2, "next": f"{DEVICES_URL}?offset=1&limit=1", "previous": None, "results": [make_device()]}
+
+    requests_mock.get(DEVICES_URL, json=devices)
+
+    assets = list(connector.get_assets())
+
+    assert len(assets) == 1
+    assert connector._latest_time is None
+
+    connector.update_checkpoint()
+    assert connector.most_recent_last_sync is None

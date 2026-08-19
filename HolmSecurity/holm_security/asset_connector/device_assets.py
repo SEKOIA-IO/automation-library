@@ -2,7 +2,6 @@ from collections.abc import Generator
 from datetime import datetime
 from functools import cached_property
 
-from dateutil.parser import isoparse
 from pydantic import ValidationError
 from requests.exceptions import RequestException
 from sekoia_automation.asset_connector import AssetConnector
@@ -13,15 +12,12 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceTypeId,
     DeviceTypeStr,
     NetworkInterface,
-    NetworkInterfaceTypeId,
-    NetworkInterfaceTypeStr,
     OperatingSystem,
-    OSTypeId,
-    OSTypeStr,
 )
 from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId, RiskLevelStr
 from sekoia_automation.storage import PersistentJSON
 
+from holm_security.asset_connector import mappers
 from holm_security.asset_connector.models import HolmDevice, HolmDevicePage
 from holm_security.client import ApiClient
 
@@ -49,28 +45,25 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
     TYPE_NAME: str = "Device Inventory Info: Collect"
     TYPE_UID: int = 500102
 
-    # Holm max_severity -> OCSF risk level mapping
+    # Holm max_severity -> OCSF risk level mapping. The devices endpoint reports the
+    # severity as an integer, older payloads use the bucket name.
     MAX_SEVERITY_MAP: dict[str, tuple[RiskLevelStr, RiskLevelId]] = {
         "info": (RiskLevelStr.INFO, RiskLevelId.INFO),
         "low": (RiskLevelStr.LOW, RiskLevelId.LOW),
         "medium": (RiskLevelStr.MEDIUM, RiskLevelId.MEDIUM),
         "high": (RiskLevelStr.HIGH, RiskLevelId.HIGH),
         "critical": (RiskLevelStr.CRITICAL, RiskLevelId.CRITICAL),
-    }
-
-    # Holm os_family -> OCSF OS type mapping
-    OS_FAMILY_MAP: dict[str, tuple[OSTypeStr, OSTypeId]] = {
-        "windows": (OSTypeStr.WINDOWS, OSTypeId.WINDOWS),
-        "linux": (OSTypeStr.LINUX, OSTypeId.LINUX),
-        "macos": (OSTypeStr.MACOS, OSTypeId.MACOS),
-        "mac": (OSTypeStr.MACOS, OSTypeId.MACOS),
-        "android": (OSTypeStr.ANDROID, OSTypeId.ANDROID),
-        "ios": (OSTypeStr.IOS, OSTypeId.IOS),
+        "0": (RiskLevelStr.INFO, RiskLevelId.INFO),
+        "1": (RiskLevelStr.LOW, RiskLevelId.LOW),
+        "2": (RiskLevelStr.MEDIUM, RiskLevelId.MEDIUM),
+        "3": (RiskLevelStr.HIGH, RiskLevelId.HIGH),
+        "4": (RiskLevelStr.CRITICAL, RiskLevelId.CRITICAL),
     }
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("device_context.json", self._data_path)
+        self._latest_time: str | None = None
         self._new_device_ids: set[str] = set()
 
     @property
@@ -101,75 +94,32 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
     @staticmethod
     def _to_epoch(value: str | None) -> float | None:
         """Convert an ISO 8601 timestamp to a Unix epoch float."""
-        if not value:
-            return None
-        return isoparse(value).timestamp()
+        return mappers.to_epoch(value)
 
     @staticmethod
     def build_device_type(os_is_server: bool | None) -> tuple[DeviceTypeStr, DeviceTypeId]:
         """Map ``os_is_server`` to an OCSF device type."""
-        if os_is_server:
-            return DeviceTypeStr.SERVER, DeviceTypeId.SERVER
-
-        if os_is_server is False:
-            return DeviceTypeStr.DESKTOP, DeviceTypeId.DESKTOP
-
-        return DeviceTypeStr.UNKNOWN, DeviceTypeId.UNKNOWN
+        return mappers.map_device_type(os_is_server)
 
     def build_operating_system(self, device: HolmDevice) -> OperatingSystem | None:
         """Map the Holm OS fields to an OCSF ``OperatingSystem`` object."""
-        if device.os_name is None and device.os_family is None:
-            return None
-
-        os_type: OSTypeStr = OSTypeStr.UNKNOWN
-        os_type_id: OSTypeId = OSTypeId.UNKNOWN
-        if device.os_family:
-            os_type, os_type_id = self.OS_FAMILY_MAP.get(
-                device.os_family.strip().lower(), (OSTypeStr.OTHER, OSTypeId.OTHER)
-            )
-
-        return OperatingSystem(name=device.os_name, type=os_type, type_id=os_type_id)
+        return mappers.build_operating_system(device.os_name, device.os_family)
 
     def build_network_interfaces(self, device: HolmDevice) -> list[NetworkInterface] | None:
         """Build the primary IPv4 and secondary IPv6 network interfaces."""
-        network = device.network
-        if network is None:
-            return None
+        return mappers.build_network_interfaces(device.network, device.hostname)
 
-        interfaces: list[NetworkInterface] = []
-
-        if network.ip_address:
-            interfaces.append(
-                NetworkInterface(
-                    ip=network.ip_address,
-                    mac=network.mac_address,
-                    hostname=device.hostname,
-                    type=NetworkInterfaceTypeStr.WIRED,
-                    type_id=NetworkInterfaceTypeId.WIRED,
-                )
-            )
-
-        if network.ip_address_v6:
-            interfaces.append(
-                NetworkInterface(
-                    ip=network.ip_address_v6,
-                    type=NetworkInterfaceTypeStr.WIRED,
-                    type_id=NetworkInterfaceTypeId.WIRED,
-                )
-            )
-
-        return interfaces or None
+    def build_risk_level(self, max_severity: int | str | None) -> tuple[RiskLevelStr | None, RiskLevelId | None]:
+        """Map the Holm ``max_severity`` of a device agent to an OCSF risk level."""
+        if max_severity is None or max_severity == "":
+            return None, None
+        return self.MAX_SEVERITY_MAP.get(str(max_severity).strip().lower(), (None, None))
 
     def build_device(self, device: HolmDevice) -> Device:
         """Map a Holm device record to an OCSF ``Device`` object."""
         device_type, device_type_id = self.build_device_type(device.os_is_server)
         network = device.network
-
-        risk_level, risk_level_id = (
-            self.MAX_SEVERITY_MAP.get((device.max_severity or "").lower(), (None, None))
-            if device.max_severity
-            else (None, None)
-        )
+        risk_level, risk_level_id = self.build_risk_level(device.max_severity)
 
         return Device(
             type=device_type,
@@ -211,8 +161,9 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
     def _fetch_device_pages(self, last_sync_from: str | None = None) -> Generator[HolmDevicePage, None, None]:
         """Fetch device pages, following the ``next`` URL until it is null."""
         url: str | None = f"{self.base_url}{self.DEVICES_ENDPOINT}"
+        # The Holm API paginates with `limit`/`offset`; `page_size` is silently ignored.
         params: dict[str, int | str] | None = {
-            "page_size": self.DEFAULT_PAGE_SIZE,
+            "limit": self.DEFAULT_PAGE_SIZE,
             **({"last_sync_from": last_sync_from} if last_sync_from else {}),
         }
 
@@ -239,7 +190,7 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
         """Yield OCSF device assets, skipping devices already seen via checkpoint."""
         checkpoint = self.most_recent_last_sync
-        checkpoint_dt: datetime | None = isoparse(checkpoint) if checkpoint else None
+        checkpoint_dt: datetime | None = mappers.parse_datetime(checkpoint)
 
         max_last_sync_dt: datetime | None = checkpoint_dt
         max_last_sync_raw: str | None = checkpoint
@@ -252,7 +203,7 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
             last_sync_from=checkpoint_dt.date().isoformat() if checkpoint_dt else None
         ):
             for device in page.results:
-                device_dt = isoparse(device.last_sync) if device.last_sync else None
+                device_dt = mappers.parse_datetime(device.last_sync)
 
                 # Deduplicate: skip devices already pushed in a previous run.
                 if device.uid in cached_ids:
@@ -279,14 +230,42 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
                 generated += 1
                 yield asset
 
-        # Persist the new checkpoint only after the full run has been consumed.
-        if max_last_sync_raw and max_last_sync_raw != checkpoint:
+        # Persist the new checkpoint only after a complete traversal: a run cut short by
+        # a shutdown may have left older devices unvisited.
+        if self.running and max_last_sync_raw and max_last_sync_raw != checkpoint:
             self._latest_time = max_last_sync_raw
 
         self.log(
             message=f"Asset generation complete - generated: {generated}, skipped: {skipped}",
             level="info",
         )
+
+    def get_mapped_fields(self) -> dict[str, str]:
+        """Return the Holm -> OCSF field mapping used for schema-change fingerprinting."""
+        return {
+            "uid": "device.uid",
+            "device_name": "device.name",
+            "hostname": "device.hostname",
+            "os_is_server": "device.type",
+            "os_name": "device.os.name",
+            "os_family": "device.os.type",
+            "network.ip_address": "device.ip",
+            "network.ip_address_v6": "device.network_interfaces.ip",
+            "network.mac_address": "device.network_interfaces.mac",
+            "created": "device.created_time",
+            "last_sync": "device.last_seen_time",
+            "max_severity": "device.risk_level",
+            "risk_score": "device.risk_score",
+        }
+
+    def reset_checkpoint(self) -> None:
+        """Clear the checkpoint and dedup cache so all devices are re-fetched from scratch."""
+        with self.context as cache:
+            cache.pop("most_recent_last_sync", None)
+            cache.pop("seen_device_ids", None)
+        self._latest_time = None
+        self._new_device_ids = set()
+        self.log(message="Checkpoint reset - all devices will be re-fetched on the next cycle", level="info")
 
     def update_checkpoint(self) -> None:
         if self._new_device_ids or self._latest_time:
