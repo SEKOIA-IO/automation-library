@@ -67,7 +67,8 @@ def test_iterate_yields_new_detections_and_updates_checkpoint() -> None:
     assert len(batches) == 1
     outgoing, most_recent = batches[0]
     assert len(outgoing) == 3
-    assert most_recent == datetime(2026, 7, 3, 10, 5, tzinfo=UTC)
+    # iterate yields a naive UTC watermark for the SDK lag computation.
+    assert most_recent == datetime(2026, 7, 3, 10, 5)
     assert connector.last_detection_date.offset == datetime(2026, 7, 3, 10, 5, tzinfo=UTC)
     # Only the detection at the new watermark is retained for boundary dedup.
     assert connector._context.data["boundary_detection_ids"] == ["evt-3"]
@@ -109,6 +110,7 @@ def test_iterate_forwards_new_detection_at_checkpoint_boundary() -> None:
     assert len(batches) == 1
     outgoing, most_recent = batches[0]
     assert len(outgoing) == 1
-    assert most_recent == since
+    # iterate yields a naive UTC watermark for the SDK lag computation.
+    assert most_recent == since.replace(tzinfo=None)
     assert connector.last_detection_date.offset == since
     assert connector._context.data["boundary_detection_ids"] == ["evt-1", "evt-2"]
