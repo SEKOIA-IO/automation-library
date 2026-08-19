@@ -3,7 +3,7 @@
 import asyncio
 import time
 import traceback
-from typing import Any, Optional
+from typing import Any
 
 import orjson
 from aiohttp import ClientSession
@@ -49,7 +49,7 @@ class AuditLogConnector(AsyncConnector):
     module: GithubModule
     configuration: AuditLogConnectorConfiguration
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         """
         Initialize connector and load the context
 
@@ -222,6 +222,6 @@ class AuditLogConnector(AsyncConnector):
                 self.log_exception(exc)
                 self.log(message=str(exc), level="critical")
 
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001
                 traceback.print_exc()
                 self.log_exception(error, message="Failed to forward events")

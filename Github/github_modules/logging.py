@@ -15,7 +15,7 @@ structlog.configure(
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
     wrapper_class=structlog.make_filtering_bound_logger(
-        int(os.environ.get("LOG_LEVEL", 20))
+        int(os.environ.get("LOG_LEVEL", "20"))
     ),
 )
 

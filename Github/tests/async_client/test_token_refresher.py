@@ -21,7 +21,7 @@ async def test_github_refresher_refresh_token(base_url, session_faker, pem_conte
 
     with aioresponses() as mocked_responses:
         mocked_responses.get(
-            "{0}/orgs/{1}/installation".format(base_url, organization),
+            f"{base_url}/orgs/{organization}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )
@@ -60,7 +60,7 @@ async def test_github_refresher_get_token(base_url, session_faker, pem_content):
 
     with aioresponses() as mocked_responses:
         mocked_responses.get(
-            "{0}/orgs/{1}/installation".format(base_url, organization),
+            f"{base_url}/orgs/{organization}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )

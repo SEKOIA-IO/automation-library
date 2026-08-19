@@ -1,7 +1,8 @@
 """Contains client to interact with Github API."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Union
+from typing import Any
 
 from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
@@ -12,7 +13,7 @@ from github_modules.async_client import AuthenticationError
 from github_modules.async_client.token_refresher import PemGithubTokenRefresher
 
 
-class AsyncGithubClient(object):
+class AsyncGithubClient:
     """Async Github client."""
 
     _session: ClientSession | None = None
@@ -102,7 +103,7 @@ class AsyncGithubClient(object):
         }
 
         if self.api_key:
-            headers["Authorization"] = "token {0}".format(self.api_key)
+            headers["Authorization"] = f"token {self.api_key}"
         else:
             token_refresher = await self._get_token_refresher()
             if refresh_token:
@@ -110,7 +111,7 @@ class AsyncGithubClient(object):
 
             token = await token_refresher.get_access_token()
 
-            headers["Authorization"] = "Bearer {0}".format(token)
+            headers["Authorization"] = f"Bearer {token}"
 
         return headers
 
@@ -140,7 +141,7 @@ class AsyncGithubClient(object):
             {}
             if url
             else {
-                "phrase": "created:>{0}".format(start_from),
+                "phrase": f"created:>{start_from}",
                 "order": "asc",
                 "per_page": 100,
             }
@@ -148,7 +149,7 @@ class AsyncGithubClient(object):
         request_url: str = url or self.audit_logs_url
 
         result: list[dict[str, Any]] = []
-        links: Union[MultiDictProxy[Union[str, URL]], dict[Any, Any]] = {}
+        links: MultiDictProxy[str | URL] | dict[Any, Any] = {}
         next_link: str | None = None
 
         async with self.session() as session:

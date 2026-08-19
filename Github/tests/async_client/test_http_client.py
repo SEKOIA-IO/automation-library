@@ -101,14 +101,14 @@ async def test_github_client_auth_headers(session_faker, pem_content):
     assert headers_1 == {
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "Authorization": "token {0}".format(api_key),
+        "Authorization": f"token {api_key}",
     }
 
     with aioresponses() as mocked_responses:
         access_tokens_url = session_faker.uri()
         access_token = session_faker.word()
         mocked_responses.get(
-            "https://api.github.com/orgs/{0}/installation".format(organization),
+            f"https://api.github.com/orgs/{organization}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )
@@ -121,7 +121,7 @@ async def test_github_client_auth_headers(session_faker, pem_content):
         assert headers2 == {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "Authorization": "Bearer {0}".format(access_token),
+            "Authorization": f"Bearer {access_token}",
         }
 
 
@@ -140,7 +140,7 @@ async def test_github_client_audit_log_url(session_faker):
 
     assert (
         github_client.audit_logs_url
-        == "https://api.github.com/orgs/{0}/audit-log".format(organization)
+        == f"https://api.github.com/orgs/{organization}/audit-log"
     )
 
 
@@ -159,7 +159,7 @@ async def test_github_custom_url(session_faker):
     )
     assert (
         github_client.audit_logs_url
-        == "https://api.sekoia.ghe.com/orgs/{0}/audit-log".format(organization)
+        == f"https://api.sekoia.ghe.com/orgs/{organization}/audit-log"
     )
 
     github_client = AsyncGithubClient(
@@ -167,7 +167,7 @@ async def test_github_custom_url(session_faker):
     )
     assert (
         github_client.audit_logs_url
-        == "https://api.sekoia.ghe.com/orgs/{0}/audit-log".format(organization)
+        == f"https://api.sekoia.ghe.com/orgs/{organization}/audit-log"
     )
 
 
@@ -191,9 +191,7 @@ async def test_github_client_get_audit_logs_with_api_key(
     with aioresponses() as mocked_responses:
         mocked_responses.get(
             github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
-                last_timestamp
-            ),
+            + f"?order=asc&per_page=100&phrase=created%253A%253E{last_timestamp}",
             status=200,
             payload=github_response,
         )
@@ -232,7 +230,7 @@ async def test_github_client_get_audit_logs_with_pem_file_content(
         access_tokens_url = session_faker.uri()
 
         mocked_responses.get(
-            "https://api.github.com/orgs/{0}/installation".format(organization),
+            f"https://api.github.com/orgs/{organization}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )
@@ -243,9 +241,7 @@ async def test_github_client_get_audit_logs_with_pem_file_content(
 
         mocked_responses.get(
             github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
-                last_timestamp
-            ),
+            + f"?order=asc&per_page=100&phrase=created%253A%253E{last_timestamp}",
             status=200,
             payload=github_response,
         )
@@ -287,7 +283,7 @@ async def test_github_client_get_audit_logs_with_pem_file_content_1(
         access_tokens_url = session_faker.uri()
 
         mocked_responses.get(
-            "https://api.github.com/orgs/{0}/installation".format(organization),
+            f"https://api.github.com/orgs/{organization}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )
@@ -298,12 +294,10 @@ async def test_github_client_get_audit_logs_with_pem_file_content_1(
 
         mocked_responses.get(
             github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
-                last_timestamp
-            ),
+            + f"?order=asc&per_page=100&phrase=created%253A%253E{last_timestamp}",
             status=200,
             payload=github_response,
-            headers={"Link": '<{0}>; rel="next"'.format(next_page_link)},
+            headers={"Link": f'<{next_page_link}>; rel="next"'},
         )
 
         mocked_responses.get(
@@ -350,7 +344,7 @@ async def test_github_client_get_audit_logs_with_pem_file_content_3(
         access_tokens_url = session_faker.uri()
 
         mocked_responses.get(
-            "https://api.github.com/orgs/{0}/installation".format(organization),
+            f"https://api.github.com/orgs/{organization}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )
@@ -364,12 +358,10 @@ async def test_github_client_get_audit_logs_with_pem_file_content_3(
 
         mocked_responses.get(
             github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
-                last_timestamp
-            ),
+            + f"?order=asc&per_page=100&phrase=created%253A%253E{last_timestamp}",
             status=200,
             payload=github_response,
-            headers={"Link": '<{0}>; rel="next"'.format(next_page_link_1)},
+            headers={"Link": f'<{next_page_link_1}>; rel="next"'},
         )
 
         mocked_responses.get(
@@ -381,7 +373,7 @@ async def test_github_client_get_audit_logs_with_pem_file_content_3(
             next_page_link_1,
             status=200,
             payload=github_response,
-            headers={"Link": '<{0}>; rel="next"'.format(next_page_link_2)},
+            headers={"Link": f'<{next_page_link_2}>; rel="next"'},
         )
 
         mocked_responses.get(
@@ -411,9 +403,7 @@ async def test_github_client_get_audit_logs_with_incorrect_creds(
     with aioresponses() as mocked_responses:
         audit_logs_url = (
             github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
-                last_timestamp
-            )
+            + f"?order=asc&per_page=100&phrase=created%253A%253E{last_timestamp}"
         )
 
         mocked_responses.get(
@@ -444,9 +434,7 @@ async def test_github_client_get_audit_logs_retry_after_401(
     with aioresponses() as mocked_responses:
         audit_logs_url = (
             github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
-                last_timestamp
-            )
+            + f"?order=asc&per_page=100&phrase=created%253A%253E{last_timestamp}"
         )
 
         mocked_responses.get(

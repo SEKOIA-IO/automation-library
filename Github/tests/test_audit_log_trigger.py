@@ -7,8 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 from aioresponses import aioresponses
 
-from github_modules import GithubModule, GithubModuleConfiguration
-from github_modules.async_client.http_client import AuthenticationError
+from github_modules import GithubModule
 from github_modules.audit_log_trigger import AuditLogConnector
 
 
@@ -142,9 +141,7 @@ async def test_next_batch_with_api_key(
     with aioresponses() as mocked_responses:
         audit_logs_url = (
             connector_with_api_key.github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
-                connector_with_api_key.last_ts
-            )
+            + f"?order=asc&per_page=100&phrase=created%253A%253E{connector_with_api_key.last_ts}"
         )
 
         mocked_responses.get(
@@ -177,9 +174,7 @@ async def test_next_batch_with_pem_file(
         access_tokens_url = session_faker.uri()
         access_token = session_faker.word()
         mocked_responses.get(
-            "https://api.github.com/orgs/{0}/installation".format(
-                connector_with_pem_file.module.configuration.org_name,
-            ),
+            f"https://api.github.com/orgs/{connector_with_pem_file.module.configuration.org_name}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )
@@ -190,9 +185,7 @@ async def test_next_batch_with_pem_file(
 
         audit_logs_url = (
             connector_with_pem_file.github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
-                connector_with_pem_file.last_ts
-            )
+            + f"?order=asc&per_page=100&phrase=created%253A%253E{connector_with_pem_file.last_ts}"
         )
 
         mocked_responses.get(
@@ -224,9 +217,7 @@ async def test_next_batch_with_api_key_no_base_url(
     with aioresponses() as mocked_responses:
         audit_logs_url = (
             connector_with_api_key_no_base_url.github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
-                connector_with_api_key_no_base_url.last_ts
-            )
+            + f"?order=asc&per_page=100&phrase=created%253A%253E{connector_with_api_key_no_base_url.last_ts}"
         )
 
         mocked_responses.get(

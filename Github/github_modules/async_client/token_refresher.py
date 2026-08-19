@@ -3,7 +3,6 @@
 import asyncio
 import time
 from asyncio import Lock, Task
-from typing import Optional
 
 import jwt
 from aiohttp import ClientSession
@@ -12,11 +11,11 @@ from jwt import JWT
 from github_modules.async_client import AuthenticationError
 
 
-class PemGithubTokenRefresher(object):
+class PemGithubTokenRefresher:
     """Github token refresher that uses pem file content and org name to get access token."""
 
-    _instances: dict[str, "PemGithubTokenRefresher"] = {}
-    _locks: dict[str, Lock] = {}
+    _instances: dict[str, "PemGithubTokenRefresher"] = {}  # noqa: RUF012
+    _locks: dict[str, Lock] = {}  # noqa: RUF012
     _session: ClientSession | None = None
 
     def __init__(
@@ -50,7 +49,7 @@ class PemGithubTokenRefresher(object):
         self.app_id = app_id
 
         self._token: str | None = None
-        self._token_refresh_task: Optional[Task[None]] = None
+        self._token_refresh_task: Task[None] | None = None
 
     @classmethod
     def session(cls) -> ClientSession:
@@ -145,7 +144,7 @@ class PemGithubTokenRefresher(object):
         headers = {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "Authorization": "Bearer {0}".format(self._get_jwt()),
+            "Authorization": f"Bearer {self._get_jwt()}",
         }
 
         session = self.session()
@@ -157,7 +156,7 @@ class PemGithubTokenRefresher(object):
             access_token_url = installation_info.get("access_tokens_url")
             if not access_token_url:
                 raise AuthenticationError(
-                    f"Authentication failed: {str(installation_info)}"
+                    f"Authentication failed: {installation_info!s}"
                 )
 
             async with session.post(
