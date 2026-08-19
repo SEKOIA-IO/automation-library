@@ -12,12 +12,10 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 from sekoia_automation.module import Module
 
 from holm_security.asset_connector.device_assets import HolmSecurityDeviceAssetConnector
-from holm_security.asset_connector.models import HolmDevice, HolmNetAsset
+from holm_security.asset_connector.models import HolmDevice
 
 BASE_URL = "https://se-api.holmsecurity.com"
 DEVICES_URL = f"{BASE_URL}/v2/devices"
-NET_ASSETS_URL = f"{BASE_URL}/v2/net-assets"
-NET_ASSET_UUID = "7ae54691-3698-4ef6-9e50-7d021ef444a0"
 
 
 def make_device(**overrides) -> dict:
@@ -41,34 +39,8 @@ def make_device(**overrides) -> dict:
     return device
 
 
-def make_net_asset(**overrides) -> dict:
-    asset = {
-        "uuid": NET_ASSET_UUID,
-        "name": "host-example01.example.com",
-        "hostname": "host-example01.example.com",
-        "ip": "192.0.2.20",
-        "ip_range": None,
-        "type": "host",
-        "operating_system": "Ubuntu 22.04",
-        "details": "",
-        "created": "2026-07-01T16:37:00.667844Z",
-        "last_detected": "2026-07-03T08:47:33Z",
-        "vulnerabilities_count": 231,
-        "risk_score": 100,
-        "severity": {"critical": 19, "high": 32, "medium": 26, "low": 5, "info": 70},
-    }
-    asset.update(overrides)
-    return asset
-
-
 def empty_page() -> dict:
     return {"count": 0, "next": None, "previous": None, "results": []}
-
-
-@pytest.fixture(autouse=True)
-def default_net_assets(requests_mock):
-    """Most device tests only care about the agent inventory."""
-    requests_mock.get(NET_ASSETS_URL, json=empty_page())
 
 
 @pytest.fixture
@@ -347,9 +319,6 @@ def test_get_assets_deduplication_across_cycles(connector, requests_mock):
     assert len(assets_cycle_2) == 0
 
 
-# --- scanned network assets -------------------------------------------------
-
-
 def test_devices_pagination_uses_limit(connector, requests_mock):
     devices = requests_mock.get(DEVICES_URL, json=empty_page())
 
@@ -358,129 +327,6 @@ def test_devices_pagination_uses_limit(connector, requests_mock):
     # The Holm API paginates with `limit`/`offset` and silently ignores `page_size`.
     assert devices.last_request.qs.get("limit") == ["100"]
     assert devices.last_request.qs.get("page_size") is None
-
-
-def test_map_net_asset_fields(connector):
-    asset = connector.map_net_asset_fields(HolmNetAsset.model_validate(make_net_asset()))
-
-    assert isinstance(asset, DeviceOCSFModel)
-    assert asset.class_uid == 5001
-    assert asset.time == isoparse("2026-07-03T08:47:33Z").timestamp()
-
-    device = asset.device
-    assert device.uid == NET_ASSET_UUID
-    assert device.hostname == "host-example01.example.com"
-    assert device.name == "host-example01.example.com"
-    assert device.ip == "192.0.2.20"
-    assert device.is_managed is False
-    assert device.vendor_name == "Holm Security"
-    assert device.risk_score == 100
-    assert device.risk_level == "Critical"
-    assert device.created_time == isoparse("2026-07-01T16:37:00.667844Z").timestamp()
-    assert device.last_seen_time == isoparse("2026-07-03T08:47:33Z").timestamp()
-    # A scan reports no MAC address, so no network interface is emitted.
-    assert device.network_interfaces is None
-
-
-def test_net_asset_device_type(connector):
-    host = connector.build_net_asset_device(HolmNetAsset.model_validate(make_net_asset()))
-    assert (host.type, host.type_id) == (DeviceTypeStr.UNKNOWN, DeviceTypeId.UNKNOWN)
-
-    network = connector.build_net_asset_device(HolmNetAsset.model_validate(make_net_asset(type="network")))
-    assert (network.type, network.type_id) == (DeviceTypeStr.OTHER, DeviceTypeId.OTHER)
-
-    unknown = connector.build_net_asset_device(HolmNetAsset.model_validate(make_net_asset(type=None)))
-    assert (unknown.type, unknown.type_id) == (DeviceTypeStr.UNKNOWN, DeviceTypeId.UNKNOWN)
-
-
-def test_net_asset_operating_system_from_free_form_name(connector):
-    linux = connector.build_net_asset_device(HolmNetAsset.model_validate(make_net_asset()))
-    assert linux.os.name == "Ubuntu 22.04"
-    assert linux.os.type == OSTypeStr.LINUX
-    assert linux.os.type_id == OSTypeId.LINUX
-
-    debian = connector.build_net_asset_device(
-        HolmNetAsset.model_validate(make_net_asset(operating_system="Debian GNU/Linux 12"))
-    )
-    assert debian.os.type == OSTypeStr.LINUX
-
-    exotic = connector.build_net_asset_device(HolmNetAsset.model_validate(make_net_asset(operating_system="Plan 9")))
-    assert exotic.os.type == OSTypeStr.OTHER
-
-    absent = connector.build_net_asset_device(HolmNetAsset.model_validate(make_net_asset(operating_system=None)))
-    assert absent.os is None
-
-
-def test_net_asset_risk_level_uses_the_most_severe_bucket(connector):
-    high = connector.build_net_asset_device(
-        HolmNetAsset.model_validate(
-            make_net_asset(severity={"critical": 0, "high": 3, "medium": 0, "low": 0, "info": 9})
-        )
-    )
-    assert high.risk_level == "High"
-
-    empty = connector.build_net_asset_device(
-        HolmNetAsset.model_validate(
-            make_net_asset(severity={"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0})
-        )
-    )
-    assert empty.risk_level is None
-
-
-def test_map_net_asset_without_timestamps_raises(connector):
-    with pytest.raises(ValueError):
-        connector.map_net_asset_fields(HolmNetAsset.model_validate(make_net_asset(last_detected=None, created=None)))
-
-
-def test_get_assets_yields_devices_then_net_assets(connector, requests_mock):
-    requests_mock.get(DEVICES_URL, json={"count": 1, "next": None, "previous": None, "results": [make_device()]})
-    requests_mock.get(
-        NET_ASSETS_URL,
-        json={"count": 1, "next": None, "previous": None, "results": [make_net_asset()]},
-    )
-
-    assets = list(connector.get_assets())
-
-    assert [asset.device.uid for asset in assets] == ["0123456789abcdef0123456789abcdef", NET_ASSET_UUID]
-    assert [asset.device.is_managed for asset in assets] == [True, False]
-
-
-def test_net_assets_use_their_own_checkpoint(connector, requests_mock):
-    with connector.context as cache:
-        cache["most_recent_net_asset_last_detected"] = "2026-07-03T08:47:33Z"
-
-    requests_mock.get(DEVICES_URL, json=empty_page())
-    requests_mock.get(
-        NET_ASSETS_URL,
-        json={
-            "count": 2,
-            "next": None,
-            "previous": None,
-            "results": [
-                make_net_asset(uuid="old-asset"),
-                make_net_asset(uuid="new-asset", last_detected="2026-07-10T00:00:00Z"),
-            ],
-        },
-    )
-
-    assets = list(connector.get_assets())
-
-    assert [asset.device.uid for asset in assets] == ["new-asset"]
-
-    connector.update_checkpoint()
-    assert connector.most_recent_net_asset_last_detected == "2026-07-10T00:00:00Z"
-    assert connector.most_recent_last_sync is None
-
-
-def test_reset_checkpoint_clears_the_net_asset_cursor(connector):
-    connector._latest_net_asset_time = "2026-07-10T00:00:00Z"
-    connector.update_checkpoint()
-    assert connector.most_recent_net_asset_last_detected == "2026-07-10T00:00:00Z"
-
-    connector.reset_checkpoint()
-
-    assert connector.most_recent_net_asset_last_detected is None
-    assert connector._latest_net_asset_time is None
 
 
 def test_max_severity_accepts_the_integer_reported_by_the_api(connector):
@@ -492,62 +338,6 @@ def test_max_severity_accepts_the_integer_reported_by_the_api(connector):
 
     absent = connector.build_device(HolmDevice.model_validate(make_device(max_severity=None)))
     assert absent.risk_level is None
-
-
-def test_get_mapped_fields_declares_the_net_asset_mapping(connector):
-    fields = connector.get_mapped_fields()
-
-    assert fields["net_assets.uuid"] == "device.uid"
-    assert fields["net_assets.hostname"] == "device.hostname"
-    assert fields["net_assets.last_detected"] == "device.last_seen_time"
-
-
-def test_net_assets_api_failure_is_propagated(connector, requests_mock):
-    requests_mock.get(DEVICES_URL, json=empty_page())
-    requests_mock.get(NET_ASSETS_URL, json={"detail": "Server error"}, status_code=500)
-
-    with pytest.raises(Exception):
-        list(connector.get_assets())
-
-
-def test_get_assets_skips_already_cached_net_asset(connector, requests_mock):
-    with connector.context as cache:
-        cache["seen_device_ids"] = [NET_ASSET_UUID]
-
-    requests_mock.get(DEVICES_URL, json=empty_page())
-    requests_mock.get(
-        NET_ASSETS_URL,
-        json={"count": 1, "next": None, "previous": None, "results": [make_net_asset()]},
-    )
-
-    assert list(connector.get_assets()) == []
-
-
-def test_get_assets_skips_net_asset_without_timestamp(connector, requests_mock):
-    requests_mock.get(DEVICES_URL, json=empty_page())
-    requests_mock.get(
-        NET_ASSETS_URL,
-        json={
-            "count": 2,
-            "next": None,
-            "previous": None,
-            "results": [
-                make_net_asset(uuid="bad", last_detected=None, created=None),
-                make_net_asset(uuid="good"),
-            ],
-        },
-    )
-
-    assets = list(connector.get_assets())
-
-    assert [asset.device.uid for asset in assets] == ["good"]
-
-
-def test_net_asset_without_severity_has_no_risk_level(connector):
-    device = connector.build_net_asset_device(HolmNetAsset.model_validate(make_net_asset(severity=None)))
-
-    assert device.risk_level is None
-    assert device.risk_level_id is None
 
 
 def test_device_checkpoint_is_not_advanced_when_the_connector_stops(connector, requests_mock):
@@ -566,26 +356,3 @@ def test_device_checkpoint_is_not_advanced_when_the_connector_stops(connector, r
 
     connector.update_checkpoint()
     assert connector.most_recent_last_sync is None
-
-
-def test_net_asset_checkpoint_is_not_advanced_when_the_connector_stops(connector, requests_mock):
-    requests_mock.get(DEVICES_URL, json=empty_page())
-
-    def net_assets(request, context):
-        connector.stop()
-        return {
-            "count": 2,
-            "next": f"{NET_ASSETS_URL}?offset=1&limit=1",
-            "previous": None,
-            "results": [make_net_asset()],
-        }
-
-    requests_mock.get(NET_ASSETS_URL, json=net_assets)
-
-    assets = list(connector.get_assets())
-
-    assert len(assets) == 1
-    assert connector._latest_net_asset_time is None
-
-    connector.update_checkpoint()
-    assert connector.most_recent_net_asset_last_detected is None

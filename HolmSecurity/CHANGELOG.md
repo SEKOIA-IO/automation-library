@@ -12,7 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Vulnerability asset connector that collects the vulnerability findings.
-- Device asset connector now also collects the scanned network assets.
 
 ### Changed
 
