@@ -29,7 +29,8 @@ dev = [
     "requests-mock",
     "black",
     "isort",
-    "mypy"
+    "mypy",
+    "ruff"
 ]
 
 [tool.uv]

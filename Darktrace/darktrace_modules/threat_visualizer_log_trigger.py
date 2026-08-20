@@ -62,12 +62,9 @@ class ThreatVisualizerLogConsumer(Thread):
         Returns:
             dict[str, str]:
         """
-        return {
-            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
-                self.connector.module.manifest.get("slug"),
-                self.connector.module.manifest.get("version"),
-            ),
-        }
+        slug = self.connector.module.manifest.get("slug")
+        version = self.connector.module.manifest.get("version")
+        return {"User-Agent": f"sekoiaio-connector/{slug}-{version}"}
 
     @property
     def last_ts(self) -> int:
@@ -115,7 +112,7 @@ class ThreatVisualizerLogConsumer(Thread):
                 self.last_ts = int(item[self.time_field])
 
     def next_batch(self):
-        logger.debug(f"New batch")
+        logger.debug("New batch")
         # reset the current lag
         current_lag: int = 0
 
@@ -190,7 +187,7 @@ class ThreatVisualizerLogConsumer(Thread):
         while self.running:
             try:
                 self.next_batch()
-            except Exception as error:  # pragma: no cover
+            except Exception as error:  # noqa: BLE001
                 traceback.print_exc()
                 self.connector.log_exception(error, message="Failed to forward events")
 
