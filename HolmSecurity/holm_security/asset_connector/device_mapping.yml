@@ -1,0 +1,432 @@
+mapping:
+  ocsf_class: "Device Inventory Info"
+  class_uid: 5001
+  ocsf_version: "1.5.0"
+
+  samples:
+    - name: "Holm Security Device Sample"
+      description: "Single device record from GET /v2/devices."
+      data: |
+        {
+          "uid": "0123456789abcdef0123456789abcdef",
+          "device_name": "DESKTOP-EXAMPLE01",
+          "hostname": "desktop-example01",
+          "state": "active",
+          "last_sync": "2026-07-01T20:30:36.712744Z",
+          "os_is_server": false,
+          "created": "2026-07-01T20:30:36.629532Z",
+          "user_account": "SYSTEM",
+          "emails": [],
+          "network": {
+            "ip_address": "192.0.2.10",
+            "ip_address_v6": "2001:db8::10",
+            "mac_address": "00:00:5E:00:53:00"
+          },
+          "internet_facing": false,
+          "os_family": "windows",
+          "os_name": "Microsoft Windows Server 2025 Datacenter",
+          "os_version": "10.0.26100",
+          "vuln_count": 0,
+          "max_severity": null,
+          "current_version": "1.3.2.0",
+          "os_build": "26100"
+        }
+
+    - name: "Holm Security Network Asset Sample"
+      description: "Single scanned network asset from GET /v2/net-assets."
+      data: |
+        {
+          "uuid": "00000000-0000-0000-0000-000000000000",
+          "name": "host-example01.example.com",
+          "hostname": "host-example01.example.com",
+          "ip": "192.0.2.20",
+          "ip_range": null,
+          "type": "host",
+          "operating_system": "Ubuntu 22.04",
+          "details": "",
+          "created": "2026-07-01T16:37:00.667844Z",
+          "last_detected": "2026-07-03T08:47:33Z",
+          "business_impact": "neutral",
+          "hosts_personal_data": false,
+          "auth_status": "not_configured",
+          "vulnerabilities_count": 231,
+          "risk_score": 100,
+          "severity": {
+            "critical": 19,
+            "high": 32,
+            "medium": 26,
+            "low": 5,
+            "info": 70
+          },
+          "tags": [
+            {"uuid": "00000000-0000-0000-0000-00000000000a", "name": "Web servers"}
+          ],
+          "open_ports": [
+            {"proto": "tcp", "port": 443}
+          ]
+        }
+
+  fields:
+    # OCSF EVENT CLASSIFICATION
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      logic: "Always 2 for 'Collect' activity"
+      description: "OCSF activity ID"
+
+    - source: "static: Collect"
+      target: "activity_name"
+      type: "string"
+      logic: "Always 'Collect' for asset inventory"
+      description: "OCSF activity name"
+
+    - source: "static: Discovery"
+      target: "category_name"
+      type: "string"
+      logic: "Always 'Discovery'"
+      description: "OCSF category name"
+
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      logic: "Always 5 for Discovery category"
+      description: "OCSF category UID"
+
+    - source: "static: Device Inventory Info"
+      target: "class_name"
+      type: "string"
+      logic: "Always 'Device Inventory Info'"
+      description: "OCSF class name"
+
+    - source: "static: 5001"
+      target: "class_uid"
+      type: "integer"
+      logic: "Always 5001 for Device Inventory Info"
+      description: "OCSF class UID"
+
+    - source: "static: 500102"
+      target: "type_uid"
+      type: "integer"
+      logic: "Always 500102 for Device Inventory Info: Collect"
+      description: "OCSF type UID"
+
+    - source: "static: Device Inventory Info: Collect"
+      target: "type_name"
+      type: "string"
+      logic: "Always 'Device Inventory Info: Collect'"
+      description: "OCSF type name"
+
+    # TIMESTAMP
+    - source: "last_sync"
+      target: "time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 last_sync to Unix epoch; fall back to created if last_sync is null"
+      description: "OCSF event timestamp"
+
+    # METADATA
+    - source: "static: Holm Security"
+      target: "metadata.product.name"
+      type: "string"
+      logic: "Always 'Holm Security'"
+      description: "Source product name"
+
+    - source: "static: v2"
+      target: "metadata.product.version"
+      type: "string"
+      logic: "Holm Security API version used"
+      description: "Product version"
+
+    - source: "static: 1.5.0"
+      target: "metadata.version"
+      type: "string"
+      logic: "Fixed OCSF schema version"
+      description: "OCSF schema version"
+
+    # DEVICE ATTRIBUTES
+    - source: "os_is_server"
+      target: "device.type_id"
+      type: "integer"
+      logic: "true -> 1 (Server), false -> 2 (Desktop), null -> 0 (Unknown)"
+      description: "Device type ID"
+
+    - source: "os_is_server"
+      target: "device.type"
+      type: "string"
+      logic: "true -> 'Server', false -> 'Desktop', null -> 'Unknown'"
+      description: "Device type"
+
+    - source: "uid"
+      target: "device.uid"
+      type: "string"
+      logic: "Direct mapping of Holm device unique ID"
+      description: "Device unique identifier"
+
+    - source: "device_name"
+      target: "device.name"
+      type: "string"
+      logic: "Direct mapping of device name"
+      description: "Device name"
+
+    - source: "hostname"
+      target: "device.hostname"
+      type: "string"
+      logic: "Direct mapping of hostname; empty string fallback if missing"
+      description: "Device hostname"
+
+    - source: "os_name"
+      target: "device.os.name"
+      type: "string"
+      logic: "Direct mapping of OS name"
+      description: "Operating system name"
+
+    - source: "os_family"
+      target: "device.os.type"
+      type: "string"
+      logic: "Normalize via OS_FAMILY_MAP to OCSF OSTypeStr; unknown families -> 'other'"
+      description: "Operating system type"
+
+    - source: "os_family"
+      target: "device.os.type_id"
+      type: "integer"
+      logic: "Normalize via OS_FAMILY_MAP to OCSF OSTypeId; unknown families -> 99"
+      description: "OCSF operating system type ID"
+
+    - source: "network.ip_address"
+      target: "device.ip"
+      type: "string"
+      logic: "Direct mapping of primary IPv4 address"
+      description: "Primary IP address"
+
+    - source: "network.ip_address"
+      target: "device.network_interfaces[0].ip"
+      type: "string"
+      logic: "Primary IPv4 interface; created only when ip_address is present"
+      description: "Primary network interface IPv4 address"
+
+    - source: "network.mac_address"
+      target: "device.network_interfaces[0].mac"
+      type: "string"
+      logic: "MAC address of the primary IPv4 interface"
+      description: "Primary network interface MAC address"
+
+    - source: "hostname"
+      target: "device.network_interfaces[0].hostname"
+      type: "string"
+      logic: "Hostname attached to the primary IPv4 interface"
+      description: "Network interface hostname"
+
+    - source: "network.ip_address_v6"
+      target: "device.network_interfaces[1].ip"
+      type: "string"
+      logic: "Secondary IPv6 interface; created only when ip_address_v6 is present"
+      description: "Secondary network interface IPv6 address"
+
+    - source: "created"
+      target: "device.created_time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 created to Unix epoch"
+      description: "Device creation timestamp"
+
+    - source: "last_sync"
+      target: "device.last_seen_time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 last_sync to Unix epoch"
+      description: "Device last seen timestamp"
+
+    - source: "max_severity"
+      target: "device.risk_level"
+      type: "string"
+      logic: "Normalize via MAX_SEVERITY_MAP to OCSF RiskLevelStr; unknown values -> null"
+      description: "Highest vulnerability severity found on the device"
+
+    - source: "max_severity"
+      target: "device.risk_level_id"
+      type: "integer"
+      logic: "Normalize via MAX_SEVERITY_MAP to OCSF RiskLevelId; unknown values -> null"
+      description: "OCSF risk level ID"
+
+    - source: "risk_score"
+      target: "device.risk_score"
+      type: "integer"
+      logic: "Direct mapping; omitted when 0"
+      description: "Device risk score"
+
+    # NETWORK ASSET ATTRIBUTES (GET /v2/net-assets)
+    # Scanned assets have no agent: they carry no MAC address and no OS family.
+    - source: "net_assets.uuid"
+      target: "device.uid"
+      type: "string"
+      logic: "Direct mapping of the network asset UUID"
+      description: "Network asset unique identifier"
+
+    - source: "net_assets.name"
+      target: "device.name"
+      type: "string"
+      logic: "Direct mapping of the asset name"
+      description: "Network asset name"
+
+    - source: "net_assets.hostname"
+      target: "device.hostname"
+      type: "string"
+      logic: "Direct mapping of hostname; empty string fallback if missing"
+      description: "Network asset hostname"
+
+    - source: "net_assets.type"
+      target: "device.type / device.type_id"
+      type: "string"
+      logic: "'host' -> 'Unknown' (0), 'network' -> 'Other' (99); Holm exposes no server/desktop signal for scanned assets"
+      description: "Device type"
+
+    - source: "net_assets.ip"
+      target: "device.ip"
+      type: "string"
+      logic: "Direct mapping of the asset IP address"
+      description: "Network asset IP address"
+
+    - source: "net_assets.operating_system"
+      target: "device.os.name"
+      type: "string"
+      logic: "Direct mapping of the free-form operating system label"
+      description: "Operating system name"
+
+    - source: "net_assets.operating_system"
+      target: "device.os.type / device.os.type_id"
+      type: "string"
+      logic: "Derived from known keywords via OS_NAME_KEYWORDS (e.g. 'Ubuntu 22.04' -> linux/200); unrecognized -> 'other' (99)"
+      description: "Operating system type"
+
+    - source: "net_assets.details"
+      target: "device.desc"
+      type: "string"
+      logic: "Direct mapping; omitted when empty"
+      description: "Network asset description"
+
+    - source: "net_assets.created"
+      target: "device.created_time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 created to Unix epoch"
+      description: "Network asset creation timestamp"
+
+    - source: "net_assets.last_detected"
+      target: "device.last_seen_time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 last_detected to Unix epoch"
+      description: "Network asset last detection timestamp"
+
+    - source: "net_assets.last_detected"
+      target: "time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 last_detected to Unix epoch; fall back to created if last_detected is null"
+      description: "OCSF event timestamp"
+
+    - source: "net_assets.severity"
+      target: "device.risk_level / device.risk_level_id"
+      type: "string"
+      logic: "Most severe non-empty bucket of the severity breakdown (critical > high > medium > low > info); all empty -> null"
+      description: "Highest vulnerability severity found on the asset"
+
+    - source: "net_assets.risk_score"
+      target: "device.risk_score"
+      type: "integer"
+      logic: "Direct mapping; omitted when 0"
+      description: "Network asset risk score"
+
+    - source: "static: false"
+      target: "device.is_managed"
+      type: "boolean"
+      logic: "Always false: network assets are discovered by a scan, not by an agent"
+      description: "Whether the asset is agent-managed"
+
+  ocsf_samples:
+    - name: "Device Inventory Info: Collect"
+      description: "Transformed Holm Security device record to OCSF Device Inventory Info event"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "Device Inventory Info",
+          "class_uid": 5001,
+          "type_name": "Device Inventory Info: Collect",
+          "type_uid": 500102,
+          "time": 1751401836.712744,
+          "metadata": {
+            "product": {
+              "name": "Holm Security",
+              "version": "v2"
+            },
+            "version": "1.5.0"
+          },
+          "device": {
+            "uid": "0123456789abcdef0123456789abcdef",
+            "name": "DESKTOP-EXAMPLE01",
+            "hostname": "desktop-example01",
+            "type": "Desktop",
+            "type_id": 2,
+            "ip": "192.0.2.10",
+            "created_time": 1751401836.629532,
+            "last_seen_time": 1751401836.712744,
+            "os": {
+              "name": "Microsoft Windows Server 2025 Datacenter",
+              "type": "windows",
+              "type_id": 100
+            },
+            "network_interfaces": [
+              {
+                "hostname": "desktop-example01",
+                "ip": "192.0.2.10",
+                "mac": "00:00:5E:00:53:00",
+                "type": "Wired",
+                "type_id": 1
+              },
+              {
+                "ip": "2001:db8::10",
+                "type": "Wired",
+                "type_id": 1
+              }
+            ]
+          }
+        }
+
+    - name: "Device Inventory Info: Collect (network asset)"
+      description: "Transformed Holm Security network asset to OCSF Device Inventory Info event"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "Device Inventory Info",
+          "class_uid": 5001,
+          "type_name": "Device Inventory Info: Collect",
+          "type_uid": 500102,
+          "time": 1751532453.0,
+          "metadata": {
+            "product": {
+              "name": "Holm Security",
+              "version": "v2"
+            },
+            "version": "1.5.0"
+          },
+          "device": {
+            "uid": "00000000-0000-0000-0000-000000000000",
+            "name": "host-example01.example.com",
+            "hostname": "host-example01.example.com",
+            "type": "Unknown",
+            "type_id": 0,
+            "ip": "192.0.2.20",
+            "created_time": 1751387820.667844,
+            "last_seen_time": 1751532453.0,
+            "is_managed": false,
+            "vendor_name": "Holm Security",
+            "risk_score": 100,
+            "risk_level": "Critical",
+            "risk_level_id": 4,
+            "os": {
+              "name": "Ubuntu 22.04",
+              "type": "linux",
+              "type_id": 200
+            }
+          }
+        }

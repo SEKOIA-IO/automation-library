@@ -1,8 +1,9 @@
 from posixpath import join as urljoin
+from uuid import UUID
 
 from sekoia_automation.action import Action
 import requests
-from tenacity import retry, wait_exponential, stop_after_attempt
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
 
 STATUS_UUIDS = {
     "PENDING": "2efc4930-1442-4abb-acf2-58ba219a4fd0",
@@ -19,35 +20,118 @@ ACTION_UUIDS = [
 ]
 
 
+class NonRetryableAlertStatusError(Exception):
+    """Raised when status resolution fails due to a persistent client-side issue."""
+
+
+def _is_retryable_request_exception(exc: BaseException) -> bool:
+    if isinstance(exc, NonRetryableAlertStatusError):
+        return False
+    if isinstance(exc, requests.HTTPError) and exc.response is not None:
+        return exc.response.status_code >= 500
+    return True
+
+
 class UpdateAlertStatus(Action):
 
-    def url(self, alert_uuid: str) -> str:
+    def workflow_url(self, alert_uuid: str) -> str:
         return urljoin(self.module.configuration["base_url"], f"api/v1/sic/alerts/{alert_uuid}/workflow")
+
+    def alert_url(self, alert_uuid: str) -> str:
+        return urljoin(self.module.configuration["base_url"], f"api/v1/sic/alerts/{alert_uuid}")
+
+    def custom_statuses_url(self) -> str:
+        return urljoin(self.module.configuration["base_url"], "api/v1/sic/custom_statuses")
 
     @property
     def headers(self) -> dict:
         api_key = self.module.configuration["api_key"]
         return {"Authorization": f"Bearer {api_key}"}
 
+    @staticmethod
+    def _is_uuid(value: str) -> bool:
+        try:
+            UUID(value)
+            return True
+        except ValueError:
+            return False
+
+    @staticmethod
+    def _extract_custom_statuses(payload: dict) -> list[dict]:
+        """Extract custom statuses from the API payload."""
+        if isinstance(payload.get("items"), list):
+            return [item for item in payload["items"] if isinstance(item, dict)]
+        if payload:
+            raise ValueError("Unexpected custom statuses payload format")
+        return []
+
+    def _resolve_custom_status_uuid(self, status_name: str) -> str | None:
+        response = requests.get(self.custom_statuses_url(), headers=self.headers)
+        if 400 <= response.status_code < 500:
+            message = (
+                "Could not list custom statuses due to a client error "
+                f"(check configuration and permissions), status code: {response.status_code}"
+            )
+            self.error(message)
+            raise NonRetryableAlertStatusError(message)
+        if response.status_code >= 500:
+            self.error(f"Could not list custom statuses, status code: {response.status_code}")
+            response.raise_for_status()
+
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            message = "Could not list custom statuses, response body is not valid JSON"
+            self.error(message)
+            raise NonRetryableAlertStatusError(message) from exc
+
+        try:
+            custom_statuses = self._extract_custom_statuses(payload)
+        except ValueError as exc:
+            message = "Could not list custom statuses, unexpected payload format"
+            self.error(message)
+            raise NonRetryableAlertStatusError(message) from exc
+
+        status_name_lower = status_name.casefold()
+        for custom_status in custom_statuses:
+            custom_status_uuid = custom_status.get("uuid")
+            label = custom_status.get("label")
+            if isinstance(label, str) and label.casefold() == status_name_lower:
+                return custom_status_uuid
+            name = custom_status.get("name")
+            if isinstance(name, str) and name.casefold() == status_name_lower:
+                return custom_status_uuid
+        return None
+
+    def _patch_workflow_status(self, alert_uuid: str, action_uuid: str, comment: str | None = None):
+        return requests.patch(
+            self.workflow_url(alert_uuid), headers=self.headers, json={"action_uuid": action_uuid, "comment": comment}
+        )
+
+    def _patch_custom_status(self, alert_uuid: str, custom_status_uuid: str):
+        return requests.patch(
+            self.alert_url(alert_uuid), headers=self.headers, json={"custom_status_uuid": custom_status_uuid}
+        )
+
     @retry(
         reraise=True,
+        retry=retry_if_exception(_is_retryable_request_exception),
         wait=wait_exponential(max=300),
         stop=stop_after_attempt(10),
     )
     def perform_request(self, alert_uuid: str, status: str, comment: str | None = None):
         if status in STATUS_UUIDS.values() or status in ACTION_UUIDS:
-            result = requests.patch(
-                self.url(alert_uuid), headers=self.headers, json={"action_uuid": status, "comment": comment}
-            )
+            result = self._patch_workflow_status(alert_uuid, status, comment)
         elif status.upper() in STATUS_UUIDS:
-            result = requests.patch(
-                self.url(alert_uuid),
-                headers=self.headers,
-                json={"action_uuid": STATUS_UUIDS[status.upper()], "comment": comment},
-            )
+            result = self._patch_workflow_status(alert_uuid, STATUS_UUIDS[status.upper()], comment)
+        elif self._is_uuid(status):
+            result = self._patch_custom_status(alert_uuid, status)
         else:
-            self.error(f"Invalid status: {status}")
-            return
+            custom_status_uuid = self._resolve_custom_status_uuid(status)
+            if custom_status_uuid is None:
+                self.error(f"Invalid status: {status}")
+                return
+            result = self._patch_custom_status(alert_uuid, custom_status_uuid)
         if result.status_code >= 500:
             self.error(f"Could not change alert {alert_uuid} status, status code: {result.status_code}")
             result.raise_for_status()
