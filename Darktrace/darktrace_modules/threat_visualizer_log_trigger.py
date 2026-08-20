@@ -31,7 +31,7 @@ class ThreatVisualizerLogConnectorConfiguration(DefaultConnectorConfiguration):
 
 
 class ThreatVisualizerLogConsumer(Thread):
-    def __init__(self, connector: ThreatVisualizerLogConnector, endpoint: Endpoints):
+    def __init__(self, connector: "ThreatVisualizerLogConnector", endpoint: Endpoints):
         super().__init__()
 
         self.connector = connector
