@@ -128,3 +128,49 @@ class SophosPages(BaseModel):
 class SophosEndpointsResponse(BaseModel):
     items: list[SophosEndpoint] = Field(default_factory=list)
     pages: SophosPages | None = None
+
+
+# ---------------------------------------------------------------------------
+# Sophos Directory Users – GET /common/v1/directory/users
+# ---------------------------------------------------------------------------
+
+
+class SophosUserGroup(BaseModel):
+    id: str | None = None
+    name: str | None = None
+    displayName: str | None = None
+
+
+class SophosUserGroups(BaseModel):
+    total: int | None = None
+    itemsCount: int | None = None
+    items: list[SophosUserGroup] = Field(default_factory=list)
+
+
+class SophosUserSource(BaseModel):
+    type: str | None = None
+
+
+class SophosUser(BaseModel):
+    id: str | None = None
+    name: str | None = None
+    firstName: str | None = None
+    lastName: str | None = None
+    email: str | None = None
+    exchangeLogin: str | None = None
+    groups: SophosUserGroups | None = None
+    tenant: SophosTenant | None = None
+    source: SophosUserSource | None = None
+    createdAt: str | None = None
+    updatedAt: str | None = None
+
+
+class SophosUserPages(BaseModel):
+    current: int | None = None
+    size: int | None = None
+    maxSize: int | None = None
+
+
+class SophosUsersResponse(BaseModel):
+    items: list[SophosUser] = Field(default_factory=list)
+    pages: SophosUserPages | None = None

@@ -3,13 +3,14 @@
 from datetime import datetime, timedelta, timezone
 from shutil import rmtree
 from tempfile import mkdtemp
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from aioresponses import aioresponses
 from sekoia_automation import constants
 
 from client.schemas.log_file import EventLogFile, SalesforceEventLogFilesResponse
+from client.token_refresher import RefreshTokenException
 from salesforce import SalesforceModule
 from salesforce.connector import SalesforceConnector, SalesforceConnectorConfig
 from salesforce.models import SalesforceModuleConfig
@@ -624,3 +625,146 @@ async def test_salesforce_connector_skips_processed_log_files(
 
         # Should return empty list since log file was skipped
         assert result == []
+
+
+def _make_window(offset_minutes: int = 0):
+    """Helper to build a (start, end) time window."""
+    start = datetime.now(timezone.utc) - timedelta(minutes=20 - offset_minutes)
+    end = start + timedelta(minutes=10)
+    return start, end
+
+
+@pytest.mark.asyncio
+async def test_salesforce_connector_async_run_processes_windows(connector, pushed_events_ids):
+    """
+    Test that async_run iterates over the stepper windows asynchronously and saves progress.
+
+    Args:
+        connector: SalesforceConnector
+        pushed_events_ids: list[str]
+    """
+    window_1 = _make_window(0)
+    window_2 = _make_window(10)
+
+    # Replace the stepper with a controlled mock yielding two windows
+    mock_stepper = MagicMock()
+    mock_stepper.sleep_duration = 0
+    mock_stepper.ranges.return_value = iter([window_1, window_2])
+    connector._stepper = mock_stepper
+
+    processed_windows = []
+
+    async def fake_get_events(start, end):
+        processed_windows.append((start, end))
+        # Stop the connector once both windows are processed
+        if len(processed_windows) >= 2:
+            connector._stop_event.set()
+
+        return pushed_events_ids
+
+    connector.get_salesforce_events = AsyncMock(side_effect=fake_get_events)
+    connector.update_stepper = MagicMock()
+    connector._save_log_file_cache = MagicMock()
+
+    await connector.async_run()
+
+    # Both windows have been processed in order
+    assert processed_windows == [window_1, window_2]
+    assert connector.get_salesforce_events.await_count == 2
+
+    # Progress is saved after each window
+    assert connector.update_stepper.call_count == 2
+    connector.update_stepper.assert_any_call(window_1[1])
+    connector.update_stepper.assert_any_call(window_2[1])
+    assert connector._save_log_file_cache.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_salesforce_connector_async_run_waits_when_caught_up(connector, pushed_events_ids):
+    """
+    Test that async_run awaits asyncio.sleep (non-blocking) when the stepper indicates a wait.
+
+    Args:
+        connector: SalesforceConnector
+        pushed_events_ids: list[str]
+    """
+    window = _make_window(0)
+
+    mock_stepper = MagicMock()
+    mock_stepper.sleep_duration = 5
+    mock_stepper.ranges.return_value = iter([window])
+    connector._stepper = mock_stepper
+
+    async def fake_get_events(start, end):
+        connector._stop_event.set()
+
+        return pushed_events_ids
+
+    connector.get_salesforce_events = AsyncMock(side_effect=fake_get_events)
+    connector.update_stepper = MagicMock()
+    connector._save_log_file_cache = MagicMock()
+
+    with patch("salesforce.connector.asyncio.sleep", new=AsyncMock()) as mock_sleep:
+        await connector.async_run()
+
+    # The wait is delegated to asyncio.sleep (non-blocking) with the stepper duration
+    mock_sleep.assert_awaited_once_with(5)
+
+
+@pytest.mark.asyncio
+async def test_salesforce_connector_async_run_handles_refresh_token_error(connector):
+    """
+    Test that async_run handles RefreshTokenException with a critical log.
+
+    Args:
+        connector: SalesforceConnector
+    """
+    window = _make_window(0)
+
+    mock_stepper = MagicMock()
+    mock_stepper.sleep_duration = 0
+    mock_stepper.ranges.return_value = iter([window])
+    connector._stepper = mock_stepper
+
+    async def fake_get_events(start, end):
+        connector._stop_event.set()
+
+        raise RefreshTokenException("invalid credentials")
+
+    connector.get_salesforce_events = AsyncMock(side_effect=fake_get_events)
+
+    await connector.async_run()
+
+    connector.log.assert_any_call(
+        message="Using refresh token failed. Please check the credentials",
+        level="critical",
+    )
+
+
+@pytest.mark.asyncio
+async def test_salesforce_connector_async_run_handles_generic_error(connector):
+    """
+    Test that async_run handles unexpected exceptions via log_exception.
+
+    Args:
+        connector: SalesforceConnector
+    """
+    window = _make_window(0)
+
+    mock_stepper = MagicMock()
+    mock_stepper.sleep_duration = 0
+    mock_stepper.ranges.return_value = iter([window])
+    connector._stepper = mock_stepper
+
+    async def fake_get_events(start, end):
+        connector._stop_event.set()
+
+        raise ValueError("boom")
+
+    connector.get_salesforce_events = AsyncMock(side_effect=fake_get_events)
+
+    await connector.async_run()
+
+    connector.log_exception.assert_called_once()
+    _, kwargs = connector.log_exception.call_args
+    assert kwargs.get("message") == "Failed to forward events"

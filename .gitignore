@@ -78,8 +78,13 @@ dmypy.json
 .idea
 .vscode/
 */.devcontainer/*
+.devcontainer/*
 */test_end_to_end*
 
 # Specific
 .reviews/
-*/.github/*
+*/.github/skills/*
+*/.github/agents/*
+*/.github/copilot*
+.github/skills/*
+.github/agents/*

@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # natives
 from datetime import datetime, timedelta
 from typing import Any

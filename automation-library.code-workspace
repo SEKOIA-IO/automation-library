@@ -1,0 +1,35 @@
+{
+	"folders": [
+		{
+			"name": "· automation-library (root)",
+			"path": "."
+		},
+		{
+			"name": "HarfangLab",
+			"path": "HarfangLab"
+		},
+		{
+			"name": "1Password",
+			"path": "1Password"
+		},
+		{
+			"name": "Flare",
+			"path": "Flare"
+		},
+		{
+			"name": "Zimperium",
+			"path": "Zimperium"
+		},
+		{
+			"name": "Upwind",
+			"path": "Upwind"
+		}
+	],
+	"settings": {
+		"mise.enable": true,
+		"mise.configureExtensionsAutomatically": true,
+		"mise.automaticallyTrustMiseConfigFiles": true,
+		"mise.updateEnvAutomatically": true,
+		"mise.updateOpenTerminalsEnvAutomatically": true
+	}
+}

@@ -2,11 +2,13 @@ import os
 from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
+from unittest.mock import Mock
 
 import pytest
 import requests_mock
+from pydantic import ValidationError
 
-from http_module.download_file_action import DownloadFileAction
+from http_module.action_download_file import DownloadFileAction
 
 URL = "https://fake.url/my_file.json"
 FILE = os.urandom(128)
@@ -84,3 +86,29 @@ def test_download_file_no_verify(symphony_storage, file_mock):
     assert "file_path" in result
     assert "file_relative_path" in result
     assert file_mock._adapter.last_request.verify is False
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["C:\\Windows\\system32\\virus.exe", "google.com"],
+)
+def test_download_file_url_validation(symphony_storage, url):
+    action = DownloadFileAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with pytest.raises(ValidationError):
+        action.run(dict(url=url))
+
+
+@pytest.mark.parametrize(
+    "content_disposition, expected_filename",
+    [
+        ('attachment; filename="report.json"', "report.json"),
+        ("attachment; filename=report.csv", "report.csv"),
+    ],
+)
+def test_get_file_name_from_content_disposition(content_disposition, expected_filename):
+    response = Mock()
+    response.headers = {"Content-Disposition": content_disposition}
+
+    assert DownloadFileAction._get_file_name(response) == expected_filename

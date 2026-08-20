@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-07 - 1.31.7
+
+### Added
+
+- Add `feature-flag` to the software asset connector
+
+## 2026-07-03 - 1.31.6
+
+### Fixed
+
+- Fix `400 Bad Request` when triggering jobs (get process list, get pipe list, download file) by sending the `targets` payload with the `agents`/`groups` keys expected by the HarfangLab `job/batch` API instead of `agent_ids`/`group_ids`
+- Fix dockerfile to use the correct `uv` version
+
+## 2026-06-11 - 1.31.0
+
+### Changed
+
+- Migrated module from Poetry to uv
+
+## 2026-06-10 - 1.30.2
+
+### Fixed
+
+- Fix asset connector validation error by accepting UUID values for `ioc_ruleset`, `sigma_ruleset`, and `yara_ruleset` policy fields (HarfangLab API returns UUIDs, not integers)
+
 ## 2026-04-30 - 1.30.1
 
 ### Added

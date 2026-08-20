@@ -1,15 +1,15 @@
 import json
+import os
 import queue
 import threading
 import time
-import os
 from collections.abc import Generator
 from functools import cached_property
 
 import orjson
 from requests.auth import AuthBase
 from requests.exceptions import HTTPError, StreamConsumedError
-from sekoia_automation.connector import Connector
+from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 from sekoia_automation.timer import RepeatedTimer
 
@@ -520,12 +520,17 @@ class EventForwarder(threading.Thread):
                 self.log_exception(error, message="Failed to forward events")
 
 
+class EventStreamTriggerConfiguration(DefaultConnectorConfiguration):
+    pass
+
+
 class EventStreamTrigger(Connector):
     """
     This trigger request new events from CrowdStrike Falcon event stream
     """
 
     module: CrowdStrikeFalconModule
+    configuration: EventStreamTriggerConfiguration
 
     seconds_without_events = 3600 * 24  # Time to wait without events before restarting the pod
 

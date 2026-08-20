@@ -1,0 +1,35 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "base_url": {
+        "description": "Base URL of the Holm Security API",
+        "type": "string",
+        "format": "uri",
+        "default": "https://se-api.holmsecurity.com"
+      },
+      "api_token": {
+        "description": "API token used to authenticate against the Holm Security API",
+        "type": "string"
+      }
+    },
+    "required": [
+      "base_url",
+      "api_token"
+    ],
+    "title": "Arguments",
+    "type": "object",
+    "secrets": [
+      "api_token"
+    ]
+  },
+  "description": "Holm Security is a cloud-hosted vulnerability and attack surface management platform for system and network security.",
+  "name": "Holm Security",
+  "uuid": "23886dfe-89a9-4522-b1fb-6e2837e15390",
+  "slug": "holm-security",
+  "version": "1.3.0",
+  "categories": [
+    "Network"
+  ],
+  "supports_validation": true
+}
