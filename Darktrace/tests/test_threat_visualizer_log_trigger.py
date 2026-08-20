@@ -46,9 +46,10 @@ def aianalyst_response():
 
 
 def test_modelbreaches_consumer(trigger, modelbreaches_response):
-    with patch(
-        "darktrace_modules.threat_visualizer_log_trigger.time"
-    ) as mock_time, requests_mock.Mocker() as mock_request:
+    with (
+        patch("darktrace_modules.threat_visualizer_log_trigger.time") as mock_time,
+        requests_mock.Mocker() as mock_request,
+    ):
         last_ts = 1687774141.000
         batch_start = 1687774141.000
         batch_end = 1688465633.434
@@ -61,17 +62,23 @@ def test_modelbreaches_consumer(trigger, modelbreaches_response):
         mock_time.time.side_effect = [batch_start, last_ts, last_ts, batch_end]
 
         connector = trigger
-        ThreatVisualizerLogConsumer(connector=connector, endpoint=Endpoints.MODEL_BREACHES).next_batch()
+        ThreatVisualizerLogConsumer(
+            connector=connector, endpoint=Endpoints.MODEL_BREACHES
+        ).next_batch()
 
-        calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+        calls = [
+            call.kwargs["events"]
+            for call in trigger.push_events_to_intakes.call_args_list
+        ]
         assert len(calls[0]) == 1
         assert trigger.push_events_to_intakes.call_count == 1
 
 
 def test_aianalyst_consumer(trigger, aianalyst_response):
-    with patch(
-        "darktrace_modules.threat_visualizer_log_trigger.time"
-    ) as mock_time, requests_mock.Mocker() as mock_request:
+    with (
+        patch("darktrace_modules.threat_visualizer_log_trigger.time") as mock_time,
+        requests_mock.Mocker() as mock_request,
+    ):
         last_ts = 1687774141.000
         batch_start = 1687774141.000
         batch_end = 1688465633.434
@@ -83,15 +90,22 @@ def test_aianalyst_consumer(trigger, aianalyst_response):
 
         mock_time.time.side_effect = [batch_start, last_ts, last_ts, batch_end]
 
-        ThreatVisualizerLogConsumer(connector=trigger, endpoint=Endpoints.AI_ANALYST).next_batch()
+        ThreatVisualizerLogConsumer(
+            connector=trigger, endpoint=Endpoints.AI_ANALYST
+        ).next_batch()
 
-        calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+        calls = [
+            call.kwargs["events"]
+            for call in trigger.push_events_to_intakes.call_args_list
+        ]
         assert len(calls[0]) == 16
         assert trigger.push_events_to_intakes.call_count == 1
 
 
 def test_start_consumers(trigger):
-    with patch("darktrace_modules.threat_visualizer_log_trigger.ThreatVisualizerLogConsumer.start") as mock_start:
+    with patch(
+        "darktrace_modules.threat_visualizer_log_trigger.ThreatVisualizerLogConsumer.start"
+    ) as mock_start:
         consumers = trigger.start_consumers()
 
         assert consumers is not None
@@ -116,7 +130,9 @@ def test_stop_consumers(trigger):
 
 
 def test_supervise_consumers(trigger):
-    with patch("darktrace_modules.threat_visualizer_log_trigger.ThreatVisualizerLogConsumer.start") as mock_start:
+    with patch(
+        "darktrace_modules.threat_visualizer_log_trigger.ThreatVisualizerLogConsumer.start"
+    ) as mock_start:
         consumers = {
             Endpoints.MODEL_BREACHES: Mock(**{"is_alive.return_value": False}),
             Endpoints.AI_ANALYST: Mock(**{"is_alive.return_value": True}),
