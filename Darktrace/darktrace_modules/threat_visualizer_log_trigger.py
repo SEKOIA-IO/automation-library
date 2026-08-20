@@ -1,8 +1,8 @@
 import time
 import traceback
 from functools import cached_property
-from threading import Event, Thread
 from posixpath import join as urljoin
+from threading import Event, Thread
 
 import orjson
 import requests
