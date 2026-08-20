@@ -5,9 +5,7 @@ from urllib.parse import urlparse
 import requests
 
 
-def generate_darktrace_signature(
-    public_key: str, private_key: str, query: str, now: str
-) -> str:
+def generate_darktrace_signature(public_key: str, private_key: str, query: str, now: str) -> str:
     maccer = hmac.new(
         private_key.encode("ASCII"),
         (query + "\n" + public_key + "\n" + now).encode("ASCII"),

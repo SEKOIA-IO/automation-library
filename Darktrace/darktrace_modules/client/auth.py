@@ -18,9 +18,7 @@ class ApiKeyAuthentication(AuthBase):
         d = datetime.now(tz=UTC)
         now = d.strftime("%Y%m%dT%H%M%S")
         query = helpers.extract_query(request)
-        sig = helpers.generate_darktrace_signature(
-            self.__public_key, self.__private_key, query, now
-        )
+        sig = helpers.generate_darktrace_signature(self.__public_key, self.__private_key, query, now)
         request.headers.update(
             {
                 "DTAPI-Token": self.__public_key,
