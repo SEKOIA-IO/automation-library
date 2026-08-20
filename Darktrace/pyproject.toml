@@ -19,13 +19,10 @@ profile = "black"
 line_length = 119
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.13.0"
-requests = "^2.31.0"
-requests-ratelimiter = "^0.4.0"
-requests-mock = "^1.11.0"
-structlog = "^23.1.0"
-urllib3 = "^2.0.7"
+python = ">=3.11,<3.15"
+sekoia-automation-sdk = "^1.24.0"
+structlog = "^26.1.0"
+urllib3 = "^2.7.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

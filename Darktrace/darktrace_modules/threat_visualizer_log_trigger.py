@@ -139,7 +139,7 @@ class ThreatVisualizerLogConsumer(Thread):
             response = self.refine_response(response)
 
             # if the response is not empty, push it
-            if response != []:
+            if len(response) > 0:
                 for event in response:
                     event["log_type"] = self.endpoint.value
                 batch_of_events = [orjson.dumps(event).decode("utf-8") for event in response]
