@@ -102,47 +102,41 @@ def reexec_with_venv(module_dir: Path) -> None:
 
 def install_module(module_dir: Path) -> None:
     """
-    Install the module's dependencies inside module_dir.
+    Install the module's dependencies inside module_dir using ``uv``.
 
     Strategy (tried in order):
-      1. ``poetry install --no-root`` – preferred when pyproject.toml uses Poetry
-      2. ``pip install -r requirements.txt`` – if a requirements.txt exists
-      3. ``pip install -e .`` – generic fallback
+      1. ``uv sync`` – preferred when pyproject.toml + uv.lock are present
+      2. ``uv pip install -e .`` – generic fallback
     """
-    print(colorize(f"\n  Installing dependencies in {module_dir} …", "yellow"))
+    print(colorize(f"\n  Installing dependencies in {module_dir} (uv) …", "yellow"))
+
+    uv = subprocess.run(["uv", "--version"], capture_output=True)
+    if uv.returncode != 0:
+        print(colorize(
+            "[ERROR] `uv` is not installed or not on PATH.\n"
+            "  Install it: https://docs.astral.sh/uv/getting-started/installation/",
+            "red",
+        ))
+        sys.exit(1)
 
     if (module_dir / "pyproject.toml").exists():
-        poetry = subprocess.run(
-            ["poetry", "--version"], capture_output=True, cwd=str(module_dir)
-        )
-        if poetry.returncode == 0:
-            result = subprocess.run(["poetry", "install", "--no-root"], cwd=str(module_dir))
-            if result.returncode == 0:
-                print(colorize("  ✔  Dependencies installed (poetry).\n", "green"))
-                return
-            print(colorize("  ⚠  poetry install failed – trying next method …", "yellow"))
-
-    req_file = module_dir / "requirements.txt"
-    if req_file.exists():
-        result = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "-r", str(req_file), "--quiet"],
-        )
+        result = subprocess.run(["uv", "sync"], cwd=str(module_dir))
         if result.returncode == 0:
-            print(colorize("  ✔  Dependencies installed (requirements.txt).\n", "green"))
+            print(colorize("  ✔  Dependencies installed (uv sync).\n", "green"))
             return
-        print(colorize("  ⚠  pip -r requirements.txt failed – trying pip install -e …", "yellow"))
+        print(colorize("  ⚠  uv sync failed – trying uv pip install -e …", "yellow"))
 
     result = subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-e", str(module_dir), "--quiet"],
+        ["uv", "pip", "install", "-e", str(module_dir)],
     )
     if result.returncode != 0:
         print(colorize(
-            "[ERROR] All install methods failed.\n"
-            f"  Please run `poetry install` manually inside {module_dir}.",
+            "[ERROR] uv install failed.\n"
+            f"  Please run `uv sync` manually inside {module_dir}.",
             "red",
         ))
         sys.exit(result.returncode)
-    print(colorize("  ✔  Dependencies installed (pip install -e).\n", "green"))
+    print(colorize("  ✔  Dependencies installed (uv pip install -e).\n", "green"))
 
 
 def inject_module_dir(module_dir: Path) -> None:

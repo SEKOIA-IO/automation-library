@@ -155,7 +155,7 @@ def _build_parser() -> argparse.ArgumentParser:
                             "Auto-detected from CWD if omitted."
                         ))
     parser.add_argument("--install", action="store_true",
-                        help="Run `pip install -e <module-dir>` before importing. Useful on first run.")
+                        help="Run `uv sync` in <module-dir> before importing. Useful on first run.")
     parser.add_argument("--module-class", metavar="MODULE:CLASS",
                         help="Dotted import path and class name of the Module.")
     parser.add_argument("--target-class", metavar="MODULE:CLASS",
@@ -225,7 +225,7 @@ def main() -> None:
         venv_python = find_venv_python(module_dir)
         install_hint = (
             f"    cd {module_dir}\n"
-            "    poetry install\n\n"
+            "    uv sync\n\n"
             "  Or let this tool install them automatically:\n\n"
             f"    python -m _utils.e2e_runner --module-dir {module_dir} --install ..."
         )
@@ -233,8 +233,8 @@ def main() -> None:
             install_hint = (
                 "  The module venv exists but deps are not installed.\n\n"
                 f"    cd {module_dir}\n"
-                "    poetry install          # recommended\n\n"
-                "  Or try (may fail if lock file is incompatible):\n\n"
+                "    uv sync                 # recommended\n\n"
+                "  Or via this tool:\n\n"
                 f"    python -m _utils.e2e_runner --module-dir {module_dir} --install ..."
             )
         print(colorize(
