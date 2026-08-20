@@ -10,7 +10,7 @@ from pathlib import Path
 from .display import colorize
 
 
-def _auto_detect_module_dir() -> Path | None:
+def auto_detect_module_dir() -> Path | None:
     """
     Walk from the current directory upward looking for a pyproject.toml.
     Returns the first directory that contains one, or None.
@@ -22,7 +22,7 @@ def _auto_detect_module_dir() -> Path | None:
     return None
 
 
-def _resolve_module_dir(raw: str | None) -> Path:
+def resolve_module_dir(raw: str | None) -> Path:
     """Return a resolved, existing module directory. Falls back to auto-detection."""
     if raw:
         path = Path(raw).expanduser().resolve()
@@ -31,7 +31,7 @@ def _resolve_module_dir(raw: str | None) -> Path:
             sys.exit(1)
         return path
 
-    detected = _auto_detect_module_dir()
+    detected = auto_detect_module_dir()
     if detected:
         print(colorize(f"  Auto-detected module dir: {detected}", "grey"))
         return detected
@@ -44,7 +44,7 @@ def _resolve_module_dir(raw: str | None) -> Path:
     sys.exit(1)
 
 
-def _find_venv_python(module_dir: Path) -> Path | None:
+def find_venv_python(module_dir: Path) -> Path | None:
     """
     Return the path to the Python interpreter inside the module's .venv,
     or None if no .venv exists.
@@ -59,7 +59,7 @@ def _find_venv_python(module_dir: Path) -> Path | None:
     return None
 
 
-def _venv_has_core_deps(venv_python: Path) -> bool:
+def venv_has_core_deps(venv_python: Path) -> bool:
     """Return True if the given Python interpreter has sekoia_automation installed."""
     result = subprocess.run(
         [str(venv_python), "-c", "import sekoia_automation"],
@@ -68,7 +68,7 @@ def _venv_has_core_deps(venv_python: Path) -> bool:
     return result.returncode == 0
 
 
-def _reexec_with_venv(module_dir: Path) -> None:
+def reexec_with_venv(module_dir: Path) -> None:
     """
     If the module has its own populated .venv and we are NOT already running from it,
     re-execute this script with that venv's Python and exit.
@@ -78,14 +78,14 @@ def _reexec_with_venv(module_dir: Path) -> None:
     if "--_venv-resolved" in sys.argv:
         return
 
-    venv_python = _find_venv_python(module_dir)
+    venv_python = find_venv_python(module_dir)
     if venv_python is None:
         return
 
     if Path(sys.executable).resolve() == venv_python.resolve():
         return
 
-    if not _venv_has_core_deps(venv_python):
+    if not venv_has_core_deps(venv_python):
         print(colorize(
             f"  Module venv found ({venv_python.parent.parent.name}) "
             "but deps not installed – keeping current Python.",
@@ -100,7 +100,7 @@ def _reexec_with_venv(module_dir: Path) -> None:
     sys.exit(result.returncode)
 
 
-def _install_module(module_dir: Path) -> None:
+def install_module(module_dir: Path) -> None:
     """
     Install the module's dependencies inside module_dir.
 
@@ -145,14 +145,14 @@ def _install_module(module_dir: Path) -> None:
     print(colorize("  ✔  Dependencies installed (pip install -e).\n", "green"))
 
 
-def _inject_module_dir(module_dir: Path) -> None:
+def inject_module_dir(module_dir: Path) -> None:
     """Prepend module_dir to sys.path so its packages are importable."""
     path_str = str(module_dir)
     if path_str not in sys.path:
         sys.path.insert(0, path_str)
 
 
-def _module_is_importable(module_dir: Path) -> bool:  # noqa: ARG001
+def module_is_importable(module_dir: Path) -> bool:  # noqa: ARG001
     """
     Quick heuristic: try importing sekoia_automation to verify the environment
     has its dependencies installed.

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import importlib
+from importlib import import_module
 import json
 import sys
 from contextlib import ExitStack
@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import PropertyMock, patch
 
-from .display import _banner, colorize
+from .display import banner, colorize
 
 
 class E2ERunner:
@@ -49,7 +49,7 @@ class E2ERunner:
 
     def run(self) -> None:
         """Detect the component type and execute the appropriate test runner."""
-        _banner("E2E Runner  –  automation-library")
+        banner("E2E Runner  –  automation-library")
         print(f"  Module  : {colorize(self.module_class_ref, 'cyan')}")
         print(f"  Target  : {colorize(self.target_class_ref, 'cyan')}")
 
@@ -83,7 +83,7 @@ class E2ERunner:
 
         Mocks: push_assets_to_sekoia → prints each OCSF asset; log → coloured output.
         """
-        _banner("Running  AssetConnector")
+        banner("Running  AssetConnector")
         total_batches = 0
         total_assets = 0
         connector = self._connector
@@ -112,7 +112,7 @@ class E2ERunner:
 
         Mocks: send_event / send_records → prints intercepted calls; log → coloured output.
         """
-        _banner("Running  EventConnector / Trigger")
+        banner("Running  EventConnector / Trigger")
         connector = self._connector
         event_count = 0
         records_count = 0
@@ -146,24 +146,17 @@ class E2ERunner:
         """
         Test an Action.
 
-        Mocks: json_result → prints the action result; log → coloured output.
+        Calls connector.run(target_config) directly and prints the returned result.
+        Mocks: log → coloured output.
         """
-        _banner("Running  Action")
-        connector = self._connector
-        results: list[Any] = []
+        banner("Running  Action")
+        action = self._connector
 
-        def _on_result(result: Any) -> None:
-            results.append(result)
-            print(
-                colorize(f"[RESULT #{len(results)}]", "green")
-                + f"\n{json.dumps(result, indent=2, default=str)}"
-            )
+        with self._standard_patches(action, extra={}):
+            result = action.run(self.target_config)
 
-        with self._standard_patches(connector, extra={"json_result": _on_result}):
-            connector.execute()
-
-        self._print_summary(f"{len(results)} result(s)")
-
+        print(colorize("[RESULT]", "green"))
+        print(json.dumps(result, indent=2, default=str))
 
     def _build_module(self) -> Any:
         """Instantiate and configure the Module."""
@@ -200,16 +193,10 @@ class E2ERunner:
             )
 
         try:
-            mod = importlib.import_module(module_path)
+            mod = import_module(module_path)
         except ModuleNotFoundError as exc:
             self._abort(
-                f"Cannot import '{module_path}': {exc}\n\n"
-                f"  Possible fixes:\n"
-                f"  1. Pass --module-dir pointing to the module folder\n"
-                f"     e.g.  --module-dir ./Sophos\n"
-                f"  2. Add --install to install the module's dependencies first\n"
-                f"  3. Make sure you run with the right Python interpreter\n"
-                f"     (the one that has sekoia_automation installed)"
+                f"Cannot import '{module_path}': {exc}"
             )
 
         cls = getattr(mod, class_name, None)
@@ -220,21 +207,21 @@ class E2ERunner:
 
     def _detect_type(self, connector_cls: type) -> str:
         """
-        Inspect the MRO of the class to determine the component category.
+        Inspect the all parent classes to determine the component category.
 
         Returns ``'asset'``, ``'event'``, ``'action'``, or ``'unknown'``.
         """
-        mro_names = {c.__name__ for c in connector_cls.__mro__}
-        if "AssetConnector" in mro_names:
+        parent_class_names = {c.__name__ for c in connector_cls.__mro__}
+        if "AssetConnector" in parent_class_names:
             return "asset"
-        if "Action" in mro_names:
+        if "Action" in parent_class_names:
             return "action"
-        if "Trigger" in mro_names or "Connector" in mro_names:
+        if "Trigger" in parent_class_names or "Connector" in parent_class_names:
             return "event"
         return "unknown"
 
     @staticmethod
-    def _load_config(value: str | None, file_path: str | None) -> dict[str, Any]:
+    def load_config(value: str | None, file_path: str | None) -> dict[str, Any]:
         """
         Load a configuration dict from either a raw JSON string or a JSON file.
         Returns an empty dict if both are None.

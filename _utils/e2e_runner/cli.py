@@ -8,30 +8,30 @@ from typing import Any
 
 # Support both package import and direct script execution.
 try:
-    from .display import _banner, colorize
+    from .display import banner, colorize
     from .environment import (
-        _auto_detect_module_dir,
-        _find_venv_python,
-        _inject_module_dir,
-        _install_module,
-        _module_is_importable,
-        _reexec_with_venv,
-        _resolve_module_dir,
-        _venv_has_core_deps,
+        auto_detect_module_dir,
+        find_venv_python,
+        inject_module_dir,
+        install_module,
+        module_is_importable,
+        reexec_with_venv,
+        resolve_module_dir,
+        venv_has_core_deps,
     )
     from .runner import E2ERunner
 except ImportError:
     sys.path.insert(0, str(Path(__file__).parent.parent))
-    from e2e_runner.display import _banner, colorize  # type: ignore[no-redef]
+    from e2e_runner.display import banner, colorize  # type: ignore[no-redef]
     from e2e_runner.environment import (  # type: ignore[no-redef]
-        _auto_detect_module_dir,
-        _find_venv_python,
-        _inject_module_dir,
-        _install_module,
-        _module_is_importable,
-        _reexec_with_venv,
-        _resolve_module_dir,
-        _venv_has_core_deps,
+        auto_detect_module_dir,
+        find_venv_python,
+        inject_module_dir,
+        install_module,
+        module_is_importable,
+        reexec_with_venv,
+        resolve_module_dir,
+        venv_has_core_deps,
     )
     from e2e_runner.runner import E2ERunner  # type: ignore[no-redef]
 
@@ -47,7 +47,7 @@ def _wizard() -> tuple[dict[str, Any], Path, bool]:
     Collect all required parameters interactively.
     Returns ``(runner_kwargs, module_dir, do_install)``.
     """
-    _banner("E2E Runner  –  Interactive Wizard")
+    banner("E2E Runner  –  Interactive Wizard")
     print(colorize(
         textwrap.dedent("""\
           Format for class references:
@@ -58,10 +58,10 @@ def _wizard() -> tuple[dict[str, Any], Path, bool]:
         "grey",
     ))
 
-    detected = _auto_detect_module_dir()
+    detected = auto_detect_module_dir()
     default_dir = str(detected) if detected else ""
     raw_dir = _prompt("Module directory (folder containing the module package)", default=default_dir)
-    module_dir = _resolve_module_dir(raw_dir or None)
+    module_dir = resolve_module_dir(raw_dir or None)
 
     do_install_str = _prompt("Install dependencies now? (y/N)", default="n")
     do_install = do_install_str.lower() in ("y", "yes")
@@ -84,12 +84,12 @@ def _wizard() -> tuple[dict[str, Any], Path, bool]:
     print("    Enter as inline JSON or provide a file path.")
     mod_raw  = _prompt("Inline JSON  (or leave blank)", default="")
     mod_file = _prompt("Config file  (or leave blank)", default="") if not mod_raw else ""
-    module_config = E2ERunner._load_config(mod_raw or None, mod_file or None)
+    module_config = E2ERunner.load_config(mod_raw or None, mod_file or None)
 
     print(colorize("\n  Target configuration:", "yellow"))
     tgt_raw  = _prompt("Inline JSON  (or leave blank)", default="")
     tgt_file = _prompt("Config file  (or leave blank)", default="") if not tgt_raw else ""
-    target_config = E2ERunner._load_config(tgt_raw or None, tgt_file or None)
+    target_config = E2ERunner.load_config(tgt_raw or None, tgt_file or None)
 
     uuid      = _prompt("Connector configuration UUID", default="<YOUR_CONNECTOR_CONFIGURATION_UUID>")
     data_path = _prompt("Data path", default="./test_data")
@@ -119,13 +119,13 @@ def _build_parser() -> argparse.ArgumentParser:
 
             Examples
             --------
-            # Asset connector (from the repo root)
+            # Asset connector (from the _utils repo)
             python -m _utils.e2e_runner \\
-              --module-dir    ./Sophos \\
+              --module-dir    ../Sophos \\
               --module-class  sophos_module.base:SophosModule \\
               --target-class  sophos_module.asset_connector.device_assets:SophosDeviceAssetConnector \\
-              --module-config '{"client_id":"x","client_secret":"y","api_host":"https://..."}' \\
-              --target-config '{"sekoia_api_key":"z","sekoia_base_url":"https://...","frequency":60}'
+              --module-config {\"client_id\":\"x\",\"client_secret":\"y\",\"api_host":\"https://...\"} \\
+              --target-config {\"sekoia_api_key\":\"z\",\"sekoia_base_url\":\"https://...\",\"frequency\":60}
 
             # Trigger – configs from JSON files
             python -m _utils.e2e_runner \\
@@ -147,7 +147,6 @@ def _build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--interactive", "-i", action="store_true",
                         help="Launch the interactive wizard to fill parameters step by step.")
-    # Internal sentinel – set automatically when the script re-execs itself with the module venv.
     parser.add_argument("--_venv-resolved", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--module-dir", metavar="PATH",
                         help=(
@@ -196,15 +195,15 @@ def main() -> None:
                 "or use --interactive."
             )
 
-        module_dir = _resolve_module_dir(args.module_dir)
+        module_dir = resolve_module_dir(args.module_dir)
         do_install = args.install
 
         def _resolve(value: str | None) -> dict[str, Any]:
             if not value:
                 return {}
             if _is_json_file(value):
-                return E2ERunner._load_config(None, value)
-            return E2ERunner._load_config(value, None)
+                return E2ERunner.load_config(None, value)
+            return E2ERunner.load_config(value, None)
 
         runner_kwargs = dict(
             module_class_ref=args.module_class,
@@ -218,19 +217,19 @@ def main() -> None:
         )
 
     if do_install and "--_venv-resolved" not in sys.argv:
-        _install_module(module_dir)
+        install_module(module_dir)
 
-    _reexec_with_venv(module_dir)
+    reexec_with_venv(module_dir)
 
-    if not _module_is_importable(module_dir):
-        venv_python = _find_venv_python(module_dir)
+    if not module_is_importable(module_dir):
+        venv_python = find_venv_python(module_dir)
         install_hint = (
             f"    cd {module_dir}\n"
             "    poetry install\n\n"
             "  Or let this tool install them automatically:\n\n"
             f"    python -m _utils.e2e_runner --module-dir {module_dir} --install ..."
         )
-        if venv_python and not _venv_has_core_deps(venv_python):
+        if venv_python and not venv_has_core_deps(venv_python):
             install_hint = (
                 "  The module venv exists but deps are not installed.\n\n"
                 f"    cd {module_dir}\n"
@@ -245,7 +244,7 @@ def main() -> None:
         ))
         sys.exit(1)
 
-    _inject_module_dir(module_dir)
+    inject_module_dir(module_dir)
     print(colorize(f"  Python  : {sys.executable}", "grey"))
     print(colorize(f"  sys.path ← {module_dir}", "grey"))
 

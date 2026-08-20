@@ -22,7 +22,7 @@ def colorize(text: str, *styles: str) -> str:
     return f"{codes}{text}{_COLOURS['reset']}"
 
 
-def _banner(title: str) -> None:
+def banner(title: str) -> None:
     line = "─" * 60
     print(colorize(line, "blue"))
     print(colorize(f"  {title}", "bold", "blue"))
