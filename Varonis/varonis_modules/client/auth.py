@@ -33,7 +33,9 @@ class VaronisApiAuthentication(AuthBase):
         api_key: str,
         ratelimit_per_second: int = 10,
     ) -> None:
-        self.__authorization_url = urljoin(base_url, "api/authentication/api_keys/token")
+        self.__authorization_url = urljoin(
+            base_url, "api/authentication/api_keys/token"
+        )
         self.__api_key = api_key
         self.__api_credentials: VaronisApiCredentials | None = None
 
@@ -52,7 +54,10 @@ class VaronisApiAuthentication(AuthBase):
     def get_credentials(self) -> VaronisApiCredentials:
         current_dt = datetime.utcnow()
 
-        if self.__api_credentials is None or current_dt + timedelta(seconds=300) >= self.__api_credentials.expires_at:
+        if (
+            self.__api_credentials is None
+            or current_dt + timedelta(seconds=300) >= self.__api_credentials.expires_at
+        ):
             response = self.__http_session.post(
                 url=self.__authorization_url,
                 data="grant_type=varonis_custom",
@@ -68,14 +73,18 @@ class VaronisApiAuthentication(AuthBase):
             except requests.HTTPError:
                 if response.status_code in (401, 403):
                     raw = response.json()
-                    raise VaronisAuthenticationError(error=raw["error"], error_description=raw["error_description"])
+                    raise VaronisAuthenticationError(
+                        error=raw["error"], error_description=raw["error_description"]
+                    )
 
             api_credentials: dict = response.json()
 
             credentials = VaronisApiCredentials()
             credentials.token_type = api_credentials["token_type"]
             credentials.access_token = api_credentials["access_token"]
-            credentials.expires_at = current_dt + timedelta(seconds=api_credentials["expires_in"])
+            credentials.expires_at = current_dt + timedelta(
+                seconds=api_credentials["expires_in"]
+            )
             self.__api_credentials = credentials
 
         return self.__api_credentials

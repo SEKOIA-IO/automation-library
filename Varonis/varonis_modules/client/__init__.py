@@ -36,7 +36,9 @@ class ApiClient(requests.Session):
 
     def make_request(self, query: str, variables: dict[str, Any]) -> Any:
         url = f"{self.base_url}/api/graphql"
-        response = self.post(url=url, json={"query": query, "variables": variables}, timeout=60)
+        response = self.post(
+            url=url, json={"query": query, "variables": variables}, timeout=60
+        )
 
         raw = response.json()
         if "errors" in raw:
