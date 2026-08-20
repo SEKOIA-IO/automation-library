@@ -130,7 +130,7 @@ class ThreatVisualizerLogConsumer(Thread):
             INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(response))
         except ValueError:  # pragma: no cover
             self.connector.log(
-                message="The server response is not a json: " + str(response),
+                message=f"The server response with status {response.status_code} is not a JSON: {response.text}",
                 level="warning",
             )
             return
