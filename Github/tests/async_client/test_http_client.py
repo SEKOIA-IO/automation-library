@@ -3,7 +3,10 @@
 import pytest
 from aioresponses import aioresponses
 
-from github_modules.async_client.http_client import AsyncGithubClient, BadCredentialsError
+from github_modules.async_client.http_client import (
+    AsyncGithubClient,
+    AuthenticationError,
+)
 
 
 @pytest.mark.asyncio
@@ -15,7 +18,14 @@ async def test_github_client_init_error(session_faker):
         session_faker: Faker
     """
     try:
-        AsyncGithubClient("https://api.github.com", session_faker.word(), None, None, session_faker.pyint(), None)
+        AsyncGithubClient(
+            "https://api.github.com",
+            session_faker.word(),
+            None,
+            None,
+            session_faker.pyint(),
+            None,
+        )
 
         assert False
     except ValueError:
@@ -35,10 +45,18 @@ async def test_github_client_token_refresher(session_faker, pem_content):
         "https://api.github.com", session_faker.word(), session_faker.word(), None, None
     )
     github_client_2 = AsyncGithubClient(
-        "https://api.github.com", session_faker.word(), session_faker.word(), pem_content, None
+        "https://api.github.com",
+        session_faker.word(),
+        session_faker.word(),
+        pem_content,
+        None,
     )
     github_client_3 = AsyncGithubClient(
-        "https://api.github.com", session_faker.word(), session_faker.word(), pem_content, session_faker.pyint()
+        "https://api.github.com",
+        session_faker.word(),
+        session_faker.word(),
+        pem_content,
+        session_faker.pyint(),
     )
 
     try:
@@ -55,7 +73,10 @@ async def test_github_client_token_refresher(session_faker, pem_content):
     except ValueError:
         assert True
 
-    assert await github_client_3._get_token_refresher() == await github_client_3._get_token_refresher()
+    assert (
+        await github_client_3._get_token_refresher()
+        == await github_client_3._get_token_refresher()
+    )
 
 
 @pytest.mark.asyncio
@@ -68,7 +89,9 @@ async def test_github_client_auth_headers(session_faker, pem_content):
     """
     api_key = session_faker.word()
     organization = session_faker.word()
-    github_client_1 = AsyncGithubClient("https://api.github.com", organization, api_key, None, None)
+    github_client_1 = AsyncGithubClient(
+        "https://api.github.com", organization, api_key, None, None
+    )
     github_client_2 = AsyncGithubClient(
         "https://api.github.com", organization, None, pem_content, session_faker.pyint()
     )
@@ -78,25 +101,27 @@ async def test_github_client_auth_headers(session_faker, pem_content):
     assert headers_1 == {
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "Authorization": "token {0}".format(api_key),
+        "Authorization": f"token {api_key}",
     }
 
     with aioresponses() as mocked_responses:
         access_tokens_url = session_faker.uri()
         access_token = session_faker.word()
         mocked_responses.get(
-            "https://api.github.com/orgs/{0}/installation".format(organization),
+            f"https://api.github.com/orgs/{organization}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )
 
-        mocked_responses.post(access_tokens_url, status=200, payload={"token": access_token})
+        mocked_responses.post(
+            access_tokens_url, status=200, payload={"token": access_token}
+        )
 
         headers2 = await github_client_2.get_auth_headers()
         assert headers2 == {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "Authorization": "Bearer {0}".format(access_token),
+            "Authorization": f"Bearer {access_token}",
         }
 
 
@@ -109,9 +134,14 @@ async def test_github_client_audit_log_url(session_faker):
         session_faker: Faker
     """
     organization = session_faker.word()
-    github_client = AsyncGithubClient("https://api.github.com", organization, session_faker.word(), None, None)
+    github_client = AsyncGithubClient(
+        "https://api.github.com", organization, session_faker.word(), None, None
+    )
 
-    assert github_client.audit_logs_url == "https://api.github.com/orgs/{0}/audit-log".format(organization)
+    assert (
+        github_client.audit_logs_url
+        == f"https://api.github.com/orgs/{organization}/audit-log"
+    )
 
 
 @pytest.mark.asyncio
@@ -124,15 +154,27 @@ async def test_github_custom_url(session_faker):
     """
     organization = session_faker.word()
 
-    github_client = AsyncGithubClient("https://api.sekoia.ghe.com", organization, session_faker.word(), None, None)
-    assert github_client.audit_logs_url == "https://api.sekoia.ghe.com/orgs/{0}/audit-log".format(organization)
+    github_client = AsyncGithubClient(
+        "https://api.sekoia.ghe.com", organization, session_faker.word(), None, None
+    )
+    assert (
+        github_client.audit_logs_url
+        == f"https://api.sekoia.ghe.com/orgs/{organization}/audit-log"
+    )
 
-    github_client = AsyncGithubClient("api.sekoia.ghe.com", organization, session_faker.word(), None, None)
-    assert github_client.audit_logs_url == "https://api.sekoia.ghe.com/orgs/{0}/audit-log".format(organization)
+    github_client = AsyncGithubClient(
+        "api.sekoia.ghe.com", organization, session_faker.word(), None, None
+    )
+    assert (
+        github_client.audit_logs_url
+        == f"https://api.sekoia.ghe.com/orgs/{organization}/audit-log"
+    )
 
 
 @pytest.mark.asyncio
-async def test_github_client_get_audit_logs_with_api_key(session_faker, github_response, last_timestamp):
+async def test_github_client_get_audit_logs_with_api_key(
+    session_faker, github_response, last_timestamp
+):
     """
     Test GithubClient audit logs url.
 
@@ -142,12 +184,14 @@ async def test_github_client_get_audit_logs_with_api_key(session_faker, github_r
         last_timestamp: int
     """
     organization = session_faker.word()
-    github_client = AsyncGithubClient("https://api.github.com", organization, session_faker.word(), None, None)
+    github_client = AsyncGithubClient(
+        "https://api.github.com", organization, session_faker.word(), None, None
+    )
 
     with aioresponses() as mocked_responses:
         mocked_responses.get(
             github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(last_timestamp),
+            + f"?order=asc&per_page=100&phrase=created:%3E{last_timestamp}",
             status=200,
             payload=github_response,
         )
@@ -175,23 +219,29 @@ async def test_github_client_get_audit_logs_with_pem_file_content(
     """
     organization = session_faker.word()
     github_client = AsyncGithubClient(
-        "https://api.github.com", organization, session_faker.word(), pem_content, session_faker.pyint()
+        "https://api.github.com",
+        organization,
+        session_faker.word(),
+        pem_content,
+        session_faker.pyint(),
     )
 
     with aioresponses() as mocked_responses:
         access_tokens_url = session_faker.uri()
 
         mocked_responses.get(
-            "https://api.github.com/orgs/{0}/installation".format(organization),
+            f"https://api.github.com/orgs/{organization}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )
 
-        mocked_responses.post(access_tokens_url, status=200, payload={"token": session_faker.word()})
+        mocked_responses.post(
+            access_tokens_url, status=200, payload={"token": session_faker.word()}
+        )
 
         mocked_responses.get(
             github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(last_timestamp),
+            + f"?order=asc&per_page=100&phrase=created:%3E{last_timestamp}",
             status=200,
             payload=github_response,
         )
@@ -221,7 +271,11 @@ async def test_github_client_get_audit_logs_with_pem_file_content_1(
     """
     organization = session_faker.word()
     github_client = AsyncGithubClient(
-        "https://api.github.com", organization, session_faker.word(), pem_content, session_faker.pyint()
+        "https://api.github.com",
+        organization,
+        session_faker.word(),
+        pem_content,
+        session_faker.pyint(),
     )
     next_page_link = session_faker.uri()
 
@@ -229,19 +283,21 @@ async def test_github_client_get_audit_logs_with_pem_file_content_1(
         access_tokens_url = session_faker.uri()
 
         mocked_responses.get(
-            "https://api.github.com/orgs/{0}/installation".format(organization),
+            f"https://api.github.com/orgs/{organization}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )
 
-        mocked_responses.post(access_tokens_url, status=200, payload={"token": session_faker.word()})
+        mocked_responses.post(
+            access_tokens_url, status=200, payload={"token": session_faker.word()}
+        )
 
         mocked_responses.get(
             github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(last_timestamp),
+            + f"?order=asc&per_page=100&phrase=created:%3E{last_timestamp}",
             status=200,
             payload=github_response,
-            headers={"Link": '<{0}>; rel="next"'.format(next_page_link)},
+            headers={"Link": f'<{next_page_link}>; rel="next"'},
         )
 
         mocked_responses.get(
@@ -275,7 +331,11 @@ async def test_github_client_get_audit_logs_with_pem_file_content_3(
     """
     organization = session_faker.word()
     github_client = AsyncGithubClient(
-        "https://api.github.com", organization, session_faker.word(), pem_content, session_faker.pyint()
+        "https://api.github.com",
+        organization,
+        session_faker.word(),
+        pem_content,
+        session_faker.pyint(),
     )
     next_page_link_1 = session_faker.uri()
     next_page_link_2 = session_faker.uri()
@@ -284,20 +344,24 @@ async def test_github_client_get_audit_logs_with_pem_file_content_3(
         access_tokens_url = session_faker.uri()
 
         mocked_responses.get(
-            "https://api.github.com/orgs/{0}/installation".format(organization),
+            f"https://api.github.com/orgs/{organization}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )
 
-        mocked_responses.post(access_tokens_url, status=200, payload={"token": session_faker.word()})
-        mocked_responses.post(access_tokens_url, status=200, payload={"token": session_faker.word()})
+        mocked_responses.post(
+            access_tokens_url, status=200, payload={"token": session_faker.word()}
+        )
+        mocked_responses.post(
+            access_tokens_url, status=200, payload={"token": session_faker.word()}
+        )
 
         mocked_responses.get(
             github_client.audit_logs_url
-            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(last_timestamp),
+            + f"?order=asc&per_page=100&phrase=created:%3E{last_timestamp}",
             status=200,
             payload=github_response,
-            headers={"Link": '<{0}>; rel="next"'.format(next_page_link_1)},
+            headers={"Link": f'<{next_page_link_1}>; rel="next"'},
         )
 
         mocked_responses.get(
@@ -309,7 +373,7 @@ async def test_github_client_get_audit_logs_with_pem_file_content_3(
             next_page_link_1,
             status=200,
             payload=github_response,
-            headers={"Link": '<{0}>; rel="next"'.format(next_page_link_2)},
+            headers={"Link": f'<{next_page_link_2}>; rel="next"'},
         )
 
         mocked_responses.get(
@@ -329,32 +393,48 @@ async def test_github_client_get_audit_logs_with_incorrect_creds(
 ):
     organization = session_faker.word()
     github_client = AsyncGithubClient(
-        "https://api.github.com", organization, session_faker.word(), pem_content, session_faker.pyint()
+        "https://api.github.com",
+        organization,
+        session_faker.word(),
+        pem_content,
+        session_faker.pyint(),
     )
 
     with aioresponses() as mocked_responses:
-        audit_logs_url = github_client.audit_logs_url + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
-            last_timestamp
+        audit_logs_url = (
+            github_client.audit_logs_url
+            + f"?order=asc&per_page=100&phrase=created:%3E{last_timestamp}"
         )
 
-        mocked_responses.get(audit_logs_url, status=401, payload=github_bad_creds_response, repeat=2)
+        mocked_responses.get(
+            audit_logs_url, status=401, payload=github_bad_creds_response, repeat=2
+        )
 
-        with pytest.raises(BadCredentialsError):
+        with pytest.raises(AuthenticationError):
             await github_client.get_audit_logs(last_timestamp)
 
 
 @pytest.mark.asyncio
 async def test_github_client_get_audit_logs_retry_after_401(
-    github_bad_creds_response, github_response, session_faker, pem_content, last_timestamp
+    github_bad_creds_response,
+    github_response,
+    session_faker,
+    pem_content,
+    last_timestamp,
 ):
     organization = session_faker.word()
     github_client = AsyncGithubClient(
-        "https://api.github.com", organization, session_faker.word(), pem_content, session_faker.pyint()
+        "https://api.github.com",
+        organization,
+        session_faker.word(),
+        pem_content,
+        session_faker.pyint(),
     )
 
     with aioresponses() as mocked_responses:
-        audit_logs_url = github_client.audit_logs_url + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(
-            last_timestamp
+        audit_logs_url = (
+            github_client.audit_logs_url
+            + f"?order=asc&per_page=100&phrase=created:%3E{last_timestamp}"
         )
 
         mocked_responses.get(
