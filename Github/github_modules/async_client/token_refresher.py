@@ -3,21 +3,29 @@
 import asyncio
 import time
 from asyncio import Lock, Task
-from typing import Optional
 
 import jwt
 from aiohttp import ClientSession
 from jwt import JWT
 
+from github_modules.async_client import AuthenticationError
 
-class PemGithubTokenRefresher(object):
+
+class PemGithubTokenRefresher:
     """Github token refresher that uses pem file content and org name to get access token."""
 
-    _instances: dict[str, "PemGithubTokenRefresher"] = {}
-    _locks: dict[str, Lock] = {}
+    _instances: dict[str, "PemGithubTokenRefresher"] = {}  # noqa: RUF012
+    _locks: dict[str, Lock] = {}  # noqa: RUF012
     _session: ClientSession | None = None
 
-    def __init__(self, base_url: str, pem_file: str, organization: str, app_id: int, token_ttl: int = 300):
+    def __init__(
+        self,
+        base_url: str,
+        pem_file: str,
+        organization: str,
+        app_id: int,
+        token_ttl: int = 300,
+    ):
         """
         Initialize GithubTokenRefresher.
 
@@ -41,7 +49,7 @@ class PemGithubTokenRefresher(object):
         self.app_id = app_id
 
         self._token: str | None = None
-        self._token_refresh_task: Optional[Task[None]] = None
+        self._token_refresh_task: Task[None] | None = None
 
     @classmethod
     def session(cls) -> ClientSession:
@@ -60,7 +68,12 @@ class PemGithubTokenRefresher(object):
 
     @classmethod
     async def instance(
-        cls, base_url: str, pem_file: str, organization: str, app_id: int, token_ttl: int = 300
+        cls,
+        base_url: str,
+        pem_file: str,
+        organization: str,
+        app_id: int,
+        token_ttl: int = 300,
     ) -> "PemGithubTokenRefresher":
         """
         Get singleton PemGithubTokenRefresher instance for specified input params.
@@ -131,15 +144,24 @@ class PemGithubTokenRefresher(object):
         headers = {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "Authorization": "Bearer {0}".format(self._get_jwt()),
+            "Authorization": f"Bearer {self._get_jwt()}",
         }
 
         session = self.session()
 
-        async with session.get(self.installation_request_url, headers=headers) as installation_response:
+        async with session.get(
+            self.installation_request_url, headers=headers
+        ) as installation_response:
             installation_info = await installation_response.json()
             access_token_url = installation_info.get("access_tokens_url")
-            async with session.post(access_token_url, headers=headers) as access_token_response:
+            if not access_token_url:
+                raise AuthenticationError(
+                    f"Authentication failed: {installation_info!s}"
+                )
+
+            async with session.post(
+                access_token_url, headers=headers
+            ) as access_token_response:
                 access_token_info = await access_token_response.json()
 
                 self._token = access_token_info.get("token")
