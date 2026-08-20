@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.3.0] - 2026-08-19
+## [1.3.0] - 2026-08-20
 
 ### Added
 
@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `GET /v2/net-assets` and publishes them as OCSF Device Inventory Info events
   alongside the agent-managed devices. They share the deduplication cache but keep
   their own `last_detected` cursor
+
+## [1.2.1] - 2026-08-20
+
+### Fixed
+
+- Replace `assert isinstance` guards with explicit `if/raise TypeError` to prevent silent failures when Python runs with the `-O` optimization flag
 
 ## [1.2.0] - 2026-08-18
 

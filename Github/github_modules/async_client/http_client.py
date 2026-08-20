@@ -1,21 +1,19 @@
 """Contains client to interact with Github API."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Union
+from typing import Any
 
 from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
 from multidict import MultiDictProxy
 from yarl import URL
 
+from github_modules.async_client import AuthenticationError
 from github_modules.async_client.token_refresher import PemGithubTokenRefresher
 
 
-class BadCredentialsError(Exception):
-    pass
-
-
-class AsyncGithubClient(object):
+class AsyncGithubClient:
     """Async Github client."""
 
     _session: ClientSession | None = None
@@ -45,7 +43,7 @@ class AsyncGithubClient(object):
         self.api_key = api_key
 
         self.pem_file = pem_file
-        self.base_url = f'https://{base_url.removeprefix("http://").removeprefix("https://").rstrip("/")}'
+        self.base_url = f"https://{base_url.removeprefix('http://').removeprefix('https://').rstrip('/')}"
         self.organization = organization
         self.app_id = app_id
 
@@ -105,7 +103,7 @@ class AsyncGithubClient(object):
         }
 
         if self.api_key:
-            headers["Authorization"] = "token {0}".format(self.api_key)
+            headers["Authorization"] = f"token {self.api_key}"
         else:
             token_refresher = await self._get_token_refresher()
             if refresh_token:
@@ -113,7 +111,7 @@ class AsyncGithubClient(object):
 
             token = await token_refresher.get_access_token()
 
-            headers["Authorization"] = "Bearer {0}".format(token)
+            headers["Authorization"] = f"Bearer {token}"
 
         return headers
 
@@ -140,24 +138,36 @@ class AsyncGithubClient(object):
             list[dict[str, Any]]:
         """
         params: dict[str, Any] = (
-            {} if url else {"phrase": "created:>{0}".format(start_from), "order": "asc", "per_page": 100}
+            {}
+            if url
+            else {
+                "phrase": f"created:>{start_from}",
+                "order": "asc",
+                "per_page": 100,
+            }
         )
         request_url: str = url or self.audit_logs_url
 
         result: list[dict[str, Any]] = []
-        links: Union[MultiDictProxy[Union[str, URL]], dict[Any, Any]] = {}
+        links: MultiDictProxy[str | URL] | dict[Any, Any] = {}
         next_link: str | None = None
 
         async with self.session() as session:
             headers = await self.get_auth_headers()
 
-            async with session.get(request_url, params=params, headers=headers) as response:
+            async with session.get(
+                request_url, params=params, headers=headers
+            ) as response:
                 if response.status != 200:
                     headers = await self.get_auth_headers(refresh_token=True)
 
-                    async with session.get(request_url, params=params, headers=headers) as refreshed_response:
+                    async with session.get(
+                        request_url, params=params, headers=headers
+                    ) as refreshed_response:
                         if refreshed_response.status == 401:
-                            raise BadCredentialsError("Bad credentials")
+                            raise AuthenticationError(
+                                "The authentication Failed. Please check you credendial. error=Bad credential status_code=401"
+                            )
 
                         result = await refreshed_response.json()
                         links = refreshed_response.links.get("next", {})
