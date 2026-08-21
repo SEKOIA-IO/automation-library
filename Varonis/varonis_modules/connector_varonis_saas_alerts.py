@@ -8,7 +8,6 @@ import orjson
 import tenacity
 from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
-from pydantic import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.helpers.timestepper import TimeStepper
 from sekoia_automation.storage import PersistentJSON
@@ -28,9 +27,6 @@ RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 class VaronisSaaSAlertsConfiguration(DefaultConnectorConfiguration):
-    base_url: str = Field(..., description="Base domain")
-    api_key: str = Field(..., description="API key", json_schema_extra={"secret": True})
-
     frequency: int = 60
     timedelta: int = 5
     start_time: int = 1
@@ -108,7 +104,7 @@ class VaronisSaaSAlertsConnector(Connector):
     @cached_property
     def client(self) -> ApiClient:
         return ApiClient(
-            base_url=self.configuration.base_url, api_key=self.configuration.api_key
+            base_url=self.module.configuration.base_url, api_key=self.module.configuration.api_key
         )
 
     def is_processed(self, event: dict[str, Any]) -> bool:

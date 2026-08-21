@@ -5,14 +5,6 @@
   "docker_parameters": "connector_varonis_saas_alerts",
   "arguments": {
     "properties": {
-      "base_url": {
-        "description": "Base URL (looks like https://YOUR_TENANT.varonis.io)",
-        "type": "string"
-      },
-      "api_key": {
-        "description": "API key",
-        "type": "string"
-      },
       "frequency": {
         "type": "integer",
         "description": "Batch frequency in seconds",

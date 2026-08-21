@@ -12,16 +12,16 @@ from varonis_modules.connector_varonis_saas_alerts import VaronisSaaSAlertsConne
 @pytest.fixture
 def trigger(data_storage):
     module = VaronisModule()
-    module.configuration = {}
-
+    module.configuration = {
+        "base_url": "https://test.varonis.io",
+        "api_key": "API_KEY",
+    }
     trigger = VaronisSaaSAlertsConnector(module=module, data_path=data_storage)
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
     trigger.configuration = {
         "intake_key": "intake_key",
-        "base_url": "https://test.varonis.io",
-        "api_key": "API_KEY",
         "frequency": 60,
         "start_time": 0,
         "timedelta": 0,
