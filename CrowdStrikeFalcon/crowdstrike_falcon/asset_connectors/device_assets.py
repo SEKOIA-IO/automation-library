@@ -229,9 +229,7 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         except Exception as e:
             self._groups_fetch_disabled = True
             self.log(
-                f"Failed to fetch group details: {e}. "
-                "Check that the API client owns the 'Host groups: Read' scope. "
-                "Groups are reported with their identifier as name for this cycle",
+                f"Failed to fetch group details: {e}. ",
                 level="warning",
             )
 
