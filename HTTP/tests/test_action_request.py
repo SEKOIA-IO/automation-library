@@ -7,7 +7,9 @@ from unittest.mock import Mock
 import pytest
 import requests_mock
 from pydantic import ValidationError
+from requests import Response
 from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import HTTPError
 from tenacity import Retrying, wait_none
 
 from http_module.action_request import RequestAction

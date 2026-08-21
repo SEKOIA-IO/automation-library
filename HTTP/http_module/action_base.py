@@ -37,7 +37,9 @@ class HTTPActionBase(Action, ABC):
 
         if 400 <= status_code < 500:
             self.log(
-                message=f"HTTP Request returned client error for {url}: {status_code} - {response.reason}: {response.text}",
+                message=(
+                    f"HTTP Request returned client error for {url}: {status_code} - {response.reason}: {response.text}"
+                ),
                 level="error" if fail_on_http_error else "warning",
             )
             if fail_on_http_error:
@@ -46,7 +48,9 @@ class HTTPActionBase(Action, ABC):
 
         if 500 <= status_code < 600:
             self.log(
-                message=f"HTTP Request returned server error for {url}: {status_code} - {response.reason}: {response.text}",
+                message=(
+                    f"HTTP Request returned server error for {url}: {status_code} - {response.reason}: {response.text}"
+                ),
                 level="critical" if fail_on_http_error else "error",
             )
             if fail_on_http_error:
