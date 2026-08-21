@@ -6,6 +6,7 @@ import requests_mock
 from sekoia_automation.storage import PersistentJSON
 
 from varonis_modules import VaronisModule
+from varonis_modules.client import VaronisApiError
 from varonis_modules.connector_varonis_saas_alerts import VaronisSaaSAlertsConnector
 
 
@@ -193,3 +194,45 @@ def test_stepper_without_cursor(trigger, data_storage):
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
         assert trigger.stepper.start == datetime(2023, 3, 22, 11, 55, 28, tzinfo=UTC)
+
+
+def test_client_no_json(trigger, data_storage):
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.post(
+            "https://test.varonis.io/api/authentication/api_keys/token",
+            status_code=200,
+            json={
+                "access_token": "access_token",
+                "token_type": "Bearer",
+                "expires_in": 3600,
+            },
+        )
+
+        mock_requests.post("https://test.varonis.io/api/graphql", status_code=200, text="some-text")
+
+        with pytest.raises(VaronisApiError):
+            trigger.run()
+
+        trigger.log.assert_called_with("Invalid JSON response", level="error")
+
+
+def test_client_error(trigger, data_storage, start_time, end_time):
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.post(
+            "https://test.varonis.io/api/authentication/api_keys/token",
+            status_code=200,
+            json={
+                "access_token": "access_token",
+                "token_type": "Bearer",
+                "expires_in": 3600,
+            },
+        )
+
+        mock_requests.post(
+            "https://test.varonis.io/api/graphql", status_code=200, json={"errors": [{"message": "Some error"}]}
+        )
+
+        with pytest.raises(VaronisApiError):
+            trigger.run()
+
+        trigger.log.assert_called_with("Some error", level="error")

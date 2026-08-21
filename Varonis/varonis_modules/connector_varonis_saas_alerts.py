@@ -16,12 +16,7 @@ from tenacity import retry_if_exception_type, stop_after_attempt, wait_exponenti
 from . import VaronisModule
 from .client import ApiClient, VaronisApiError
 from .client.auth import VaronisAuthenticationError
-from .metrics import (
-    EVENTS_LAG,
-    FORWARD_EVENTS_DURATION,
-    INCOMING_MESSAGES,
-    OUTCOMING_EVENTS,
-)
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
