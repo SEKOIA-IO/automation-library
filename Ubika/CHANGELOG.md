@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Reduce events age limit from one month to a week
+- Reduce the maximum event lookback period to one week.
 
 ## 2026-05-15 - 1.1.2
 
