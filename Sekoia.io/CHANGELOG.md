@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-21 - 2.76.0
+
+### Added
+
+- Add a new `Case Comment Created` trigger for Operation Center cases, for enabling playbooks to react automatically when a comment is posted on a case (for example, forwarding analyst notes to third-party ticketing/case systems)
+
+### Changed
+
+- Improve case trigger test maintainability by refactoring repeated scenarios with `pytest.mark.parametrize`
+- Significantly reduce case trigger test execution time while preserving behavior and assertions
+- Refresh dependency lockfile (`poetry.lock`) with upgraded compatible package versions
+
+### Fixed
+
+- Increase reliability of case trigger behavior with additional tests covering edge cases (invalid sub-events, missing identifiers, API failures, and filter rejections)
+- Reach 100% test coverage on `sekoiaio/triggers/cases.py`
+
 ## 2026-08-13 - 2.75.3
 
 ### Added
