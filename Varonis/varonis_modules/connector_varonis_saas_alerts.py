@@ -104,7 +104,8 @@ class VaronisSaaSAlertsConnector(Connector):
     @cached_property
     def client(self) -> ApiClient:
         return ApiClient(
-            base_url=self.module.configuration.base_url, api_key=self.module.configuration.api_key
+            base_url=self.module.configuration.base_url,
+            api_key=self.module.configuration.api_key,
         )
 
     def is_processed(self, event: dict[str, Any]) -> bool:
@@ -119,9 +120,7 @@ class VaronisSaaSAlertsConnector(Connector):
         retry=retry_if_exception_type(exception_types=VaronisJobError),
         reraise=True,
     )
-    def fetch_events(
-        self, from_date: datetime, to_date: datetime
-    ) -> list[dict[str, Any]]:
+    def fetch_events(self, from_date: datetime, to_date: datetime) -> list[dict[str, Any]]:
         from_str = from_date.strftime(RFC3339_STRICT_FORMAT)
         to_str = to_date.strftime(RFC3339_STRICT_FORMAT)
         self.log(message=f"Fetching events from {from_str} to {to_str}", level="info")
@@ -138,9 +137,7 @@ class VaronisSaaSAlertsConnector(Connector):
             status = raw["jobStatus"]
             if status == "COMPLETED":
                 events = raw["results"]
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(
-                    len(events)
-                )
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
 
                 return events
 
@@ -170,9 +167,7 @@ class VaronisSaaSAlertsConnector(Connector):
                 events = self.fetch_events(start, end)
 
                 batch_of_events = [
-                    orjson.dumps(event).decode("utf-8")
-                    for event in events
-                    if not self.is_processed(event)
+                    orjson.dumps(event).decode("utf-8") for event in events if not self.is_processed(event)
                 ]
 
                 if len(batch_of_events) > 0:
@@ -182,9 +177,7 @@ class VaronisSaaSAlertsConnector(Connector):
                     )
                     self.push_events_to_intakes(events=batch_of_events)
 
-                    OUTCOMING_EVENTS.labels(
-                        intake_key=self.configuration.intake_key
-                    ).inc(len(batch_of_events))
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
 
                     # mark sent events as processed
                     for event in events:
@@ -194,9 +187,9 @@ class VaronisSaaSAlertsConnector(Connector):
                 else:
                     self.log(message="No events to forward", level="info")
 
-                FORWARD_EVENTS_DURATION.labels(
-                    intake_key=self.configuration.intake_key
-                ).observe(time.time() - duration_start)
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                    time.time() - duration_start
+                )
 
             except VaronisApiError as e:
                 errors = e.js.get("errors", [])

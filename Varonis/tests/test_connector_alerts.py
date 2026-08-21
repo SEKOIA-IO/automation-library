@@ -157,9 +157,7 @@ def test_stepper_with_cursor(trigger, data_storage):
     with context as cache:
         cache["most_recent_date_requested"] = most_recent_date_requested.isoformat()
 
-    with patch(
-        "varonis_modules.connector_varonis_saas_alerts.datetime"
-    ) as mock_datetime:
+    with patch("varonis_modules.connector_varonis_saas_alerts.datetime") as mock_datetime:
         mock_datetime.now.return_value = datetime.now(UTC)
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
@@ -176,15 +174,11 @@ def test_stepper_with_cursor_older_than_week(trigger, data_storage):
     with context as cache:
         cache["most_recent_date_requested"] = most_recent_date_requested.isoformat()
 
-    with patch(
-        "varonis_modules.connector_varonis_saas_alerts.datetime"
-    ) as mock_datetime:
+    with patch("varonis_modules.connector_varonis_saas_alerts.datetime") as mock_datetime:
         mock_datetime.now.return_value = fixed_now
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
-        assert trigger.stepper.start.replace(microsecond=0) == expected_date.replace(
-            microsecond=0
-        )
+        assert trigger.stepper.start.replace(microsecond=0) == expected_date.replace(microsecond=0)
 
 
 def test_stepper_without_cursor(trigger, data_storage):
@@ -194,14 +188,8 @@ def test_stepper_without_cursor(trigger, data_storage):
     with context as cache:
         cache["most_recent_date_requested"] = None
 
-    with patch(
-        "sekoia_automation.helpers.timestepper.datetime.datetime"
-    ) as mock_datetime:
-        mock_datetime.now.return_value = datetime(
-            2023, 3, 22, 11, 56, 28, tzinfo=UTC
-        )
+    with patch("sekoia_automation.helpers.timestepper.datetime.datetime") as mock_datetime:
+        mock_datetime.now.return_value = datetime(2023, 3, 22, 11, 56, 28, tzinfo=UTC)
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
-        assert trigger.stepper.start == datetime(
-            2023, 3, 22, 11, 55, 28, tzinfo=UTC
-        )
+        assert trigger.stepper.start == datetime(2023, 3, 22, 11, 55, 28, tzinfo=UTC)
