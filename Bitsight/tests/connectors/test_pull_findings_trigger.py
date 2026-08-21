@@ -7,7 +7,7 @@ from aioresponses import aioresponses
 from faker import Faker
 
 from client.http_client import BitsightClient
-from connectors import BitsightModule, BitsightModuleConfiguration
+from connectors import BitsightModule
 from connectors.pull_findings_trigger import Checkpoint, CompanyCheckpoint, PullFindingsConnector
 
 
@@ -72,12 +72,10 @@ def connector(
 
     connector.push_data_to_intakes = mock_push_data_to_intakes
 
-    connector.module.configuration = BitsightModuleConfiguration(
-        **{
-            "api_token": session_faker.word(),
-            "company_uuids": company_uuids,
-        }
-    )
+    connector.module.configuration = {
+        "api_token": session_faker.word(),
+        "company_uuids": company_uuids,
+    }
 
     connector.configuration = {
         "intake_server": session_faker.uri(),

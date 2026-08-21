@@ -1,7 +1,8 @@
 import pytest
 import requests
 import requests_mock
-from usta_modules.usta_sdk import UstaClient, UstaAuthenticationError, UstaAPIError
+
+from usta_modules.usta_sdk import UstaAPIError, UstaAuthenticationError, UstaClient
 
 
 def test_clean_params() -> None:

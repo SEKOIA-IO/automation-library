@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-30 - 1.31.8
+
+### Changed
+
+- Pin Docker base image to `python:3.14-bookworm` for reproducible runtime builds.
+
 ## 2026-07-07 - 1.31.7
 
 ### Added

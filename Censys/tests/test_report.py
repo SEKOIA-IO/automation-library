@@ -132,7 +132,7 @@ def action():
 
 
 def mock_request(censys_mock, arguments, json):
-    censys_mock.post(f'https://www.censys.io/api/v1/report/{arguments["index"]}', json=json)
+    censys_mock.post(f"https://www.censys.io/api/v1/report/{arguments['index']}", json=json)
 
 
 def validate_result(res, expected, storage):
