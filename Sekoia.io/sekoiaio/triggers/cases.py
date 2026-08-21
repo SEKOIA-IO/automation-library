@@ -11,6 +11,8 @@ from .base import _SEKOIANotificationBaseTrigger
 
 
 class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
+    REQUEST_TIMEOUT = 30
+
     # List of cases types we can handle.
     HANDLED_EVENT_SUB_TYPES = [
         ("case", "created"),
@@ -67,6 +69,7 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
         response = requests.get(
             api_url,
             headers=headers,
+            timeout=self.REQUEST_TIMEOUT,
         )
 
         if not response.ok:
@@ -77,6 +80,8 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
             self.log(
                 "Error while fetching case from Case API",
                 level="error",
+                case_uuid=case_uuid,
+                api_url=api_url,
                 status_code=response.status_code,
                 content=content,
             )
@@ -89,6 +94,9 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
             self.log(
                 "Failed to parse JSON response from Case API",
                 level="error",
+                case_uuid=case_uuid,
+                api_url=api_url,
+                status_code=response.status_code,
                 content=response.text,
             )
             raise exp
@@ -110,6 +118,7 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
         response = requests.get(
             api_url,
             headers=headers,
+            timeout=self.REQUEST_TIMEOUT,
         )
 
         if not response.ok:
@@ -120,6 +129,9 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
             self.log(
                 "Error while fetching case comment from Case API",
                 level="error",
+                case_uuid=case_uuid,
+                comment_uuid=comment_uuid,
+                api_url=api_url,
                 status_code=response.status_code,
                 content=content,
             )
@@ -131,6 +143,10 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
             self.log(
                 "Failed to parse JSON response from Case API",
                 level="error",
+                case_uuid=case_uuid,
+                comment_uuid=comment_uuid,
+                api_url=api_url,
+                status_code=response.status_code,
                 content=response.text,
             )
             raise exp
@@ -345,7 +361,7 @@ class CaseCommentCreatedTrigger(SecurityCasesTrigger):
                 "author": comment.get("created_by"),
                 "date": comment.get("created_at"),
             },
-            "case_uuid": case_uuid,
+            "uuid": case_uuid,
             "short_id": case_short_id,
             "status_uuid": case.get("status_uuid"),
             "priority_uuid": case.get("custom_priority_uuid"),
