@@ -60,7 +60,7 @@
           }
         }
       },
-      "case_uuid": {
+      "uuid": {
         "description": "Unique identifier of the Case (UUID string).",
         "type": "string"
       },
@@ -104,7 +104,7 @@
     },
     "required": [
       "comment",
-      "case_uuid",
+      "uuid",
       "short_id",
       "status_uuid",
       "priority_uuid",

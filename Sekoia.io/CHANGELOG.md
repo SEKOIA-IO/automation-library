@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Increase reliability of case trigger behavior with additional tests covering edge cases (invalid sub-events, missing identifiers, API failures, and filter rejections)
 - Reach 100% test coverage on `sekoiaio/triggers/cases.py`
+- Improve case trigger resilience and troubleshooting with explicit API timeouts and richer error logs (request context included)
 
 ## 2026-08-13 - 2.75.3
 
