@@ -65,7 +65,7 @@ class HolmDevice(BaseModel):
     emails: list[str] = []
     tags: list[HolmTag] = []
     vuln_count: int = 0
-    max_severity: str | None = None
+    max_severity: int | str | None = None
     severity: HolmSeverityBreakdown | None = None
     current_version: str | None = None
     risk_score: int = 0
@@ -80,3 +80,51 @@ class HolmDevicePage(BaseModel):
     next: str | None = None
     previous: str | None = None
     results: list[HolmDevice] = []
+
+
+class HolmOpenPort(BaseModel):
+    """An open port reported on a Holm Security network asset."""
+
+    model_config = ConfigDict(extra="allow")
+
+    proto: str | None = None
+    port: int | None = None
+
+
+class HolmNetAsset(BaseModel):
+    """A single scanned network asset returned by ``GET /v2/net-assets``.
+
+    Network assets are hosts and IP ranges discovered by a scan, without an agent.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    uuid: str
+    name: str | None = None
+    hostname: str | None = None
+    ip: str | None = None
+    ip_range: str | None = None
+    type: str | None = None
+    operating_system: str | None = None
+    details: str | None = None
+    created: str | None = None
+    last_detected: str | None = None
+    business_impact: str | None = None
+    hosts_personal_data: bool = False
+    auth_status: str | None = None
+    vulnerabilities_count: int = 0
+    risk_score: int = 0
+    severity: HolmSeverityBreakdown | None = None
+    tags: list[HolmTag] = []
+    open_ports: list[HolmOpenPort] = []
+
+
+class HolmNetAssetPage(BaseModel):
+    """Paginated response envelope for the network assets endpoint."""
+
+    model_config = ConfigDict(extra="allow")
+
+    count: int = 0
+    next: str | None = None
+    previous: str | None = None
+    results: list[HolmNetAsset] = []
