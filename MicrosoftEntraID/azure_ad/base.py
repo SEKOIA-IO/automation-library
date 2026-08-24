@@ -13,8 +13,8 @@ from sekoia_automation.module import Module
 
 class AzureADConfiguration(BaseModel):
     tenant_id: str = Field(..., description="ID of the Azure AD tenant")
-    username: str | None = Field(default=None, description="")
-    password: str | None = Field(default=None, description="", json_schema_extra={"secret": True})
+    username: str | None = Field(None, description="")
+    password: str | None = Field(None, description="", json_schema_extra={"secret": True})
     client_id: str = Field(
         ...,
         description="Client ID. An application needs to be created in the Azure Portal and assigned relevent permissions. Its Client ID should then be used in this configuration.",  # noqa: E501

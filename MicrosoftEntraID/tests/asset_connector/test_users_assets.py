@@ -1,4 +1,6 @@
 import datetime
+import hashlib
+import json
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
@@ -976,6 +978,48 @@ def test_map_fields_enrichment_with_employment_info(test_entra_id_asset_connecto
     assert "Engineering" in employment_enrichment.value or "Senior Engineer" in employment_enrichment.value
 
 
+def test_map_fields_populates_ldap_person(test_entra_id_asset_connector):
+    """Job title and department must land in structured user.ldap_person, not only free-text enrichment."""
+    from msgraph.generated.models.user import User
+
+    asset_user = User(
+        user_principal_name="ir.analyst@example.com",
+        id="user_id",
+        display_name="IR Analyst",
+        mail="ir.analyst@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+        department="Incident Response",
+        job_title="Managing Consultant, Incident Response",
+        employee_id="EMP456",
+        office_location="London",
+    )
+
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
+
+    assert result.user.ldap_person is not None
+    assert result.user.ldap_person.job_title == "Managing Consultant, Incident Response"
+    assert result.user.ldap_person.department == "Incident Response"
+    assert result.user.ldap_person.employee_uid == "EMP456"
+    assert result.user.ldap_person.office_location == "London"
+
+
+def test_map_fields_ldap_person_none_when_absent(test_entra_id_asset_connector):
+    """ldap_person stays None when no identity attributes are present."""
+    from msgraph.generated.models.user import User
+
+    asset_user = User(
+        user_principal_name="plain@example.com",
+        id="user_id",
+        display_name="Plain User",
+        mail="plain@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+    )
+
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
+
+    assert result.user.ldap_person is None
+
+
 def test_map_fields_enrichment_without_optional_fields(test_entra_id_asset_connector):
     """Test that enrichments are created with minimal data."""
     from msgraph.generated.models.user import User
@@ -1036,11 +1080,12 @@ def test_get_mapped_fields(test_entra_id_asset_connector):
         "mail": "user.email_addr",
         "user_principal_name": "user.name",
         "company_name": "user.org.name",
-        "office_location": "user.org.ou_name",
+        "office_location": "user.org.ou_name,user.ldap_person.office_location",
         "on_premises_sam_account_name": "user.uid_alt",
         "account_enabled": "enrichments.account.data.is_enabled",
-        "department": "enrichments.employment.value",
-        "job_title": "enrichments.employment.value",
+        "department": "user.ldap_person.department,enrichments.employment.value",
+        "job_title": "user.ldap_person.job_title,enrichments.employment.value",
+        "employee_id": "user.ldap_person.employee_uid",
         "sign_in_activity.last_sign_in_date_time": "enrichments.account.data.last_logon",
         "last_password_change_date_time": "enrichments.account.data.last_time_password_change",
         "created_date_time": "time",
@@ -1056,3 +1101,67 @@ def test_get_mapped_fields_failed(test_entra_id_asset_connector):
     }
 
     assert test_entra_id_asset_connector.get_mapped_fields() != not_expected
+
+
+def test_get_mapped_fields_declares_ldap_person_targets(test_entra_id_asset_connector):
+    """Every ldap_person field written by map_fields must be declared in the mapping.
+
+    Undeclared targets leave the schema fingerprint unchanged, so the checkpoint is never
+    reset and the new fields are only ever populated on users created after the release.
+    """
+    targets = {
+        target for value in test_entra_id_asset_connector.get_mapped_fields().values() for target in value.split(",")
+    }
+
+    assert {
+        "user.ldap_person.job_title",
+        "user.ldap_person.department",
+        "user.ldap_person.employee_uid",
+        "user.ldap_person.office_location",
+    } <= targets
+
+
+@pytest.mark.asyncio
+async def test_schema_change_resets_checkpoint(test_entra_id_asset_connector):
+    """A stored fingerprint from the previous mapping must trigger a checkpoint reset."""
+    # Arrange: connector already ran with the pre-ldap_person mapping
+    previous_fields = {
+        "id": "user.uid",
+        "office_location": "user.org.ou_name",
+        "department": "enrichments.employment.value",
+        "job_title": "enrichments.employment.value",
+    }
+    with test_entra_id_asset_connector.schema_store as store:
+        store["fingerprint"] = hashlib.sha256(json.dumps(sorted(previous_fields.items())).encode()).hexdigest()
+        store["fields"] = previous_fields
+
+    test_entra_id_asset_connector._latest_time = 1640995200.0
+    await test_entra_id_asset_connector.update_checkpoint()
+    assert test_entra_id_asset_connector.most_recent_date_seen is not None
+
+    # Act
+    await test_entra_id_asset_connector._check_schema_and_reset_if_needed()
+
+    # Assert: checkpoint cleared, so the next cycle re-collects every user
+    assert test_entra_id_asset_connector.most_recent_date_seen is None
+    with test_entra_id_asset_connector.schema_store as store:
+        assert store["fields"] == test_entra_id_asset_connector.get_mapped_fields()
+
+
+@pytest.mark.asyncio
+async def test_unchanged_schema_keeps_checkpoint(test_entra_id_asset_connector):
+    """An unchanged mapping must leave the checkpoint alone."""
+    # Arrange
+    current_fields = test_entra_id_asset_connector.get_mapped_fields()
+    with test_entra_id_asset_connector.schema_store as store:
+        store["fingerprint"] = hashlib.sha256(json.dumps(sorted(current_fields.items())).encode()).hexdigest()
+        store["fields"] = current_fields
+
+    test_entra_id_asset_connector._latest_time = 1640995200.0
+    await test_entra_id_asset_connector.update_checkpoint()
+
+    # Act
+    await test_entra_id_asset_connector._check_schema_and_reset_if_needed()
+
+    # Assert
+    assert test_entra_id_asset_connector.most_recent_date_seen == "2022-01-01T00:00:01+00:00"

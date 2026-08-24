@@ -22,6 +22,9 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     AccountTypeStr,
 )
 from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
+from sekoia_automation.asset_connector.models.ocsf.user import (
+    LdapPerson,
+)
 from sekoia_automation.asset_connector.models.ocsf.user import User as UserOCSF
 from sekoia_automation.asset_connector.models.ocsf.user import (
     UserDataObject,
@@ -104,17 +107,25 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         self._latest_time = None
 
     def get_mapped_fields(self) -> dict[str, str]:
+        """Return the Entra ID → OCSF field mapping used for schema-change fingerprinting.
+
+        Every source field written by :meth:`map_fields` must be declared here: the base
+        connector hashes this mapping and resets the checkpoint when it changes, which is
+        what makes a new mapping backfill onto already-collected users. A source field
+        feeding several OCSF targets lists them comma-separated.
+        """
         return {
             "id": "user.uid",
             "display_name": "user.full_name",
             "mail": "user.email_addr",
             "user_principal_name": "user.name",
             "company_name": "user.org.name",
-            "office_location": "user.org.ou_name",
+            "office_location": "user.org.ou_name,user.ldap_person.office_location",
             "on_premises_sam_account_name": "user.uid_alt",
             "account_enabled": "enrichments.account.data.is_enabled",
-            "department": "enrichments.employment.value",
-            "job_title": "enrichments.employment.value",
+            "department": "user.ldap_person.department,enrichments.employment.value",
+            "job_title": "user.ldap_person.job_title,enrichments.employment.value",
+            "employee_id": "user.ldap_person.employee_uid",
             "sign_in_activity.last_sign_in_date_time": "enrichments.account.data.last_logon",
             "last_password_change_date_time": "enrichments.account.data.last_time_password_change",
             "created_date_time": "time",
@@ -165,6 +176,19 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             type=AccountTypeStr.AZURE_AD_ACCOUNT,
             uid=user.id,
         )
+
+        # Structured identity attributes (job title, department) so they are indexed
+        # and surfaced in the user asset detail view and available to enrichment consumers,
+        # instead of only living in the free-text employment enrichment value.
+        ldap_person = None
+        if user.department or user.job_title or user.employee_id:
+            ldap_person = LdapPerson(
+                job_title=user.job_title,
+                department=user.department,
+                employee_uid=user.employee_id,
+                office_location=user.office_location,
+            )
+
         user_data = UserOCSF(
             has_mfa=has_mfa,
             name=user.user_principal_name or "Unknown",
@@ -179,6 +203,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             type=user_type_str,
             org=org,
             uid_alt=user.on_premises_sam_account_name,
+            ldap_person=ldap_person,
         )
 
         # Build enrichment data
