@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-21 - 1.1.3
+
+### Changed
+
+- Reduce the maximum event lookback period to one week.
+
 ## 2026-05-15 - 1.1.2
 
 ### Added
