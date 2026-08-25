@@ -1043,6 +1043,7 @@ def test_get_mapped_fields(test_entra_id_asset_connector):
         "job_title": "enrichments.employment.value",
         "sign_in_activity.last_sign_in_date_time": "enrichments.account.data.last_logon",
         "last_password_change_date_time": "enrichments.account.data.last_time_password_change",
+        "created_date_time": "time",
     }
 
     assert test_entra_id_asset_connector.get_mapped_fields() == expected

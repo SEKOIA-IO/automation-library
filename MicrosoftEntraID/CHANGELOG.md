@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-25 - 2.10.28
+
+### Changed
+
+- Add again `created_date_time` → `time` field mapping from `EntraIDAssetConnector.get_mapped_fields` to activate the reset checkpoint feature for this asset connector.
+
 ## 2026-08-25 - 2.10.27
 
 ### Changed
