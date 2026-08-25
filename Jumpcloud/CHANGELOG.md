@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-21 - 1.9.0
+
+### Changed
+
+- Migrated module from Poetry to uv
+
 ## 2025-11-25 - 1.8.2
 
 ### Fixed

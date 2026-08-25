@@ -1,9 +1,10 @@
 import json
 import time
-from datetime import datetime, timedelta, timezone
+from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from threading import Event, Thread
-from typing import Generator, cast
+from typing import ClassVar, cast
 
 import orjson
 import requests
@@ -21,7 +22,7 @@ from .metrics import EVENTS_LAG, OUTCOMING_EVENTS
 logger = get_logger()
 
 
-class ShutdownException(Exception):
+class ShutdownException(Exception):  # noqa: N818
     pass
 
 
@@ -34,10 +35,10 @@ class MobileEndpointSecurityConnectorConfiguration(DefaultConnectorConfiguration
 
 
 class MobileEndpointSecurityThread(Thread):
-    YIELD_EVENTS = ["events", "heartbeat"]
-    RECONNECT_EVENTS = ["end", "reconnect"]
+    YIELD_EVENTS: ClassVar[list[str]] = ["events", "heartbeat"]
+    RECONNECT_EVENTS: ClassVar[list[str]] = ["end", "reconnect"]
 
-    def __init__(self, connector: "MobileEndpointSecurityConnector") -> None:
+    def __init__(self, connector: MobileEndpointSecurityConnector) -> None:
         super().__init__()
 
         self.connector = connector
@@ -81,6 +82,7 @@ class MobileEndpointSecurityThread(Thread):
             return response
 
         except requests.exceptions.HTTPError as err:
+            assert err.response is not None
             if err.response.status_code == 401:
                 self.log("Unauthorized error", level="critical")
 
@@ -95,13 +97,13 @@ class MobileEndpointSecurityThread(Thread):
 
             raise
 
-    def fetch_events(self) -> Generator[SSEvent, None, None]:
+    def fetch_events(self) -> Generator[SSEvent]:
         if self.last_event_id:
             params = {"last_id": self.last_event_id}
 
         else:
             # the very first run - start from an hour ago
-            start_time = datetime.now(timezone.utc) - timedelta(hours=1)
+            start_time = datetime.now(UTC) - timedelta(hours=1)
             params = {"start_time": start_time.isoformat()}
 
         stream = self.get_sse_stream(params=params, timeout=60)
@@ -124,7 +126,7 @@ class MobileEndpointSecurityThread(Thread):
                 self.log(f"{ss_event.event} event received, shutting down...", level="info")
                 if self.retry_ms:
                     wait_time_seconds = round(self.retry_ms / 1000.0, 2)
-                    self.log("Waiting %d seconds before reconnect" % wait_time_seconds)
+                    self.log(f"Waiting {int(wait_time_seconds)} seconds before reconnect")
 
                     time.sleep(wait_time_seconds)
 
@@ -160,7 +162,7 @@ class MobileEndpointSecurityThread(Thread):
                         # save last seen event id
                         self.cursor.offset = self.last_event_id
 
-                        now = datetime.now(timezone.utc)
+                        now = datetime.now(UTC)
                         current_lag = now - most_recent_date_seen
                         EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(
                             current_lag.total_seconds()

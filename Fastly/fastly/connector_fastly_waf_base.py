@@ -1,9 +1,9 @@
 import datetime
 import time
 from abc import abstractmethod
+from collections.abc import Generator
 from functools import cached_property
 from threading import Event, Lock, Thread
-from typing import Generator
 
 import orjson
 from dateutil.parser import isoparse
@@ -28,7 +28,7 @@ class FastlyWAFBasicConnectorConfiguration(DefaultConnectorConfiguration):
 class FastlyWAFConsumer(Thread):
     base_uri = "https://dashboard.signalsciences.net"
 
-    def __init__(self, connector: "FastlyWAFBaseConnector", name: str, url: str):
+    def __init__(self, connector: FastlyWAFBaseConnector, name: str, url: str):
         super().__init__()
 
         self.connector = connector
@@ -60,7 +60,7 @@ class FastlyWAFConsumer(Thread):
 
     @property
     def most_recent_date_seen(self) -> datetime.datetime:
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
 
         self.connector.context_lock.acquire()
         with self.connector.context as cache:
@@ -94,7 +94,7 @@ class FastlyWAFConsumer(Thread):
         from_timestamp = int(from_datetime.timestamp())
         return f"{self.url}?sort=asc&limit={self.connector.configuration.chunk_size}&from={from_timestamp}"
 
-    def fetch_next_events(self, from_datetime: datetime.datetime) -> Generator[list, None, None]:
+    def fetch_next_events(self, from_datetime: datetime.datetime) -> Generator[list]:
         next_url = self.get_next_url(from_datetime=from_datetime)
         while self.running:
             response = self.client.get(url=next_url, timeout=60)
@@ -117,9 +117,9 @@ class FastlyWAFConsumer(Thread):
             if not next_path:
                 return
 
-            next_url = "%s%s" % (self.base_uri, next_path)
+            next_url = f"{self.base_uri}{next_path}"
 
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list]:
         most_recent_date_seen = self.from_datetime
         try:
             for next_events in self.fetch_next_events(most_recent_date_seen):
@@ -159,7 +159,7 @@ class FastlyWAFConsumer(Thread):
                 self.connector.push_events_to_intakes(events=batch_of_events)
 
                 # Compute the current lag from the date of the most recent event seen
-                current_lag = int((datetime.datetime.now(datetime.timezone.utc) - self.from_datetime).total_seconds())
+                current_lag = int((datetime.datetime.now(datetime.UTC) - self.from_datetime).total_seconds())
             else:
                 self.log(
                     message=f"{self.name}: No events to forward",
@@ -216,7 +216,7 @@ class FastlyWAFBaseConnector(Connector):
         page_limit = 100
         while True:
             response = self.client.get(
-                f"{self.base_uri}/api/v0/corps/{self.configuration.corp}/sites?" f"page={page_num}&limit={page_limit}",
+                f"{self.base_uri}/api/v0/corps/{self.configuration.corp}/sites?page={page_num}&limit={page_limit}",
                 timeout=60,
             )
             response.raise_for_status()
@@ -273,7 +273,7 @@ class FastlyWAFBaseConnector(Connector):
         return isoparse(item["timestamp"])
 
     def get_url_by_consumer_name(self, name: str) -> str | None:
-        level, label = name.split(":")
+        level, _label = name.split(":")
         if level == "site":
             return self.get_url_for_site(site_name=name)
 

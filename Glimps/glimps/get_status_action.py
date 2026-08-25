@@ -9,7 +9,7 @@ class GetStatus(GLIMPSAction):
     description = "Get Glimps detect profile status, it includes quotas, eastimated analysis duration and cache"
     results_model = ProfileStatus
 
-    def run(self, arguments) -> ProfileStatus:
+    def run(self, arguments) -> ProfileStatus:  # noqa: ARG002
         # send the request to Glimps
         status = self.gdetect_client.get_status()
         response = ProfileStatus(**status.to_dict())

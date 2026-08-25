@@ -1,4 +1,5 @@
 import json
+from typing import ClassVar
 
 
 class SSEvent:
@@ -6,9 +7,9 @@ class SSEvent:
     Using an event class allows for checking event fields.
     """
 
-    VALID_FIELDS = ["id", "event", "data", "retry"]
+    VALID_FIELDS: ClassVar[list[str]] = ["id", "event", "data", "retry"]
 
-    def __init__(self, id: int | None = None, event: str = "", data: str = "", retry: int | None = None):
+    def __init__(self, id: int | None = None, event: str = "", data: str = "", retry: int | None = None):  # noqa: A002
         self.id = id
         self.event = event
         self.data = data

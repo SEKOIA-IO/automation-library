@@ -1,10 +1,10 @@
 import os
 import time
 from collections.abc import Generator
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from typing import Any
 from posixpath import join as urljoin
+from typing import Any
 
 import orjson
 import requests
@@ -28,7 +28,7 @@ from jumpcloud_modules.metrics import (
 logger = get_logger()
 
 
-class FetchEventsException(Exception):
+class FetchEventsException(Exception):  # noqa: N818
     pass
 
 
@@ -54,14 +54,14 @@ class JumpcloudDirectoryInsightsConnector(Connector):
         self.from_date = self.most_recent_date_seen
         self.fetch_events_limit = 1000
 
-    def stop(self, *args, **kwargs):
+    def stop(self, *args, **kwargs):  # noqa: ARG002
         self.log(message="Stopping Jumpcloud Directory Insights logs connector", level="info")
         # Exit signal received, asking the processor to stop
         self._stop_event.set()
 
     @property
     def most_recent_date_seen(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         with self.context as cache:
             most_recent_date_seen_str = cache.get("most_recent_date_seen")
@@ -98,7 +98,7 @@ failed with status {response.status_code} - {response.reason}"
 
             raise FetchEventsException(message)
 
-    def __fetch_next_events(self, from_date: datetime) -> Generator[list, None, None]:
+    def __fetch_next_events(self, from_date: datetime) -> Generator[list]:
         # set parameters
         params: dict[str, Any] = {
             "start_time": from_date.isoformat(),
@@ -140,7 +140,7 @@ failed with status {response.status_code} - {response.reason}"
             else:
                 return
 
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list]:
         most_recent_date_seen = self.from_date
 
         for next_events in self.__fetch_next_events(most_recent_date_seen):
@@ -168,7 +168,7 @@ failed with status {response.status_code} - {response.reason}"
         # save the most recent date
         current_lag: int = 0
         if most_recent_date_seen > self.from_date:
-            now_utc = datetime.now(timezone.utc)
+            now_utc = datetime.now(UTC)
             if most_recent_date_seen > now_utc:
                 # if the most recent date seen is in the future, set it to now
                 most_recent_date_seen = now_utc
@@ -179,7 +179,7 @@ failed with status {response.status_code} - {response.reason}"
             with self.context as cache:
                 cache["most_recent_date_seen"] = most_recent_date_seen.isoformat()
 
-            delta_time = datetime.now(timezone.utc) - self.from_date
+            delta_time = datetime.now(UTC) - self.from_date
             current_lag = int(delta_time.total_seconds())
             self.log(
                 message=f"Current lag {current_lag} seconds.",

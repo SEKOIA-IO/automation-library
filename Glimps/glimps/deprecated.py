@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import requests
 from requests import Response, Timeout
 from sekoia_automation.action import GenericAPIAction
@@ -27,7 +29,7 @@ class DeprecatedRetrieveAnalysis(DeprecatedGlimpsAction):
 
     verb: str = "get"
     endpoint: str = base_url + "results/{uuid}"
-    query_parameters: list[str] = []
+    query_parameters: ClassVar[list[str]] = []
 
 
 class DeprecatedSearchPreviousAnalysis(DeprecatedGlimpsAction):
@@ -35,14 +37,14 @@ class DeprecatedSearchPreviousAnalysis(DeprecatedGlimpsAction):
 
     verb: str = "get"
     endpoint: str = base_url + "search/{sha256}"
-    query_parameters: list[str] = []
+    query_parameters: ClassVar[list[str]] = []
 
 
 class DeprecatedSubmitFileToBeAnalysed(DeprecatedGlimpsAction):
     name = "[Deprecated] Analyse a file"
 
     endpoint: str = base_url + "submit"
-    query_parameters: list[str] = ["bypass-cache"]
+    query_parameters: ClassVar[list[str]] = ["bypass-cache"]
 
     def get_files(self, arguments) -> dict:
         """

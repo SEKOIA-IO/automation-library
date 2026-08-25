@@ -103,6 +103,26 @@
 		{
 			"name": "Duo",
 			"path": "Duo"
+		},
+		{
+			"name": "Fastly",
+			"path": "Fastly"
+		},
+		{
+			"name": "Git",
+			"path": "Git"
+		},
+		{
+			"name": "Glimps",
+			"path": "Glimps"
+		},
+		{
+			"name": "Jumpcloud",
+			"path": "Jumpcloud"
+		},
+		{
+			"name": "Lookout",
+			"path": "Lookout"
 		}
 	],
 	"settings": {

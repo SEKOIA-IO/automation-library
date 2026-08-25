@@ -1,5 +1,5 @@
 import logging
-from typing import Generator
+from collections.abc import Generator
 
 import requests
 
@@ -24,7 +24,7 @@ class SSEClient:
         self.event_stream = event_stream
         self.event_enc = event_enc
 
-    def __read(self) -> Generator[bytes, None, None]:
+    def __read(self) -> Generator[bytes]:
         """
         Read from the event stream and yield raw event data.
 
@@ -46,7 +46,7 @@ class SSEClient:
         if raw_event:
             yield raw_event
 
-    def iter_stream_events(self) -> Generator[SSEvent, None, None]:
+    def iter_stream_events(self) -> Generator[SSEvent]:
         """
         Stream events from a SSE endpoint
 
