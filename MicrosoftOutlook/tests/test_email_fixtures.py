@@ -2,7 +2,6 @@ from email import policy
 from email.parser import Parser
 from pathlib import Path
 
-
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "mail_samples"
 
 

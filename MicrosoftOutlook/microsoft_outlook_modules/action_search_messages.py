@@ -29,7 +29,9 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
                 return value if isinstance(value, str) else None
         return None
 
-    def _search_by_network_message_id_fallback(self, user_id_or_principal_name: str, network_message_id: str, top: int) -> Any:
+    def _search_by_network_message_id_fallback(
+        self, user_id_or_principal_name: str, network_message_id: str, top: int
+    ) -> Any:
         escaped_property = self._escape_odata_literal(self.NETWORK_MESSAGE_ID_EXTENDED_PROPERTY)
         params: dict[str, Any] = {
             "$top": top,
