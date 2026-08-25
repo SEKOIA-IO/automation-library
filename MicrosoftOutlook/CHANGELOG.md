@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.0] - 2026-08-11
+## [0.2.0] - 2026-08-25
 
 ### Added
 
@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Increase automated test coverage to 100%
+- Added a fallback lookup for `email_local_id` queries in search/resolve actions when Graph returns `InefficientFilter` or no results
 
 ## [0.1.2] - 2025-09-22
 
