@@ -117,7 +117,6 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             "job_title": "enrichments.employment.value",
             "sign_in_activity.last_sign_in_date_time": "enrichments.account.data.last_logon",
             "last_password_change_date_time": "enrichments.account.data.last_time_password_change",
-            "created_date_time": "time",
         }
 
     def map_fields(self, user: User, has_mfa: bool, groups: list[UserOCSFGroup], is_admin: bool) -> UserOCSFModel:

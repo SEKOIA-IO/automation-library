@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-25 - 2.10.27
+
+### Changed
+
+- Remove `created_date_time` → `time` field mapping from `EntraIDAssetConnector.get_mapped_fields`
+
 ## 2026-07-27 - 2.10.26
 
 ### Added
