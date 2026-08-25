@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-25 - 2.10.29
+
+### Changed
+
+- Set default frequency to 86400s (1 day) and minimum to 10800s (3 hours) in user asset connector
+
 ## 2026-08-25 - 2.10.28
 
 ### Changed
