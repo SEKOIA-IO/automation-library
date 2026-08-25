@@ -2,7 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .action_base import MicrosoftGraphActionBase
+from .action_base import GraphAPIException, MicrosoftGraphActionBase
 
 
 class ResolveMessageArguments(BaseModel):
@@ -22,6 +22,37 @@ class ResolveMessageAction(MicrosoftGraphActionBase):
     @staticmethod
     def _escape_odata_literal(value: str) -> str:
         return value.replace("'", "''")
+
+    @staticmethod
+    def _extract_network_message_id(message: dict[str, Any]) -> str | None:
+        for prop in message.get("singleValueExtendedProperties", []):
+            if prop.get("id") == ResolveMessageAction.NETWORK_MESSAGE_ID_EXTENDED_PROPERTY:
+                value = prop.get("value")
+                return value if isinstance(value, str) else None
+        return None
+
+    def _resolve_by_network_message_id_fallback(self, user_id_or_principal_name: str, email_local_id: str, top: int) -> Any:
+        escaped_property = self._escape_odata_literal(self.NETWORK_MESSAGE_ID_EXTENDED_PROPERTY)
+        params: dict[str, Any] = {
+            "$top": top,
+            "$select": "id,internetMessageId,subject,receivedDateTime,from,toRecipients",
+            "$expand": "singleValueExtendedProperties(" f"$filter=id eq '{escaped_property}'" ")",
+            "$orderby": "receivedDateTime desc",
+        }
+
+        response = self.client.get(
+            f"https://graph.microsoft.com/v1.0/users/{user_id_or_principal_name}/messages",
+            params=params,
+            timeout=60,
+        )
+        self.handle_response(response)
+
+        payload = response.json()
+        messages: list[dict[str, Any]] = payload.get("value", [])
+        payload["value"] = [
+            message for message in messages if self._extract_network_message_id(message) == email_local_id
+        ]
+        return payload
 
     def run(self, arguments: Any) -> Any:
         validated_arguments = ResolveMessageArguments.model_validate(arguments)
@@ -61,14 +92,25 @@ class ResolveMessageAction(MicrosoftGraphActionBase):
             escaped_property = self._escape_odata_literal(self.NETWORK_MESSAGE_ID_EXTENDED_PROPERTY)
             params["$expand"] = "singleValueExtendedProperties(" f"$filter=id eq '{escaped_property}'" ")"
 
-        response = self.client.get(
-            f"https://graph.microsoft.com/v1.0/users/{user_id_or_principal_name}/messages",
-            params=params,
-            timeout=60,
-        )
-        self.handle_response(response)
+        try:
+            response = self.client.get(
+                f"https://graph.microsoft.com/v1.0/users/{user_id_or_principal_name}/messages",
+                params=params,
+                timeout=60,
+            )
+            self.handle_response(response)
+            payload = response.json()
+        except GraphAPIException as exc:
+            if email_local_id and "InefficientFilter" in str(exc):
+                self.log(message="Fallback to client-side NetworkMessageId filtering", level="warning")
+                payload = self._resolve_by_network_message_id_fallback(user_id_or_principal_name, email_local_id, top)
+            else:
+                raise
 
-        payload = response.json()
+        if email_local_id and not payload.get("value"):
+            self.log(message="No results with NetworkMessageId filter, retrying with fallback", level="warning")
+            payload = self._resolve_by_network_message_id_fallback(user_id_or_principal_name, email_local_id, top)
+
         messages: list[dict[str, Any]] = payload.get("value", [])
 
         if not messages:

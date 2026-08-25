@@ -2,6 +2,7 @@ import pytest
 import requests_mock
 from urllib.parse import unquote_plus
 
+from microsoft_outlook_modules.action_base import GraphAPIException
 from microsoft_outlook_modules.action_resolve_message import ResolveMessageAction
 
 
@@ -93,3 +94,127 @@ def test_resolve_message_most_recent_and_item_index(configured_action):
         decoded_query = unquote_plus(request.url.split("?", maxsplit=1)[1])
         assert "$orderby=receivedDateTime desc" in decoded_query
         assert result["graph_message_id"] == "graph-item-id-2"
+
+
+def test_resolve_message_by_network_message_id_fallback_on_empty_result(configured_action):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages",
+            [
+                {"status_code": 200, "json": {"value": []}},
+                {
+                    "status_code": 200,
+                    "json": {
+                        "value": [
+                            {
+                                "id": "graph-item-id-3",
+                                "singleValueExtendedProperties": [
+                                    {
+                                        "id": "String {41F28F13-83F4-4114-A584-EEDB5A6B0BFF} Name NetworkMessageId",
+                                        "value": "00000000-0000-4000-8000-000000000001",
+                                    }
+                                ],
+                            }
+                        ]
+                    },
+                },
+            ],
+        )
+
+        action = configured_action(ResolveMessageAction)
+        result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
+
+        assert result["graph_message_id"] == "graph-item-id-3"
+        assert result["total_results"] == 1
+
+
+def test_resolve_message_by_network_message_id_fallback_on_inefficient_filter(configured_action):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages",
+            [
+                {
+                    "status_code": 400,
+                    "text": '{"error":{"code":"InefficientFilter","message":"The restriction or sort order is too complex for this operation."}}',
+                },
+                {
+                    "status_code": 200,
+                    "json": {
+                        "value": [
+                            {
+                                "id": "graph-item-id-4",
+                                "singleValueExtendedProperties": [
+                                    {
+                                        "id": "String {41F28F13-83F4-4114-A584-EEDB5A6B0BFF} Name NetworkMessageId",
+                                        "value": "00000000-0000-4000-8000-000000000001",
+                                    }
+                                ],
+                            }
+                        ]
+                    },
+                },
+            ],
+        )
+
+        action = configured_action(ResolveMessageAction)
+        result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
+
+        assert result["graph_message_id"] == "graph-item-id-4"
+        assert result["total_results"] == 1
+
+
+def test_extract_network_message_id_returns_none_for_non_string_value():
+    message = {
+        "singleValueExtendedProperties": [
+            {
+                "id": "String {41F28F13-83F4-4114-A584-EEDB5A6B0BFF} Name NetworkMessageId",
+                "value": 123,
+            }
+        ]
+    }
+
+    assert ResolveMessageAction._extract_network_message_id(message) is None
+
+
+def test_extract_network_message_id_returns_none_when_property_is_absent():
+    message = {
+        "singleValueExtendedProperties": [
+            {
+                "id": "String {11111111-1111-1111-1111-111111111111} Name OtherProperty",
+                "value": "foo",
+            }
+        ]
+    }
+
+    assert ResolveMessageAction._extract_network_message_id(message) is None
+
+
+def test_resolve_message_by_network_message_id_raises_non_inefficient_filter_error(configured_action):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages",
+            status_code=400,
+            text='{"error":{"code":"BadRequest","message":"boom"}}',
+        )
+
+        action = configured_action(ResolveMessageAction)
+        with pytest.raises(GraphAPIException, match="BadRequest"):
+            action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
