@@ -82,9 +82,12 @@ class AuditLogsClient(requests.Session):
 
         try:
             response.raise_for_status()
-            payload: dict[str, Any] = response.json()
+            payload = response.json()
         except (requests.RequestException, ValueError) as error:
             raise SlackAuditLogsError(str(error)) from error
+
+        if not isinstance(payload, dict):
+            raise SlackAuditLogsError(f"Expected a JSON object, got {type(payload).__name__}")
 
         if payload.get("ok") is False:
             code = self._error_code(response)

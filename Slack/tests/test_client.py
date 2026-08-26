@@ -161,6 +161,16 @@ def test_non_json_body_is_wrapped_in_the_module_error():
             list(make_client().iter_pages(oldest=1, latest=2))
 
 
+def test_a_json_body_that_is_not_an_object_is_wrapped_in_the_module_error():
+    """A list or a bare string decodes fine, so the ValueError guard above never fires; without a
+    shape check the caller would meet an AttributeError instead of a handled API failure."""
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{BASE_URL}/logs", json=["not", "an", "object"])
+
+        with pytest.raises(SlackAuditLogsError):
+            list(make_client().iter_pages(oldest=1, latest=2))
+
+
 def test_the_budget_ending_on_a_drained_page_still_reports_the_window_as_drained():
     """The boundary that separates an unfinished window from a finished one: at exactly MAX_PAGES
     pages the client returns normally either way, and only the last cursor says which happened.
