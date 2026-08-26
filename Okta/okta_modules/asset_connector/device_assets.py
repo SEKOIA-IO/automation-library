@@ -93,6 +93,38 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
 
         return result
 
+    def get_mapped_fields(self) -> dict[str, str]:
+        """Return the Okta -> OCSF field mapping used for schema-change fingerprinting.
+
+        Static OCSF constants are excluded: they never depend on the Okta payload, so they
+        cannot invalidate a checkpoint.
+        """
+        return {
+            "id": "device.uid",
+            "status": "device.is_compliant",
+            "created": "device.created_time",
+            "lastUpdated": "device.last_seen_time",
+            "lastSeen": "device.last_seen_time",
+            "profile.displayName": "device.hostname",
+            "profile.platform": "device.os.type",
+            "profile.registered": "device.is_managed",
+            "profile.secureHardwarePresent": "device.is_trusted",
+            "profile.manufacturer": "device.vendor_name",
+            "profile.model": "device.model",
+            "profile.udid": "device.udid",
+            "profile.imei": "device.imei_list",
+            "profile.serialNumber": "device.uid_alt",
+            "profile.diskEncryptionType": "enrichments.data.Storage_encryption",
+            "profile.sid": "enrichments.data.Users",
+        }
+
+    async def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so every device is collected again on the next cycle."""
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self.new_most_recent_date = None
+        self.log("Checkpoint reset - a full device re-collection will occur on the next cycle", level="info")
+
     async def update_checkpoint(self) -> None:
         """Update the checkpoint with the most recent date seen.
 

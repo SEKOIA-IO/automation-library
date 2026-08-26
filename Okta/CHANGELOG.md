@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-26 - 2.11.0
+
+### Changed
+
+- Upgrade `sekoia-automation-sdk` to 1.24.0
+- Migrate the module configuration from `pydantic.v1` to Pydantic v2, required by the SDK
+
+### Fixed
+
+- Account validator no longer relies on the deprecated `asyncio.get_event_loop()`, which
+  failed with "There is no current event loop" when no loop was set for the thread
+
 ## 2026-08-21 - 2.10.5
 
 ### Fixed
