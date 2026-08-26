@@ -1,0 +1,28 @@
+# Module-specific mise config.
+# Tools and tasks are declared locally so commands can run directly from this
+# module folder in isolated workspace contexts.
+
+[tools]
+python = "3.14"
+
+[env]
+_.python.venv = { path = ".venv", create = false }
+
+[tasks.test]
+description = "Run tests"
+run = "uv run pytest tests/"
+
+[tasks.lint]
+description = "Check code style and types"
+run = [
+    "uv run ruff check --no-fix .",
+    "uv run ruff format --check .",
+    "uv run mypy .",
+]
+
+[tasks.format]
+description = "Format and auto-fix code"
+run = [
+    "uv run ruff check --fix .",
+    "uv run ruff format .",
+]
