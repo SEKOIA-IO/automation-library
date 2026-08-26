@@ -352,3 +352,23 @@ def test_is_device_compliant(connector):
     assert connector.is_device_compliant(compliant) is True
     assert connector.is_device_compliant(non_compliant) is False
     assert connector.is_device_compliant(CrowdStrikeDevice()) is None
+
+
+def test_get_mapped_fields(connector):
+    fields = connector.get_mapped_fields()
+
+    assert isinstance(fields, dict)
+    assert fields
+    assert all(isinstance(key, str) and isinstance(value, str) for key, value in fields.items())
+    assert fields["device_id"] == "device.uid"
+
+
+def test_reset_checkpoint(connector):
+    connector._latest_id = "device-1"
+    connector.update_checkpoint()
+    assert connector.most_recent_device_id == "device-1"
+
+    connector.reset_checkpoint()
+
+    assert connector._latest_id is None
+    assert connector.most_recent_device_id is None
