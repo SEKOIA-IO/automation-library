@@ -94,6 +94,19 @@ class AwsAssetsConnector(OidcAwsMixin, AssetConnector):
             self.log_exception(e)
             return None
 
+    def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so every asset is collected again on the next cycle."""
+        try:
+            with self.context as cache:
+                cache.pop("most_recent_date_seen", None)
+        except Exception as e:
+            self.log(f"Failed to reset checkpoint: {str(e)}", level="error")
+            self.log_exception(e)
+            return
+
+        self.new_most_recent_date = None
+        self.log("Checkpoint reset - a full re-collection will occur on the next cycle", level="info")
+
     def update_checkpoint(self) -> None:
         """Update checkpoint with the most recent processed date."""
         if self.new_most_recent_date is None:

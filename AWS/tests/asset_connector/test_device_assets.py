@@ -1112,3 +1112,23 @@ def test_update_checkpoint_integration(test_aws_device_asset_connector):
 
     # Verify logging was called
     test_aws_device_asset_connector.log.assert_called_with(f"Checkpoint updated with date: {test_date}", level="info")
+
+
+def test_get_mapped_fields(test_aws_device_asset_connector):
+    fields = test_aws_device_asset_connector.get_mapped_fields()
+
+    assert isinstance(fields, dict)
+    assert fields
+    assert all(isinstance(key, str) and isinstance(value, str) for key, value in fields.items())
+    assert fields["Instances.InstanceId"] == "device.uid"
+
+
+def test_reset_checkpoint(test_aws_device_asset_connector):
+    test_aws_device_asset_connector.new_most_recent_date = "2025-01-01T00:00:00+00:00"
+    test_aws_device_asset_connector.update_checkpoint()
+    assert test_aws_device_asset_connector.most_recent_date_seen == "2025-01-01T00:00:00+00:00"
+
+    test_aws_device_asset_connector.reset_checkpoint()
+
+    assert test_aws_device_asset_connector.new_most_recent_date is None
+    assert test_aws_device_asset_connector.most_recent_date_seen is None

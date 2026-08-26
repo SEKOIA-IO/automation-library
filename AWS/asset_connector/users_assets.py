@@ -248,6 +248,26 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
 
         self.log(f"Successfully collected {user_count} AWS users", level="info")
 
+    def get_mapped_fields(self) -> dict[str, str]:
+        """Return the IAM -> OCSF field mapping used for schema-change fingerprinting.
+
+        Sources prefixed with ``Groups.`` come from ``list_groups_for_user``,
+        ``AttachedPolicies.`` from ``list_attached_group_policies`` and ``MFADevices``
+        from ``list_mfa_devices``. Static OCSF constants are excluded: they never depend
+        on the IAM payload, so they cannot invalidate a checkpoint.
+        """
+        return {
+            "UserName": "user.name",
+            "Arn": "user.uid",
+            "UserId": "user.uid_alt",
+            "CreateDate": "time",
+            "PasswordLastUsed": "enrichments.data.last_logon",
+            "Groups.GroupName": "user.groups.name",
+            "Groups.Arn": "user.groups.uid",
+            "AttachedPolicies.PolicyName": "user.groups.privileges",
+            "MFADevices": "user.has_mfa",
+        }
+
     def user_has_admin_policy(self, user_groups: List[Group]) -> bool:
         """Check if a user has admin policies."""
         admin_patterns = ["admin", "administrator", "poweruser"]
