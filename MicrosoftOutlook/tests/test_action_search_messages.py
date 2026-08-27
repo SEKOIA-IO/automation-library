@@ -33,7 +33,7 @@ def test_search_messages_by_internet_message_id(configured_action, get_message_1
 
 def test_client_property_accepts_raw_string_client_secret():
     module = MicrosoftOutlookModule()
-    module.configuration = {
+    module.configuration = {  # type: ignore[assignment]
         "tenant_id": "test_tenant_id",
         "client_id": "32747e7c-2eff-43ea-a9c7-e783b9d2f930",
         "client_secret": "client_secret",
