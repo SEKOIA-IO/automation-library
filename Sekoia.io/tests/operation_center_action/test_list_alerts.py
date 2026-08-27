@@ -65,6 +65,6 @@ def test_list_alerts_drops_empty_and_false_parameters(requests_mock):
     assert sent["limit"] == ["20"]
     assert sent["offset"] == ["0"]
     assert sent["match[status_name]"] == ["ongoing"]
-    # booleans serialized lowercase (API is case-sensitive), never capital "True"
+    # booleans normalized to lowercase, never Python's capital "True"
     assert "visible=true" in url
     assert "visible=True" not in url
