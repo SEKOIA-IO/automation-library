@@ -15,12 +15,26 @@ class GraphAPIException(Exception):
 class MicrosoftGraphActionBase(Action, ABC):
     module: MicrosoftOutlookModule
 
+    @staticmethod
+    def _read_client_secret(secret_value: object) -> str:
+        """Accept either a Pydantic SecretStr-like value or a raw string."""
+        if isinstance(secret_value, str):
+            return secret_value
+
+        getter = getattr(secret_value, "get_secret_value", None)
+        if callable(getter):
+            resolved_value = getter()
+            if isinstance(resolved_value, str):
+                return resolved_value
+
+        raise TypeError("Invalid client_secret type: expected string or SecretStr-like value")
+
     @cached_property
     def client(self) -> ApiClient:
         return ApiClient(
             tenant_id=self.module.configuration.tenant_id,
             app_id=self.module.configuration.client_id,
-            app_secret=self.module.configuration.client_secret.get_secret_value(),
+            app_secret=self._read_client_secret(self.module.configuration.client_secret),
         )
 
     def handle_response(self, response: Response) -> None:

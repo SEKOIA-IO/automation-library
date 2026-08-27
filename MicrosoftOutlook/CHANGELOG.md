@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-08-27
+
+### Changed
+
+- Document lint and test commands in README and align lint tooling configuration for local validation
+
+### Fixed
+
+- Accept `client_secret` from playbook runtime whether provided as raw string or `SecretStr`-like value
+- Prevent action startup failure caused by `AttributeError: 'str' object has no attribute 'get_secret_value'` in playbook executions
+
 ## [0.3.0] - 2026-08-27
 
 ### Added
