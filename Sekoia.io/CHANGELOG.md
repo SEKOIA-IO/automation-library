@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-27 - 2.76.1
+
+### Fixed
+
+- Do not include community UUIDs in request for `Execute a Query` action to avoid permission issues
+
 ## 2026-08-21 - 2.76.0
 
 ### Added
