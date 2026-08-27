@@ -1203,3 +1203,25 @@ def test_get_assets_skips_on_map_error(test_harfanglab_asset_connector, agent_en
             with patch.object(test_harfanglab_asset_connector, "map_fields", side_effect=ValueError("mapping error")):
                 assets = list(test_harfanglab_asset_connector.get_assets())
                 assert len(assets) == 0
+
+
+def test_get_mapped_fields(test_harfanglab_asset_connector):
+    fields = test_harfanglab_asset_connector.get_mapped_fields()
+
+    assert isinstance(fields, dict)
+    assert fields
+    assert all(isinstance(key, str) and isinstance(value, str) for key, value in fields.items())
+    assert fields["id"] == "device.uid"
+
+
+def test_reset_checkpoint(test_harfanglab_asset_connector):
+    connector = test_harfanglab_asset_connector
+
+    connector._latest_time = "2025-01-01T00:00:00+00:00"
+    connector.update_checkpoint()
+    assert connector.most_recent_date_seen == "2025-01-01T00:00:00+00:00"
+
+    connector.reset_checkpoint()
+
+    assert connector._latest_time is None
+    assert connector.most_recent_date_seen is None

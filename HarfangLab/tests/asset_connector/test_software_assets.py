@@ -499,3 +499,25 @@ def test_get_assets_no_applications(test_software_connector):
             assets = list(test_software_connector.get_assets())
 
     assert len(assets) == 0
+
+
+def test_get_mapped_fields(test_software_connector):
+    fields = test_software_connector.get_mapped_fields()
+
+    assert isinstance(fields, dict)
+    assert fields
+    assert all(isinstance(key, str) and isinstance(value, str) for key, value in fields.items())
+    assert fields["application.name"] == "sbom.package.name"
+
+
+def test_reset_checkpoint(test_software_connector):
+    connector = test_software_connector
+
+    connector._latest_time = "2025-01-01T00:00:00+00:00"
+    connector.update_checkpoint()
+    assert connector.most_recent_date_seen == "2025-01-01T00:00:00+00:00"
+
+    connector.reset_checkpoint()
+
+    assert connector._latest_time is None
+    assert connector.most_recent_date_seen is None

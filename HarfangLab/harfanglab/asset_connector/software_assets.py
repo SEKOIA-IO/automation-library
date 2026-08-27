@@ -5,7 +5,7 @@ from typing import ClassVar
 from urllib.parse import urljoin
 
 from dateutil.parser import isoparse
-from pydantic.v1 import ValidationError
+from pydantic import ValidationError
 from requests.exceptions import RequestException
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
@@ -63,6 +63,7 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("software_context.json", self._data_path)
+        self._latest_time: str | None = None
 
     @property
     def most_recent_date_seen(self) -> str | None:
@@ -325,6 +326,38 @@ class HarfanglabSoftwareAssetConnector(AssetConnector):
         except Exception as e:
             self.log(f"Device iteration failed - Error: {e!s}, Devices processed: {device_count}", level="error")
             raise
+
+    def get_mapped_fields(self) -> dict[str, str]:
+        """
+        Return the Harfanglab -> OCSF field mapping used for schema-change fingerprinting.
+
+        Sources prefixed with ``application.`` come from the per-agent application inventory.
+        Static OCSF constants are excluded: they never depend on the Harfanglab payload, so
+        they cannot invalidate a checkpoint.
+        """
+        return {
+            "id": "device.uid",
+            "hostname": "device.hostname",
+            "domainname": "device.domain",
+            "ipaddress": "device.ip",
+            "osproducttype": "device.os.name",
+            "ostype": "device.os.type",
+            "firstseen": "device.first_seen_time",
+            "lastseen": "device.last_seen_time",
+            "application.id": "sbom.package.uid",
+            "application.name": "sbom.package.name",
+            "application.last_version": "sbom.package.version",
+            "application.first_version": "sbom.package.version",
+            "application.cpe_prefix": "sbom.package.cpe_name",
+            "application.app_type": "sbom.package.type",
+        }
+
+    def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so every software asset is collected again on the next cycle."""
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self._latest_time = None
+        self.log("Checkpoint reset - a full software re-collection will occur on the next cycle", level="info")
 
     def update_checkpoint(self) -> None:
         if self._latest_time:
