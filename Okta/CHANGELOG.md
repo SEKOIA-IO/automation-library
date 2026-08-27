@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-21 - 2.10.5
+
+### Fixed
+
+- Account validation now reports the real error to the platform instead of "Unknown error": the validator calls `self.error()` so the message reaches the UI, and falls back to `str(err)`/`repr(err)` when the Okta SDK error carries an empty `message`.
+
 ## 2026-06-16 - 2.10.4
 
 ### Fixed

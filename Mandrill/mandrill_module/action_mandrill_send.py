@@ -1,4 +1,4 @@
-import mailchimp_transactional as MailchimpTransactional
+import mailchimp_transactional as mailchimp_transactional
 from mailchimp_transactional.api_client import ApiClientError
 from sekoia_automation.action import Action
 
@@ -9,7 +9,7 @@ class MandrillSendAction(Action):
     """
 
     def run(self, arguments) -> dict | None:
-        client = MailchimpTransactional.Client(self.module.configuration.get("apikey"))
+        client = mailchimp_transactional.Client(self.module.configuration.get("apikey"))
 
         message = {
             "message": arguments["message"],

@@ -3,9 +3,8 @@ from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
 
-from sekoia_automation import config
-from sekoia_automation import storage as storage_module
 import pytest
+from sekoia_automation.configuration.filesystem import FileSystemConfiguration
 
 
 @pytest.fixture()
@@ -26,11 +25,10 @@ def mocked_uuid(mocker):
 
 @pytest.fixture()
 def config_storage():
-    old_config_storage = config.VOLUME_PATH
-    config.VOLUME_PATH = mkdtemp()
-    storage_module.VOLUME_PATH = config.VOLUME_PATH
+    original_storage = FileSystemConfiguration.VOLUME_PATH
+    FileSystemConfiguration.VOLUME_PATH = mkdtemp()
 
-    yield Path(config.VOLUME_PATH)
+    yield Path(FileSystemConfiguration.VOLUME_PATH)
 
-    rmtree(config.VOLUME_PATH)
-    config.VOLUME_PATH = old_config_storage
+    rmtree(FileSystemConfiguration.VOLUME_PATH)
+    FileSystemConfiguration.VOLUME_PATH = original_storage

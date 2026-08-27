@@ -20,7 +20,7 @@ class MicrosoftGraphActionBase(Action, ABC):
         return ApiClient(
             tenant_id=self.module.configuration.tenant_id,
             app_id=self.module.configuration.client_id,
-            app_secret=self.module.configuration.client_secret,
+            app_secret=self.module.configuration.client_secret.get_secret_value(),
         )
 
     def handle_response(self, response: Response) -> None:

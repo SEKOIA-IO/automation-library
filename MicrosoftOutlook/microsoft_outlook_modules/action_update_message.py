@@ -1,6 +1,41 @@
-from typing import Any
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .action_base import MicrosoftGraphActionBase
+
+
+class UpdateMessageArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    user: str
+    message_id: str
+    content: str | None = None
+    bcc: list[str] | None = None
+    cc: list[str] | None = None
+    sender: str | None = None
+    from_: str | None = Field(default=None, alias="from")
+    subject: str | None = None
+    recipients: list[str] | None = None
+    importance: Literal["Low", "Normal", "High"] | None = None
+
+    @model_validator(mode="after")
+    def validate_at_least_one_update_field(self) -> "UpdateMessageArguments":
+        if all(
+            value is None
+            for value in (
+                self.content,
+                self.bcc,
+                self.cc,
+                self.sender,
+                self.from_,
+                self.subject,
+                self.recipients,
+                self.importance,
+            )
+        ):
+            raise ValueError("At least one updatable field must be provided")
+        return self
 
 
 class UpdateMessageAction(MicrosoftGraphActionBase):
@@ -13,27 +48,30 @@ class UpdateMessageAction(MicrosoftGraphActionBase):
         return {"emailAddress": {"name": email, "address": email}}
 
     def run(self, arguments: Any) -> Any:
-        user_id_or_principal_name = arguments["user"]
-        message_id = arguments["message_id"]
+        validated_arguments = UpdateMessageArguments.model_validate(arguments)
+        user_id_or_principal_name = validated_arguments.user
+        message_id = validated_arguments.message_id
 
-        content = arguments.get("content")
-        bcc: list[str] | None = arguments.get("bcc")
-        cc: list[str] | None = arguments.get("cc")
-        sender = arguments.get("sender")
-        mailbox_owner = arguments.get("from")
-        subject = arguments.get("subject")
-        recipients: list[str] | None = arguments.get("recipients")
-        importance = arguments.get("importance")
+        content = validated_arguments.content
+        bcc = validated_arguments.bcc
+        cc = validated_arguments.cc
+        sender = validated_arguments.sender
+        mailbox_owner = validated_arguments.from_
+        subject = validated_arguments.subject
+        recipients = validated_arguments.recipients
+        importance = validated_arguments.importance
 
         payload: dict[str, Any] = self.fill_non_empty(
             {
-                "body": {"content": content, "contentType": "text"} if content else None,  # plain text
-                "bccRecipients": [self.generate_recipient(item) for item in bcc] if bcc else None,
-                "ccRecipients": [self.generate_recipient(item) for item in cc] if cc else None,
-                "sender": self.generate_recipient(sender) if sender else None,
-                "from": self.generate_recipient(mailbox_owner) if mailbox_owner else None,
+                "body": {"content": content, "contentType": "text"} if content is not None else None,
+                "bccRecipients": [self.generate_recipient(item) for item in bcc] if bcc is not None else None,
+                "ccRecipients": [self.generate_recipient(item) for item in cc] if cc is not None else None,
+                "sender": self.generate_recipient(sender) if sender is not None else None,
+                "from": self.generate_recipient(mailbox_owner) if mailbox_owner is not None else None,
                 "subject": subject,
-                "toRecipients": [self.generate_recipient(item) for item in recipients] if recipients else None,
+                "toRecipients": (
+                    [self.generate_recipient(item) for item in recipients] if recipients is not None else None
+                ),
                 "importance": importance,
             }
         )

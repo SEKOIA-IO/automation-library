@@ -6,14 +6,17 @@ from sekoia_automation.module import Module
 
 from holm_security.account_validator import HolmSecurityAccountValidator
 
-VALIDATION_URL = "https://se-api.holmsecurity.com/v2/devices"
+BASE_URL = "https://se-api.holmsecurity.com"
+DEVICES_URL = f"{BASE_URL}/v2/devices"
+NET_ASSETS_URL = f"{BASE_URL}/v2/net-assets"
+VULNS_URL = f"{BASE_URL}/v2/net-assets/report/vulnerabilities/"
 
 
 @pytest.fixture
 def account_validator():
     module = Module()
     module.configuration = {
-        "base_url": "https://se-api.holmsecurity.com",
+        "base_url": BASE_URL,
         "api_token": "fake_api_token",
     }
     validator = HolmSecurityAccountValidator(module=module)
@@ -23,44 +26,70 @@ def account_validator():
 
 
 def test_validate_success(account_validator, requests_mock):
-    matcher = requests_mock.get(VALIDATION_URL, json={"count": 1, "results": []}, status_code=200)
+    devices = requests_mock.get(DEVICES_URL, json={"count": 1, "results": []}, status_code=200)
+    net_assets = requests_mock.get(NET_ASSETS_URL, json={"count": 1, "results": []}, status_code=200)
+    vulns = requests_mock.get(VULNS_URL, json={"count": 0, "results": []}, status_code=200)
 
     assert account_validator.validate() is True
-    # Ping call must use page_size=1
-    assert matcher.last_request.qs.get("page_size") == ["1"]
+    # The Holm API paginates with `limit`; `page_size` is silently ignored.
+    assert devices.last_request.qs.get("limit") == ["1"]
+    assert devices.last_request.qs.get("page_size") is None
+    assert net_assets.last_request.qs.get("limit") == ["1"]
+    # The vulnerability report is probed for authorization; without the `assets`
+    # filter it answers 200 with an empty page, which still proves access.
+    assert vulns.last_request.qs.get("limit") == ["1"]
 
 
-def test_validate_authentication_failure(account_validator, requests_mock):
-    requests_mock.get(VALIDATION_URL, json={"detail": "Invalid token."}, status_code=401)
+def test_validate_devices_authentication_failure(account_validator, requests_mock):
+    requests_mock.get(DEVICES_URL, json={"detail": "Invalid token."}, status_code=401)
+    requests_mock.get(NET_ASSETS_URL, json={"count": 1, "results": []}, status_code=200)
+    requests_mock.get(VULNS_URL, json={"count": 0, "results": []}, status_code=200)
+
+    assert account_validator.validate() is False
+
+
+def test_validate_net_assets_failure(account_validator, requests_mock):
+    requests_mock.get(DEVICES_URL, json={"count": 1, "results": []}, status_code=200)
+    requests_mock.get(NET_ASSETS_URL, json={"detail": "Forbidden"}, status_code=403)
+    requests_mock.get(VULNS_URL, json={"count": 0, "results": []}, status_code=200)
+
+    assert account_validator.validate() is False
+
+
+def test_validate_vulnerability_report_failure(account_validator, requests_mock):
+    """A token allowed on the inventories but not on the report must be rejected."""
+    requests_mock.get(DEVICES_URL, json={"count": 1, "results": []}, status_code=200)
+    requests_mock.get(NET_ASSETS_URL, json={"count": 1, "results": []}, status_code=200)
+    requests_mock.get(VULNS_URL, json={"detail": "Forbidden"}, status_code=403)
 
     assert account_validator.validate() is False
 
 
 def test_validate_server_error(account_validator, requests_mock):
-    requests_mock.get(VALIDATION_URL, json={"detail": "Internal error"}, status_code=500)
+    requests_mock.get(DEVICES_URL, json={"detail": "Internal error"}, status_code=500)
 
     assert account_validator.validate() is False
 
 
 def test_validate_timeout(account_validator, requests_mock):
-    requests_mock.get(VALIDATION_URL, exc=requests.Timeout)
+    requests_mock.get(DEVICES_URL, exc=requests.Timeout)
 
     assert account_validator.validate() is False
 
 
 def test_validate_connection_error(account_validator, requests_mock):
-    requests_mock.get(VALIDATION_URL, exc=requests.ConnectionError)
+    requests_mock.get(DEVICES_URL, exc=requests.ConnectionError)
 
     assert account_validator.validate() is False
 
 
 def test_validate_unexpected_error(account_validator, requests_mock):
-    requests_mock.get(VALIDATION_URL, exc=ValueError("boom"))
+    requests_mock.get(DEVICES_URL, exc=ValueError("boom"))
 
     assert account_validator.validate() is False
 
 
 def test_validate_non_json_error_body(account_validator, requests_mock):
-    requests_mock.get(VALIDATION_URL, text="Forbidden", status_code=403)
+    requests_mock.get(DEVICES_URL, text="Forbidden", status_code=403)
 
     assert account_validator.validate() is False

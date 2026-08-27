@@ -24,7 +24,7 @@ class RSSTrigger(Trigger):
         try:
             self._schedule_feeds()
             self._scheduler.start()
-        except (KeyboardInterrupt, SystemExit):
+        except KeyboardInterrupt, SystemExit:
             if self._scheduler.running:
                 self._scheduler.shutdown()
         finally:

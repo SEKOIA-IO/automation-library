@@ -6,50 +6,15 @@
   "arguments": {
     "title": "ApplicationArguments",
     "type": "object",
-    "required": ["user", "content", "sender", "from", "recipients", "subject"],
+    "required": [
+      "content",
+      "from",
+      "recipients",
+      "sender",
+      "subject",
+      "user"
+    ],
     "properties": {
-      "user": {
-        "description": "The identifier or the principal name of the user",
-        "type": "string",
-        "format": "email"
-      },
-      "sender": {
-        "description": "The sender of the message. Usually the same as mailbox owner",
-        "type": "string",
-        "format": "email"
-      },
-      "from": {
-        "description": "The mailbox owner of the message (from header). Usually the same as sender",
-        "type": "string",
-        "format": "email"
-      },
-      "subject": {
-        "description": "The subject of the message",
-        "type": "string"
-      },
-      "content": {
-        "description": "The content of the message",
-        "type": "string"
-      },
-      "content_type": {
-        "description": "The type of the content",
-        "type": "string",
-        "default": "text",
-        "enum": ["text", "html"]
-      },
-      "save_to_sent_items": {
-        "description": "Indicates whether to save the message in Sent Items",
-        "type": "boolean",
-        "default": true
-      },
-      "recipients": {
-        "description": "The list of recipients",
-        "type": "array",
-        "items": {
-          "type": "string",
-          "format": "email"
-        }
-      },
       "bcc": {
         "description": "The list of BCC recipients",
         "type": "array",
@@ -66,10 +31,52 @@
           "format": "email"
         }
       },
+      "content": {
+        "description": "The content of the message",
+        "type": "string"
+      },
+      "content_type": {
+        "description": "The message body content type",
+        "type": "string",
+        "default": "text",
+        "enum": ["text", "html"]
+      },
+      "from": {
+        "description": "The mailbox owner email address (From header). Usually the same as sender",
+        "type": "string",
+        "format": "email"
+      },
       "importance": {
-        "description": "The importance of the message",
+        "description": "The importance level of the message",
         "type": "string",
         "enum": ["Low", "Normal", "High"]
+      },
+      "recipients": {
+        "description": "The list of recipients",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "save_to_sent_items": {
+        "description": "Indicates whether to save the message in Sent Items",
+        "type": "boolean",
+        "default": true
+      },
+      "sender": {
+        "description": "The sender email address. Usually the same as mailbox owner",
+        "type": "string",
+        "format": "email"
+      },
+      "subject": {
+        "description": "The subject of the message",
+        "type": "string"
+      },
+      "user": {
+        "description": "The user identifier or user principal name (UPN)",
+        "type": "string",
+        "format": "email"
       }
     }
   },

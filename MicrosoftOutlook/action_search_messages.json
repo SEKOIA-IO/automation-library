@@ -1,0 +1,47 @@
+{
+  "name": "Search messages",
+  "description": "Search messages in a user's mailbox using InternetMessageId and/or NetworkMessageId",
+  "uuid": "9cd0dbfd-1ceb-40bf-a49f-28ca70e61165",
+  "docker_parameters": "action_search_messages",
+  "arguments": {
+    "title": "ApplicationArguments",
+    "type": "object",
+    "anyOf": [
+      {
+        "required": [
+          "email_message_id",
+          "user"
+        ]
+      },
+      {
+        "required": [
+          "email_local_id",
+          "user"
+        ]
+      }
+    ],
+    "properties": {
+      "email_local_id": {
+        "description": "The local message identifier mapped from email.local_id (Graph NetworkMessageId)",
+        "type": "string"
+      },
+      "email_message_id": {
+        "description": "The message identifier mapped from email.message_id (Graph internetMessageId / Internet Message-ID RFC 5322)",
+        "type": "string"
+      },
+      "top": {
+        "description": "Maximum number of messages to return",
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 100,
+        "default": 10
+      },
+      "user": {
+        "description": "The user identifier or user principal name (UPN)",
+        "type": "string"
+      }
+    }
+  },
+  "results": {},
+  "slug": "search_messages"
+}
