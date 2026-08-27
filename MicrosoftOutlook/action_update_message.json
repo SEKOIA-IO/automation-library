@@ -126,6 +126,42 @@
       }
     }
   },
-  "results": {},
+  "results": {
+    "title": "UpdateMessageResults",
+    "type": "object",
+    "properties": {
+      "from": {
+        "description": "Sender information",
+        "type": "object"
+      },
+      "graph_message_id": {
+        "description": "Resolved Microsoft Graph message item ID (alias of id)",
+        "type": "string"
+      },
+      "id": {
+        "description": "The Microsoft Graph message item ID",
+        "type": "string"
+      },
+      "internetMessageId": {
+        "description": "The Internet Message-ID (RFC 5322)",
+        "type": "string"
+      },
+      "receivedDateTime": {
+        "description": "Message reception timestamp",
+        "type": "string"
+      },
+      "subject": {
+        "description": "Message subject",
+        "type": "string"
+      },
+      "toRecipients": {
+        "description": "List of recipients",
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      }
+    }
+  },
   "slug": "update_message"
 }

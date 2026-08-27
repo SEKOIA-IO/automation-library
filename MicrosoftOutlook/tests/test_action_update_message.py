@@ -17,7 +17,28 @@ def test_update_message(configured_action, message_2):
         )
 
         action = configured_action(UpdateMessageAction)
-        action.run(arguments={"user": "1111", "message_id": "2222", "subject": "Changed Subject"})
+        result = action.run(arguments={"user": "1111", "message_id": "2222", "subject": "Changed Subject"})
+        assert result["id"] == message_2["id"]
+        assert result["graph_message_id"] == message_2["id"]
+
+
+def test_update_message_keeps_non_dict_payload_unchanged(configured_action):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "PATCH",
+            "https://graph.microsoft.com/v1.0/users/1111/messages/2222",
+            status_code=200,
+            json=["message"],
+        )
+
+        action = configured_action(UpdateMessageAction)
+        result = action.run(arguments={"user": "1111", "message_id": "2222", "subject": "Changed Subject"})
+        assert result == ["message"]
 
 
 def test_update_message_with_all_optional_fields(configured_action, message_2):
