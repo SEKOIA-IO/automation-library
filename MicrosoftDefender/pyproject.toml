@@ -20,7 +20,7 @@ line_length = 119
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-sekoia-automation-sdk = "^1.22.4"
+sekoia-automation-sdk = "^1.24.0"
 structlog = "^25.5.0"
 stix2-patterns = "^2.1.2"
 requests = "^2.32.5"

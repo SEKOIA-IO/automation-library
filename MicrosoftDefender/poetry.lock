@@ -2961,15 +2961,30 @@ botocore = ">=1.37.4,<2.0a0"
 crt = ["botocore[crt] (>=1.37.4,<2.0a0)"]
 
 [[package]]
+name = "sekoia-automation-models"
+version = "1.2.0"
+description = "Standalone Pydantic models (OCSF asset-connector) shared across Sekoia services and the `sekoia-automation-sdk`"
+optional = false
+python-versions = "<4,>=3.11"
+groups = ["main"]
+files = [
+    {file = "sekoia_automation_models-1.2.0-py3-none-any.whl", hash = "sha256:028afe35160fcfba1b25361f414e4f19dbb427a75b9830831f55d6b93e559c32"},
+    {file = "sekoia_automation_models-1.2.0.tar.gz", hash = "sha256:085d843fe0148a103927fbb6520ec865964b7552cd4c3c37f10d6196ac8a13ce"},
+]
+
+[package.dependencies]
+pydantic = ">=2.10,<3.0.0"
+
+[[package]]
 name = "sekoia-automation-sdk"
-version = "1.23.0"
+version = "1.24.0"
 description = "SDK to create Sekoia.io playbook modules"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "sekoia_automation_sdk-1.23.0-py3-none-any.whl", hash = "sha256:2d94f8eb2a79e0943529f0f0c5685bc52aa8dff21eef31ae5e706945f2e2f5a5"},
-    {file = "sekoia_automation_sdk-1.23.0.tar.gz", hash = "sha256:bd9becf3b7b579c1a184ec903d5c14b8b70927b618f674da6662e3f62a2c650b"},
+    {file = "sekoia_automation_sdk-1.24.0-py3-none-any.whl", hash = "sha256:52b4545cb3bce9a5d14cd1bb1e104b889ab0ae98288f85099b02e9404b39e50f"},
+    {file = "sekoia_automation_sdk-1.24.0.tar.gz", hash = "sha256:09d7a08263354d7494bf94300fadf640d970d0585b9a0e7fdaeab13380ce7fd2"},
 ]
 
 [package.dependencies]
@@ -2993,6 +3008,7 @@ pyyaml = ">=6.0,<7"
 requests = ">=2.25,<3"
 requests-ratelimiter = ">=0.7.0,<0.8"
 s3path = ">=0.6.4,<0.7"
+sekoia-automation-models = ">=1.2.0,<2"
 sentry-sdk = "*"
 tenacity = "*"
 typer = ">=0.20"
@@ -3591,4 +3607,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "16690cbf3e3868c6ee492f250d1249f028a86297de8aeb03eaf690af63c9e00b"
+content-hash = "598f1608565bb80fd6767fc983671bad128efeb03edaed51a8c02bf6030a58de"

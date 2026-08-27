@@ -414,6 +414,56 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
 
         self._latest_time_raw = most_recent_raw
 
+    def get_mapped_fields(self) -> dict[str, str]:
+        """
+        Return the Defender -> OCSF field mapping used for schema-change fingerprinting.
+
+        Sources prefixed with ``managedDevice.`` come from the Graph
+        ``/deviceManagement/managedDevices`` enrichment call. Static OCSF constants are
+        excluded: they never depend on the Defender payload, so they cannot invalidate a
+        checkpoint.
+        """
+        return {
+            "id": "device.uid",
+            "aadDeviceId": "device.uid_alt",
+            "computerDnsName": "device.hostname",
+            "lastIpAddress": "device.ip",
+            "osPlatform": "device.os.type",
+            "osBuild": "device.os.name",
+            "riskScore": "device.risk_level",
+            "firstSeen": "device.first_seen_time",
+            "lastSeen": "device.last_seen_time",
+            "rbacGroupName": "device.groups.name",
+            "rbacGroupId": "device.groups.uid",
+            "ipAddresses": "device.network_interfaces",
+            "healthStatus": "enrichments.health_status",
+            "exposureLevel": "enrichments.exposure_level",
+            "managedDevice.ethernetMacAddress": "device.network_interfaces.mac",
+            "managedDevice.wiFiMacAddress": "device.network_interfaces.mac",
+            "managedDevice.imei": "device.imei_list",
+            "managedDevice.meid": "device.meid",
+            "managedDevice.iccid": "device.iccid",
+            "managedDevice.udid": "device.udid",
+            "managedDevice.model": "device.model",
+            "managedDevice.manufacturer": "device.vendor_name",
+            "managedDevice.osVersion": "device.os.name",
+            "managedDevice.complianceState": "device.is_compliant",
+            "managedDevice.managedDeviceOwnerType": "device.is_personal",
+            "managedDevice.isSupervised": "device.is_supervised",
+            "managedDevice.userPrincipalName": "enrichments.user_principal_name",
+            "managedDevice.managementAgent": "enrichments.management_agent",
+        }
+
+    async def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so every device is collected again on the next cycle."""
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self._latest_time_raw = None
+        self.log(
+            message="Checkpoint reset - a full device re-collection will occur on the next cycle",
+            level="info",
+        )
+
     async def update_checkpoint(self) -> None:
         if self._latest_time_raw:
             with self.context as cache:
