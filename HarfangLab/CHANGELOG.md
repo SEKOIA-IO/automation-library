@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-27 - 1.31.10
+
+### Fixed
+
+- Fix typo in software asset connector feature flag key (`feature-flags` → `feature_flags`)
+
 ## 2026-08-27 - 1.31.9
 
 ### Changed
