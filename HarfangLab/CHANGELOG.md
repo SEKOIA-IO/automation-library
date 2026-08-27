@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-27 - 1.32.0
+
+### Added
+
+- Device and software asset connectors now declare their Harfanglab -> OCSF field mappings
+  and reset their checkpoint automatically when a mapping changes, so all assets are
+  re-collected with the new mapping
+
+### Changed
+
+- Upgrade `sekoia-automation-sdk` to 1.24.0
+- Migrate the remaining `pydantic.v1` models to Pydantic v2
+
 ## 2026-07-30 - 1.31.8
 
 ### Changed

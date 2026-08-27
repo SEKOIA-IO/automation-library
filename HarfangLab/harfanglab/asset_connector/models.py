@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class HarfanglabAdditionalInfo(BaseModel):
@@ -9,16 +9,14 @@ class HarfanglabAdditionalInfo(BaseModel):
     additional_info3: str | None = None
     additional_info4: str | None = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class HarfanglabGroup(BaseModel):
     id: str | None = None
     name: str | None = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class HarfanglabSubnet(BaseModel):
@@ -28,8 +26,7 @@ class HarfanglabSubnet(BaseModel):
     id: str | None = None
     name: str | None = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class HarfanglabOriginStack(BaseModel):
@@ -39,8 +36,7 @@ class HarfanglabOriginStack(BaseModel):
     is_tenant: bool | None = None
     name: str | None = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class HarfanglabPolicy(BaseModel):
@@ -229,8 +225,7 @@ class HarfanglabPolicy(BaseModel):
     yara_skip_signed_ms: bool | None = None
     yara_skip_signed_others: bool | None = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class HarfanglabAgent(BaseModel):
@@ -314,8 +309,7 @@ class HarfanglabAgent(BaseModel):
     windows_groups_last_update: str | None = None
     windows_users_last_update: str | None = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class HarfanglabAgentPage(BaseModel):
@@ -324,8 +318,7 @@ class HarfanglabAgentPage(BaseModel):
     previous: str | None = None
     results: list[HarfanglabAgent] = []
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class HarfanglabApplication(BaseModel):
@@ -344,8 +337,7 @@ class HarfanglabApplication(BaseModel):
     app_type: str | None = None
     description: str | None = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class HarfanglabApplicationPage(BaseModel):
@@ -354,5 +346,4 @@ class HarfanglabApplicationPage(BaseModel):
     previous: str | None = None
     results: list[HarfanglabApplication] = []
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")

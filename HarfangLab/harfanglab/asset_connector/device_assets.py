@@ -4,7 +4,7 @@ from functools import cached_property
 from urllib.parse import urljoin
 
 from dateutil.parser import isoparse
-from pydantic.v1 import ValidationError
+from pydantic import ValidationError
 from requests.exceptions import RequestException
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
@@ -52,6 +52,7 @@ class HarfanglabAssetConnector(AssetConnector):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+        self._latest_time: str | None = None
 
     @property
     def most_recent_date_seen(self) -> str | None:
@@ -408,6 +409,45 @@ class HarfanglabAssetConnector(AssetConnector):
         except Exception as e:
             self.log(f"Device iteration failed - Error: {e!s}, Devices processed: {device_count}", level="error")
             raise
+
+    def get_mapped_fields(self) -> dict[str, str]:
+        """
+        Return the Harfanglab -> OCSF field mapping used for schema-change fingerprinting.
+
+        Static OCSF constants are excluded: they never depend on the Harfanglab payload, so
+        they cannot invalidate a checkpoint.
+        """
+        return {
+            "id": "device.uid",
+            "hostname": "device.hostname",
+            "domainname": "device.domain",
+            "ipaddress": "device.ip",
+            "ipmask": "device.subnet",
+            "osproducttype": "device.os.name",
+            "ostype": "device.os.type",
+            "producttype": "device.model",
+            "description": "device.desc",
+            "policy": "device.is_managed",
+            "has_valid_password": "device.is_trusted",
+            "firstseen": "device.first_seen_time",
+            "lastseen": "device.last_seen_time",
+            "machine_boottime": "device.boot_time",
+            "installdate": "device.created_time",
+            "subnet.name": "device.network_interfaces.name",
+            "subnet.id": "device.network_interfaces.uid",
+            "subnet.gateway_macaddress": "device.network_interfaces.mac",
+            "policy.windows_self_protection_feature_firewall": "enrichments.data.Firewall_status",
+            "encrypted_disk_count": "enrichments.data.Storage_encryption",
+            "disk_count": "enrichments.data.Storage_encryption",
+            "dnsdomainname": "enrichments.data.Full_qualified_domain_name",
+        }
+
+    def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so every device is collected again on the next cycle."""
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self._latest_time = None
+        self.log("Checkpoint reset - a full device re-collection will occur on the next cycle", level="info")
 
     def update_checkpoint(self) -> None:
         if self._latest_time:
