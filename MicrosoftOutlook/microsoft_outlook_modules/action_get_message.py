@@ -26,5 +26,6 @@ class GetMessageAction(MicrosoftGraphActionBase):
 
         result = response.json()
         if isinstance(result, dict):
-            result.setdefault("graph_message_id", result.get("id"))
+            resolved_message_id = result.get("id") if isinstance(result.get("id"), str) else message_id
+            result["graph_message_id"] = resolved_message_id
         return result

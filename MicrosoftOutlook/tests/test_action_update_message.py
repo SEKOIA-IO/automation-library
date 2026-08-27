@@ -13,7 +13,7 @@ def test_update_message(configured_action, message_2):
             json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
         )
         mock.register_uri(
-            "PATCH", "https://graph.microsoft.com/v1.0/users/1111/messages/2222", status_code=204, json=message_2
+            "PATCH", "https://graph.microsoft.com/v1.0/users/1111/messages/2222", status_code=200, json=message_2
         )
 
         action = configured_action(UpdateMessageAction)
@@ -22,7 +22,7 @@ def test_update_message(configured_action, message_2):
         assert result["graph_message_id"] == message_2["id"]
 
 
-def test_update_message_keeps_non_dict_payload_unchanged(configured_action):
+def test_update_message_falls_back_to_message_id_for_non_dict_payload(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
@@ -38,7 +38,26 @@ def test_update_message_keeps_non_dict_payload_unchanged(configured_action):
 
         action = configured_action(UpdateMessageAction)
         result = action.run(arguments={"user": "1111", "message_id": "2222", "subject": "Changed Subject"})
-        assert result == ["message"]
+        assert result == {"id": "2222", "graph_message_id": "2222"}
+
+
+def test_update_message_falls_back_to_message_id_for_non_json_payload(configured_action):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "PATCH",
+            "https://graph.microsoft.com/v1.0/users/1111/messages/2222",
+            status_code=204,
+            content=b"",
+        )
+
+        action = configured_action(UpdateMessageAction)
+        result = action.run(arguments={"user": "1111", "message_id": "2222", "subject": "Changed Subject"})
+        assert result == {"id": "2222", "graph_message_id": "2222"}
 
 
 def test_update_message_with_all_optional_fields(configured_action, message_2):
