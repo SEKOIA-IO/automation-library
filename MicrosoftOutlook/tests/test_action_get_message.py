@@ -16,7 +16,23 @@ def test_get_message(configured_action, get_message_1):
         mock.register_uri("GET", "https://graph.microsoft.com/v1.0/users/1111/messages/2222", json=get_message_1)
 
         action = configured_action(GetMessageAction)
-        action.run(arguments={"user": "1111", "message_id": "2222"})
+        result = action.run(arguments={"user": "1111", "message_id": "2222"})
+        assert result["id"] == get_message_1["id"]
+        assert result["graph_message_id"] == get_message_1["id"]
+
+
+def test_get_message_keeps_non_dict_payload_unchanged(configured_action):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri("GET", "https://graph.microsoft.com/v1.0/users/1111/messages/2222", json=["message"])
+
+        action = configured_action(GetMessageAction)
+        result = action.run(arguments={"user": "1111", "message_id": "2222"})
+        assert result == ["message"]
 
 
 @pytest.mark.parametrize(

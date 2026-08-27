@@ -83,4 +83,7 @@ class UpdateMessageAction(MicrosoftGraphActionBase):
         )
         self.handle_response(response)
 
-        return response.json()
+        result = response.json()
+        if isinstance(result, dict):
+            result.setdefault("graph_message_id", result.get("id"))
+        return result

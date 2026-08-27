@@ -21,6 +21,28 @@
       }
     }
   },
-  "results": {},
+  "results": {
+    "title": "DeleteMessageResults",
+    "type": "object",
+    "required": [
+      "action",
+      "status",
+      "target_message_id"
+    ],
+    "properties": {
+      "action": {
+        "description": "Action technical identifier",
+        "type": "string"
+      },
+      "status": {
+        "description": "Delete execution status",
+        "type": "string"
+      },
+      "target_message_id": {
+        "description": "The Microsoft Graph message item ID targeted by the action",
+        "type": "string"
+      }
+    }
+  },
   "slug": "delete_a_message"
 }

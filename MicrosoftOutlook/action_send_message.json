@@ -75,11 +75,35 @@
       },
       "user": {
         "description": "The user identifier or user principal name (UPN)",
-        "type": "string",
-        "format": "email"
+        "type": "string"
       }
     }
   },
-  "results": {},
+  "results": {
+    "title": "SendMessageResults",
+    "type": "object",
+    "required": [
+      "action",
+      "status",
+      "target_message_id"
+    ],
+    "properties": {
+      "action": {
+        "description": "Action technical identifier",
+        "type": "string"
+      },
+      "status": {
+        "description": "Send execution status",
+        "type": "string"
+      },
+      "target_message_id": {
+        "description": "The Microsoft Graph message item ID targeted by the action",
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    }
+  },
   "slug": "send_message"
 }

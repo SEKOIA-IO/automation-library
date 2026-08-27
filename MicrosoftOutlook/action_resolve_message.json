@@ -53,6 +53,41 @@
       }
     }
   },
-  "results": {},
+  "results": {
+    "title": "ResolveMessageResults",
+    "type": "object",
+    "required": [
+      "graph_message_id",
+      "messages",
+      "selected_index",
+      "selected_message",
+      "total_results"
+    ],
+    "properties": {
+      "graph_message_id": {
+        "description": "Resolved Microsoft Graph message item ID",
+        "type": "string"
+      },
+      "messages": {
+        "description": "List of fetched candidate messages",
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "selected_index": {
+        "description": "Zero-based index selected in the candidate list",
+        "type": "integer"
+      },
+      "selected_message": {
+        "description": "Selected message object",
+        "type": "object"
+      },
+      "total_results": {
+        "description": "Total number of fetched candidate messages",
+        "type": "integer"
+      }
+    }
+  },
   "slug": "resolve_message"
 }

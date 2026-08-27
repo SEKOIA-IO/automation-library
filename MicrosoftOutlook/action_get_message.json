@@ -1,6 +1,6 @@
 {
   "name": "Get a message",
-  "description": "Get the detail of a message from the user's mailbox",
+  "description": "Get message details from the user's mailbox",
   "uuid": "dbff60fd-58a3-5b62-8138-84c7db955243",
   "docker_parameters": "action_get_message",
   "arguments": {
@@ -21,6 +21,42 @@
       }
     }
   },
-  "results": {},
+  "results": {
+    "title": "GetMessageResults",
+    "type": "object",
+    "properties": {
+      "from": {
+        "description": "Sender information",
+        "type": "object"
+      },
+      "graph_message_id": {
+        "description": "Resolved Microsoft Graph message item ID (alias of id)",
+        "type": "string"
+      },
+      "id": {
+        "description": "The Microsoft Graph message item ID",
+        "type": "string"
+      },
+      "internetMessageId": {
+        "description": "The Internet Message-ID (RFC 5322)",
+        "type": "string"
+      },
+      "receivedDateTime": {
+        "description": "Message reception timestamp",
+        "type": "string"
+      },
+      "subject": {
+        "description": "Message subject",
+        "type": "string"
+      },
+      "toRecipients": {
+        "description": "List of recipients",
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      }
+    }
+  },
   "slug": "get_message"
 }
