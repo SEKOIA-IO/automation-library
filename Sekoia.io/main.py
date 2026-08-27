@@ -87,6 +87,7 @@ from sekoiaio.triggers.alerts import (
 )
 from sekoiaio.triggers.cases import (
     CaseAlertsUpdatedTrigger,
+    CaseCommentCreatedTrigger,
     CaseCreatedTrigger,
     CaseUpdatedTrigger,
 )
@@ -171,6 +172,7 @@ if __name__ == "__main__":
     module.register(CaseCreatedTrigger, "case_created_trigger")
     module.register(CaseUpdatedTrigger, "case_updated_trigger")
     module.register(CaseAlertsUpdatedTrigger, "case_alerts_updated_trigger")
+    module.register(CaseCommentCreatedTrigger, "case_comment_created_trigger")
 
     # Intelligence Center Triggers
     module.register(FeedConsumptionTrigger, "feed_consumption_trigger")
