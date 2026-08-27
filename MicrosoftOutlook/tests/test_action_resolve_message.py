@@ -1,6 +1,7 @@
+from urllib.parse import unquote_plus
+
 import pytest
 import requests_mock
-from urllib.parse import unquote_plus
 
 from microsoft_outlook_modules.action_base import GraphAPIException
 from microsoft_outlook_modules.action_resolve_message import ResolveMessageAction
