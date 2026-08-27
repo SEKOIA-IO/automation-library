@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-27 - 1.31.9
+
+### Changed
+
+- Update software asset connector default frequency to 1 day (86400s) and minimum frequency to 3 hours (10800s)
+
 ## 2026-07-30 - 1.31.8
 
 ### Changed
