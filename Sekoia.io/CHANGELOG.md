@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-27 - 2.76.2
+
+### Fixed
+
+- Apply gevent monkey-patching before any import pulls in `ssl` (via `requests`/`urllib3`), and restrict it to trigger executions. Patching an already-loaded `ssl` module caused `RecursionError` on HTTPS calls.
+
 ## 2026-08-27 - 2.76.1
 
 ### Fixed
