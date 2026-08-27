@@ -120,7 +120,7 @@ mapping:
     - source: "deviceType / isMobile"
       target: "device.type / device.type_id"
       type: "string / integer"
-      logic: |
+      logic: >-
         isMobile=true → MOBILE (5); deviceType contains SERVER → SERVER (1);
         contains VIRTUAL → VIRTUAL (6); default → DESKTOP (2)
       description: "OCSF device type classification"
@@ -128,7 +128,7 @@ mapping:
     - source: "operatingSystem.familyId"
       target: "device.os.type / device.os.type_id"
       type: "string / integer"
-      logic: |
+      logic: >-
         1 → windows/100, 2 → macos/300, 3 → linux/200,
         4 → android/201, 5 → ios/301, null → unknown/0, other → other/99
       description: "OCSF OS type derived from ESET OS family ID"
@@ -148,7 +148,7 @@ mapping:
     - source: "primaryLocalIpAddress + publicIpAddress + hardwareProfiles[].networkAdapters[].macAddress"
       target: "device.network_interfaces"
       type: "list[NetworkInterface]"
-      logic: |
+      logic: >-
         First NetworkInterface built from primaryLocalIpAddress (type=Wired).
         MAC address from first hardware profile adapter enriches it.
         Additional adapters create extra NetworkInterface entries.
@@ -189,7 +189,7 @@ mapping:
     - source: "parentGroupUuid → deviceGroups"
       target: "device.groups"
       type: "list[Group]"
-      logic: |
+      logic: >-
         Pre-loaded group map (from /v1/device_groups) is keyed by uuid.
         If device.parentGroupUuid matches a group, that group is added as an OCSF Group
         with name=displayName and uid=uuid.
@@ -236,7 +236,7 @@ mapping:
           "metadata": {
             "product": { "name": "ESET EDR", "version": "9.1.2500.0" },
             "version": "1.5.0"
-          }
+          },
           "device": {
             "uid": "550e8400-e29b-41d4-a716-446655440000",
             "hostname": "DESKTOP-ABC123",

@@ -4,6 +4,7 @@ from eset_modules.action_deisolate_endpoint import EsetDeIsolateEndpointAction
 from eset_modules.action_isolate_endpoint import EsetIsolateEndpointAction
 from eset_modules.action_scan import EsetScanAction
 from eset_modules.asset_connector.device_assets import EsetDeviceAssetConnector
+from eset_modules.asset_connector.vulnerability_assets import EsetVulnerabilityAssetConnector
 
 if __name__ == "__main__":
     module = EsetModule()
@@ -11,5 +12,6 @@ if __name__ == "__main__":
     module.register(EsetIsolateEndpointAction, "EsetIsolateEndpointAction")
     module.register(EsetDeIsolateEndpointAction, "EsetDeIsolateEndpointAction")
     module.register(EsetDeviceAssetConnector, "eset_device_asset_connector")
+    module.register(EsetVulnerabilityAssetConnector, "eset_vuln_asset_connector")
     module.register_account_validator(EsetAccountValidator)
     module.run()
