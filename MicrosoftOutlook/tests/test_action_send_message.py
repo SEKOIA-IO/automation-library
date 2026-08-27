@@ -159,3 +159,32 @@ def test_send_message_ignores_non_dict_json_response(configured_action):
             "action": "send_message",
             "target_message_id": None,
         }
+
+
+def test_send_message_handles_plain_value_error_from_json(configured_action):
+    class FakeResponse:
+        ok = True
+
+        @staticmethod
+        def json():
+            raise ValueError("invalid json")
+
+    action = configured_action(SendMessageAction)
+    action.client.post = lambda *args, **kwargs: FakeResponse()  # type: ignore[method-assign]
+
+    result = action.run(
+        arguments={
+            "user": "1111",
+            "subject": "Subject",
+            "content": "Hello there",
+            "sender": "john.doe@example.com",
+            "from": "john.doe@example.com",
+            "recipients": ["jane.doe@example.com"],
+        }
+    )
+
+    assert result == {
+        "status": "sent",
+        "action": "send_message",
+        "target_message_id": None,
+    }
