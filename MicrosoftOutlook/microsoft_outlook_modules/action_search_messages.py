@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -100,11 +100,20 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
         except GraphAPIException as exc:
             if network_message_id and "InefficientFilter" in str(exc):
                 self.log(message="Fallback to client-side NetworkMessageId filtering", level="warning")
-                return self._search_by_network_message_id_fallback(user_id_or_principal_name, network_message_id, top)
-            raise
+                payload = self._search_by_network_message_id_fallback(
+                    user_id_or_principal_name, network_message_id, top
+                )
+            else:
+                raise
 
         if network_message_id and not payload.get("value"):
             self.log(message="No results with NetworkMessageId filter, retrying with fallback", level="warning")
-            return self._search_by_network_message_id_fallback(user_id_or_principal_name, network_message_id, top)
+            payload = self._search_by_network_message_id_fallback(user_id_or_principal_name, network_message_id, top)
 
-        return payload
+        messages = payload.get("value", [])
+        normalized_messages = cast(list[dict[str, Any]], self._snake_case_keys(messages))
+        for message in normalized_messages:
+            message_id = message.pop("id", None)
+            message["message_id"] = message_id
+
+        return {"messages": normalized_messages}

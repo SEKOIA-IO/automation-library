@@ -91,7 +91,7 @@ def test_anonymized_fixture_headers_map_pertinently_to_search_and_resolve(config
                 "email_message_id": internet_message_id,
             }
         )
-        assert search_result["value"][0]["id"] == "graph-item-id-from-fixture"
+        assert search_result["messages"][0]["message_id"] == "graph-item-id-from-fixture"
 
         resolve_action = configured_action(ResolveMessageAction)
         resolve_result = resolve_action.run(
@@ -100,7 +100,7 @@ def test_anonymized_fixture_headers_map_pertinently_to_search_and_resolve(config
                 "email_local_id": network_message_id,
             }
         )
-        assert resolve_result["graph_message_id"] == "graph-item-id-from-fixture"
+        assert resolve_result["message_id"] == "graph-item-id-from-fixture"
 
         messages_requests = [request for request in mock.request_history if "/users/1111/messages" in request.url]
         assert len(messages_requests) == 2

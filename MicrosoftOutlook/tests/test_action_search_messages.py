@@ -161,8 +161,8 @@ def test_search_messages_by_network_message_id_fallback_on_empty_result(configur
         action = configured_action(SearchMessagesAction)
         result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
 
-        assert len(result["value"]) == 1
-        assert result["value"][0]["id"] == "graph-item-id-1"
+        assert len(result["messages"]) == 1
+        assert result["messages"][0]["message_id"] == "graph-item-id-1"
         assert len(mock.request_history) == 3
 
 
@@ -203,8 +203,8 @@ def test_search_messages_by_network_message_id_fallback_on_inefficient_filter(co
         action = configured_action(SearchMessagesAction)
         result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
 
-        assert len(result["value"]) == 1
-        assert result["value"][0]["id"] == "graph-item-id-2"
+        assert len(result["messages"]) == 1
+        assert result["messages"][0]["message_id"] == "graph-item-id-2"
 
 
 def test_extract_network_message_id_returns_none_for_non_string_value():

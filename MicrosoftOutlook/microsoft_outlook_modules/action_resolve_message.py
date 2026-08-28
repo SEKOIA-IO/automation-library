@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -122,11 +122,20 @@ class ResolveMessageAction(MicrosoftGraphActionBase):
             raise ValueError(f"item_index {item_index} is out of range for {len(messages)} result(s)")
 
         selected_message = messages[item_index]
+        resolved_message_id = selected_message.get("id") if isinstance(selected_message.get("id"), str) else None
+        normalized_selected_message = cast(dict[str, Any], self._snake_case_keys(selected_message))
+        normalized_selected_message.pop("id", None)
+        normalized_selected_message["message_id"] = resolved_message_id
+
+        normalized_messages = cast(list[dict[str, Any]], self._snake_case_keys(messages))
+        for message in normalized_messages:
+            message_id = message.pop("id", None)
+            message["message_id"] = message_id
 
         return {
-            "graph_message_id": selected_message.get("id"),
+            "message_id": resolved_message_id,
             "selected_index": item_index,
             "total_results": len(messages),
-            "selected_message": selected_message,
-            "messages": messages,
+            "selected_message": normalized_selected_message,
+            "messages": normalized_messages,
         }

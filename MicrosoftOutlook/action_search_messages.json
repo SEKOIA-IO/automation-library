@@ -46,7 +46,7 @@
     "title": "SearchMessagesResults",
     "type": "object",
     "properties": {
-      "value": {
+      "messages": {
         "description": "List of matching messages",
         "type": "array",
         "items": {
@@ -56,15 +56,15 @@
               "description": "Sender information",
               "type": "object"
             },
-            "id": {
+            "message_id": {
               "description": "The Microsoft Graph message item ID",
               "type": "string"
             },
-            "internetMessageId": {
+            "internet_message_id": {
               "description": "The Internet Message-ID (RFC 5322)",
               "type": "string"
             },
-            "receivedDateTime": {
+            "received_date_time": {
               "description": "Message reception timestamp",
               "type": "string"
             },
@@ -72,7 +72,7 @@
               "description": "Message subject",
               "type": "string"
             },
-            "toRecipients": {
+            "to_recipients": {
               "description": "List of recipients",
               "type": "array",
               "items": {
