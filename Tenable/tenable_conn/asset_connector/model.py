@@ -389,6 +389,8 @@ class Vulnerability(BaseModel):
     finding_id: Optional[str] = None
     resurfaced_date: Optional[str] = None
     time_taken_to_fix: Optional[int] = None
-    software_vulns: Optional[List[SoftwareVulnsObject]] = None  # Only if include_software_vulns=true in the export vulns
+    software_vulns: Optional[List[SoftwareVulnsObject]] = (
+        None  # Only if include_software_vulns=true in the export vulns
+    )
 
     model_config = {"extra": "allow"}
