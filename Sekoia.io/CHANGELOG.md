@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-27 - 2.76.2
+
+### Fixed
+
+- Apply gevent monkey-patching before any import pulls in `ssl` (via `requests`/`urllib3`), and restrict it to trigger executions. Patching an already-loaded `ssl` module caused `RecursionError` on HTTPS calls.
+
 ## 2026-08-27 - 2.76.1
 
 ### Fixed
 
-- Do not include community UUIDs in request for `Execute a Query` action to avoid permission issues
+- `Search Alerts`, `Search Cases` and `Get Alert` actions: only forward the query parameters the user actually set. The playbook node populates every argument declared in the manifest, including empty strings for untouched text filters and `False` for untouched booleans; the API treats any parameter present in the query string as an active filter (e.g. `match[title]=` matches nothing, `is_assigned_to_case=false` excludes assigned alerts), so these unset values made the searches return no result. They are now dropped, and kept booleans are normalized to lowercase `true` instead of Python's `True`.
 
 ## 2026-08-21 - 2.76.0
 

@@ -15,4 +15,9 @@ def test_delete_message(configured_action):
         )
 
         action = configured_action(DeleteMessageAction)
-        action.run(arguments={"user": "1111", "message_id": "2222"})
+        result = action.run(arguments={"user": "1111", "message_id": "2222"})
+        assert result == {
+            "status": "deleted",
+            "action": "delete_a_message",
+            "target_message_id": "2222",
+        }

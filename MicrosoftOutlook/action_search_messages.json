@@ -42,6 +42,47 @@
       }
     }
   },
-  "results": {},
+  "results": {
+    "title": "SearchMessagesResults",
+    "type": "object",
+    "properties": {
+      "value": {
+        "description": "List of matching messages",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "description": "Sender information",
+              "type": "object"
+            },
+            "id": {
+              "description": "The Microsoft Graph message item ID",
+              "type": "string"
+            },
+            "internetMessageId": {
+              "description": "The Internet Message-ID (RFC 5322)",
+              "type": "string"
+            },
+            "receivedDateTime": {
+              "description": "Message reception timestamp",
+              "type": "string"
+            },
+            "subject": {
+              "description": "Message subject",
+              "type": "string"
+            },
+            "toRecipients": {
+              "description": "List of recipients",
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "slug": "search_messages"
 }

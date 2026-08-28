@@ -1,6 +1,5 @@
 from typing import Any, Literal
 
-import requests
 from pydantic import BaseModel, ConfigDict, Field
 
 from .action_base import MicrosoftGraphActionBase
@@ -65,8 +64,19 @@ class SendMessageAction(MicrosoftGraphActionBase):
         )
         self.handle_response(response)
 
+        response_data: dict[str, Any] = {}
         try:
-            return response.json()
+            parsed_body = response.json()
+            if isinstance(parsed_body, dict):
+                response_data = parsed_body
 
-        except requests.exceptions.JSONDecodeError:
-            return {}
+        except ValueError:
+            response_data = {}
+
+        target_message_id = response_data.get("id") if isinstance(response_data.get("id"), str) else None
+        return {
+            **response_data,
+            "status": "sent",
+            "action": "send_message",
+            "target_message_id": target_message_id,
+        }
