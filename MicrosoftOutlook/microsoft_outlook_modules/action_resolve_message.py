@@ -123,14 +123,18 @@ class ResolveMessageAction(MicrosoftGraphActionBase):
 
         selected_message = messages[item_index]
         resolved_message_id = selected_message.get("id") if isinstance(selected_message.get("id"), str) else None
+        if resolved_message_id is None:
+            raise ValueError("Unable to resolve a valid string message_id from selected message")
+
         normalized_selected_message = cast(dict[str, Any], self._snake_case_keys(selected_message))
         normalized_selected_message.pop("id", None)
         normalized_selected_message["message_id"] = resolved_message_id
 
         normalized_messages = cast(list[dict[str, Any]], self._snake_case_keys(messages))
         for message in normalized_messages:
-            message_id = message.pop("id", None)
-            message["message_id"] = message_id
+            raw_message_id = message.pop("id", None)
+            if isinstance(raw_message_id, str):
+                message["message_id"] = raw_message_id
 
         return {
             "message_id": resolved_message_id,

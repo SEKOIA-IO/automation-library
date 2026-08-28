@@ -207,6 +207,26 @@ def test_search_messages_by_network_message_id_fallback_on_inefficient_filter(co
         assert result["messages"][0]["message_id"] == "graph-item-id-2"
 
 
+def test_search_messages_omits_message_id_when_graph_id_is_not_string(configured_action):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages",
+            json={"value": [{"id": None, "subject": "test-subject"}]},
+        )
+
+        action = configured_action(SearchMessagesAction)
+        result = action.run(arguments={"user": "1111", "email_message_id": "<sample-message-id@example.com>"})
+
+        assert len(result["messages"]) == 1
+        assert "message_id" not in result["messages"][0]
+
+
 def test_extract_network_message_id_returns_none_for_non_string_value():
     message = {
         "singleValueExtendedProperties": [

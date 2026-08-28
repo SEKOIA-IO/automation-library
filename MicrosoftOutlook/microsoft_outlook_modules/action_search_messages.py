@@ -113,7 +113,8 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
         messages = payload.get("value", [])
         normalized_messages = cast(list[dict[str, Any]], self._snake_case_keys(messages))
         for message in normalized_messages:
-            message_id = message.pop("id", None)
-            message["message_id"] = message_id
+            raw_message_id = message.pop("id", None)
+            if isinstance(raw_message_id, str):
+                message["message_id"] = raw_message_id
 
         return {"messages": normalized_messages}
