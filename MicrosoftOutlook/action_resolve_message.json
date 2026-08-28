@@ -57,14 +57,14 @@
     "title": "ResolveMessageResults",
     "type": "object",
     "required": [
-      "graph_message_id",
+      "message_id",
       "messages",
       "selected_index",
       "selected_message",
       "total_results"
     ],
     "properties": {
-      "graph_message_id": {
+      "message_id": {
         "description": "Resolved Microsoft Graph message item ID",
         "type": "string"
       },

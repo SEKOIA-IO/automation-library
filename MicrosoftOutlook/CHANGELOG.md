@@ -7,14 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.3.1] - 2026-08-27
+## [0.4.0] - 2026-08-28
 
 ### Changed
 
+- Normalize `results` payload field names to `snake_case` for `search_messages`, `resolve_message`, `get_message`, and `update_message`
+- Rename resolved Graph identifier field from `graph_message_id` to `message_id` in action `results`
+- Rename `search_messages` top-level output from `value` to `messages`
+- Rename message fields in `results` from Graph-style camelCase to snake_case (`internet_message_id`, `received_date_time`, `to_recipients`, `body_preview`)
 - Document lint and test commands in README and align lint tooling configuration for local validation
 
 ### Fixed
 
+- Remove redundant top-level identifier duplication in message action `results` by exposing a single canonical `message_id` field
 - Accept `client_secret` from playbook runtime whether provided as raw string or `SecretStr`-like value
 - Prevent action startup failure caused by `AttributeError: 'str' object has no attribute 'get_secret_value'` in playbook executions
 

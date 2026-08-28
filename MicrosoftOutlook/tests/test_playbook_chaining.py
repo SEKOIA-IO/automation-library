@@ -7,13 +7,13 @@ from microsoft_outlook_modules.action_update_message import UpdateMessageAction
 
 
 def test_linear_chain_resolve_get_update_forward_uses_enriched_results(configured_action, get_message_1, message_2):
-    graph_message_id = "graph-item-id-chain"
+    message_id = "graph-item-id-chain"
 
     get_payload = dict(get_message_1)
-    get_payload["id"] = graph_message_id
+    get_payload["id"] = message_id
 
     update_payload = dict(message_2)
-    update_payload["id"] = graph_message_id
+    update_payload["id"] = message_id
 
     with requests_mock.Mocker() as mock:
         mock.register_uri(
@@ -24,22 +24,22 @@ def test_linear_chain_resolve_get_update_forward_uses_enriched_results(configure
         mock.register_uri(
             "GET",
             "https://graph.microsoft.com/v1.0/users/1111/messages",
-            json={"value": [{"id": graph_message_id}]},
+            json={"value": [{"id": message_id}]},
         )
         mock.register_uri(
             "GET",
-            f"https://graph.microsoft.com/v1.0/users/1111/messages/{graph_message_id}",
+            f"https://graph.microsoft.com/v1.0/users/1111/messages/{message_id}",
             json=get_payload,
         )
         mock.register_uri(
             "PATCH",
-            f"https://graph.microsoft.com/v1.0/users/1111/messages/{graph_message_id}",
+            f"https://graph.microsoft.com/v1.0/users/1111/messages/{message_id}",
             status_code=200,
             json=update_payload,
         )
         mock.register_uri(
             "POST",
-            f"https://graph.microsoft.com/v1.0/users/1111/messages/{graph_message_id}/forward",
+            f"https://graph.microsoft.com/v1.0/users/1111/messages/{message_id}/forward",
             status_code=202,
             content=b"",
         )
@@ -55,32 +55,32 @@ def test_linear_chain_resolve_get_update_forward_uses_enriched_results(configure
                 "email_message_id": "<chain-sample-message-id@example.test>",
             }
         )
-        assert resolve_result["graph_message_id"] == graph_message_id
+        assert resolve_result["message_id"] == message_id
 
         get_result = get_action.run(
             arguments={
                 "user": "1111",
-                "message_id": resolve_result["graph_message_id"],
+                "message_id": resolve_result["message_id"],
             }
         )
-        assert get_result["graph_message_id"] == graph_message_id
+        assert get_result["message_id"] == message_id
 
         update_result = update_action.run(
             arguments={
                 "user": "1111",
-                "message_id": get_result["graph_message_id"],
+                "message_id": get_result["message_id"],
                 "subject": "Updated subject",
             }
         )
-        assert update_result["graph_message_id"] == graph_message_id
+        assert update_result["message_id"] == message_id
 
         forward_result = forward_action.run(
             arguments={
                 "user": "1111",
-                "message_id": update_result["graph_message_id"],
+                "message_id": update_result["message_id"],
                 "recipients": ["recipient@example.test"],
             }
         )
-        assert forward_result["target_message_id"] == graph_message_id
+        assert forward_result["target_message_id"] == message_id
         assert forward_result["status"] == "forwarded"
         assert forward_result["action"] == "forward_message"

@@ -134,19 +134,15 @@
         "description": "Sender information",
         "type": "object"
       },
-      "graph_message_id": {
-        "description": "Resolved Microsoft Graph message item ID (alias of id)",
-        "type": "string"
-      },
-      "id": {
+      "message_id": {
         "description": "The Microsoft Graph message item ID",
         "type": "string"
       },
-      "internetMessageId": {
+      "internet_message_id": {
         "description": "The Internet Message-ID (RFC 5322)",
         "type": "string"
       },
-      "receivedDateTime": {
+      "received_date_time": {
         "description": "Message reception timestamp",
         "type": "string"
       },
@@ -154,7 +150,7 @@
         "description": "Message subject",
         "type": "string"
       },
-      "toRecipients": {
+      "to_recipients": {
         "description": "List of recipients",
         "type": "array",
         "items": {

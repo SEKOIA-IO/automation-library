@@ -27,5 +27,8 @@ class GetMessageAction(MicrosoftGraphActionBase):
         result = response.json()
         if isinstance(result, dict):
             resolved_message_id = result.get("id") if isinstance(result.get("id"), str) else message_id
-            result["graph_message_id"] = resolved_message_id
+            normalized_result = self._snake_case_keys(result)
+            normalized_result.pop("id", None)
+            normalized_result["message_id"] = resolved_message_id
+            return normalized_result
         return result

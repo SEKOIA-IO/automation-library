@@ -58,7 +58,7 @@ def test_resolve_message_defaults_to_first_result(configured_action):
         action = configured_action(ResolveMessageAction)
         result = action.run(arguments={"user": "1111", "email_message_id": "<sample-message-id@example.com>"})
 
-        assert result["graph_message_id"] == "graph-item-id-1"
+        assert result["message_id"] == "graph-item-id-1"
         assert result["selected_index"] == 0
         assert result["total_results"] == 2
 
@@ -94,7 +94,7 @@ def test_resolve_message_most_recent_and_item_index(configured_action):
         request = mock.request_history[1]
         decoded_query = unquote_plus(request.url.split("?", maxsplit=1)[1])
         assert "$orderby=receivedDateTime desc" in decoded_query
-        assert result["graph_message_id"] == "graph-item-id-2"
+        assert result["message_id"] == "graph-item-id-2"
 
 
 def test_resolve_message_by_network_message_id_fallback_on_empty_result(configured_action):
@@ -131,7 +131,7 @@ def test_resolve_message_by_network_message_id_fallback_on_empty_result(configur
         action = configured_action(ResolveMessageAction)
         result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
 
-        assert result["graph_message_id"] == "graph-item-id-3"
+        assert result["message_id"] == "graph-item-id-3"
         assert result["total_results"] == 1
 
 
@@ -172,7 +172,7 @@ def test_resolve_message_by_network_message_id_fallback_on_inefficient_filter(co
         action = configured_action(ResolveMessageAction)
         result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
 
-        assert result["graph_message_id"] == "graph-item-id-4"
+        assert result["message_id"] == "graph-item-id-4"
         assert result["total_results"] == 1
 
 
