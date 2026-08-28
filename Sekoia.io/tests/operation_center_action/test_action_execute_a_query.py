@@ -503,7 +503,7 @@ def test_execute_query_full_polling_cycle(requests_mock):
     assert result["query_result"] == "final_result"
 
 
-def test_execute_query_has_empty_community_ids(requests_mock):
+def test_execute_query_omits_community_uuids(requests_mock):
     action = make_action()
     action.configure_http_session()
     action.configure_urls()
