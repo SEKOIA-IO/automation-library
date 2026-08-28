@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-28 - 1.0.19
+
+### Changed
+
+- Complete `Vulnerability` Pydantic model with missing fields from Tenable API spec: add `cvss4_base_score`, `cvss4_vector`, `cvss4_threat_vector` to `Plugin`; add missing plugin fields (`d2_elliot_name`, `exploithub_sku`, `metasploit_name`, `stig_severity`, `usn`, `workaround`, `workaround_type`, `workaround_published`, `vendor_unpatched`, `vendor_severity`); fix `ms_bulletin` type to `List[str]`; fix enum casing for `AttackVector`, `AttackComplexity`, `ExploitMaturity`; replace `CommonEnums` with `PrivilegesRequired` and `ImpactLevel`; add `authentication` to `Cvss3Vector`; add `service` to `Port`; rename `Scan.target` to `Scan.last_scan_target`; add missing `VprDrivers` and `VprV2` fields; fully implement `SoftwareVulnsObject` and add `SoftwareVulnFix`; fix `indexed` type to `str`; change `software_vulns` to `List[SoftwareVulnsObject]`
+- Add CVSSv4 score support in vulnerability OCSF mapping
+
 ## 2026-07-29 - 1.0.18
 
 ### Fixed
