@@ -83,6 +83,54 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
             result: str | None = cache.get("most_recent_date_seen", None)
             return result
 
+    def get_mapped_fields(self) -> dict[str, str]:
+        """Return the SentinelOne -> OCSF field mapping used for schema-change fingerprinting.
+
+        Static OCSF constants are excluded: they never depend on the SentinelOne payload, so
+        they cannot invalidate a checkpoint.
+        """
+        return {
+            "uuid": "device.uid",
+            "id": "device.uid_alt",
+            "externalId": "device.eid",
+            "computerName": "device.hostname",
+            "machineType": "device.type",
+            "osType": "device.os.type",
+            "osName": "device.os.name",
+            "osRevision": "device.os.name",
+            "domain": "device.domain",
+            "externalIp": "device.ip",
+            "groupIp": "device.subnet",
+            "networkInterfaces.name": "device.network_interfaces.name",
+            "networkInterfaces.physical": "device.network_interfaces.mac",
+            "networkInterfaces.inet": "device.network_interfaces.ip",
+            "networkInterfaces.id": "device.network_interfaces.uid",
+            "modelName": "device.model",
+            "locations.name": "device.location.city",
+            "groupName": "device.groups.name",
+            "groupId": "device.groups.uid",
+            "accountName": "device.org.name",
+            "accountId": "device.org.uid",
+            "siteName": "device.region",
+            "createdAt": "device.created_time",
+            "registeredAt": "device.first_seen_time",
+            "lastActiveDate": "device.last_seen_time",
+            "osStartTime": "device.boot_time",
+            "isUpToDate": "device.is_compliant",
+            "infected": "device.risk_level",
+            "activeThreats": "device.risk_score",
+            "firewallEnabled": "enrichments.data.Firewall_status",
+            "lastLoggedInUserName": "enrichments.data.Users",
+            "osUsername": "enrichments.data.Users",
+        }
+
+    def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so every device is collected again on the next cycle."""
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self.new_most_recent_date = None
+        self.log("Checkpoint reset - a full device re-collection will occur on the next cycle", level="info")
+
     def update_checkpoint(self) -> None:
         """Update the checkpoint with the most recent date seen.
 

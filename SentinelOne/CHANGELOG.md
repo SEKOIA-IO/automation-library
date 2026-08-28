@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-28 - 1.24.0
+
+### Added
+
+- Device asset connector now declares its SentinelOne -> OCSF field mapping and resets its
+  checkpoint automatically when that mapping changes, so all devices are re-collected with
+  the new mapping
+
+### Changed
+
+- Upgrade `sekoia-automation-sdk` to 1.24.0
+- Migrate the configuration, action and filter models from `pydantic.v1` to Pydantic v2,
+  required by the SDK. Filters now declare `query_filter_class` as a class attribute
+  instead of an inner `Config` class
+- Deep Visibility events keep coercing the numeric fields the API returns (ports, pids,
+  sizes) into strings, which Pydantic v2 no longer does implicitly
+
 ## 2026-07-29 - 1.23.1
 
 ### Fixed
