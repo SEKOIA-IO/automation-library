@@ -61,6 +61,41 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
     OCSF_VERSION: str = "1.6.0"
     PRODUCT_VERSION: str = "N/A"
 
+    def get_mapped_fields(self) -> dict[str, str]:
+        """Return the EC2 -> OCSF field mapping used for schema-change fingerprinting.
+
+        Static OCSF constants are excluded: they never depend on the EC2 payload, so they
+        cannot invalidate a checkpoint.
+        """
+        return {
+            "Reservations.OwnerId": "device.org.uid",
+            "Instances.InstanceId": "device.uid",
+            "Instances.PublicDnsName": "device.hostname",
+            "Instances.PrivateDnsName": "device.hostname",
+            "Instances.Tags.Name": "device.name",
+            "Instances.Tags.aws:autoscaling:groupName": "device.autoscale_uid",
+            "Instances.PlatformDetails": "device.os.name",
+            "Instances.PublicIpAddress": "device.ip",
+            "Instances.PrivateIpAddress": "device.ip",
+            "Instances.Placement.AvailabilityZone": "device.region",
+            "Instances.SubnetId": "device.subnet",
+            "Instances.VpcId": "device.domain",
+            "Instances.Hypervisor": "device.hypervisor",
+            "Instances.InstanceType": "device.model",
+            "Instances.ImageId": "device.desc",
+            "Instances.State.Name": "device.desc",
+            "Instances.IamInstanceProfile": "device.is_managed",
+            "Instances.LaunchTime": "device.boot_time",
+            "Instances.BlockDeviceMappings.Ebs.AttachTime": "device.created_time",
+            "Instances.NetworkInterfaces.NetworkInterfaceId": "device.network_interfaces.uid",
+            "Instances.NetworkInterfaces.Description": "device.network_interfaces.name",
+            "Instances.NetworkInterfaces.MacAddress": "device.network_interfaces.mac",
+            "Instances.NetworkInterfaces.PrivateIpAddress": "device.network_interfaces.ip",
+            "Instances.NetworkInterfaces.PrivateDnsName": "device.network_interfaces.hostname",
+            "Instances.SecurityGroups.GroupId": "device.groups.uid",
+            "Instances.SecurityGroups.GroupName": "device.groups.name",
+        }
+
     def client(self) -> boto3.client:
         """Create and return a configured AWS EC2 client.
 
