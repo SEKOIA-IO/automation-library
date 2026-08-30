@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  module:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - USER_ID=${USER_ID:-1000}
+        - GROUP_ID=${GROUP_ID:-1000}
+    image: ${MODULE_NAME_LOWER:-module}-module:local
+    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+    volumes:
+      - ./results:/results
+      - ./symphony:/symphony:ro
+    environment:
+      - RESULTS_PATH=/results
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
+      - PLAYBOOK_RUN_ID=${PLAYBOOK_RUN_ID:-local-test-run}
+      - CALLBACK_URL=${CALLBACK_URL:-}
+    command: ["${ACTION_NAME:-default}"]
+    entrypoint: ["python", "${MAIN_SCRIPT:-main.py}"]
