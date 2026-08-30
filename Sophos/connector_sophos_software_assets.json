@@ -1,0 +1,34 @@
+{
+  "name": "Sophos EDR Software Assets",
+  "description": "Fetch installed software from Sophos EDR endpoints as Software assets",
+  "uuid": "b5f2e3a1-4d6c-4e8f-9a0b-1c2d3e4f5a6b",
+  "docker_parameters": "sophos_software_asset_connector",
+  "type": "asset",
+  "capability": "host_detection",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "sekoia_base_url": {
+        "description": "Sekoia base URL",
+        "type": "string"
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds"
+      },
+      "sekoia_api_key": {
+        "description": "API key to use from sekoia.io",
+        "type": "string"
+      },
+      "batch_size": {
+        "description": "Batch size for each request",
+        "type": "integer"
+      }
+    },
+    "required": ["sekoia_api_key"],
+    "secrets": ["sekoia_api_key"],
+    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"]
+  }
+}
+
