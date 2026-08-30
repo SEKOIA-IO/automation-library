@@ -6,10 +6,19 @@ from datetime import datetime
 from typing import Any
 from urllib.parse import urlencode, urlparse, urlunsplit
 
+import aiohttp
 import msal
-from aiohttp.client import ClientSession
+from aiohttp.client import ClientResponse, ClientSession
 
-from .constants import OFFICE365_ACTIVE_SUBSCRIPTION_STATUS, OFFICE365_AUTHORITY_DEFAULT, OFFICE365_URL_BASE
+from .constants import (
+    OFFICE365_ACTIVE_SUBSCRIPTION_STATUS,
+    OFFICE365_AUTHORITY_DEFAULT,
+    OFFICE365_URL_BASE,
+    REQUEST_BASE_BACKOFF_SECONDS,
+    REQUEST_MAX_ATTEMPTS,
+    REQUEST_MAX_BACKOFF_SECONDS,
+)
+from .error_handling import extract_error_metadata
 from .errors import (
     ApplicationAuthenticationFailed,
     FailedToActivateO365Subscription,
@@ -87,6 +96,85 @@ class Office365API:
 
         yield self._session
 
+    async def _request_with_retry(
+        self,
+        session: ClientSession,
+        method: str,
+        url: str,
+        **kwargs: Any,
+    ) -> ClientResponse:
+        """
+        Issue an HTTP request, retrying transient failures.
+
+        Retries on:
+            - 429 Too Many Requests
+            - any 5xx Server Error (including 503 Service Unavailable)
+            - aiohttp.ClientError, asyncio.TimeoutError
+
+        For retryable HTTP responses, a numeric ``Retry-After`` header is honored
+        (capped at REQUEST_MAX_BACKOFF_SECONDS); otherwise an exponential backoff
+        is used. Transport errors always use exponential backoff.
+
+        On the final attempt, the response (or exception) is returned/raised
+        as-is so the caller can build a meaningful error.
+        """
+        for attempt in range(REQUEST_MAX_ATTEMPTS):
+            try:
+                response = await session.request(method, url, **kwargs)
+            except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+                if attempt == REQUEST_MAX_ATTEMPTS - 1:
+                    raise
+                wait = self._compute_backoff(attempt)
+                logger.warning(
+                    "Office 365 API request failed",
+                    error=type(exc).__name__,
+                    wait_seconds=wait,
+                    attempt=attempt + 1,
+                    max_attempts=REQUEST_MAX_ATTEMPTS,
+                )
+
+                await asyncio.sleep(wait)
+
+                continue
+
+            # Success or non-retryable client error: return immediately.
+            if response.status != 429 and response.status < 500:
+                return response
+
+            # On the final attempt, hand the response back to the caller.
+            if attempt == REQUEST_MAX_ATTEMPTS - 1:
+                return response
+
+            wait = self._wait_seconds_for_response(response, attempt)
+            logger.warning(
+                "Office 365 API returned a transient error, retrying",
+                status=response.status,
+                wait_seconds=wait,
+                attempt=attempt + 1,
+                max_attempts=REQUEST_MAX_ATTEMPTS,
+            )
+            await response.release()
+            await asyncio.sleep(wait)
+
+        # Unreachable: the final attempt always returns the response or raises above.
+        raise RuntimeError("retry loop exited without returning a response")
+
+    @staticmethod
+    def _compute_backoff(attempt: int) -> float:
+        return min(REQUEST_BASE_BACKOFF_SECONDS * (2**attempt), REQUEST_MAX_BACKOFF_SECONDS)
+
+    @classmethod
+    def _wait_seconds_for_response(cls, response: ClientResponse, attempt: int) -> float:
+        retry_after = response.headers.get("Retry-After")
+        if retry_after:
+            try:
+                return min(float(retry_after), REQUEST_MAX_BACKOFF_SECONDS)
+            except ValueError:
+                # HTTP-date form is allowed but rarely seen here; fall through.
+                pass
+
+        return cls._compute_backoff(attempt)
+
     async def activate_subscriptions(self) -> None:
         """
         Activate subscriptions for a tenant
@@ -106,8 +194,11 @@ class Office365API:
                 for content_type in missing_types:
                     # activate the subscription
                     base_url = OFFICE365_URL_BASE.format(tenant_id=self.tenant_id)
-                    response = await session.post(
-                        f"{base_url}/subscriptions/start", params={"contentType": content_type}
+                    response = await self._request_with_retry(
+                        session,
+                        "POST",
+                        f"{base_url}/subscriptions/start",
+                        params={"contentType": content_type},
                     )
 
                     try:
@@ -127,7 +218,9 @@ class Office365API:
 
                     # check HTTP status code
                     if response.status >= 400:
-                        raise FailedToActivateO365Subscription(status_code=response.status, body=await response.text())
+                        raise FailedToActivateO365Subscription(
+                            **extract_error_metadata(await response.text(), response.status)
+                        )
 
         except RuntimeError as exc:
             if "Session is closed" in str(exc):
@@ -146,11 +239,13 @@ class Office365API:
         try:
             async with self._fresh_session() as session:
                 # get the list of subscriptions
-                response = await session.get(f"{base_url}/subscriptions/list")
+                response = await self._request_with_retry(session, "GET", f"{base_url}/subscriptions/list")
 
                 # check HTTP status code
                 if response.status >= 400:
-                    raise FailedToListO365Subscriptions(status_code=response.status, body=await response.text())
+                    raise FailedToListO365Subscriptions(
+                        **extract_error_metadata(await response.text(), response.status)
+                    )
 
                 # get the body of the response
                 subscriptions = await response.json()
@@ -219,14 +314,12 @@ class Office365API:
             # queries the contents for the current page
             try:
                 async with self._fresh_session() as session:
-                    response = await session.get(
-                        next_page_uri,
-                    )
+                    response = await self._request_with_retry(session, "GET", next_page_uri)
 
                     # check HTTP status code
                     if response.status >= 400:
                         raise FailedToGetO365SubscriptionContents(
-                            status_code=response.status, body=await response.text()
+                            **extract_error_metadata(await response.text(), response.status)
                         )
 
                     contents = await response.json()
@@ -257,13 +350,11 @@ class Office365API:
         # queries the contents for the current page
         try:
             async with self._fresh_session() as session:
-                response = await session.get(
-                    content_uri,
-                )
+                response = await self._request_with_retry(session, "GET", content_uri)
 
                 # check HTTP status code
                 if response.status >= 400:
-                    raise FailedToGetO365AuditContent(status_code=response.status, body=await response.text())
+                    raise FailedToGetO365AuditContent(**extract_error_metadata(await response.text(), response.status))
 
                 content = await response.json(content_type=None)
 
