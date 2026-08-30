@@ -1,0 +1,57 @@
+name: patch_api_v1_accounts_accountId_riskassessment_updateconfiguration
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: PATCH
+      url: '{{inputs.base_url}}/api/v1/accounts/{{inputs.accountId}}/riskassessment/updateconfiguration'
+      auth:
+        bearer:
+          token: '{{inputs.token}}'
+          scheme: Bearer
+      headers:
+        WatchGuard-API-Key: '{{apikey}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: BAD REQUEST.
+      error_403:
+        predicate: '{{response.status_code != 403}}'
+        fail: ACCESS DENIED.
+      error_404:
+        predicate: '{{response.status_code != 404}}'
+        fail: NOT FOUND.
+      error_405:
+        predicate: '{{response.status_code != 405}}'
+        fail: METHOD NOT ALLOWED.
+      error_500:
+        predicate: '{{response.status_code != 500}}'
+        fail: INTERNAL ERROR.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Modifies the risk configuration.
+inputs:
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://api.usa.cloud.watchguard.com/rest/endpoint-security/management
+    - https://api.deu.cloud.watchguard.com/rest/endpoint-security/management
+    - https://api.jpn.cloud.watchguard.com/rest/endpoint-security/management
+  token:
+    type: string
+    description: The bearer token for authentication
+    default: '{{token}}'
+  accountId:
+    type: string
+    description: Your WatchGuard Cloud account ID.
