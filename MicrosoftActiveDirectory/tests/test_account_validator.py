@@ -25,6 +25,8 @@ def test_returns_false_on_timeout_error():
     validator = object.__new__(MicrosoftADAccountValidator)
 
     class LdapClient:
+        bound = False
+
         def bind(self):
             raise LDAPSocketOpenError("Timeout occurred !!")
 
@@ -40,6 +42,8 @@ def test_returns_false_on_bind_error():
     validator = object.__new__(MicrosoftADAccountValidator)
 
     class LdapClient:
+        bound = False
+
         def bind(self):
             raise LDAPBindError("LDAP bind failed")
 
@@ -55,6 +59,8 @@ def test_returns_false_on_unexpected_exception():
     validator = object.__new__(MicrosoftADAccountValidator)
 
     class LdapClient:
+        bound = False
+
         def bind(self):
             raise RuntimeError("unexpected")
 
