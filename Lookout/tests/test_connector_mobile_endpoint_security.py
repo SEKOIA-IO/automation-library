@@ -96,7 +96,7 @@ def sse_stream():
             },
         ]
     )
-    return """event:heartbeat\ndata:{}\n\nid:01969f85-f6d8-73bd-bcbc-a38948f21386\nevent:events\ndata:%s\n\n""" % data
+    return f"event:heartbeat\ndata:{{}}\n\nid:01969f85-f6d8-73bd-bcbc-a38948f21386\nevent:events\ndata:{data}\n\n"
 
 
 def test_fetch_events(worker, sse_stream):
@@ -122,9 +122,10 @@ def test_fetch_events(worker, sse_stream):
 
 
 def test_reconnect(worker):
-    with requests_mock.Mocker() as mock_requests, patch(
-        "lookout_modules.connector_mobile_endpoint_security.time"
-    ) as mock_time:
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch("lookout_modules.connector_mobile_endpoint_security.time") as mock_time,
+    ):
         mock_requests.register_uri(
             "POST",
             "https://api.lookout.com/oauth2/token",

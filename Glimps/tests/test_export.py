@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 from gdetect import GDetectError
-from pydantic.v1.error_wrappers import ValidationError
+from pydantic import ValidationError
 
 from glimps.export_action import ExportSubmission
 from glimps.models import ExportSubmissionArguments, GLIMPSConfiguration

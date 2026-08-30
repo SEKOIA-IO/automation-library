@@ -38,9 +38,20 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 - CertificateTransparency
 - Duo
 
+### Wave 2 second batch completed in this session
+- Fastly
+- Git
+- Glimps
+- Jumpcloud
+- Lookout
+
+### Additional modules already migrated (outside the wave batches)
+- Upwind
+- Github (originally planned in Wave 6)
+
 ### Remaining scope
-- Remaining modules to migrate: 86
-- Remaining planned effort: about 385.0 hours
+- Remaining modules to migrate: 81 (includes untracked `_utils` and `HolmSecurity`; 80 are covered by the waves below)
+- Remaining planned effort: about 363.0 hours
 - Criticity scale: 1 (easiest) to 10 (hardest)
 
 ## Incremental Delivery Strategy
@@ -82,11 +93,6 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 Estimated wave effort: 27.5h (completed)
 
 ### Wave 2: Criticity 5 (estimated 3h each) - In progress
-- Fastly
-- Git
-- Glimps
-- Jumpcloud
-- Lookout
 - Mattermost
 - MWDB
 - Nybble
@@ -100,7 +106,7 @@ Estimated wave effort: 27.5h (completed)
 - Virustotal
 - WatchGuard
 
-Estimated wave effort: 66h total, 51h remaining
+Estimated wave effort: 66h total, 36h remaining
 
 ### Wave 3: Criticity 6 (estimated 4h each)
 - Akamai
@@ -181,11 +187,10 @@ Estimated wave effort: 102h
 
 ### Wave 6: Criticity 9 (estimated 7h each)
 - AWS
-- Github
 - MicrosoftSentinel
 - Sekoia.io
 
-Estimated wave effort: 28h
+Estimated wave effort: 21h
 
 ## Suggested Batch Size Per Session
 - Small session: 2 modules from current wave.
@@ -194,9 +199,9 @@ Estimated wave effort: 28h
 
 ## Resume Point For Next Session
 Start with the next small batch from Wave 2:
-1. Fastly
-2. Git
-3. Glimps
+1. Mattermost
+2. MWDB
+3. Nybble
 
 After that, continue through the remaining Criticity 5 modules in order.
 

@@ -19,7 +19,7 @@ class FastlyWAFConnectorConfiguration(FastlyWAFBasicConnectorConfiguration):
 class FastlyWAFConnector(FastlyWAFBaseConnector):
     configuration: FastlyWAFConnectorConfiguration
 
-    def get_url_for_site(self, site_name: str) -> str:
+    def get_url_for_site(self, site_name: str) -> str:  # noqa: ARG002
         return f"{self.base_uri}/api/v0/corps/{self.configuration.corp}/sites/{self.configuration.site}/events"
 
     def get_url_for_corp(self) -> str | None:

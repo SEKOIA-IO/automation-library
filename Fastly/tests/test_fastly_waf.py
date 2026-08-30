@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -93,7 +93,7 @@ def test_fetch_events(trigger, message2):
             name="site:www.example.com",
             url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events",
         )
-        consumer.from_datetime = datetime(year=2022, month=2, day=24, tzinfo=timezone.utc)
+        consumer.from_datetime = datetime(year=2022, month=2, day=24, tzinfo=UTC)
         events = consumer.fetch_events()
         assert list(events) == [message2["data"]]
 
@@ -119,7 +119,7 @@ def test_fetch_events_with_pagination(trigger, message1, message2):
             name="site:www.example.com",
             url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events",
         )
-        consumer.from_datetime = datetime(year=2022, month=2, day=24, tzinfo=timezone.utc)
+        consumer.from_datetime = datetime(year=2022, month=2, day=24, tzinfo=UTC)
         events = consumer.fetch_events()
         assert list(events) == [message1["data"], message2["data"]]
 

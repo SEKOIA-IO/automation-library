@@ -10,7 +10,7 @@ from s3path import S3Path, register_configuration_parameter
 
 @pytest.fixture(autouse=True)
 def purge_settings_lru_cache():
-    """Reset Settings’s `lru_cache` before every test to prevent wrong
+    """Reset Settings's `lru_cache` before every test to prevent wrong
     usage of cache.
 
     """

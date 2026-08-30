@@ -123,7 +123,7 @@ def test_wait_for_view_token(add_file_to_storage, set_up_wait_for_action, analys
 def test_wait_for_timeout(add_file_to_storage, set_up_wait_for_action, analysis_result):
     _, file, _ = add_file_to_storage
     action: WaitForFile = set_up_wait_for_action
-    uuid, mock_analysis_result = analysis_result
+    _uuid, mock_analysis_result = analysis_result
     # set very small timeout to trigger timeout exception
     arguments = WaitForResultArgument(file_name=file, timeout=0.1, pull_time=0.1)
     with patch("gdetect.api.Client.push_reader") as mock_push:

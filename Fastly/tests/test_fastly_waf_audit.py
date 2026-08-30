@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -45,7 +45,10 @@ def message_corpo():
                     "detailLink": "https://dashboard.signalsciences.net/corps/corpname/users/john.doe+demo@sample.com",
                     "email": "john.doe+demo@sample.com",
                     "tokenName": "Dev Audit log",
-                    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+                    "userAgent": (
+                        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                        "(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+                    ),
                 },
                 "message": "John OUTREY (john.doe+demo@sample.com) created API Access Token `Dev Audit log`",
                 "attachments": [
@@ -95,7 +98,10 @@ def message_site():
                 "id": "65cb8a386af260edn88be7f7",
                 "eventType": "createIntegration",
                 "msgData": {"integrationType": "generic", "plainSubscribedTo": '"all events"'},
-                "message": 'John DOE (john.doe+demo@sample.com) created a new "generic" integration subscribed to "all events"',
+                "message": (
+                    'John DOE (john.doe+demo@sample.com) created a new "generic" '
+                    'integration subscribed to "all events"'
+                ),
                 "attachments": [],
                 "created": "2024-02-13T15:26:48Z",
             },
@@ -146,7 +152,7 @@ def test_fetch_corp_events(trigger, message_corpo):
             name="corp:testcorp",
             url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/activity",
         )
-        consumer.from_datetime = datetime(year=2022, month=2, day=24, tzinfo=timezone.utc)
+        consumer.from_datetime = datetime(year=2022, month=2, day=24, tzinfo=UTC)
         events = consumer.fetch_events()
         assert list(events) == [message_corpo["data"]]
 
@@ -164,7 +170,7 @@ def test_fetch_site_events(trigger, message_site):
             name="site:www.example.com",
             url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/activity",
         )
-        consumer.from_datetime = datetime(year=2022, month=2, day=24, tzinfo=timezone.utc)
+        consumer.from_datetime = datetime(year=2022, month=2, day=24, tzinfo=UTC)
         events = consumer.fetch_events()
         assert list(events) == [message_site["data"]]
 
@@ -225,7 +231,7 @@ def test_load_without_cursor(trigger, data_storage):
         cache["most_recent_date_seen"] = None
 
     with patch("fastly.connector_fastly_waf_base.datetime.datetime") as mock_datetime:
-        datetime_now = datetime(2023, 3, 22, 11, 56, 28, tzinfo=timezone.utc)
+        datetime_now = datetime(2023, 3, 22, 11, 56, 28, tzinfo=UTC)
         datetime_expected = datetime_now - timedelta(minutes=1)
 
         mock_datetime.now.return_value = datetime_now

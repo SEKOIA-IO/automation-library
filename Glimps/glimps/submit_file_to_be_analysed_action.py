@@ -45,7 +45,7 @@ class WaitForFile(GLIMPSAction):
                 description=arguments.description,
                 archive_password=arguments.archive_pwd,
             )
-        details = AnalysisDetails.parse_obj(raw_analysis)
+        details = AnalysisDetails.model_validate(raw_analysis)
         view_token: str = self._get_token_view_url(raw_analysis)
 
         return AnalysisResponse(analysis=details, view_url=view_token)

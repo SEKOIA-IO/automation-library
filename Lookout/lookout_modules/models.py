@@ -1,9 +1,9 @@
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 
 class LookoutModuleConfiguration(BaseModel):
     host: str = Field(..., description="Base URL")
-    api_token: str = Field(..., description="API Token", secret=True)
+    api_token: str = Field(..., description="API Token", json_schema_extra={"secret": True})
 
     @property
     def base_url(self):

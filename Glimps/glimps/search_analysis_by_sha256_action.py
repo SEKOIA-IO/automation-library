@@ -11,7 +11,7 @@ class SearchPreviousAnalysis(GLIMPSAction):
 
     def run(self, arguments: SearchAnalysisBySha256Argument) -> AnalysisResponse:
         raw_analysis = self.gdetect_client.get_by_sha256(arguments.sha256)
-        details: AnalysisDetails = AnalysisDetails.parse_obj(raw_analysis)
+        details: AnalysisDetails = AnalysisDetails.model_validate(raw_analysis)
         view_token: str = self._get_token_view_url(raw_analysis)
 
         return AnalysisResponse(analysis=details, view_url=view_token)
