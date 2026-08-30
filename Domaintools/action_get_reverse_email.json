@@ -1,0 +1,117 @@
+{
+  "uuid": "4d1dea81-0edd-46f3-b921-894d38139379",
+  "name": "Get Reverse Email",
+  "description": "Find all domains registered or managed by a specific email address through DomainTools Iris Investigate API. Discover domain portfolios, registrant connections, and related infrastructure by analyzing WHOIS email contacts for threat actor attribution and investigation",
+  "docker_parameters": "get_reverse_email",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "email": {
+        "description": "The email address to search for in WHOIS records (e.g., admin@example.com)",
+        "type": "string"
+      }
+    },
+    "required": [
+      "email"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "limit_exceeded": {
+        "type": "boolean",
+        "description": "Indicates if the API response limit per page has been exceeded"
+      },
+      "has_more_results": {
+        "type": "boolean",
+        "description": "Indicates if additional results are available beyond the current response"
+      },
+      "message": {
+        "type": "string",
+        "description": "Status message from DomainTools API (e.g., 'Enjoy your data.')"
+      },
+      "results_count": {
+        "type": "integer",
+        "description": "Number of domains associated with the email in the current response"
+      },
+      "total_count": {
+        "type": "integer",
+        "description": "Total number of domains linked to the queried email address"
+      },
+      "results": {
+        "type": "array",
+        "description": "Array of domains where the email appears in WHOIS records as registrant, administrative, technical, or billing contact",
+        "items": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "description": "Domain name associated with the email address"
+            },
+            "domain_risk": {
+              "type": "object",
+              "description": "Risk assessment for the domain",
+              "properties": {
+                "risk_score": {
+                  "type": "integer",
+                  "description": "Overall risk score for the domain (0-100, where higher values indicate greater risk)"
+                }
+              }
+            },
+            "first_seen": {
+              "type": "object",
+              "description": "Date and time when the domain was first observed with this email",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "First seen timestamp in ISO 8601 format (e.g., '2023-06-10T11:55:34Z')"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of occurrences"
+                }
+              }
+            },
+            "server_type": {
+              "type": "object",
+              "description": "Web server software information",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Server software identifier (e.g., 'Apache/2.4.41', 'nginx/1.18.0', 'cloudflare')"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains using this server type"
+                }
+              }
+            },
+            "website_title": {
+              "type": "object",
+              "description": "HTML title of the website",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Website title text"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains with this title"
+                }
+              }
+            }
+          }
+        }
+      },
+      "missing_domains": {
+        "type": "array",
+        "description": "Array of domain names that were queried but not found in the DomainTools database"
+      }
+    },
+    "title": "Results",
+    "type": "object"
+  },
+  "slug": "get_reverse_email_in_domaintools"
+}

@@ -1,0 +1,92 @@
+{
+  "uuid": "8c80f506-4e8b-45c3-8fb1-cd496644fdb4",
+  "name": "Get Domain Reputation",
+  "description": "Retrieve domain reputation and risk assessment from DomainTools Iris Investigate API, including risk scores, threat indicators, proximity analysis, and security classifications to identify potentially malicious domains",
+  "docker_parameters": "get_domain_reputation",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "domain": {
+        "description": "The domain name to assess for reputation and risk score (e.g., example.com)",
+        "type": "string"
+      }
+    },
+    "required": [
+      "domain"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "limit_exceeded": {
+        "type": "boolean",
+        "description": "Indicates if the API response limit per page has been exceeded"
+      },
+      "has_more_results": {
+        "type": "boolean",
+        "description": "Indicates if additional results are available beyond the current response"
+      },
+      "message": {
+        "type": "string",
+        "description": "Status message from DomainTools API (e.g., 'Enjoy your data.')"
+      },
+      "results_count": {
+        "type": "integer",
+        "description": "Number of domain results returned in the current response"
+      },
+      "total_count": {
+        "type": "integer",
+        "description": "Total number of matching domain records available"
+      },
+      "results": {
+        "type": "array",
+        "description": "Array of domain reputation results containing risk scores, threat components, proximity analysis, and security classifications",
+        "items": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "description": "The queried domain name"
+            },
+            "domain_risk": {
+              "type": "object",
+              "description": "Domain risk assessment with overall score and component breakdown",
+              "properties": {
+                "risk_score": {
+                  "type": "integer",
+                  "description": "Overall risk score for the domain (0-100, where higher values indicate greater risk)"
+                },
+                "components": {
+                  "type": "array",
+                  "description": "Risk score components breakdown by category (e.g., proximity, threat_profile)",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Name of the risk component (e.g., 'proximity', 'threat_profile')"
+                      },
+                      "risk_score": {
+                        "type": "integer",
+                        "description": "Risk score for this specific component (0-100)"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "missing_domains": {
+        "type": "array",
+        "description": "Array of domain names that were queried but not found in the DomainTools database"
+      }
+    },
+    "title": "Results",
+    "type": "object"
+  },
+  "slug": "get_domain_reputation_in_domaintools"
+}
