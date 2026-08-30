@@ -1136,3 +1136,27 @@ async def test_map_fields_bitlocker_encryption(test_okta_device_asset_connector)
         partitions = result.enrichments[0].data.Storage_encryption.partitions
         assert "full" in partitions
         assert partitions["full"] == "Enabled"
+
+
+def test_get_mapped_fields(test_okta_device_asset_connector):
+    fields = test_okta_device_asset_connector.get_mapped_fields()
+
+    assert isinstance(fields, dict)
+    assert fields
+    assert all(isinstance(key, str) and isinstance(value, str) for key, value in fields.items())
+    assert fields["id"] == "device.uid"
+
+
+@pytest.mark.asyncio
+async def test_reset_checkpoint(test_okta_device_asset_connector):
+    connector = test_okta_device_asset_connector
+    connector.log = MagicMock()
+
+    connector.new_most_recent_date = "2025-01-01T00:00:00.000Z"
+    await connector.update_checkpoint()
+    assert connector.most_recent_date_seen == "2025-01-01T00:00:00.000Z"
+
+    await connector.reset_checkpoint()
+
+    assert connector.new_most_recent_date is None
+    assert connector.most_recent_date_seen is None

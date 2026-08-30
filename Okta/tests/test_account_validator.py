@@ -153,7 +153,7 @@ class TestOktaAccountValidator:
             )
 
     def test_validate_event_loop_handling(self):
-        """Test that validate properly handles asyncio event loop."""
+        """Test that validate runs the coroutine on its own event loop."""
         mock_client = Mock()
 
         async def mock_list_users():
@@ -162,15 +162,11 @@ class TestOktaAccountValidator:
         mock_client.list_users = mock_list_users
 
         with patch.object(type(self.validator), "client", new_callable=PropertyMock, return_value=mock_client):
-            with patch("asyncio.get_event_loop") as mock_get_loop:
-                mock_loop = Mock()
-                mock_loop.run_until_complete.return_value = ([], Mock(), None)
-                mock_get_loop.return_value = mock_loop
-
+            with patch("asyncio.run", return_value=([], Mock(), None)) as mock_run:
                 result = self.validator.validate()
 
                 assert result is True
-                mock_loop.run_until_complete.assert_called_once()
+                mock_run.assert_called_once()
 
     def test_validate_logs_error_details(self):
         """Test that validation logs detailed error information."""

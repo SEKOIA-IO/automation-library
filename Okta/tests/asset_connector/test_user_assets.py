@@ -10,6 +10,8 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     UserOCSFModel,
 )
 
+from sekoia_automation.module import Module
+
 from okta_modules.asset_connector.user_assets import OktaUserAssetConnector
 
 
@@ -693,3 +695,33 @@ class TestOktaUserAssetConnector:
         # Verify
         assert isinstance(result, UserOCSFModel)
         assert result.user.display_name is None  # Not set because it's not a string
+
+
+def test_get_mapped_fields(data_storage):
+    module = Module()
+    module.configuration = {"base_url": "https://example.com", "apikey": "fake_okta_api_key"}
+    connector = OktaUserAssetConnector(module=module, data_path=data_storage)
+
+    fields = connector.get_mapped_fields()
+
+    assert isinstance(fields, dict)
+    assert fields
+    assert all(isinstance(key, str) and isinstance(value, str) for key, value in fields.items())
+    assert fields["id"] == "user.uid"
+
+
+@pytest.mark.asyncio
+async def test_reset_checkpoint(data_storage):
+    module = Module()
+    module.configuration = {"base_url": "https://example.com", "apikey": "fake_okta_api_key"}
+    connector = OktaUserAssetConnector(module=module, data_path=data_storage)
+    connector.log = MagicMock()
+
+    connector.new_most_recent_date = "2025-01-01T00:00:00.000Z"
+    await connector.update_checkpoint()
+    assert connector.most_recent_date_seen == "2025-01-01T00:00:00.000Z"
+
+    await connector.reset_checkpoint()
+
+    assert connector.new_most_recent_date is None
+    assert connector.most_recent_date_seen is None

@@ -67,6 +67,42 @@ class OktaUserAssetConnector(AsyncAssetConnector):
 
         return result
 
+    def get_mapped_fields(self) -> dict[str, str]:
+        """Return the Okta -> OCSF field mapping used for schema-change fingerprinting.
+
+        Sources prefixed with ``groups.`` come from ``list_user_groups``, ``roles.`` from
+        ``list_assigned_roles_for_user`` and ``factors`` from ``list_factors``. Static OCSF
+        constants are excluded: they never depend on the Okta payload, so they cannot
+        invalidate a checkpoint.
+        """
+        return {
+            "id": "user.uid",
+            "status": "enrichments.data.is_enabled",
+            "created": "time",
+            "last_login": "enrichments.data.last_logon",
+            "password_changed": "enrichments.data.last_time_password_change",
+            "profile.login": "user.name",
+            "profile.first_name": "user.full_name",
+            "profile.last_name": "user.full_name",
+            "profile.email": "user.email_addr",
+            "profile.display_name": "user.display_name",
+            "profile.organization": "user.org.name",
+            "profile.department": "user.org.ou_name",
+            "groups.id": "user.groups.uid",
+            "groups.profile.name": "user.groups.name",
+            "groups.profile.description": "user.groups.desc",
+            "roles.type": "user.type",
+            "roles.status": "user.type",
+            "factors": "user.has_mfa",
+        }
+
+    async def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so every user is collected again on the next cycle."""
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self.new_most_recent_date = None
+        self.log("Checkpoint reset - a full user re-collection will occur on the next cycle", level="info")
+
     async def update_checkpoint(self) -> None:
         """Update the checkpoint with the most recent date seen.
 
