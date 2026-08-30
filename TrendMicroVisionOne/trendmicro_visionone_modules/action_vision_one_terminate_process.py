@@ -1,16 +1,26 @@
-from typing import Any
+from typing import Any, Optional
+from uuid import UUID
+
+from pydantic import BaseModel, Field
 
 from .action_vision_one_base import TrendMicroVisionOneBaseAction
 
 
-class TerminateProcessAction(TrendMicroVisionOneBaseAction):
-    def run(self, arguments: Any) -> Any:
-        agent_guid: str = arguments["agent_guid"]
-        process_id: int = arguments["process_id"]
+class TerminateProcessArguments(BaseModel):
+    agent_guid: UUID = Field(..., description="The identifiers of the endpoints to isolate")
+    process_id: int = Field(..., gt=0, description="Process ID to terminate")
+    file_sha1: Optional[str] = None
+    file_name: Optional[str] = None
+    description: Optional[str] = None
 
-        file_sha1: str | None = arguments.get("file_sha1")
-        file_name: str | None = arguments.get("file_name")
-        description: str | None = arguments.get("description")
+
+class TerminateProcessAction(TrendMicroVisionOneBaseAction):
+    def run(self, arguments: TerminateProcessArguments) -> Any:
+        agent_guid = arguments.agent_guid
+        process_id = arguments.process_id
+        file_sha1 = arguments.file_sha1
+        file_name = arguments.file_name
+        description = arguments.description
 
         if file_sha1 is None and file_name is None:
             self.log("You should provide either file's name or SHA-1 hash", level="critical")
@@ -20,7 +30,7 @@ class TerminateProcessAction(TrendMicroVisionOneBaseAction):
         url = f"{base_url}/v3.0/response/endpoints/terminateProcess"
 
         payload: list[dict[str, Any]] = []
-        item = {"agentGuid": agent_guid, "processId": process_id}
+        item = {"agentGuid": str(agent_guid), "processId": process_id}
         if description:
             item["description"] = description
 
