@@ -1,4 +1,6 @@
+import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from virustotal.action_virustotal_getcomments import VirusTotalGetCommentsAction
 
@@ -56,3 +58,21 @@ def test_virustotal_get_comments():
             "?apikey=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
             "&resource=99017f6eebbac24f351415dd410d522d"
         )
+
+
+def test_virustotal_get_comments_returns_none_if_resource_empty(requests_mock):
+    vt: VirusTotalGetCommentsAction = VirusTotalGetCommentsAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+
+    with pytest.raises(ValidationError):
+        vt.run({"resource": ""})
+    assert requests_mock.call_count == 0
+
+
+def test_virustotal_get_comments_returns_none_if_resource_missing(requests_mock):
+    vt: VirusTotalGetCommentsAction = VirusTotalGetCommentsAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+
+    with pytest.raises(ValidationError):
+        vt.run({})
+    assert requests_mock.call_count == 0

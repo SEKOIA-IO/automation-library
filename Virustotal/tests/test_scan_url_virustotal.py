@@ -2,6 +2,7 @@ import urllib.parse
 
 import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from virustotal.action_virustotal_scanurl import VirusTotalScanURLAction
 from virustotal.errors import RequestLimitError
@@ -155,3 +156,30 @@ def test_virustotal_scan_url_no_scans():
 
         with pytest.raises(RequestLimitError):
             vt.run({"url": url})
+
+
+def test_virustotal_scan_url_returns_none_if_url_empty(requests_mock):
+    vt: VirusTotalScanURLAction = VirusTotalScanURLAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+
+    with pytest.raises(ValidationError):
+        vt.run({"url": ""})
+    assert requests_mock.call_count == 0
+
+
+def test_virustotal_scan_url_returns_none_if_url_invalid(requests_mock):
+    vt: VirusTotalScanURLAction = VirusTotalScanURLAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+
+    with pytest.raises(ValidationError):
+        vt.run({"url": "not a url"})
+    assert requests_mock.call_count == 0
+
+
+def test_virustotal_scan_url_returns_none_if_url_missing(requests_mock):
+    vt: VirusTotalScanURLAction = VirusTotalScanURLAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+
+    with pytest.raises(ValidationError):
+        vt.run({})
+    assert requests_mock.call_count == 0
