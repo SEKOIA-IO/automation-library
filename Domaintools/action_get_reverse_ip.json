@@ -1,0 +1,52 @@
+{
+  "uuid": "f42ea540-c138-47df-88ea-77987c868642",
+  "name": "Reverse IP Lookup",
+  "description": "Identify domain names sharing the same Internet host (IP address) using the DomainTools Reverse IP API. Query an IP address to find other domains hosted on that IP. Note: Results represent a subset of domains on shared hosting for investigative use, not exhaustive enumeration. Unsuitable for large CDNs or cloud providers.",
+  "docker_parameters": "get_reverse_ip",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "ip": {
+        "description": "The IP address to search for hosted domains (e.g., 199.30.228.77)",
+        "type": "string"
+      }
+    },
+    "required": [
+      "ip"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "ip_addresses": {
+        "type": "array",
+        "description": "Array of IP address objects containing domain information",
+        "items": {
+          "type": "object",
+          "properties": {
+            "ip_address": {
+              "type": "string",
+              "description": "The queried IP address"
+            },
+            "domain_count": {
+              "type": "integer",
+              "description": "Total number of known domains hosted on this IP address"
+            },
+            "domain_names": {
+              "type": "array",
+              "description": "Array of domain names hosted on this IP address",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "title": "Results",
+    "type": "object"
+  },
+  "slug": "get_reverse_ip_in_domaintools"
+}
