@@ -380,6 +380,55 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
 
         return device_ocsf
 
+    def get_mapped_fields(self) -> dict[str, str]:
+        """
+        Return the CrowdStrike -> OCSF field mapping used for schema-change fingerprinting.
+
+        Sources prefixed with ``host_groups.`` come from the host-groups lookup used to
+        resolve group names. Static OCSF constants are excluded: they never depend on the
+        CrowdStrike payload, so they cannot invalidate a checkpoint.
+        """
+        return {
+            "device_id": "device.uid",
+            "hostname": "device.hostname",
+            "serial_number": "device.uid_alt",
+            "machine_domain": "device.domain",
+            "platform_name": "device.os.type",
+            "os_version": "device.os.name",
+            "product_type_desc": "device.type",
+            "external_ip": "device.ip",
+            "local_ip": "device.network_interfaces.ip",
+            "mac_address": "device.network_interfaces.mac",
+            "connection_ip": "device.network_interfaces.ip",
+            "connection_mac_address": "device.network_interfaces.mac",
+            "default_gateway_ip": "device.subnet",
+            "system_product_name": "device.model",
+            "system_manufacturer": "device.vendor_name",
+            "bios_manufacturer": "device.hypervisor",
+            "zone_group": "device.region",
+            "cid": "device.org.uid",
+            "service_provider": "device.org.name",
+            "groups": "device.groups.uid",
+            "host_groups.name": "device.groups.name",
+            "host_groups.description": "device.groups.desc",
+            "first_seen": "device.first_seen_time",
+            "last_seen": "device.last_seen_time",
+            "agent_local_time": "device.boot_time",
+            "modified_timestamp": "time",
+            "status": "device.is_compliant",
+            "reduced_functionality_mode": "device.is_compliant",
+            "filesystem_containment_status": "device.is_compliant",
+            "device_policies.firewall.applied": "enrichments.data.Firewall_status",
+            "last_login_user": "enrichments.data.Users",
+        }
+
+    def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so every device is collected again on the next cycle."""
+        with self.context as cache:
+            cache.pop("most_recent_device_id", None)
+        self._latest_id = None
+        self.log("Checkpoint reset - a full device re-collection will occur on the next cycle", level="info")
+
     def update_checkpoint(self) -> None:
         """Update the checkpoint with the latest device ID."""
         self.log("Updating the device id !!", level="info")

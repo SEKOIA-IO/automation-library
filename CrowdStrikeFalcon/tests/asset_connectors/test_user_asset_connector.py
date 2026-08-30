@@ -445,3 +445,23 @@ class TestListIdentityEntities:
             query="query { test }",
             data_path=["entities", "nodes"],
         )
+
+
+def test_get_mapped_fields(connector):
+    fields = connector.get_mapped_fields()
+
+    assert isinstance(fields, dict)
+    assert fields
+    assert all(isinstance(key, str) and isinstance(value, str) for key, value in fields.items())
+    assert fields["entityId"] == "user.uid"
+
+
+def test_reset_checkpoint(connector):
+    connector._latest_time = "2025-01-01T00:00:00Z"
+    connector.update_checkpoint()
+    assert connector.most_recent_user_date == "2025-01-01T00:00:00Z"
+
+    connector.reset_checkpoint()
+
+    assert connector._latest_time is None
+    assert connector.most_recent_user_date is None

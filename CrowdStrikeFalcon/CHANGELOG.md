@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-26 - 1.26.0
+
+### Changed
+
+- Upgrade `sekoia-automation-sdk` to 1.24.0
+- Migrate the module configuration from `pydantic.v1` to Pydantic v2, required by the SDK
+
 ## 2026-07-02 - 1.25.18
 
 ### Fixed
