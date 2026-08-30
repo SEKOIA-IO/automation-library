@@ -1,0 +1,47 @@
+{
+  "configuration": {
+    "title": "EsetModuleConfiguration",
+    "type": "object",
+    "properties": {
+      "region": {
+        "title": "Region",
+        "description": "Region",
+        "type": "string",
+        "enum": [
+          "eu",
+          "de",
+          "ca",
+          "us",
+          "jpn"
+        ]
+      },
+      "username": {
+        "title": "Username",
+        "description": "Username",
+        "type": "string"
+      },
+      "password": {
+        "title": "Password",
+        "description": "Password",
+        "type": "string"
+      }
+    },
+    "required": [
+      "region",
+      "username",
+      "password"
+    ],
+    "secrets": [
+      "password"
+    ]
+  },
+  "description": "ESET is a global cybersecurity company known for its antivirus and security software solutions for both businesses and consumers, providing advanced threat detection and malware protection.",
+  "name": "Eset",
+  "uuid": "d6a734e9-b9a5-4dee-a0bd-3dffc4850b55",
+  "version": "1.2.0",
+  "slug": "eset",
+  "categories": [
+    "Endpoint"
+  ],
+  "supports_validation": true
+}
