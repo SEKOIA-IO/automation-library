@@ -2,6 +2,7 @@ import os
 from typing import List
 import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from thehive.upload_logs import TheHiveUploadLogsV5
 from thehive4py.types.attachment import OutputAttachment
@@ -129,3 +130,36 @@ def test_upload_logs_action_file_not_found(module, data_path):
 
     # Verify the error message contains the expected path
     assert non_existent_file in str(exc_info.value)
+
+
+@pytest.mark.parametrize("alert_id", [None, "", "   "])
+def test_upload_logs_action_requires_alert_id(alert_id, requests_mock, module, data_path):
+    filepath = data_path / FILEPATH
+    filepath.touch()
+
+    action = TheHiveUploadLogsV5(module=module, data_path=data_path)
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+
+    with pytest.raises(ValidationError):
+        action.run({"alert_id": alert_id, "filepath": FILEPATH})
+
+    assert requests_mock.call_count == 0
+
+
+@pytest.mark.parametrize("filepath", [None, "", "   "])
+def test_upload_logs_action_requires_filepath(filepath, requests_mock, module, data_path):
+    action = TheHiveUploadLogsV5(module=module, data_path=data_path)
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+
+    with pytest.raises(ValidationError):
+        action.run({"alert_id": ALERT_ID, "filepath": filepath})
+
+    assert requests_mock.call_count == 0

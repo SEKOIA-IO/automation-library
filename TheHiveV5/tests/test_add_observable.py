@@ -2,6 +2,7 @@ from typing import Any, Optional, List
 import json
 import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from thehive.add_observable import TheHiveCreateObservableV5
 from thehive4py.types.observable import OutputObservable
@@ -436,6 +437,21 @@ def test_add_observables_action_api_error(requests_mock):
 
     # Should attempt to add each observable
     assert mock_alert.call_count > 0
+
+
+@pytest.mark.parametrize("alert_id", [None, "", "   "])
+def test_add_observables_action_requires_alert_id(alert_id, requests_mock):
+    action = TheHiveCreateObservableV5()
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+
+    with pytest.raises(ValidationError):
+        action.run({"alert_id": alert_id, "events": EVENTS})
+
+    assert requests_mock.call_count == 0
 
 
 def test_add_observables_action_json_decode_error():
