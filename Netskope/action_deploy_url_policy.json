@@ -1,0 +1,23 @@
+{
+  "description": "Deploy pending Netskope URL policy changes",
+  "docker_parameters": "deploy_url_policy",
+  "name": "Deploy URL Policy",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_token": {
+        "type": "string",
+        "description": "API token for authentication"
+      }
+    },
+    "required": ["api_token"],
+    "title": "Deploy URL policy",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "45f64ba5-afce-43f1-8b87-d54e21515f68"
+}

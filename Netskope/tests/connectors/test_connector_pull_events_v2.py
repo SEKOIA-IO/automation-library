@@ -470,7 +470,7 @@ def test_run_logs_exception_when_consumer_start_fails(trigger):
     trigger.log_exception.assert_called_once()
 
 
-@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}" ".issubset(os.environ.keys()) == False")
+@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}.issubset(os.environ.keys()) == False")
 def test_fetch_next_batch_integration(integration_trigger):
     trigger = integration_trigger
     iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
@@ -484,7 +484,7 @@ def test_fetch_next_batch_integration(integration_trigger):
     assert len(calls) > 0
 
 
-@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}" ".issubset(os.environ.keys()) == False")
+@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}.issubset(os.environ.keys()) == False")
 def test_run_integration(integration_trigger):
     trigger = integration_trigger
     main_thread = Thread(target=trigger.run)
