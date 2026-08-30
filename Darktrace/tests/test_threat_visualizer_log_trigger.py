@@ -1,5 +1,5 @@
 import json
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 import pytest
 import requests_mock
@@ -126,3 +126,34 @@ def test_supervise_consumers(trigger):
 
         trigger.supervise_consumers(consumers)
         assert mock_start.call_count == 1
+
+
+def test_validate_cloud_configuration_ok(trigger):
+    trigger.validate_cloud_configuration()
+
+
+def test_validate_cloud_configuration_missing_field(trigger):
+    trigger.module.configuration = {
+        "api_url": "https://api_url",
+        "public_key": "public",
+    }
+
+    with pytest.raises(
+        ValueError,
+        match="Missing required Darktrace Cloud configuration fields: private_key",
+    ):
+        trigger.validate_cloud_configuration()
+
+
+def test_run_validates_cloud_configuration(trigger):
+    with (
+        patch.object(ThreatVisualizerLogConnector, "validate_cloud_configuration") as mock_validate,
+        patch.object(ThreatVisualizerLogConnector, "start_consumers", return_value={}) as mock_start,
+        patch.object(ThreatVisualizerLogConnector, "stop_consumers") as mock_stop,
+        patch.object(ThreatVisualizerLogConnector, "running", new_callable=PropertyMock, return_value=False),
+    ):
+        trigger.run()
+
+    assert mock_validate.call_count == 1
+    assert mock_start.call_count == 1
+    assert mock_stop.call_count == 1
