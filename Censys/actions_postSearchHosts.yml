@@ -1,0 +1,94 @@
+name: postSearchHosts
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.base_url}}/v2/hosts/search'
+      auth:
+        basic:
+          username: '{{inputs.username}}'
+          password: '{{inputs.password}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Bad Request.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: You must authenticate with a valid API ID and secret.
+      error_422:
+        predicate: '{{response.status_code != 422}}'
+        fail: Invalid cursor.
+      error_429:
+        predicate: '{{response.status_code != 429}}'
+        fail: Too many requests.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: "Accepts queries for host or service attributes provided in the Censys\
+  \ Search Language and returns a list of matching hosts with some summary fields.\
+  \ \n\n**Cursor Pagination** \n\nSearch endpoints rely on using cursors for efficient\
+  \ pagination. \n\nEach search result may return a `next` and `prev` cursor value\
+  \ which can be used to fetch additional pages of results. \n\n```json \n{\n\t\"\
+  links\":{ \n\t\t\"prev\":\"prevCursorToken\", \n\t\t\"next\":\"nextCursorToken\"\
+  \ \n\t}, \n\t[Rest of Response]\n} \n``` \nThe returned cursor token values can\
+  \ be added to the search endpoint as a `cursor` parameter to fetch either the next\
+  \ page of results or the previous page. \n\nThe entire set of results can be iterated\
+  \ page-by-page using returned cursors. If no cursor is given, the first page will\
+  \ be returned."
+inputs:
+  per_page:
+    type: integer
+    description: The maximum number of hits to return in each response (minimum of
+      1, maximum of 100).
+  virtual_hosts:
+    type: string
+    description: 'Determine how to query Virtual Hosts. The default is `EXCLUDE` which
+      will ignore any virtual hosts entries.
+
+      When set to `INCLUDE` or `ONLY` virtual hosts will be present in the returned
+      list of hits, with the later
+
+      returning only virtual hosts.
+
+
+      To learn more, see the [Help Desk article on Virtual Hosts](https://support.censys.io/hc/en-us/articles/4411773845524).
+
+      '
+  fields:
+    type: string
+    description: Comma separated list of up to 25 fields to be returned for each result.
+      (This parameter is only available to paid users.)
+  password:
+    type: string
+    description: The password for basic authentication
+    default: '{{password}}'
+  q:
+    type: string
+    description: Query used to search for hosts with matching attributes. Uses the
+      Censys Search Language.
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://search.censys.io/api
+  sort:
+    type: string
+    description: Sort the results
+  cursor:
+    type: string
+    description: Cursor token from the API response, which fetches the next or previous
+      page of hits when added to the endpoint URL.
+  username:
+    type: string
+    description: The username for basic authentication
+    default: '{{username}}'

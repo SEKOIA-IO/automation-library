@@ -1,0 +1,69 @@
+name: aggregateCertificates
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.base_url}}/v2/certificates/aggregate'
+      auth:
+        basic:
+          username: '{{inputs.username}}'
+          password: '{{inputs.password}}'
+      params:
+        q: '{{inputs.q}}'
+        field: '{{inputs.field}}'
+        num_buckets: '{{inputs.num_buckets}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Bad Request.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: You must authenticate with a valid API ID and secret.
+      error_429:
+        predicate: '{{response.status_code != 429}}'
+        fail: Too many requests.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: 'Aggregates certificate records matching a specified query into buckets
+  based on the given field.
+
+  See help on the Censys Search Language for help on constructing a search query.
+
+  '
+inputs:
+  field:
+    type: string
+    description: The field used to aggregated upon and generate buckets for. If the
+      field is a service level field, the aggregation result will be based on services
+      which belong to hosts which match the query, not the hosts themselves.
+  password:
+    type: string
+    description: The password for basic authentication
+    default: '{{password}}'
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://search.censys.io/api
+  q:
+    type: string
+    description: Query used to search for hosts with matching attributes. Uses the
+      Censys Search Language.
+  num_buckets:
+    type: integer
+    description: The maximum number of buckets used to generate aggregate results.
+  username:
+    type: string
+    description: The username for basic authentication
+    default: '{{username}}'
