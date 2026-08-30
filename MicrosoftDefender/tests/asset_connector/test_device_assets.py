@@ -578,3 +578,25 @@ class TestGetAssetsCheckpointTracking:
 
         with connector.context as cache:
             assert cache["most_recent_date_seen"] == raw
+
+
+def test_get_mapped_fields(connector):
+    fields = connector.get_mapped_fields()
+
+    assert isinstance(fields, dict)
+    assert fields
+    assert all(isinstance(key, str) and isinstance(value, str) for key, value in fields.items())
+    assert fields["id"] == "device.uid"
+    assert fields["managedDevice.imei"] == "device.imei_list"
+
+
+@pytest.mark.asyncio
+async def test_reset_checkpoint(connector):
+    connector._latest_time_raw = "2024-12-01T10:00:00Z"
+    await connector.update_checkpoint()
+    assert connector.most_recent_date_seen == "2024-12-01T10:00:00Z"
+
+    await connector.reset_checkpoint()
+
+    assert connector._latest_time_raw is None
+    assert connector.most_recent_date_seen is None
