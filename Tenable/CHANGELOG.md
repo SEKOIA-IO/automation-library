@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-26 - 1.1.0
+
+### Added
+
+- Vulnerability asset connector now declares its Tenable -> OCSF field mapping and resets
+  its checkpoint automatically when that mapping changes, so all findings are re-collected
+  with the new mapping
+
+### Changed
+
+- Upgrade `sekoia-automation-sdk` to 1.24.0
+
 ## 2026-07-29 - 1.0.18
 
 ### Fixed
