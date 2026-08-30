@@ -4,7 +4,9 @@
 import json
 
 # third parties
+import pytest
 import requests_mock
+from pydantic import ValidationError
 
 # internals
 from mattermost.action_mattermost_postmessage import MattermostPostMessageAction
@@ -50,3 +52,17 @@ def test_mattermost_postmessage_set_username_and_channel():
         assert json.loads(history[0].text)["text"] == sample_text
         assert json.loads(history[0].text)["username"] == username
         assert json.loads(history[0].text)["channel"] == channel
+
+
+@pytest.mark.parametrize("arguments", [{}, {"message": ""}, {"message": "   "}])
+def test_mattermost_postmessage_requires_message(arguments):
+    hook_url: str = "https://my.chat.mattermost/hooks/123456"
+
+    mt: MattermostPostMessageAction = MattermostPostMessageAction()
+    mt.module.configuration = {"hook_url": hook_url}
+
+    with requests_mock.Mocker() as mock:
+        with pytest.raises(ValidationError):
+            mt.run(arguments)
+
+    assert mock.call_count == 0
