@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-08-28
+
+### Fixed
+
+- Both asset connectors no longer abort a whole collection cycle when the Holm API
+  reports a field as `null` instead of omitting it. A pydantic default only applies to
+  an absent key, so a single `"risk_score": null` or `"open_ports": null` on one network
+  asset failed the validation of the entire page and no asset was ever pushed
+
 ## [1.3.0] - 2026-08-20
 
 ### Added

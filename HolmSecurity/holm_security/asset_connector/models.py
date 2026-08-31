@@ -1,20 +1,48 @@
-from pydantic import BaseModel, ConfigDict
+from typing import Any, cast
+
+from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic.fields import FieldInfo
 
 
-class HolmNetwork(BaseModel):
-    """Network block of a Holm Security device record."""
+class HolmBaseModel(BaseModel):
+    """Base model tolerating the explicit ``null`` values of the Holm Security API.
+
+    Holm reports a field it has no value for as ``null`` instead of omitting it, and a
+    pydantic default only applies to an absent key. Those nulls are dropped so the
+    declared default applies: without this, a single ``"risk_score": null`` aborts the
+    validation of the whole page and the connector collects nothing.
+
+    Nulls on required fields are kept so a genuinely malformed record still fails.
+    """
 
     model_config = ConfigDict(extra="allow")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _null_to_default(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        # `cls.model_fields` is typed as an instance property, hence the cast.
+        fields = cast(dict[str, FieldInfo], cls.model_fields)
+
+        return {
+            key: value
+            for key, value in data.items()
+            if value is not None or key not in fields or fields[key].is_required()
+        }
+
+
+class HolmNetwork(HolmBaseModel):
+    """Network block of a Holm Security device record."""
 
     ip_address: str | None = None
     ip_address_v6: str | None = None
     mac_address: str | None = None
 
 
-class HolmTag(BaseModel):
+class HolmTag(HolmBaseModel):
     """A tag attached to a Holm Security device."""
-
-    model_config = ConfigDict(extra="allow")
 
     uuid: str
     name: str
@@ -27,10 +55,8 @@ class HolmTag(BaseModel):
     recipient_assets_cnt: int = 0
 
 
-class HolmSeverityBreakdown(BaseModel):
+class HolmSeverityBreakdown(HolmBaseModel):
     """Per-severity vulnerability counts for a device."""
-
-    model_config = ConfigDict(extra="allow")
 
     info: int = 0
     low: int = 0
@@ -39,10 +65,8 @@ class HolmSeverityBreakdown(BaseModel):
     critical: int = 0
 
 
-class HolmDevice(BaseModel):
+class HolmDevice(HolmBaseModel):
     """A single agent-managed device returned by ``GET /v2/devices``."""
-
-    model_config = ConfigDict(extra="allow")
 
     uid: str
     device_name: str | None = None
@@ -71,10 +95,8 @@ class HolmDevice(BaseModel):
     risk_score: int = 0
 
 
-class HolmDevicePage(BaseModel):
+class HolmDevicePage(HolmBaseModel):
     """Paginated response envelope for the devices endpoint."""
-
-    model_config = ConfigDict(extra="allow")
 
     count: int = 0
     next: str | None = None
@@ -82,22 +104,18 @@ class HolmDevicePage(BaseModel):
     results: list[HolmDevice] = []
 
 
-class HolmOpenPort(BaseModel):
+class HolmOpenPort(HolmBaseModel):
     """An open port reported on a Holm Security network asset."""
-
-    model_config = ConfigDict(extra="allow")
 
     proto: str | None = None
     port: int | None = None
 
 
-class HolmNetAsset(BaseModel):
+class HolmNetAsset(HolmBaseModel):
     """A single scanned network asset returned by ``GET /v2/net-assets``.
 
     Network assets are hosts and IP ranges discovered by a scan, without an agent.
     """
-
-    model_config = ConfigDict(extra="allow")
 
     uuid: str
     name: str | None = None
@@ -119,10 +137,8 @@ class HolmNetAsset(BaseModel):
     open_ports: list[HolmOpenPort] = []
 
 
-class HolmNetAssetPage(BaseModel):
+class HolmNetAssetPage(HolmBaseModel):
     """Paginated response envelope for the network assets endpoint."""
-
-    model_config = ConfigDict(extra="allow")
 
     count: int = 0
     next: str | None = None
