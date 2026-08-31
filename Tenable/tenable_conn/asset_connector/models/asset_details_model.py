@@ -10,7 +10,6 @@ from enum import StrEnum
 from pydantic import BaseModel
 
 
-
 class SourceName(StrEnum):
     ACUNETIX_360 = "ACUNETIX_360"
     ACUNETIX_PREMIUM = "ACUNETIX_PREMIUM"
