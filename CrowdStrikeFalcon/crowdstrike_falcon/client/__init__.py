@@ -41,9 +41,17 @@ class ApiClient(requests.Session):
     def get_url(self, endpoint: str) -> str:
         return urljoin(self._base_url, endpoint.lstrip("/"))
 
-    def request_endpoint(self, method: str, endpoint: str, **kwargs) -> Generator[Any, None, None]:
+    def request_endpoint(
+        self, method: str, endpoint: str, cursor_pagination: bool = False, **kwargs
+    ) -> Generator[Any, None, None]:
         """
         Send the request and handle the response
+
+        Args:
+            cursor_pagination: the endpoint returns an opaque continuation token in
+                `meta.pagination.offset` instead of a numeric offset
+                (e.g. /devices/queries/devices-scroll/v1). Numeric offsets are capped
+                at 10 000 results by the API, tokens are not.
         """
         params = kwargs.pop("params", {})
 
@@ -51,6 +59,7 @@ class ApiClient(requests.Session):
 
         still_fetching_items = True
         pagination: dict | None = None
+        previous_cursor: str | None = None
 
         while still_fetching_items:
             new_params = dict(params)
@@ -82,6 +91,11 @@ class ApiClient(requests.Session):
             if pagination:
                 if pagination.get("after"):
                     still_fetching_items = True
+                elif cursor_pagination:
+                    # Follow the continuation token until the API stops handing back a new one
+                    cursor = pagination.get("offset")
+                    still_fetching_items = bool(cursor) and cursor != previous_cursor
+                    previous_cursor = cursor
                 else:
                     offset = pagination.get("offset")
                     limit = pagination.get("limit")
@@ -263,10 +277,13 @@ class CrowdstrikeFalconClient(ApiClient):
         )
 
     def list_devices_uuids(self, limit: int, sort: str, **kwargs) -> Generator[str, None, None]:
+        # devices-scroll (token pagination) instead of devices/v1: the latter refuses
+        # limit + offset above 10 000, which silently caps large tenants.
         yield from self.request_endpoint(
             "GET",
-            "/devices/queries/devices/v1",
+            "/devices/queries/devices-scroll/v1",
             params={"limit": limit, "sort": sort},
+            cursor_pagination=True,
             **kwargs,
         )
 

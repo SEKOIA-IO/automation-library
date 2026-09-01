@@ -200,3 +200,56 @@ def test_find_indicators():
 
         indicators = client.find_indicators(fql_filter=f"source:Sekoia.io")
         assert list(indicators) == ["519b7236-8ed2-4c63-b5c4-0f72dc3f187e", "f6d85700-1b5b-450f-8df1-a8317fe7f137"]
+
+
+def test_list_devices_uuids_follows_the_scroll_token_past_the_offset_cap():
+    """devices/v1 refuses limit + offset above 10 000, devices-scroll uses a token."""
+    base_url = "https://my.fake.sekoia"
+    client = CrowdstrikeFalconClient(base_url, "foo", "bar")
+
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST", f"{base_url}/oauth2/token", json={"access_token": "t", "token_type": "bearer", "expires_in": 1799}
+        )
+
+        mock.register_uri(
+            "GET",
+            f"{base_url}/devices/queries/devices-scroll/v1?limit=2&sort=first_seen.desc",
+            json={
+                "errors": [],
+                "meta": {"pagination": {"limit": 2, "total": 3, "offset": "scroll-token-1"}},
+                "resources": ["u1", "u2"],
+            },
+        )
+        mock.register_uri(
+            "GET",
+            f"{base_url}/devices/queries/devices-scroll/v1" "?limit=2&sort=first_seen.desc&offset=scroll-token-1",
+            json={
+                "errors": [],
+                "meta": {"pagination": {"limit": 2, "total": 3, "offset": ""}},
+                "resources": ["u3"],
+            },
+        )
+
+        assert list(client.list_devices_uuids(limit=2, sort="first_seen.desc")) == ["u1", "u2", "u3"]
+
+
+def test_list_devices_uuids_stops_on_a_repeated_scroll_token():
+    base_url = "https://my.fake.sekoia"
+    client = CrowdstrikeFalconClient(base_url, "foo", "bar")
+
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST", f"{base_url}/oauth2/token", json={"access_token": "t", "token_type": "bearer", "expires_in": 1799}
+        )
+        mock.register_uri(
+            "GET",
+            f"{base_url}/devices/queries/devices-scroll/v1",
+            json={
+                "errors": [],
+                "meta": {"pagination": {"limit": 1, "total": 9, "offset": "stuck"}},
+                "resources": ["u1"],
+            },
+        )
+
+        assert list(client.list_devices_uuids(limit=1, sort="first_seen.desc")) == ["u1", "u1"]
