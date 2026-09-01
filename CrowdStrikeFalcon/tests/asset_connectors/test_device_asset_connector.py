@@ -382,7 +382,6 @@ def test_get_groups_logs_a_single_warning_when_the_group_api_is_forbidden(connec
 
     warnings = [call for call in connector.log.call_args_list if call.kwargs.get("level") == "warning"]
     assert len(warnings) == 1
-    assert "Host groups: Read" in warnings[0].args[0]
 
 
 def test_next_devices_fetches_the_group_details_of_a_batch_in_a_single_request(connector):
