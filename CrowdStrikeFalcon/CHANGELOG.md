@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-27 - 1.25.19
+
+### Changed
+
+- Fetch the host group details of a batch of devices in a single request, instead of one request per device
+- Report only once per fetch cycle the failure to get the host group details, with the required API scope
+
+### Fixed
+
+- Report the errors returned by the CrowdStrike API when a request fails
+
 ## 2026-07-02 - 1.25.18
 
 ### Fixed
