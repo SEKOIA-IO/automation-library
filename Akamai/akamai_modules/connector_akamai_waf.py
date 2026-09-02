@@ -30,6 +30,7 @@ class AkamaiWAFLogsConnector(Connector):
     configuration: AkamaiWAFLogsConnectorConfiguration
 
     def __init__(self, *args, **kwargs) -> None:
+        """Initialize connector state, cache, and batch sizing."""
         super().__init__(*args, **kwargs)
 
         self.cursor = CheckpointTimestamp(
@@ -52,6 +53,7 @@ class AkamaiWAFLogsConnector(Connector):
         )  # number of events to accumulate before yielding to limit memory usage
 
     def load_events_cache(self) -> Cache:
+        """Load cached event identifiers from checkpoint context."""
         result: LRUCache = LRUCache(maxsize=self.cache_size)
 
         with self.cursor._context as cache:
@@ -63,11 +65,13 @@ class AkamaiWAFLogsConnector(Connector):
         return result
 
     def save_events_cache(self) -> None:
+        """Persist cached event identifiers into checkpoint context."""
         with self.cursor._context as cache:
             cache["events_cache"] = list(self.events_cache.keys())
 
     @cached_property
     def client(self) -> ApiClient:
+        """Build and cache an authenticated Akamai API client."""
         return ApiClient(
             client_token=self.module.configuration.client_token,
             client_secret=self.module.configuration.client_secret,
@@ -76,6 +80,7 @@ class AkamaiWAFLogsConnector(Connector):
 
     @staticmethod
     def extract_attack_data(event: dict[str, Any]) -> dict[str, Any]:
+        """Normalize attack data fields and decode per-rule values."""
         attack_section = event["attackData"]
         rules_array: list[dict[str, Any]] = []
 
@@ -103,6 +108,7 @@ class AkamaiWAFLogsConnector(Connector):
 
     @staticmethod
     def _extract_headers_with_diagnostics(headers: Any) -> tuple[dict[str, Any], dict[str, int]]:
+        """Parse headers and collect malformed-line diagnostics."""
         result = {}
         malformed_line_reasons: Counter[str] = Counter()
 
@@ -130,11 +136,13 @@ class AkamaiWAFLogsConnector(Connector):
 
     @staticmethod
     def extract_headers(headers: str) -> dict[str, Any]:
+        """Parse headers and return only valid key-value pairs."""
         result, _ = AkamaiWAFLogsConnector._extract_headers_with_diagnostics(headers)
         return result
 
     @staticmethod
     def _sanitize_log_value(value: Any, max_length: int = 300) -> str:
+        """Format a log value as a single, bounded line."""
         text = str(value)
         text = text.replace("\n", " ").replace("\r", " ").replace("\t", " ").strip()
         if len(text) > max_length:
@@ -143,6 +151,7 @@ class AkamaiWAFLogsConnector(Connector):
 
     @staticmethod
     def _get_event_request_id(event: dict[str, Any]) -> Any:
+        """Extract requestId from an event HTTP message."""
         http_message = event.get("httpMessage")
         if isinstance(http_message, dict):
             return http_message.get("requestId")
@@ -150,6 +159,7 @@ class AkamaiWAFLogsConnector(Connector):
 
     @staticmethod
     def _get_event_start_timestamp(event: dict[str, Any]) -> int | None:
+        """Extract and cast event start timestamp to integer."""
         http_message = event.get("httpMessage")
         if not isinstance(http_message, dict):
             return None
@@ -161,6 +171,7 @@ class AkamaiWAFLogsConnector(Connector):
             return None
 
     def process_event(self, event: dict[str, Any]) -> None:
+        """Normalize event sections and log header parsing anomalies."""
         # Processing `attackData` section
         new_attack_section = self.extract_attack_data(event)
         http_message = event.get("httpMessage", {})
@@ -208,6 +219,7 @@ class AkamaiWAFLogsConnector(Connector):
             )
 
     def __fetch_next_events(self, from_date: int) -> Generator[list, None, None]:
+        """Stream events from Akamai and yield chunked batches."""
         url = f"{self.module.configuration.base_url}/siem/v1/configs/{self.configuration.config_id}"
         self.log(
             message=(
@@ -321,6 +333,7 @@ class AkamaiWAFLogsConnector(Connector):
             )
 
     def fetch_events(self) -> Generator[list, None, None]:
+        """Fetch events and update checkpoint timestamp when possible."""
         most_recent_date_seen: int = self.from_timestamp
 
         for next_events in self.__fetch_next_events(most_recent_date_seen):
@@ -374,6 +387,7 @@ class AkamaiWAFLogsConnector(Connector):
             )
 
     def __handle_response_error(self, response: requests.Response):
+        """Log API error details and raise HTTP exceptions."""
         if not response.ok:
             request_method = response.request.method if response.request else None
             request_url = response.request.url if response.request else None
@@ -430,6 +444,7 @@ class AkamaiWAFLogsConnector(Connector):
             response.raise_for_status()
 
     def filter_processed_events(self, events: list[dict]) -> Generator[dict, None, None]:
+        """Skip duplicates and yield only events to forward."""
         for event in events:
             event_id = self._get_event_request_id(event)
             if event_id is None:
@@ -447,6 +462,7 @@ class AkamaiWAFLogsConnector(Connector):
             yield event
 
     def next_batch(self):
+        """Process one fetch-forward cycle and apply pacing."""
         # save the starting time
         batch_start_time = time.time()
         fetched_events = 0
@@ -531,6 +547,7 @@ class AkamaiWAFLogsConnector(Connector):
             )
 
     def run(self):  # pragma: no cover
+        """Run batch processing loop until connector stops."""
         self.log(message="Started Akamai WAF logs connector component=akamai_waf_logs", level="info")
 
         while self.running:
