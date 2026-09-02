@@ -11,18 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Enrich operational logs across fetching, pagination, deduplication, checkpoint updates, and batch lifecycle to improve observability
 - Increase test coverage to 100% across connector, models, and logging modules with targeted branch tests and regression tests
 - Add defensive handling for malformed Akamai stream lines, per-event processing failures, and pagination context entries without offset
-- Add warning logs for newly handled error cases to keep ingestion resilient while preserving troubleshooting context
 - Add concise docstrings to each connector method to improve code readability and maintainability
 
 ### Changed
 
-- Harmonize connector logging by using `self.log(message=..., level=...)` consistently to improve log visibility in Loki/Grafana
-- Add privacy-safe diagnostics when malformed HTTP header lines are ignored by reporting counts and malformation types only, without logging raw header line content
-- Normalize request identifier semantics in logs by distinguishing `event_request_id`, `api_request_id`, and `api_error_*` fields by source
-- Use concise single-line log messages with searchable `key=value` context to optimize Loki/Grafana parsing and querying
+- Standardize connector logging on `self.log(message=..., level=...)` with concise single-line `key=value` messages and explicit request-id fields by source
+- Add privacy-safe and sampled diagnostics for high-frequency warning/debug paths to reduce log noise while preserving troubleshooting context
 - Rename and reorganize test files to align with source modules (`connector_akamai_waf`, `metrics`, `models`)
 
 ### Fixed

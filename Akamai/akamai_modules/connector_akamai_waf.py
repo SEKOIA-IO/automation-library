@@ -51,6 +51,31 @@ class AkamaiWAFLogsConnector(Connector):
         self.chunk_size = max(
             1, min(1000, int(os.environ.get("AKAMAI_CHUNK_SIZE", 1_000)))
         )  # number of events to accumulate before yielding to limit memory usage
+        self.log_sample_every = max(2, int(os.environ.get("AKAMAI_LOG_SAMPLE_EVERY", 100)))
+        self._sampled_log_counts: Counter[str] = Counter()
+
+    def _should_emit_sampled_log(self, key: str, every: int | None = None) -> tuple[bool, int, int]:
+        """Return whether to emit a sampled log and include occurrence metadata."""
+        sample_every = every if every is not None else self.log_sample_every
+        self._sampled_log_counts[key] += 1
+        occurrence = self._sampled_log_counts[key]
+        should_emit = occurrence == 1 or occurrence % sample_every == 0
+        return should_emit, occurrence, sample_every
+
+    def _log_sampled(self, key: str, message: str, level: str, every: int | None = None) -> None:
+        """Log a high-frequency message on first occurrence and periodic samples."""
+        should_emit, occurrence, sample_every = self._should_emit_sampled_log(key=key, every=every)
+        if should_emit:
+            self.log(message=f"{message} occurrence={occurrence} sample_every={sample_every}", level=level)
+
+    def _log_exception_sampled(self, key: str, error: Exception, message: str, every: int | None = None) -> None:
+        """Log a high-frequency exception on first occurrence and periodic samples."""
+        should_emit, occurrence, sample_every = self._should_emit_sampled_log(key=key, every=every)
+        if should_emit:
+            self.log_exception(
+                error,
+                message=f"{message} occurrence={occurrence} sample_every={sample_every}",
+            )
 
     def load_events_cache(self) -> Cache:
         """Load cached event identifiers from checkpoint context."""
@@ -208,7 +233,8 @@ class AkamaiWAFLogsConnector(Connector):
             event_start = http_message.get("start")
             request_malformed_summary = self._sanitize_log_value(request_malformed)
             response_malformed_summary = self._sanitize_log_value(response_malformed)
-            self.log(
+            self._log_sampled(
+                key="malformed_headers",
                 message=(
                     "Ignored malformed HTTP header lines "
                     f"event_request_id={self._sanitize_log_value(event_request_id)} "
@@ -247,7 +273,8 @@ class AkamaiWAFLogsConnector(Connector):
                     try:
                         item: dict = orjson.loads(line)
                     except Exception:
-                        self.log(
+                        self._log_sampled(
+                            key="malformed_json_line",
                             message=("Skipped malformed JSON line in Akamai stream " f"line_size={len(line)}"),
                             level="warning",
                         )
@@ -257,8 +284,9 @@ class AkamaiWAFLogsConnector(Connector):
                         try:
                             self.process_event(item)
                         except Exception as error:
-                            self.log_exception(
-                                error,
+                            self._log_exception_sampled(
+                                key="process_event_error",
+                                error=error,
                                 message=(
                                     "Failed to process Akamai event "
                                     f"event_request_id={self._sanitize_log_value(self._get_event_request_id(item))}"
@@ -278,7 +306,8 @@ class AkamaiWAFLogsConnector(Connector):
                         offset = item.get("offset")
                         total = item.get("total")
                         if offset is None:
-                            self.log(
+                            self._log_sampled(
+                                key="pagination_context_without_offset",
                                 message=(
                                     "Skipped pagination context without offset "
                                     f"context_keys={self._sanitize_log_value(list(item.keys()))}"
@@ -319,7 +348,8 @@ class AkamaiWAFLogsConnector(Connector):
                     INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
                     yield chunk
 
-                self.log(
+                self._log_sampled(
+                    key="stream_ended_without_pagination_context",
                     message=(
                         "Akamai stream ended without pagination context " f"remaining_events_in_chunk={len(chunk)}"
                     ),
@@ -344,7 +374,8 @@ class AkamaiWAFLogsConnector(Connector):
                 ]
 
                 if not timestamps:
-                    self.log(
+                    self._log_sampled(
+                        key="invalid_or_missing_timestamps",
                         message=(
                             "Skipped checkpoint update because event timestamps are missing or invalid "
                             f"events_count={len(next_events)}"
@@ -380,7 +411,8 @@ class AkamaiWAFLogsConnector(Connector):
                 level="debug",
             )
         else:
-            self.log(
+            self._log_sampled(
+                key="checkpoint_unchanged",
                 message=f"Kept checkpoint unchanged from_timestamp={self.from_timestamp}",
                 level="debug",
             )
@@ -447,7 +479,8 @@ class AkamaiWAFLogsConnector(Connector):
         for event in events:
             event_id = self._get_event_request_id(event)
             if event_id is None:
-                self.log(
+                self._log_sampled(
+                    key="missing_request_id",
                     message="Forwarded event without deduplication because requestId is missing",
                     level="warning",
                 )

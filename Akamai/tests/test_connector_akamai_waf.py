@@ -783,3 +783,19 @@ def test_fetch_events_skips_pagination_context_without_offset(trigger, response_
         "Skipped pagination context without offset" in call.kwargs.get("message", "")
         for call in trigger.log.call_args_list
     )
+
+
+def test_filter_processed_events_samples_missing_request_id_logs(trigger):
+    events = [{"httpMessage": {"start": "1743505200"}} for _ in range(101)]
+
+    filtered_events = list(trigger.filter_processed_events(events))
+
+    assert len(filtered_events) == 101
+    missing_id_logs = [
+        call.kwargs.get("message", "")
+        for call in trigger.log.call_args_list
+        if "Forwarded event without deduplication because requestId is missing" in call.kwargs.get("message", "")
+    ]
+    assert len(missing_id_logs) == 2
+    assert any("occurrence=1" in message for message in missing_id_logs)
+    assert any("occurrence=100" in message for message in missing_id_logs)
