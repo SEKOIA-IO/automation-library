@@ -25,15 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use concise single-line log messages with searchable `key=value` context to optimize Loki/Grafana parsing and querying
 - Rename and reorganize test files to align with source modules (`connector_akamai_waf`, `metrics`, `models`)
 
-### Removed
-
-- Remove module-level logger usage after standardizing on `self.log(message=..., level=...)` across the connector
-
 ### Fixed
 
 - Fix a crash in HTTP header parsing (`ValueError: not enough values to unpack`) caused by malformed header lines returned by the Akamai SIEM stream
 - Make header parsing resilient to malformed input (missing separator, empty key, non-string headers) so event ingestion continues instead of stopping
 - Handle missing `requestId` and invalid or missing `httpMessage.start` values without breaking batch processing
+
+### Removed
+
+- Remove module-level logger usage after standardizing on `self.log(message=..., level=...)` across the connector
 
 ## [1.0.1] - 2026-04-16
 
