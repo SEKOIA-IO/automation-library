@@ -380,14 +380,21 @@ class AkamaiWAFLogsConnector(Connector):
                             return
 
             if offset is None:
+                flushed_events_in_final_chunk = 0
                 if chunk:
-                    INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
+                    flushed_events_in_final_chunk = len(chunk)
+                    INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(
+                        flushed_events_in_final_chunk
+                    )
                     yield chunk
+                    chunk = []
 
                 self._log_sampled(
                     key="stream_ended_without_pagination_context",
                     message=(
-                        "Akamai stream ended without pagination context " f"remaining_events_in_chunk={len(chunk)}"
+                        "Akamai stream ended without pagination context "
+                        f"flushed_events_in_final_chunk={flushed_events_in_final_chunk} "
+                        f"remaining_events_in_chunk={len(chunk)}"
                     ),
                     level="warning",
                 )

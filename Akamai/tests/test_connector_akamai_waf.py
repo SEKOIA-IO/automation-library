@@ -700,9 +700,10 @@ def test_fetch_events_logs_exception_when_process_event_fails(trigger, response_
         b'{"total": 1, "offset": "OFFSET_TOKEN"}\n'
     )
 
-    with patch.object(
-        trigger, "process_event", side_effect=RuntimeError("boom")
-    ), requests_mock.Mocker() as mock_requests:
+    with (
+        patch.object(trigger, "process_event", side_effect=RuntimeError("boom")),
+        requests_mock.Mocker() as mock_requests,
+    ):
         mock_requests.get(
             "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
             status_code=200,
