@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add privacy-safe and sampled diagnostics for high-frequency warning/debug paths to reduce log noise while preserving troubleshooting context
 - Rename and reorganize test files to align with source modules (`connector_akamai_waf`, `metrics`, `models`)
 - Refactor repeated test scenarios with `pytest.mark.parametrize` to reduce duplication and improve maintainability
+- Align `pyproject.toml` dependency declarations with directly imported runtime packages and regenerate `poetry.lock`
 
 ### Fixed
 
