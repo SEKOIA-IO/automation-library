@@ -202,7 +202,20 @@ class AkamaiWAFLogsConnector(Connector):
         """Normalize event sections and log header parsing anomalies."""
         # Processing `attackData` section
         new_attack_section = self.extract_attack_data(event)
-        http_message = event.get("httpMessage", {})
+        raw_http_message = event.get("httpMessage")
+        if isinstance(raw_http_message, dict):
+            http_message = raw_http_message
+        else:
+            self._log_sampled(
+                key="invalid_http_message_type",
+                message=(
+                    "Skipped httpMessage normalization because httpMessage is not a mapping "
+                    f"http_message_type={type(raw_http_message).__name__}"
+                ),
+                level="warning",
+            )
+            http_message = {}
+            event["httpMessage"] = http_message
 
         # Processing `httpMessage` section
         request_headers = None

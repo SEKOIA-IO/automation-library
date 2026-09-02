@@ -246,6 +246,21 @@ def test_process_event_logs_invalid_header_type(trigger, raw_event):
     assert "request_malformed_reasons={'invalid_type': 1}" in message
 
 
+def test_process_event_handles_non_dict_http_message(trigger, raw_event):
+    event = raw_event.copy()
+    event["httpMessage"] = None
+
+    trigger.process_event(event)
+
+    assert event["httpMessage"] == {}
+    assert isinstance(event["attackData"], dict)
+    assert "rules" in event["attackData"]
+    assert any(
+        "Skipped httpMessage normalization because httpMessage is not a mapping" in call.kwargs.get("message", "")
+        for call in trigger.log.call_args_list
+    )
+
+
 def test_fetch_events(trigger, response_1, response_2):
     with requests_mock.Mocker() as mock_requests:
         mock_requests.get(

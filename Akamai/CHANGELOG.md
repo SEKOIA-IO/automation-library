@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Increase test coverage to 100% across connector, models, and logging modules with targeted branch tests and regression tests
-- Add defensive handling for malformed Akamai stream lines, per-event processing failures, and pagination context entries without offset
+- Add defensive handling for malformed Akamai stream lines, per-event processing failures, non-dict `httpMessage` payloads, and pagination context entries without offset
 - Add concise docstrings to each connector method to improve code readability and maintainability
 
 ### Changed

@@ -1,5 +1,3 @@
-import importlib
-
 from akamai_modules.models import AkamaiModuleConfiguration
 
 
