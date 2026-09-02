@@ -6,7 +6,7 @@ import urllib.parse
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
-from typing import Any, Generator
+from typing import Any, Generator, cast
 
 import orjson
 import requests
@@ -109,7 +109,7 @@ class AkamaiWAFLogsConnector(Connector):
     @staticmethod
     def _extract_headers_with_diagnostics(headers: Any) -> tuple[dict[str, Any], dict[str, int]]:
         """Parse headers and collect malformed-line diagnostics."""
-        result = {}
+        result: dict[str, Any] = {}
         malformed_line_reasons: Counter[str] = Counter()
 
         if not isinstance(headers, str):
@@ -165,8 +165,11 @@ class AkamaiWAFLogsConnector(Connector):
             return None
 
         start = http_message.get("start")
+        if start is None:
+            return None
+
         try:
-            return int(start)
+            return int(cast(Any, start))
         except (TypeError, ValueError):
             return None
 
@@ -178,14 +181,14 @@ class AkamaiWAFLogsConnector(Connector):
 
         # Processing `httpMessage` section
         request_headers = None
-        request_malformed = {}
+        request_malformed: dict[str, int] = {}
         if "requestHeaders" in http_message:
             request_headers, request_malformed = self._extract_headers_with_diagnostics(
                 http_message.get("requestHeaders")
             )
 
         response_headers = None
-        response_malformed = {}
+        response_malformed: dict[str, int] = {}
         if "responseHeaders" in http_message:
             response_headers, response_malformed = self._extract_headers_with_diagnostics(
                 http_message.get("responseHeaders")
@@ -245,10 +248,7 @@ class AkamaiWAFLogsConnector(Connector):
                         item: dict = orjson.loads(line)
                     except Exception:
                         self.log(
-                            message=(
-                                "Skipped malformed JSON line in Akamai stream "
-                                f"line_size={len(line)}"
-                            ),
+                            message=("Skipped malformed JSON line in Akamai stream " f"line_size={len(line)}"),
                             level="warning",
                         )
                         continue
@@ -321,8 +321,7 @@ class AkamaiWAFLogsConnector(Connector):
 
                 self.log(
                     message=(
-                        "Akamai stream ended without pagination context "
-                        f"remaining_events_in_chunk={len(chunk)}"
+                        "Akamai stream ended without pagination context " f"remaining_events_in_chunk={len(chunk)}"
                     ),
                     level="warning",
                 )

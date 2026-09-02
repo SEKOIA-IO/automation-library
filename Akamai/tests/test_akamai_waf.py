@@ -8,7 +8,8 @@ import requests_mock
 from freezegun import freeze_time
 
 from akamai_modules import AkamaiModule
-from akamai_modules.connector_akamai_waf import AkamaiWAFLogsConnector
+from akamai_modules.connector_akamai_waf import AkamaiWAFLogsConnector, AkamaiWAFLogsConnectorConfiguration
+from akamai_modules.models import AkamaiModuleConfiguration
 
 
 @pytest.fixture
@@ -19,17 +20,21 @@ def fake_time():
 @pytest.fixture
 def trigger(data_storage, fake_time):
     module = AkamaiModule()
-    module.configuration = {
-        "host": "example.com",
-        "client_token": "1",
-        "client_secret": "2",
-        "access_token": "3",
-    }
+    module.configuration = AkamaiModuleConfiguration(
+        host="example.com",
+        client_token="1",
+        client_secret="2",
+        access_token="3",
+    )
 
     with freeze_time(fake_time):
         trigger = AkamaiWAFLogsConnector(module=module, data_path=data_storage)
 
-    trigger.configuration = {"config_id": 1, "intake_key": "intake_key", "frequency": 60}
+    trigger.configuration = AkamaiWAFLogsConnectorConfiguration(
+        config_id="1",
+        intake_key="intake_key",
+        frequency=60,
+    )
 
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
@@ -531,10 +536,7 @@ def test_fetch_events_logs_unchanged_checkpoint(trigger):
         chunks = list(trigger.fetch_events())
 
     assert chunks == []
-    assert any(
-        "Kept checkpoint unchanged" in call.kwargs.get("message", "")
-        for call in trigger.log.call_args_list
-    )
+    assert any("Kept checkpoint unchanged" in call.kwargs.get("message", "") for call in trigger.log.call_args_list)
 
 
 def test_request_error_with_unparseable_body_logs_warning(trigger):
@@ -623,7 +625,7 @@ def test_next_batch_skips_chunk_when_all_events_are_duplicates(trigger, response
 def test_fetch_events_skips_malformed_json_lines(trigger, response_2):
     malformed_stream = (
         b'{"type": "akamai_siem", "attackData": {}, "httpMessage": {"requestId": 1, "start": "1743505200"}}\n'
-        b'not-a-json-line\n'
+        b"not-a-json-line\n"
         b'{"type": "akamai_siem", "attackData": {}, "httpMessage": {"requestId": 2, "start": "1743505201"}}\n'
         b'{"total": 2, "offset": "OFFSET_TOKEN"}\n'
     )
@@ -720,13 +722,23 @@ def test_get_event_start_timestamp_returns_none_when_http_message_is_not_a_dict(
     assert event_start is None
 
 
+def test_get_event_start_timestamp_returns_none_when_start_is_none():
+    event = {"httpMessage": {"start": None}}
+
+    event_start = AkamaiWAFLogsConnector._get_event_start_timestamp(event)
+
+    assert event_start is None
+
+
 def test_fetch_events_logs_exception_when_process_event_fails(trigger, response_2):
     stream = (
         b'{"type": "akamai_siem", "attackData": {}, "httpMessage": {"requestId": 99, "start": "1743505200"}}\n'
         b'{"total": 1, "offset": "OFFSET_TOKEN"}\n'
     )
 
-    with patch.object(trigger, "process_event", side_effect=RuntimeError("boom")), requests_mock.Mocker() as mock_requests:
+    with patch.object(
+        trigger, "process_event", side_effect=RuntimeError("boom")
+    ), requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
             status_code=200,
