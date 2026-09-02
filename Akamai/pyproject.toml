@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "Automation module for Akamai"
-version = "0.0"
+version = "1.0.2"
 description = ""
 authors = []
 package-mode = false
