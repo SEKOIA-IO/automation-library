@@ -6,6 +6,8 @@ import requests_mock
 from beyondtrust_modules import BeyondTrustModule
 from beyondtrust_modules.connector_pra_platform import BeyondTrustPRAPlatformConnector
 
+from .expectations import EXPECTED_SESSION_EVENTS
+
 
 @pytest.fixture
 def trigger(data_storage):
@@ -47,24 +49,7 @@ def test_fetch_events(trigger, sessions_list_xml_with_one, session_xml):
         trigger.from_date = 1732810704
         events = trigger.fetch_events()
 
-        assert list(events) == [
-            [
-                {
-                    "timestamp": "1733239565",
-                    "event_type": "Session Start",
-                    "session_id": "e9e99aeb9ad54fb381634498502c5a1b",
-                    "jump_group": {"name": "Sekoia.io integration", "type": "shared"},
-                },
-                {
-                    "timestamp": "1733239565",
-                    "event_type": "Conference Owner Changed",
-                    "data": {"owner": "Pre-start Conference"},
-                    "destination": {"type": "system", "name": "Pre-start Conference"},
-                    "session_id": "e9e99aeb9ad54fb381634498502c5a1b",
-                    "jump_group": {"name": "Sekoia.io integration", "type": "shared"},
-                },
-            ]
-        ]
+        assert list(events) == [EXPECTED_SESSION_EVENTS]
 
         assert trigger.from_date == 1733240467
         assert trigger.sessions_cache["e9e99aeb9ad54fb381634498502c5a1b"] == 1
