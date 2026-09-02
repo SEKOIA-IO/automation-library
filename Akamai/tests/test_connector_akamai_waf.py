@@ -564,6 +564,7 @@ def test_fetch_events_skips_malformed_json_lines(trigger, response_2):
     malformed_stream = (
         b'{"type": "akamai_siem", "attackData": {}, "httpMessage": {"requestId": 1, "start": "1743505200"}}\n'
         b"not-a-json-line\n"
+        b"[]\n"
         b'{"type": "akamai_siem", "attackData": {}, "httpMessage": {"requestId": 2, "start": "1743505201"}}\n'
         b'{"total": 2, "offset": "OFFSET_TOKEN"}\n'
     )
@@ -585,6 +586,10 @@ def test_fetch_events_skips_malformed_json_lines(trigger, response_2):
     assert sum(len(chunk) for chunk in chunks) == 2
     assert any(
         "Skipped malformed JSON line in Akamai stream" in call.kwargs.get("message", "")
+        for call in trigger.log.call_args_list
+    )
+    assert any(
+        "Skipped non-object JSON line in Akamai stream" in call.kwargs.get("message", "")
         for call in trigger.log.call_args_list
     )
 
@@ -612,7 +617,7 @@ def test_next_batch_forwards_event_without_request_id(trigger, response_2):
 
     trigger.push_events_to_intakes.assert_called_once()
     assert any(
-        "Forwarded event without deduplication because requestId is missing" in call.kwargs.get("message", "")
+        "Forwarded event with fallback deduplication because requestId is missing" in call.kwargs.get("message", "")
         for call in trigger.log.call_args_list
     )
 
@@ -672,6 +677,23 @@ def test_get_event_start_timestamp(event, expected_start):
     assert event_start == expected_start
 
 
+@pytest.mark.parametrize(
+    "event,expect_none",
+    [
+        ({"httpMessage": {"start": "1743505200"}, "eventIndex": 1}, False),
+        ({"httpMessage": {"start": "1743505200"}, "notSerializable": {1, 2}}, True),
+    ],
+)
+def test_build_fallback_event_dedup_key(event, expect_none):
+    dedup_key = AkamaiWAFLogsConnector._build_fallback_event_dedup_key(event)
+
+    if expect_none:
+        assert dedup_key is None
+    else:
+        assert dedup_key is not None
+        assert dedup_key.startswith("fallback:")
+
+
 def test_fetch_events_logs_exception_when_process_event_fails(trigger, response_2):
     stream = (
         b'{"type": "akamai_siem", "attackData": {}, "httpMessage": {"requestId": 99, "start": "1743505200"}}\n'
@@ -728,7 +750,7 @@ def test_fetch_events_skips_pagination_context_without_offset(trigger, response_
 
 
 def test_filter_processed_events_samples_missing_request_id_logs(trigger):
-    events = [{"httpMessage": {"start": "1743505200"}} for _ in range(101)]
+    events = [{"httpMessage": {"start": "1743505200"}, "eventIndex": i} for i in range(101)]
 
     filtered_events = list(trigger.filter_processed_events(events))
 
@@ -736,8 +758,45 @@ def test_filter_processed_events_samples_missing_request_id_logs(trigger):
     missing_id_logs = [
         call.kwargs.get("message", "")
         for call in trigger.log.call_args_list
-        if "Forwarded event without deduplication because requestId is missing" in call.kwargs.get("message", "")
+        if "Forwarded event with fallback deduplication because requestId is missing" in call.kwargs.get("message", "")
     ]
     assert len(missing_id_logs) == 2
     assert any("occurrence=1" in message for message in missing_id_logs)
     assert any("occurrence=100" in message for message in missing_id_logs)
+
+
+def test_filter_processed_events_forwards_when_fallback_dedup_key_generation_fails(trigger):
+    event = {
+        "httpMessage": {"start": "1743505200"},
+        "notSerializable": {1, 2},
+    }
+
+    filtered_events = list(trigger.filter_processed_events([event]))
+
+    assert filtered_events == [event]
+    assert any(
+        "fallback dedup key generation failed" in call.kwargs.get("message", "") for call in trigger.log.call_args_list
+    )
+
+
+def test_next_batch_deduplicates_missing_request_id_when_timestamp_is_invalid(trigger, response_2):
+    repeated_stream = (
+        b'{"type": "akamai_siem", "attackData": {}, "httpMessage": {"start": "invalid"}}\n'
+        b'{"total": 1, "offset": "OFFSET_TOKEN"}\n'
+    )
+
+    with patch("akamai_modules.connector_akamai_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            [{"status_code": 200, "content": repeated_stream}, {"status_code": 200, "content": repeated_stream}],
+        )
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
+            [{"status_code": 200, "content": response_2}, {"status_code": 200, "content": response_2}],
+        )
+
+        mock_time.time.side_effect = [1666711174.0, 1666711235.0, 1666711296.0, 1666711357.0]
+        trigger.next_batch()
+        trigger.next_batch()
+
+    assert trigger.push_events_to_intakes.call_count == 1

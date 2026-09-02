@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import os
 import re
 import time
@@ -198,6 +199,17 @@ class AkamaiWAFLogsConnector(Connector):
         except (TypeError, ValueError):
             return None
 
+    @staticmethod
+    def _build_fallback_event_dedup_key(event: dict[str, Any]) -> str | None:
+        """Build a deterministic deduplication key when requestId is unavailable."""
+        try:
+            canonical_payload = orjson.dumps(event, option=orjson.OPT_SORT_KEYS)
+        except Exception:
+            return None
+
+        payload_hash = hashlib.sha256(canonical_payload).hexdigest()
+        return f"fallback:{payload_hash}"
+
     def process_event(self, event: dict[str, Any]) -> None:
         """Normalize event sections and log header parsing anomalies."""
         # Processing `attackData` section
@@ -284,11 +296,22 @@ class AkamaiWAFLogsConnector(Connector):
             for line in response.iter_lines():
                 if line:
                     try:
-                        item: dict = orjson.loads(line)
+                        item = orjson.loads(line)
                     except Exception:
                         self._log_sampled(
                             key="malformed_json_line",
                             message=("Skipped malformed JSON line in Akamai stream " f"line_size={len(line)}"),
+                            level="warning",
+                        )
+                        continue
+
+                    if not isinstance(item, dict):
+                        self._log_sampled(
+                            key="non_object_json_line",
+                            message=(
+                                "Skipped non-object JSON line in Akamai stream "
+                                f"line_size={len(line)} json_type={type(item).__name__}"
+                            ),
                             level="warning",
                         )
                         continue
@@ -492,9 +515,29 @@ class AkamaiWAFLogsConnector(Connector):
         for event in events:
             event_id = self._get_event_request_id(event)
             if event_id is None:
+                fallback_event_id = self._build_fallback_event_dedup_key(event)
+                if fallback_event_id is None:
+                    self._log_sampled(
+                        key="missing_request_id_no_fallback_dedup_key",
+                        message=(
+                            "Forwarded event without deduplication because requestId is missing "
+                            "and fallback dedup key generation failed"
+                        ),
+                        level="warning",
+                    )
+                    yield event
+                    continue
+
+                if fallback_event_id in self.events_cache:
+                    continue
+
+                self.events_cache[fallback_event_id] = True
                 self._log_sampled(
                     key="missing_request_id",
-                    message="Forwarded event without deduplication because requestId is missing",
+                    message=(
+                        "Forwarded event with fallback deduplication because requestId is missing "
+                        "dedup_marker=payload_hash"
+                    ),
                     level="warning",
                 )
                 yield event

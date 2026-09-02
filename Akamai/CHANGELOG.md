@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix a crash in HTTP header parsing (`ValueError: not enough values to unpack`) caused by malformed header lines returned by the Akamai SIEM stream
 - Make header parsing resilient to malformed input (missing separator, empty key, non-string headers) so event ingestion continues instead of stopping
 - Handle missing `requestId` and invalid or missing `httpMessage.start` values without breaking batch processing
+- Prevent repeated redelivery of events without `requestId` when `httpMessage.start` is invalid or missing by using a fallback payload-based deduplication key
 
 ### Removed
 
