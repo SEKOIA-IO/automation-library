@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Enrich operational logs across fetching, pagination, deduplication, checkpoint updates, and batch lifecycle to improve observability
 - Increase test coverage to 100% across connector, models, and logging modules with targeted branch tests and regression tests
+- Add defensive handling for malformed Akamai stream lines, per-event processing failures, and pagination context entries without offset
+- Add warning logs for newly handled error cases to keep ingestion resilient while preserving troubleshooting context
 
 ### Changed
 
@@ -25,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix a crash in HTTP header parsing (`ValueError: not enough values to unpack`) caused by malformed header lines returned by the Akamai SIEM stream
 - Make header parsing resilient to malformed input (missing separator, empty key, non-string headers) so event ingestion continues instead of stopping
+- Handle missing `requestId` and invalid or missing `httpMessage.start` values without breaking batch processing
 
 ## [1.0.1] - 2026-04-16
 

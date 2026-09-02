@@ -141,6 +141,25 @@ class AkamaiWAFLogsConnector(Connector):
             return f"{text[:max_length]}..."
         return text
 
+    @staticmethod
+    def _get_event_request_id(event: dict[str, Any]) -> Any:
+        http_message = event.get("httpMessage")
+        if isinstance(http_message, dict):
+            return http_message.get("requestId")
+        return None
+
+    @staticmethod
+    def _get_event_start_timestamp(event: dict[str, Any]) -> int | None:
+        http_message = event.get("httpMessage")
+        if not isinstance(http_message, dict):
+            return None
+
+        start = http_message.get("start")
+        try:
+            return int(start)
+        except (TypeError, ValueError):
+            return None
+
     def process_event(self, event: dict[str, Any]) -> None:
         # Processing `attackData` section
         new_attack_section = self.extract_attack_data(event)
@@ -210,9 +229,31 @@ class AkamaiWAFLogsConnector(Connector):
 
             for line in response.iter_lines():
                 if line:
-                    item: dict = orjson.loads(line)
+                    try:
+                        item: dict = orjson.loads(line)
+                    except Exception:
+                        self.log(
+                            message=(
+                                "Skipped malformed JSON line in Akamai stream "
+                                f"line_size={len(line)}"
+                            ),
+                            level="warning",
+                        )
+                        continue
+
                     if item.get("type") == "akamai_siem":
-                        self.process_event(item)
+                        try:
+                            self.process_event(item)
+                        except Exception as error:
+                            self.log_exception(
+                                error,
+                                message=(
+                                    "Failed to process Akamai event "
+                                    f"event_request_id={self._sanitize_log_value(self._get_event_request_id(item))}"
+                                ),
+                            )
+                            continue
+
                         chunk.append(item)
                         events_in_page += 1
 
@@ -222,8 +263,18 @@ class AkamaiWAFLogsConnector(Connector):
                             chunk = []
 
                     else:
-                        offset = item["offset"]
+                        offset = item.get("offset")
                         total = item.get("total")
+                        if offset is None:
+                            self.log(
+                                message=(
+                                    "Skipped pagination context without offset "
+                                    f"context_keys={self._sanitize_log_value(list(item.keys()))}"
+                                ),
+                                level="warning",
+                            )
+                            continue
+
                         # response context - last JSON line
                         if events_in_page > 0:
                             # Yield remaining events that didn't fill a full chunk
@@ -274,8 +325,24 @@ class AkamaiWAFLogsConnector(Connector):
 
         for next_events in self.__fetch_next_events(most_recent_date_seen):
             if next_events:
-                latest_event = max(next_events, key=lambda x: int(x["httpMessage"]["start"]))
-                latest_timestamp = int(latest_event["httpMessage"]["start"])
+                timestamps = [
+                    timestamp
+                    for timestamp in (self._get_event_start_timestamp(event) for event in next_events)
+                    if timestamp is not None
+                ]
+
+                if not timestamps:
+                    self.log(
+                        message=(
+                            "Skipped checkpoint update because event timestamps are missing or invalid "
+                            f"events_count={len(next_events)}"
+                        ),
+                        level="warning",
+                    )
+                    yield next_events
+                    continue
+
+                latest_timestamp = max(timestamps)
 
                 if latest_timestamp > most_recent_date_seen:
                     most_recent_date_seen = latest_timestamp
@@ -364,7 +431,15 @@ class AkamaiWAFLogsConnector(Connector):
 
     def filter_processed_events(self, events: list[dict]) -> Generator[dict, None, None]:
         for event in events:
-            event_id = event["httpMessage"]["requestId"]
+            event_id = self._get_event_request_id(event)
+            if event_id is None:
+                self.log(
+                    message="Forwarded event without deduplication because requestId is missing",
+                    level="warning",
+                )
+                yield event
+                continue
+
             if event_id in self.events_cache:
                 continue
 

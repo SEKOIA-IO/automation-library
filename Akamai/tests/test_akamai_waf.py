@@ -618,3 +618,156 @@ def test_next_batch_skips_chunk_when_all_events_are_duplicates(trigger, response
         "Skipped forwarding chunk because all events were duplicates" in call.kwargs.get("message", "")
         for call in trigger.log.call_args_list
     )
+
+
+def test_fetch_events_skips_malformed_json_lines(trigger, response_2):
+    malformed_stream = (
+        b'{"type": "akamai_siem", "attackData": {}, "httpMessage": {"requestId": 1, "start": "1743505200"}}\n'
+        b'not-a-json-line\n'
+        b'{"type": "akamai_siem", "attackData": {}, "httpMessage": {"requestId": 2, "start": "1743505201"}}\n'
+        b'{"total": 2, "offset": "OFFSET_TOKEN"}\n'
+    )
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=malformed_stream,
+        )
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
+            status_code=200,
+            content=response_2,
+        )
+
+        chunks = list(trigger.fetch_events())
+
+    assert sum(len(chunk) for chunk in chunks) == 2
+    assert any(
+        "Skipped malformed JSON line in Akamai stream" in call.kwargs.get("message", "")
+        for call in trigger.log.call_args_list
+    )
+
+
+def test_next_batch_forwards_event_without_request_id(trigger, response_2):
+    missing_request_id_stream = (
+        b'{"type": "akamai_siem", "attackData": {}, "httpMessage": {"start": "1743505200"}}\n'
+        b'{"total": 1, "offset": "OFFSET_TOKEN"}\n'
+    )
+
+    with patch("akamai_modules.connector_akamai_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=missing_request_id_stream,
+        )
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
+            status_code=200,
+            content=response_2,
+        )
+
+        mock_time.time.side_effect = [1666711174.0, 1666711235.0]
+        trigger.next_batch()
+
+    trigger.push_events_to_intakes.assert_called_once()
+    assert any(
+        "Forwarded event without deduplication because requestId is missing" in call.kwargs.get("message", "")
+        for call in trigger.log.call_args_list
+    )
+
+
+def test_fetch_events_logs_warning_when_timestamps_are_invalid(trigger, response_2):
+    invalid_timestamp_stream = (
+        b'{"type": "akamai_siem", "attackData": {}, "httpMessage": {"requestId": 1, "start": "invalid"}}\n'
+        b'{"total": 1, "offset": "OFFSET_TOKEN"}\n'
+    )
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=invalid_timestamp_stream,
+        )
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
+            status_code=200,
+            content=response_2,
+        )
+
+        chunks = list(trigger.fetch_events())
+
+    assert sum(len(chunk) for chunk in chunks) == 1
+    assert any(
+        "Skipped checkpoint update because event timestamps are missing or invalid" in call.kwargs.get("message", "")
+        for call in trigger.log.call_args_list
+    )
+
+
+def test_get_event_request_id_returns_none_without_http_message():
+    event = {"type": "akamai_siem", "attackData": {}}
+
+    event_request_id = AkamaiWAFLogsConnector._get_event_request_id(event)
+
+    assert event_request_id is None
+
+
+def test_get_event_start_timestamp_returns_none_when_http_message_is_not_a_dict():
+    event = {"httpMessage": "not-a-dict"}
+
+    event_start = AkamaiWAFLogsConnector._get_event_start_timestamp(event)
+
+    assert event_start is None
+
+
+def test_fetch_events_logs_exception_when_process_event_fails(trigger, response_2):
+    stream = (
+        b'{"type": "akamai_siem", "attackData": {}, "httpMessage": {"requestId": 99, "start": "1743505200"}}\n'
+        b'{"total": 1, "offset": "OFFSET_TOKEN"}\n'
+    )
+
+    with patch.object(trigger, "process_event", side_effect=RuntimeError("boom")), requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=stream,
+        )
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
+            status_code=200,
+            content=response_2,
+        )
+
+        chunks = list(trigger.fetch_events())
+
+    assert chunks == []
+    trigger.log_exception.assert_called_once()
+    assert "Failed to process Akamai event" in trigger.log_exception.call_args.kwargs["message"]
+
+
+def test_fetch_events_skips_pagination_context_without_offset(trigger, response_2):
+    stream = (
+        b'{"total": 1}\n'
+        b'{"type": "akamai_siem", "attackData": {}, "httpMessage": {"requestId": 1, "start": "1743505200"}}\n'
+        b'{"total": 1, "offset": "OFFSET_TOKEN"}\n'
+    )
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=stream,
+        )
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
+            status_code=200,
+            content=response_2,
+        )
+
+        chunks = list(trigger.fetch_events())
+
+    assert sum(len(chunk) for chunk in chunks) == 1
+    assert any(
+        "Skipped pagination context without offset" in call.kwargs.get("message", "")
+        for call in trigger.log.call_args_list
+    )
