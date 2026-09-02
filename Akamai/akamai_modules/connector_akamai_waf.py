@@ -136,35 +136,40 @@ class AkamaiWAFLogsConnector(Connector):
     def process_event(self, event: dict[str, Any]) -> None:
         # Processing `attackData` section
         new_attack_section = self.extract_attack_data(event)
+        http_message = event.get("httpMessage", {})
 
         # Processing `httpMessage` section
         request_headers = None
         request_malformed = {}
-        if "requestHeaders" in event.get("httpMessage", {}):
+        if "requestHeaders" in http_message:
             request_headers, request_malformed = self._extract_headers_with_diagnostics(
-                event.get("httpMessage", {}).get("requestHeaders")
+                http_message.get("requestHeaders")
             )
 
         response_headers = None
         response_malformed = {}
-        if "responseHeaders" in event.get("httpMessage", {}):
+        if "responseHeaders" in http_message:
             response_headers, response_malformed = self._extract_headers_with_diagnostics(
-                event.get("httpMessage", {}).get("responseHeaders")
+                http_message.get("responseHeaders")
             )
 
         event["attackData"] = new_attack_section
-        if "requestHeaders" in event.get("httpMessage", {}):
+        if "requestHeaders" in http_message:
             event["httpMessage"]["requestHeaders"] = request_headers
 
-        if "responseHeaders" in event.get("httpMessage", {}):
+        if "responseHeaders" in http_message:
             event["httpMessage"]["responseHeaders"] = response_headers
 
         ignored_request_lines = sum(request_malformed.values())
         ignored_response_lines = sum(response_malformed.values())
         if ignored_request_lines or ignored_response_lines:
+            event_request_id = http_message.get("requestId")
+            event_start = http_message.get("start")
             self.log(
                 message=(
-                    "Ignored malformed HTTP header lines while processing Akamai event "
+                    "Ignored malformed HTTP header lines "
+                    f"event_request_id={event_request_id} "
+                    f"event_start={event_start} "
                     f"request_header_lines_ignored={ignored_request_lines} "
                     f"response_header_lines_ignored={ignored_response_lines} "
                     f"request_malformed_reasons={request_malformed} "
@@ -175,6 +180,13 @@ class AkamaiWAFLogsConnector(Connector):
 
     def __fetch_next_events(self, from_date: int) -> Generator[list, None, None]:
         url = f"{self.module.configuration.base_url}/siem/v1/configs/{self.configuration.config_id}"
+        self.log(
+            message=(
+                "Started fetching Akamai events "
+                f"from_timestamp={from_date} page_size={self.page_size} chunk_size={self.chunk_size}"
+            ),
+            level="debug",
+        )
         response = self.client.get(
             url=url, params={"from": from_date, "limit": self.page_size}, timeout=60, stream=True
         )
@@ -201,6 +213,7 @@ class AkamaiWAFLogsConnector(Connector):
 
                     else:
                         offset = item["offset"]
+                        total = item.get("total")
                         # response context - last JSON line
                         if events_in_page > 0:
                             # Yield remaining events that didn't fill a full chunk
@@ -209,7 +222,22 @@ class AkamaiWAFLogsConnector(Connector):
                                 yield chunk
                                 chunk = []
 
+                            self.log(
+                                message=(
+                                    "Processed Akamai events page "
+                                    f"events_in_page={events_in_page} offset={offset} total={total}"
+                                ),
+                                level="debug",
+                            )
+
                         else:
+                            self.log(
+                                message=(
+                                    "No new Akamai events available "
+                                    f"offset={offset} total={total} from_timestamp={from_date}"
+                                ),
+                                level="info",
+                            )
                             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
                             return
 
@@ -217,6 +245,14 @@ class AkamaiWAFLogsConnector(Connector):
                 if chunk:
                     INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(chunk))
                     yield chunk
+
+                self.log(
+                    message=(
+                        "Akamai stream ended without pagination context "
+                        f"remaining_events_in_chunk={len(chunk)}"
+                    ),
+                    level="warning",
+                )
                 return
 
             response = self.client.get(
@@ -239,17 +275,34 @@ class AkamaiWAFLogsConnector(Connector):
 
         # save the most recent date
         if most_recent_date_seen > self.from_timestamp:
+            previous_from_timestamp = self.from_timestamp
             self.from_timestamp = most_recent_date_seen
             self.cursor.offset = most_recent_date_seen
 
             delta_time = datetime.now(timezone.utc).timestamp() - most_recent_date_seen
             current_lag = int(delta_time)
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+            self.log(
+                message=(
+                    "Updated checkpoint after fetch "
+                    f"previous_from_timestamp={previous_from_timestamp} "
+                    f"new_from_timestamp={self.from_timestamp} lag_seconds={current_lag}"
+                ),
+                level="debug",
+            )
+        else:
+            self.log(
+                message=f"Kept checkpoint unchanged from_timestamp={self.from_timestamp}",
+                level="debug",
+            )
 
     def __handle_response_error(self, response: requests.Response):
         if not response.ok:
+            request_method = response.request.method if response.request else None
+            request_url = response.request.url if response.request else None
             message = (
-                f"Request on Akamai API to fetch events failed with status {response.status_code} - {response.reason}"
+                "Akamai API request failed "
+                f"status={response.status_code} reason={response.reason} method={request_method} url={request_url}"
             )
             self.log(
                 message=message,
@@ -258,24 +311,41 @@ class AkamaiWAFLogsConnector(Connector):
 
             try:
                 raw = response.json()
+                api_error_client_ip = raw.get("clientIp")
+                api_error_detail = raw.get("detail")
+                api_error_instance = raw.get("instance")
+                api_error_method = raw.get("method")
+                api_error_request_id = raw.get("requestId")
+                api_error_request_time = raw.get("requestTime")
+                api_error_server_ip = raw.get("serverIp")
+                api_error_title = raw.get("title")
+                api_error_type = raw.get("type")
+
                 self.log(
                     message=(
                         f"{message} "
-                        f"client_ip={raw.get('clientIp')} "
-                        f"detail={raw.get('detail')} "
-                        f"instance={raw.get('instance')} "
-                        f"method={raw.get('method')} "
-                        f"request_id={raw.get('requestId')} "
-                        f"request_time={raw.get('requestTime')} "
-                        f"server_ip={raw.get('serverIp')} "
-                        f"title={raw.get('title')} "
-                        f"type={raw.get('type')}"
+                        "error_payload=true "
+                        f"api_error_client_ip={api_error_client_ip} "
+                        f"api_error_detail={api_error_detail} "
+                        f"api_error_instance={api_error_instance} "
+                        f"api_error_method={api_error_method} "
+                        f"api_error_request_id={api_error_request_id} "
+                        f"api_error_request_time={api_error_request_time} "
+                        f"api_error_server_ip={api_error_server_ip} "
+                        f"api_error_title={api_error_title} "
+                        f"api_error_type={api_error_type}"
                     ),
                     level="error",
                 )
 
             except Exception:
-                pass
+                self.log(
+                    message=(
+                        "Failed to parse Akamai API error response body "
+                        f"status={response.status_code} reason={response.reason}"
+                    ),
+                    level="warning",
+                )
 
             response.raise_for_status()
 
@@ -291,15 +361,36 @@ class AkamaiWAFLogsConnector(Connector):
     def next_batch(self):
         # save the starting time
         batch_start_time = time.time()
+        fetched_events = 0
+        forwarded_events = 0
+        deduplicated_events = 0
+        processed_chunks = 0
+
+        self.log(
+            message=(
+                "Started batch processing "
+                f"from_timestamp={self.from_timestamp} frequency={self.configuration.frequency}"
+            ),
+            level="debug",
+        )
 
         # Fetch next batch
         for events in self.fetch_events():
+            processed_chunks += 1
+            fetched_events += len(events)
             batch_of_events = [orjson.dumps(event).decode("utf-8") for event in self.filter_processed_events(events)]
+            deduplicated_events += len(events) - len(batch_of_events)
 
             # if the batch is full, push it
             if len(batch_of_events) > 0:
+                forwarded_events += len(batch_of_events)
                 self.log(
-                    message=f"Forwarded {len(batch_of_events)} events to the intake",
+                    message=(
+                        "Forwarded events to intake "
+                        f"forwarded_events={len(batch_of_events)} "
+                        f"chunk_index={processed_chunks} fetched_events={len(events)} "
+                        f"duplicate_events_skipped={len(events) - len(batch_of_events)}"
+                    ),
                     level="info",
                 )
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
@@ -309,24 +400,50 @@ class AkamaiWAFLogsConnector(Connector):
 
             else:
                 self.log(
-                    message="No events to forward",
+                    message=(
+                        "Skipped forwarding chunk because all events were duplicates "
+                        f"chunk_index={processed_chunks} fetched_events={len(events)}"
+                    ),
                     level="info",
                 )
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
-        self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="debug")
+        self.log(
+            message=(
+                "Completed batch processing "
+                f"duration_seconds={batch_duration} chunks={processed_chunks} "
+                f"fetched_events={fetched_events} forwarded_events={forwarded_events} "
+                f"duplicate_events_skipped={deduplicated_events}"
+            ),
+            level="debug",
+        )
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
         if delta_sleep > 0:
-            self.log(f"Next batch in the future. Waiting {delta_sleep} seconds", level="debug")
+            self.log(
+                message=(
+                    "Waiting before next batch "
+                    f"sleep_seconds={delta_sleep} frequency={self.configuration.frequency} "
+                    f"last_batch_duration={batch_duration}"
+                ),
+                level="debug",
+            )
             time.sleep(delta_sleep)
+        else:
+            self.log(
+                message=(
+                    "Starting next batch immediately "
+                    f"frequency={self.configuration.frequency} last_batch_duration={batch_duration}"
+                ),
+                level="debug",
+            )
 
     def run(self):  # pragma: no cover
-        self.log(message="Start fetching Akamai WAF system logs", level="info")
+        self.log(message="Started Akamai WAF logs connector component=akamai_waf_logs", level="info")
 
         while self.running:
             try:
