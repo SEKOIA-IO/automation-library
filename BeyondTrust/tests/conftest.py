@@ -45,21 +45,21 @@ def session_xml():
     <duration>00:15:02</duration>
     <external_key></external_key>
     <custom_attributes></custom_attributes>
-    <session_chat_view_url>https://sekoia-pra.beyondtrustcloud.com/session_download?lsid=l%3De9e99aeb9ad54fb381634498502c5a1b%3Bh%3D3a68ddba411dd2aeae0c68139afd991944d42f0d%3Bt%3Dsd%3Bm%3Dchat&amp;dl_action=chat&amp;view=1</session_chat_view_url>
-    <session_chat_download_url>https://sekoia-pra.beyondtrustcloud.com/session_download?lsid=l%3De9e99aeb9ad54fb381634498502c5a1b%3Bh%3D3a68ddba411dd2aeae0c68139afd991944d42f0d%3Bt%3Dsd%3Bm%3Dchat&amp;dl_action=chat</session_chat_download_url>
+    <session_chat_view_url>https://pra.example.com/session_download?lsid=l%3De9e99aeb9ad54fb381634498502c5a1b%3Bh%3D3a68ddba411dd2aeae0c68139afd991944d42f0d%3Bt%3Dsd%3Bm%3Dchat&amp;dl_action=chat&amp;view=1</session_chat_view_url>
+    <session_chat_download_url>https://pra.example.com/session_download?lsid=l%3De9e99aeb9ad54fb381634498502c5a1b%3Bh%3D3a68ddba411dd2aeae0c68139afd991944d42f0d%3Bt%3Dsd%3Bm%3Dchat&amp;dl_action=chat</session_chat_download_url>
     <file_transfer_count>2</file_transfer_count>
     <file_move_count>0</file_move_count>
     <file_delete_count>1</file_delete_count>
-    <primary_customer gsnumber="22">Sekoia.io integration</primary_customer>
-    <jump_group type="shared" id="1">Sekoia.io integration</jump_group>
+    <primary_customer gsnumber="22">John Doe</primary_customer>
+    <jump_group type="shared" id="1">EXAMPLE_JUMP_GROUP</jump_group>
 
     <primary_rep gsnumber="21" id="1">Admin</primary_rep>
     <customer_list>
     <customer gsnumber="22">
-    <username>Sekoia.io integration</username>
-    <public_ip>4.231.237.19:61606</public_ip>
-    <private_ip>10.0.0.4</private_ip>
-    <hostname>Windows2022</hostname>
+    <username>jdoe</username>
+    <public_ip>4.3.2.1:61606</public_ip>
+    <private_ip>1.2.3.4</private_ip>
+    <hostname>workstation.test.local</hostname>
     <os>Windows Server 2022 Datacenter Azure Edition (21H2)</os>
 </customer>
     </customer_list>
@@ -69,7 +69,7 @@ def session_xml():
     <display_name>Admin</display_name>
     <public_display_name>Admin</public_display_name>
     <private_display_name>Admin</private_display_name>
-        <public_ip>[2a01:e34:ec57:b230:f188:56c5:7089:d987]:56722</public_ip>
+        <public_ip>[2001:db8::1]:56722</public_ip>
     <private_ip>Unknown</private_ip>
     <os>Unknown</os>
     <session_owner>1</session_owner>
@@ -81,12 +81,15 @@ def session_xml():
 
     </event>
 <event timestamp="1733239565" event_type="Conference Owner Changed" >
-
+    <performed_by type="representative" gsnumber="21">Admin</performed_by>
     <destination type="system" gsnumber="0">Pre-start Conference</destination>
     <data>
             <value name="owner" value="Pre-start Conference" />
         </data>
 </event>
+<event timestamp="1733239600" event_type="Conference Member Added" >
+    <performed_by type="customer" gsnumber="22">John Doe</performed_by>
+    </event>
 </session_details>
 </session>
 </session_list>
