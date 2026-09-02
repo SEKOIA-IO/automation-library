@@ -1,8 +1,11 @@
+import pytest
+
 from akamai_modules import metrics
 
 
-def test_metrics_are_declared_with_expected_name_type_and_labels():
-    expected = [
+@pytest.mark.parametrize(
+    "metric,expected_name,expected_type,expected_labelnames",
+    [
         (
             metrics.INCOMING_MESSAGES,
             "symphony_module_akamai_collected_messages",
@@ -27,11 +30,11 @@ def test_metrics_are_declared_with_expected_name_type_and_labels():
             "gauge",
             ("intake_key",),
         ),
-    ]
+    ],
+)
+def test_metric_declaration(metric, expected_name, expected_type, expected_labelnames):
+    family = list(metric.collect())[0]
 
-    for metric, expected_name, expected_type, expected_labelnames in expected:
-        family = list(metric.collect())[0]
-
-        assert family.name == expected_name
-        assert family.type == expected_type
-        assert metric._labelnames == expected_labelnames
+    assert family.name == expected_name
+    assert family.type == expected_type
+    assert metric._labelnames == expected_labelnames

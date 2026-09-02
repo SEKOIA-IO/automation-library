@@ -325,7 +325,14 @@ def test_request_error(trigger):
             trigger.next_batch()
 
 
-def test_next_batch_sleep_until_next_round(trigger, response_1, response_2):
+@pytest.mark.parametrize(
+    "batch_duration,expected_sleep_call_count",
+    [
+        (16, 1),
+        ("longer_than_frequency", 0),
+    ],
+)
+def test_next_batch_sleep_behavior(trigger, response_1, response_2, batch_duration, expected_sleep_call_count):
     with patch("akamai_modules.connector_akamai_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
@@ -339,45 +346,43 @@ def test_next_batch_sleep_until_next_round(trigger, response_1, response_2):
             content=response_2,
         )
 
-        batch_duration = 16  # the batch lasts 16 seconds
+        effective_batch_duration = (
+            trigger.configuration.frequency + 20 if batch_duration == "longer_than_frequency" else batch_duration
+        )
         start_time = 1666711174.0
-        end_time = start_time + batch_duration
+        end_time = start_time + effective_batch_duration
         mock_time.time.side_effect = [start_time, end_time]
 
         trigger.next_batch()
 
         assert trigger.push_events_to_intakes.call_count == 1
-        assert mock_time.sleep.call_count == 1
+        assert mock_time.sleep.call_count == expected_sleep_call_count
 
 
-def test_long_next_batch_should_not_sleep(trigger, response_1, response_2):
-    with patch("akamai_modules.connector_akamai_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
-        mock_requests.get(
-            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
-            status_code=200,
-            content=response_1,
-        )
+@pytest.mark.parametrize(
+    "chunk_size_override,scenario,expected_chunk_lengths",
+    [
+        (10, "less_than_chunk_size", [9]),
+        (None, "exactly_chunk_size", ["chunk"]),
+        (None, "chunk_plus_remainder", ["chunk", 500]),
+        (None, "multiple_full_chunks", ["chunk", "chunk", "chunk"]),
+    ],
+)
+def test_fetch_events_chunking_patterns(trigger, response_2, chunk_size_override, scenario, expected_chunk_lengths):
+    if chunk_size_override is not None:
+        trigger.chunk_size = chunk_size_override
 
-        mock_requests.get(
-            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
-            status_code=200,
-            content=response_2,
-        )
+    if scenario == "less_than_chunk_size":
+        n_events = trigger.chunk_size - 1
+    elif scenario == "exactly_chunk_size":
+        n_events = trigger.chunk_size
+    elif scenario == "chunk_plus_remainder":
+        n_events = trigger.chunk_size + 500
+    elif scenario == "multiple_full_chunks":
+        n_events = trigger.chunk_size * 3
+    else:
+        raise AssertionError(f"Unknown chunking scenario: {scenario}")
 
-        batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
-        start_time = 1666711174.0
-        end_time = start_time + batch_duration
-        mock_time.time.side_effect = [start_time, end_time]
-
-        trigger.next_batch()
-
-        assert trigger.push_events_to_intakes.call_count == 1
-        assert mock_time.sleep.call_count == 0
-
-
-def test_fetch_events_less_than_chunk_size_yields_single_chunk(trigger, response_2):
-    trigger.chunk_size = 10
-    n_events = trigger.chunk_size - 1
     big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
 
     with requests_mock.Mocker() as mock_requests:
@@ -394,77 +399,9 @@ def test_fetch_events_less_than_chunk_size_yields_single_chunk(trigger, response
 
         chunks = list(trigger.fetch_events())
 
-    # All events fit in a single chunk (remainder chunk)
-    assert len(chunks) == 1
-    assert len(chunks[0]) == n_events
-
-
-def test_fetch_events_exactly_chunk_size_yields_single_chunk(trigger, response_2):
-    n_events = trigger.chunk_size
-    big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
-
-    with requests_mock.Mocker() as mock_requests:
-        mock_requests.get(
-            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
-            status_code=200,
-            content=big_response,
-        )
-        mock_requests.get(
-            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
-            status_code=200,
-            content=response_2,
-        )
-
-        chunks = list(trigger.fetch_events())
-
-    assert len(chunks) == 1
-    assert len(chunks[0]) == n_events
-
-
-def test_fetch_events_more_than_chunk_size_yields_multiple_chunks(trigger, response_2):
-    n_events = trigger.chunk_size + 500  # one full chunk + a remainder
-    big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
-
-    with requests_mock.Mocker() as mock_requests:
-        mock_requests.get(
-            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
-            status_code=200,
-            content=big_response,
-        )
-        mock_requests.get(
-            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
-            status_code=200,
-            content=response_2,
-        )
-
-        chunks = list(trigger.fetch_events())
-
-    assert len(chunks) == 2
-    assert len(chunks[0]) == trigger.chunk_size
-    assert len(chunks[1]) == 500
-    assert sum(len(c) for c in chunks) == n_events
-
-
-def test_fetch_events_multiple_full_chunks(trigger, response_2):
-    n_events = trigger.chunk_size * 3
-    big_response = make_response_with_n_events(n_events, offset_token="OFFSET_TOKEN")
-
-    with requests_mock.Mocker() as mock_requests:
-        mock_requests.get(
-            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
-            status_code=200,
-            content=big_response,
-        )
-        mock_requests.get(
-            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
-            status_code=200,
-            content=response_2,
-        )
-
-        chunks = list(trigger.fetch_events())
-
-    assert len(chunks) == 3
-    assert all(len(c) == trigger.chunk_size for c in chunks)
+    expected_lengths = [trigger.chunk_size if length == "chunk" else length for length in expected_chunk_lengths]
+    assert [len(chunk) for chunk in chunks] == expected_lengths
+    assert sum(len(chunk) for chunk in chunks) == n_events
 
 
 def test_chunk_size_limits_memory_per_yield(trigger, response_2):
@@ -493,11 +430,17 @@ def test_chunk_size_limits_memory_per_yield(trigger, response_2):
     assert sum(len(c) for c in chunks) == n_events
 
 
-def test_fetch_events_truncated_response_sub_chunk_yields_all_events(trigger):
-    """When the API stream ends without a context/offset line and the number of events
-    is below chunk_size, no events should be silently dropped."""
-    n_events = 5
-    truncated_response = make_truncated_response_with_n_events(n_events)
+@pytest.mark.parametrize(
+    "n_events,expected_chunk_lengths",
+    [
+        (5, [5]),
+        ("chunk_plus_300", ["chunk", 300]),
+    ],
+)
+def test_fetch_events_truncated_response_yields_all_events(trigger, n_events, expected_chunk_lengths):
+    """Return all events when the API stream ends without pagination context."""
+    effective_n_events = trigger.chunk_size + 300 if n_events == "chunk_plus_300" else n_events
+    truncated_response = make_truncated_response_with_n_events(effective_n_events)
 
     with requests_mock.Mocker() as mock_requests:
         mock_requests.get(
@@ -508,29 +451,9 @@ def test_fetch_events_truncated_response_sub_chunk_yields_all_events(trigger):
 
         chunks = list(trigger.fetch_events())
 
-    assert sum(len(c) for c in chunks) == n_events
-
-
-def test_fetch_events_truncated_response_multi_chunk_yields_all_events(trigger):
-    """When the API stream ends without a context/offset line and the number of events
-    spans more than one chunk, both the already-yielded full chunks and the remaining
-    partial chunk should be returned — none of the tail events silently dropped."""
-    n_events = trigger.chunk_size + 300  # one full chunk flushed mid-stream + 300 remainder
-    truncated_response = make_truncated_response_with_n_events(n_events)
-
-    with requests_mock.Mocker() as mock_requests:
-        mock_requests.get(
-            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
-            status_code=200,
-            content=truncated_response,
-        )
-
-        chunks = list(trigger.fetch_events())
-
-    assert len(chunks) == 2
-    assert len(chunks[0]) == trigger.chunk_size
-    assert len(chunks[1]) == 300
-    assert sum(len(c) for c in chunks) == n_events
+    expected_lengths = [trigger.chunk_size if length == "chunk" else length for length in expected_chunk_lengths]
+    assert [len(chunk) for chunk in chunks] == expected_lengths
+    assert sum(len(chunk) for chunk in chunks) == effective_n_events
 
 
 def test_load_events_cache_restores_event_ids(trigger):
@@ -721,28 +644,32 @@ def test_fetch_events_logs_warning_when_timestamps_are_invalid(trigger, response
     )
 
 
-def test_get_event_request_id_returns_none_without_http_message():
-    event = {"type": "akamai_siem", "attackData": {}}
-
+@pytest.mark.parametrize(
+    "event,expected_request_id",
+    [
+        ({"type": "akamai_siem", "attackData": {}}, None),
+        ({"httpMessage": {"requestId": "req-123"}}, "req-123"),
+    ],
+)
+def test_get_event_request_id(event, expected_request_id):
     event_request_id = AkamaiWAFLogsConnector._get_event_request_id(event)
 
-    assert event_request_id is None
+    assert event_request_id == expected_request_id
 
 
-def test_get_event_start_timestamp_returns_none_when_http_message_is_not_a_dict():
-    event = {"httpMessage": "not-a-dict"}
-
+@pytest.mark.parametrize(
+    "event,expected_start",
+    [
+        ({"httpMessage": "not-a-dict"}, None),
+        ({"httpMessage": {"start": None}}, None),
+        ({"httpMessage": {"start": "1743505200"}}, 1743505200),
+        ({"httpMessage": {"start": "invalid"}}, None),
+    ],
+)
+def test_get_event_start_timestamp(event, expected_start):
     event_start = AkamaiWAFLogsConnector._get_event_start_timestamp(event)
 
-    assert event_start is None
-
-
-def test_get_event_start_timestamp_returns_none_when_start_is_none():
-    event = {"httpMessage": {"start": None}}
-
-    event_start = AkamaiWAFLogsConnector._get_event_start_timestamp(event)
-
-    assert event_start is None
+    assert event_start == expected_start
 
 
 def test_fetch_events_logs_exception_when_process_event_fails(trigger, response_2):

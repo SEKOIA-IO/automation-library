@@ -1,12 +1,22 @@
+import pytest
+
 from akamai_modules.models import AkamaiModuleConfiguration
 
 
-def test_base_url_converts_http_to_https_and_trims_trailing_slash():
+@pytest.mark.parametrize(
+    "host,expected_base_url",
+    [
+        ("http://example.com/", "https://example.com"),
+        ("https://example.com/", "https://example.com"),
+        ("example.com", "https://example.com"),
+    ],
+)
+def test_base_url_normalization(host, expected_base_url):
     cfg = AkamaiModuleConfiguration(
-        host="http://example.com/",
+        host=host,
         client_token="token",
         client_secret="secret",
         access_token="access",
     )
 
-    assert cfg.base_url == "https://example.com"
+    assert cfg.base_url == expected_base_url

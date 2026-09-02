@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Standardize connector logging on `self.log(message=..., level=...)` with concise single-line `key=value` messages and explicit request-id fields by source
 - Add privacy-safe and sampled diagnostics for high-frequency warning/debug paths to reduce log noise while preserving troubleshooting context
 - Rename and reorganize test files to align with source modules (`connector_akamai_waf`, `metrics`, `models`)
+- Refactor repeated test scenarios with `pytest.mark.parametrize` to reduce duplication and improve maintainability
 
 ### Fixed
 
