@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add privacy-safe diagnostics when malformed HTTP header lines are ignored by reporting counts and malformation types only, without logging raw header line content
 - Normalize request identifier semantics in logs by distinguishing `event_request_id`, `api_request_id`, and `api_error_*` fields by source
 - Use concise single-line log messages with searchable `key=value` context to optimize Loki/Grafana parsing and querying
+- Rename and reorganize test files to align with source modules (`connector_akamai_waf`, `metrics`, `models`)
+
+### Removed
+
+- Remove module-level logger usage after standardizing on `self.log(message=..., level=...)` across the connector
 
 ### Fixed
 
