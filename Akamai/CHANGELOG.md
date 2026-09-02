@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Enrich operational logs across fetching, pagination, deduplication, checkpoint updates, and batch lifecycle to improve observability
+- Increase test coverage to 100% across connector, models, and logging modules with targeted branch tests and regression tests
 
 ### Changed
 

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -510,3 +511,71 @@ def test_fetch_events_truncated_response_multi_chunk_yields_all_events(trigger):
     assert len(chunks[0]) == trigger.chunk_size
     assert len(chunks[1]) == 300
     assert sum(len(c) for c in chunks) == n_events
+
+
+def test_load_events_cache_restores_event_ids(trigger):
+    @contextmanager
+    def fake_context():
+        yield {"events_cache": ["evt-1", "evt-2"]}
+
+    trigger.cursor._context = fake_context()
+
+    restored_cache = trigger.load_events_cache()
+
+    assert restored_cache["evt-1"] is True
+    assert restored_cache["evt-2"] is True
+
+
+def test_fetch_events_logs_unchanged_checkpoint(trigger):
+    with patch.object(trigger, "_AkamaiWAFLogsConnector__fetch_next_events", return_value=iter([[]])):
+        chunks = list(trigger.fetch_events())
+
+    assert chunks == []
+    assert any(
+        "Kept checkpoint unchanged" in call.kwargs.get("message", "")
+        for call in trigger.log.call_args_list
+    )
+
+
+def test_request_error_with_unparseable_body_logs_warning(trigger):
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=500,
+            text="this-is-not-json",
+        )
+
+        with pytest.raises(requests.HTTPError):
+            trigger.next_batch()
+
+    assert any(
+        call.kwargs.get("level") == "warning"
+        and "Failed to parse Akamai API error response body" in call.kwargs.get("message", "")
+        for call in trigger.log.call_args_list
+    )
+
+
+def test_next_batch_skips_chunk_when_all_events_are_duplicates(trigger, response_2):
+    duplicate_page = make_response_with_n_events(1, offset_token="OFFSET_TOKEN")
+    trigger.events_cache[0] = True
+
+    with patch("akamai_modules.connector_akamai_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=duplicate_page,
+        )
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
+            status_code=200,
+            content=response_2,
+        )
+
+        mock_time.time.side_effect = [1666711174.0, 1666711235.0]
+        trigger.next_batch()
+
+    trigger.push_events_to_intakes.assert_not_called()
+    assert any(
+        "Skipped forwarding chunk because all events were duplicates" in call.kwargs.get("message", "")
+        for call in trigger.log.call_args_list
+    )
