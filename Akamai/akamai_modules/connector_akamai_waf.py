@@ -133,6 +133,14 @@ class AkamaiWAFLogsConnector(Connector):
         result, _ = AkamaiWAFLogsConnector._extract_headers_with_diagnostics(headers)
         return result
 
+    @staticmethod
+    def _sanitize_log_value(value: Any, max_length: int = 300) -> str:
+        text = str(value)
+        text = text.replace("\n", " ").replace("\r", " ").replace("\t", " ").strip()
+        if len(text) > max_length:
+            return f"{text[:max_length]}..."
+        return text
+
     def process_event(self, event: dict[str, Any]) -> None:
         # Processing `attackData` section
         new_attack_section = self.extract_attack_data(event)
@@ -165,15 +173,17 @@ class AkamaiWAFLogsConnector(Connector):
         if ignored_request_lines or ignored_response_lines:
             event_request_id = http_message.get("requestId")
             event_start = http_message.get("start")
+            request_malformed_summary = self._sanitize_log_value(request_malformed)
+            response_malformed_summary = self._sanitize_log_value(response_malformed)
             self.log(
                 message=(
                     "Ignored malformed HTTP header lines "
-                    f"event_request_id={event_request_id} "
-                    f"event_start={event_start} "
+                    f"event_request_id={self._sanitize_log_value(event_request_id)} "
+                    f"event_start={self._sanitize_log_value(event_start)} "
                     f"request_header_lines_ignored={ignored_request_lines} "
                     f"response_header_lines_ignored={ignored_response_lines} "
-                    f"request_malformed_reasons={request_malformed} "
-                    f"response_malformed_reasons={response_malformed}"
+                    f"request_malformed_reasons={request_malformed_summary} "
+                    f"response_malformed_reasons={response_malformed_summary}"
                 ),
                 level="warning",
             )
@@ -300,9 +310,12 @@ class AkamaiWAFLogsConnector(Connector):
         if not response.ok:
             request_method = response.request.method if response.request else None
             request_url = response.request.url if response.request else None
+            safe_request_method = self._sanitize_log_value(request_method)
+            safe_request_url = self._sanitize_log_value(request_url)
             message = (
                 "Akamai API request failed "
-                f"status={response.status_code} reason={response.reason} method={request_method} url={request_url}"
+                f"status={response.status_code} reason={self._sanitize_log_value(response.reason)} "
+                f"method={safe_request_method} url={safe_request_url}"
             )
             self.log(
                 message=message,
@@ -325,15 +338,15 @@ class AkamaiWAFLogsConnector(Connector):
                     message=(
                         f"{message} "
                         "error_payload=true "
-                        f"api_error_client_ip={api_error_client_ip} "
-                        f"api_error_detail={api_error_detail} "
-                        f"api_error_instance={api_error_instance} "
-                        f"api_error_method={api_error_method} "
-                        f"api_error_request_id={api_error_request_id} "
-                        f"api_error_request_time={api_error_request_time} "
-                        f"api_error_server_ip={api_error_server_ip} "
-                        f"api_error_title={api_error_title} "
-                        f"api_error_type={api_error_type}"
+                        f"api_error_client_ip={self._sanitize_log_value(api_error_client_ip)} "
+                        f"api_error_detail={self._sanitize_log_value(api_error_detail)} "
+                        f"api_error_instance={self._sanitize_log_value(api_error_instance)} "
+                        f"api_error_method={self._sanitize_log_value(api_error_method)} "
+                        f"api_error_request_id={self._sanitize_log_value(api_error_request_id)} "
+                        f"api_error_request_time={self._sanitize_log_value(api_error_request_time)} "
+                        f"api_error_server_ip={self._sanitize_log_value(api_error_server_ip)} "
+                        f"api_error_title={self._sanitize_log_value(api_error_title)} "
+                        f"api_error_type={self._sanitize_log_value(api_error_type)}"
                     ),
                     level="error",
                 )

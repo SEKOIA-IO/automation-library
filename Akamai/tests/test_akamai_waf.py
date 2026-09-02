@@ -555,6 +555,45 @@ def test_request_error_with_unparseable_body_logs_warning(trigger):
     )
 
 
+def test_request_error_sanitizes_and_truncates_long_multiline_values(trigger):
+    very_long_detail = "line1\nline2\t" + ("x" * 400)
+    msg = {
+        "clientIp": "192.0.2.201",
+        "detail": very_long_detail,
+        "instance": "https://example.com/path\nwith-newline",
+        "method": "GET",
+        "requestId": "9ab12ef",
+        "requestTime": "2023-06-20T15:02:30Z",
+        "serverIp": "192.0.2.221",
+        "title": "Error\nTitle",
+        "type": "https://problems.example.net/type",
+    }
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=500,
+            json=msg,
+        )
+
+        with pytest.raises(requests.HTTPError):
+            trigger.next_batch()
+
+    payload_logs = [
+        call.kwargs.get("message", "")
+        for call in trigger.log.call_args_list
+        if call.kwargs.get("level") == "error" and "error_payload=true" in call.kwargs.get("message", "")
+    ]
+    assert len(payload_logs) == 1
+
+    payload_message = payload_logs[0]
+    assert "\n" not in payload_message
+    assert "\r" not in payload_message
+    assert "\t" not in payload_message
+    assert "api_error_detail=" in payload_message
+    assert "..." in payload_message
+
+
 def test_next_batch_skips_chunk_when_all_events_are_duplicates(trigger, response_2):
     duplicate_page = make_response_with_n_events(1, offset_token="OFFSET_TOKEN")
     trigger.events_cache[0] = True
