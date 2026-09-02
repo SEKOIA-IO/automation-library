@@ -3,6 +3,7 @@ import os
 import re
 import time
 import urllib.parse
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from typing import Any, Generator
@@ -16,10 +17,7 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from . import AkamaiModule
 from .client import ApiClient
-from .logging import get_logger
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
-
-logger = get_logger()
 
 
 class AkamaiWAFLogsConnectorConfiguration(DefaultConnectorConfiguration):
@@ -104,30 +102,55 @@ class AkamaiWAFLogsConnector(Connector):
         return new_attack_section
 
     @staticmethod
-    def extract_headers(headers: str) -> dict[str, Any]:
+    def _extract_headers_with_diagnostics(headers: Any) -> tuple[dict[str, Any], dict[str, int]]:
         result = {}
-        for item in urllib.parse.unquote(headers).strip().split("\n"):
-            header_key, header_value = map(str.strip, item.strip().split(":", maxsplit=1))
+        malformed_line_reasons: Counter[str] = Counter()
+
+        if not isinstance(headers, str):
+            malformed_line_reasons["invalid_type"] += 1
+            return result, dict(malformed_line_reasons)
+
+        for item in urllib.parse.unquote(headers).splitlines():
+            item = item.strip()
+            if not item:
+                continue
+
+            if ":" not in item:
+                malformed_line_reasons["missing_separator"] += 1
+                continue
+
+            header_key, header_value = map(str.strip, item.split(":", maxsplit=1))
+            if not header_key:
+                malformed_line_reasons["empty_key"] += 1
+                continue
+
             result[header_key] = header_value
 
+        return result, dict(malformed_line_reasons)
+
+    @staticmethod
+    def extract_headers(headers: str) -> dict[str, Any]:
+        result, _ = AkamaiWAFLogsConnector._extract_headers_with_diagnostics(headers)
         return result
 
-    @classmethod
-    def process_event(cls, event: dict[str, Any]) -> None:
+    def process_event(self, event: dict[str, Any]) -> None:
         # Processing `attackData` section
-        new_attack_section = cls.extract_attack_data(event)
+        new_attack_section = self.extract_attack_data(event)
 
         # Processing `httpMessage` section
-        request_headers = (
-            cls.extract_headers(event["httpMessage"]["requestHeaders"])
-            if event.get("httpMessage", {}).get("requestHeaders")
-            else None
-        )
-        response_headers = (
-            cls.extract_headers(event["httpMessage"]["responseHeaders"])
-            if event.get("httpMessage", {}).get("responseHeaders")
-            else None
-        )
+        request_headers = None
+        request_malformed = {}
+        if "requestHeaders" in event.get("httpMessage", {}):
+            request_headers, request_malformed = self._extract_headers_with_diagnostics(
+                event.get("httpMessage", {}).get("requestHeaders")
+            )
+
+        response_headers = None
+        response_malformed = {}
+        if "responseHeaders" in event.get("httpMessage", {}):
+            response_headers, response_malformed = self._extract_headers_with_diagnostics(
+                event.get("httpMessage", {}).get("responseHeaders")
+            )
 
         event["attackData"] = new_attack_section
         if "requestHeaders" in event.get("httpMessage", {}):
@@ -135,6 +158,20 @@ class AkamaiWAFLogsConnector(Connector):
 
         if "responseHeaders" in event.get("httpMessage", {}):
             event["httpMessage"]["responseHeaders"] = response_headers
+
+        ignored_request_lines = sum(request_malformed.values())
+        ignored_response_lines = sum(response_malformed.values())
+        if ignored_request_lines or ignored_response_lines:
+            self.log(
+                message=(
+                    "Ignored malformed HTTP header lines while processing Akamai event "
+                    f"request_header_lines_ignored={ignored_request_lines} "
+                    f"response_header_lines_ignored={ignored_response_lines} "
+                    f"request_malformed_reasons={request_malformed} "
+                    f"response_malformed_reasons={response_malformed}"
+                ),
+                level="warning",
+            )
 
     def __fetch_next_events(self, from_date: int) -> Generator[list, None, None]:
         url = f"{self.module.configuration.base_url}/siem/v1/configs/{self.configuration.config_id}"
@@ -221,17 +258,20 @@ class AkamaiWAFLogsConnector(Connector):
 
             try:
                 raw = response.json()
-                logger.error(
-                    message,
-                    client_ip=raw.get("clientIp"),
-                    detail=raw.get("detail"),
-                    instance=raw.get("instance"),
-                    method=raw.get("method"),
-                    request_id=raw.get("requestId"),
-                    request_time=raw.get("requestTime"),
-                    server_ip=raw.get("serverIp"),
-                    title=raw.get("title"),
-                    type=raw.get("type"),
+                self.log(
+                    message=(
+                        f"{message} "
+                        f"client_ip={raw.get('clientIp')} "
+                        f"detail={raw.get('detail')} "
+                        f"instance={raw.get('instance')} "
+                        f"method={raw.get('method')} "
+                        f"request_id={raw.get('requestId')} "
+                        f"request_time={raw.get('requestTime')} "
+                        f"server_ip={raw.get('serverIp')} "
+                        f"title={raw.get('title')} "
+                        f"type={raw.get('type')}"
+                    ),
+                    level="error",
                 )
 
             except Exception:

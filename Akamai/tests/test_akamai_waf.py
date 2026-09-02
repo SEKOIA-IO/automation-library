@@ -166,6 +166,80 @@ def test_extract_attack_data(trigger, raw_event):
     }
 
 
+def test_process_event_ignores_malformed_headers(trigger, raw_event):
+    event = raw_event.copy()
+    event["httpMessage"] = raw_event["httpMessage"].copy()
+    event["httpMessage"]["responseHeaders"] = (
+        "Content-Type%3A%20application%2Fjson%0A"
+        "malformed-header-line-without-separator%0A"
+        "Server%3A%20AkamaiGHost"
+    )
+
+    trigger.process_event(event)
+
+    assert event["httpMessage"]["responseHeaders"] == {
+        "Content-Type": "application/json",
+        "Server": "AkamaiGHost",
+    }
+
+
+@pytest.mark.parametrize(
+    "encoded_headers,expected_headers",
+    [
+        (
+            "X-Test%3A%201%0Ajust-text-without-colon%0AAnother-Test%3A%202",
+            {"X-Test": "1", "Another-Test": "2"},
+        ),
+        (
+            "X-Ok%3A%20ok%0A%3Avalue-with-empty-key%0AX-Other%3A%20other",
+            {"X-Ok": "ok", "X-Other": "other"},
+        ),
+        (
+            "\n\r\nX-One%3A%201\n\nX-Two%3A%202\r\n",
+            {"X-One": "1", "X-Two": "2"},
+        ),
+    ],
+)
+def test_extract_headers_handles_multiple_malformed_line_patterns(trigger, encoded_headers, expected_headers):
+    assert trigger.extract_headers(encoded_headers) == expected_headers
+
+
+def test_process_event_logs_malformed_header_nature_without_raw_content(trigger, raw_event):
+    event = raw_event.copy()
+    event["httpMessage"] = raw_event["httpMessage"].copy()
+    event["httpMessage"]["requestHeaders"] = "Auth%3A%20token%0Amalformed-sensitive-line-user%3Dalice"
+    event["httpMessage"]["responseHeaders"] = "%3Ano-key%0AContent-Type%3A%20application%2Fjson"
+
+    trigger.process_event(event)
+
+    trigger.log.assert_called_once()
+    _, kwargs = trigger.log.call_args
+
+    assert kwargs["level"] == "warning"
+    message = kwargs["message"]
+    assert "request_header_lines_ignored=1" in message
+    assert "response_header_lines_ignored=1" in message
+    assert "request_malformed_reasons={'missing_separator': 1}" in message
+    assert "response_malformed_reasons={'empty_key': 1}" in message
+    assert "malformed-sensitive-line-user=alice" not in message
+
+
+def test_process_event_logs_invalid_header_type(trigger, raw_event):
+    event = raw_event.copy()
+    event["httpMessage"] = raw_event["httpMessage"].copy()
+    event["httpMessage"]["requestHeaders"] = ["not-a-string"]
+
+    trigger.process_event(event)
+
+    trigger.log.assert_called_once()
+    _, kwargs = trigger.log.call_args
+
+    assert kwargs["level"] == "warning"
+    message = kwargs["message"]
+    assert "request_header_lines_ignored=1" in message
+    assert "request_malformed_reasons={'invalid_type': 1}" in message
+
+
 def test_fetch_events(trigger, response_1, response_2):
     with requests_mock.Mocker() as mock_requests:
         mock_requests.get(
