@@ -18,7 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Standardize connector logging on `self.log(message=..., level=...)` with concise single-line `key=value` messages and explicit request-id fields by source
-- Add privacy-safe and sampled diagnostics for high-frequency warning/debug paths to reduce log noise while preserving troubleshooting context
+- Add sampled diagnostics with raw event/context payloads for high-frequency warning/debug paths to improve troubleshooting while reducing log noise
+- Cap serialized raw log payload fields with `AKAMAI_RAW_LOG_MAX_LENGTH` to avoid oversized log records
 - Rename and reorganize test files to align with source modules (`connector_akamai_waf`, `metrics`, `models`)
 - Refactor repeated test scenarios with `pytest.mark.parametrize` to reduce duplication and improve maintainability
 - Align `pyproject.toml` dependency declarations with directly imported runtime packages and regenerate `poetry.lock`

@@ -210,7 +210,7 @@ def test_extract_headers_handles_multiple_malformed_line_patterns(trigger, encod
     assert trigger.extract_headers(encoded_headers) == expected_headers
 
 
-def test_process_event_logs_malformed_header_nature_without_raw_content(trigger, raw_event):
+def test_process_event_logs_malformed_header_nature_with_raw_content(trigger, raw_event):
     event = raw_event.copy()
     event["httpMessage"] = raw_event["httpMessage"].copy()
     event["httpMessage"]["requestHeaders"] = "Auth%3A%20token%0Amalformed-sensitive-line-user%3Dalice"
@@ -227,7 +227,10 @@ def test_process_event_logs_malformed_header_nature_without_raw_content(trigger,
     assert "response_header_lines_ignored=1" in message
     assert "request_malformed_reasons={'missing_separator': 1}" in message
     assert "response_malformed_reasons={'empty_key': 1}" in message
-    assert "malformed-sensitive-line-user=alice" not in message
+    assert "raw_request_headers=" in message
+    assert "malformed-sensitive-line-user%3Dalice" in message
+    assert "raw_response_headers=" in message
+    assert "raw_event=" in message
 
 
 def test_process_event_logs_invalid_header_type(trigger, raw_event):
@@ -259,6 +262,7 @@ def test_process_event_handles_non_dict_http_message(trigger, raw_event):
         "Skipped httpMessage normalization because httpMessage is not a mapping" in call.kwargs.get("message", "")
         for call in trigger.log.call_args_list
     )
+    assert any("raw_http_message=null" in call.kwargs.get("message", "") for call in trigger.log.call_args_list)
 
 
 def test_fetch_events(trigger, response_1, response_2):
@@ -588,10 +592,12 @@ def test_fetch_events_skips_malformed_json_lines(trigger, response_2):
         "Skipped malformed JSON line in Akamai stream" in call.kwargs.get("message", "")
         for call in trigger.log.call_args_list
     )
+    assert any("raw_line=not-a-json-line" in call.kwargs.get("message", "") for call in trigger.log.call_args_list)
     assert any(
         "Skipped non-object JSON line in Akamai stream" in call.kwargs.get("message", "")
         for call in trigger.log.call_args_list
     )
+    assert any("raw_item=[]" in call.kwargs.get("message", "") for call in trigger.log.call_args_list)
 
 
 def test_next_batch_forwards_event_without_request_id(trigger, response_2):
@@ -694,6 +700,16 @@ def test_build_fallback_event_dedup_key(event, expect_none):
         assert dedup_key.startswith("fallback:")
 
 
+def test_serialize_raw_log_value_truncates_oversized_payload(trigger):
+    trigger.raw_log_max_length = 10
+
+    serialized = trigger._serialize_raw_log_value({"payload": "x" * 100})
+
+    assert serialized.startswith('{"payload"')
+    assert "[truncated_raw_log chars=" in serialized
+    assert "max_chars=10" in serialized
+
+
 def test_fetch_events_logs_exception_when_process_event_fails(trigger, response_2):
     stream = (
         b'{"type": "akamai_siem", "attackData": {}, "httpMessage": {"requestId": 99, "start": "1743505200"}}\n'
@@ -720,6 +736,7 @@ def test_fetch_events_logs_exception_when_process_event_fails(trigger, response_
     assert chunks == []
     trigger.log_exception.assert_called_once()
     assert "Failed to process Akamai event" in trigger.log_exception.call_args.kwargs["message"]
+    assert "raw_event={" in trigger.log_exception.call_args.kwargs["message"]
 
 
 def test_fetch_events_skips_pagination_context_without_offset(trigger, response_2):
@@ -778,6 +795,7 @@ def test_filter_processed_events_forwards_when_fallback_dedup_key_generation_fai
     assert any(
         "fallback dedup key generation failed" in call.kwargs.get("message", "") for call in trigger.log.call_args_list
     )
+    assert any("raw_event=" in call.kwargs.get("message", "") for call in trigger.log.call_args_list)
 
 
 def test_next_batch_deduplicates_missing_request_id_when_timestamp_is_invalid(trigger, response_2):

@@ -53,6 +53,7 @@ class AkamaiWAFLogsConnector(Connector):
             1, min(1000, int(os.environ.get("AKAMAI_CHUNK_SIZE", 1_000)))
         )  # number of events to accumulate before yielding to limit memory usage
         self.log_sample_every = max(2, int(os.environ.get("AKAMAI_LOG_SAMPLE_EVERY", 100)))
+        self.raw_log_max_length = max(512, int(os.environ.get("AKAMAI_RAW_LOG_MAX_LENGTH", 16_000)))
         self._sampled_log_counts: Counter[str] = Counter()
 
     def _should_emit_sampled_log(self, key: str, every: int | None = None) -> tuple[bool, int, int]:
@@ -175,6 +176,21 @@ class AkamaiWAFLogsConnector(Connector):
             return f"{text[:max_length]}..."
         return text
 
+    def _serialize_raw_log_value(self, value: Any) -> str:
+        """Serialize raw value for diagnostics with a configurable size cap."""
+        try:
+            serialized = orjson.dumps(value).decode("utf-8")
+        except Exception:
+            serialized = str(value)
+
+        if len(serialized) > self.raw_log_max_length:
+            return (
+                f"{serialized[:self.raw_log_max_length]}"
+                f"...[truncated_raw_log chars={len(serialized)} max_chars={self.raw_log_max_length}]"
+            )
+
+        return serialized
+
     @staticmethod
     def _get_event_request_id(event: dict[str, Any]) -> Any:
         """Extract requestId from an event HTTP message."""
@@ -222,7 +238,8 @@ class AkamaiWAFLogsConnector(Connector):
                 key="invalid_http_message_type",
                 message=(
                     "Skipped httpMessage normalization because httpMessage is not a mapping "
-                    f"http_message_type={type(raw_http_message).__name__}"
+                    f"http_message_type={type(raw_http_message).__name__} "
+                    f"raw_http_message={self._serialize_raw_log_value(raw_http_message)}"
                 ),
                 level="warning",
             )
@@ -230,6 +247,9 @@ class AkamaiWAFLogsConnector(Connector):
             event["httpMessage"] = http_message
 
         # Processing `httpMessage` section
+        raw_request_headers_value = http_message.get("requestHeaders")
+        raw_response_headers_value = http_message.get("responseHeaders")
+
         request_headers = None
         request_malformed: dict[str, int] = {}
         if "requestHeaders" in http_message:
@@ -267,7 +287,10 @@ class AkamaiWAFLogsConnector(Connector):
                     f"request_header_lines_ignored={ignored_request_lines} "
                     f"response_header_lines_ignored={ignored_response_lines} "
                     f"request_malformed_reasons={request_malformed_summary} "
-                    f"response_malformed_reasons={response_malformed_summary}"
+                    f"response_malformed_reasons={response_malformed_summary} "
+                    f"raw_request_headers={self._serialize_raw_log_value(raw_request_headers_value)} "
+                    f"raw_response_headers={self._serialize_raw_log_value(raw_response_headers_value)} "
+                    f"raw_event={self._serialize_raw_log_value(event)}"
                 ),
                 level="warning",
             )
@@ -300,7 +323,10 @@ class AkamaiWAFLogsConnector(Connector):
                     except Exception:
                         self._log_sampled(
                             key="malformed_json_line",
-                            message=("Skipped malformed JSON line in Akamai stream " f"line_size={len(line)}"),
+                            message=(
+                                "Skipped malformed JSON line in Akamai stream "
+                                f"line_size={len(line)} raw_line={line.decode('utf-8', errors='backslashreplace')}"
+                            ),
                             level="warning",
                         )
                         continue
@@ -310,7 +336,9 @@ class AkamaiWAFLogsConnector(Connector):
                             key="non_object_json_line",
                             message=(
                                 "Skipped non-object JSON line in Akamai stream "
-                                f"line_size={len(line)} json_type={type(item).__name__}"
+                                f"line_size={len(line)} json_type={type(item).__name__} "
+                                f"raw_line={line.decode('utf-8', errors='backslashreplace')} "
+                                f"raw_item={self._serialize_raw_log_value(item)}"
                             ),
                             level="warning",
                         )
@@ -325,7 +353,8 @@ class AkamaiWAFLogsConnector(Connector):
                                 error=error,
                                 message=(
                                     "Failed to process Akamai event "
-                                    f"event_request_id={self._sanitize_log_value(self._get_event_request_id(item))}"
+                                    f"event_request_id={self._sanitize_log_value(self._get_event_request_id(item))} "
+                                    f"raw_event={self._serialize_raw_log_value(item)}"
                                 ),
                             )
                             continue
@@ -346,7 +375,8 @@ class AkamaiWAFLogsConnector(Connector):
                                 key="pagination_context_without_offset",
                                 message=(
                                     "Skipped pagination context without offset "
-                                    f"context_keys={self._sanitize_log_value(list(item.keys()))}"
+                                    f"context_keys={self._sanitize_log_value(list(item.keys()))} "
+                                    f"raw_context={self._serialize_raw_log_value(item)}"
                                 ),
                                 level="warning",
                             )
@@ -421,7 +451,8 @@ class AkamaiWAFLogsConnector(Connector):
                         key="invalid_or_missing_timestamps",
                         message=(
                             "Skipped checkpoint update because event timestamps are missing or invalid "
-                            f"events_count={len(next_events)}"
+                            f"events_count={len(next_events)} "
+                            f"raw_events={self._serialize_raw_log_value(next_events)}"
                         ),
                         level="warning",
                     )
@@ -528,7 +559,8 @@ class AkamaiWAFLogsConnector(Connector):
                         key="missing_request_id_no_fallback_dedup_key",
                         message=(
                             "Forwarded event without deduplication because requestId is missing "
-                            "and fallback dedup key generation failed"
+                            "and fallback dedup key generation failed "
+                            f"raw_event={self._serialize_raw_log_value(event)}"
                         ),
                         level="warning",
                     )
@@ -543,7 +575,8 @@ class AkamaiWAFLogsConnector(Connector):
                     key="missing_request_id",
                     message=(
                         "Forwarded event with fallback deduplication because requestId is missing "
-                        "dedup_marker=payload_hash"
+                        "dedup_marker=payload_hash "
+                        f"raw_event={self._serialize_raw_log_value(event)}"
                     ),
                     level="warning",
                 )
