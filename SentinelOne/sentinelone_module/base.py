@@ -1,7 +1,7 @@
 from functools import cached_property
 
 from management.mgmtsdk_v2_1.mgmt import Management
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
 from sekoia_automation.module import Module
 
@@ -10,7 +10,9 @@ from sentinelone_module.helpers import clean_hostname
 
 class SentinelOneConfiguration(BaseModel):
     hostname: str = Field(..., description="The url to the SentinelOne instance")
-    api_token: str = Field(secret=True, description="The API token to authenticate the requests")
+    api_token: str = Field(
+        ..., description="The API token to authenticate the requests", json_schema_extra={"secret": True}
+    )
 
 
 class SentinelOneModule(Module):

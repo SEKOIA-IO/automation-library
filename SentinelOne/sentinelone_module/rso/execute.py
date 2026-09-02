@@ -1,7 +1,7 @@
 import enum
 
 from management.mgmtsdk_v2.exceptions import raise_from_response
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 from tenacity import Retrying, stop_after_delay, wait_exponential
 
 from sentinelone_module.base import SentinelOneAction
@@ -15,10 +15,10 @@ from sentinelone_module.rso import RemoteScriptsFilters
 
 
 class ExecuteRemoteScriptSettings(BaseModel):
-    inputParams: str | None
-    password: str | None
-    outputDirectory: str | None
-    scriptRuntimeTimeoutSeconds: int | None
+    inputParams: str | None = None
+    password: str | None = None
+    outputDirectory: str | None = None
+    scriptRuntimeTimeoutSeconds: int | None = None
 
 
 class OutputDestination(str, enum.Enum):
@@ -28,7 +28,7 @@ class OutputDestination(str, enum.Enum):
 
 
 class ExecuteRemoteScriptArguments(BaseModel):
-    filters: RemoteScriptsFilters | None
+    filters: RemoteScriptsFilters | None = None
     settings: ExecuteRemoteScriptSettings
     script_id: str
     output_destination: OutputDestination
@@ -36,7 +36,7 @@ class ExecuteRemoteScriptArguments(BaseModel):
     timeout: int
 
     def get_args(self):
-        args = self.settings.dict(exclude_unset=True, exclude_none=True)
+        args = self.settings.model_dump(exclude_unset=True, exclude_none=True)
         args.update(
             {
                 "scriptId": self.script_id,
@@ -59,13 +59,13 @@ class ExecuteRemoteScriptArguments(BaseModel):
 
 
 class ExecuteRemoteScriptResultFile(BaseModel):
-    download_url: str | None
+    download_url: str | None = None
 
 
 class ExecuteRemoteScriptResult(BaseModel):
     status: str
     status_reason: str
-    result_file: ExecuteRemoteScriptResultFile | None
+    result_file: ExecuteRemoteScriptResultFile | None = None
 
 
 class ExecuteRemoteScriptAction(SentinelOneAction):
