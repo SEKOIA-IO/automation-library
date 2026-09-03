@@ -1,11 +1,15 @@
 import json
+from copy import deepcopy
+from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+import requests
 import requests_mock
 
 from sekoiaio.triggers.cases import (
     CaseAlertsUpdatedTrigger,
+    CaseCommentCreatedTrigger,
     CaseCreatedTrigger,
     CaseUpdatedTrigger,
     SecurityCasesTrigger,
@@ -72,6 +76,17 @@ def case_updated_trigger(module_configuration, symphony_storage):
 @pytest.fixture
 def case_alerts_updated_trigger(module_configuration, symphony_storage):
     trigger = CaseAlertsUpdatedTrigger()
+    trigger.configuration = {}
+    trigger._data_path = symphony_storage
+    trigger.module.configuration = module_configuration
+    trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+
+    yield trigger
+
+
+@pytest.fixture
+def case_comment_created_trigger(module_configuration, symphony_storage):
+    trigger = CaseCommentCreatedTrigger()
     trigger.configuration = {}
     trigger._data_path = symphony_storage
     trigger.module.configuration = module_configuration
@@ -350,3 +365,273 @@ def test_case_combined_filters(
         }
         case_updated_trigger.handle_event(samplenotif_case_updated)
         assert case_updated_trigger.send_event.call_count == 4
+
+
+def test_single_event_triggers_case_comments_added(
+    module_configuration,
+    symphony_storage,
+    sample_siccaseapi,
+    samplenotif_case_comment_created,
+    sample_case_notifications,
+):
+    trigger = CaseCommentCreatedTrigger()
+    trigger.configuration = {}
+    trigger._data_path = symphony_storage
+    trigger.module.configuration = module_configuration
+    trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+    trigger.send_event = MagicMock()
+
+    case_uuid = samplenotif_case_comment_created.get("attributes").get("case_uuid")
+    comment_uuid = samplenotif_case_comment_created.get("attributes").get("uuid")
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"http://fake.url/api/v1/sic/cases/{case_uuid}", json=sample_siccaseapi)
+        mock.get(
+            f"http://fake.url/api/v1/sic/cases/{case_uuid}/comments/{comment_uuid}",
+            json={
+                "uuid": comment_uuid,
+                "content": "a new comment",
+                "created_at": "2025-03-17T15:06:04.858932+00:00",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
+                "created_by_type": "user",
+                "updated_at": "2025-03-17T15:06:04.858932+00:00",
+            },
+        )
+
+        trigger.handle_event(samplenotif_case_comment_created)
+        trigger.send_event.assert_called_once()
+
+        for notification in sample_case_notifications:
+            if notification != samplenotif_case_comment_created:
+                trigger.handle_event(notification)
+
+        trigger.send_event.assert_called_once()
+
+
+def test_invalid_events_dont_trigger_case_comments_added(
+    module_configuration,
+    symphony_storage,
+    sample_siccaseapi,
+):
+    trigger = CaseCommentCreatedTrigger()
+    trigger.configuration = {}
+    trigger._data_path = symphony_storage
+    trigger.module.configuration = module_configuration
+    trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+    trigger.send_event = MagicMock()
+    trigger.log = Mock()
+
+    invalid_notification: dict[str, Any] = {
+        "metadata": {
+            "version": 2,
+            "community_uuid": "6ffbe55b-d30a-4dc4-bc52-a213dce0af29",
+            "uuid": "94ef1f9d-ebad-42ba-98d7-2be3447c6bd0",
+            "created_at": "2019-09-06T07:07:54.830677+00:00",
+        },
+        "type": "case-comment",
+        "action": "created",
+        "attributes": {
+            "content": "comment",
+            "created_by": "c110d686-0b45-4ae7-b917-f15486d0f8c7",
+            "created_by_type": "user",
+            "case_short_id": "CAmDUb2Anct1e",
+        },
+    }
+
+    trigger.handle_event(invalid_notification)
+    trigger.send_event.assert_not_called()
+
+    invalid_notification["attributes"]["case_uuid"] = "f014aac5-2d38-49f6-a47f-ff602c734d51"
+    trigger.handle_event(invalid_notification)
+    trigger.send_event.assert_not_called()
+
+    with requests_mock.Mocker() as mock, patch("tenacity.nap.time"):
+        invalid_notification["attributes"]["uuid"] = "ed44b802-f2ec-4cbc-bcdb-a9e31a87bcf9"
+
+        mock.get("http://fake.url/api/v1/sic/cases/f014aac5-2d38-49f6-a47f-ff602c734d51", json={}, status_code=404)
+        trigger.log.assert_not_called()
+        trigger.handle_event(invalid_notification)
+        trigger.log.assert_called()
+        trigger.log.reset_mock()
+
+        mock.get(
+            "http://fake.url/api/v1/sic/cases/f014aac5-2d38-49f6-a47f-ff602c734d51",
+            json=sample_siccaseapi,
+        )
+        mock.get(
+            "http://fake.url/api/v1/sic/cases/f014aac5-2d38-49f6-a47f-ff602c734d51/comments/ed44b802-f2ec-4cbc-bcdb-a9e31a87bcf9",
+            json={},
+            status_code=404,
+        )
+        trigger.log.assert_not_called()
+        trigger.handle_event(invalid_notification)
+        trigger.log.assert_called()
+        trigger.log.reset_mock()
+
+        mock.get(
+            "http://fake.url/api/v1/sic/cases/f014aac5-2d38-49f6-a47f-ff602c734d51/comments/ed44b802-f2ec-4cbc-bcdb-a9e31a87bcf9",
+            text="not json",
+            status_code=200,
+        )
+        trigger.handle_event(invalid_notification)
+        trigger.log.assert_called()
+
+
+@pytest.mark.parametrize(
+    "trigger_fixture,message_fixture",
+    [
+        ("case_created_trigger", "samplenotif_case_created"),
+        ("case_alerts_updated_trigger", "samplenotif_case_has_updated_alerts"),
+        ("case_comment_created_trigger", "samplenotif_case_comment_created"),
+    ],
+)
+def test_triggers_ignored_by_wrong_sub_event(request, trigger_fixture, message_fixture):
+    trigger = request.getfixturevalue(trigger_fixture)
+    message = deepcopy(request.getfixturevalue(message_fixture))
+    trigger.send_event = MagicMock()
+    message["action"] = "updated"
+
+    trigger.handle_event(message)
+
+    trigger.send_event.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "trigger_fixture,message_fixture,uuid_key",
+    [
+        ("case_created_trigger", "samplenotif_case_created", "uuid"),
+        ("case_updated_trigger", "samplenotif_case_updated", "uuid"),
+        ("case_alerts_updated_trigger", "samplenotif_case_has_updated_alerts", "uuid"),
+        ("case_comment_created_trigger", "samplenotif_case_comment_created", "case_uuid"),
+    ],
+)
+def test_triggers_ignored_when_case_uuid_missing(request, trigger_fixture, message_fixture, uuid_key):
+    trigger = request.getfixturevalue(trigger_fixture)
+    message = deepcopy(request.getfixturevalue(message_fixture))
+    trigger.send_event = MagicMock()
+    message["attributes"][uuid_key] = ""
+
+    trigger.handle_event(message)
+
+    trigger.send_event.assert_not_called()
+
+
+def test_case_comment_created_trigger_filtered_out(
+    case_comment_created_trigger,
+    samplenotif_case_comment_created,
+    sample_siccaseapi,
+):
+    case_comment_created_trigger.send_event = MagicMock()
+    case_comment_created_trigger.configuration = {"case_uuids_filter": ["does-not-match"]}
+
+    case_uuid = samplenotif_case_comment_created.get("attributes").get("case_uuid")
+    comment_uuid = samplenotif_case_comment_created.get("attributes").get("uuid")
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"http://fake.url/api/v1/sic/cases/{case_uuid}", json=sample_siccaseapi)
+        mock.get(
+            f"http://fake.url/api/v1/sic/cases/{case_uuid}/comments/{comment_uuid}",
+            json={
+                "uuid": comment_uuid,
+                "content": "a new comment",
+                "created_at": "2025-03-17T15:06:04.858932+00:00",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
+                "created_by_type": "user",
+            },
+        )
+
+        case_comment_created_trigger.handle_event(samplenotif_case_comment_created)
+
+    case_comment_created_trigger.send_event.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "method_name,url_path,args,expected_exception,use_wrapped",
+    [
+        (
+            "_retrieve_case_from_caseapi",
+            "api/v1/sic/cases/{case_uuid}",
+            lambda case_uuid: (case_uuid,),
+            requests.HTTPError,
+            False,
+        ),
+        (
+            "_retrieve_comment_from_caseapi",
+            "api/v1/sic/cases/{case_uuid}/comments/{comment_uuid}",
+            lambda case_uuid: (case_uuid, "ed44b802-f2ec-4cbc-bcdb-a9e31a87bcf9"),
+            requests.HTTPError,
+            False,
+        ),
+        (
+            "_retrieve_case_from_caseapi",
+            "api/v1/sic/cases/{case_uuid}",
+            lambda case_uuid: (case_uuid,),
+            Exception,
+            True,
+        ),
+        (
+            "_retrieve_comment_from_caseapi",
+            "api/v1/sic/cases/{case_uuid}/comments/{comment_uuid}",
+            lambda case_uuid: (case_uuid, "ed44b802-f2ec-4cbc-bcdb-a9e31a87bcf9"),
+            Exception,
+            True,
+        ),
+    ],
+)
+def test_retrieve_case_and_comment_errors_are_logged(
+    case_trigger,
+    sample_siccaseapi,
+    method_name,
+    url_path,
+    args,
+    expected_exception,
+    use_wrapped,
+):
+    case_uuid = sample_siccaseapi.get("uuid")
+    call_args = args(case_uuid)
+    comment_uuid = call_args[1] if len(call_args) > 1 else None
+    api_url = f"http://fake.url/{url_path.format(case_uuid=case_uuid, comment_uuid=comment_uuid)}"
+    payload = "not json" if use_wrapped else "bad response"
+    status_code = 200 if use_wrapped else 500
+
+    with requests_mock.Mocker() as mock:
+        mock.get(api_url, text=payload, status_code=status_code)
+
+        method = getattr(case_trigger, method_name)
+        with pytest.raises(expected_exception):
+            if use_wrapped:
+                if method_name == "_retrieve_case_from_caseapi":
+                    wrapped_case_method = getattr(SecurityCasesTrigger._retrieve_case_from_caseapi, "__wrapped__")
+                    wrapped_case_method(case_trigger, *call_args)
+                else:
+                    wrapped_comment_method = getattr(
+                        SecurityCasesTrigger._retrieve_comment_from_caseapi, "__wrapped__"
+                    )
+                    wrapped_comment_method(case_trigger, *call_args)
+            else:
+                with patch("tenacity.nap.time"):
+                    method(*call_args)
+
+        case_trigger.log.assert_called()
+
+
+@pytest.mark.parametrize(
+    "trigger_fixture,message_fixture",
+    [
+        ("case_created_trigger", "samplenotif_case_created"),
+        ("case_updated_trigger", "samplenotif_case_updated"),
+        ("case_alerts_updated_trigger", "samplenotif_case_has_updated_alerts"),
+        ("case_comment_created_trigger", "samplenotif_case_comment_created"),
+    ],
+)
+def test_triggers_log_exception_when_case_api_fails(request, trigger_fixture, message_fixture):
+    trigger = request.getfixturevalue(trigger_fixture)
+    message = request.getfixturevalue(message_fixture)
+    trigger.send_event = MagicMock()
+    trigger.log_exception = Mock()
+    trigger._retrieve_case_from_caseapi = Mock(side_effect=Exception("boom"))
+
+    trigger.handle_event(message)
+
+    trigger.send_event.assert_not_called()
+    trigger.log_exception.assert_called_once()

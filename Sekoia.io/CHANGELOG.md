@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-28 - 2.76.3
+
+### Fixed
+
+- Do not include community UUIDs in request for `Execute a Query` action to avoid permission issues
+
+## 2026-08-27 - 2.76.2
+
+### Fixed
+
+- Apply gevent monkey-patching before any import pulls in `ssl` (via `requests`/`urllib3`), and restrict it to trigger executions. Patching an already-loaded `ssl` module caused `RecursionError` on HTTPS calls.
+
+## 2026-08-27 - 2.76.1
+
+### Fixed
+
+- `Search Alerts`, `Search Cases` and `Get Alert` actions: only forward the query parameters the user actually set. The playbook node populates every argument declared in the manifest, including empty strings for untouched text filters and `False` for untouched booleans; the API treats any parameter present in the query string as an active filter (e.g. `match[title]=` matches nothing, `is_assigned_to_case=false` excludes assigned alerts), so these unset values made the searches return no result. They are now dropped, and kept booleans are normalized to lowercase `true` instead of Python's `True`.
+
+## 2026-08-21 - 2.76.0
+
+### Added
+
+- Add a new `Case Comment Created` trigger for Operation Center cases, for enabling playbooks to react automatically when a comment is posted on a case (for example, forwarding analyst notes to third-party ticketing/case systems)
+
+### Changed
+
+- Improve case trigger test maintainability by refactoring repeated scenarios with `pytest.mark.parametrize`
+- Significantly reduce case trigger test execution time while preserving behavior and assertions
+- Refresh dependency lockfile (`poetry.lock`) with upgraded compatible package versions
+
+### Fixed
+
+- Increase reliability of case trigger behavior with additional tests covering edge cases (invalid sub-events, missing identifiers, API failures, and filter rejections)
+- Reach 100% test coverage on `sekoiaio/triggers/cases.py`
+- Improve case trigger resilience and troubleshooting with explicit API timeouts and richer error logs (request context included)
+
 ## 2026-08-13 - 2.75.3
 
 ### Added

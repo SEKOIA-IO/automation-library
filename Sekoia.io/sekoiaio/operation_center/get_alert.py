@@ -3,9 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
-from sekoia_automation.action import GenericAPIAction
-
 from sekoiaio.operation_center.constants import base_url
+from sekoiaio.utils import FilteredQueryParametersAction
 
 
 class GetAlertArguments(BaseModel):
@@ -34,7 +33,7 @@ class GetAlertArguments(BaseModel):
         return self
 
 
-class GetAlert(GenericAPIAction):
+class GetAlert(FilteredQueryParametersAction):
     verb = "get"
     endpoint = base_url + "alerts/{uuid}"
     query_parameters = ["stix", "cases"]
