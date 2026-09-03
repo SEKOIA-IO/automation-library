@@ -1232,17 +1232,42 @@ def samplenotif_case_has_updated_alerts():
 
 
 @pytest.fixture
+def samplenotif_case_comment_created():
+    yield {
+        "metadata": {
+            "version": 2,
+            "uuid": "8f7d31c8-0fc6-4b0d-95c4-07e6bc9864d6",
+            "created_at": "2019-09-06T07:32:03.256679+00:00",
+            "community_uuid": "55890e1b-b693-4c5f-b747-118f88afc30a",
+        },
+        "type": "case-comment",
+        "action": "created",
+        "attributes": {
+            "uuid": "ed44b802-f2ec-4cbc-bcdb-a9e31a87bcf9",
+            "case_uuid": "f014aac5-2d38-49f6-a47f-ff602c734d51",
+            "case_short_id": "CAmDUb2Anct1e",
+            "content": "A new analyst comment",
+            "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
+            "created_by_type": "user",
+            "created_at": "2025-03-17T15:06:04.858932+00:00",
+        },
+    }
+
+
+@pytest.fixture
 def sample_case_notifications(
     samplenotif_case_created,
     samplenotif_case_updated,
     samplenotif_case_has_new_alert,
     samplenotif_case_has_updated_alerts,
+    samplenotif_case_comment_created,
 ):
     yield [
         samplenotif_case_created,
         samplenotif_case_updated,
         samplenotif_case_has_new_alert,
         samplenotif_case_has_updated_alerts,
+        samplenotif_case_comment_created,
     ]
 
 
