@@ -72,11 +72,13 @@ class ExecuteAQuery(BaseSolAction):
         stop=stop_after_attempt(10),
         retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
     )
-    def trigger_query_execution(self, query_uuid: UUID, query_definition: str, query_parameters: dict | None) -> str:
+    def trigger_query_execution(
+        self, query_uuid: UUID, query_definition: dict[str, Any], query_parameters: dict | None
+    ) -> str:
         """Trigger the asynchronous execution of a SOL query and return the run UUID.
 
         :param query_uuid: UUID of the query to execute
-        :param query_definition: SOL query definition string
+        :param query_definition: SOL query definition object
         :param query_parameters: Optional dict of named parameters passed to the query
         :return: UUID of the created query run
         """
@@ -345,6 +347,12 @@ class ExecuteAQuery(BaseSolAction):
             query = self.get_query_by_uuid(arguments.query_uuid)
         else:
             query = self.get_query_by_name(arguments.query_name)
+
+        # Remove `community_uuids` from further request, as it contains all workspace communities.
+        # Without it, we will target the current community and avoid permissions error.
+        community_uuids = query.get("definition", {}).get("community_uuids")
+        if community_uuids:
+            del query["definition"]["community_uuids"]
 
         # Trigger the asynchronous query execution run
         run_uuid = self.trigger_query_execution(
