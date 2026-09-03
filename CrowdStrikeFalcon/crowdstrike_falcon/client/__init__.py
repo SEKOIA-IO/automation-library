@@ -41,6 +41,39 @@ class ApiClient(requests.Session):
     def get_url(self, endpoint: str) -> str:
         return urljoin(self._base_url, endpoint.lstrip("/"))
 
+    @staticmethod
+    def format_api_errors(content: Any) -> str | None:
+        """
+        Return, as a single message, the errors reported in the content of a response
+        """
+        if not isinstance(content, dict):
+            return None
+
+        errors = [error for error in content.get("errors") or [] if isinstance(error, dict)]
+        if not errors:
+            return None
+
+        return "\n".join([f"{error.get('code')}: {error.get('message')}" for error in errors])
+
+    def raise_for_status(self, response: requests.Response) -> None:
+        """
+        Raise an exception according to the status code, enriched with the errors
+        reported in the body of the response, when the API provides them
+        """
+        try:
+            response.raise_for_status()
+        except HTTPError as error:
+            try:
+                api_errors = self.format_api_errors(response.json())
+            except ValueError:
+                api_errors = None
+
+            if api_errors is None:
+                raise
+
+            msg = f"{error}. The API returns the following errors: \n{api_errors}"
+            raise HTTPError(msg, response=response) from error  # type: ignore[call-arg]
+
     def request_endpoint(
         self, method: str, endpoint: str, cursor_pagination: bool = False, **kwargs
     ) -> Generator[Any, None, None]:
@@ -75,15 +108,14 @@ class ApiClient(requests.Session):
             response = self.request(method=method, url=url, params=new_params, **kwargs)
 
             # raise exception according the status code
-            response.raise_for_status()
+            self.raise_for_status(response)
 
             content = response.json()
 
             # check for errors
-            errors = content.get("errors", [])
-            if errors and len(errors):
-                errors_str = "\n".join([f"{error['code']}: {error['message']}" for error in errors])
-                msg = f"The API returns the following errors: \n{errors_str}"
+            errors = self.format_api_errors(content)
+            if errors:
+                msg = f"The API returns the following errors: \n{errors}"
                 raise HTTPError(msg, response=response)  # type: ignore[call-arg]
             yield from content.get("resources") or []
 

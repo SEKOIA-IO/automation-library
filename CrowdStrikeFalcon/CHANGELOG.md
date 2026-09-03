@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-09-01 - 1.25.19
+## 2026-09-01 - 1.25.20
 
 ### Fixed
 
@@ -23,6 +23,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Crowdstrike Falcon Devices asset connector: host groups are resolved once per cycle
   instead of once per device, removing up to one API call per device (and the repeated
   403 warnings when the API client lacks the `Host groups: Read` scope).
+
+## 2026-07-27 - 1.25.19
+
+### Changed
+
+- Fetch the host group details of a batch of devices in a single request, instead of one request per device
+- Report only once per fetch cycle the failure to get the host group details, with the required API scope
+
+### Fixed
+
+- Report the errors returned by the CrowdStrike API when a request fails
 
 ## 2026-07-02 - 1.25.18
 

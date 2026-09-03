@@ -1,9 +1,12 @@
-import pytest
-import requests_mock
 from urllib.parse import unquote_plus
 
+import pytest
+import requests_mock
+
+from microsoft_outlook_modules import MicrosoftOutlookModule
 from microsoft_outlook_modules.action_base import GraphAPIException
 from microsoft_outlook_modules.action_search_messages import SearchMessagesAction
+from microsoft_outlook_modules.client import ApiClient
 
 
 def test_search_messages_by_internet_message_id(configured_action, get_message_1):
@@ -26,6 +29,44 @@ def test_search_messages_by_internet_message_id(configured_action, get_message_1
         decoded_query = unquote_plus(request.url.split("?", maxsplit=1)[1])
         assert "$filter=internetMessageId eq '<sample-message-id@example.com>'" in decoded_query
         assert "$top=5" in decoded_query
+
+
+def test_client_property_accepts_raw_string_client_secret():
+    module = MicrosoftOutlookModule()
+    module.configuration = {  # type: ignore[assignment]
+        "tenant_id": "test_tenant_id",
+        "client_id": "32747e7c-2eff-43ea-a9c7-e783b9d2f930",
+        "client_secret": "client_secret",
+    }
+
+    action = SearchMessagesAction(module)
+    assert isinstance(action.client, ApiClient)
+
+
+def test_read_client_secret_accepts_raw_string_value():
+    assert SearchMessagesAction._read_client_secret("client_secret") == "client_secret"
+
+
+def test_read_client_secret_accepts_secretstr_like_value():
+    class SecretLike:
+        def get_secret_value(self):
+            return "client_secret"
+
+    assert SearchMessagesAction._read_client_secret(SecretLike()) == "client_secret"
+
+
+def test_read_client_secret_rejects_non_string_secret_value():
+    class BadSecretLike:
+        def get_secret_value(self):
+            return 123
+
+    with pytest.raises(TypeError, match="Invalid client_secret type"):
+        SearchMessagesAction._read_client_secret(BadSecretLike())
+
+
+def test_read_client_secret_rejects_object_without_secret_getter():
+    with pytest.raises(TypeError, match="Invalid client_secret type"):
+        SearchMessagesAction._read_client_secret(object())
 
 
 def test_search_messages_by_network_message_id(configured_action, get_message_1):
@@ -120,8 +161,8 @@ def test_search_messages_by_network_message_id_fallback_on_empty_result(configur
         action = configured_action(SearchMessagesAction)
         result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
 
-        assert len(result["value"]) == 1
-        assert result["value"][0]["id"] == "graph-item-id-1"
+        assert len(result["messages"]) == 1
+        assert result["messages"][0]["message_id"] == "graph-item-id-1"
         assert len(mock.request_history) == 3
 
 
@@ -162,8 +203,28 @@ def test_search_messages_by_network_message_id_fallback_on_inefficient_filter(co
         action = configured_action(SearchMessagesAction)
         result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
 
-        assert len(result["value"]) == 1
-        assert result["value"][0]["id"] == "graph-item-id-2"
+        assert len(result["messages"]) == 1
+        assert result["messages"][0]["message_id"] == "graph-item-id-2"
+
+
+def test_search_messages_omits_message_id_when_graph_id_is_not_string(configured_action):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages",
+            json={"value": [{"id": None, "subject": "test-subject"}]},
+        )
+
+        action = configured_action(SearchMessagesAction)
+        result = action.run(arguments={"user": "1111", "email_message_id": "<sample-message-id@example.com>"})
+
+        assert len(result["messages"]) == 1
+        assert "message_id" not in result["messages"][0]
 
 
 def test_extract_network_message_id_returns_none_for_non_string_value():

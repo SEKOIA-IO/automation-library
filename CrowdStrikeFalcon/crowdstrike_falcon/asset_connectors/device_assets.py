@@ -43,6 +43,7 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         self._latest_id = None
         self._push_failed = False
         self._groups_cache: dict[str, Group] = {}
+        self._groups_fetch_disabled = False
 
     @property
     def most_recent_device_id(self) -> str | None:
@@ -196,6 +197,43 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
             )
 
         return interfaces if interfaces else None
+
+    def fetch_groups(self, group_ids: list[str]) -> None:
+        """
+        Fetch, in a single request, the details of the groups that are not cached yet.
+
+        The details are unavailable when the API client misses the `Host groups: Read` scope.
+        In that case, the fetching is disabled for the remaining of the cycle to avoid
+        repeating a request that is known to fail for every device of the batch.
+        """
+        if self._groups_fetch_disabled:
+            return
+
+        # deduplicate the identifiers, keeping their order, and drop the already cached ones
+        missing_ids = [
+            group_id for group_id in dict.fromkeys(group_ids) if group_id and group_id not in self._groups_cache
+        ]
+
+        if not missing_ids:
+            return
+
+        try:
+            for group_info in self.client.get_host_groups(missing_ids):
+                group_id = group_info.get("id")
+                if not group_id:
+                    continue
+
+                self._groups_cache[group_id] = Group(
+                    uid=group_id,
+                    name=group_info.get("name") or "Unknown",
+                    desc=group_info.get("description") or None,
+                )
+        except Exception as e:
+            self._groups_fetch_disabled = True
+            self.log(
+                f"Failed to fetch group details: {e}. ",
+                level="warning",
+            )
 
     def get_groups(self, device: CrowdStrikeDevice) -> list[Group] | None:
         """
@@ -417,6 +455,18 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
             cache["most_recent_device_id"] = self._latest_id
             self.log(f"Device id was updated to {self._latest_id}", level="info")
 
+    def next_devices_batch(self, uuids_batch: list[str]) -> Generator[CrowdStrikeDevice, None, None]:
+        """
+        Fetch the information of a batch of devices, with the details of their groups.
+        """
+        devices = [
+            CrowdStrikeDevice.model_validate(device_info) for device_info in self.client.get_devices_infos(uuids_batch)
+        ]
+
+        self.fetch_groups([group_id for device in devices for group_id in device.groups])
+
+        yield from devices
+
     def next_devices(self) -> Generator[CrowdStrikeDevice, None, None]:
         """
         Generator that yields device information from CrowdStrike API.
@@ -451,14 +501,12 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
 
             if len(uuids_batch) >= self.LIMIT:
                 self.log(f"Found {len(uuids_batch)} devices !!", level="info")
-                for device_info in self.client.get_devices_infos(uuids_batch):
-                    yield CrowdStrikeDevice.model_validate(device_info)
+                yield from self.next_devices_batch(uuids_batch)
                 uuids_batch = []
 
         if uuids_batch:
             self.log(f"Found {len(uuids_batch)} devices in the last batch!!", level="info")
-            for device_info in self.client.get_devices_infos(uuids_batch):
-                yield CrowdStrikeDevice.model_validate(device_info)
+            yield from self.next_devices_batch(uuids_batch)
 
         # The whole listing was walked: remember where we stopped. It is committed at the
         # end of the cycle, once every batch has been pushed.
@@ -469,7 +517,11 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         Main generator that yields OCSF-formatted device assets.
         """
         self.log("Start the getting assets generator !!", level="info")
+
+        # reset the group details collected in the previous cycle
         self._groups_cache = {}
+        self._groups_fetch_disabled = False
+
         for device in self.next_devices():
             mapped = self.map_device_fields(device)
             if mapped is not None:  # pragma: no branch

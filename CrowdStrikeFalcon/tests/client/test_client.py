@@ -202,6 +202,68 @@ def test_find_indicators():
         assert list(indicators) == ["519b7236-8ed2-4c63-b5c4-0f72dc3f187e", "f6d85700-1b5b-450f-8df1-a8317fe7f137"]
 
 
+def test_request_endpoint_forbidden_reports_the_api_error_message():
+    base_url = "https://my.fake.sekoia"
+    client = CrowdstrikeFalconClient(base_url, "foo", "bar")
+
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            f"{base_url}/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            f"{base_url}/devices/entities/host-groups/v1?ids=group1",
+            status_code=403,
+            json={
+                "errors": [{"code": 403, "message": "access denied, authorization failed"}],
+                "meta": {"trace_id": "13787250-fc0f-49a6-9191-d809e30afdfb"},
+                "resources": [],
+            },
+        )
+
+        with pytest.raises(HTTPError) as exc_info:
+            list(client.get_host_groups(["group1"]))
+
+        message = str(exc_info.value)
+        assert "403" in message
+        assert "access denied, authorization failed" in message
+
+
+def test_request_endpoint_forbidden_without_a_json_body():
+    base_url = "https://my.fake.sekoia"
+    client = CrowdstrikeFalconClient(base_url, "foo", "bar")
+
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            f"{base_url}/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            f"{base_url}/devices/entities/host-groups/v1?ids=group1",
+            status_code=403,
+            text="Forbidden",
+        )
+
+        with pytest.raises(HTTPError) as exc_info:
+            list(client.get_host_groups(["group1"]))
+
+        assert "403" in str(exc_info.value)
+
+
 def test_list_devices_uuids_follows_the_scroll_token_past_the_offset_cap():
     """devices/v1 refuses limit + offset above 10 000, devices-scroll uses a token."""
     base_url = "https://my.fake.sekoia"

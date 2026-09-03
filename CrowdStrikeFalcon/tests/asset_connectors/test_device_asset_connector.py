@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 import pytest
+from requests.exceptions import HTTPError
 from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceTypeId,
     DeviceTypeStr,
@@ -354,6 +355,71 @@ def test_is_device_compliant(connector):
     assert connector.is_device_compliant(compliant) is True
     assert connector.is_device_compliant(non_compliant) is False
     assert connector.is_device_compliant(CrowdStrikeDevice()) is None
+
+def test_get_groups_reuses_cached_group_details(connector):
+    mock_client = Mock()
+    mock_client.get_host_groups.return_value = [{"id": "group1", "name": "Group One"}]
+    connector.client = mock_client
+
+    first = connector.get_groups(CrowdStrikeDevice(groups=["group1"]))
+    second = connector.get_groups(CrowdStrikeDevice(groups=["group1"]))
+
+    assert mock_client.get_host_groups.call_count == 1
+    assert first[0].name == "Group One"
+    assert second[0].name == "Group One"
+
+
+def test_get_groups_logs_a_single_warning_when_the_group_api_is_forbidden(connector):
+    mock_client = Mock()
+    mock_client.get_host_groups.side_effect = HTTPError(
+        "403 Client Error: Forbidden for url: "
+        "https://api.eu-1.crowdstrike.com/devices/entities/host-groups/v1?ids=group1"
+    )
+    connector.client = mock_client
+
+    first = connector.get_groups(CrowdStrikeDevice(groups=["group1"]))
+    second = connector.get_groups(CrowdStrikeDevice(groups=["group2"]))
+
+    assert mock_client.get_host_groups.call_count == 1
+    assert first[0].name == "group1"
+    assert second[0].name == "group2"
+
+    warnings = [call for call in connector.log.call_args_list if call.kwargs.get("level") == "warning"]
+    assert len(warnings) == 1
+
+
+def test_next_devices_fetches_the_group_details_of_a_batch_in_a_single_request(connector):
+    mock_client = Mock()
+    mock_client.list_devices_uuids.return_value = ["dev-1", "dev-2"]
+    mock_client.get_devices_infos.return_value = [
+        {"device_id": "dev-1", "hostname": "host-1", "groups": ["group1"]},
+        {"device_id": "dev-2", "hostname": "host-2", "groups": ["group1", "group2"]},
+    ]
+    mock_client.get_host_groups.return_value = [
+        {"id": "group1", "name": "Group One"},
+        {"id": "group2", "name": "Group Two"},
+    ]
+    connector.client = mock_client
+
+    devices = list(connector.next_devices())
+
+    assert len(devices) == 2
+    assert mock_client.get_host_groups.call_count == 1
+    assert mock_client.get_host_groups.call_args[0][0] == ["group1", "group2"]
+    assert [group.name for group in connector.get_groups(devices[1])] == ["Group One", "Group Two"]
+
+
+def test_get_assets_resets_the_group_state_between_cycles(connector):
+    mock_client = Mock()
+    mock_client.list_devices_uuids.return_value = []
+    connector.client = mock_client
+    connector._groups_cache = {"group1": Group(uid="group1", name="Group One")}
+    connector._groups_fetch_disabled = True
+
+    list(connector.get_assets())
+
+    assert connector._groups_cache == {}
+    assert connector._groups_fetch_disabled is False
 
 
 def test_next_devices_does_not_checkpoint_before_the_walk_completes(connector):
