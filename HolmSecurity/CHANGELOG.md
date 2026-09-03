@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.3.1] - 2026-08-28
+## [1.3.1] - 2026-09-03
 
 ### Fixed
 
@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reports a field as `null` instead of omitting it. A pydantic default only applies to
   an absent key, so a single `"risk_score": null` or `"open_ports": null` on one network
   asset failed the validation of the entire page and no asset was ever pushed
+- `emails` of a device is a list of `{email, username}` objects, not a list of addresses
+
+### Changed
+
+- Every optional field of the Holm API models is now nullable, following the published
+  API schema: a `null` is kept as `null` instead of being replaced by a fabricated
+  default. An absent `risk_score` is no longer reported as a score of `0`, and a real
+  score of `0` is now reported instead of being dropped
 
 ## [1.3.0] - 2026-08-20
 

@@ -8,9 +8,13 @@ class HolmBaseModel(BaseModel):
     """Base model tolerating the explicit ``null`` values of the Holm Security API.
 
     Holm reports a field it has no value for as ``null`` instead of omitting it, and a
-    pydantic default only applies to an absent key. Those nulls are dropped so the
-    declared default applies: without this, a single ``"risk_score": null`` aborts the
-    validation of the whole page and the connector collects nothing.
+    pydantic default only applies to an absent key: a single ``"risk_score": null`` or
+    ``"open_ports": null`` on one network asset aborted the validation of the whole page
+    and the connector collected nothing.
+
+    Those nulls are dropped so the declared default applies. Every optional scalar
+    defaults to ``None`` so a null is never turned into a fabricated value: only a
+    collection falls back to an empty one, where ``null`` and ``[]`` mean the same thing.
 
     Nulls on required fields are kept so a genuinely malformed record still fails.
     """
@@ -41,28 +45,39 @@ class HolmNetwork(HolmBaseModel):
     mac_address: str | None = None
 
 
-class HolmTag(HolmBaseModel):
-    """A tag attached to a Holm Security device."""
+class HolmDeviceEmail(HolmBaseModel):
+    """A notification recipient attached to a Holm Security device."""
 
-    uuid: str
-    name: str
+    email: str | None = None
+    username: str | None = None
+
+
+class HolmTag(HolmBaseModel):
+    """A tag attached to a Holm Security device or network asset.
+
+    Devices carry a full tag object, network assets a minimal one holding only a name
+    and a uuid, so every field is optional.
+    """
+
+    uuid: str | None = None
+    name: str | None = None
     color: str | None = None
-    is_dynamic: bool = False
-    host_assets_cnt: int = 0
-    da_assets_cnt: int = 0
-    web_assets_cnt: int = 0
-    cloud_assets_cnt: int = 0
-    recipient_assets_cnt: int = 0
+    is_dynamic: bool | None = None
+    host_assets_cnt: int | None = None
+    da_assets_cnt: int | None = None
+    web_assets_cnt: int | None = None
+    cloud_assets_cnt: int | None = None
+    recipient_assets_cnt: int | None = None
 
 
 class HolmSeverityBreakdown(HolmBaseModel):
     """Per-severity vulnerability counts for a device."""
 
-    info: int = 0
-    low: int = 0
-    medium: int = 0
-    high: int = 0
-    critical: int = 0
+    info: int | None = None
+    low: int | None = None
+    medium: int | None = None
+    high: int | None = None
+    critical: int | None = None
 
 
 class HolmDevice(HolmBaseModel):
@@ -80,19 +95,19 @@ class HolmDevice(HolmBaseModel):
     os_version: str | None = None
     os_build: str | None = None
     network: HolmNetwork | None = None
-    internet_facing: bool = False
-    internet_facing_user_override: bool = False
+    internet_facing: bool | None = None
+    internet_facing_user_override: bool | None = None
     debug_level: str | None = None
     error_interval: str | None = None
     update_interval: str | None = None
     user_account: str | None = None
-    emails: list[str] = []
+    emails: list[HolmDeviceEmail] = []
     tags: list[HolmTag] = []
-    vuln_count: int = 0
+    vuln_count: int | None = None
     max_severity: int | str | None = None
     severity: HolmSeverityBreakdown | None = None
     current_version: str | None = None
-    risk_score: int = 0
+    risk_score: int | None = None
 
 
 class HolmDevicePage(HolmBaseModel):
@@ -128,10 +143,10 @@ class HolmNetAsset(HolmBaseModel):
     created: str | None = None
     last_detected: str | None = None
     business_impact: str | None = None
-    hosts_personal_data: bool = False
+    hosts_personal_data: bool | None = None
     auth_status: str | None = None
-    vulnerabilities_count: int = 0
-    risk_score: int = 0
+    vulnerabilities_count: int | None = None
+    risk_score: int | None = None
     severity: HolmSeverityBreakdown | None = None
     tags: list[HolmTag] = []
     open_ports: list[HolmOpenPort] = []
