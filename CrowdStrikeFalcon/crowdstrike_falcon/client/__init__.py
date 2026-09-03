@@ -92,7 +92,6 @@ class ApiClient(requests.Session):
 
         still_fetching_items = True
         pagination: dict | None = None
-        previous_cursor: str | None = None
 
         while still_fetching_items:
             new_params = dict(params)
@@ -104,6 +103,8 @@ class ApiClient(requests.Session):
                 # Otherwise, fallback on the offset parameter if defined
                 elif "offset" in pagination:
                     new_params["offset"] = pagination["offset"]
+
+            requested_cursor = new_params.get("offset") if cursor_pagination else None
 
             response = self.request(method=method, url=url, params=new_params, **kwargs)
 
@@ -117,29 +118,30 @@ class ApiClient(requests.Session):
             if errors:
                 msg = f"The API returns the following errors: \n{errors}"
                 raise HTTPError(msg, response=response)  # type: ignore[call-arg]
-            yield from content.get("resources") or []
 
             pagination = content.get("meta", {}).get("pagination")
-            if pagination:
-                if pagination.get("after"):
-                    still_fetching_items = True
-                elif cursor_pagination:
-                    # Follow the continuation token until the API stops handing back a new one
-                    cursor = pagination.get("offset")
-                    still_fetching_items = bool(cursor) and cursor != previous_cursor
-                    previous_cursor = cursor
-                else:
-                    offset = pagination.get("offset")
-                    limit = pagination.get("limit")
-                    total = pagination.get("total")
-                    still_fetching_items = (
-                        isinstance(offset, int)
-                        and isinstance(limit, int)
-                        and isinstance(total, int)
-                        and offset < total
-                    )
+
+            if pagination and pagination.get("after"):
+                still_fetching_items = True
+            elif cursor_pagination:
+                # Follow the continuation token until the API stops handing back a new one
+                cursor = (pagination or {}).get("offset")
+                if requested_cursor is not None and cursor == requested_cursor:
+                    # The API handed back the token it was given: the scroll is not
+                    # advancing, so this page only repeats the previous one. Drop it.
+                    return
+                still_fetching_items = bool(cursor)
+            elif pagination:
+                offset = pagination.get("offset")
+                limit = pagination.get("limit")
+                total = pagination.get("total")
+                still_fetching_items = (
+                    isinstance(offset, int) and isinstance(limit, int) and isinstance(total, int) and offset < total
+                )
             else:
                 still_fetching_items = False
+
+            yield from content.get("resources") or []
 
     def request_graphql_endpoint(
         self,

@@ -243,30 +243,14 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         host groups but tens of thousands of devices, and looking them up per device
         turns the run into one extra API call per device.
         """
-        raw_groups = [group_id for group_id in device.groups or [] if group_id]
+        raw_groups = [group_id for group_id in device.groups if group_id]
         if not raw_groups:
             return None
 
-        unresolved = [group_id for group_id in raw_groups if group_id not in self._groups_cache]
-        if unresolved:
-            try:
-                for group_info in self.client.get_host_groups(unresolved):
-                    group_id = group_info.get("id")
-                    if group_id:
-                        self._groups_cache[group_id] = Group(
-                            uid=group_id,
-                            name=group_info.get("name", "Unknown"),
-                            desc=group_info.get("description") or None,
-                        )
-            except Exception as e:
-                self.log(f"Failed to fetch group details: {e}", level="warning")
+        self.fetch_groups(raw_groups)
 
-            # Fall back on the identifier for whatever the API did not return, and cache
-            # that too so a missing scope does not retry (and re-log) on every device.
-            for group_id in unresolved:
-                self._groups_cache.setdefault(group_id, Group(uid=group_id, name=group_id))
-
-        return [self._groups_cache[group_id] for group_id in raw_groups]
+        # fallback on the identifier as name for the groups without details
+        return [self._groups_cache.get(group_id) or Group(uid=group_id, name=group_id) for group_id in raw_groups]
 
     def get_location(self, device: CrowdStrikeDevice) -> GeoLocation | None:
         """

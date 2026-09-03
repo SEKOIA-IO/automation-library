@@ -314,4 +314,5 @@ def test_list_devices_uuids_stops_on_a_repeated_scroll_token():
             },
         )
 
-        assert list(client.list_devices_uuids(limit=1, sort="first_seen.desc")) == ["u1", "u1"]
+        # The stuck page is dropped, not replayed
+        assert list(client.list_devices_uuids(limit=1, sort="first_seen.desc")) == ["u1"]

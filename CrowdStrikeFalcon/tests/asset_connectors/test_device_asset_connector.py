@@ -356,6 +356,7 @@ def test_is_device_compliant(connector):
     assert connector.is_device_compliant(non_compliant) is False
     assert connector.is_device_compliant(CrowdStrikeDevice()) is None
 
+
 def test_get_groups_reuses_cached_group_details(connector):
     mock_client = Mock()
     mock_client.get_host_groups.return_value = [{"id": "group1", "name": "Group One"}]
