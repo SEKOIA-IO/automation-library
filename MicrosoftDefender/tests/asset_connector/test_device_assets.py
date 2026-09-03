@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
@@ -355,9 +356,10 @@ class TestFetchManagedDeviceByAadId:
         mock_device_management = MagicMock()
         mock_device_management.managed_devices = mock_managed_devices
 
-        with patch.object(connector, "graph_client", create=True) as mock_client:
-            mock_client.device_management = mock_device_management
-            result = await connector._fetch_managed_device_by_aad_id("80fe8ff8-2624-418e-9591-41f0491218f9")
+        mock_client = MagicMock()
+        mock_client.device_management = mock_device_management
+
+        result = await connector._fetch_managed_device_by_aad_id(mock_client, "80fe8ff8-2624-418e-9591-41f0491218f9")
 
         assert result is not None
         assert result.id == sample_managed_device.id
@@ -373,9 +375,10 @@ class TestFetchManagedDeviceByAadId:
         mock_device_management = MagicMock()
         mock_device_management.managed_devices = mock_managed_devices
 
-        with patch.object(connector, "graph_client", create=True) as mock_client:
-            mock_client.device_management = mock_device_management
-            result = await connector._fetch_managed_device_by_aad_id("nonexistent-id")
+        mock_client = MagicMock()
+        mock_client.device_management = mock_device_management
+
+        result = await connector._fetch_managed_device_by_aad_id(mock_client, "nonexistent-id")
 
         assert result is None
 
@@ -387,12 +390,23 @@ class TestFetchManagedDeviceByAadId:
         mock_device_management = MagicMock()
         mock_device_management.managed_devices = mock_managed_devices
 
-        with patch.object(connector, "graph_client", create=True) as mock_client:
-            mock_client.device_management = mock_device_management
-            result = await connector._fetch_managed_device_by_aad_id("some-id")
+        mock_client = MagicMock()
+        mock_client.device_management = mock_device_management
+
+        result = await connector._fetch_managed_device_by_aad_id(mock_client, "some-id")
 
         assert result is None
         connector.log.assert_called()
+
+
+def _mock_graph_client(mock_client):
+    """Helper: return an async context manager that yields mock_client."""
+
+    @asynccontextmanager
+    async def _fake_graph_client():
+        yield mock_client
+
+    return _fake_graph_client
 
 
 class TestGetAssets:
@@ -412,12 +426,14 @@ class TestGetAssets:
         mock_device_management = MagicMock()
         mock_device_management.managed_devices = mock_managed_devices
 
+        mock_graph_client = MagicMock()
+        mock_graph_client.device_management = mock_device_management
+
         with patch.object(connector, "defender_client", create=True) as mock_def_client, patch.object(
-            connector, "graph_client", create=True
-        ) as mock_graph_client:
+            connector, "_graph_client", _mock_graph_client(mock_graph_client)
+        ):
             mock_def_client.base_url = "https://api.securitycenter.microsoft.com"
             mock_def_client.get = Mock(return_value=mock_response)
-            mock_graph_client.device_management = mock_device_management
             assets = []
             async for asset in connector.get_assets():
                 assets.append(asset)
@@ -440,7 +456,11 @@ class TestGetAssets:
         mock_response.raise_for_status = Mock()
         mock_response.json.return_value = {"value": [machine.dict()]}
 
-        with patch.object(connector, "defender_client", create=True) as mock_def_client:
+        mock_graph_client = MagicMock()
+
+        with patch.object(connector, "defender_client", create=True) as mock_def_client, patch.object(
+            connector, "_graph_client", _mock_graph_client(mock_graph_client)
+        ):
             mock_def_client.base_url = "https://api.securitycenter.microsoft.com"
             mock_def_client.get = Mock(return_value=mock_response)
             assets = []
@@ -499,7 +519,9 @@ class TestGetAssetsCheckpointTracking:
             DefenderMachine(id="c", lastSeen="2024-06-02T10:00:00.0000000Z"),
         ]
 
-        with patch.object(connector, "defender_client", create=True) as mock_client:
+        with patch.object(connector, "defender_client", create=True) as mock_client, patch.object(
+            connector, "_graph_client", _mock_graph_client(MagicMock())
+        ):
             mock_client.base_url = "https://api.securitycenter.microsoft.com"
             mock_client.get = Mock(return_value=self._make_mock_response(machines))
             async for _ in connector.get_assets():
@@ -513,7 +535,9 @@ class TestGetAssetsCheckpointTracking:
         raw = "2024-12-01T10:00:00.1234567Z"
         machine = DefenderMachine(id="precise", lastSeen=raw)
 
-        with patch.object(connector, "defender_client", create=True) as mock_client:
+        with patch.object(connector, "defender_client", create=True) as mock_client, patch.object(
+            connector, "_graph_client", _mock_graph_client(MagicMock())
+        ):
             mock_client.base_url = "https://api.securitycenter.microsoft.com"
             mock_client.get = Mock(return_value=self._make_mock_response([machine]))
             async for _ in connector.get_assets():
@@ -525,7 +549,9 @@ class TestGetAssetsCheckpointTracking:
     async def test_latest_time_raw_none_when_no_last_seen(self, connector):
         machine = DefenderMachine(id="no-date")
 
-        with patch.object(connector, "defender_client", create=True) as mock_client:
+        with patch.object(connector, "defender_client", create=True) as mock_client, patch.object(
+            connector, "_graph_client", _mock_graph_client(MagicMock())
+        ):
             mock_client.base_url = "https://api.securitycenter.microsoft.com"
             mock_client.get = Mock(return_value=self._make_mock_response([machine]))
             async for _ in connector.get_assets():
@@ -541,7 +567,9 @@ class TestGetAssetsCheckpointTracking:
         machine = DefenderMachine(id="m1", lastSeen=raw)
 
         response = self._make_mock_response([machine])
-        with patch.object(connector, "defender_client", create=True) as mock_client:
+        with patch.object(connector, "defender_client", create=True) as mock_client, patch.object(
+            connector, "_graph_client", _mock_graph_client(MagicMock())
+        ):
             mock_client.base_url = "https://api.securitycenter.microsoft.com"
             mock_client.get = Mock(return_value=response)
             async for _ in connector.get_assets():

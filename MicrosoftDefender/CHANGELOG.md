@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-08-18 - 1.3.7
+
+### Changed
+
+- Update the minimum frequency value from 1 second to 3 hours (10800 seconds) for the device asset connector to avoid excessive API calls and potential throttling.
+
+## 2026-08-18 - 1.3.6
+
+### Fixed
+
+- Fix `'NoneType' object has no attribute 'lower'` when a network interface entry has an explicit `None` type in the device asset connector.
+- Fix `HTTP transport has already been closed` error when enriching multiple devices via the Graph API by properly managing the `GraphServiceClient` lifecycle with an async context manager.
+
 ## 2026-07-30 - 1.3.5
 
 ### Changed
