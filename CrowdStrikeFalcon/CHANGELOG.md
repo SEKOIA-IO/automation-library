@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-01 - 1.25.20
+
+### Fixed
+
+- Crowdstrike Falcon Devices asset connector: an interrupted collection cycle no longer
+  strands the devices it had not reached. The checkpoint used to be advanced to the newest
+  device as soon as the first batch was pushed, so any restart, API error or refused batch
+  made every later cycle stop immediately and skip the rest of the inventory.
+- Crowdstrike Falcon Devices asset connector: list devices through
+  `/devices/queries/devices-scroll/v1`.
+
+### Changed
+
+- Crowdstrike Falcon Devices asset connector: host groups are resolved once per cycle
+  instead of once per device, removing up to one API call per device (and the repeated
+  403 warnings when the API client lacks the `Host groups: Read` scope).
+
 ## 2026-07-27 - 1.25.19
 
 ### Changed

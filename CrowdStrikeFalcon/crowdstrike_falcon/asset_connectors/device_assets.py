@@ -5,6 +5,7 @@ from datetime import datetime
 
 from dateutil.parser import isoparse
 from sekoia_automation.asset_connector import AssetConnector
+from sekoia_automation.asset_connector.models.connector import AssetList
 from sekoia_automation.asset_connector.models.ocsf.base import (
     Metadata,
     Product,
@@ -40,6 +41,7 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._latest_id = None
+        self._push_failed = False
         self._groups_cache: dict[str, Group] = {}
         self._groups_fetch_disabled = False
 
@@ -235,7 +237,11 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
 
     def get_groups(self, device: CrowdStrikeDevice) -> list[Group] | None:
         """
-        Extract groups from device data, with the details fetched from the API.
+        Extract groups from device data and fetch details from API.
+
+        Resolved groups are cached for the whole fetch cycle: a tenant has a handful of
+        host groups but tens of thousands of devices, and looking them up per device
+        turns the run into one extra API call per device.
         """
         raw_groups = [group_id for group_id in device.groups if group_id]
         if not raw_groups:
@@ -408,10 +414,26 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
 
         return device_ocsf
 
+    def post_assets_to_api(self, assets: AssetList, asset_connector_api_url: str) -> dict[str, str] | None:
+        """Push a batch and remember whether it made it through."""
+        response = super().post_assets_to_api(assets, asset_connector_api_url)
+        if response is None:
+            # The batch was dropped, so the devices it carried were never ingested: hold
+            # the checkpoint back so the next cycle walks the whole listing again.
+            self._push_failed = True
+        return response
+
+    def asset_fetch_cycle(self) -> None:
+        """Run a fetch cycle, then commit the checkpoint if it collected everything."""
+        super().asset_fetch_cycle()
+        # Every batch of the cycle has been pushed by now, so this is the first moment we
+        # know the run was complete. An interrupted cycle raises and never gets here.
+        self.update_checkpoint()
+
     def update_checkpoint(self) -> None:
         """Update the checkpoint with the latest device ID."""
         self.log("Updating the device id !!", level="info")
-        if self._latest_id is None:
+        if self._latest_id is None or self._push_failed:
             return
         with self.context as cache:
             cache["most_recent_device_id"] = self._latest_id
@@ -433,16 +455,27 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         """
         Generator that yields device information from CrowdStrike API.
         Uses pagination and checkpoint to fetch only new devices.
+
+        The checkpoint is only advanced once the whole listing has been walked. The SDK
+        calls `update_checkpoint` after every batch it pushes, so remembering the newest
+        device id up front would make any interruption of the run (pod restart, API
+        error, rate limit) skip every device it had not reached yet, forever.
         """
         last_first_uuid = self.most_recent_device_id
+        newest_uuid: str | None = None
         uuids_batch: list[str] = []
+
+        # Nothing is collected yet: the pushes happening during this walk must not commit
+        # a checkpoint.
+        self._latest_id = None
+        self._push_failed = False
 
         for idx, device_uuid in enumerate(self.client.list_devices_uuids(limit=self.LIMIT, sort="first_seen.desc")):
             if idx == 0:
                 if device_uuid == last_first_uuid:
                     self.log("No device has been added !!", level="info")
                     return
-                self._latest_id = device_uuid
+                newest_uuid = device_uuid
 
             # Stop before the last seen device id
             if last_first_uuid and device_uuid == last_first_uuid:
@@ -458,6 +491,10 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         if uuids_batch:
             self.log(f"Found {len(uuids_batch)} devices in the last batch!!", level="info")
             yield from self.next_devices_batch(uuids_batch)
+
+        # The whole listing was walked: remember where we stopped. It is committed at the
+        # end of the cycle, once every batch has been pushed.
+        self._latest_id = newest_uuid
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
         """
