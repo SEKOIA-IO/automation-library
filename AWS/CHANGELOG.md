@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-04 - 1.38.1
+
+### Fixed
+
+- Fix device asset connector: stop setting `device.vendor_name` to "Amazon Web Services" for EC2 instances; AWS is the cloud provider, not the hardware vendor of the underlying physical device (which is not exposed by the EC2 API)
+
 ## 2026-07-31 - 1.38.0
 
 ### Added

@@ -177,7 +177,6 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
             created_time=self._to_epoch(asset.created),
             last_seen_time=self._to_epoch(asset.last_detected),
             is_managed=False,
-            vendor_name=self.PRODUCT_NAME,
             risk_score=asset.risk_score if asset.risk_score else None,
             risk_level=risk_level,
             risk_level_id=risk_level_id,

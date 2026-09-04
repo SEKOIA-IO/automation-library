@@ -373,7 +373,7 @@ def test_map_net_asset_fields(connector):
     assert device.name == "host-example01.example.com"
     assert device.ip == "192.0.2.20"
     assert device.is_managed is False
-    assert device.vendor_name == "Holm Security"
+    assert device.vendor_name is None
     assert device.risk_score == 100
     assert device.risk_level == "Critical"
     assert device.created_time == isoparse("2026-07-01T16:37:00.667844Z").timestamp()
