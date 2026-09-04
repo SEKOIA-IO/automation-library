@@ -52,31 +52,27 @@ class AkamaiWAFLogsConnector(Connector):
         self.chunk_size = max(
             1, min(1000, int(os.environ.get("AKAMAI_CHUNK_SIZE", 1_000)))
         )  # number of events to accumulate before yielding to limit memory usage
-        self.log_sample_every = max(2, int(os.environ.get("AKAMAI_LOG_SAMPLE_EVERY", 100)))
         self.raw_log_max_length = max(512, int(os.environ.get("AKAMAI_RAW_LOG_MAX_LENGTH", 16_000)))
-        self._sampled_log_counts: Counter[str] = Counter()
+        self.log_count_max_keys = max(1000, int(os.environ.get("AKAMAI_LOG_COUNT_MAX_KEYS", 10_000)))
+        # Reduce log noise: keep a bounded set of exception signatures that were already emitted.
+        self._logged_exception_signatures: LRUCache[str, bool] = LRUCache(maxsize=self.log_count_max_keys)
 
-    def _should_emit_sampled_log(self, key: str, every: int | None = None) -> tuple[bool, int, int]:
-        """Return whether to emit a sampled log and include occurrence metadata."""
-        sample_every = every if every is not None else self.log_sample_every
-        self._sampled_log_counts[key] += 1
-        occurrence = self._sampled_log_counts[key]
-        should_emit = occurrence == 1 or occurrence % sample_every == 0
-        return should_emit, occurrence, sample_every
-
-    def _log_sampled(self, key: str, message: str, level: str, every: int | None = None) -> None:
-        """Log a high-frequency message on first occurrence and periodic samples."""
-        should_emit, occurrence, sample_every = self._should_emit_sampled_log(key=key, every=every)
-        if should_emit:
-            self.log(message=f"{message} occurrence={occurrence} sample_every={sample_every}", level=level)
-
-    def _log_exception_sampled(self, key: str, error: Exception, message: str, every: int | None = None) -> None:
-        """Log a high-frequency exception on first occurrence and periodic samples."""
-        should_emit, occurrence, sample_every = self._should_emit_sampled_log(key=key, every=every)
-        if should_emit:
+    def _log_exception_once_per_signature(self, key: str, error: Exception, message: str) -> None:
+        """Emit only the first error log for a strictly identical exception payload."""
+        signature = "|".join(
+            [
+                key,
+                type(error).__name__,
+                self._sanitize_log_value(error),
+                message,
+            ]
+        )
+        # Explicit aggregation point: repeated identical errors are dropped after first emission.
+        if signature not in self._logged_exception_signatures:
+            self._logged_exception_signatures[signature] = True
             self.log_exception(
                 error,
-                message=f"{message} occurrence={occurrence} sample_every={sample_every}",
+                message=message,
             )
 
     def load_events_cache(self) -> Cache:
@@ -234,8 +230,7 @@ class AkamaiWAFLogsConnector(Connector):
         if isinstance(raw_http_message, dict):
             http_message = raw_http_message
         else:
-            self._log_sampled(
-                key="invalid_http_message_type",
+            self.log(
                 message=(
                     "Skipped httpMessage normalization because httpMessage is not a mapping "
                     f"http_message_type={type(raw_http_message).__name__} "
@@ -278,8 +273,7 @@ class AkamaiWAFLogsConnector(Connector):
             event_start = http_message.get("start")
             request_malformed_summary = self._sanitize_log_value(request_malformed)
             response_malformed_summary = self._sanitize_log_value(response_malformed)
-            self._log_sampled(
-                key="malformed_headers",
+            self.log(
                 message=(
                     "Ignored malformed HTTP header lines "
                     f"event_request_id={self._sanitize_log_value(event_request_id)} "
@@ -321,8 +315,7 @@ class AkamaiWAFLogsConnector(Connector):
                     try:
                         item = orjson.loads(line)
                     except Exception:
-                        self._log_sampled(
-                            key="malformed_json_line",
+                        self.log(
                             message=(
                                 "Skipped malformed JSON line in Akamai stream "
                                 f"line_size={len(line)} raw_line={line.decode('utf-8', errors='backslashreplace')}"
@@ -332,8 +325,7 @@ class AkamaiWAFLogsConnector(Connector):
                         continue
 
                     if not isinstance(item, dict):
-                        self._log_sampled(
-                            key="non_object_json_line",
+                        self.log(
                             message=(
                                 "Skipped non-object JSON line in Akamai stream "
                                 f"line_size={len(line)} json_type={type(item).__name__} "
@@ -348,7 +340,16 @@ class AkamaiWAFLogsConnector(Connector):
                         try:
                             self.process_event(item)
                         except Exception as error:
-                            self._log_exception_sampled(
+                            # Explicit aggregation point: identical process failures on identical raw events
+                            # are logged once to avoid repetitive error spam across batches.
+                            # Example for this call site:
+                            # without safeguard, logs could look like:
+                            # "Failed to process Akamai event event_request_id=99 raw_event={...}"
+                            # "Failed to process Akamai event event_request_id=99 raw_event={...}"
+                            # [...]
+                            # "Failed to process Akamai event event_request_id=99 raw_event={...}"
+                            # with safeguard, only the first line above is emitted.
+                            self._log_exception_once_per_signature(
                                 key="process_event_error",
                                 error=error,
                                 message=(
@@ -371,8 +372,7 @@ class AkamaiWAFLogsConnector(Connector):
                         offset = item.get("offset")
                         total = item.get("total")
                         if offset is None:
-                            self._log_sampled(
-                                key="pagination_context_without_offset",
+                            self.log(
                                 message=(
                                     "Skipped pagination context without offset "
                                     f"context_keys={self._sanitize_log_value(list(item.keys()))} "
@@ -419,8 +419,7 @@ class AkamaiWAFLogsConnector(Connector):
                     yield chunk
                     chunk = []
 
-                self._log_sampled(
-                    key="stream_ended_without_pagination_context",
+                self.log(
                     message=(
                         "Akamai stream ended without pagination context "
                         f"flushed_events_in_final_chunk={flushed_events_in_final_chunk} "
@@ -447,8 +446,7 @@ class AkamaiWAFLogsConnector(Connector):
                 ]
 
                 if not timestamps:
-                    self._log_sampled(
-                        key="invalid_or_missing_timestamps",
+                    self.log(
                         message=(
                             "Skipped checkpoint update because event timestamps are missing or invalid "
                             f"events_count={len(next_events)} "
@@ -485,11 +483,7 @@ class AkamaiWAFLogsConnector(Connector):
                 level="debug",
             )
         else:
-            self._log_sampled(
-                key="checkpoint_unchanged",
-                message=f"Kept checkpoint unchanged from_timestamp={self.from_timestamp}",
-                level="debug",
-            )
+            self.log(message=f"Kept checkpoint unchanged from_timestamp={self.from_timestamp}", level="debug")
 
     def __handle_response_error(self, response: requests.Response):
         """Log API error details and raise HTTP exceptions."""
@@ -555,8 +549,7 @@ class AkamaiWAFLogsConnector(Connector):
             if event_id is None:
                 fallback_event_id = self._build_fallback_event_dedup_key(event)
                 if fallback_event_id is None:
-                    self._log_sampled(
-                        key="missing_request_id_no_fallback_dedup_key",
+                    self.log(
                         message=(
                             "Forwarded event without deduplication because requestId is missing "
                             "and fallback dedup key generation failed "
@@ -571,8 +564,7 @@ class AkamaiWAFLogsConnector(Connector):
                     continue
 
                 self.events_cache[fallback_event_id] = True
-                self._log_sampled(
-                    key="missing_request_id",
+                self.log(
                     message=(
                         "Forwarded event with fallback deduplication because requestId is missing "
                         "dedup_marker=payload_hash "
