@@ -177,7 +177,7 @@ class AkamaiWAFLogsConnector(Connector):
         try:
             serialized = orjson.dumps(value).decode("utf-8")
         except Exception:
-            serialized = str(value)
+            serialized = self._sanitize_log_value(value, max_length=self.raw_log_max_length)
 
         if len(serialized) > self.raw_log_max_length:
             return (
@@ -535,7 +535,7 @@ class AkamaiWAFLogsConnector(Connector):
                 self.log(
                     message=(
                         "Failed to parse Akamai API error response body "
-                        f"status={response.status_code} reason={response.reason}"
+                        f"status={response.status_code} reason={self._sanitize_log_value(response.reason)}"
                     ),
                     level="warning",
                 )

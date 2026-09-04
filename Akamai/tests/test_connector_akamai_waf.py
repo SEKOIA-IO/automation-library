@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from datetime import datetime, timezone
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
@@ -5,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 import requests_mock
+import orjson
 from freezegun import freeze_time
 
 from akamai_modules import AkamaiModule
@@ -131,6 +134,13 @@ def make_truncated_response_with_n_events(n: int) -> bytes:
             f'"attackData": {{}}, "httpMessage": {{"requestId": {i}, "start": "1743505200"}}}}'
         )
     return ("\n".join(lines) + "\n").encode()
+
+
+def load_fixture_akamai_event(fixture_name: str) -> dict[str, object]:
+    fixture_path = Path(__file__).resolve().parent / "fixtures" / fixture_name
+    fixture_data = json.loads(fixture_path.read_text(encoding="utf-8"))
+    # Return a deep copy so each test can mutate the sample safely.
+    return orjson.loads(orjson.dumps(fixture_data))
 
 
 def test_extract_attack_data(trigger, raw_event):
@@ -657,6 +667,20 @@ def test_get_event_request_id(event, expected_request_id):
 
 
 @pytest.mark.parametrize(
+    "fixture_name,expected_request_id",
+    [
+        ("akamai_waf_event_1.json", "1158db1758e37bfe67b7c09"),
+        ("akamai_waf_event_2.json", "2222222222"),
+        ("akamai_waf_event_3.json", "abc123"),
+    ],
+)
+def test_get_event_request_id_from_fixture_payloads(fixture_name, expected_request_id):
+    event = load_fixture_akamai_event(fixture_name)
+
+    assert AkamaiWAFLogsConnector._get_event_request_id(event) == expected_request_id
+
+
+@pytest.mark.parametrize(
     "event,expected_start",
     [
         ({"httpMessage": "not-a-dict"}, None),
@@ -669,6 +693,20 @@ def test_get_event_start_timestamp(event, expected_start):
     event_start = AkamaiWAFLogsConnector._get_event_start_timestamp(event)
 
     assert event_start == expected_start
+
+
+@pytest.mark.parametrize(
+    "fixture_name,expected_start",
+    [
+        ("akamai_waf_event_1.json", 1491303422),
+        ("akamai_waf_event_2.json", 1753178159),
+        ("akamai_waf_event_3.json", 1765196327),
+    ],
+)
+def test_get_event_start_timestamp_from_fixture_payloads(fixture_name, expected_start):
+    event = load_fixture_akamai_event(fixture_name)
+
+    assert AkamaiWAFLogsConnector._get_event_start_timestamp(event) == expected_start
 
 
 @pytest.mark.parametrize(
@@ -688,6 +726,19 @@ def test_build_fallback_event_dedup_key(event, expect_none):
         assert dedup_key.startswith("fallback:")
 
 
+@pytest.mark.parametrize(
+    "fixture_name",
+    ["akamai_waf_event_1.json", "akamai_waf_event_2.json", "akamai_waf_event_3.json"],
+)
+def test_build_fallback_event_dedup_key_from_fixture_payloads(fixture_name):
+    event = load_fixture_akamai_event(fixture_name)
+
+    dedup_key = AkamaiWAFLogsConnector._build_fallback_event_dedup_key(event)
+
+    assert dedup_key is not None
+    assert dedup_key.startswith("fallback:")
+
+
 def test_serialize_raw_log_value_truncates_oversized_payload(trigger):
     trigger.raw_log_max_length = 10
 
@@ -696,6 +747,59 @@ def test_serialize_raw_log_value_truncates_oversized_payload(trigger):
     assert serialized.startswith('{"payload"')
     assert "[truncated_raw_log chars=" in serialized
     assert "max_chars=10" in serialized
+
+
+@pytest.mark.parametrize(
+    "raw_string,expected_serialized",
+    [
+        ("line1\nline2\tline3\rline4", "line1 line2 line3 line4"),
+        ("single line", "single line"),
+    ],
+)
+def test_serialize_raw_log_value_sanitizes_multiline_fallback(trigger, raw_string, expected_serialized):
+    class NonSerializableWithCustomStr:
+        def __init__(self, value: str) -> None:
+            self.value = value
+
+        def __str__(self) -> str:
+            return self.value
+
+    serialized = trigger._serialize_raw_log_value(NonSerializableWithCustomStr(raw_string))
+
+    assert "\n" not in serialized
+    assert "\r" not in serialized
+    assert "\t" not in serialized
+    assert serialized == expected_serialized
+
+
+@pytest.mark.parametrize(
+    "reason,expected_reason_fragment",
+    [
+        ("bad\nreason\twith\rcontrols", "bad reason with controls"),
+        ("plain-reason", "plain-reason"),
+    ],
+)
+def test_request_error_with_unparseable_body_sanitizes_reason(trigger, reason, expected_reason_fragment):
+    response = MagicMock()
+    response.ok = False
+    response.status_code = 500
+    response.reason = reason
+    response.request = None
+    response.json.side_effect = ValueError("invalid json")
+    response.raise_for_status.side_effect = requests.HTTPError("boom")
+
+    with pytest.raises(requests.HTTPError):
+        trigger._AkamaiWAFLogsConnector__handle_response_error(response)
+
+    warning_logs = [
+        call.kwargs.get("message", "") for call in trigger.log.call_args_list if call.kwargs.get("level") == "warning"
+    ]
+    assert len(warning_logs) == 1
+    assert "Failed to parse Akamai API error response body" in warning_logs[0]
+    assert "\n" not in warning_logs[0]
+    assert "\r" not in warning_logs[0]
+    assert "\t" not in warning_logs[0]
+    assert f"reason={expected_reason_fragment}" in warning_logs[0]
 
 
 def test_fetch_events_logs_exception_when_process_event_fails(trigger, response_2):
@@ -811,6 +915,61 @@ def test_filter_processed_events_forwards_when_fallback_dedup_key_generation_fai
         "fallback dedup key generation failed" in call.kwargs.get("message", "") for call in trigger.log.call_args_list
     )
     assert any("raw_event=" in call.kwargs.get("message", "") for call in trigger.log.call_args_list)
+
+
+@pytest.mark.parametrize(
+    "fixture_name",
+    ["akamai_waf_event_1.json", "akamai_waf_event_2.json", "akamai_waf_event_3.json"],
+)
+def test_filter_processed_events_logs_single_line_raw_event_for_tmp_payloads(trigger, fixture_name):
+    event = load_fixture_akamai_event(fixture_name)
+    event_http_message = event.get("httpMessage")
+    if isinstance(event_http_message, dict):
+        event_http_message.pop("requestId", None)
+
+    filtered_events = list(trigger.filter_processed_events([event]))
+
+    assert len(filtered_events) == 1
+    warning_logs = [
+        call.kwargs.get("message", "") for call in trigger.log.call_args_list if call.kwargs.get("level") == "warning"
+    ]
+    assert len(warning_logs) == 1
+    assert "raw_event=" in warning_logs[0]
+    assert "\n" not in warning_logs[0]
+    assert "\r" not in warning_logs[0]
+    assert "\t" not in warning_logs[0]
+
+
+@pytest.mark.parametrize("fixture_name", ["akamai_waf_event_1.json", "akamai_waf_event_3.json"])
+def test_fetch_events_deduplicates_identical_exceptions_for_tmp_payloads(trigger, response_2, fixture_name):
+    event = load_fixture_akamai_event(fixture_name)
+    stream = orjson.dumps(event) + b"\n" + orjson.dumps(event) + b"\n" + b'{"total": 2, "offset": "OFFSET_TOKEN"}\n'
+
+    with (
+        patch.object(trigger, "process_event", side_effect=RuntimeError("boom")),
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
+            status_code=200,
+            content=stream,
+        )
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
+            status_code=200,
+            content=response_2,
+        )
+
+        chunks = list(trigger.fetch_events())
+
+    assert chunks == []
+    trigger.log_exception.assert_called_once()
+    logged_message = trigger.log_exception.call_args.kwargs["message"]
+    assert "Failed to process Akamai event" in logged_message
+    assert "raw_event=" in logged_message
+    assert "\n" not in logged_message
+    assert "\r" not in logged_message
+    assert "\t" not in logged_message
 
 
 def test_next_batch_deduplicates_missing_request_id_when_timestamp_is_invalid(trigger, response_2):
