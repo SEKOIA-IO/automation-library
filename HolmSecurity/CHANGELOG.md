@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-09-04
+
+### Fixed
+
+- Fix device asset connector: stop setting `device.vendor_name` to the product name ("Holm Security") for network assets; `vendor_name` must represent the device hardware vendor, not the scanning tool
+
 ## [1.3.1] - 2026-09-03
 
 ### Fixed

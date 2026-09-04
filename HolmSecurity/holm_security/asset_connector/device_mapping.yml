@@ -419,7 +419,6 @@ mapping:
             "created_time": 1751387820.667844,
             "last_seen_time": 1751532453.0,
             "is_managed": false,
-            "vendor_name": "Holm Security",
             "risk_score": 100,
             "risk_level": "Critical",
             "risk_level_id": 4,
