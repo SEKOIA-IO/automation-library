@@ -1,9 +1,12 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import requests
 
-from microsoft_outlook_modules.client.auth import GraphApiAuthentication, MicrosoftDefenderCredentials
+from microsoft_outlook_modules.client.auth import (
+    GraphApiAuthentication,
+    MicrosoftDefenderCredentials,
+)
 from microsoft_outlook_modules.client.retry import Retry
 
 
@@ -11,7 +14,7 @@ def test_credentials_authorization_title_cases_token_type():
     credentials = MicrosoftDefenderCredentials()
     credentials.token_type = "bearer"
     credentials.access_token = "sample-token"
-    credentials.expires_at = datetime.utcnow() + timedelta(seconds=600)
+    credentials.expires_at = datetime.now(UTC) + timedelta(seconds=600)
 
     assert credentials.authorization == "Bearer sample-token"
 
@@ -65,7 +68,7 @@ def test_graph_auth_refreshes_expired_credentials(monkeypatch):
     expired_credentials = MicrosoftDefenderCredentials()
     expired_credentials.token_type = "bearer"
     expired_credentials.access_token = "old-token"
-    expired_credentials.expires_at = datetime.utcnow() - timedelta(seconds=60)
+    expired_credentials.expires_at = datetime.now(UTC) - timedelta(seconds=60)
     auth._GraphApiAuthentication__api_credentials = expired_credentials
 
     class DummyResponse:
@@ -96,7 +99,7 @@ def test_graph_auth_call_sets_request_authorization_header(monkeypatch):
     credentials = MicrosoftDefenderCredentials()
     credentials.token_type = "bearer"
     credentials.access_token = "sample-token"
-    credentials.expires_at = datetime.utcnow() + timedelta(seconds=600)
+    credentials.expires_at = datetime.now(UTC) + timedelta(seconds=600)
 
     monkeypatch.setattr(auth, "get_credentials", lambda: credentials)
 
@@ -116,7 +119,7 @@ def test_graph_auth_call_sets_request_authorization_header(monkeypatch):
     ],
 )
 def test_retry_parse_ratelimit_retry_after(offset_seconds, expect_positive_delay):
-    timestamp = str(datetime.utcnow().timestamp() + offset_seconds)
+    timestamp = str(datetime.now(UTC).timestamp() + offset_seconds)
     delay = Retry.parse_ratelimit_retry_after(timestamp)
 
     if expect_positive_delay:

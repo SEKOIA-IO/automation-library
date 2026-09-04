@@ -18,8 +18,10 @@ def test_update_message(configured_action, message_2):
 
         action = configured_action(UpdateMessageAction)
         result = action.run(arguments={"user": "1111", "message_id": "2222", "subject": "Changed Subject"})
-        assert result["id"] == message_2["id"]
-        assert result["graph_message_id"] == message_2["id"]
+        assert result["message_id"] == message_2["id"]
+        assert result["internet_message_id"] == message_2["internetMessageId"]
+        assert result["received_date_time"] == message_2["receivedDateTime"]
+        assert result["to_recipients"][0]["email_address"]["address"] == "recipient@example.com"
 
 
 def test_update_message_falls_back_to_message_id_for_non_dict_payload(configured_action):
@@ -38,7 +40,7 @@ def test_update_message_falls_back_to_message_id_for_non_dict_payload(configured
 
         action = configured_action(UpdateMessageAction)
         result = action.run(arguments={"user": "1111", "message_id": "2222", "subject": "Changed Subject"})
-        assert result == {"id": "2222", "graph_message_id": "2222"}
+        assert result == {"message_id": "2222"}
 
 
 def test_update_message_falls_back_to_message_id_for_non_json_payload(configured_action):
@@ -57,7 +59,7 @@ def test_update_message_falls_back_to_message_id_for_non_json_payload(configured
 
         action = configured_action(UpdateMessageAction)
         result = action.run(arguments={"user": "1111", "message_id": "2222", "subject": "Changed Subject"})
-        assert result == {"id": "2222", "graph_message_id": "2222"}
+        assert result == {"message_id": "2222"}
 
 
 def test_update_message_with_all_optional_fields(configured_action, message_2):

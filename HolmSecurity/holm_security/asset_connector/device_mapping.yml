@@ -248,7 +248,7 @@ mapping:
     - source: "risk_score"
       target: "device.risk_score"
       type: "integer"
-      logic: "Direct mapping; omitted when 0"
+      logic: "Direct mapping; null when the API reports no score"
       description: "Device risk score"
 
     # NETWORK ASSET ATTRIBUTES (GET /v2/net-assets)
@@ -328,7 +328,7 @@ mapping:
     - source: "net_assets.risk_score"
       target: "device.risk_score"
       type: "integer"
-      logic: "Direct mapping; omitted when 0"
+      logic: "Direct mapping; null when the API reports no score"
       description: "Network asset risk score"
 
     - source: "static: false"

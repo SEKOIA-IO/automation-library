@@ -93,10 +93,7 @@ class UpdateMessageAction(MicrosoftGraphActionBase):
             result = {}
 
         resolved_message_id = result.get("id") if isinstance(result.get("id"), str) else message_id
-        resolved_graph_message_id = (
-            result.get("graph_message_id") if isinstance(result.get("graph_message_id"), str) else resolved_message_id
-        )
-
-        result["id"] = resolved_message_id
-        result["graph_message_id"] = resolved_graph_message_id
-        return result
+        normalized_result = self._snake_case_keys(result)
+        normalized_result.pop("id", None)
+        normalized_result["message_id"] = resolved_message_id
+        return normalized_result

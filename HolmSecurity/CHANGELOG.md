@@ -7,11 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.3.1] - 2026-09-04
+## [1.3.2] - 2026-09-04
 
 ### Fixed
 
 - Fix device asset connector: stop setting `device.vendor_name` to the product name ("Holm Security") for network assets; `vendor_name` must represent the device hardware vendor, not the scanning tool
+
+## [1.3.1] - 2026-09-03
+
+### Fixed
+
+- Both asset connectors no longer abort a whole collection cycle when the Holm API
+  reports a field as `null` instead of omitting it. A pydantic default only applies to
+  an absent key, so a single `"risk_score": null` or `"open_ports": null` on one network
+  asset failed the validation of the entire page and no asset was ever pushed
+- `emails` of a device is a list of `{email, username}` objects, not a list of addresses
+
+### Changed
+
+- Every optional field of the Holm API models is now nullable, following the published
+  API schema: a `null` is kept as `null` instead of being replaced by a fabricated
+  default. An absent `risk_score` is no longer reported as a score of `0`, and a real
+  score of `0` is now reported instead of being dropped
 
 ## [1.3.0] - 2026-08-20
 

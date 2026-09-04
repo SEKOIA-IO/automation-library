@@ -2,6 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 from dateutil.parser import isoparse
+from pydantic import ValidationError
 from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceOCSFModel,
     DeviceTypeId,
@@ -12,7 +13,12 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 from sekoia_automation.module import Module
 
 from holm_security.asset_connector.device_assets import HolmSecurityDeviceAssetConnector
-from holm_security.asset_connector.models import HolmDevice, HolmNetAsset
+from holm_security.asset_connector.models import (
+    HolmDevice,
+    HolmDevicePage,
+    HolmNetAsset,
+    HolmNetAssetPage,
+)
 
 BASE_URL = "https://se-api.holmsecurity.com"
 DEVICES_URL = f"{BASE_URL}/v2/devices"
@@ -589,3 +595,101 @@ def test_net_asset_checkpoint_is_not_advanced_when_the_connector_stops(connector
 
     connector.update_checkpoint()
     assert connector.most_recent_net_asset_last_detected is None
+
+
+def test_net_asset_page_accepts_null_values():
+    """The Holm API reports an absent value as `null` instead of omitting the key."""
+    page = HolmNetAssetPage.model_validate(
+        {
+            "count": 1,
+            "next": None,
+            "previous": None,
+            "results": [
+                make_net_asset(
+                    risk_score=None,
+                    vulnerabilities_count=None,
+                    open_ports=None,
+                    tags=None,
+                    severity=None,
+                    hosts_personal_data=None,
+                )
+            ],
+        }
+    )
+
+    asset = page.results[0]
+    # A null scalar stays null: an absent score is not a score of 0.
+    assert asset.risk_score is None
+    assert asset.vulnerabilities_count is None
+    assert asset.hosts_personal_data is None
+    # A null collection is an empty one.
+    assert asset.open_ports == []
+    assert asset.tags == []
+
+
+def test_device_page_accepts_null_values():
+    page = HolmDevicePage.model_validate(
+        {
+            "count": 1,
+            "next": None,
+            "previous": None,
+            "results": [
+                make_device(
+                    risk_score=None,
+                    vuln_count=None,
+                    internet_facing=None,
+                    current_version=None,
+                    emails=None,
+                    tags=None,
+                )
+            ],
+        }
+    )
+
+    device = page.results[0]
+    assert device.risk_score is None
+    assert device.vuln_count is None
+    assert device.internet_facing is None
+    assert device.emails == []
+    assert device.tags == []
+
+
+def test_page_still_rejects_a_null_identifier():
+    """A record without an identifier cannot be published and must still fail."""
+    with pytest.raises(ValidationError):
+        HolmNetAssetPage.model_validate(
+            {"count": 1, "next": None, "previous": None, "results": [make_net_asset(uuid=None)]}
+        )
+
+
+def test_device_emails_are_objects():
+    """`emails` holds `{email, username}` objects, not plain addresses."""
+    device = HolmDevice.model_validate(make_device(emails=[{"email": "soc@example.com", "username": "soc"}]))
+
+    assert device.emails[0].email == "soc@example.com"
+    assert device.emails[0].username == "soc"
+
+
+def test_net_asset_tags_without_a_uuid():
+    """Network assets carry a minimal tag object, sometimes without a uuid."""
+    asset = HolmNetAsset.model_validate(make_net_asset(tags=[{"name": "Web servers"}]))
+
+    assert asset.tags[0].name == "Web servers"
+    assert asset.tags[0].uuid is None
+
+
+def test_risk_score_null_is_not_reported(connector):
+    device = connector.build_device(HolmDevice.model_validate(make_device(risk_score=None)))
+    net_asset = connector.build_net_asset_device(HolmNetAsset.model_validate(make_net_asset(risk_score=None)))
+
+    assert device.risk_score is None
+    assert net_asset.risk_score is None
+
+
+def test_risk_score_zero_is_reported(connector):
+    """A score of 0 is a real score and must be distinguished from an absent one."""
+    device = connector.build_device(HolmDevice.model_validate(make_device(risk_score=0)))
+    net_asset = connector.build_net_asset_device(HolmNetAsset.model_validate(make_net_asset(risk_score=0)))
+
+    assert device.risk_score == 0
+    assert net_asset.risk_score == 0
