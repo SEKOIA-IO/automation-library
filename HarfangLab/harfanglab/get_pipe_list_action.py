@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # natives
 
 # third parties
@@ -19,8 +17,8 @@ class GetPipeListAction(JobExecutor):
 
         job_trigger_result: JobTriggerResult = self.trigger_job(
             target=JobTarget(
-                agent_ids=[agent.strip() for agent in target_agents.split(",") if agent.strip()] or None,
-                group_ids=[group.strip() for group in target_groups.split(",") if group.strip()] or None,
+                agents=[agent.strip() for agent in target_agents.split(",") if agent.strip()] or None,
+                groups=[group.strip() for group in target_groups.split(",") if group.strip()] or None,
             ),
             job=JobAction(value="getPipeList", params={}),
         )

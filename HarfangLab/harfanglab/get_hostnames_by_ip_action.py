@@ -1,5 +1,3 @@
-# coding: utf-8
-
 from sekoia_automation.action import Action
 
 from .client import ApiClient
