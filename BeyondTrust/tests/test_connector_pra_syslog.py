@@ -8,7 +8,9 @@ import pytest
 import requests_mock
 
 from beyondtrust_modules import BeyondTrustModule
+from beyondtrust_modules.connector_pra_syslog import BeyondTrustPRASyslogConfiguration
 from beyondtrust_modules.connector_pra_syslog import BeyondTrustPRASyslogConnector
+from beyondtrust_modules.models import BeyondTrustModuleConfiguration
 
 SYSLOG_LINES = (
     "Mar 10 11:55:00 test BG[24183]: 1427:01:01:"
@@ -46,19 +48,19 @@ def _make_syslog_zip(content: str) -> bytes:
 @pytest.fixture
 def trigger(data_storage):
     module = BeyondTrustModule()
-    module.configuration = {
-        "base_url": "https://tenant.beyondtrustcloud.com",
-        "client_id": "client_1",
-        "client_secret": "SECRET",
-    }
+    module.configuration = BeyondTrustModuleConfiguration(
+        base_url="https://tenant.beyondtrustcloud.com",
+        client_id="client_1",
+        client_secret="SECRET",
+    )
     trigger = BeyondTrustPRASyslogConnector(module=module, data_path=data_storage)
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
-    trigger.configuration = {
-        "intake_key": "intake_key",
-        "frequency": 1800,
-    }
+    trigger.configuration = BeyondTrustPRASyslogConfiguration(
+        intake_key="intake_key",
+        frequency=1800,
+    )
     yield trigger
 
 
