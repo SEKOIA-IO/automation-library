@@ -104,7 +104,8 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         while continue_receiving:
             messages: list[tuple[str, int]]
             async with self.sqs_wrapper.receive_messages(
-                max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
+                max_messages=self.sqs_max_messages,
+                visibility_timeout=self.sqs_visibility_timeout,
             ) as messages:
                 message_records = []
 
@@ -119,12 +120,17 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                         # Records is a list of strings
                         message_records.extend(self._get_notifs_from_sqs_message(message))
                     except ValueError as e:
-                        self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
+                        self.log_exception(
+                            e,
+                            message=f"Invalid JSON in message.\nInvalid message is: {message}",
+                        )
 
                 if not message_records:
                     continue_receiving = False
 
-                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_records))
+                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(message_records)
+                )
                 for record in message_records:
                     try:
                         s3_bucket, s3_key = self._get_object_from_notification(record)

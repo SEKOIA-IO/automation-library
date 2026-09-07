@@ -1,10 +1,9 @@
 import time
-from collections.abc import Generator
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from pathlib import Path
 from threading import Event, Lock, Thread
-from typing import Any, ClassVar
+from typing import Generator
 from urllib.parse import urljoin
 
 import orjson
@@ -14,7 +13,12 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from . import OnePasswordModule
 from .client import ApiClient
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 
 class OnePasswordConnectorConfiguration(DefaultConnectorConfiguration):
@@ -26,7 +30,7 @@ class OnePasswordEndpoint(Thread):
     METHOD_URI: str
     FEATURE_NAME: str
 
-    def __init__(self, connector: OnePasswordConnector) -> None:
+    def __init__(self, connector: "OnePasswordConnector") -> None:
         super().__init__()
         self._stop_event = Event()
         self.name = self.FEATURE_NAME
@@ -63,11 +67,11 @@ class OnePasswordEndpoint(Thread):
     def extract_timestamp(self, event: dict) -> datetime:
         return isoparse(event["timestamp"])
 
-    def __fetch_next_events(self, from_date: datetime) -> Generator[list]:
-        to_date = datetime.now().astimezone(UTC)
+    def __fetch_next_events(self, from_date: datetime) -> Generator[list, None, None]:
+        to_date = datetime.now().astimezone(timezone.utc)
         url = urljoin(self.connector.base_url, self.METHOD_URI)
 
-        data: dict[str, Any] = {
+        data = {
             "start_time": from_date.isoformat(),
             "end_time": to_date.isoformat(),
             "limit": self.connector.configuration.chunk_size,
@@ -79,19 +83,25 @@ class OnePasswordEndpoint(Thread):
             events = page.get("items", [])
 
             if len(events) > 0:
-                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.name).inc(
-                    len(events)
-                )
+                INCOMING_MESSAGES.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.name,
+                    **self.connector.scalability_labels,
+                ).inc(len(events))
                 yield events
 
             else:
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(0)
+                EVENTS_LAG.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.name,
+                    **self.connector.scalability_labels,
+                ).set(0)
                 return
 
             data = {"cursor": page["cursor"]}
             response = self.client.post(url, json=data)
 
-    def fetch_events(self) -> Generator[list]:
+    def fetch_events(self) -> Generator[list, None, None]:
         most_recent_date_seen = self.from_date
 
         for next_events in self.__fetch_next_events(most_recent_date_seen):
@@ -112,11 +122,13 @@ class OnePasswordEndpoint(Thread):
             self.cursor.offset = most_recent_date_seen
             self.from_date = most_recent_date_seen
 
-            now = datetime.now(UTC)
+            now = datetime.now(timezone.utc)
             current_lag = now - most_recent_date_seen
-            EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(
-                int(current_lag.total_seconds())
-            )
+            EVENTS_LAG.labels(
+                intake_key=self.connector.configuration.intake_key,
+                type=self.name,
+                **self.connector.scalability_labels,
+            ).set(int(current_lag.total_seconds()))
 
     def next_batch(self) -> None:
         # save the starting time
@@ -132,9 +144,11 @@ class OnePasswordEndpoint(Thread):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.name).inc(
-                    len(batch_of_events)
-                )
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.name,
+                    **self.connector.scalability_labels,
+                ).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -147,9 +161,11 @@ class OnePasswordEndpoint(Thread):
         # get the ending time and compute the duration to fetch the events
         batch_duration = int(batch_end_time - batch_start_time)
 
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.name).observe(
-            batch_duration
-        )
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.connector.configuration.intake_key,
+            type=self.name,
+            **self.connector.scalability_labels,
+        ).observe(batch_duration)
 
         self.log(
             message=f"{self.name}: Fetched and forwarded events in {batch_duration} seconds",
@@ -192,7 +208,7 @@ class OnePasswordConnector(Connector):
     module: OnePasswordModule
     configuration: OnePasswordConnectorConfiguration
 
-    FEATURE_TO_CLASS: ClassVar[dict] = {
+    FEATURE_TO_CLASS = {
         SignInAttemptsEndpoint.FEATURE_NAME: SignInAttemptsEndpoint,
         ItemUsagesEndpoint.FEATURE_NAME: ItemUsagesEndpoint,
         AuditEventsEndpoint.FEATURE_NAME: AuditEventsEndpoint,
@@ -211,6 +227,17 @@ class OnePasswordConnector(Connector):
     @cached_property
     def client(self) -> ApiClient:
         return ApiClient(api_token=self.module.configuration.api_token)
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     @cached_property
     def get_allowed_endpoints(self) -> list:

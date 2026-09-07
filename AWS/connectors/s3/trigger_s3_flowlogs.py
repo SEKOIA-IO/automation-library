@@ -3,11 +3,14 @@
 import ipaddress
 from collections.abc import AsyncGenerator
 from itertools import islice
-from typing import Any, cast
 
-from aws_helpers.utils import AsyncReader, is_parquet_content
+from aws_helpers.utils import AsyncReader, unescape_string
 from connectors.metrics import DISCARDED_EVENTS
-from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3LogsBaseConfiguration, AwsS3QueuedConfiguration
+from connectors.s3 import (
+    AbstractAwsS3QueuedConnector,
+    AwsS3LogsBaseConfiguration,
+    AwsS3QueuedConfiguration,
+)
 from connectors.s3.provider import AwsAccountProvider
 
 
@@ -22,17 +25,7 @@ class BaseAwsS3FlowLogsTrigger:
 
     configuration: AwsS3FlowLogsConfiguration
     name = "AWS S3 Flow Logs"
-
-    def _warn_parquet_content(self) -> None:
-        """Log a warning when Parquet content is sent to the text flow logs trigger."""
-        cast(Any, self).log(
-            message=(
-                "Parquet content detected in AWS S3 Flow Logs text trigger. "
-                "Use the AWS S3 Parquet records trigger (Fetch new FlowLogs Parquet records on S3) "
-                "for .parquet objects."
-            ),
-            level="warning",
-        )
+    scalability_labels: dict[str, str]
 
     @staticmethod
     def check_all_ips_are_private(input_str: str) -> bool:
@@ -62,13 +55,9 @@ class BaseAwsS3FlowLogsTrigger:
             stream: AsyncReader
 
         Returns:
-             AsyncGenerator[str, None]:
+             Generator:
         """
         content = await stream.read()
-
-        if is_parquet_content(content):
-            self._warn_parquet_content()
-            return
 
         records: list[str] = []
         for record in content.decode("utf-8").split(self.configuration.sep):
@@ -76,7 +65,7 @@ class BaseAwsS3FlowLogsTrigger:
                 if not self.check_all_ips_are_private(record):
                     records.append(record)
                 else:
-                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc()
 
         if self.configuration.ignore_comments:  # pragma: no cover
             records = [record for record in records if not record.strip().startswith("#")]

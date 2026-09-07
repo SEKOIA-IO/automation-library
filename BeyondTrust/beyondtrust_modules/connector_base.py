@@ -19,6 +19,17 @@ class BeyondTrustBaseConnector(Connector):
     module: BeyondTrustModule
 
     @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
+    @cached_property
     def client(self) -> ApiClient:
         return ApiClient(
             base_url=self.module.configuration.base_url,
@@ -69,7 +80,9 @@ class BeyondTrustBaseConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(batch_of_events)
+                )
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -80,7 +93,9 @@ class BeyondTrustBaseConnector(Connector):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         self.log(message=f"Fetched and forwarded events in {batch_duration} seconds", level="info")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            batch_duration
+        )
 
         delta_sleep = self.configuration.frequency - batch_duration
         if delta_sleep > 0:
