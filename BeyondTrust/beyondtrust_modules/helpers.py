@@ -5,7 +5,7 @@ from lxml import etree
 # Fields describing a participant of a session, reported under customer_list/rep_list
 PARTICIPANT_FIELDS = ("private_ip", "public_ip", "hostname", "os")
 
-# Session wide counters, useful to monitor exfiltration
+# Session-wide counters, useful to monitor exfiltration
 SESSION_COUNTERS = ("file_transfer_count", "file_move_count", "file_delete_count")
 
 
