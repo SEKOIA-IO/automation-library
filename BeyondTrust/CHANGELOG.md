@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.4.1] - 2026-09-07
+
+### Fixed
+
+- Handle BeyondTrust PRA platform `"No Support report information matching your chosen criteria is available."` XML responses as a no-data state instead of an error
+
 ## [1.4.0] - 2026-09-07
 
 ### Added
