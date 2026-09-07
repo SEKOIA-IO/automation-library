@@ -3,6 +3,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -50,18 +51,24 @@ def _make_syslog_zip(content: str) -> bytes:
 @pytest.fixture
 def trigger(data_storage):
     module = BeyondTrustModule()
-    module.configuration = BeyondTrustModuleConfiguration(
-        base_url="https://tenant.beyondtrustcloud.com",
-        client_id="client_1",
-        client_secret="SECRET",
+    module.configuration = cast(
+        Any,
+        BeyondTrustModuleConfiguration(
+            base_url="https://tenant.beyondtrustcloud.com",
+            client_id="client_1",
+            client_secret="SECRET",
+        ).model_dump(),
     )
     trigger = BeyondTrustPRASyslogConnector(module=module, data_path=data_storage)
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
-    trigger.configuration = BeyondTrustPRASyslogConfiguration(
-        intake_key="intake_key",
-        frequency=1800,
+    trigger.configuration = cast(
+        Any,
+        BeyondTrustPRASyslogConfiguration(
+            intake_key="intake_key",
+            frequency=1800,
+        ).model_dump(),
     )
     yield trigger
 
@@ -401,7 +408,10 @@ def test_iter_lines_skips_blank_lines_and_flush_empty_payload_branch(trigger):
 
 
 def test_fetch_events_batching_and_next_batch_empty_branch(trigger):
-    trigger.configuration = BeyondTrustPRASyslogConfiguration(intake_key="intake_key", frequency=1)
+    trigger.configuration = cast(
+        Any,
+        BeyondTrustPRASyslogConfiguration(intake_key="intake_key", frequency=1).model_dump(),
+    )
 
     lines = [
         "Mar 10 11:55:00 test BG[1]: 1:01:01:event=missing_when",
