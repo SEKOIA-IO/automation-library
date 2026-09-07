@@ -62,5 +62,9 @@
     "properties": {},
     "title": "The records"
   },
-  "uuid": "2d806360-5c22-4722-b335-8eaf5ab3e4bf"
+  "uuid": "2d806360-5c22-4722-b335-8eaf5ab3e4bf",
+  "labels": {
+    "scalable_horizontally": true,
+    "scalable_vertically": true
+  }
 }

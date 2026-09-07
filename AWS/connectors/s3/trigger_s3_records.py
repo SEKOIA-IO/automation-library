@@ -37,8 +37,7 @@ class BaseAwsS3RecordsTrigger:
                 "CreateTags",
                 "DeleteTags",
                 "DescribeAddresses",
-                # DescribeInstances is deliberately collected: it is a key reconnaissance action
-                # performed with stolen EC2 credentials. See _forced_events below.
+                "DescribeInstances",
                 "DescribeInstanceStatus",
                 "DescribePublicIpv4Pools",
                 "DescribeSubnets",
@@ -51,15 +50,6 @@ class BaseAwsS3RecordsTrigger:
             ],
         },
         "default": {"unsupported": ["List", "Describe", "GetRecords"]},
-    }
-
-    # Reconnaissance actions that must always be collected, even though their name matches one of the
-    # unsupported prefixes above. Keyed by eventSource, matched on the exact event name so that noisier
-    # neighbours (ListUserPolicies, ListSecretVersionIds, ...) keep being filtered out.
-    _forced_events = {
-        "iam.amazonaws.com": {"ListAccessKeys", "ListRoles", "ListUsers"},
-        "secretsmanager.amazonaws.com": {"ListSecrets"},
-        "ssm.amazonaws.com": {"DescribeParameters"},
     }
 
     @classmethod
@@ -75,10 +65,6 @@ class BaseAwsS3RecordsTrigger:
         """
         event_source = payload.get("eventSource", "")
         event_name = payload.get("eventName", "")
-
-        if event_name in cls._forced_events.get(event_source, set()):
-            return True
-
         if event_source not in cls._events_prefixes.keys():
             event_source = "default"
 

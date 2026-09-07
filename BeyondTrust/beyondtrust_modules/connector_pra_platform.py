@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from functools import cached_property
 from typing import Generator
 
 from cachetools import Cache, LRUCache
@@ -32,6 +33,17 @@ class BeyondTrustPRAPlatformConnector(BeyondTrustBaseConnector):
         self.from_date = self.cursor.offset
         self.sessions_cache: Cache = self.load_sessions_cache()
 
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
     def load_sessions_cache(self) -> Cache:
         result: LRUCache = LRUCache(maxsize=1000)
 
@@ -55,7 +67,7 @@ class BeyondTrustPRAPlatformConnector(BeyondTrustBaseConnector):
             return
 
         if self._check_xml_error(response):
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
             return
 
         sessions_ids = parse_session_list(response.content)
@@ -72,7 +84,9 @@ class BeyondTrustPRAPlatformConnector(BeyondTrustBaseConnector):
                 most_recent_date_seen = session_end_time
 
             parsed_events = parse_session(response.content)
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(parsed_events))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(parsed_events)
+            )
 
             self.sessions_cache[session_id] = 1
             yield parsed_events
@@ -85,4 +99,4 @@ class BeyondTrustPRAPlatformConnector(BeyondTrustBaseConnector):
 
             now = int(datetime.now(timezone.utc).timestamp())
             current_lag = now - most_recent_date_seen
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)

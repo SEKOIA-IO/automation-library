@@ -1,16 +1,15 @@
 """Bitsight Http Client and other helpers."""
 
 import asyncio
-from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, AsyncGenerator, AsyncIterator
 
 from aiohttp import BasicAuth, ClientSession
 from aiolimiter import AsyncLimiter
 from yarl import URL
 
 
-class BitsightClient:
+class BitsightClient(object):
     """
     Bitsight Http Client.
 
@@ -46,7 +45,7 @@ class BitsightClient:
         return AsyncLimiter(16, 1)
 
     @asynccontextmanager
-    async def session(self) -> AsyncGenerator[ClientSession]:
+    async def session(self) -> AsyncGenerator[ClientSession, None]:
         """
         Get configured session with rate limiter.
 
@@ -85,8 +84,7 @@ class BitsightClient:
         """
         base_url = f"https://api.bitsighttech.com/ratings/v1/companies/{company_id}/findings"
 
-        # TODO: in spec we want to use `last_seen_gt`.
-        #       It does not include the items inside `last_seen`.
+        # TODO: in spec we want to use `last_seen_gt`. Seems like `last_seen_gt` does not include the items inside last_seen
         #       but as we use offset, we should use `last_seen` instead
         # Sort is default
         params = {

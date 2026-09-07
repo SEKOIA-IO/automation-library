@@ -1,12 +1,13 @@
 import asyncio
 import time
 from asyncio import Queue
-from datetime import UTC, datetime, timedelta
-from functools import reduce
-from typing import Any, cast
+from datetime import datetime, timedelta, timezone
+from functools import cached_property, reduce
+from typing import Annotated, Any, Optional, TypeAlias, cast
 
 import orjson
 from loguru import logger
+from pydantic import Field
 from pydantic.v1 import BaseModel
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
@@ -17,8 +18,8 @@ from connectors import BitsightModule
 
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
-type FindingQueue = Queue[tuple[dict[str, Any] | None, str]]
-type Finding = dict[str, Any]
+FindingQueue: TypeAlias = Queue[tuple[dict[str, Any] | None, str]]
+Finding: TypeAlias = dict[str, Any]
 
 
 class CompanyCheckpoint(BaseModel):
@@ -26,7 +27,7 @@ class CompanyCheckpoint(BaseModel):
     last_seen: str | None = None
     offset: int | None = None
 
-    def with_updated_last_seen(self, time_delta: int) -> CompanyCheckpoint:
+    def with_updated_last_seen(self, time_delta: int) -> "CompanyCheckpoint":
         """
         Get CompanyCheckpoint with updated last_see corresponded to the next logic.
 
@@ -40,14 +41,22 @@ class CompanyCheckpoint(BaseModel):
         Returns:
             datetime:
         """
-        result = datetime.now(UTC).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(days=time_delta)
+        result = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(
+            days=time_delta
+        )
 
-        parsed_last_seen = datetime.fromisoformat(self.last_seen).replace(tzinfo=UTC) if self.last_seen else None
+        parsed_last_seen = (
+            datetime.fromisoformat(self.last_seen).replace(tzinfo=timezone.utc) if self.last_seen else None
+        )
 
         if parsed_last_seen is not None and parsed_last_seen >= result:
             return self
 
-        return CompanyCheckpoint(company_uuid=self.company_uuid, last_seen=result.strftime("%Y-%m-%d"), offset=None)
+        return CompanyCheckpoint(
+            company_uuid=self.company_uuid,
+            last_seen=result.strftime("%Y-%m-%d"),
+            offset=None,
+        )
 
 
 class Checkpoint(BaseModel):
@@ -67,13 +76,15 @@ class Checkpoint(BaseModel):
             return
 
         last_seen = (
-            datetime.fromisoformat(company_checkpoint.last_seen or datetime.now(UTC).isoformat())
-            .replace(tzinfo=UTC)
+            datetime.fromisoformat(company_checkpoint.last_seen or datetime.now(timezone.utc).isoformat())
+            .replace(tzinfo=timezone.utc)
             .replace(microsecond=0, second=0, minute=0, hour=0)
         )
 
         next_day = last_seen + timedelta(days=1)
-        now = datetime.now(UTC).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(days=self.time_delta)
+        now = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(
+            days=self.time_delta
+        )
         if next_day <= now:
             company_checkpoint.last_seen = next_day.strftime("%Y-%m-%d")
             company_checkpoint.offset = 1
@@ -115,7 +126,18 @@ class PullFindingsConnector(AsyncConnector):
     module: BitsightModule
     configuration: PullFindingsConnectorConfiguration
 
-    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from module manifest."""
+        labels = self.module.manifest.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
+
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         """Init PullFindingsConnector."""
 
         super().__init__(*args, **kwargs)
@@ -236,7 +258,10 @@ class PullFindingsConnector(AsyncConnector):
         """
         Fetch next batch of findings.
         """
-        logger.info("Start fetching next batch of findings. Companies {0}", self.module.configuration.company_uuids)
+        logger.info(
+            "Start fetching next batch of findings. Companies {0}",
+            self.module.configuration.company_uuids,
+        )
         checkpoint = self.get_checkpoint()
 
         company_ids = self.module.configuration.company_uuids
@@ -281,19 +306,31 @@ class PullFindingsConnector(AsyncConnector):
                         logger.info("No new events to forward")
 
                     # report the lag
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+                    EVENTS_LAG.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).set(current_lag)
 
                     # report the number of forwarded events
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result_count)
+                    OUTCOMING_EVENTS.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).inc(result_count)
 
                     # compute and report the duration to fetch the events
                     batch_duration = int(processing_end - processing_start)
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+                    FORWARD_EVENTS_DURATION.labels(
+                        intake_key=self.configuration.intake_key,
+                        **self.scalability_labels,
+                    ).observe(batch_duration)
 
                     # compute the remaining sleeping time. If greater than 0, sleep
                     delta_sleep = self.configuration.frequency - batch_duration
                     if delta_sleep > 0:
-                        self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
+                        self.log(
+                            message=f"Next batch in the future. Waiting {delta_sleep} seconds",
+                            level="info",
+                        )
                         time.sleep(delta_sleep)
 
             except Exception as error:
