@@ -4,24 +4,26 @@ import pytest
 import requests_mock
 
 from beyondtrust_modules import BeyondTrustModule
+from beyondtrust_modules.connector_pra_vault_account_activity import BeyondTrustPRAVaultAccountActivityConfiguration
 from beyondtrust_modules.connector_pra_vault_account_activity import BeyondTrustPRAVaultAccountActivityConnector
+from beyondtrust_modules.models import BeyondTrustModuleConfiguration
 
 
 @pytest.fixture
 def trigger(data_storage):
     module = BeyondTrustModule()
-    module.configuration = {
-        "base_url": "https://tenant.beyondtrustcloud.com",
-        "client_id": "client_1",
-        "client_secret": "SECRET",
-    }
+    module.configuration = BeyondTrustModuleConfiguration(
+        base_url="https://tenant.beyondtrustcloud.com",
+        client_id="client_1",
+        client_secret="SECRET",
+    )
     trigger = BeyondTrustPRAVaultAccountActivityConnector(module=module, data_path=data_storage)
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
-    trigger.configuration = {
-        "intake_key": "intake_key",
-    }
+    trigger.configuration = BeyondTrustPRAVaultAccountActivityConfiguration(
+        intake_key="intake_key",
+    )
     yield trigger
 
 
