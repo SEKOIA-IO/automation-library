@@ -164,3 +164,28 @@ def test_fetch_events_xml_error_with_attributes(trigger, error_response_xml):
         # Verify that the error was logged with the expected format
         expected_error_msg = f"An error occurred. response: {error_response_xml.decode('utf-8')}"
         trigger.log.assert_any_call(expected_error_msg, level="error")
+
+
+def test_no_data_message_and_empty_events_paths(trigger):
+    no_data_error_xml = b"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<error xmlns=\"http://www.beyondtrust.com/sra/namespaces/API/reporting\">No Support Team report information matching your chosen criteria is available.</error>"""
+
+    empty_team_xml = b"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<team_activity_list xmlns=\"http://www.beyondtrust.com/sra/namespaces/API/reporting\">
+    <team_activity name=\"Integration\" id=\"1\"><events></events></team_activity>
+</team_activity_list>"""
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.register_uri(
+            "POST",
+            "https://tenant.beyondtrustcloud.com/oauth2/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock_requests.register_uri(
+            "POST",
+            "https://tenant.beyondtrustcloud.com/api/reporting",
+            [{"content": no_data_error_xml}, {"content": empty_team_xml}],
+        )
+
+        assert list(trigger.fetch_events()) == []
+        assert list(trigger.fetch_events()) == []
