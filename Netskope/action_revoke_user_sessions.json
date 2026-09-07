@@ -1,0 +1,27 @@
+{
+  "description": "Revoke active Netskope sessions and tokens for a user",
+  "docker_parameters": "revoke_user_sessions",
+  "name": "Revoke User Sessions",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_token": {
+        "type": "string",
+        "description": "API token for authentication"
+      },
+      "user_name": {
+        "type": "string",
+        "description": "The user name or email whose sessions should be revoked"
+      }
+    },
+    "required": ["api_token", "user_name"],
+    "title": "Revoke user sessions",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "5063527b-73b6-4cef-b203-c9fa31b1bd17"
+}

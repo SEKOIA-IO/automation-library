@@ -23,7 +23,10 @@ def test_replace_blocklist_success(replace_action):
             "https://my.fake.netskope.com/api/v2/policy/urllist/456/replace",
             status_code=200,
             json={
-                "data": {"type": "exact", "urls": ["new-blocked.com", "another-blocked.com"]},
+                "data": {
+                    "type": "exact",
+                    "urls": ["new-blocked.com", "another-blocked.com"],
+                },
                 "id": 456,
                 "modify_by": "Netskope API",
                 "modify_time": "1997-01-01 00:00:00",
@@ -38,7 +41,10 @@ def test_replace_blocklist_success(replace_action):
             status_code=200,
             json=[
                 {
-                    "data": {"type": "exact", "urls": ["new-blocked.com", "another-blocked.com"]},
+                    "data": {
+                        "type": "exact",
+                        "urls": ["new-blocked.com", "another-blocked.com"],
+                    },
                     "id": 456,
                     "modify_by": "Netskope API",
                     "modify_time": "1997-01-01 00:00:00",
@@ -64,7 +70,12 @@ def test_replace_blocklist_success(replace_action):
             level="info",
             message="Successfully replaced blocklist Updated Blocklist (id = 456) with 2 item(s)",
         )
-        assert replace_request_body == {"data": {"type": "exact", "urls": ["another-blocked.com", "new-blocked.com"]}}
+        assert replace_request_body == {
+            "data": {
+                "type": "exact",
+                "urls": ["another-blocked.com", "new-blocked.com"],
+            }
+        }
 
 
 def test_replace_blocklist_missing_required_params(replace_action):
