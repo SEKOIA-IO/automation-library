@@ -138,3 +138,52 @@ def test_fetch_events_xml_error_with_attributes(trigger, error_response_xml):
         # Verify that the error was logged with the expected format
         expected_error_msg = f"An error occurred. response: {error_response_xml.decode('utf-8')}"
         trigger.log.assert_any_call(expected_error_msg, level="error")
+
+
+def test_load_cache_and_skip_cached_session(trigger):
+    with trigger.cursor._context as cache:
+        cache["sessions_cache"] = ["cached-session-id"]
+
+    loaded = trigger.load_sessions_cache()
+    assert "cached-session-id" in loaded
+    trigger.sessions_cache = loaded
+
+    session_listing = b"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<session_summary_list xmlns=\"http://www.beyondtrust.com/sra/namespaces/API/reporting\">
+<session_summary lsid=\"cached-session-id\" has_recording=\"0\"/>
+</session_summary_list>"""
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.register_uri(
+            "POST",
+            "https://tenant.beyondtrustcloud.com/oauth2/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock_requests.register_uri(
+            "POST",
+            "https://tenant.beyondtrustcloud.com/api/reporting",
+            [{"content": session_listing}],
+        )
+
+        assert list(trigger.fetch_events()) == []
+
+
+def test_return_on_get_session_error(trigger):
+    session_listing = b"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<session_summary_list xmlns=\"http://www.beyondtrust.com/sra/namespaces/API/reporting\">
+<session_summary lsid=\"new-session-id\" has_recording=\"0\"/>
+</session_summary_list>"""
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.register_uri(
+            "POST",
+            "https://tenant.beyondtrustcloud.com/oauth2/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock_requests.register_uri(
+            "POST",
+            "https://tenant.beyondtrustcloud.com/api/reporting",
+            [{"content": session_listing}, {"status_code": 500, "json": {"message": "boom"}}],
+        )
+
+        assert list(trigger.fetch_events()) == []
