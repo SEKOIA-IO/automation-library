@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "Automation module for Beyondtrust"
-version = "0.0"
+version = "1.4.0"
 description = ""
 authors = []
 package-mode = false
@@ -23,8 +23,12 @@ python = ">=3.11,<3.12"
 sekoia-automation-sdk = "^1.22.4"
 orjson = "^3.11.7"
 lxml = "^6.0.2"
-structlog = "^25.5.0"
 cachetools = "^7.0.5"
+pydantic = ">=2.10,<3"
+requests = "^2.34.2"
+requests-ratelimiter = ">=0.7.0,<0.8"
+urllib3 = "^2.7.0"
+prometheus-client = "^0.26.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

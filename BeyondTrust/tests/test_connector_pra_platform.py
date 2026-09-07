@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+from typing import Any, cast
 
 import pytest
 import requests_mock
@@ -14,18 +15,24 @@ from .expectations import EXPECTED_SESSION_EVENTS
 @pytest.fixture
 def trigger(data_storage):
     module = BeyondTrustModule()
-    module.configuration = BeyondTrustModuleConfiguration(
-        base_url="https://tenant.beyondtrustcloud.com",
-        client_id="client_1",
-        client_secret="SECRET",
+    module.configuration = cast(
+        Any,
+        BeyondTrustModuleConfiguration(
+            base_url="https://tenant.beyondtrustcloud.com",
+            client_id="client_1",
+            client_secret="SECRET",
+        ).model_dump(),
     )
     trigger = BeyondTrustPRAPlatformConnector(module=module, data_path=data_storage)
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
-    trigger.configuration = BeyondTrustPRAPlatformConfiguration(
-        intake_key="intake_key",
-        frequency=300,
+    trigger.configuration = cast(
+        Any,
+        BeyondTrustPRAPlatformConfiguration(
+            intake_key="intake_key",
+            frequency=300,
+        ).model_dump(),
     )
     yield trigger
 

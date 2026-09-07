@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -37,6 +37,8 @@ class _FakeResponse:
 
 
 class _BaseConnectorForTests(BeyondTrustBaseConnector):
+    configuration: BeyondTrustPRAPlatformConfiguration
+
     def __init__(self, *args, batches=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._batches = batches if batches is not None else []
@@ -48,10 +50,13 @@ class _BaseConnectorForTests(BeyondTrustBaseConnector):
 
 def _build_module() -> BeyondTrustModule:
     module = BeyondTrustModule()
-    module.configuration = BeyondTrustModuleConfiguration(
-        base_url="https://tenant.beyondtrustcloud.com",
-        client_id="client_1",
-        client_secret="SECRET",
+    module.configuration = cast(
+        Any,
+        BeyondTrustModuleConfiguration(
+            base_url="https://tenant.beyondtrustcloud.com",
+            client_id="client_1",
+            client_secret="SECRET",
+        ).model_dump(),
     )
     return module
 
@@ -126,7 +131,10 @@ def test_next_batch_no_events_and_no_sleep_branch(data_storage):
     connector = _BaseConnectorForTests(module=_build_module(), data_path=data_storage, batches=[[]])
     connector.log = MagicMock()
     connector.push_events_to_intakes = MagicMock()
-    connector.configuration = BeyondTrustPRAPlatformConfiguration(intake_key="intake_key", frequency=2)
+    connector.configuration = cast(
+        Any,
+        BeyondTrustPRAPlatformConfiguration(intake_key="intake_key", frequency=2).model_dump(),
+    )
 
     with pytest.MonkeyPatch.context() as m:
         times = iter([0.0, 5.0])
