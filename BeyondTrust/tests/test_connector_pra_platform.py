@@ -147,6 +147,26 @@ def test_fetch_events_xml_error_with_attributes(trigger, error_response_xml):
         trigger.log.assert_any_call(expected_error_msg, level="error")
 
 
+def test_fetch_events_no_data_error_message_is_not_logged_as_error(trigger):
+    no_data_error_xml = b"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<error xmlns=\"http://www.beyondtrust.com/sra/namespaces/API/reporting\">No Support report information matching your chosen criteria is available.</error>"""
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.register_uri(
+            "POST",
+            "https://tenant.beyondtrustcloud.com/oauth2/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock_requests.register_uri(
+            "POST",
+            "https://tenant.beyondtrustcloud.com/api/reporting",
+            [{"content": no_data_error_xml}],
+        )
+
+        assert list(trigger.fetch_events()) == []
+        trigger.log.assert_not_called()
+
+
 def test_load_cache_and_skip_cached_session(trigger):
     with trigger.cursor._context as cache:
         cache["sessions_cache"] = ["cached-session-id"]
