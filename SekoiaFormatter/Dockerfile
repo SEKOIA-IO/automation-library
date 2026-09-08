@@ -22,4 +22,4 @@ COPY . .
 USER sekoiaio-runtime
 
 # Set the entrypoint
-ENTRYPOINT [ "python", "./main.py" ]
+ENTRYPOINT [ "/app/.venv/bin/python", "./main.py" ]
