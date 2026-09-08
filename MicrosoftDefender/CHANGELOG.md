@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-09-08 - 1.3.8
+
+### Changed
+
+- Upgrade `msgraph-sdk` from 1.56.0 to 1.62.0.
+
 ## 2026-08-18 - 1.3.7
 
 ### Changed
