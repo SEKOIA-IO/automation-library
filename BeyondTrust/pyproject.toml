@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "Automation module for Beyondtrust"
-version = "1.4.0"
+version = "1.4.1"
 description = ""
 authors = []
 package-mode = false
