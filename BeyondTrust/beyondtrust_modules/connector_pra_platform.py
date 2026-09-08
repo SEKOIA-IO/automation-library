@@ -55,7 +55,7 @@ class BeyondTrustPRAPlatformConnector(BeyondTrustBaseConnector):
         if self._handle_response_error(response):
             return
 
-        if response.ok and "<error" in response.text and self.NO_DATA_ERROR_MESSAGE in response.text:
+        if "<error" in response.text and self.NO_DATA_ERROR_MESSAGE in response.text:
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
             # Just no new events for the requested interval.
             return
