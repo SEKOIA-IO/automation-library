@@ -37,10 +37,16 @@ class FormatAction(Action):
             # Preprocess data: convert epoch timestamps to datetime objects
             processed_data: dict[str, Any] = {}
             for key, value in data_dict.items():
+                int_value = None
+                try:
+                    int_value = int(value)
+                except (ValueError, TypeError):
+                    pass
+
                 # If value is numeric and looks like an epoch timestamp, convert it
-                if isinstance(value, (int, float)) and value > 1000000000:
+                if int_value is not None and int_value > 1000000000:
                     try:
-                        dt_value: Any = datetime.fromtimestamp(value)
+                        dt_value: Any = datetime.fromtimestamp(int_value)
                         processed_data[key] = dt_value
                         self.log(
                             message=f"Converted epoch timestamp {key} to datetime object.",
