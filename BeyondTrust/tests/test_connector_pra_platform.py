@@ -164,7 +164,7 @@ def test_fetch_events_no_data_error_message_is_not_logged_as_error(trigger):
         )
 
         assert list(trigger.fetch_events()) == []
-        trigger.log.assert_not_called()
+        assert not any(call.kwargs.get("level") == "error" for call in trigger.log.call_args_list)
 
 
 def test_load_cache_and_skip_cached_session(trigger):
