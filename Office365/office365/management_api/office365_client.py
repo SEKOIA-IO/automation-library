@@ -153,7 +153,7 @@ class Office365API:
                 attempt=attempt + 1,
                 max_attempts=REQUEST_MAX_ATTEMPTS,
             )
-            await response.release()
+            response.release()
             await asyncio.sleep(wait)
 
         # Unreachable: the final attempt always returns the response or raises above.
