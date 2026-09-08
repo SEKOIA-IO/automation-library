@@ -1046,3 +1046,112 @@ class TestGetAssetsDeduplication:
             new_fp = cache["sent_ids"][COMPUTER_ENDPOINT_DICT["id"]]["fingerprint"]
 
         assert new_fp != original_fp
+
+
+class TestGetMappedFields:
+    def test_returns_dict(self, connector):
+        result = connector.get_mapped_fields()
+        assert isinstance(result, dict)
+
+    def test_is_non_empty(self, connector):
+        assert len(connector.get_mapped_fields()) > 0
+
+    def test_all_keys_and_values_are_strings(self, connector):
+        mapping = connector.get_mapped_fields()
+        for k, v in mapping.items():
+            assert isinstance(k, str), f"Key {k!r} is not a string"
+            assert isinstance(v, str), f"Value {v!r} is not a string"
+
+    def test_contains_hostname_mapping(self, connector):
+        assert "hostname" in connector.get_mapped_fields()
+
+    def test_contains_os_mapping(self, connector):
+        mapping = connector.get_mapped_fields()
+        assert any("os" in k for k in mapping)
+
+    def test_contains_ip_mapping(self, connector):
+        mapping = connector.get_mapped_fields()
+        assert any("ipv4" in k.lower() or "ipv6" in k.lower() for k in mapping)
+
+    def test_contains_timestamp_mappings(self, connector):
+        mapping = connector.get_mapped_fields()
+        assert "lastSeenAt" in mapping
+        assert "registeredAt" in mapping
+
+    def test_deterministic_across_calls(self, connector):
+        assert connector.get_mapped_fields() == connector.get_mapped_fields()
+
+    def test_values_reference_device_namespace(self, connector):
+        """All OCSF paths must point into the device object or enrichments."""
+        for v in connector.get_mapped_fields().values():
+            assert v.startswith("device.") or v.startswith(
+                "enrichments."
+            ), f"Expected OCSF path to start with 'device.' or 'enrichments.', got {v!r}"
+
+
+class TestResetCheckpoint:
+    def test_clears_last_seen_cursor_from_context(self, connector):
+        with connector.context as cache:
+            cache["last_seen_cursor"] = "2026-01-01T00:00:00.000Z"
+
+        connector.reset_checkpoint()
+
+        with connector.context as cache:
+            assert cache.get("last_seen_cursor") is None
+
+    def test_clears_sent_ids_from_context(self, connector):
+        with connector.context as cache:
+            cache["sent_ids"] = {"some-id": {"fingerprint": "fp", "cached_at": "2026-01-01T00:00:00Z"}}
+
+        connector.reset_checkpoint()
+
+        with connector.context as cache:
+            assert cache.get("sent_ids") is None
+
+    def test_resets_latest_time_in_memory(self, connector):
+        connector._latest_time = "2026-05-01T00:00:00.000Z"
+        connector.reset_checkpoint()
+        assert connector._latest_time is None
+
+    def test_resets_sent_ids_in_memory(self, connector):
+        connector._sent_ids = {"id-1": {"fingerprint": "fp", "cached_at": "2026-01-01T00:00:00Z"}}
+        connector.reset_checkpoint()
+        assert connector._sent_ids == {}
+
+    def test_logs_info_message(self, connector):
+        connector.reset_checkpoint()
+        log_calls = [str(call) for call in connector.log.call_args_list]
+        assert any("reset" in call.lower() for call in log_calls)
+
+    def test_noop_on_empty_context(self, connector):
+        """reset_checkpoint must not raise when the context is already empty."""
+        connector.reset_checkpoint()  # must not raise
+
+    def test_full_refetch_after_reset(self, connector):
+        """After reset, the next get_assets() run must re-yield all devices."""
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT])
+        list(connector.get_assets())  # seeds cache
+
+        connector.reset_checkpoint()
+
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT])
+        assets = list(connector.get_assets())
+        assert len(assets) == 2
+
+    def test_checkpoint_cleared_means_no_cursor_on_next_iter(self, connector):
+        """After reset, _iter_endpoints must not pass lastSeenAfter."""
+        with connector.context as cache:
+            cache["last_seen_cursor"] = "2026-05-30T00:00:00.000Z"
+
+        connector.reset_checkpoint()
+
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = {"items": [], "pages": {"size": 50, "maxSize": 500}}
+        connector.client = MagicMock()
+        connector.client.list_endpoints.return_value = mock_resp
+
+        list(connector._iter_endpoints())
+
+        called_params = connector.client.list_endpoints.call_args[0][0]
+        assert "lastSeenAfter" not in called_params

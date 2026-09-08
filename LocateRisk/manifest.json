@@ -1,0 +1,27 @@
+{
+  "configuration": {
+    "properties": {
+      "api_key": {
+        "description": "API Key",
+        "title": "Api Key",
+        "type": "string"
+      },
+      "base_url": {
+        "default": "https://app.locaterisk.com/",
+        "description": "Base URL of the LocateRisk platform",
+        "title": "Base Url",
+        "type": "string"
+      }
+    },
+    "required": ["api_key"],
+    "title": "LocateRiskModuleConfiguration",
+    "type": "object",
+    "secrets": ["api_key"]
+  },
+  "description": "Specialist for automated IT risk analysis and monitoring",
+  "name": "LocateRisk",
+  "slug": "locaterisk",
+  "categories": ["Threat Intelligence"],
+  "uuid": "5173f31f-13b7-4418-bf3b-3b18b196a8e2",
+  "version": "0.6.0"
+}

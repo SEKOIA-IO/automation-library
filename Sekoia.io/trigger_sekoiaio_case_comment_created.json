@@ -1,0 +1,118 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "mode_filter": {
+        "type": "string",
+        "description": "Create a run only for cases matching a mode (automatic or manual)",
+        "enum": [
+          "automatic",
+          "manual"
+        ]
+      },
+      "priority_uuids_filter": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Create a run only for cases matching a list of priority uuids"
+      },
+      "assignees_filter": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Create a run only for cases matching a list of assignees"
+      },
+      "case_uuids_filter": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Create a run only for cases matching a list of case uuids/short ids"
+      }
+    },
+    "type": "object",
+    "title": "Trigger configuration"
+  },
+  "description": "A comment was added to an existing Case",
+  "docker_parameters": "case_comment_created_trigger",
+  "name": "Case Comment Created",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "comment": {
+        "description": "Case comment (object containing comment uuid, content, author, date).",
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "uuid": {
+        "description": "Unique identifier of the Case (UUID string).",
+        "type": "string"
+      },
+      "short_id": {
+        "description": "Unique short identifier of the Case.",
+        "type": "string"
+      },
+      "status_uuid": {
+        "description": "Unique identifier of the Status (UUID string).",
+        "type": "string"
+      },
+      "priority_uuid": {
+        "description": "Unique identifier of the Priority (UUID string).",
+        "type": "string"
+      },
+      "verdict_uuid": {
+        "description": "Unique identifier of the Verdict (UUID string).",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "created_at": {
+        "description": "Creation date of the Case.",
+        "type": "string",
+        "format": "date-time"
+      },
+      "updated_at": {
+        "description": "Updated date of the Case.",
+        "type": "string",
+        "format": "date-time"
+      },
+      "title": {
+        "description": "Title of the Case.",
+        "type": "string"
+      },
+      "description": {
+        "description": "Description of the Case.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "comment",
+      "uuid",
+      "short_id",
+      "status_uuid",
+      "priority_uuid",
+      "created_at",
+      "updated_at"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "f2f3225d-ae65-4be3-8fb4-c8de8c44f77d"
+}

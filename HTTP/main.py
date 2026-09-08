@@ -1,7 +1,7 @@
 from sekoia_automation.module import Module
 
-from http_module.download_file_action import DownloadFileAction
-from http_module.request_action import RequestAction
+from http_module.action_download_file import DownloadFileAction
+from http_module.action_request import RequestAction
 
 if __name__ == "__main__":
     module = Module()

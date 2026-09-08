@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-27 - 1.31.10
+
+### Fixed
+
+- Fix typo in software asset connector feature flag key (`feature-flags` → `feature_flags`)
+
+## 2026-08-27 - 1.31.9
+
+### Changed
+
+- Update software asset connector default frequency to 1 day (86400s) and minimum frequency to 3 hours (10800s)
+
+## 2026-07-30 - 1.31.8
+
+### Changed
+
+- Pin Docker base image to `python:3.14-bookworm` for reproducible runtime builds.
+
+## 2026-07-07 - 1.31.7
+
+### Added
+
+- Add `feature-flag` to the software asset connector
+
+## 2026-07-03 - 1.31.6
+
+### Fixed
+
+- Fix `400 Bad Request` when triggering jobs (get process list, get pipe list, download file) by sending the `targets` payload with the `agents`/`groups` keys expected by the HarfangLab `job/batch` API instead of `agent_ids`/`group_ids`
+- Fix dockerfile to use the correct `uv` version
+
+## 2026-06-11 - 1.31.0
+
+### Changed
+
+- Migrated module from Poetry to uv
+
 ## 2026-06-10 - 1.30.2
 
 ### Fixed

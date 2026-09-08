@@ -55,7 +55,7 @@ class SalesforceConnector(AsyncConnector):
     LOG_FILE_CACHE_SIZE = 100
 
     # Thresholds for log processing
-    SIZE_TO_PROCESS_DEFAULT = 20 * 1024 * 1024  # 20MB
+    SIZE_TO_PROCESS_DEFAULT = 500 * 1024 * 1024  # 500MB
     CHUNK_SIZE_DEFAULT = 1024 * 1024  # 1MB
 
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:

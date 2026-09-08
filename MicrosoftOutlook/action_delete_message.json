@@ -7,20 +7,42 @@
     "title": "ApplicationArguments",
     "type": "object",
     "required": [
-      "user",
-      "message_id"
+      "message_id",
+      "user"
     ],
     "properties": {
-      "user": {
-        "description": "The identifier or the principal name of the user",
+      "message_id": {
+        "description": "The Microsoft Graph message item ID",
         "type": "string"
       },
-      "message_id": {
-        "description": "The identifier of the message to delete",
+      "user": {
+        "description": "The user identifier or user principal name (UPN)",
         "type": "string"
       }
     }
   },
-  "results": {},
+  "results": {
+    "title": "DeleteMessageResults",
+    "type": "object",
+    "required": [
+      "action",
+      "status",
+      "target_message_id"
+    ],
+    "properties": {
+      "action": {
+        "description": "Action technical identifier",
+        "type": "string"
+      },
+      "status": {
+        "description": "Delete execution status",
+        "type": "string"
+      },
+      "target_message_id": {
+        "description": "The Microsoft Graph message item ID targeted by the action",
+        "type": "string"
+      }
+    }
+  },
   "slug": "delete_a_message"
 }

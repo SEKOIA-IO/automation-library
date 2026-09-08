@@ -10,7 +10,7 @@ runs:
   using: "composite"
   steps:
     - name: Install uv
-      uses: astral-sh/setup-uv@6ee6290f1cbc4156c0bdd66691b2c144ef8df19a # v7.4.0
+      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       with:
         enable-cache: true
         activate-environment: true
@@ -22,18 +22,22 @@ runs:
         uv sync --frozen
       working-directory: ${{ inputs.module }}
 
-    - name: Execute Black
-      uses: psf/black@c6755bb741b6481d6b3d3bb563c83fa060db96c9 # 26.3.1
-      with:
-        options: "--check --verbose"
-        src: ./"${{ inputs.module }}"
+    - name: Execute Ruff lint
+      shell: bash
+      run: |
+        uv run ruff check .
+      working-directory: ${{ inputs.module }}
+
+    - name: Execute Ruff format check
+      shell: bash
+      run: |
+        uv run ruff format --check .
+      working-directory: ${{ inputs.module }}
 
     - name: Execute Mypy
       shell: bash
       run: |
-        uv pip install mypy
-        mkdir -p .mypy_cache
-        uv run mypy --install-types --non-interactive --ignore-missing-imports --show-column-numbers --hide-error-context .
+        uv run mypy .
       working-directory: ${{ inputs.module }}
 
     - name: Execute Python tests

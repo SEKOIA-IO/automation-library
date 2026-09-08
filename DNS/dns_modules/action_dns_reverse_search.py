@@ -1,4 +1,5 @@
 import socket
+
 from sekoia_automation.action import Action
 
 
@@ -21,7 +22,7 @@ class DnsReverseSearchAction(Action):
             }
 
         except socket.herror as e:
-            self.log(f"Unable to resolve IP {ip_address}: {str(e)}", level="warning")
+            self.log(f"Unable to resolve IP {ip_address}: {e!s}", level="warning")
             return {
                 "ip_address": ip_address,
                 "hostname": None,
@@ -30,12 +31,10 @@ class DnsReverseSearchAction(Action):
             }
         except Exception as e:
             error_class = e.__class__.__name__
-            self.error(
-                f"Unexpected error [{error_class}] during resolution of {ip_address}: {str(e)}"
-            )
+            self.error(f"Unexpected error [{error_class}] during resolution of {ip_address}: {e!s}")
             return {
                 "ip_address": ip_address,
                 "hostname": None,
                 "aliases": [],
-                "error": f"[{error_class}] {str(e)}",
+                "error": f"[{error_class}] {e!s}",
             }

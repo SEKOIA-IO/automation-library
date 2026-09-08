@@ -6,6 +6,8 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from unittest.mock import Mock
 
+from mokn.domain import AttemptCursor, AttemptQuery, MoknThreatLevel
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -15,11 +17,6 @@ package.__path__ = [str(PROJECT_ROOT / "connectors")]
 sys.modules["connectors"] = package
 MoknLoginAttemptsTrigger = import_module("connectors.attempts").MoknLoginAttemptsTrigger
 MoknLoginAttemptsTriggerConfiguration = import_module("connectors.configuration").MoknLoginAttemptsTriggerConfiguration
-from mokn.domain import (
-    AttemptCursor,
-    AttemptQuery,
-    MoknThreatLevel,
-)
 
 
 class FakeResponse:

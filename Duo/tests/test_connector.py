@@ -52,7 +52,9 @@ def admin_response_1():
     return [
         {
             "action": "user_update",
-            "description": '{"notes": "Joe asked for their nickname to be displayed instead of Joseph.", "realname": "Joe Smith"}',
+            "description": (
+                '{"notes": "Joe asked for their nickname to be displayed instead of Joseph.", "realname": "Joe Smith"}'
+            ),
             "isotimestamp": "2020-01-24T15:09:42+00:00",
             "object": "jsmith",
             "timestamp": 1579878582,
@@ -67,15 +69,14 @@ def admin_response_2():
 
 
 def test_fetch_batches_v2(trigger, telephony_response_1, telephony_response_2):
-    with patch(
-        "duo_client.logs.Telephony.get_telephony_logs_v2", side_effect=[telephony_response_1, telephony_response_2]
-    ) as mock_get_log, patch(
-        "duo.connector.DuoLogsConsumer.load_checkpoint", return_value={"min_time": 1687598073}
-    ) as mock_load_checkpoint, patch(
-        "duo.connector.DuoLogsConsumer.save_checkpoint"
-    ) as mock_save_checkpoint, patch(
-        "duo.connector.time"
-    ) as mock_time:
+    with (
+        patch(
+            "duo_client.logs.Telephony.get_telephony_logs_v2", side_effect=[telephony_response_1, telephony_response_2]
+        ),
+        patch("duo.connector.DuoLogsConsumer.load_checkpoint", return_value={"min_time": 1687598073}),
+        patch("duo.connector.DuoLogsConsumer.save_checkpoint"),
+        patch("duo.connector.time") as mock_time,
+    ):
         # create a consumer
         batch_duration = 16  # the batch lasts 16 seconds
         start_time = 1666711174.0
@@ -91,15 +92,12 @@ def test_fetch_batches_v2(trigger, telephony_response_1, telephony_response_2):
 
 
 def test_fetch_batches_v1(trigger, admin_response_1, admin_response_2):
-    with patch(
-        "duo_client.Admin.get_administrator_log", side_effect=[admin_response_1, admin_response_2]
-    ) as mock_get_log, patch(
-        "duo.connector.DuoLogsConsumer.load_checkpoint", return_value={}
-    ) as mock_load_checkpoint, patch(
-        "duo.connector.DuoLogsConsumer.save_checkpoint"
-    ) as mock_save_checkpoint, patch(
-        "duo.connector.time"
-    ) as mock_time:
+    with (
+        patch("duo_client.Admin.get_administrator_log", side_effect=[admin_response_1, admin_response_2]),
+        patch("duo.connector.DuoLogsConsumer.load_checkpoint", return_value={}),
+        patch("duo.connector.DuoLogsConsumer.save_checkpoint"),
+        patch("duo.connector.time") as mock_time,
+    ):
         # create a consumer
         batch_duration = 42  # the batch lasts 16 seconds
         start_time = 1666711174.0
@@ -115,11 +113,12 @@ def test_fetch_batches_v1(trigger, admin_response_1, admin_response_2):
 
 
 def test_fetch_batches_with_no_events(trigger):
-    with patch("duo_client.Admin.get_administrator_log", side_effect=[]) as mock_get_log, patch(
-        "duo.connector.DuoLogsConsumer.load_checkpoint", return_value={}
-    ) as mock_load_checkpoint, patch("duo.connector.DuoLogsConsumer.save_checkpoint") as mock_save_checkpoint, patch(
-        "duo.connector.time"
-    ) as mock_time:
+    with (
+        patch("duo_client.Admin.get_administrator_log", side_effect=[]),
+        patch("duo.connector.DuoLogsConsumer.load_checkpoint", return_value={}),
+        patch("duo.connector.DuoLogsConsumer.save_checkpoint"),
+        patch("duo.connector.time") as mock_time,
+    ):
         consumer = DuoLogsConsumer(connector=trigger, log_type=LogType.ADMINISTRATION)
         consumer.fetch_batches()
 
@@ -128,12 +127,13 @@ def test_fetch_batches_with_no_events(trigger):
 
 
 def test_fetch_batches_with_non_existent_log_type(trigger):
-    with patch("duo.connector.DuoLogsConsumer.load_checkpoint", return_value={}) as mock_load_checkpoint, patch(
-        "duo.connector.DuoLogsConsumer.save_checkpoint"
-    ) as mock_save_checkpoint:
+    with (
+        patch("duo.connector.DuoLogsConsumer.load_checkpoint", return_value={}),
+        patch("duo.connector.DuoLogsConsumer.save_checkpoint"),
+    ):
         consumer = DuoLogsConsumer(connector=trigger, log_type="TEST")
 
-        with pytest.raises(NotImplementedError) as context:
+        with pytest.raises(NotImplementedError):
             consumer.fetch_batches()
 
         assert trigger.push_events_to_intakes.call_count == 0

@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from queue import Queue
 from threading import Event, Thread
-from typing import Callable
 
 from websocket import WebSocketApp, WebSocketTimeoutException
 

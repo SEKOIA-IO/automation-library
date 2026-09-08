@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
 
 import requests
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 from sekoia_automation.action import Action
 
 

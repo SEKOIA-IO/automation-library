@@ -6,7 +6,7 @@ from time import sleep, time
 
 from typing import Any, Callable, Literal
 
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
 
@@ -72,11 +72,13 @@ class ExecuteAQuery(BaseSolAction):
         stop=stop_after_attempt(10),
         retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
     )
-    def trigger_query_execution(self, query_uuid: UUID, query_definition: str, query_parameters: dict | None) -> str:
+    def trigger_query_execution(
+        self, query_uuid: UUID, query_definition: dict[str, Any], query_parameters: dict | None
+    ) -> str:
         """Trigger the asynchronous execution of a SOL query and return the run UUID.
 
         :param query_uuid: UUID of the query to execute
-        :param query_definition: SOL query definition string
+        :param query_definition: SOL query definition object
         :param query_parameters: Optional dict of named parameters passed to the query
         :return: UUID of the created query run
         """
@@ -203,18 +205,29 @@ class ExecuteAQuery(BaseSolAction):
         stop=stop_after_attempt(10),
         retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
     )
-    def download_query_result(self, run_uuid: str, result_format: str) -> str:
+    def download_query_result(self, run_uuid: str, result_format: str) -> str | None:
         """Download the result of a completed query run.
 
         :param run_uuid: UUID of the query run whose result should be downloaded
         :param result_format: Desired output format, either "jsonl" or "csv"
-        :return: Raw result content as a string
+        :return: Raw result content as a string, or None if the query returned no results
         """
         response_download_result = self.http_session.get(
             url=urljoin(self.query_runs_api_path, f"{run_uuid}/download"),
             timeout=60,
             params={"download_format": result_format},
         )
+        if response_download_result.status_code == 404:
+            try:
+                error_code = response_download_result.json().get("detail", {}).get("code")
+            except Exception:
+                error_code = None
+            if error_code == "NO_RESULTS":
+                self.log(
+                    f"Query run '{run_uuid}' returned no results.",
+                    level="info",
+                )
+                return None
         try:
             response_download_result.raise_for_status()
         except HTTPError as e:
@@ -335,6 +348,12 @@ class ExecuteAQuery(BaseSolAction):
         else:
             query = self.get_query_by_name(arguments.query_name)
 
+        # Remove `community_uuids` from further request, as it contains all workspace communities.
+        # Without it, we will target the current community and avoid permissions error.
+        community_uuids = query.get("definition", {}).get("community_uuids")
+        if community_uuids:
+            del query["definition"]["community_uuids"]
+
         # Trigger the asynchronous query execution run
         run_uuid = self.trigger_query_execution(
             query_uuid=UUID(query["uuid"]),
@@ -353,6 +372,8 @@ class ExecuteAQuery(BaseSolAction):
             query_uuid=query["uuid"],
             run_uuid=run_uuid,
         )
+        if result is None:
+            return ExecuteAQueryResults(query_result=None, output_path=None)
         if arguments.to_file:
             filepath = self.save_to_file(result, arguments.result_format)
             return ExecuteAQueryResults(query_result=None, output_path=filepath)

@@ -1086,7 +1086,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             raise RuntimeError("HTTP session not initialized")
 
         query = f'alert_short_ids:"{alert_short_id}"'
-        data = {
+        data: dict[str, str | bool | int] = {
             "term": query,
             "earliest_time": earliest_time,
             "latest_time": latest_time,

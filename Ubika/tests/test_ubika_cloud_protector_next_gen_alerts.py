@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call, patch
 
 import httpx
 import pytest
@@ -275,9 +275,10 @@ def test_authorization_timeout_error(respx_mock: MockRouter, trigger):
     start = datetime.fromtimestamp(1747326560, tz=timezone.utc)
     end = datetime.fromtimestamp(1747326660, tz=timezone.utc)
 
-    with pytest.raises(AuthorizationTimeoutError):
+    with patch("time.sleep") as mock_sleep, pytest.raises(AuthorizationTimeoutError):
         trigger.next_batch(start=start, end=end)
 
+    mock_sleep.assert_has_calls([call(600.0), call(600.0), call(600.0), call(600.0)])
     assert route.call_count == 5
 
 
@@ -314,7 +315,7 @@ def test_stepper_initializes_with_backfill(monkeypatch, trigger):
     )
 
 
-def test_stepper_clamps_dates_older_than_one_month(monkeypatch, trigger):
+def test_stepper_clamps_dates_older_than_one_week(monkeypatch, trigger):
     # Override some configuration parameters for the test
     trigger.configuration.frequency = 42
     old_dt = datetime.now(timezone.utc) - timedelta(days=60)
@@ -337,12 +338,12 @@ def test_stepper_clamps_dates_older_than_one_month(monkeypatch, trigger):
     # It must have returned our sentinel
     assert stepper is sentinel
 
-    # And the date passed in was clamped to one_month_ago
+    # And the date passed in was clamped to one_week_ago
     now = datetime.now(timezone.utc)
-    one_month_ago = now - timedelta(days=30)
+    one_week_ago = now - timedelta(days=7)
     passed = called["date"]
     # allow 2s slack for test timing
-    assert abs((passed - one_month_ago).total_seconds()) < 2
+    assert abs((passed - one_week_ago).total_seconds()) < 2
 
     # And create_from_time got the right config args
     assert called["freq"] == trigger.configuration.frequency

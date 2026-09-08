@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-02 - 2.20.7
+
+### Fixed
+
+- Add intake_server to connector's manifests
+
+## 2026-07-01 - 2.20.6
+
+### Changed
+
+- Add retries for reading and writing context file
+
 ## 2026-06-01 - 2.20.5
 
 ### Fixed

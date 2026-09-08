@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-29 - 1.23.1
+
+### Fixed
+
+- Fix event duplication after unexpected pod restart by persisting the events cache to disk after each pagination page instead of only on clean shutdown
+
 ## 2026-03-20 - 1.23.0
 
 ### Added

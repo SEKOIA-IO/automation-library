@@ -411,6 +411,36 @@ class SophosDeviceAssetConnector(AssetConnector):
                 break
             params["pageFromKey"] = next_key
 
+    def get_mapped_fields(self) -> dict[str, str]:
+        """Return the Sophos → OCSF field mapping for schema-change fingerprinting."""
+        return {
+            "hostname": "device.hostname",
+            "type": "device.type",
+            "os.platform": "device.os.type",
+            "os.name": "device.os.name",
+            "ipv4Addresses": "device.network_interfaces.ip",
+            "ipv6Addresses": "device.network_interfaces.ip",
+            "macAddresses": "device.network_interfaces.mac",
+            "health.overall": "device.is_compliant",
+            "tamperProtectionEnabled": "enrichments.data.Firewall_status",
+            "tenant.id": "device.org.uid",
+            "isolation.status": "device.is_trusted",
+            "group.name": "device.groups",
+            "cloud.provider": "device.region",
+            "associatedPerson.name": "device.desc",
+            "lastSeenAt": "device.last_seen_time",
+            "registeredAt": "device.created_time",
+        }
+
+    def reset_checkpoint(self) -> None:
+        """Clear the cursor and dedup cache so all devices are re-fetched from scratch."""
+        with self.context as cache:
+            cache.pop("last_seen_cursor", None)
+            cache.pop("sent_ids", None)
+        self._latest_time = None
+        self._sent_ids = {}
+        self.log("Checkpoint reset – full device re-fetch will occur on next cycle", level="info")
+
     def update_checkpoint(self) -> None:
         if self._latest_time:
             with self.context as cache:

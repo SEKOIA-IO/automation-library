@@ -1,0 +1,18 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Cisco Secure Access",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Cisco Secure Access is a comprehensive security solution that provides secure access to network resources, ensuring that only authorized users and devices can connect.\n\nIt is known for its robust security features, scalability, and integration capabilities.",
+
+  "name": "Cisco Secure Access",
+  "uuid": "5451156c-e6af-445d-a032-3dcc90d7b7f2",
+  "version": "1.0.0",
+  "slug": "cisco-secure-access",
+  "categories": [
+    "Network"
+  ]
+}

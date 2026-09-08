@@ -1,0 +1,18 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Corelight",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Corelight is an Open NDR platform built on Zeek and Suricata. It transforms network traffic into rich, structured logs (conn, dns, http, ssl, files, notice, intel) and Suricata alerts (suricata_corelight) for threat detection, hunting and incident response.",
+  "name": "Corelight",
+  "uuid": "df10ea26-8f9a-4f20-bdf6-8a906538be4d",
+  "version": "1.0.0",
+  "slug": "corelight",
+  "categories": [
+    "Applicative",
+    "Network"
+  ]
+}

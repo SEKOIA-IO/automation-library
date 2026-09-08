@@ -11,7 +11,7 @@
       "uuid": {
         "type": "string",
         "in": "path",
-        "description": "UUID of the alert to retrieve."
+        "description": "The identifier (UUID or short id) of the alert to retrieve."
       },
       "stix": {
         "in": "query",

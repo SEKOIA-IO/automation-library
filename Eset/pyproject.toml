@@ -20,7 +20,7 @@ line_length = 119
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-sekoia-automation-sdk = "^1.22.5"
+sekoia-automation-sdk = "^1.24.0"
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py", "dev.py"]

@@ -1,0 +1,41 @@
+{
+  "description": "Fetch incidents from Microsoft Defender XDR via the Microsoft Graph Security API (/security/incidents). Requires the Graph application permission `SecurityIncident.Read.All`.",
+  "docker_parameters": "connector_defender_incidents",
+  "name": "Fetch incidents from Microsoft Defender XDR (Graph API)",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "timedelta": {
+        "type": "integer",
+        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching incidents (default 5 minutes).",
+        "default": 5
+      },
+      "start_time": {
+        "type": "integer",
+        "description": "The number of hours from which incidents should be queried on the first run.",
+        "default": 1
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Polling frequency in seconds",
+        "default": 60
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "title": "Events",
+    "type": "object"
+  },
+  "results": {},
+  "uuid": "35700bd5-72bc-4dc5-9ca8-b905bcc180ee"
+}

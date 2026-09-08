@@ -1,0 +1,30 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Nutanix Prism",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Ingest Nutanix Prism Central syslog events (API Audit, Audit, Security Policy Hit Logs, Flow Service Logs).",
+  "name": "Nutanix Prism",
+  "uuid": "4c57501a-61ec-4a87-bbc0-96e1253cd861",
+  "slug": "nutanix-prism",
+  "version": "0.1.0",
+  "datasources": [
+    "api_audit",
+    "audit",
+    "flow_service_logs",
+    "security_policy_hit_logs"
+  ],
+  "categories": [
+    "Endpoint"
+  ],
+  "maintainer": "automation-library",
+  "tags": [
+    "endpoint",
+    "intake",
+    "nutanix",
+    "prism"
+  ]
+}

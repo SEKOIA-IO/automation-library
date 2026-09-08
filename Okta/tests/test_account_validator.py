@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import Mock, PropertyMock, patch
 
 from okta_modules.account_validator import OktaAccountValidator
@@ -189,3 +190,93 @@ class TestOktaAccountValidator:
                 mock_log.assert_called_once_with(
                     f"Error while validating account. Authentication failed: {error_message}", level="error"
                 )
+
+    def test_validate_error_with_empty_message_falls_back_to_str(self):
+        """Okta errors carrying an empty `.message` must not produce a blank log/error."""
+        mock_client = Mock()
+
+        class FakeOktaError:
+            message = ""
+
+            def __str__(self):
+                return "Your Okta domain should not contain -admin."
+
+        okta_error = FakeOktaError()
+
+        async def mock_list_users():
+            return None, Mock(), okta_error
+
+        mock_client.list_users = mock_list_users
+
+        with patch.object(type(self.validator), "client", new_callable=PropertyMock, return_value=mock_client):
+            with patch.object(self.validator, "log") as mock_log:
+                with patch.object(self.validator, "error") as mock_error:
+                    result = self.validator.validate()
+
+                    assert result is False
+                    expected = (
+                        "Error while validating account. Authentication failed: "
+                        "Your Okta domain should not contain -admin."
+                    )
+                    mock_log.assert_called_once_with(expected, level="error")
+                    mock_error.assert_called_once_with(expected)
+
+    def test_validate_error_with_empty_message_and_empty_str_falls_back_to_repr(self):
+        """Errors that stringify to an empty string (e.g. TimeoutError) still yield a message."""
+        mock_client = Mock()
+        okta_error = asyncio.TimeoutError()
+
+        async def mock_list_users():
+            return None, Mock(), okta_error
+
+        mock_client.list_users = mock_list_users
+
+        with patch.object(type(self.validator), "client", new_callable=PropertyMock, return_value=mock_client):
+            with patch.object(self.validator, "log") as mock_log:
+                with patch.object(self.validator, "error") as mock_error:
+                    result = self.validator.validate()
+
+                    assert result is False
+                    expected = "Error while validating account. Authentication failed: TimeoutError()"
+                    mock_log.assert_called_once_with(expected, level="error")
+                    mock_error.assert_called_once_with(expected)
+
+    def test_validate_reports_error_to_platform_on_sdk_error(self):
+        """`error()` must be called so the platform shows the real message, not "Unknown error"."""
+        mock_client = Mock()
+        okta_error = Mock()
+        okta_error.message = "Okta HTTP 401 E0000011 Invalid token provided"
+
+        async def mock_list_users():
+            return None, Mock(), okta_error
+
+        mock_client.list_users = mock_list_users
+
+        with patch.object(type(self.validator), "client", new_callable=PropertyMock, return_value=mock_client):
+            with patch.object(self.validator, "error") as mock_error:
+                result = self.validator.validate()
+
+                assert result is False
+                mock_error.assert_called_once_with(
+                    f"Error while validating account. Authentication failed: {okta_error.message}"
+                )
+
+    def test_validate_reports_error_to_platform_on_exception(self):
+        """Client construction failures (e.g. a `-admin` org URL) must reach the platform too."""
+        with patch.object(
+            type(self.validator),
+            "client",
+            new_callable=PropertyMock,
+            side_effect=ValueError("Your Okta domain should not contain -admin."),
+        ):
+            with patch.object(self.validator, "log") as mock_log:
+                with patch.object(self.validator, "error") as mock_error:
+                    result = self.validator.validate()
+
+                    assert result is False
+                    expected = (
+                        "Error while validating account. Authentication failed: "
+                        "Your Okta domain should not contain -admin."
+                    )
+                    mock_log.assert_called_once_with(expected, level="error")
+                    mock_error.assert_called_once_with(expected)

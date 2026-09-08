@@ -113,10 +113,59 @@ def test_check_if_payload_is_valid_1(connector: AwsS3RecordsTrigger, session_fak
     assert connector.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "Random"}) is True
     assert connector.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "GetRecords"}) is False
 
-    assert connector.is_valid_payload({"eventSource": "ec2.amazonaws.com", "eventName": "DescribeInstances"}) is False
+    assert connector.is_valid_payload({"eventSource": "ec2.amazonaws.com", "eventName": "DescribeInstances"}) is True
     assert connector.is_valid_payload({"eventSource": "ec2.amazonaws.com", "eventName": "CreateImage"}) is True
     assert connector.is_valid_payload({"eventSource": "ec2.amazonaws.com", "eventName": "DescribeTags"}) is False
     assert connector.is_valid_payload({"eventSource": "ec2.amazonaws.com", "eventName": "CreateTags"}) is False
+    assert (
+        connector.is_valid_payload({"eventSource": "ec2.amazonaws.com", "eventName": "DescribeInstanceStatus"})
+        is False
+    )
+
+
+def test_check_if_payload_is_valid_reconnaissance_events(connector: AwsS3RecordsTrigger):
+    """
+    Reconnaissance events performed with stolen EC2 credentials must be collected,
+    even though their name matches an unsupported prefix.
+
+    Args:
+        connector: AwsS3RecordsTrigger
+    """
+    forced_events = [
+        ("iam.amazonaws.com", "ListRoles"),
+        ("iam.amazonaws.com", "ListUsers"),
+        ("iam.amazonaws.com", "ListAccessKeys"),
+        ("secretsmanager.amazonaws.com", "ListSecrets"),
+        ("ssm.amazonaws.com", "DescribeParameters"),
+        ("ec2.amazonaws.com", "DescribeInstances"),
+    ]
+
+    for event_source, event_name in forced_events:
+        assert connector.is_valid_payload({"eventSource": event_source, "eventName": event_name}) is True
+
+    # Neighbouring event names are matched exactly, so they keep being filtered out
+    still_filtered = [
+        ("iam.amazonaws.com", "ListUserPolicies"),
+        ("iam.amazonaws.com", "ListRoleTags"),
+        ("secretsmanager.amazonaws.com", "ListSecretVersionIds"),
+        ("ssm.amazonaws.com", "DescribeInstanceInformation"),
+        # The exception is scoped to its event source
+        ("random.amazonaws.com", "ListRoles"),
+    ]
+
+    for event_source, event_name in still_filtered:
+        assert connector.is_valid_payload({"eventSource": event_source, "eventName": event_name}) is False
+
+    # Non read-only events of those sources are still collected
+    not_filtered = [
+        ("iam.amazonaws.com", "CreateUser"),
+        ("iam.amazonaws.com", "AttachRolePolicy"),
+        ("secretsmanager.amazonaws.com", "GetSecretValue"),
+        ("ssm.amazonaws.com", "SendCommand"),
+    ]
+
+    for event_source, event_name in not_filtered:
+        assert connector.is_valid_payload({"eventSource": event_source, "eventName": event_name}) is True
 
 
 def test_check_if_payload_is_valid_2(connector: AwsS3RecordsTrigger, session_faker: Faker):

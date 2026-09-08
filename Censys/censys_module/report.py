@@ -11,7 +11,7 @@ class ReportAction(CensysAction):
         try:
             buckets = int(arguments.get("buckets", self.DEFAULT_BUCKETS))
             return min(buckets, self.MAX_BUCKETS)
-        except (KeyError, ValueError):
+        except KeyError, ValueError:
             return self.DEFAULT_BUCKETS
 
     def execute_request(self, index_class: CensysIndex, arguments: dict):

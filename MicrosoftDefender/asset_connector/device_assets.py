@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from functools import cached_property
 from urllib.parse import urlencode, urljoin
@@ -87,11 +88,21 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("device_context.json", self._data_path)
+        self._latest_time_raw: str | None = None
 
     @property
     def most_recent_date_seen(self) -> str | None:
         with self.context as cache:
             return cache.get("most_recent_date_seen")
+
+    @asynccontextmanager
+    async def _graph_client(self) -> AsyncGenerator[GraphServiceClient, None]:
+        async with ClientSecretCredential(
+            tenant_id=self.module.configuration.tenant_id,
+            client_id=self.module.configuration.app_id,
+            client_secret=self.module.configuration.app_secret,
+        ) as credential:
+            yield GraphServiceClient(credentials=credential, scopes=GRAPH_SCOPES)
 
     @cached_property
     def defender_client(self) -> ApiClient:
@@ -100,21 +111,6 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
             app_id=self.module.configuration.app_id,
             app_secret=self.module.configuration.app_secret,
             tenant_id=self.module.configuration.tenant_id,
-        )
-
-    @cached_property
-    def credential(self) -> ClientSecretCredential:
-        return ClientSecretCredential(
-            tenant_id=self.module.configuration.tenant_id,
-            client_id=self.module.configuration.app_id,
-            client_secret=self.module.configuration.app_secret,
-        )
-
-    @cached_property
-    def graph_client(self) -> GraphServiceClient:
-        return GraphServiceClient(
-            credentials=self.credential,
-            scopes=GRAPH_SCOPES,
         )
 
     @cached_property
@@ -238,7 +234,7 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
             for iface in machine.ipAddresses:
                 mac = iface.get("macAddress")
                 ip_addr = iface.get("ipAddress")
-                iface_type = iface.get("type", "").lower()
+                iface_type = (iface.get("type") or "").lower()
                 type_str, type_id = NETWORK_INTERFACE_TYPE_MAP.get(
                     iface_type, (NetworkInterfaceTypeStr.OTHER, NetworkInterfaceTypeId.OTHER)
                 )
@@ -342,7 +338,7 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
         machines: list[DefenderMachine] = []
         endpoint = self.MACHINES_ENDPOINT
         if self.most_recent_date_seen:
-            params = urlencode({"$filter": f"lastSeen ge {self.most_recent_date_seen}"})
+            params = urlencode({"$filter": f"lastSeen gt {self.most_recent_date_seen}"})
             endpoint = f"{endpoint}?{params}"
         url: str | None = urljoin(self.defender_client.base_url, endpoint)
 
@@ -361,7 +357,9 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
 
         return machines
 
-    async def _fetch_managed_device_by_aad_id(self, aad_device_id: str) -> ManagedDevice | None:
+    async def _fetch_managed_device_by_aad_id(
+        self, client: GraphServiceClient, aad_device_id: str
+    ) -> ManagedDevice | None:
         """Fetch a managed device from Graph API by its Azure AD device ID."""
         query_params = ManagedDevicesRequestBuilder.ManagedDevicesRequestBuilderGetQueryParameters(
             filter=f"azureADDeviceId eq '{aad_device_id}'",
@@ -372,7 +370,7 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
         )
 
         try:
-            response = await self.graph_client.device_management.managed_devices.get(
+            response = await client.device_management.managed_devices.get(
                 request_configuration=request_config,
             )
             if response and response.value:
@@ -384,40 +382,39 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
 
     async def get_assets(self) -> AsyncGenerator[DeviceOCSFModel, None]:
         """Yield OCSF DeviceOCSFModel: fetch Defender machines, enrich with Graph managed devices."""
-        most_recent: datetime | None = None
+        most_recent_raw: str | None = None
 
         machines = self._fetch_machines()
 
-        for machine in machines:
-            if not self.running:
-                break
+        async with self._graph_client() as client:
+            for machine in machines:
+                if not self.running:
+                    break
 
-            # Enrich with managed device data if aadDeviceId available
-            managed_device: ManagedDevice | None = None
-            if machine.aadDeviceId:
-                managed_device = await self._fetch_managed_device_by_aad_id(machine.aadDeviceId)
+                # Enrich with managed device data if aadDeviceId available
+                managed_device: ManagedDevice | None = None
+                if machine.aadDeviceId:
+                    managed_device = await self._fetch_managed_device_by_aad_id(client, machine.aadDeviceId)
 
-            try:
-                ocsf_device = self.map_to_ocsf(machine, managed_device)
-            except Exception as e:
-                self.log(
-                    message=f"Error mapping device {machine.id}: {e}",
-                    level="warning",
-                )
-                continue
+                try:
+                    ocsf_device = self.map_to_ocsf(machine, managed_device)
+                except Exception as e:
+                    self.log(
+                        message=f"Error mapping device {machine.id}: {e}",
+                        level="warning",
+                    )
+                    continue
 
-            # Track most recent lastSeen for checkpoint
-            if machine.lastSeen:
-                last_seen_dt = isoparse(machine.lastSeen)
-                if most_recent is None or last_seen_dt > most_recent:
-                    most_recent = last_seen_dt
+                # Track most recent lastSeen for checkpoint
+                if machine.lastSeen:
+                    if most_recent_raw is None or machine.lastSeen > most_recent_raw:
+                        most_recent_raw = machine.lastSeen
 
-            yield ocsf_device
+                yield ocsf_device
 
-        self._latest_time = most_recent
+        self._latest_time_raw = most_recent_raw
 
     async def update_checkpoint(self) -> None:
-        if self._latest_time:
-            dt_utc = self._latest_time.astimezone(timezone.utc).replace(tzinfo=None)
+        if self._latest_time_raw:
             with self.context as cache:
-                cache["most_recent_date_seen"] = dt_utc.isoformat(timespec="milliseconds") + "Z"
+                cache["most_recent_date_seen"] = self._latest_time_raw

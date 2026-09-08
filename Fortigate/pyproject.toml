@@ -35,3 +35,9 @@ omit = ["tests/*", "main.py"]
 mypy = "^0.991"
 isort = "^5.10.1"
 black = "^22.10.0"
+
+[tool.mypy]
+
+[[tool.mypy.overrides]]
+module = ["requests", "requests.*", "sekoia_automation", "sekoia_automation.*"]
+ignore_missing_imports = true

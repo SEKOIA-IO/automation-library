@@ -10,8 +10,7 @@ from pydantic import BaseModel
 class EventsFeedQueries(Enum):
     """EventsFeedQueries."""
 
-    GET_EVENTS_FEED = gql(
-        """
+    GET_EVENTS_FEED = gql("""
             query($accountIds: [ID!], $lastEventId: String) {
                 eventsFeed(accountIDs: $accountIds, marker: $lastEventId) {
                     marker
@@ -24,8 +23,7 @@ class EventsFeedQueries(Enum):
                     }
                   }
             }
-        """
-    )
+        """)
 
 
 class EventsFeedRecordSchema(BaseModel):

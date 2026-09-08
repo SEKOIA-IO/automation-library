@@ -1,6 +1,6 @@
 from posixpath import join as urljoin
 
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 from requests import Session
 from requests.exceptions import Timeout, HTTPError

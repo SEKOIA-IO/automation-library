@@ -5,27 +5,50 @@ mapping:
 
   samples:
     - name: "Named user with email"
-      description: "A Sophos directory user with full name and email address"
+      description: "A real directory user with full name and email address"
       data: |
         {
           "id": "00000000-0000-0000-0000-000000000001",
-          "name": "Jane Doe",
-          "firstName": "Jane",
-          "lastName": "Doe",
-          "email": "jane.doe@example.com",
-          "exchangeLogin": "",
+          "name": "Alice Martin",
+          "firstName": "Alice",
+          "lastName": "Martin",
+          "email": "alice.martin@example.com",
+          "exchangeLogin": "amartin",
           "groups": { "total": 0, "itemsCount": 0, "items": [] },
           "tenant": { "id": "00000000-0000-0000-0000-000000000010" },
           "source": { "type": "custom" },
           "createdAt": "2023-06-16T15:00:56.473Z",
           "updatedAt": "2023-06-16T15:00:56.870Z"
         }
-    - name: "Windows local account"
-      description: "A Sophos directory user representing a Windows local account (DOMAIN\\username)"
+    - name: "AD domain account"
+      description: "An Active Directory account with short-domain-qualified login (DOMAIN/username format)"
+      data: |
+        {
+          "id": "00000000-0000-0000-0000-000000000004",
+          "name": "CORPDOMAIN/BC12345678",
+          "exchangeLogin": "BC12345678",
+          "groups": {
+            "total": 1,
+            "itemsCount": 1,
+            "items": [
+              {
+                "id": "00000000-0000-0000-0000-000000000021",
+                "name": "CORPDOMAIN",
+                "displayName": "CORPDOMAIN"
+              }
+            ]
+          },
+          "tenant": { "id": "00000000-0000-0000-0000-000000000010" },
+          "source": { "type": "active_directory" },
+          "createdAt": "2024-01-10T08:00:00.000Z",
+          "updatedAt": "2024-01-10T08:00:00.000Z"
+        }
+    - name: "Windows local machine account"
+      description: "A local Windows session account bound to a specific machine (COMPUTERNAME\\username format, no email or first/last name)"
       data: |
         {
           "id": "00000000-0000-0000-0000-000000000002",
-          "name": "DESKTOP-ABC1234\\jdoe",
+          "name": "DESKTOP-ABC1234\\localuser",
           "groups": { "total": 0, "itemsCount": 0, "items": [] },
           "tenant": { "id": "00000000-0000-0000-0000-000000000010" },
           "source": { "type": "custom" },
@@ -33,12 +56,12 @@ mapping:
           "updatedAt": "2025-12-11T12:22:37.223Z"
         }
     - name: "User with groups"
-      description: "A Sophos directory user that belongs to one or more groups"
+      description: "A Sophos directory user that belongs to one or more AD groups"
       data: |
         {
           "id": "00000000-0000-0000-0000-000000000003",
-          "name": "John Smith",
-          "email": "john.smith@example.onmicrosoft.com",
+          "name": "Bob Dupont",
+          "email": "bob.dupont@example.onmicrosoft.com",
           "groups": {
             "total": 1,
             "itemsCount": 1,
@@ -141,12 +164,12 @@ mapping:
       target: "user.name"
       type: "string"
       logic: "Direct mapping"
-      description: "Display name of the user"
+      description: "Display name or domain-qualified login of the user"
 
     - source: "firstName + lastName"
       target: "user.full_name"
       type: "string"
-      logic: "Concatenate firstName and lastName with a space when either is present"
+      logic: "Concatenate firstName and lastName with a space when either is present; omitted otherwise"
       description: "Full name constructed from first and last name fields"
 
     - source: "email"
@@ -155,25 +178,46 @@ mapping:
       logic: "Direct mapping; omitted when null or empty"
       description: "Primary email address of the user"
 
-    - source: "static: User"
+    - source: "name (classification logic)"
       target: "user.type_id / user.type"
       type: "integer / string"
-      logic: "All Sophos directory users are classified as UserTypeId.USER (1)"
-      description: "OCSF user type classification"
+      logic: |
+        Local machine account: name contains '\' AND no email AND no firstName AND no lastName
+          → UserTypeId.SYSTEM (3) / "System"
+          (machine-bound Windows session, not a real directory user)
+        All other users (named, AD domain):
+          → UserTypeId.USER (1) / "User"
+      description: "OCSF user type — System for local machine accounts, User for real directory entries"
 
-    - source: "name (presence of backslash and absence of email)"
+    - source: "name (classification logic)"
       target: "user.account.type_id / user.account.type"
       type: "integer / string"
       logic: |
-        If name contains '\' and email is absent → AccountTypeId.WINDOWS_ACCOUNT (2)
-        Otherwise → AccountTypeId.UNKNOWN (0)
+        Local machine account (name contains '\', no email/firstName/lastName):
+          → AccountTypeId.WINDOWS_ACCOUNT (2) / "Windows Account"
+        AD domain account (name contains '/', no email):
+          → AccountTypeId.LDAP_ACCOUNT (1) / "LDAP Account"
+        Otherwise:
+          → AccountTypeId.UNKNOWN (0) / "Unknown"
       description: "Account type inferred from the name format"
+
+    - source: "name (part before '\\' or '/')"
+      target: "user.domain"
+      type: "string"
+      logic: "Split name on '\\' or '/' (first occurrence); use left-hand side as domain. Omitted when name has no separator."
+      description: "Domain prefix extracted from domain-qualified usernames (e.g. CORPDOMAIN from CORPDOMAIN/BC12345678, or DESKTOP-ABC1234 from DESKTOP-ABC1234\\localuser)"
+
+    - source: "exchangeLogin"
+      target: "user.uid_alt"
+      type: "string"
+      logic: "Direct mapping; omitted when null or empty"
+      description: "Exchange / AD sAMAccountName used as an alternate user identifier (e.g. BC12345678)"
 
     - source: "groups.items[].id + groups.items[].name"
       target: "user.groups[]"
       type: "array"
-      logic: "Map each group item to an OCSF Group object (uid=id, name=name)"
-      description: "Groups the user belongs to"
+      logic: "Map each group item to an OCSF Group object (uid=id, name=name or displayName). Groups are fetched via includeGroupIds=true query parameter."
+      description: "AD group memberships of the user"
 
     - source: "tenant.id"
       target: "user.org.uid / user.org.name"
@@ -189,14 +233,12 @@ mapping:
       description: "Incremental collection checkpoint for change detection"
 
   not_mapped:
-    - field: "exchangeLogin"
-      reason: "No corresponding OCSF field for Exchange login"
     - field: "source.type"
       reason: "Internal Sophos user source type; not relevant to OCSF user model"
 
   ocsf_samples:
     - name: "Named user with email – OCSF output"
-      description: "Transformed OCSF UserOCSFModel for a user with firstName/lastName/email"
+      description: "Transformed OCSF UserOCSFModel for a real directory user with exchangeLogin"
       data: |
         {
           "activity_id": 2,
@@ -216,16 +258,102 @@ mapping:
           },
           "user": {
             "uid": "00000000-0000-0000-0000-000000000001",
-            "name": "Jane Doe",
-            "full_name": "Jane Doe",
-            "email_addr": "jane.doe@example.com",
+            "name": "Alice Martin",
+            "full_name": "Alice Martin",
+            "email_addr": "alice.martin@example.com",
+            "uid_alt": "amartin",
             "type_id": 1,
             "type": "User",
+            "domain": null,
             "account": {
-              "name": "Jane Doe",
+              "name": "Alice Martin",
               "type_id": 0,
               "type": "Unknown",
               "uid": "00000000-0000-0000-0000-000000000001"
+            },
+            "groups": null,
+            "org": {
+              "uid": "00000000-0000-0000-0000-000000000010",
+              "name": "00000000-0000-0000-0000-000000000010"
+            }
+          }
+        }
+    - name: "AD domain account – OCSF output"
+      description: "Transformed OCSF UserOCSFModel for an Active Directory domain account"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "User Inventory Info",
+          "class_uid": 5003,
+          "type_name": "User Inventory Info: Collect",
+          "type_uid": 500302,
+          "severity": "Informational",
+          "severity_id": 1,
+          "time": 1704873600.0,
+          "metadata": {
+            "product": { "name": "Sophos EDR", "version": "N/A" },
+            "version": "1.6.0"
+          },
+          "user": {
+            "uid": "00000000-0000-0000-0000-000000000004",
+            "name": "CORPDOMAIN/BC12345678",
+            "full_name": null,
+            "email_addr": null,
+            "uid_alt": "BC12345678",
+            "type_id": 1,
+            "type": "User",
+            "domain": "CORPDOMAIN",
+            "account": {
+              "name": "CORPDOMAIN/BC12345678",
+              "type_id": 1,
+              "type": "LDAP Account",
+              "uid": "00000000-0000-0000-0000-000000000004"
+            },
+            "groups": [
+              { "uid": "00000000-0000-0000-0000-000000000021", "name": "CORPDOMAIN" }
+            ],
+            "org": {
+              "uid": "00000000-0000-0000-0000-000000000010",
+              "name": "00000000-0000-0000-0000-000000000010"
+            }
+          }
+        }
+    - name: "Windows local machine account – OCSF output"
+      description: "Transformed OCSF UserOCSFModel for a local Windows session account"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "User Inventory Info",
+          "class_uid": 5003,
+          "type_name": "User Inventory Info: Collect",
+          "type_uid": 500302,
+          "severity": "Informational",
+          "severity_id": 1,
+          "time": 1733914957.0,
+          "metadata": {
+            "product": { "name": "Sophos EDR", "version": "N/A" },
+            "version": "1.6.0"
+          },
+          "user": {
+            "uid": "00000000-0000-0000-0000-000000000002",
+            "name": "DESKTOP-ABC1234\\localuser",
+            "full_name": null,
+            "email_addr": null,
+            "uid_alt": null,
+            "type_id": 3,
+            "type": "System",
+            "domain": "DESKTOP-ABC1234",
+            "account": {
+              "name": "DESKTOP-ABC1234\\localuser",
+              "type_id": 2,
+              "type": "Windows Account",
+              "uid": "00000000-0000-0000-0000-000000000002"
             },
             "groups": null,
             "org": {
