@@ -418,3 +418,26 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
         if self._latest_time_raw:
             with self.context as cache:
                 cache["most_recent_date_seen"] = self._latest_time_raw
+
+    async def reset_checkpoint(self) -> None:
+        self._latest_time_raw = None
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+
+    def get_mapped_fields(self) -> dict[str, str]:
+        return {
+            "id": "device.uid",
+            "aadDeviceId": "device.uid_alt",
+            "computerDnsName": "device.hostname",
+            "lastIpAddress": "device.ip",
+            "osPlatform": "device.os.type",
+            "osBuild": "device.os.name",
+            "riskScore": "device.risk_level",
+            "firstSeen": "device.first_seen_time",
+            "lastSeen": "device.last_seen_time",
+            "rbacGroupName": "device.groups.name",
+            "rbacGroupId": "device.groups.uid",
+            "ipAddresses": "device.network_interfaces",
+            "healthStatus": "enrichments.health_status",
+            "exposureLevel": "enrichments.exposure_level",
+        }
