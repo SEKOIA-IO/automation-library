@@ -43,7 +43,7 @@ class FormatAction(Action):
                         dt_value: Any = datetime.fromtimestamp(value)
                         processed_data[key] = dt_value
                         self.log(
-                            message="Converted epoch timestamp {key} to datetime object.",
+                            message=f"Converted epoch timestamp {key} to datetime object.",
                             level="info",
                         )
                     except (ValueError, OSError):
