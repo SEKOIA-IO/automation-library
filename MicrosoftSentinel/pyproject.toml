@@ -34,8 +34,8 @@ exclude = ["tests/*"]
 python = "^3.11"
 azure-mgmt-securityinsight = "^1.0.0"
 orjson = "^3.10.15"
-azure-identity = "^1.19.0"
-sekoia-automation-sdk = "^1.18.2"
+azure-identity = "^1.25.3"
+sekoia-automation-sdk = "^1.25.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

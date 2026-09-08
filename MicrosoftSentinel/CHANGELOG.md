@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-08 - 1.1.1
+
+### Changed
+
+- Upgrade azure-identity to 1.25.3 and sekoia-automation-sdk to 1.25.0
+
 ## 1.1.0
 
 ### Added
