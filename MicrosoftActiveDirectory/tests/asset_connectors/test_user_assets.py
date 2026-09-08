@@ -257,6 +257,21 @@ def test_get_users_generator(connector):
     assert connector._latest_time == "20240101120000.0Z"
 
 
+def test_get_users_generator_skips_entries_without_attributes(connector):
+    bad_entry = {"dn": "CN=Broken,DC=example,DC=com", "attributes": {}}
+    good_entry = {
+        "dn": "CN=Test User,DC=example,DC=com",
+        "attributes": {"userPrincipalName": "test@example.com", "whenCreated": datetime(2024, 1, 1, 12, 0, 0)},
+    }
+
+    connector.ldap_client.extend.standard.paged_search.return_value = iter([bad_entry, good_entry])
+
+    users = list(connector.get_users_generator())
+
+    # The attribute-less entry is skipped instead of aborting the whole collection.
+    assert [u["dn"] for u in users] == ["CN=Test User,DC=example,DC=com"]
+
+
 def test_get_assets(connector):
     mock_user = {
         "dn": "CN=Asset User,DC=example,DC=com",

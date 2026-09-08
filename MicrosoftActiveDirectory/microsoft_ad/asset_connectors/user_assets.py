@@ -328,8 +328,11 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         for entry in self._entries():
             user_attributes = entry.get("attributes", {})
             if not user_attributes:
-                self.log("No user attributes found for user", level="error")
-                raise Exception("No user attributes found for user")
+                self.log(
+                    f"Skipping entry with no attributes (DN={entry.get('dn')})",
+                    level="warning",
+                )
+                continue
 
             user_created_at = user_attributes.get("whenCreated")
             if user_created_at:
