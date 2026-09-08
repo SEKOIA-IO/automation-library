@@ -29,6 +29,8 @@ class FormatAction(Action):
         try:
             # Parse JSON string to dictionary
             data_dict = json.loads(arguments.data)
+            if not isinstance(data_dict, dict):
+                raise ValueError("Data field must contain a JSON object")
 
             self.log(message=f"Formatting template with {len(data_dict)} variables", level="info")
 
