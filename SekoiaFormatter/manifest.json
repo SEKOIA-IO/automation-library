@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "properties": {},
+    "title": "SekoiaFormatterModuleConfiguration",
+    "type": "object"
+  },
+  "description": "A powerful text formatting module that applies Python f-string style templates with automatic epoch timestamp conversion to readable datetime formats",
+  "name": "Sekoia Formatter",
+  "slug": "sekoia-formatter",
+  "categories": [],
+  "uuid": "0beab79b-978b-4b98-a3e1-5c3e2f182465",
+  "version": "0.4.0"
+}
