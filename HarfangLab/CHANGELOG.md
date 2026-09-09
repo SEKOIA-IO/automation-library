@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-04 - 1.31.11
+
+### Fixed
+
+- Fix device asset connector: remove incorrect `vendor_name` value ("HarfangLab") from the device inventory mapping sample; `vendor_name` should reflect the device hardware vendor, not the product name
+
 ## 2026-08-27 - 1.31.10
 
 ### Fixed

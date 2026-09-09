@@ -349,7 +349,6 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
             subnet=agent.groupIp,  # Network subnet/range (e.g., "31.155.5.x")
             network_interfaces=network_interfaces,
             model=agent.modelName,
-            vendor_name=agent.modelName,
             boot_time=boot_time,
             created_time=created_time,
             first_seen_time=first_seen_time,
