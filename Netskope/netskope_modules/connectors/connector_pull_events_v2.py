@@ -45,6 +45,28 @@ class NetskopeEventConsumer(Thread):
     def running(self):
         return not self._stop_event.is_set()
 
+    def _get_conflict_wait_time(self, response) -> int:
+        """Return a safe wait time before retrying after a 409 conflict."""
+        retry_after = response.headers.get("Retry-After")
+        if retry_after is not None:
+            try:
+                retry_after_seconds = int(float(retry_after))
+                if retry_after_seconds > 0:
+                    return retry_after_seconds
+            except ValueError:
+                pass
+
+        try:
+            content = response.json()
+            if isinstance(content, dict):
+                wait_time = content.get("wait_time")
+                if isinstance(wait_time, (int, float)) and wait_time > 0:
+                    return int(wait_time)
+        except JSONDecodeError:
+            pass
+
+        return 5
+
     def next_batch(self):
         # save the starting time
         batch_start_time = time.time()
@@ -70,9 +92,13 @@ class NetskopeEventConsumer(Thread):
 
             raise
 
-        if response.status_code == 204:
+        content = {}
+
+        if response.status_code == 200:
+            content = response.json()
+        elif response.status_code == 204:
             self.connector.log(message=f"No events to forward for {self.name}", level="info")
-        if response.status_code == 403:
+        elif response.status_code == 403:
             try:
                 message = response.json().get("message")
                 if message == MESSAGE_CANNOT_CONSUME_SERVICE:
@@ -92,13 +118,21 @@ class NetskopeEventConsumer(Thread):
                     message=f"Cannot consume the service {self.name}. Error={response.text}",
                     level="error",
                 )
+        elif response.status_code == 409:
+            wait_time = self._get_conflict_wait_time(response)
+            content = {"wait_time": wait_time}
+            self.connector.log(
+                message=(
+                    f"Concurrency conflict while fetching events for {self.name}: "
+                    f"{response.status_code} {response.text}. Retrying in {wait_time} seconds"
+                ),
+                level="warning",
+            )
         elif response.status_code > 299:
             self.connector.log(
                 message=f"Failed to fetch events for {self.name}: {response.status_code} {response.text}",
                 level="error",
             )
-
-        content = response.json() if response.status_code == 200 else {}
 
         # Serialize events and extract the most recent timestamp
         batch_of_events = []
