@@ -2,7 +2,12 @@ from unittest.mock import Mock
 
 import pytest
 from requests.exceptions import HTTPError
-from sekoia_automation.asset_connector.models.ocsf.device import DeviceTypeId, DeviceTypeStr, OSTypeId, OSTypeStr
+from sekoia_automation.asset_connector.models.ocsf.device import (
+    DeviceTypeId,
+    DeviceTypeStr,
+    OSTypeId,
+    OSTypeStr,
+)
 from sekoia_automation.asset_connector.models.ocsf.group import Group
 
 from crowdstrike_falcon.asset_connectors.crowdstrike_device_model import CrowdStrikeDevice, PolicyEntry
@@ -416,3 +421,201 @@ def test_get_assets_resets_the_group_state_between_cycles(connector):
 
     assert connector._groups_cache == {}
     assert connector._groups_fetch_disabled is False
+
+
+def test_next_devices_does_not_checkpoint_before_the_walk_completes(connector):
+    """Regression: an interrupted run must not commit a checkpoint (SekoiaLab/integration#1846).
+
+    The SDK calls update_checkpoint() after every batch it pushes, so a checkpoint set
+    at the start of the walk makes the next cycle skip every device the interrupted run
+    never reached.
+    """
+    connector.LIMIT = 2
+    client = Mock()
+    client.list_devices_uuids.return_value = iter(["u5", "u4", "u3", "u2"])
+    client.get_devices_infos.side_effect = lambda batch: [{"device_id": b} for b in batch]
+    connector.client = client
+
+    devices = connector.next_devices()
+    # Consume the first batch only, as an interrupted cycle would
+    next(devices)
+    connector.update_checkpoint()
+
+    assert connector._latest_id is None
+    assert "most_recent_device_id" not in connector.context.store
+
+    # Draining the generator completes the walk and releases the checkpoint
+    list(devices)
+    connector.update_checkpoint()
+    assert connector.context.store["most_recent_device_id"] == "u5"
+
+
+def test_next_devices_resumes_full_listing_after_an_interrupted_run(connector):
+    uuids = ["u5", "u4", "u3", "u2"]
+    connector.LIMIT = 2
+    client = Mock()
+    client.get_devices_infos.side_effect = lambda batch: [{"device_id": b} for b in batch]
+    connector.client = client
+
+    # Cycle 1 dies after the first batch
+    client.list_devices_uuids.return_value = iter(uuids)
+    devices = connector.next_devices()
+    assert next(devices).device_id == "u5"
+    devices.close()
+
+    # Cycle 2 still sees the whole listing
+    client.list_devices_uuids.return_value = iter(uuids)
+    assert [d.device_id for d in connector.next_devices()] == uuids
+
+
+def test_get_groups_resolves_each_group_once_across_devices(connector):
+    mock_client = Mock()
+    mock_client.get_host_groups.return_value = [{"id": "group1", "name": "Group One"}]
+    connector.client = mock_client
+
+    for _ in range(3):
+        groups = connector.get_groups(CrowdStrikeDevice(groups=["group1"]))
+        assert [g.name for g in groups] == ["Group One"]
+
+    mock_client.get_host_groups.assert_called_once_with(["group1"])
+
+
+def test_get_groups_only_looks_up_unknown_groups(connector):
+    mock_client = Mock()
+    mock_client.get_host_groups.side_effect = [
+        [{"id": "group1", "name": "Group One"}],
+        [{"id": "group2", "name": "Group Two"}],
+    ]
+    connector.client = mock_client
+
+    connector.get_groups(CrowdStrikeDevice(groups=["group1"]))
+    groups = connector.get_groups(CrowdStrikeDevice(groups=["group1", "group2"]))
+
+    assert [g.name for g in groups] == ["Group One", "Group Two"]
+    assert mock_client.get_host_groups.call_args_list[-1].args[0] == ["group2"]
+
+
+def test_get_groups_caches_the_fallback_so_a_failing_lookup_is_not_retried(connector):
+    mock_client = Mock()
+    mock_client.get_host_groups.side_effect = Exception("403 Forbidden")
+    connector.client = mock_client
+
+    for _ in range(3):
+        groups = connector.get_groups(CrowdStrikeDevice(groups=["group1"]))
+        assert [(g.uid, g.name) for g in groups] == [("group1", "group1")]
+
+    mock_client.get_host_groups.assert_called_once()
+
+
+def test_get_assets_resets_the_group_cache_between_cycles(connector):
+    connector._groups_cache = {"stale": Group(uid="stale", name="Stale")}
+    client = Mock()
+    client.list_devices_uuids.return_value = iter([])
+    connector.client = client
+
+    assert list(connector.get_assets()) == []
+    assert connector._groups_cache == {}
+
+
+def test_update_checkpoint_held_back_when_a_batch_was_dropped(connector):
+    """A batch Sekoia refused was never ingested, so the run must be replayed."""
+    connector._latest_id = "u5"
+    connector._push_failed = True
+
+    connector.update_checkpoint()
+
+    assert "most_recent_device_id" not in connector.context.store
+
+
+def test_post_assets_to_api_flags_a_dropped_batch(connector, monkeypatch):
+    monkeypatch.setattr(CrowdstrikeDeviceAssetConnector.__bases__[0], "post_assets_to_api", lambda *a, **kw: None)
+    assert connector.post_assets_to_api(Mock(), "https://api.fake") is None
+    assert connector._push_failed is True
+
+
+def test_asset_fetch_cycle_commits_the_checkpoint_once_every_batch_is_pushed(connector, monkeypatch):
+    def fake_cycle(self):
+        self._latest_id = "u5"
+
+    monkeypatch.setattr(CrowdstrikeDeviceAssetConnector.__bases__[0], "asset_fetch_cycle", fake_cycle)
+
+    connector.asset_fetch_cycle()
+
+    assert connector.context.store["most_recent_device_id"] == "u5"
+
+
+class _PersistentContext:
+    """Behaves like PersistentJSON: survives across fetch cycles."""
+
+    def __init__(self):
+        self.store = {}
+
+    def __enter__(self):
+        return self.store
+
+    def __exit__(self, *args):
+        pass
+
+
+def _install_push_session(connector, statuses):
+    """Mock the Sekoia push; `statuses` gives the status code of each POST."""
+    pushed = []
+    codes = iter(statuses)
+
+    def post(url, json=None, timeout=None):
+        res = Mock()
+        res.status_code = next(codes)
+        res.headers = {}
+        res.json.return_value = {}
+        if res.status_code == 200:
+            pushed.append(len(json["items"]))
+        return res
+
+    session = Mock()
+    session.post.side_effect = post
+    connector.__dict__["_http_session"] = session
+    return pushed
+
+
+def test_asset_fetch_cycle_replays_an_interrupted_backfill(connector):
+    """SekoiaLab/integration#1846: a run cut short must not strand the devices it missed."""
+    total, batch = 200, 100
+    connector.LIMIT = batch
+    connector.configuration = {
+        "sekoia_base_url": "https://api.fake.sekoia.io/",
+        "sekoia_api_key": "fake_api_key",
+        "batch_size": batch,
+        "frequency": 0,
+    }
+    connector.module.connector_configuration_uuid = "adcd0095-0f3d-4699-8621-158977b6c2c3"
+    connector.context = _PersistentContext()
+
+    uuids = [f"dev-{i:03d}" for i in range(total)]  # first_seen.desc
+    client = Mock()
+    client.get_devices_infos.side_effect = lambda ids: [
+        {"device_id": u, "hostname": f"host-{u}", "platform_name": "Windows"} for u in ids
+    ]
+    connector.client = client
+
+    # Cycle 1: the second batch is refused, so nothing may be checkpointed
+    client.list_devices_uuids.return_value = iter(uuids)
+    pushed = _install_push_session(connector, [200, 500])
+    connector.asset_fetch_cycle()
+
+    assert pushed == [batch]
+    assert "most_recent_device_id" not in connector.context.store
+
+    # Cycle 2: the whole listing is walked again, no device is lost
+    client.list_devices_uuids.return_value = iter(uuids)
+    pushed = _install_push_session(connector, [200] * 5)
+    connector.asset_fetch_cycle()
+
+    assert sum(pushed) == total
+    assert connector.context.store["most_recent_device_id"] == "dev-000"
+
+    # Cycle 3: everything is collected, the checkpoint short-circuits the run
+    client.list_devices_uuids.return_value = iter(uuids)
+    pushed = _install_push_session(connector, [200] * 5)
+    connector.asset_fetch_cycle()
+
+    assert pushed == []
