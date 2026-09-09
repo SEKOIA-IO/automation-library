@@ -169,9 +169,7 @@ def test_api_error_in_json_response(append_action):
             "items": ["invalid-url"],
         }
 
-        with pytest.raises(
-            ValueError, match="Netskope API returned an error: Invalid URL format"
-        ):
+        with pytest.raises(ValueError, match="Netskope API returned an error: Invalid URL format"):
             append_action.run(arguments)
 
 
@@ -255,9 +253,7 @@ def test_append_to_blocklist_should_skip_existing_and_duplicates(append_action):
         )
         assert len(mock_requests.request_history) == 3
         append_request_body = mock_requests.request_history[1].json()
-        assert append_request_body == {
-            "data": {"type": "exact", "urls": ["www.new.com"]}
-        }
+        assert append_request_body == {"data": {"type": "exact", "urls": ["www.new.com"]}}
 
 
 def test_append_to_blocklist_noop_when_all_items_exist(append_action):
@@ -330,6 +326,4 @@ def test_append_to_blocklist_should_not_sort_when_sort_items_false(append_action
         append_action.run(arguments)
 
         append_request_body = mock_requests.request_history[1].json()
-        assert append_request_body == {
-            "data": {"type": "exact", "urls": ["www.z.com", "www.a.com"]}
-        }
+        assert append_request_body == {"data": {"type": "exact", "urls": ["www.z.com", "www.a.com"]}}

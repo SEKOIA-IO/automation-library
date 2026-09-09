@@ -11,9 +11,7 @@ from netskope_modules.actions.action_remove_from_blocklist import (
 @pytest.fixture
 def remove_action(symphony_storage, trigger):
     trigger.module.configuration.base_url = "https://my.fake.netskope.com"
-    action = RemoveFromBlocklistAction(
-        module=trigger.module, data_path=symphony_storage
-    )
+    action = RemoveFromBlocklistAction(module=trigger.module, data_path=symphony_storage)
     action.log = MagicMock()
     action.log_exception = MagicMock()
     return action
