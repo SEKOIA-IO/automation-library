@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from management.mgmtsdk_v2.entities.deep_visibility_v2 import DvQuery
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from tenacity import Retrying, retry_if_not_exception_type, stop_after_delay, wait_exponential
 
 from sentinelone_module.base import SentinelOneAction
@@ -16,8 +16,8 @@ from sentinelone_module.helpers import to_rfc3339
 
 
 class QueryDeepVisibilityArguments(BaseModel):
-    group_ids: list[str] | None
-    site_ids: list[str] | None
+    group_ids: list[str] | None = None
+    site_ids: list[str] | None = None
     query: str
     from_date: datetime
     to_date: datetime
@@ -43,6 +43,10 @@ class QueryDeepVisibilityArguments(BaseModel):
 
 
 class DeepVisibilityEvent(BaseModel):
+    # The Deep Visibility API returns numbers for some of these string fields (ports, pids,
+    # sizes); Pydantic v1 coerced them silently, v2 needs to be told to.
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+
     agentDomain: str | None = None
     agentGroupId: str | None = None
     agentId: str | None = None
@@ -62,81 +66,81 @@ class DeepVisibilityEvent(BaseModel):
     processName: str | None = None
     siteName: str | None = None
     user: str | None = None
-    connectionStatus: str | None
-    direction: str | None
-    dnsRequest: str | None
-    dnsResponse: str | None
-    dstIp: str | None
-    dstPort: str | None
-    eventType: str | None
-    fileFullName: str | None
-    fileId: str | None
-    fileMd5: str | None
-    fileSha1: str | None
-    fileSha256: str | None
-    fileSize: str | None
-    fileType: str | None
-    forensicUrl: str | None
-    indicatorCategory: str | None
-    indicatorDescription: str | None
-    indicatorMetadata: str | None
-    indicatorName: str | None
-    isAgentVersionFullySupportedForPg: bool | None
-    isAgentVersionFullySupportedForPgMessage: str | None
-    loginsBaseType: str | None
-    loginsUserName: str | None
-    md5: str | None
-    networkMethod: str | None
-    networkSource: str | None
-    networkUrl: str | None
-    oldFileMd5: str | None
-    oldFileName: str | None
-    oldFileSha1: str | None
-    oldFileSha256: str | None
-    parentPid: str | None
-    parentProcessGroupId: str | None
-    parentProcessIsMalicious: bool | None
-    parentProcessName: str | None
-    parentProcessStartTime: str | None
-    parentProcessUniqueKey: str | None
-    pid: str | None
-    processCmd: str | None
-    processDisplayName: str | None
-    processGroupId: str | None
-    processImagePath: str | None
-    processImageSha1Hash: str | None
-    processIntegrityLevel: str | None
-    processIsMalicious: bool | None
-    processIsRedirectedCommandProcessor: str | None
-    processIsWow64: str | None
-    processRoot: str | None
-    processSessionId: str | None
-    processStartTime: str | None
-    processSubSystem: str | None
-    processUniqueKey: str | None
-    processUserName: str | None
-    publisher: str | None
-    registryId: str | None
-    registryPath: str | None
-    relatedToThreat: str | None
-    rpid: str | None
-    sha1: str | None
-    sha256: str | None
-    signatureSignedInvalidReason: str | None
-    signedStatus: str | None
-    srcIp: str | None
-    srcPort: int | None
-    srcProcDownloadToken: str | None
-    taskName: str | None
-    taskPath: str | None
-    threatStatus: str | None
-    tid: str | None
-    trueContext: str | None
-    verifiedStatus: str | None
+    connectionStatus: str | None = None
+    direction: str | None = None
+    dnsRequest: str | None = None
+    dnsResponse: str | None = None
+    dstIp: str | None = None
+    dstPort: str | None = None
+    eventType: str | None = None
+    fileFullName: str | None = None
+    fileId: str | None = None
+    fileMd5: str | None = None
+    fileSha1: str | None = None
+    fileSha256: str | None = None
+    fileSize: str | None = None
+    fileType: str | None = None
+    forensicUrl: str | None = None
+    indicatorCategory: str | None = None
+    indicatorDescription: str | None = None
+    indicatorMetadata: str | None = None
+    indicatorName: str | None = None
+    isAgentVersionFullySupportedForPg: bool | None = None
+    isAgentVersionFullySupportedForPgMessage: str | None = None
+    loginsBaseType: str | None = None
+    loginsUserName: str | None = None
+    md5: str | None = None
+    networkMethod: str | None = None
+    networkSource: str | None = None
+    networkUrl: str | None = None
+    oldFileMd5: str | None = None
+    oldFileName: str | None = None
+    oldFileSha1: str | None = None
+    oldFileSha256: str | None = None
+    parentPid: str | None = None
+    parentProcessGroupId: str | None = None
+    parentProcessIsMalicious: bool | None = None
+    parentProcessName: str | None = None
+    parentProcessStartTime: str | None = None
+    parentProcessUniqueKey: str | None = None
+    pid: str | None = None
+    processCmd: str | None = None
+    processDisplayName: str | None = None
+    processGroupId: str | None = None
+    processImagePath: str | None = None
+    processImageSha1Hash: str | None = None
+    processIntegrityLevel: str | None = None
+    processIsMalicious: bool | None = None
+    processIsRedirectedCommandProcessor: str | None = None
+    processIsWow64: str | None = None
+    processRoot: str | None = None
+    processSessionId: str | None = None
+    processStartTime: str | None = None
+    processSubSystem: str | None = None
+    processUniqueKey: str | None = None
+    processUserName: str | None = None
+    publisher: str | None = None
+    registryId: str | None = None
+    registryPath: str | None = None
+    relatedToThreat: str | None = None
+    rpid: str | None = None
+    sha1: str | None = None
+    sha256: str | None = None
+    signatureSignedInvalidReason: str | None = None
+    signedStatus: str | None = None
+    srcIp: str | None = None
+    srcPort: int | None = None
+    srcProcDownloadToken: str | None = None
+    taskName: str | None = None
+    taskPath: str | None = None
+    threatStatus: str | None = None
+    tid: str | None = None
+    trueContext: str | None = None
+    verifiedStatus: str | None = None
 
 
 class DeepVisibilityEvents(BaseModel):
-    status: str | None
+    status: str | None = None
     status_reason: str
     events: list[DeepVisibilityEvent]
 

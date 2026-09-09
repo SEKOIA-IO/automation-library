@@ -1,7 +1,7 @@
 from typing import Any
 
 from management.mgmtsdk_v2_1.entities.exclusion import Exclusion
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 from sentinelone_module.base import SentinelOneAction
 

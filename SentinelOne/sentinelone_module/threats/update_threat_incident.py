@@ -1,25 +1,26 @@
+from typing import ClassVar
+from management.common.query_filter import QueryFilter
 from management.mgmtsdk_v2_1.services.threat_notes import ThreatQueryFilter
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 from sentinelone_module.base import SentinelOneAction
 from sentinelone_module.filters import BaseFilters
 
 
 class UpdateThreatIncidentFilters(BaseFilters):
-    account_ids: list[str] | None
-    group_ids: list[str] | None
-    site_ids: list[str] | None
-    agent_ids: list[str] | None
-    ids: list[str] | None
-    analyst_verdicts: str | None
+    account_ids: list[str] | None = None
+    group_ids: list[str] | None = None
+    site_ids: list[str] | None = None
+    agent_ids: list[str] | None = None
+    ids: list[str] | None = None
+    analyst_verdicts: str | None = None
 
-    class Config:
-        query_filter_class = ThreatQueryFilter
+    query_filter_class: ClassVar[type[QueryFilter]] = ThreatQueryFilter
 
 
 class UpdateThreatIncidentArguments(BaseModel):
-    filters: UpdateThreatIncidentFilters | None
-    new_analyst_verdict: str | None
+    filters: UpdateThreatIncidentFilters | None = None
+    new_analyst_verdict: str | None = None
     status: str
 
     def get_query_filters(self):

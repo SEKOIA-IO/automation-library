@@ -1,8 +1,10 @@
+from typing import ClassVar
+from management.common.query_filter import QueryFilter
 from collections import defaultdict
 
 import pandas as pd
 from management.mgmtsdk_v2_1.services.threat_intelligence import Ioc, IocQueryFilter
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 from sentinelone_module.base import SentinelOneAction
 from sentinelone_module.filters import BaseFilters
@@ -10,17 +12,16 @@ from sentinelone_module.helpers import stix_to_indicators
 
 
 class CreateIOCsFilters(BaseFilters):
-    account_ids: list[str] | None
-    group_ids: list[str] | None
-    site_ids: list[str] | None
+    account_ids: list[str] | None = None
+    group_ids: list[str] | None = None
+    site_ids: list[str] | None = None
 
-    class Config:
-        query_filter_class = IocQueryFilter
+    query_filter_class: ClassVar[type[QueryFilter]] = IocQueryFilter
 
 
 class CreateIOCsArguments(BaseModel):
-    filters: CreateIOCsFilters | None
-    sekoia_base_url: str | None
+    filters: CreateIOCsFilters | None = None
+    sekoia_base_url: str | None = None
     stix_objects_path: str
 
     def get_query_filters(self):
@@ -88,7 +89,7 @@ class CreateIOCsAction(SentinelOneAction):
             self.sekoia_base_url = arguments.sekoia_base_url
 
         self.log("Starting looking for stix_objects in the provided path")
-        stix_objects = self.json_argument("stix_objects", arguments.dict())
+        stix_objects = self.json_argument("stix_objects", arguments.model_dump())
 
         if not stix_objects:
             self.log("Empty or missing STIX objects received from the data source.")

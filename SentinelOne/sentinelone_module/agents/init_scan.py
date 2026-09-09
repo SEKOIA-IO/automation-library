@@ -1,18 +1,19 @@
+from typing import ClassVar
+from management.common.query_filter import QueryFilter
 from management.mgmtsdk_v2_1.services.agent_actions import AgentActionsFilter
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 from sentinelone_module.base import SentinelOneAction
 from sentinelone_module.filters import BaseFilters
 
 
 class InitiateScanArguments(BaseFilters):
-    account_ids: list[str] | None
-    group_ids: list[str] | None
-    uuids: list[str] | None
-    site_ids: list[str] | None
+    account_ids: list[str] | None = None
+    group_ids: list[str] | None = None
+    uuids: list[str] | None = None
+    site_ids: list[str] | None = None
 
-    class Config:
-        query_filter_class = AgentActionsFilter
+    query_filter_class: ClassVar[type[QueryFilter]] = AgentActionsFilter
 
 
 class InitiateScanResults(BaseModel):
