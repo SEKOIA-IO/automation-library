@@ -1,4 +1,6 @@
+import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from virustotal.action_virustotal_scanhash import VirusTotalScanHashAction
 
@@ -411,3 +413,21 @@ def test_virustotal_check_hash():
             "?apikey=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
             "&resource=36437528c1e97d21ae198407b788f32eeed29e49"
         )
+
+
+def test_virustotal_check_hash_returns_none_if_hash_empty(requests_mock):
+    vt: VirusTotalScanHashAction = VirusTotalScanHashAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+
+    with pytest.raises(ValidationError):
+        vt.run({"hash": ""})
+    assert requests_mock.call_count == 0
+
+
+def test_virustotal_check_hash_returns_none_if_hash_missing(requests_mock):
+    vt: VirusTotalScanHashAction = VirusTotalScanHashAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+
+    with pytest.raises(ValidationError):
+        vt.run({})
+    assert requests_mock.call_count == 0

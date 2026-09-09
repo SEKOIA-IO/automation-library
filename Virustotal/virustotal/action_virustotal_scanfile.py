@@ -3,11 +3,18 @@ import time
 from posixpath import join as urljoin
 
 import requests
+from pydantic import BaseModel, Field
 from requests import Response
 from sekoia_automation.action import Action
 
 from virustotal.errors import MaxFileSizeExceedError, RequestLimitError
+from virustotal.types import NonEmptyStr
 from virustotal.utils import virustotal_detection_outputs
+
+
+class VirusTotalScanFileArguments(BaseModel):
+    file: NonEmptyStr = Field(..., description="Path of the file to scan")
+    detect_threshold: int = Field(default=1, description="Number of positives to consider the file detected")
 
 
 class VirusTotalScanFileAction(Action):
@@ -18,13 +25,15 @@ class VirusTotalScanFileAction(Action):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def run(self, arguments) -> dict:
+    def run(self, arguments: VirusTotalScanFileArguments) -> dict | None:
+        file_path = arguments.file
+
         url: str = "https://www.virustotal.com/vtapi/v2/"
         upload_url: str = urljoin(url, "file/scan")
         params: dict = {"apikey": self.module.configuration.get("apikey")}
-        files: dict = {"file": (arguments["file"], open(arguments["file"], "rb").read())}
+        files: dict = {"file": (file_path, open(file_path, "rb").read())}
 
-        file_size = os.path.getsize(arguments["file"])
+        file_size = os.path.getsize(file_path)
 
         if file_size >= 200000000:
             raise MaxFileSizeExceedError(msg=f"The file to send exceed the maximum size of 200MB ({file_size})")
@@ -67,7 +76,7 @@ class VirusTotalScanFileAction(Action):
         virustotal_detection_outputs(
             action=self,
             vt_response=vt_response,
-            threshold=arguments.get("detect_threshold", 1),
+            threshold=arguments.detect_threshold,
         )
 
         return vt_response
