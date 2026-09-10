@@ -74,9 +74,17 @@ class ApiClient(requests.Session):
             msg = f"{error}. The API returns the following errors: \n{api_errors}"
             raise HTTPError(msg, response=response) from error  # type: ignore[call-arg]
 
-    def request_endpoint(self, method: str, endpoint: str, **kwargs) -> Generator[Any, None, None]:
+    def request_endpoint(
+        self, method: str, endpoint: str, cursor_pagination: bool = False, **kwargs
+    ) -> Generator[Any, None, None]:
         """
         Send the request and handle the response
+
+        Args:
+            cursor_pagination: the endpoint returns an opaque continuation token in
+                `meta.pagination.offset` instead of a numeric offset
+                (e.g. /devices/queries/devices-scroll/v1). Numeric offsets are capped
+                at 10 000 results by the API, tokens are not.
         """
         params = kwargs.pop("params", {})
 
@@ -96,6 +104,8 @@ class ApiClient(requests.Session):
                 elif "offset" in pagination:
                     new_params["offset"] = pagination["offset"]
 
+            requested_cursor = new_params.get("offset") if cursor_pagination else None
+
             response = self.request(method=method, url=url, params=new_params, **kwargs)
 
             # raise exception according the status code
@@ -108,24 +118,30 @@ class ApiClient(requests.Session):
             if errors:
                 msg = f"The API returns the following errors: \n{errors}"
                 raise HTTPError(msg, response=response)  # type: ignore[call-arg]
-            yield from content.get("resources") or []
 
             pagination = content.get("meta", {}).get("pagination")
-            if pagination:
-                if pagination.get("after"):
-                    still_fetching_items = True
-                else:
-                    offset = pagination.get("offset")
-                    limit = pagination.get("limit")
-                    total = pagination.get("total")
-                    still_fetching_items = (
-                        isinstance(offset, int)
-                        and isinstance(limit, int)
-                        and isinstance(total, int)
-                        and offset < total
-                    )
+
+            if pagination and pagination.get("after"):
+                still_fetching_items = True
+            elif cursor_pagination:
+                # Follow the continuation token until the API stops handing back a new one
+                cursor = (pagination or {}).get("offset")
+                if requested_cursor is not None and cursor == requested_cursor:
+                    # The API handed back the token it was given: the scroll is not
+                    # advancing, so this page only repeats the previous one. Drop it.
+                    return
+                still_fetching_items = bool(cursor)
+            elif pagination:
+                offset = pagination.get("offset")
+                limit = pagination.get("limit")
+                total = pagination.get("total")
+                still_fetching_items = (
+                    isinstance(offset, int) and isinstance(limit, int) and isinstance(total, int) and offset < total
+                )
             else:
                 still_fetching_items = False
+
+            yield from content.get("resources") or []
 
     def request_graphql_endpoint(
         self,
@@ -295,10 +311,13 @@ class CrowdstrikeFalconClient(ApiClient):
         )
 
     def list_devices_uuids(self, limit: int, sort: str, **kwargs) -> Generator[str, None, None]:
+        # devices-scroll (token pagination) instead of devices/v1: the latter refuses
+        # limit + offset above 10 000, which silently caps large tenants.
         yield from self.request_endpoint(
             "GET",
-            "/devices/queries/devices/v1",
+            "/devices/queries/devices-scroll/v1",
             params={"limit": limit, "sort": sort},
+            cursor_pagination=True,
             **kwargs,
         )
 
