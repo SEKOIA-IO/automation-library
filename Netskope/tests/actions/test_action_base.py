@@ -83,14 +83,20 @@ def test_base_url_with_dict_config(symphony_storage, trigger):
 
 def test_base_url_with_object_config(symphony_storage, trigger):
     """Test base_url extracts from object-style module configuration via getattr."""
-    trigger.module.configuration = {"base_url": "https://object.example.com", "api_token": "token"}
+    trigger.module.configuration = {
+        "base_url": "https://object.example.com",
+        "api_token": "token",
+    }
     action = AppendToBlocklistAction(module=trigger.module, data_path=symphony_storage)
     assert action.base_url == "https://object.example.com"
 
 
 def test_base_url_strips_trailing_slash(symphony_storage, trigger):
     """Test base_url removes trailing slash from URL."""
-    trigger.module.configuration = {"base_url": "https://example.com/", "api_token": "token"}
+    trigger.module.configuration = {
+        "base_url": "https://example.com/",
+        "api_token": "token",
+    }
     action = AppendToBlocklistAction(module=trigger.module, data_path=symphony_storage)
     assert action.base_url == "https://example.com"
 

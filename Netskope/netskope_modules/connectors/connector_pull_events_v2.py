@@ -13,8 +13,16 @@ from sekoia_automation.exceptions import ModuleConfigurationError
 
 from netskope_modules import NetskopeModule
 from netskope_modules.constants import MESSAGE_CANNOT_CONSUME_SERVICE
-from netskope_modules.helpers import get_index_name, get_iterator_name, get_tenant_hostname
-from netskope_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from netskope_modules.helpers import (
+    get_index_name,
+    get_iterator_name,
+    get_tenant_hostname,
+)
+from netskope_modules.metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    OUTCOMING_EVENTS,
+)
 from netskope_modules.types import NetskopeAlertType, NetskopeEventType
 
 SECURITY_CHECK_DATAEXPORTS: list[tuple[NetskopeEventType, NetskopeAlertType | None]] = [
@@ -45,6 +53,28 @@ class NetskopeEventConsumer(Thread):
     def running(self):
         return not self._stop_event.is_set()
 
+    def _get_conflict_wait_time(self, response) -> int:
+        """Return a safe wait time before retrying after a 409 conflict."""
+        retry_after = response.headers.get("Retry-After")
+        if retry_after is not None:
+            try:
+                retry_after_seconds = int(float(retry_after))
+                if retry_after_seconds > 0:
+                    return retry_after_seconds
+            except ValueError:
+                pass
+
+        try:
+            content = response.json()
+            if isinstance(content, dict):
+                wait_time = content.get("wait_time")
+                if isinstance(wait_time, (int, float)) and wait_time > 0:
+                    return int(wait_time)
+        except JSONDecodeError:
+            pass
+
+        return 5
+
     def next_batch(self):
         # save the starting time
         batch_start_time = time.time()
@@ -57,7 +87,7 @@ class NetskopeEventConsumer(Thread):
             if "connection aborted" in str(error).lower():
                 return
 
-            raise error
+            raise
 
         except ValueError as error:
             if "invalid api token" in str(error).lower():
@@ -70,9 +100,13 @@ class NetskopeEventConsumer(Thread):
 
             raise
 
-        if response.status_code == 204:
+        content = {}
+
+        if response.status_code == 200:
+            content = response.json()
+        elif response.status_code == 204:
             self.connector.log(message=f"No events to forward for {self.name}", level="info")
-        if response.status_code == 403:
+        elif response.status_code == 403:
             try:
                 message = response.json().get("message")
                 if message == MESSAGE_CANNOT_CONSUME_SERVICE:
@@ -92,13 +126,21 @@ class NetskopeEventConsumer(Thread):
                     message=f"Cannot consume the service {self.name}. Error={response.text}",
                     level="error",
                 )
+        elif response.status_code == 409:
+            wait_time = self._get_conflict_wait_time(response)
+            content = {"wait_time": wait_time}
+            self.connector.log(
+                message=(
+                    f"Concurrency conflict while fetching events for {self.name}: "
+                    f"{response.status_code} {response.text}. Retrying in {wait_time} seconds"
+                ),
+                level="warning",
+            )
         elif response.status_code > 299:
             self.connector.log(
                 message=f"Failed to fetch events for {self.name}: {response.status_code} {response.text}",
                 level="error",
             )
-
-        content = response.json() if response.status_code == 200 else {}
 
         # Serialize events and extract the most recent timestamp
         batch_of_events = []
@@ -148,7 +190,7 @@ class NetskopeEventConsumer(Thread):
         try:
             while self.running:
                 self.next_batch()
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001
             self.connector.log_exception(error, message=f"Failed to forward events for {self.name}")
 
 
@@ -266,7 +308,7 @@ class NetskopeEventConnector(Connector):
         :rtype: dict[str, NetskopeDataConsumer]
         :return: The list of consumers as dict
         """
-        consumers: dict[str, NetskopeEventConsumer] = dict()
+        consumers: dict[str, NetskopeEventConsumer] = {}
 
         # for each iterator
         for name, iterator in iterators.items():
@@ -315,7 +357,7 @@ class NetskopeEventConnector(Connector):
         :param dict iterators: The list of iterators
         """
         # for each iterator
-        for name in iterators.keys():
+        for name in iterators:
             # get the consumer
             consumer = consumers.get(name)
 
@@ -344,7 +386,7 @@ class NetskopeEventConnector(Connector):
                 time.sleep(5)
 
             self.stop_consumers(consumers, iterators)
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001
             self.log_exception(
                 error,
                 message=f"Failed to forward events from {self.module.configuration.base_url}",

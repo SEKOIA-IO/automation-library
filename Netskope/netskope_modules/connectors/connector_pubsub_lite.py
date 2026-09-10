@@ -10,13 +10,24 @@ from typing import Any
 
 from google.cloud.pubsublite import AdminClient
 from google.cloud.pubsublite.cloudpubsub import AsyncSubscriberClient
-from google.cloud.pubsublite.types import CloudRegion, CloudZone, FlowControlSettings, PublishTime, SubscriptionPath
+from google.cloud.pubsublite.types import (
+    CloudRegion,
+    CloudZone,
+    FlowControlSettings,
+    PublishTime,
+    SubscriptionPath,
+)
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from ..logging import get_logger
-from ..metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from ..metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 logger = get_logger()
 
@@ -130,19 +141,22 @@ class PubSubLite(AsyncConnector):
                 await self.push_data_to_intakes(events=batch)
                 await self.save_checkpoint()
 
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type).inc(
-                    len(batch)
-                )
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.configuration.intake_key,
+                    type=self.metric_label_type,
+                ).inc(len(batch))
 
                 batch_end = time.time()
                 batch_duration = batch_end - batch_start
                 FORWARD_EVENTS_DURATION.labels(
-                    intake_key=self.configuration.intake_key, type=self.metric_label_type
+                    intake_key=self.configuration.intake_key,
+                    type=self.metric_label_type,
                 ).observe(batch_duration)
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type).set(
-                    self.latest_event_lag
-                )
+                EVENTS_LAG.labels(
+                    intake_key=self.configuration.intake_key,
+                    type=self.metric_label_type,
+                ).set(self.latest_event_lag)
 
                 batch = []
                 batch_start = time.time()
@@ -161,7 +175,7 @@ class PubSubLite(AsyncConnector):
                 ts_datetime = self.last_seen_timestamp.astimezone(datetime.timezone.utc) + datetime.timedelta(
                     microseconds=1
                 )
-                self.log("Getting events from %s" % ts_datetime.isoformat())
+                self.log(f"Getting events from {ts_datetime.isoformat()}")
 
                 ts = PublishTime(ts_datetime)
                 admin_client.seek_subscription(self.subscription_path, ts)
@@ -192,7 +206,7 @@ class PubSubLite(AsyncConnector):
         # Netskope is putting multiple transaction events in 1 PubSub Lite message
         try:
             return [event for event in content.decode("utf-8").split("\n") if len(event) > 0]
-        except Exception:
+        except UnicodeDecodeError:
             self.log(level="error", message="Unable to decode the content of a message")
             logger.error("Failed to decode the content of a message", content=content)
             return None
@@ -215,7 +229,7 @@ class PubSubLite(AsyncConnector):
 
                     except Exception as ex:
                         self.log_exception(ex, message="Failed to consume messages")
-                        raise ex
+                        raise
 
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001
                 self.log_exception(error, message="Failed to forward events")
