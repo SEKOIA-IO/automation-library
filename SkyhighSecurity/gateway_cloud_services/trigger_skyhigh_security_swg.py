@@ -88,6 +88,13 @@ class EventCollector(Thread):
 
         else:
             self.start_date = isoparse(most_recent_date_seen_str)
+
+            # If the most recent date is older than one week, set it to one week ago
+            now = datetime.now(timezone.utc)
+            one_week_ago = now - timedelta(days=7)
+            if self.start_date < one_week_ago:
+                self.start_date = one_week_ago
+
             self.end_date: datetime = self.start_date + timedelta(seconds=self.configuration.frequency)
 
     def _sleep_until_next_batch(self):

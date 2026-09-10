@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Generator
 
 from cachetools import Cache, LRUCache
-from pydantic.v1 import Field
+from pydantic import Field
 from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
 from sekoia_automation.connector import DefaultConnectorConfiguration
 
@@ -19,6 +19,7 @@ class BeyondTrustPRAPlatformConfiguration(DefaultConnectorConfiguration):
 class BeyondTrustPRAPlatformConnector(BeyondTrustBaseConnector):
     module: BeyondTrustModule
     configuration: BeyondTrustPRAPlatformConfiguration
+    NO_DATA_ERROR_MESSAGE = "No Support report information matching your chosen criteria is available."
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -52,6 +53,11 @@ class BeyondTrustPRAPlatformConnector(BeyondTrustBaseConnector):
 
         response = self.client.get_session_listing(most_recent_date_seen)
         if self._handle_response_error(response):
+            return
+
+        if "<error" in response.text and self.NO_DATA_ERROR_MESSAGE in response.text:
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+            # Just no new events for the requested interval.
             return
 
         if self._check_xml_error(response):

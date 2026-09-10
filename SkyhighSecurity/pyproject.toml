@@ -20,10 +20,10 @@ line_length = 119
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
-sekoia-automation-sdk = "^1.22.1"
-orjson = "^3.7.7"
+sekoia-automation-sdk = "^1.23.1"
+orjson = "^3.11.9"
 requests-ratelimiter = "^0.7.0"
-structlog = "^25.5.0"
+structlog = "^26.1.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -35,9 +35,9 @@ requests-mock = "*"
 omit = ["tests/*", "main.py"]
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.19.1"
-isort = "^7.0.0"
-black = "^26.1.0"
+mypy = "*"
+isort = "*"
+black = "*"
 
 [tool.mypy]
 python_version = 3.12

@@ -21,12 +21,14 @@ async def test_github_refresher_refresh_token(base_url, session_faker, pem_conte
 
     with aioresponses() as mocked_responses:
         mocked_responses.get(
-            "{0}/orgs/{1}/installation".format(base_url, organization),
+            f"{base_url}/orgs/{organization}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )
 
-        mocked_responses.post(access_tokens_url, status=200, payload={"token": expected_result})
+        mocked_responses.post(
+            access_tokens_url, status=200, payload={"token": expected_result}
+        )
 
         token_refresher = PemGithubTokenRefresher(
             base_url,
@@ -58,12 +60,14 @@ async def test_github_refresher_get_token(base_url, session_faker, pem_content):
 
     with aioresponses() as mocked_responses:
         mocked_responses.get(
-            "{0}/orgs/{1}/installation".format(base_url, organization),
+            f"{base_url}/orgs/{organization}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )
 
-        mocked_responses.post(access_tokens_url, status=200, payload={"token": expected_result})
+        mocked_responses.post(
+            access_tokens_url, status=200, payload={"token": expected_result}
+        )
 
         token_refresher = PemGithubTokenRefresher(
             base_url,
@@ -93,7 +97,9 @@ async def test_github_refresher_incorrect_params(base_url, session_faker, pem_co
         pem_content: str
     """
     try:
-        PemGithubTokenRefresher(base_url, pem_content, session_faker.word(), session_faker.pyint(), 601)
+        PemGithubTokenRefresher(
+            base_url, pem_content, session_faker.word(), session_faker.pyint(), 601
+        )
 
         assert False
     except ValueError:
@@ -114,10 +120,18 @@ async def test_github_token_refresher_instance(base_url, session_faker, pem_cont
     different_organization = session_faker.word()
     other_base_url = "https://other.example.com"
 
-    instance1 = await PemGithubTokenRefresher.instance(base_url, pem_content, organization, app_id)
-    instance2 = await PemGithubTokenRefresher.instance(base_url, pem_content, organization, app_id)
-    instance3 = await PemGithubTokenRefresher.instance(base_url, pem_content, different_organization, app_id)
-    instance4 = await PemGithubTokenRefresher.instance(other_base_url, pem_content, organization, app_id)
+    instance1 = await PemGithubTokenRefresher.instance(
+        base_url, pem_content, organization, app_id
+    )
+    instance2 = await PemGithubTokenRefresher.instance(
+        base_url, pem_content, organization, app_id
+    )
+    instance3 = await PemGithubTokenRefresher.instance(
+        base_url, pem_content, different_organization, app_id
+    )
+    instance4 = await PemGithubTokenRefresher.instance(
+        other_base_url, pem_content, organization, app_id
+    )
 
     assert instance1.base_url == base_url
     assert instance1.pem_file == pem_content

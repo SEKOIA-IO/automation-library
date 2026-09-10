@@ -333,7 +333,7 @@ def test_run_action(action, arguments):
             },
         )
 
-        assert action.run(arguments) == {"blocked_files_count": 1}
+        assert action.run(arguments.dict()) == {"blocked_files_count": 1}
 
 
 def test_run_action_2_hashes(action, arguments_2):
@@ -358,4 +358,4 @@ def test_run_action_2_hashes(action, arguments_2):
             },
         )
 
-        assert action.run(arguments_2) == {"blocked_files_count": 2}
+        assert action.run(arguments_2.dict()) == {"blocked_files_count": 2}

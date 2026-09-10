@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-21 - 2.10.5
+
+### Fixed
+
+- Account validation now reports the real error to the platform instead of "Unknown error": the validator calls `self.error()` so the message reaches the UI, and falls back to `str(err)`/`repr(err)` when the Okta SDK error carries an empty `message`.
+
+## 2026-06-16 - 2.10.4
+
+### Fixed
+
+- Fix duplicated events in the system logs connector: the dedup cache and the checkpoint were sharing the same `context.json` file and overwriting each other on disk, causing one of them to be lost on restart. The dedup cache is now stored in a dedicated `events_cache.json` file (with backward-compatible migration from `context.json`).
+
+## 2026-04-24 - 2.10.3
+
+### Fixed
+
+- Fix account validator to detect authentication failures.
+
 ## 2026-04-21 - 2.10.2
 
 ### Changed

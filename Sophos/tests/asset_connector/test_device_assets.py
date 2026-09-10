@@ -2,6 +2,7 @@
 Unit tests for SophosDeviceAssetConnector (asset_connector/device_assets.py).
 """
 
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -26,10 +27,6 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeId,
     OSTypeStr,
 )
-
-# ---------------------------------------------------------------------------
-# Sample API response payloads (anonymised)
-# ---------------------------------------------------------------------------
 
 COMPUTER_ENDPOINT = SophosEndpoint(
     id="aaaaaaaa-0000-0000-0000-000000000001",
@@ -593,3 +590,568 @@ class TestFullHttpRoundTrip:
         hostnames = {a.device.hostname for a in assets}
         assert "test-computer-01" in hostnames
         assert "test-server-01" in hostnames
+
+
+def _make_response(connector, items, next_key=None):
+    """Helper to build a mocked API response."""
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status = MagicMock()
+    pages = {"size": 50, "maxSize": 500}
+    if next_key:
+        pages["nextKey"] = next_key
+    mock_resp.json.return_value = {"items": items, "pages": pages}
+    connector.client = MagicMock()
+    connector.client.list_endpoints.return_value = mock_resp
+    return mock_resp
+
+
+class TestLoadSentIds:
+    def _entry(self, fp="abc", days_ago=0):
+        ts = (datetime.now(tz=timezone.utc) - timedelta(days=days_ago)).isoformat()
+        return {"fingerprint": fp, "cached_at": ts}
+
+    def test_empty_context_gives_empty_cache(self, connector):
+        connector._load_sent_ids()
+        assert connector._sent_ids == {}
+
+    def test_loads_recent_ids(self, connector):
+        with connector.context as cache:
+            cache["sent_ids"] = {
+                "id-1": self._entry("fp1"),
+                "id-2": self._entry("fp2"),
+            }
+        connector._load_sent_ids()
+        assert "id-1" in connector._sent_ids
+        assert "id-2" in connector._sent_ids
+
+    def test_prunes_old_ids(self, connector):
+        with connector.context as cache:
+            cache["sent_ids"] = {
+                "old-id": self._entry("old", days_ago=10),
+                "new-id": self._entry("new", days_ago=0),
+            }
+        connector._load_sent_ids()
+        assert "old-id" not in connector._sent_ids
+        assert "new-id" in connector._sent_ids
+
+    def test_enforces_max_cache_size(self, connector):
+        connector.MAX_CACHE_SIZE = 3
+        recent_base = datetime.now(tz=timezone.utc)
+        entries = {
+            f"id-{i}": {
+                "fingerprint": f"fp-{i}",
+                "cached_at": (recent_base - timedelta(minutes=i)).isoformat(),
+            }
+            for i in range(10)
+        }
+        with connector.context as cache:
+            cache["sent_ids"] = entries
+        connector._load_sent_ids()
+        assert len(connector._sent_ids) == 3
+        assert "id-0" in connector._sent_ids
+        assert "id-1" in connector._sent_ids
+        assert "id-2" in connector._sent_ids
+
+    def test_entry_at_exact_boundary_is_kept(self, connector):
+        """Entry exactly at CACHE_MAX_AGE_DAYS old should still be kept (>= cutoff)."""
+        boundary = (
+            datetime.now(tz=timezone.utc) - timedelta(days=connector.CACHE_MAX_AGE_DAYS, seconds=-1)
+        ).isoformat()
+        with connector.context as cache:
+            cache["sent_ids"] = {"boundary-id": {"fingerprint": "fp", "cached_at": boundary}}
+        connector._load_sent_ids()
+        assert "boundary-id" in connector._sent_ids
+
+    def test_log_eviction_count(self, connector):
+        """Debug log must report the correct number of evicted entries."""
+        old = (datetime.now(tz=timezone.utc) - timedelta(days=10)).isoformat()
+        recent = datetime.now(tz=timezone.utc).isoformat()
+        with connector.context as cache:
+            cache["sent_ids"] = {
+                "old-1": {"fingerprint": "fp1", "cached_at": old},
+                "old-2": {"fingerprint": "fp2", "cached_at": old},
+                "new-1": {"fingerprint": "fp3", "cached_at": recent},
+            }
+        connector._load_sent_ids()
+        log_calls = [str(call) for call in connector.log.call_args_list]
+        assert any("evicted=2" in call for call in log_calls)
+
+
+class TestSaveSentIds:
+    def test_persists_to_context(self, connector):
+        recent = datetime.now(tz=timezone.utc).isoformat()
+        connector._sent_ids = {"id-1": {"fingerprint": "fp1", "cached_at": recent}}
+        connector._save_sent_ids()
+        with connector.context as cache:
+            entry = cache.get("sent_ids", {}).get("id-1")
+        assert entry is not None
+        assert entry["fingerprint"] == "fp1"
+
+
+class TestComputeFingerprint:
+    def test_same_endpoint_same_fingerprint(self):
+        fp1 = SophosDeviceAssetConnector._compute_fingerprint(COMPUTER_ENDPOINT)
+        fp2 = SophosDeviceAssetConnector._compute_fingerprint(COMPUTER_ENDPOINT)
+        assert fp1 == fp2
+
+    def test_different_endpoints_different_fingerprint(self):
+        fp1 = SophosDeviceAssetConnector._compute_fingerprint(COMPUTER_ENDPOINT)
+        fp2 = SophosDeviceAssetConnector._compute_fingerprint(SERVER_ENDPOINT)
+        assert fp1 != fp2
+
+    def test_last_seen_at_change_does_not_change_fingerprint(self):
+        ep_a = COMPUTER_ENDPOINT.model_copy(update={"lastSeenAt": "2026-01-01T00:00:00.000Z"})
+        ep_b = COMPUTER_ENDPOINT.model_copy(update={"lastSeenAt": "2026-06-01T12:00:00.000Z"})
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) == SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+
+    def test_registered_at_change_does_not_change_fingerprint(self):
+        """registeredAt is excluded; changing it must not affect the fingerprint."""
+        ep_a = COMPUTER_ENDPOINT.model_copy(update={"registeredAt": "2023-01-01T00:00:00.000Z"})
+        ep_b = COMPUTER_ENDPOINT.model_copy(update={"registeredAt": "2025-01-01T00:00:00.000Z"})
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) == SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+
+    def test_hostname_change_changes_fingerprint(self):
+        ep_a = COMPUTER_ENDPOINT.model_copy(update={"hostname": "host-a"})
+        ep_b = COMPUTER_ENDPOINT.model_copy(update={"hostname": "host-b"})
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+
+    def test_health_change_changes_fingerprint(self):
+        ep_good = COMPUTER_ENDPOINT.model_copy(update={"health": SophosHealth(overall="good")})
+        ep_bad = COMPUTER_ENDPOINT.model_copy(update={"health": SophosHealth(overall="bad")})
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_good
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_bad)
+
+    def test_ip_change_changes_fingerprint(self):
+        ep_a = COMPUTER_ENDPOINT.model_copy(update={"ipv4Addresses": ["192.0.2.1"]})
+        ep_b = COMPUTER_ENDPOINT.model_copy(update={"ipv4Addresses": ["10.0.0.1"]})
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+
+    def test_ip_order_does_not_matter(self):
+        ep_a = COMPUTER_ENDPOINT.model_copy(update={"ipv4Addresses": ["10.0.0.1", "10.0.0.2"]})
+        ep_b = COMPUTER_ENDPOINT.model_copy(update={"ipv4Addresses": ["10.0.0.2", "10.0.0.1"]})
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) == SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+
+    def test_mac_order_does_not_matter(self):
+        ep_a = COMPUTER_ENDPOINT.model_copy(update={"macAddresses": ["AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"]})
+        ep_b = COMPUTER_ENDPOINT.model_copy(update={"macAddresses": ["AA:BB:CC:DD:EE:02", "AA:BB:CC:DD:EE:01"]})
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) == SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+
+    def test_tamper_protection_change_changes_fingerprint(self):
+        ep_on = COMPUTER_ENDPOINT.model_copy(update={"tamperProtectionEnabled": True})
+        ep_off = COMPUTER_ENDPOINT.model_copy(update={"tamperProtectionEnabled": False})
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_on
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_off)
+
+    def test_isolation_status_change_changes_fingerprint(self):
+        ep_free = COMPUTER_ENDPOINT.model_copy(update={"isolation": SophosIsolation(status="notIsolated")})
+        ep_isolated = COMPUTER_ENDPOINT.model_copy(update={"isolation": SophosIsolation(status="isolated")})
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_free
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_isolated)
+
+    def test_os_change_changes_fingerprint(self):
+        ep_a = COMPUTER_ENDPOINT.model_copy(update={"os": SophosOS(platform="windows", name="Windows 10")})
+        ep_b = COMPUTER_ENDPOINT.model_copy(update={"os": SophosOS(platform="windows", name="Windows 11")})
+        assert SophosDeviceAssetConnector._compute_fingerprint(
+            ep_a
+        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_b)
+
+    def test_none_optional_fields_do_not_crash(self):
+        """Fingerprint must work cleanly when optional fields are absent."""
+        ep = SophosEndpoint(id="x", hostname="h")
+        fp = SophosDeviceAssetConnector._compute_fingerprint(ep)
+        assert isinstance(fp, str) and len(fp) == 64  # SHA-256 hex = 64 chars
+
+    def test_returns_sha256_hex_string(self):
+        fp = SophosDeviceAssetConnector._compute_fingerprint(COMPUTER_ENDPOINT)
+        assert len(fp) == 64
+        assert all(c in "0123456789abcdef" for c in fp)
+
+
+class TestGetGroups:
+    def test_valid_group_returned(self, connector):
+        from sophos_module.asset_connector.model import SophosGroup
+
+        ep = COMPUTER_ENDPOINT.model_copy(update={"group": SophosGroup(id="grp-1", name="Finance")})
+        groups = connector._get_groups(ep)
+        assert groups is not None
+        assert len(groups) == 1
+        assert groups[0].uid == "grp-1"
+        assert groups[0].name == "Finance"
+
+    def test_missing_group_returns_none(self, connector):
+        ep = COMPUTER_ENDPOINT.model_copy(update={"group": None})
+        assert connector._get_groups(ep) is None
+
+    def test_group_without_name_returns_none(self, connector):
+        from sophos_module.asset_connector.model import SophosGroup
+
+        ep = COMPUTER_ENDPOINT.model_copy(update={"group": SophosGroup(id="g1", name=None)})
+        assert connector._get_groups(ep) is None
+
+    def test_group_reflected_in_mapped_model(self, connector):
+        """Group must appear in the OCSF model device.groups field."""
+        from sophos_module.asset_connector.model import SophosGroup
+
+        ep = COMPUTER_ENDPOINT.model_copy(update={"group": SophosGroup(id="grp-42", name="IT-Ops")})
+        result = connector.map_device_fields(ep)
+        assert result is not None
+        assert result.device.groups is not None
+        assert result.device.groups[0].name == "IT-Ops"
+
+
+class TestIsTrusted:
+    def test_good_health_and_tamper_enabled_is_trusted(self):
+        ep = SophosEndpoint(
+            id="x",
+            hostname="h",
+            health=SophosHealth(overall="good"),
+            tamperProtectionEnabled=True,
+            isolation=SophosIsolation(status="notIsolated"),
+        )
+        assert SophosDeviceAssetConnector._is_trusted(ep) is True
+
+    def test_isolated_is_not_trusted(self):
+        ep = SophosEndpoint(
+            id="x",
+            hostname="h",
+            health=SophosHealth(overall="good"),
+            tamperProtectionEnabled=True,
+            isolation=SophosIsolation(status="isolated"),
+        )
+        assert SophosDeviceAssetConnector._is_trusted(ep) is False
+
+    def test_bad_health_is_not_trusted(self):
+        ep = SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="bad"))
+        assert SophosDeviceAssetConnector._is_trusted(ep) is False
+
+    def test_suspicious_health_is_not_trusted(self):
+        ep = SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="suspicious"))
+        assert SophosDeviceAssetConnector._is_trusted(ep) is False
+
+    def test_unknown_state_returns_none(self):
+        ep = SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="unknown"))
+        assert SophosDeviceAssetConnector._is_trusted(ep) is None
+
+    def test_good_health_but_tamper_disabled_returns_none(self):
+        ep = SophosEndpoint(
+            id="x",
+            hostname="h",
+            health=SophosHealth(overall="good"),
+            tamperProtectionEnabled=False,
+        )
+        assert SophosDeviceAssetConnector._is_trusted(ep) is None
+
+
+class TestIterEndpointsWithCheckpoint:
+    def test_last_seen_cursor_passed_as_param(self, connector):
+        """When a checkpoint exists, lastSeenAfter must be sent to the API."""
+        with connector.context as cache:
+            cache["last_seen_cursor"] = "2026-05-30T00:00:00.000Z"
+
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = {"items": [], "pages": {"size": 50, "maxSize": 500}}
+        connector.client = MagicMock()
+        connector.client.list_endpoints.return_value = mock_resp
+
+        list(connector._iter_endpoints())
+
+        called_params = connector.client.list_endpoints.call_args[0][0]
+        assert called_params.get("lastSeenAfter") == "2026-05-30T00:00:00.000Z"
+
+    def test_no_cursor_does_not_add_param(self, connector):
+        """Without a checkpoint, lastSeenAfter must NOT be in the request params."""
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = {"items": [], "pages": {"size": 50, "maxSize": 500}}
+        connector.client = MagicMock()
+        connector.client.list_endpoints.return_value = mock_resp
+
+        list(connector._iter_endpoints())
+
+        called_params = connector.client.list_endpoints.call_args[0][0]
+        assert "lastSeenAfter" not in called_params
+
+
+class TestGetAssetsDeduplication:
+    def test_deduplicates_same_inventory(self, connector):
+        """Second run with identical inventory data must not re-send the device."""
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT])
+        assets_run1 = list(connector.get_assets())
+        assert len(assets_run1) == 2
+
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT])
+        assets_run2 = list(connector.get_assets())
+        assert len(assets_run2) == 0
+
+    def test_heartbeat_only_update_is_suppressed(self, connector):
+        """A lastSeenAt-only change must NOT trigger a re-send."""
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT])
+        list(connector.get_assets())
+
+        heartbeat = {**COMPUTER_ENDPOINT_DICT, "lastSeenAt": "2026-06-01T10:00:00.000Z"}
+        _make_response(connector, [heartbeat])
+        assets_run2 = list(connector.get_assets())
+        assert len(assets_run2) == 0
+
+    def test_real_inventory_change_is_resent(self, connector):
+        """A change in a meaningful field (e.g. health) must trigger a re-send."""
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT])
+        list(connector.get_assets())
+
+        updated = {**COMPUTER_ENDPOINT_DICT, "health": {"overall": "good"}}
+        _make_response(connector, [updated])
+        assets_run2 = list(connector.get_assets())
+        assert len(assets_run2) == 1
+
+    def test_new_device_sent_on_second_run(self, connector):
+        """A brand-new device (not in cache) must be yielded on the second run."""
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT])
+        list(connector.get_assets())
+
+        new_device = {
+            **SERVER_ENDPOINT_DICT,
+            "id": "aaaaaaaa-ffff-ffff-ffff-000000000099",
+            "hostname": "new-server-99",
+        }
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, new_device])
+        assets_run2 = list(connector.get_assets())
+        assert len(assets_run2) == 1
+        assert assets_run2[0].device.hostname == "new-server-99"
+
+    def test_cache_saved_even_on_exception(self, connector):
+        """sent_ids must be persisted even when an exception is raised mid-collection."""
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.side_effect = Exception("HTTP 503")
+        connector.client = MagicMock()
+        connector.client.list_endpoints.return_value = mock_resp
+
+        with pytest.raises(Exception, match="HTTP 503"):
+            list(connector.get_assets())
+
+        with connector.context as cache:
+            assert "sent_ids" in cache
+
+    def test_ids_added_to_cache_after_run(self, connector):
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT])
+        list(connector.get_assets())
+
+        with connector.context as cache:
+            sent = cache.get("sent_ids", {})
+        assert "aaaaaaaa-0000-0000-0000-000000000001" in sent
+        assert "aaaaaaaa-0000-0000-0000-000000000002" in sent
+
+    def test_cache_entry_has_fingerprint_and_cached_at(self, connector):
+        """Each cache entry must contain both 'fingerprint' and 'cached_at' keys."""
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT])
+        list(connector.get_assets())
+
+        with connector.context as cache:
+            entry = cache.get("sent_ids", {}).get(COMPUTER_ENDPOINT_DICT["id"])
+        assert entry is not None
+        assert "fingerprint" in entry
+        assert "cached_at" in entry
+
+    def test_device_re_sent_after_ttl_expires(self, connector):
+        """After cache TTL expires, the same device must be sent again on the next run."""
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT])
+        list(connector.get_assets())
+
+        # Manually expire the cache entry by backdating its cached_at
+        expired_ts = (datetime.now(tz=timezone.utc) - timedelta(days=connector.CACHE_MAX_AGE_DAYS + 1)).isoformat()
+        with connector.context as cache:
+            cache["sent_ids"][COMPUTER_ENDPOINT_DICT["id"]]["cached_at"] = expired_ts
+
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT])
+        assets_run2 = list(connector.get_assets())
+        assert len(assets_run2) == 1
+
+    def test_multiple_inventory_changes_each_trigger_resend(self, connector):
+        """Every distinct inventory change must produce a new send."""
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT])
+        list(connector.get_assets())  # run 1: initial send
+
+        change1 = {**COMPUTER_ENDPOINT_DICT, "health": {"overall": "good"}}
+        _make_response(connector, [change1])
+        run2 = list(connector.get_assets())  # run 2: health changed
+        assert len(run2) == 1
+
+        change2 = {**change1, "ipv4Addresses": ["10.0.0.99"]}
+        _make_response(connector, [change2])
+        run3 = list(connector.get_assets())  # run 3: IP changed
+        assert len(run3) == 1
+
+        _make_response(connector, [change2])
+        run4 = list(connector.get_assets())  # run 4: no change
+        assert len(run4) == 0
+
+    def test_deduplicated_count_logged(self, connector):
+        """The completion log must report the number of deduplicated entries."""
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT])
+        list(connector.get_assets())  # seeds cache
+
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT])
+        list(connector.get_assets())  # both deduped
+
+        log_calls = [str(call) for call in connector.log.call_args_list]
+        assert any("deduplicated=2" in call for call in log_calls)
+
+    def test_mixed_new_and_cached_devices(self, connector):
+        """In a batch with both cached and new devices, only new ones are yielded."""
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT])
+        list(connector.get_assets())  # cache computer
+
+        new_device = {
+            **SERVER_ENDPOINT_DICT,
+            "id": "aaaaaaaa-ffff-ffff-ffff-000000000099",
+            "hostname": "brand-new-host",
+        }
+        # computer (cached) + new_device (not cached) + server (cached)
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, new_device, SERVER_ENDPOINT_DICT])
+        # Note: SERVER_ENDPOINT_DICT was never sent before so it will also be sent
+        assets = list(connector.get_assets())
+        hostnames = {a.device.hostname for a in assets}
+        assert "brand-new-host" in hostnames
+        assert "test-server-01" in hostnames
+        assert "test-computer-01" not in hostnames  # was cached
+
+    def test_cache_fingerprint_updated_after_change(self, connector):
+        """After a change is detected and sent, the new fingerprint must be stored."""
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT])
+        list(connector.get_assets())
+
+        with connector.context as cache:
+            original_fp = cache["sent_ids"][COMPUTER_ENDPOINT_DICT["id"]]["fingerprint"]
+
+        updated = {**COMPUTER_ENDPOINT_DICT, "health": {"overall": "good"}}
+        _make_response(connector, [updated])
+        list(connector.get_assets())
+
+        with connector.context as cache:
+            new_fp = cache["sent_ids"][COMPUTER_ENDPOINT_DICT["id"]]["fingerprint"]
+
+        assert new_fp != original_fp
+
+
+class TestGetMappedFields:
+    def test_returns_dict(self, connector):
+        result = connector.get_mapped_fields()
+        assert isinstance(result, dict)
+
+    def test_is_non_empty(self, connector):
+        assert len(connector.get_mapped_fields()) > 0
+
+    def test_all_keys_and_values_are_strings(self, connector):
+        mapping = connector.get_mapped_fields()
+        for k, v in mapping.items():
+            assert isinstance(k, str), f"Key {k!r} is not a string"
+            assert isinstance(v, str), f"Value {v!r} is not a string"
+
+    def test_contains_hostname_mapping(self, connector):
+        assert "hostname" in connector.get_mapped_fields()
+
+    def test_contains_os_mapping(self, connector):
+        mapping = connector.get_mapped_fields()
+        assert any("os" in k for k in mapping)
+
+    def test_contains_ip_mapping(self, connector):
+        mapping = connector.get_mapped_fields()
+        assert any("ipv4" in k.lower() or "ipv6" in k.lower() for k in mapping)
+
+    def test_contains_timestamp_mappings(self, connector):
+        mapping = connector.get_mapped_fields()
+        assert "lastSeenAt" in mapping
+        assert "registeredAt" in mapping
+
+    def test_deterministic_across_calls(self, connector):
+        assert connector.get_mapped_fields() == connector.get_mapped_fields()
+
+    def test_values_reference_device_namespace(self, connector):
+        """All OCSF paths must point into the device object or enrichments."""
+        for v in connector.get_mapped_fields().values():
+            assert v.startswith("device.") or v.startswith(
+                "enrichments."
+            ), f"Expected OCSF path to start with 'device.' or 'enrichments.', got {v!r}"
+
+
+class TestResetCheckpoint:
+    def test_clears_last_seen_cursor_from_context(self, connector):
+        with connector.context as cache:
+            cache["last_seen_cursor"] = "2026-01-01T00:00:00.000Z"
+
+        connector.reset_checkpoint()
+
+        with connector.context as cache:
+            assert cache.get("last_seen_cursor") is None
+
+    def test_clears_sent_ids_from_context(self, connector):
+        with connector.context as cache:
+            cache["sent_ids"] = {"some-id": {"fingerprint": "fp", "cached_at": "2026-01-01T00:00:00Z"}}
+
+        connector.reset_checkpoint()
+
+        with connector.context as cache:
+            assert cache.get("sent_ids") is None
+
+    def test_resets_latest_time_in_memory(self, connector):
+        connector._latest_time = "2026-05-01T00:00:00.000Z"
+        connector.reset_checkpoint()
+        assert connector._latest_time is None
+
+    def test_resets_sent_ids_in_memory(self, connector):
+        connector._sent_ids = {"id-1": {"fingerprint": "fp", "cached_at": "2026-01-01T00:00:00Z"}}
+        connector.reset_checkpoint()
+        assert connector._sent_ids == {}
+
+    def test_logs_info_message(self, connector):
+        connector.reset_checkpoint()
+        log_calls = [str(call) for call in connector.log.call_args_list]
+        assert any("reset" in call.lower() for call in log_calls)
+
+    def test_noop_on_empty_context(self, connector):
+        """reset_checkpoint must not raise when the context is already empty."""
+        connector.reset_checkpoint()  # must not raise
+
+    def test_full_refetch_after_reset(self, connector):
+        """After reset, the next get_assets() run must re-yield all devices."""
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT])
+        list(connector.get_assets())  # seeds cache
+
+        connector.reset_checkpoint()
+
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT])
+        assets = list(connector.get_assets())
+        assert len(assets) == 2
+
+    def test_checkpoint_cleared_means_no_cursor_on_next_iter(self, connector):
+        """After reset, _iter_endpoints must not pass lastSeenAfter."""
+        with connector.context as cache:
+            cache["last_seen_cursor"] = "2026-05-30T00:00:00.000Z"
+
+        connector.reset_checkpoint()
+
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = {"items": [], "pages": {"size": 50, "maxSize": 500}}
+        connector.client = MagicMock()
+        connector.client.list_endpoints.return_value = mock_resp
+
+        list(connector._iter_endpoints())
+
+        called_params = connector.client.list_endpoints.call_args[0][0]
+        assert "lastSeenAfter" not in called_params

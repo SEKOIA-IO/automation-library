@@ -1,0 +1,27 @@
+{
+  "arguments": {
+    "type": "object",
+    "title": "Trigger Arguments",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {}
+  },
+  "description": "Webhook Trigger to receive specific Sekoia.io Cases",
+  "name": "Manual Trigger for Case",
+  "docker_parameters": "case_webhook_trigger",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Results",
+    "type": "object",
+    "properties": {
+      "case_uuid": {
+        "description": "Unique identifier of the Case (UUID string).",
+        "type": "string"
+      }
+    },
+    "required": [
+      "case_uuid"
+    ]
+  },
+  "uuid": "511d6f60-2166-4a16-9815-f86b42e8f689",
+  "webhook": true
+}

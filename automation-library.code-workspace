@@ -1,0 +1,116 @@
+{
+	"folders": [
+		{
+			"name": "· automation-library (root)",
+			"path": "."
+		},
+		{
+			"name": "HarfangLab",
+			"path": "HarfangLab"
+		},
+		{
+			"name": "1Password",
+			"path": "1Password"
+		},
+		{
+			"name": "Flare",
+			"path": "Flare"
+		},
+		{
+			"name": "Zimperium",
+			"path": "Zimperium"
+		},
+		{
+			"name": "Upwind",
+			"path": "Upwind"
+		},
+		{
+			"name": "LocateRisk",
+			"path": "LocateRisk"
+		},
+		{
+			"name": "DNS",
+			"path": "DNS"
+		},
+		{
+			"name": "Tranco",
+			"path": "Tranco"
+		},
+		{
+			"name": "Whois",
+			"path": "Whois"
+		},
+		{
+			"name": "HTTP",
+			"path": "HTTP"
+		},
+		{
+			"name": "IKnowWhatYouDownload",
+			"path": "IKnowWhatYouDownload"
+		},
+		{
+			"name": "IPInfo",
+			"path": "IPInfo"
+		},
+		{
+			"name": "IPtoASN",
+			"path": "IPtoASN"
+		},
+		{
+			"name": "Ilert",
+			"path": "Ilert"
+		},
+		{
+			"name": "Mandrill",
+			"path": "Mandrill"
+		},
+		{
+			"name": "MokN",
+			"path": "MokN"
+		},
+		{
+			"name": "PublicSuffix",
+			"path": "PublicSuffix"
+		},
+		{
+			"name": "RSS",
+			"path": "RSS"
+		},
+		{
+			"name": "Retarus",
+			"path": "Retarus"
+		},
+		{
+			"name": "USTA",
+			"path": "USTA"
+		},
+		{
+			"name": "BinaryEdges",
+			"path": "BinaryEdges"
+		},
+		{
+			"name": "Bitsight",
+			"path": "Bitsight"
+		},
+		{
+			"name": "Censys",
+			"path": "Censys"
+		},
+		{
+			"name": "CertificateTransparency",
+			"path": "CertificateTransparency"
+		},
+		{
+			"name": "Duo",
+			"path": "Duo"
+		}
+	],
+	"settings": {
+		"mise.enable": true,
+		"mise.configureExtensionsAutomatically": true,
+		"mise.automaticallyTrustMiseConfigFiles": true,
+		"mise.updateEnvAutomatically": true,
+		"mise.updateOpenTerminalsEnvAutomatically": true,
+		"python.defaultInterpreterPath": "/home/vscode/.local/share/mise/installs/python/3.14/bin/python"
+	}
+}

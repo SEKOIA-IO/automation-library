@@ -1,7 +1,6 @@
 """Timestepper for orchestrating event collection with configurable time windows."""
 
 import datetime
-import time
 from collections.abc import Generator
 
 from sekoia_automation.aio.connector import AsyncConnector
@@ -48,15 +47,12 @@ class TimeStepper:
         Yield time windows for event collection.
 
         Continuously yields (start, end) tuples, setting sleep_duration when approaching real-time.
-        The connector is responsible for sleeping based on sleep_duration.
+        The connector is responsible for sleeping (asynchronously) based on sleep_duration.
 
         Yields:
             Tuple of (start, end) datetimes for each time window
         """
         while True:
-            # Sleep if the stepper indicates we need to wait
-            if self.sleep_duration > 0:
-                time.sleep(self.sleep_duration)
 
             # Return the current time range
             yield self.start, self.end

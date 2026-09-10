@@ -5,7 +5,8 @@ from contextlib import asynccontextmanager
 
 from async_lru import alru_cache
 from loguru import logger
-from pydantic.v1 import Field
+from pydantic import Field
+
 from aws_helpers.client import AwsClient, AwsClientConfiguration
 
 
@@ -14,8 +15,8 @@ class SqsConfiguration(AwsClientConfiguration):
 
     frequency: int = Field(default=10, description="AWS SQS queue polling frequency in seconds")
     delete_consumed_messages: bool = Field(default=True, description="Delete consumed messages from queue")
-    queue_name: str = Field(description="AWS SQS queue name")
-    queue_url: str | None = Field(descripton="AWS SQS queue url")
+    queue_name: str = Field(..., description="AWS SQS queue name")
+    queue_url: str | None = Field(default=None, description="AWS SQS queue url")
 
 
 class SqsWrapper(AwsClient[SqsConfiguration]):

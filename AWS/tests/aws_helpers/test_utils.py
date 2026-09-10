@@ -8,7 +8,14 @@ import aiofiles
 import pytest
 from faker import Faker
 
-from aws_helpers.utils import async_gzip_open, get_content, is_gzip_compressed, normalize_s3_key, unescape_string
+from aws_helpers.utils import (
+    async_gzip_open,
+    get_content,
+    is_gzip_compressed,
+    is_parquet_content,
+    normalize_s3_key,
+    unescape_string,
+)
 
 
 def test_normalize_s3_key():
@@ -55,6 +62,16 @@ def test_is_gzip_compressed():
     assert is_gzip_compressed(b"") is False
     assert is_gzip_compressed(parquet_content) is False
     assert is_gzip_compressed(gzip_content) is True
+
+
+def test_is_parquet_content():
+    """Test is_parquet_content function."""
+    parquet_content = b"PAR1\x15\x04\x15\x08\x150cbPAR1"
+    not_parquet_content = b"PAR1\x15\x04\x15\x08\x150cb"
+
+    assert is_parquet_content(b"") is False
+    assert is_parquet_content(not_parquet_content) is False
+    assert is_parquet_content(parquet_content) is True
 
 
 @pytest.mark.asyncio

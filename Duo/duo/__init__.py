@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 
 from sekoia_automation.module import Module
 
@@ -9,7 +9,7 @@ class DuoModule(Module):
     configuration: DuoModuleConfiguration
 
 
-class LogType(str, Enum):
+class LogType(StrEnum):
     ADMINISTRATION = "admin_log"
     AUTHENTICATION = "auth_log"
     TELEPHONY = "telephony_log"

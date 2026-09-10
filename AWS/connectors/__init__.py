@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+
 from aws_helpers.base import AwsModule
 from connectors.provider import AwsAccountProvider
 

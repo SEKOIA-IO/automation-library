@@ -7,9 +7,9 @@ from contextlib import asynccontextmanager
 
 from aiofiles.threadpool.binary import AsyncBufferedReader
 from loguru import logger
-from pydantic.v1 import Field
-from aws_helpers.client import AwsClient, AwsClientConfiguration
+from pydantic import Field
 
+from aws_helpers.client import AwsClient, AwsClientConfiguration
 from aws_helpers.utils import AsyncReader, async_gzip_open, is_gzip_compressed
 
 
@@ -65,3 +65,36 @@ class S3Wrapper(AwsClient[S3Configuration]):
                         yield async_reader
                     finally:
                         await async_reader.close()
+
+    async def list_objects(
+        self,
+        bucket: str | None = None,
+        prefix: str | None = None,
+        start_after: str | None = None,
+    ) -> AsyncGenerator[dict, None]:
+        """
+        List the objects available in a S3 bucket.
+
+        The objects are returned in lexicographical order of their keys. The
+        ``start_after`` parameter relies on the ``list_objects_v2`` ``StartAfter``
+        option to only return the keys that are strictly greater than the marker,
+        which allows the caller to implement a checkpoint and avoid reading the
+        same object multiple times.
+        """
+        bucket = bucket or self._configuration.bucket
+
+        kwargs: dict[str, str] = {"Bucket": bucket} if bucket else {}
+        if prefix:
+            kwargs["Prefix"] = prefix
+
+        if start_after:
+            kwargs["StartAfter"] = start_after
+
+        logger.info(f"Listing objects from bucket {bucket}")
+
+        async with self.get_client("s3") as s3:
+            paginator = s3.get_paginator("list_objects_v2")
+            async for page in paginator.paginate(**kwargs):
+                for obj in page.get("Contents", []):
+                    if obj.get("Size", 0) > 0:
+                        yield obj

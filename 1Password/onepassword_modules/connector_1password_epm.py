@@ -1,9 +1,10 @@
 import time
-from datetime import datetime, timedelta, timezone
+from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from pathlib import Path
 from threading import Event, Lock, Thread
-from typing import Generator
+from typing import Any, ClassVar
 from urllib.parse import urljoin
 
 import orjson
@@ -25,7 +26,7 @@ class OnePasswordEndpoint(Thread):
     METHOD_URI: str
     FEATURE_NAME: str
 
-    def __init__(self, connector: "OnePasswordConnector") -> None:
+    def __init__(self, connector: OnePasswordConnector) -> None:
         super().__init__()
         self._stop_event = Event()
         self.name = self.FEATURE_NAME
@@ -62,11 +63,11 @@ class OnePasswordEndpoint(Thread):
     def extract_timestamp(self, event: dict) -> datetime:
         return isoparse(event["timestamp"])
 
-    def __fetch_next_events(self, from_date: datetime) -> Generator[list, None, None]:
-        to_date = datetime.now().astimezone(timezone.utc)
+    def __fetch_next_events(self, from_date: datetime) -> Generator[list]:
+        to_date = datetime.now().astimezone(UTC)
         url = urljoin(self.connector.base_url, self.METHOD_URI)
 
-        data = {
+        data: dict[str, Any] = {
             "start_time": from_date.isoformat(),
             "end_time": to_date.isoformat(),
             "limit": self.connector.configuration.chunk_size,
@@ -90,7 +91,7 @@ class OnePasswordEndpoint(Thread):
             data = {"cursor": page["cursor"]}
             response = self.client.post(url, json=data)
 
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list]:
         most_recent_date_seen = self.from_date
 
         for next_events in self.__fetch_next_events(most_recent_date_seen):
@@ -111,7 +112,7 @@ class OnePasswordEndpoint(Thread):
             self.cursor.offset = most_recent_date_seen
             self.from_date = most_recent_date_seen
 
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             current_lag = now - most_recent_date_seen
             EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(
                 int(current_lag.total_seconds())
@@ -191,7 +192,7 @@ class OnePasswordConnector(Connector):
     module: OnePasswordModule
     configuration: OnePasswordConnectorConfiguration
 
-    FEATURE_TO_CLASS = {
+    FEATURE_TO_CLASS: ClassVar[dict] = {
         SignInAttemptsEndpoint.FEATURE_NAME: SignInAttemptsEndpoint,
         ItemUsagesEndpoint.FEATURE_NAME: ItemUsagesEndpoint,
         AuditEventsEndpoint.FEATURE_NAME: AuditEventsEndpoint,

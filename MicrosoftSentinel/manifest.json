@@ -45,7 +45,7 @@
   "name": "Microsoft Sentinel",
   "uuid": "ba910388-ba3b-405a-8cb5-cb5953796470",
   "slug": "microsoft-sentinel",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "categories": [
     "Cloud Providers"
   ]

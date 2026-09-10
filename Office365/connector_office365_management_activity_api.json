@@ -17,6 +17,11 @@
         "description": "",
         "type": "string"
       },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
       "intake_key": {
         "description": "Intake key to use when sending events",
         "type": "string"

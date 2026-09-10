@@ -66,6 +66,6 @@
   "name": "Google Cloud",
   "uuid": "4f682a9e-9a25-43a5-8a48-cd9bd7fade7e",
   "slug": "google",
-  "version": "1.22.0",
+  "version": "1.22.2",
   "categories": ["Cloud Providers"]
 }

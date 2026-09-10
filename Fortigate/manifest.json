@@ -39,6 +39,11 @@
             "base_port"
           ]
         }
+      },
+      "verify_certificate": {
+        "description": "Verify the firewall TLS certificate",
+        "type": "boolean",
+        "default": false
       }
     },
     "required": [

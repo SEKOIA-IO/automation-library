@@ -1,0 +1,12 @@
+From: Relay User <relay@example.test>
+To: mailbox@example.test
+Date: Tue, 25 Aug 2026 14:10:01 +0000
+Message-ID: <forwarded-sample-0001@example.test>
+Subject: FW: MicrosoftOutlook e2e update
+X-MS-Exchange-Organization-Network-Message-Id: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+
+Hello,
+
+This is an anonymized forwarded email fixture used for tests.

@@ -1,6 +1,8 @@
 from sekoia_automation.action import GenericAPIAction
 
-base_url = "api/v1/sic/"
+from sekoiaio.operation_center.constants import base_url
+from sekoiaio.operation_center.get_alert import GetAlert
+from sekoiaio.utils import FilteredQueryParametersAction
 
 PatchAlert = type(
     "PatchAlert",
@@ -54,67 +56,64 @@ ListIncidents = type(
     },
 )
 
-ListAlerts = type(
-    "ListAlerts",
-    (GenericAPIAction,),
-    {
-        "verb": "get",
-        "endpoint": base_url + "alerts",
-        "query_parameters": [
-            "limit",
-            "offset",
-            "stix",
-            "cases",
-            "match[community_uuid]",
-            "match[entity_name]",
-            "match[entity_uuid]",
-            "match[status_uuid]",
-            "match[status_name]",
-            "match[type_category]",
-            "match[type_value]",
-            "match[source]",
-            "match[target]",
-            "match[node]",
-            "match[stix_object]",
-            "match[rule_uuid]",
-            "match[rule_name]",
-            "match[detection_type]",
-            "match[uuid]",
-            "match[title]",
-            "match[asset_uuid]",
-            "match[urgency_display]",
-            "match[case_short_id]",
-            "match[assignee]",
-            "match[custom_status_uuid]",
-            "match[verdict_uuid]",
-            "match[short_id]",
-            "date[created_at]",
-            "date[updated_at]",
-            "range[urgency]",
-            "range[similar]",
-            "nomatch[asset_uuid]",
-            "nomatch[entity_uuid]",
-            "nomatch[rule_uuid]",
-            "nomatch[rule_name]",
-            "nomatch[detection_type]",
-            "nomatch[source]",
-            "nomatch[target]",
-            "nomatch[status_uuid]",
-            "nomatch[stix_object]",
-            "nomatch[type_value]",
-            "nomatch[urgency_display]",
-            "nomatch[assignee]",
-            "nomatch[custom_status_uuid]",
-            "nomatch[verdict_uuid]",
-            "visible",
-            "is_assigned_to_case",
-            "similar_to",
-            "sort",
-            "direction",
-            "with_count",
-        ],
-    },
-)
+
+class ListAlerts(FilteredQueryParametersAction):
+    verb = "get"
+    endpoint = base_url + "alerts"
+    query_parameters = [
+        "limit",
+        "offset",
+        "stix",
+        "cases",
+        "match[community_uuid]",
+        "match[entity_name]",
+        "match[entity_uuid]",
+        "match[status_uuid]",
+        "match[status_name]",
+        "match[type_category]",
+        "match[type_value]",
+        "match[source]",
+        "match[target]",
+        "match[node]",
+        "match[stix_object]",
+        "match[rule_uuid]",
+        "match[rule_name]",
+        "match[detection_type]",
+        "match[uuid]",
+        "match[title]",
+        "match[asset_uuid]",
+        "match[urgency_display]",
+        "match[case_short_id]",
+        "match[assignee]",
+        "match[custom_status_uuid]",
+        "match[verdict_uuid]",
+        "match[short_id]",
+        "date[created_at]",
+        "date[updated_at]",
+        "range[urgency]",
+        "range[similar]",
+        "nomatch[asset_uuid]",
+        "nomatch[entity_uuid]",
+        "nomatch[rule_uuid]",
+        "nomatch[rule_name]",
+        "nomatch[detection_type]",
+        "nomatch[source]",
+        "nomatch[target]",
+        "nomatch[status_uuid]",
+        "nomatch[stix_object]",
+        "nomatch[type_value]",
+        "nomatch[urgency_display]",
+        "nomatch[assignee]",
+        "nomatch[custom_status_uuid]",
+        "nomatch[verdict_uuid]",
+        "visible",
+        "is_assigned_to_case",
+        "similar_to",
+        "sort",
+        "direction",
+        "with_count",
+    ]
+
 
 DenyCountermeasure = type(
     "DenyCountermeasure",
@@ -146,16 +145,6 @@ PostCommentOnAlert = type(
     },
 )
 
-
-GetAlert = type(
-    "GetAlert",
-    (GenericAPIAction,),
-    {
-        "verb": "get",
-        "endpoint": base_url + "alerts/{uuid}",
-        "query_parameters": ["stix", "cases"],
-    },
-)
 
 UpdateIncident = type(
     "UpdateIncident",
@@ -189,7 +178,7 @@ CreateCase = type(
 
 ListsCases = type(
     "ListsCases",
-    (GenericAPIAction,),
+    (FilteredQueryParametersAction,),
     {
         "verb": "get",
         "endpoint": base_url + "cases",
@@ -236,6 +225,7 @@ UpdateCase = type(
         "verb": "patch",
         "endpoint": base_url + "cases/{uuid}",
         "query_parameters": [],
+        "timeout": 60,
     },
 )
 
@@ -438,6 +428,7 @@ ListAssets = type(
             "rule_version",
             "sort",
             "direction",
+            "include_revoked",
         ],
     },
 )
@@ -478,6 +469,16 @@ DeletesAssetV2 = type(
     {
         "verb": "delete",
         "endpoint": assets_v2_base_url + "assets/{uuid}",
+        "query_parameters": [],
+    },
+)
+
+RevokesAssetV2 = type(
+    "RevokesAssetV2",
+    (GenericAPIAction,),
+    {
+        "verb": "put",
+        "endpoint": assets_v2_base_url + "assets/{uuid}/revoke",
         "query_parameters": [],
     },
 )

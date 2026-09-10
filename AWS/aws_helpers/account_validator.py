@@ -1,10 +1,10 @@
 import boto3
+from botocore.exceptions import NoCredentialsError
 from sekoia_automation.account_validator import AccountValidator
 
 from aws_helpers.base import AwsModule
 from aws_helpers.client import AwsClientConfiguration
 from aws_helpers.oidc import OidcAwsMixin
-from botocore.exceptions import NoCredentialsError
 
 
 class AwsAccountValidator(OidcAwsMixin, AccountValidator):

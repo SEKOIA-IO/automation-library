@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.1.0
+
+### Added
+- Fetch and forward incident entities from the list-entities endpoint.
+
 ## 2025-02-03 - 1.0.0
 
 ### Added

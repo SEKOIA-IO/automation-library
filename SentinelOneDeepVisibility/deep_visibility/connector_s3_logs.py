@@ -1,4 +1,6 @@
+import os
 from collections.abc import AsyncGenerator
+from typing import Any, Optional
 
 import orjson
 from aws_helpers.utils import AsyncReader
@@ -20,6 +22,12 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector, AwsAccountProvider):
 
     configuration: AwsS3QueuedConfiguration
     name = "DeepVisibility AWS S3 Logs"
+
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+        """Init DeepVisibilityConnector."""
+
+        super().__init__(*args, **kwargs)
+        self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 300))
 
     async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """

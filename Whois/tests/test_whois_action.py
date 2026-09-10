@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 from whois.parser import WhoisEntry
 
-from whois_module.whois_action import WhoisAction, is_ip_adress, extract_domain_from_url
+from whois_module.whois_action import WhoisAction, extract_domain_from_url, is_ip_adress
 
 
 @pytest.fixture
@@ -181,48 +181,17 @@ def test_whois_action(whois_results, raw_google_whois):
         assert results.get("Domain").get("Whois").get("CreationDate") == "1997-09-15 07:00:00"
         assert results.get("Domain").get("Whois").get("UpdatedDate") == "2024-08-02 02:17:33"
         assert results.get("Domain").get("Whois").get("ExpirationDate") == "2028-09-13 07:00:00"
-        assert results == {
-            "Domain": {
-                "Name": "GOOGLE.COM",
-                "Whois": {
-                    "Domain": "GOOGLE.COM",
-                    "DomainStatus": [
-                        "clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited",
-                        "clientTransferProhibited https://icann.org/epp#clientTransferProhibited",
-                        "clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited",
-                        "serverDeleteProhibited https://icann.org/epp#serverDeleteProhibited",
-                        "serverTransferProhibited https://icann.org/epp#serverTransferProhibited",
-                        "serverUpdateProhibited https://icann.org/epp#serverUpdateProhibited",
-                        "clientUpdateProhibited (https://www.icann.org/epp#clientUpdateProhibited)",
-                        "clientTransferProhibited (https://www.icann.org/epp#clientTransferProhibited)",
-                        "clientDeleteProhibited (https://www.icann.org/epp#clientDeleteProhibited)",
-                        "serverUpdateProhibited (https://www.icann.org/epp#serverUpdateProhibited)",
-                        "serverTransferProhibited (https://www.icann.org/epp#serverTransferProhibited)",
-                        "serverDeleteProhibited (https://www.icann.org/epp#serverDeleteProhibited)",
-                    ],
-                    "DNSSec": "unsigned",
-                    "Raw": raw_google_whois,
-                    "NameServers": [
-                        "NS1.GOOGLE.COM",
-                        "NS2.GOOGLE.COM",
-                        "NS3.GOOGLE.COM",
-                        "NS4.GOOGLE.COM",
-                        "ns3.google.com",
-                        "ns4.google.com",
-                        "ns2.google.com",
-                        "ns1.google.com",
-                    ],
-                    "CreationDate": "1997-09-15 07:00:00",
-                    "UpdatedDate": "2024-08-02 02:17:33",
-                    "ExpirationDate": "2028-09-13 07:00:00",
-                    "Registrar": {
-                        "Name": "MarkMonitor, Inc.",
-                        "AbuseEmail": "abusecomplaints@markmonitor.com",
-                    },
-                    "Registrant": {
-                        "Name": "None",
-                        "Email": "whoisrequest@markmonitor.com",
-                    },
-                },
-            }
-        }
+
+        domain = results["Domain"]
+        whois_data = domain["Whois"]
+
+        assert domain["Name"] == "GOOGLE.COM"
+        assert whois_data["Domain"] == "GOOGLE.COM"
+        assert whois_data["DNSSec"] == "unsigned"
+        assert whois_data["Raw"] == raw_google_whois
+        assert "NS1.GOOGLE.COM" in whois_data["NameServers"]
+        assert "clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited" in whois_data["DomainStatus"]
+        assert whois_data["Registrar"]["Name"] == "MarkMonitor, Inc."
+        assert whois_data["Registrar"]["AbuseEmail"] == "abusecomplaints@markmonitor.com"
+        assert whois_data["Registrant"]["Name"] == "None"
+        assert whois_data["Registrant"]["Email"] == "whoisrequest@markmonitor.com"

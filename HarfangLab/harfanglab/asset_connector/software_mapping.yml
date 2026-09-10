@@ -1,0 +1,266 @@
+mapping:
+  ocsf_class: "Software Inventory Info"
+  class_uid: 5020
+  ocsf_version: "1.5.0"
+
+  samples:
+    - name: "HarfangLab Software Inventory Sample"
+      description: "Agent data sample for harfanglab api response (used to build the device context)."
+      data: |
+        {
+          "id": "3891597d-8696-4fc4-a260-b04880bdbd68",
+          "hostname": "testhostaname1",
+          "firstseen": "2025-06-11T00:15:06.454734Z",
+          "lastseen": "2025-06-11T00:27:06.693963Z",
+          "ostype": "windows",
+          "osproducttype": "Windows 11 Enterprise Evaluation",
+          "ipaddress": "1.2.2.5",
+          "domainname": "TestGROUP"
+        }
+
+    - name: "HarfangLab Application Sample"
+      description: "Application data sample from GET /api/data/endpoint/Agent/<agent_uid>/applications/."
+      data: |
+        {
+          "id": "0e8412d1-f81f-4739-b254-2879bb7bc5e5",
+          "active": true,
+          "installation_date": null,
+          "first_seen": "2026-03-27T10:05:27.558496Z",
+          "last_seen": "2026-03-27T10:06:59.416022Z",
+          "first_version": "0.19051.7-0",
+          "last_version": "0.19051.7-0",
+          "installation_count": 1,
+          "name": "YourPhone",
+          "publisher": "Microsoft Corporation",
+          "ostype": "windows",
+          "cpe_prefix": null,
+          "app_type": "uwp",
+          "description": null
+        }
+
+  fields:
+    # OCSF EVENT CLASSIFICATION
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      logic: "Always 2 for 'Collect' activity"
+      description: "OCSF activity ID"
+
+    - source: "static: Collect"
+      target: "activity_name"
+      type: "string"
+      logic: "Always 'Collect' for asset inventory"
+      description: "OCSF activity name"
+
+    - source: "static: Discovery"
+      target: "category_name"
+      type: "string"
+      logic: "Always 'Discovery'"
+      description: "OCSF category name"
+
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      logic: "Always 5 for Discovery category"
+      description: "OCSF category UID"
+
+    - source: "static: Software Inventory Info"
+      target: "class_name"
+      type: "string"
+      logic: "Always 'Software Inventory Info'"
+      description: "OCSF class name"
+
+    - source: "static: 5020"
+      target: "class_uid"
+      type: "integer"
+      logic: "Always 5020 for Software Inventory Info"
+      description: "OCSF class UID"
+
+    - source: "static: 502002"
+      target: "type_uid"
+      type: "integer"
+      logic: "Always 502002 for Software Inventory Info: Collect"
+      description: "OCSF type UID"
+
+    - source: "static: Software Inventory Info: Collect"
+      target: "type_name"
+      type: "string"
+      logic: "Always 'Software Inventory Info: Collect' for this event type"
+      description: "OCSF type name"
+
+    # TIMESTAMPS
+    - source: "agent.firstseen"
+      target: "time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch from the parent agent; use for OCSF event timestamp"
+      description: "OCSF event timestamp"
+
+    # METADATA
+    - source: "static: Harfanglab EDR"
+      target: "metadata.product.name"
+      type: "string"
+      logic: "Always 'Harfanglab EDR'"
+      description: "Source product name"
+
+    - source: "static: 24.12"
+      target: "metadata.product.version"
+      type: "string"
+      logic: "Fixed HarfangLab product version"
+      description: "Product version"
+
+    - source: "static: 1.5.0"
+      target: "metadata.version"
+      type: "string"
+      logic: "Fixed OCSF schema version"
+      description: "OCSF schema version"
+
+    # DEVICE ATTRIBUTES (from parent agent)
+    - source: "static: 2"
+      target: "device.type_id"
+      type: "integer"
+      logic: "Direct mapping of type to desktop type ID"
+      description: "Device type ID"
+
+    - source: "static: Desktop"
+      target: "device.type"
+      type: "string"
+      logic: "Direct mapping of type to desktop type"
+      description: "OCSF device type"
+
+    - source: "agent.id"
+      target: "device.uid"
+      type: "string"
+      logic: "Direct mapping of HarfangLab agent unique ID"
+      description: "Device unique identifier"
+
+    - source: "agent.osproducttype"
+      target: "device.os.name"
+      type: "string"
+      logic: "Direct mapping of OS product type (e.g., 'Windows 10 Professional', 'Ubuntu 20.04')"
+      description: "Operating system name and version"
+
+    - source: "agent.ostype"
+      target: "device.os.type"
+      type: "string"
+      logic: "Normalize ostype to OCSF OSTypeStr: WINDOWS→'Windows', LINUX→'Linux', MACOS→'macOS', OTHER→'Other', UNKNOWN→'Unknown'"
+      description: "Operating system type"
+
+    - source: "agent.ostype"
+      target: "device.os.type_id"
+      type: "integer"
+      logic: "Map ostype to OCSF OSTypeId: WINDOWS→100, LINUX→200, MACOS→300, OTHER→99, UNKNOWN→0"
+      description: "OCSF operating system type ID"
+
+    - source: "agent.hostname"
+      target: "device.hostname"
+      type: "string"
+      logic: "Direct mapping of hostname"
+      description: "Device hostname"
+
+    - source: "agent.domainname"
+      target: "device.domain"
+      type: "string"
+      logic: "Direct mapping of domain name"
+      description: "Device domain or realm"
+
+    - source: "agent.ipaddress"
+      target: "device.ip"
+      type: "string"
+      logic: "Direct mapping of IP address"
+      description: "Device IP address"
+
+    - source: "agent.firstseen"
+      target: "device.first_seen_time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "Device first seen timestamp"
+
+    - source: "agent.lastseen"
+      target: "device.last_seen_time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "Device last seen timestamp"
+
+    # SBOM - SOFTWARE BILL OF MATERIALS
+    - source: "application.name"
+      target: "sbom.package.name"
+      type: "string"
+      logic: "Direct mapping of application name"
+      description: "Software package name"
+
+    - source: "application.last_version || application.first_version || 'unknown'"
+      target: "sbom.package.version"
+      type: "string"
+      logic: "Use last_version if available, fallback to first_version, then 'unknown'"
+      description: "Software package version"
+
+    - source: "application.id"
+      target: "sbom.package.uid"
+      type: "string"
+      logic: "Direct mapping of application unique ID"
+      description: "Software package unique identifier"
+
+    - source: "application.cpe_prefix"
+      target: "sbom.package.cpe_name"
+      type: "string"
+      logic: "Direct mapping of CPE prefix if available; null otherwise"
+      description: "Common Platform Enumeration name"
+
+    - source: "application.app_type"
+      target: "sbom.package.type"
+      type: "string"
+      logic: "Map app_type to OCSF PackageTypeStr: uwp/win32/macos/linux→'Application', os→'Operating System', unknown→'Unknown'"
+      description: "Software package type"
+
+    - source: "application.app_type"
+      target: "sbom.package.type_id"
+      type: "integer"
+      logic: "Map app_type to OCSF PackageTypeId: uwp/win32/macos/linux→1 (APPLICATION), os→2 (OPERATINGSYSTEM), unknown→0 (UNKNOWN)"
+      description: "OCSF software package type ID"
+
+  ocsf_samples:
+    - name: "Software Inventory Info: Collect"
+      description: "Transformed HarfangLab api response to OCSF Software Inventory Info event"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "Software Inventory Info",
+          "class_uid": 5020,
+          "type_name": "Software Inventory Info: Collect",
+          "type_uid": 502002,
+          "time": 1749316506,
+          "metadata": {
+            "product": {
+              "name": "HarfangLab EDR",
+              "version": "24.12"
+            },
+            "version": "1.5.0"
+          },
+          "device": {
+            "uid": "3891597d-8696-4fc4-a260-b04880bdbd68",
+            "hostname": "testhostaname1",
+            "type": "Desktop",
+            "type_id": 2,
+            "ip": "1.2.2.5",
+            "domain": "TestGROUP",
+            "first_seen_time": 1749316506,
+            "last_seen_time": 1749317226,
+            "os": {
+              "name": "Windows 11 Enterprise Evaluation",
+              "type": "windows",
+              "type_id": 100
+            }
+          },
+          "sbom": {
+            "package": {
+              "name": "YourPhone",
+              "version": "0.19051.7-0",
+              "uid": "0e8412d1-f81f-4739-b254-2879bb7bc5e5",
+              "type": "Application",
+              "type_id": 1
+            }
+          }
+        }

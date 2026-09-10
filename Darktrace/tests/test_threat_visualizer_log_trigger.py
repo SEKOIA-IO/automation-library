@@ -31,7 +31,7 @@ def trigger(symphony_storage):
 
 
 def get_json(filename):
-    with open(filename, "r") as file:
+    with open(filename) as file:
         return json.load(file)
 
 
@@ -46,9 +46,10 @@ def aianalyst_response():
 
 
 def test_modelbreaches_consumer(trigger, modelbreaches_response):
-    with patch(
-        "darktrace_modules.threat_visualizer_log_trigger.time"
-    ) as mock_time, requests_mock.Mocker() as mock_request:
+    with (
+        patch("darktrace_modules.threat_visualizer_log_trigger.time") as mock_time,
+        requests_mock.Mocker() as mock_request,
+    ):
         last_ts = 1687774141.000
         batch_start = 1687774141.000
         batch_end = 1688465633.434
@@ -69,9 +70,10 @@ def test_modelbreaches_consumer(trigger, modelbreaches_response):
 
 
 def test_aianalyst_consumer(trigger, aianalyst_response):
-    with patch(
-        "darktrace_modules.threat_visualizer_log_trigger.time"
-    ) as mock_time, requests_mock.Mocker() as mock_request:
+    with (
+        patch("darktrace_modules.threat_visualizer_log_trigger.time") as mock_time,
+        requests_mock.Mocker() as mock_request,
+    ):
         last_ts = 1687774141.000
         batch_start = 1687774141.000
         batch_end = 1688465633.434

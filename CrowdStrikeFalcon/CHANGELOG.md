@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-01 - 1.25.20
+
+### Fixed
+
+- Crowdstrike Falcon Devices asset connector: an interrupted collection cycle no longer
+  strands the devices it had not reached. The checkpoint used to be advanced to the newest
+  device as soon as the first batch was pushed, so any restart, API error or refused batch
+  made every later cycle stop immediately and skip the rest of the inventory.
+- Crowdstrike Falcon Devices asset connector: list devices through
+  `/devices/queries/devices-scroll/v1`.
+
+### Changed
+
+- Crowdstrike Falcon Devices asset connector: host groups are resolved once per cycle
+  instead of once per device, removing up to one API call per device (and the repeated
+  403 warnings when the API client lacks the `Host groups: Read` scope).
+
+## 2026-07-27 - 1.25.19
+
+### Changed
+
+- Fetch the host group details of a batch of devices in a single request, instead of one request per device
+- Report only once per fetch cycle the failure to get the host group details, with the required API scope
+
+### Fixed
+
+- Report the errors returned by the CrowdStrike API when a request fails
+
+## 2026-07-02 - 1.25.18
+
+### Fixed
+
+- Add intake_server to connector's manifests
+
+## 2026-06-23 - 1.25.17
+
+### Fixed
+
+- Use a default connector configuration inheritance
+
+## 2026-05-19 - 1.25.16
+
+### Fixed
+
+- Set EVENTS_LAG metric to zero when there are no events to forward
+
+## 2026-05-15 - 1.25.15
+
+### Fixed
+
+- Prevent stream offset from regressing in cache when a batch with a lower offset is written after a higher one
+
+## 2026-04-27 - 1.25.14
+
+### Fixed
+
+- Fix `Organization` model validation error when `service_provider` is `None` by using a fallback value `"Unknown"`
+
 ## 2026-04-14 - 1.25.13
 
 ### Changed

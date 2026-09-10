@@ -6,7 +6,7 @@ mapping:
   samples:
     - name: "Sophos EDR endpoint sample"
       description: "Sample endpoint data from Sophos Central API GET /endpoint/v1/endpoints"
-      data:
+      data: |
         {
           "id": "00000000-0000-0000-0000-000000000001",
           "type": "computer",
@@ -289,7 +289,7 @@ mapping:
   ocsf_samples:
     - name: "Device Inventory Info – Sophos EDR"
       description: "Transformed Sophos endpoint to OCSF Device Inventory Info"
-      data:
+      data: |
         {
           "activity_id": 2,
           "activity_name": "Collect",

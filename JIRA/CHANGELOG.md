@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-04-24 - 1.5.0
+
+### Added
+
+- Add `public` argument to the "Comment Issue" action to post public comments on Jira
+
 ## 2025-12-17 - 1.4.1
 
 ### Fixed

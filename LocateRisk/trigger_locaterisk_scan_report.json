@@ -1,0 +1,44 @@
+{
+  "name": "LocateRisk Scan Report",
+  "description": "Collect findings from a LocateRisk scan report export",
+  "uuid": "bf69813a-fd64-409b-9247-fd02326ecc5d",
+  "docker_parameters": "locaterisk_scan_report",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "scan_id": {
+        "description": "Scan ID",
+        "type": "string"
+      },
+      "report_url": {
+        "description": "Report export URL used to fetch scan findings",
+        "default": "https://app.locaterisk.com/api/rest/report/export",
+        "type": "string"
+      },
+      "polling_interval": {
+        "description": "Polling interval in minutes",
+        "default": 5,
+        "type": "integer"
+      }
+    },
+    "required": ["intake_key", "scan_id"],
+    "secrets": ["intake_key", "scan_id"],
+    "title": "LocateRisk Scan Report configuration"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {},
+    "title": "The events"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Silverfort",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Silverfort is a runtime identity security platform that protects all human, machine, and agentic identities across hybrid and cloud environments. It provides Universal MFA, Identity Threat Detection and Response (ITDR), Identity Security Posture Management (ISPM), privileged access security, and non-human identity protection by integrating inline with existing IAM infrastructure—without requiring changes to applications or systems.",
+  "name": "Silverfort",
+  "uuid": "57caf2d2-537a-48f8-8195-234788ba6b80",
+  "version": "1.0.0",
+  "slug": "silverfort",
+  "categories": [
+    "IAM"
+  ]
+}

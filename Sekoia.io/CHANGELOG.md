@@ -7,11 +7,207 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-04-27 - 2.71.4
-
-- Add missing documentation of `Get Alert`  action.
+## 2026-08-28 - 2.76.3
 
 ### Fixed
+
+- Do not include community UUIDs in request for `Execute a Query` action to avoid permission issues
+
+## 2026-08-27 - 2.76.2
+
+### Fixed
+
+- Apply gevent monkey-patching before any import pulls in `ssl` (via `requests`/`urllib3`), and restrict it to trigger executions. Patching an already-loaded `ssl` module caused `RecursionError` on HTTPS calls.
+
+## 2026-08-27 - 2.76.1
+
+### Fixed
+
+- `Search Alerts`, `Search Cases` and `Get Alert` actions: only forward the query parameters the user actually set. The playbook node populates every argument declared in the manifest, including empty strings for untouched text filters and `False` for untouched booleans; the API treats any parameter present in the query string as an active filter (e.g. `match[title]=` matches nothing, `is_assigned_to_case=false` excludes assigned alerts), so these unset values made the searches return no result. They are now dropped, and kept booleans are normalized to lowercase `true` instead of Python's `True`.
+
+## 2026-08-21 - 2.76.0
+
+### Added
+
+- Add a new `Case Comment Created` trigger for Operation Center cases, for enabling playbooks to react automatically when a comment is posted on a case (for example, forwarding analyst notes to third-party ticketing/case systems)
+
+### Changed
+
+- Improve case trigger test maintainability by refactoring repeated scenarios with `pytest.mark.parametrize`
+- Significantly reduce case trigger test execution time while preserving behavior and assertions
+- Refresh dependency lockfile (`poetry.lock`) with upgraded compatible package versions
+
+### Fixed
+
+- Increase reliability of case trigger behavior with additional tests covering edge cases (invalid sub-events, missing identifiers, API failures, and filter rejections)
+- Reach 100% test coverage on `sekoiaio/triggers/cases.py`
+- Improve case trigger resilience and troubleshooting with explicit API timeouts and richer error logs (request context included)
+
+## 2026-08-13 - 2.75.3
+
+### Added
+
+- Add concise docstrings to all methods in `Add IOC to IOC Collection`
+- Extend `Add IOC to IOC Collection` tests with edge cases (nested flattening, blank values, empty list, HTTP failure path) to reach 100% coverage on `sekoiaio/intelligence_center/add_ioc_to_ioc_collection.py`
+
+### Changed
+
+- Anonymize IOC/IP test samples with RFC 5737 and documentation IPv6 ranges to keep examples non-identifying while preserving input shapes
+- Refactor `Add IOC to IOC Collection` tests to use `pytest.mark.parametrize` for repeated success and IP validation scenarios
+- Use Pydantic v2 `TypeAdapter` to validate IPv4/IPv6 inputs in `add_IP_action` while preserving existing action behavior
+
+### Fixed
+
+- Fail explicitly in `Add IOC to IOC Collection` action when IP indicators are invalid (including CIDR notation like `/32`) instead of silently succeeding without creating indicators
+- Add stricter IP validation to prevent green runs with empty `Results`/`Errors` when no valid IPv4/IPv6 indicator is actually submitted
+
+### Removed
+
+- Remove `indicators_path` from `Add IOC to IOC Collection` action JSON arguments because it was declared but not supported by the Python implementation
+
+## 2026-06-15 - 2.75.2
+
+### Added
+
+- Add `Include revoked` parameter to `List Assets V2` action
+
+## 2026-08-04 - 2.75.1
+
+### Fixed
+
+- Fix large/empty `description` field timeout errors in `Edit case` (`update_case`) playbook action:
+  - Raise `timeout` default value from `5` to `60` seconds in `UpdateCase` class
+
+## 2026-08-04 - 2.75.0
+
+### Fixed
+
+- Update Sekoia Automation SDK to 1.24.0
+
+## 2026-07-31 - 2.74.5
+
+### Fixed
+
+- `Execute a Query` action now handles the case where a query run returns no results.
+
+### Fixed
+
+- Allow short ids when validating the arguments for the GetAlert action
+
+## 2026-07-20 - 2.74.3
+
+### Fixed
+
+- `Update Alert Status` now supports alert custom statuses by UUID and by name.
+
+## 2026-07-10 - 2.74.2
+
+### Changed
+
+- Upgraded `sekoia-automation-sdk` to `1.23.1` and migrated `GetAlert`, `CreateDataset`, `DeleteDataset`, `ExecuteAQuery`, and `ListQueries` action argument models from the `pydantic.v1` compatibility shim to native Pydantic v2, avoiding a v1/v2 model mixing error triggered by the newer SDK
+- `GetAsset` action now validates its `uuid` argument as a native `UUID` via Pydantic instead of a hand-written blank-check validator, and no longer issues an HTTP request when called with an empty, malformed, or missing `asset_uuid`
+- Migrate `AssetsMerge` and `SynchronizeAssetsWithAD` argument models from the `pydantic.v1` compatibility shim to native Pydantic v2, required to avoid a "Mixing V1 and V2 models" runtime error now that the SDK is bumped to `1.23.1`
+
+### Fixed
+
+- `GetAlert` action no longer issues an HTTP request when called with an empty or missing `uuid`; it validates the argument via a Pydantic model, now using a proper `uuid.UUID` type instead of a hand-written blank-check validator, and fails with a clear error instead
+
+## 2026-07-07 - 2.74.1
+
+### Fixed
+
+- `GetAsset` action no longer issues an HTTP request when called with an empty `asset_uuid`; it now returns `None` with an error instead
+
+## 2026-06-23 - 2.74.0
+
+### Added
+
+- Add Manual trigger for cases
+
+## 2026-06-23 - 2.73.4
+
+### Changed
+
+- Update the logo
+
+## 2026-06-15 - 2.73.3
+
+### Added
+
+- `Revoke an asset (V2)` action calling `PUT /v2/asset-management/assets/{uuid}/revoke`
+
+### Changed
+
+- `Delete an asset` and `Delete an asset (V2)` actions — the delete endpoints now return 403; use `Revoke an asset (V2)` instead
+
+## 2026-06-10 - 2.73.2
+
+### Changed
+
+- Change Deprecate `List Assets` from description to name
+
+## 2026-06-10 - 2.73.0
+
+### Changed
+
+- Deprecate `List Assets`
+
+## 2026-06-01 - 2.72.4
+
+### Fixed
+
+- Improve AD asset synchronization action response handling for non-JSON API responses.
+- Stop returning partial success payloads when AD asset synchronization encounters an error.
+
+## 2026-06-04 - 2.72.3
+
+### Fixed
+
+- Fix the uuid for the SOL actions
+
+## 2026-06-04 - 2.72.2
+
+### Fixed
+
+- Fix the `Create a Dataset` action to get the community uuid from the module, not the action
+
+## 2026-06-04 - 2.72.1
+
+### Fixed
+
+- Fixed the `List Queries` action to include the correct `is_shared` parameter in the request parameters rather that the incorrect `is_shared_run` parameter.
+- Fixed the `Create a Dataset` action to include the `community_uuid` parameter in the request data as it is required.
+- The community UUID is taken from the action's `community_uuid` property.
+
+## 2026-05-07 - 2.72.0
+
+### Added
+
+- Added the following `SOL`Actions.
+  - `Execute a Query` : Execute an existing SOL query (by name or UUID) and return the results.
+  - `List Queries` : List all existing SOL queries corresponding to the filter.
+  - `Create a Dataset` : Create a new SOL dataset with a specified name and description.
+  - `Delete a Dataset` : Delete an existing SOL dataset by name or UUID.
+
+## 2026-05-07 - 2.71.6
+
+### Changed
+
+- Flatten nested IOC IP lists in the action `add_ioc_to_ioc_collection`.
+
+## 2026-05-01 - 2.71.5
+
+### Changed
+
+- Refactor action to synchronize asset with Active Directory (AD)
+- Log non-JSON responses while trying to synchronize asset with AD
+
+## 2026-04-27 - 2.71.4
+
+### Fixed
+
+- Add checking ips for add iocs action.
+- Add missing documentation of `Get Alert` action.
 
 ## 2026-03-27 - 2.71.3
 
@@ -686,3 +882,4 @@ Support for file input - action synchronize asset
 ### Added
 
 - Add the action that let us get reports from a specific term
+

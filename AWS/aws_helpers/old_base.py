@@ -2,14 +2,16 @@ from abc import ABCMeta
 from functools import cached_property
 
 import boto3
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from sekoia_automation.connector import Connector
 from sekoia_automation.module import Module
 
 
 class AWSConfiguration(BaseModel):
     aws_access_key: str = Field(..., description="The identifier of the access key")
-    aws_secret_access_key: str = Field(secret=True, description="The secret associated to the access key")
+    aws_secret_access_key: str = Field(
+        ..., description="The secret associated to the access key", json_schema_extra={"secret": True}
+    )
     aws_region_name: str = Field(..., description="The area hosting the AWS resources")
 
 

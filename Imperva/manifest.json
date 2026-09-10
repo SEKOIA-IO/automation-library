@@ -24,6 +24,7 @@
             "type": "object",
             "properties": {
               "private": {
+                "description": "RSA private key in PEM format used to decrypt the AES symmetric key embedded in each log file",
                 "type": "string"
               }
             }
@@ -37,14 +38,15 @@
       "api_key"
     ],
     "secrets": [
-      "api_key"
+      "api_key",
+      "private"
     ]
   },
   "description": "Imperva is a cybersecurity company focused on protecting data and applications, offering solutions like web application firewalls and DDoS protection. It helps safeguard digital assets from cyber threats through comprehensive security and risk management tools.",
   "name": "Imperva",
   "uuid": "ee0e5c81-5410-48d4-b155-135679c5ebb8",
   "slug": "imperva",
-  "version": "1.21.3",
+  "version": "1.21.6",
   "categories": [
     "Network"
   ]

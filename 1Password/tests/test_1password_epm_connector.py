@@ -76,9 +76,10 @@ def test_next_batch(trigger, message_1, message_2):
     trigger.from_date = 1645668000000
     worker = SignInAttemptsEndpoint(connector=trigger)
 
-    with requests_mock.Mocker() as mock_requests, patch(
-        "onepassword_modules.connector_1password_epm.time"
-    ) as mock_time:
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch("onepassword_modules.connector_1password_epm.time") as mock_time,
+    ):
         mock_requests.post(
             "https://example.com/api/v1/signinattempts",
             [{"json": message_1}, {"json": message_2}],
@@ -99,9 +100,10 @@ def test_next_batch_without_events(trigger, message_1, message_2):
     trigger.from_date = 1645668000000
     worker = SignInAttemptsEndpoint(connector=trigger)
 
-    with requests_mock.Mocker() as mock_requests, patch(
-        "onepassword_modules.connector_1password_epm.time"
-    ) as mock_time:
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch("onepassword_modules.connector_1password_epm.time") as mock_time,
+    ):
         mock_requests.post(
             "https://example.com/api/v1/signinattempts",
             [{"json": message_2}],
