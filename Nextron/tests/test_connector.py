@@ -138,17 +138,36 @@ def test_fetch_logs_request_error_does_not_mark_scan_processed(connector, monkey
 
 
 def test_unexpected_error_is_caught_by_outer_handler(connector, monkeypatch):
-    """A non-request exception is swallowed by the outer handler (loop stays alive)."""
+    """A non-request exception is swallowed and delayed before the loop retries."""
     def kaboom(*a, **k):
         raise ValueError("unexpected")
 
     monkeypatch.setattr(client, "fetch_scans", kaboom)
-    # The outer handler has no sleep(), so stop the loop from log_exception instead.
-    monkeypatch.setattr(connector, "log_exception", lambda *a, **k: connector.stop())
-
     connector.run()  # must return (not loop forever) and not raise
 
     assert connector._load_processed() == {}
+
+
+def test_stale_processed_scans_are_pruned_without_new_scans(connector, monkeypatch):
+    connector._save_processed({"stale": 0.0, "undated": None})
+
+    _run_once(connector, monkeypatch, [], logs_by_scan={})
+
+    assert connector._load_processed() == {"undated": None}
+
+
+def test_terminal_scan_without_creation_date_remains_processed(connector, monkeypatch):
+    scan = {"id": "undated-1", "available_logs": [], "status": "failed"}
+
+    _run_once(connector, monkeypatch, [scan], logs_by_scan={})
+    assert connector._load_processed() == {"undated-1": None}
+
+    connector._stop_event.clear()
+    pushed, fetched = _run_once(connector, monkeypatch, [scan], logs_by_scan={})
+
+    assert pushed == []
+    assert fetched == []
+    assert connector._load_processed() == {"undated-1": None}
 
 
 def test_running_scan_is_rechecked_after_it_finishes(connector, monkeypatch):

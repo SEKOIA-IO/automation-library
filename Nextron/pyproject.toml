@@ -9,11 +9,13 @@ dependencies = [
     "sekoia-automation-sdk"
 ]
 
-[project.dependency-group.dev]
-pytest = "*"
-pytest-cov = "*"
-requests = "*"
-requests-mock = "*"
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "requests",
+    "requests-mock",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.7,<1.0.0"]

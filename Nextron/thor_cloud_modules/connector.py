@@ -53,12 +53,12 @@ class ThorCloudConnector(Connector):
         # so their logs are never re-ingested on subsequent polls.
         self._context = PersistentJSON("context.json", self.data_path)
 
-    def _load_processed(self) -> dict[str, float]:
-        """Return {scan_id: creation_epoch} of scans already forwarded."""
+    def _load_processed(self) -> dict[str, Optional[float]]:
+        """Return creation epochs for processed scans; ``None`` means retain indefinitely."""
         with self._context as cache:
             return dict(cache.get("processed_scans") or {})
 
-    def _save_processed(self, processed: dict[str, float]) -> None:
+    def _save_processed(self, processed: dict[str, Optional[float]]) -> None:
         with self._context as cache:
             cache["processed_scans"] = processed
 
@@ -90,7 +90,12 @@ class ThorCloudConnector(Connector):
                 # Deduplicate against scans already forwarded (persisted across runs),
                 # pruning entries older than the lookback window to bound state size.
                 cutoff = (datetime.now(timezone.utc) - timedelta(days=self.configuration.days_back)).timestamp()
-                processed = {sid: ts for sid, ts in self._load_processed().items() if ts >= cutoff}
+                loaded_processed = self._load_processed()
+                processed = {
+                    sid: ts for sid, ts in loaded_processed.items() if ts is None or ts >= cutoff
+                }
+                if processed != loaded_processed:
+                    self._save_processed(processed)
 
                 new_scans = [s for s in scans if s.get("id") and s["id"] not in processed]
                 self.log(
@@ -99,7 +104,7 @@ class ThorCloudConnector(Connector):
                 )
 
                 batch_of_events = []
-                forwarded_ids: dict[str, float] = {}
+                forwarded_ids: dict[str, Optional[float]] = {}
                 for scan in new_scans:
                     scan_id = scan["id"]
 
@@ -123,7 +128,7 @@ class ThorCloudConnector(Connector):
                             message=f"Scan {scan_id} (status={status!r}) has no thor.json; marking processed",
                             level="debug",
                         )
-                        forwarded_ids[scan_id] = client.scan_creation_epoch(scan) or cutoff
+                        forwarded_ids[scan_id] = client.scan_creation_epoch(scan)
                         continue
 
                     self.log(message=f"Fetching logs for scan {scan_id}", level="debug")
@@ -135,7 +140,7 @@ class ThorCloudConnector(Connector):
 
                     for log in logs:
                         batch_of_events.append(json.dumps(log))
-                    forwarded_ids[scan_id] = client.scan_creation_epoch(scan) or cutoff
+                    forwarded_ids[scan_id] = client.scan_creation_epoch(scan)
 
                 if batch_of_events:
                     self.log(message=f"{len(batch_of_events)} events collected", level="info")
@@ -150,3 +155,4 @@ class ThorCloudConnector(Connector):
 
             except Exception as e:
                 self.log_exception(e, message="Connector error")
+                time.sleep(self.configuration.polling_interval * 60)
