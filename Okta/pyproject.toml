@@ -46,6 +46,7 @@ select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ARG"]
+"okta_modules/asset_connector/device_models.py" = ["N815"]  # Fields mirror the camelCase Okta API schema
 
 [tool.mypy]
 python_version = "3.14"

@@ -6,7 +6,7 @@ and format them according to OCSF standards.
 
 from collections.abc import AsyncGenerator
 from functools import cached_property
-from typing import Any, List, Optional
+from typing import Any
 from urllib.parse import urlencode
 
 from dateutil.parser import isoparse
@@ -66,7 +66,7 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
         """
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.new_most_recent_date: Optional[str] = None
+        self.new_most_recent_date: str | None = None
 
     @cached_property
     def client(self) -> OktaClient:
@@ -108,7 +108,7 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
                 cache["most_recent_date_seen"] = self.new_most_recent_date
                 self.log(f"Checkpoint updated with date: {self.new_most_recent_date}", level="info")
         except Exception as e:
-            self.log(f"Failed to update checkpoint: {str(e)}", level="error")
+            self.log(f"Failed to update checkpoint: {e!s}", level="error")
 
     async def reset_checkpoint(self) -> None:
         """Clear the checkpoint so all devices are re-fetched from scratch."""
@@ -120,7 +120,7 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
         """Return the declared source-to-OCSF field mapping (empty: schema-change detection disabled)."""
         return {}
 
-    async def fetch_next_devices(self, url: str) -> tuple[List[OktaDevice], Any]:
+    async def fetch_next_devices(self, url: str) -> tuple[list[OktaDevice], Any]:
         """Fetch devices from the specified URL.
 
         Args:
@@ -152,7 +152,7 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
             self.log(f"Exception while fetching devices from {url}: {e}", level="error")
             return [], None
 
-    async def next_list_devices(self) -> AsyncGenerator[OktaDevice, None]:
+    async def next_list_devices(self) -> AsyncGenerator[OktaDevice]:
         """Fetch all devices from Okta.
 
         Yields:
@@ -329,7 +329,7 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
             enrichments=enrichments if enrichments else None,
         )
 
-    async def get_assets(self) -> AsyncGenerator[DeviceOCSFModel, None]:
+    async def get_assets(self) -> AsyncGenerator[DeviceOCSFModel]:
         """Generate device assets from Okta.
 
         Yields:

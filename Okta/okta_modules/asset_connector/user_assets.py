@@ -7,13 +7,13 @@ and format them according to OCSF standards.
 import asyncio
 from collections.abc import AsyncGenerator
 from functools import cached_property
-from typing import Any, Optional
+from typing import Any
 
 from dateutil.parser import isoparse
 from okta.client import Client as OktaClient
-from okta.models.user import User as OktaUser
 from okta.models.role import Role as OktaRole
 from okta.models.role_status import RoleStatus as OktaRoleStatus
+from okta.models.user import User as OktaUser
 from okta.models.user_status import UserStatus as OktaUserStatus
 from sekoia_automation.asset_connector import AsyncAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
@@ -53,7 +53,7 @@ class OktaUserAssetConnector(AsyncAssetConnector):
         """
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.new_most_recent_date: Optional[str] = None
+        self.new_most_recent_date: str | None = None
 
     @property
     def most_recent_date_seen(self) -> str | None:
@@ -82,7 +82,7 @@ class OktaUserAssetConnector(AsyncAssetConnector):
                 cache["most_recent_date_seen"] = self.new_most_recent_date
                 self.log(f"Checkpoint updated with date: {self.new_most_recent_date}", level="info")
         except Exception as e:
-            self.log(f"Failed to update checkpoint: {str(e)}", level="warning")
+            self.log(f"Failed to update checkpoint: {e!s}", level="warning")
             self.log_exception(e)
 
     async def reset_checkpoint(self) -> None:
@@ -220,7 +220,7 @@ class OktaUserAssetConnector(AsyncAssetConnector):
 
         return list(roles)
 
-    async def next_list_users(self) -> AsyncGenerator[OktaUser, None]:
+    async def next_list_users(self) -> AsyncGenerator[OktaUser]:
         """Fetch all users from Okta.
 
         Yields:
@@ -336,7 +336,7 @@ class OktaUserAssetConnector(AsyncAssetConnector):
         if okta_user.password_changed:
             try:
                 last_time_password_change = isoparse(str(okta_user.password_changed)).timestamp()
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 pass
 
         enrichments = [
@@ -391,7 +391,7 @@ class OktaUserAssetConnector(AsyncAssetConnector):
             enrichments=enrichments,
         )
 
-    async def get_assets(self) -> AsyncGenerator[UserOCSFModel, None]:
+    async def get_assets(self) -> AsyncGenerator[UserOCSFModel]:
         """Generate user assets from Okta.
 
         Yields:

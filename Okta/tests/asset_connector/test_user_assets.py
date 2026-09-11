@@ -5,8 +5,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sekoia_automation.asset_connector.models.ocsf.user import (
     Group,
-    UserDataObject,
-    UserEnrichmentObject,
     UserOCSFModel,
 )
 
@@ -522,6 +520,21 @@ class TestOktaUserAssetConnector:
         ]
         assert len(error_calls) > 0
         mock_connector.log_exception.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_reset_checkpoint_clears_persisted_and_in_memory_state(self, mock_connector):
+        """reset_checkpoint clears the persisted key and the in-memory new_most_recent_date."""
+        # Setup: seed both persisted checkpoint and in-memory state
+        mock_cache = {"most_recent_date_seen": "2023-01-01T00:00:00.000Z"}
+        mock_connector.context.__enter__.return_value = mock_cache
+        mock_connector.new_most_recent_date = "2023-01-01T00:00:00.000Z"
+
+        # Execute
+        await mock_connector.reset_checkpoint()
+
+        # Verify both persisted key and in-memory state are cleared
+        assert "most_recent_date_seen" not in mock_cache
+        assert mock_connector.new_most_recent_date is None
 
     @pytest.mark.asyncio
     async def test_map_fields_with_none_values(self, mock_connector):

@@ -645,7 +645,7 @@ async def test_fetch_next_devices_passes_url_verbatim(test_okta_device_asset_con
 
     pre_built_url = "/api/v1/devices?search=created+gt+%222023-01-01%22&sortBy=created&sortOrder=asc"
     with patch.object(test_okta_device_asset_connector, "context", mock_context):
-        devices, response = await test_okta_device_asset_connector.fetch_next_devices(pre_built_url)
+        devices, _response = await test_okta_device_asset_connector.fetch_next_devices(pre_built_url)
 
         assert len(devices) == 1
         assert devices[0].id == "dev1"
@@ -1136,3 +1136,17 @@ async def test_map_fields_bitlocker_encryption(test_okta_device_asset_connector)
         partitions = result.enrichments[0].data.Storage_encryption.partitions
         assert "full" in partitions
         assert partitions["full"] == "Enabled"
+
+
+@pytest.mark.asyncio
+async def test_reset_checkpoint_clears_persisted_and_in_memory_state(test_okta_device_asset_connector):
+    """reset_checkpoint clears the persisted key and the in-memory new_most_recent_date."""
+    # Seed both persisted checkpoint and in-memory state
+    with test_okta_device_asset_connector.context as cache:
+        cache["most_recent_date_seen"] = "2023-01-01T00:00:00.000Z"
+    test_okta_device_asset_connector.new_most_recent_date = "2023-01-01T00:00:00.000Z"
+
+    await test_okta_device_asset_connector.reset_checkpoint()
+
+    assert test_okta_device_asset_connector.most_recent_date_seen is None
+    assert test_okta_device_asset_connector.new_most_recent_date is None
