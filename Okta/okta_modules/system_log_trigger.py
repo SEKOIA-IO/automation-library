@@ -173,28 +173,26 @@ class SystemLogConnector(Connector):
     def fetch_events(self) -> Generator[list[dict[str, Any]], None, None]:
         most_recent_date_seen = self.cursor.offset
 
-        try:
-            for next_events in self.__fetch_next_events(most_recent_date_seen):
-                if next_events:
-                    # get the greater date seen in this list of events
-                    events_date: list[str] = sorted(
-                        x["published"] for x in next_events if x.get("published") is not None
-                    )
+        for next_events in self.__fetch_next_events(most_recent_date_seen):
+            if next_events:
+                # get the greater date seen in this list of events
+                events_date: list[str] = sorted(x["published"] for x in next_events if x.get("published") is not None)
 
-                    last_event_date = isoparse(events_date[-1])
+                last_event_date = isoparse(events_date[-1])
 
-                    # save the greater date ever seen
-                    if last_event_date > most_recent_date_seen:
-                        most_recent_date_seen = get_upper_second(
-                            last_event_date
-                        )  # get the upper second to exclude the most recent event seen
+                # save the greater date ever seen
+                if last_event_date > most_recent_date_seen:
+                    most_recent_date_seen = get_upper_second(
+                        last_event_date
+                    )  # get the upper second to exclude the most recent event seen
 
-                    # forward current events
-                    yield next_events
-        finally:
-            # save the most recent date
-            if most_recent_date_seen > self.cursor.offset:
-                self.cursor.offset = most_recent_date_seen
+                # forward current events
+                yield next_events
+
+                # Persist the checkpoint once the page has been pushed so a restart replays at most
+                # one page, which the events cache can fully deduplicate (avoids duplicated events)
+                if most_recent_date_seen > self.cursor.offset:
+                    self.cursor.offset = most_recent_date_seen
 
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen

@@ -110,6 +110,16 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
         except Exception as e:
             self.log(f"Failed to update checkpoint: {str(e)}", level="error")
 
+    async def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so all devices are re-fetched from scratch."""
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self.new_most_recent_date = None
+
+    def get_mapped_fields(self) -> dict[str, str]:
+        """Return the declared source-to-OCSF field mapping (empty: schema-change detection disabled)."""
+        return {}
+
     async def fetch_next_devices(self, url: str) -> tuple[List[OktaDevice], Any]:
         """Fetch devices from the specified URL.
 

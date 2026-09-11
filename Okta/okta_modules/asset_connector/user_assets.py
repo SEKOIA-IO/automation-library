@@ -85,6 +85,16 @@ class OktaUserAssetConnector(AsyncAssetConnector):
             self.log(f"Failed to update checkpoint: {str(e)}", level="warning")
             self.log_exception(e)
 
+    async def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so all users are re-fetched from scratch."""
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self.new_most_recent_date = None
+
+    def get_mapped_fields(self) -> dict[str, str]:
+        """Return the declared source-to-OCSF field mapping (empty: schema-change detection disabled)."""
+        return {}
+
     @cached_property
     def client(self) -> OktaClient:
         """Get the Okta client instance.
@@ -326,7 +336,7 @@ class OktaUserAssetConnector(AsyncAssetConnector):
         if okta_user.password_changed:
             try:
                 last_time_password_change = isoparse(str(okta_user.password_changed)).timestamp()
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
 
         enrichments = [

@@ -348,7 +348,7 @@ def test_long_next_batch_should_not_sleep(trigger, message1, message2):
         assert events_cache[message2["uuid"]] == True
 
 
-@pytest.mark.skipif("{'OKTA_BASE_URL', 'OKTA_API_TOKEN'}" ".issubset(os.environ.keys()) == False")
+@pytest.mark.skipif("{'OKTA_BASE_URL', 'OKTA_API_TOKEN'}.issubset(os.environ.keys()) == False")
 def test_run_integration(data_storage):
     one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
     with patch("okta_modules.system_log_trigger.datetime") as mock_datetime:

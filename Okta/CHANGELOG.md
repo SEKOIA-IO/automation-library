@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-10 - 2.11.0
+
+### Changed
+
+- Migrated module from Poetry to uv
+
+## 2026-09-09 - 2.10.6
+
+### Fixed
+
+- Fix duplicated events in the system logs connector on restart during a large fetch: the checkpoint was only persisted after a full pagination drain, so a restart mid-drain replayed events already forwarded but no longer present in the bounded dedup cache. The checkpoint is now persisted after each page is pushed, bounding the replay to a single page that the cache fully deduplicates.
+
 ## 2026-08-21 - 2.10.5
 
 ### Fixed
