@@ -336,7 +336,7 @@ class OktaUserAssetConnector(AsyncAssetConnector):
         if okta_user.password_changed:
             try:
                 last_time_password_change = isoparse(str(okta_user.password_changed)).timestamp()
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
 
         enrichments = [
