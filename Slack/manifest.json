@@ -1,0 +1,33 @@
+{
+  "configuration": {
+    "properties": {
+      "token": {
+        "description": "Slack user token (xoxp-\u2026) carrying the auditlogs:read scope, issued by installing the app on the Enterprise organization as its Owner",
+        "title": "Token",
+        "type": "string"
+      },
+      "base_url": {
+        "default": "https://api.slack.com/audit/v1",
+        "description": "Base URL of the Slack Audit Logs API",
+        "title": "Base Url",
+        "type": "string"
+      }
+    },
+    "required": [
+      "token"
+    ],
+    "title": "SlackAuditLogsModuleConfiguration",
+    "type": "object",
+    "secrets": [
+      "token"
+    ]
+  },
+  "description": "Collect audit events from the Slack Audit Logs API (Enterprise Grid)",
+  "name": "Slack",
+  "slug": "slack",
+  "categories": [
+    "Collaboration Tools"
+  ],
+  "uuid": "8ae6f10f-5c8e-40dc-bbf3-de406cc4b6e7",
+  "version": "0.1.3"
+}
