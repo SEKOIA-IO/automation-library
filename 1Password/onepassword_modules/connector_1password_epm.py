@@ -88,6 +88,13 @@ class OnePasswordEndpoint(Thread):
                 EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(0)
                 return
 
+            # Stop once the API signals there are no more pages. The cursor returned with
+            # `has_more=false` is a reset cursor meant for the next polling cycle; re-using it
+            # here would re-deliver already-seen events and produce duplicates.
+            if not page.get("has_more", False):
+                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(0)
+                return
+
             data = {"cursor": page["cursor"]}
             response = self.client.post(url, json=data)
 
