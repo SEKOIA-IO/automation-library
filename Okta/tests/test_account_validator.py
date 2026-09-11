@@ -1,4 +1,3 @@
-import asyncio
 from unittest.mock import Mock, PropertyMock, patch
 
 from okta_modules.account_validator import OktaAccountValidator
@@ -71,7 +70,7 @@ class TestOktaAccountValidator:
 
         with patch.object(type(self.validator), "client", new_callable=PropertyMock, return_value=mock_client):
             with patch.object(self.validator, "log") as mock_log:
-                with patch.object(self.validator, "error") as mock_error:
+                with patch.object(self.validator, "error"):
                     result = self.validator.validate()
 
                     assert result is False
@@ -162,15 +161,13 @@ class TestOktaAccountValidator:
         mock_client.list_users = mock_list_users
 
         with patch.object(type(self.validator), "client", new_callable=PropertyMock, return_value=mock_client):
-            with patch("asyncio.get_event_loop") as mock_get_loop:
-                mock_loop = Mock()
-                mock_loop.run_until_complete.return_value = ([], Mock(), None)
-                mock_get_loop.return_value = mock_loop
+            with patch("asyncio.run") as mock_run:
+                mock_run.return_value = ([], Mock(), None)
 
                 result = self.validator.validate()
 
                 assert result is True
-                mock_loop.run_until_complete.assert_called_once()
+                mock_run.assert_called_once()
 
     def test_validate_logs_error_details(self):
         """Test that validation logs detailed error information."""
@@ -224,7 +221,7 @@ class TestOktaAccountValidator:
     def test_validate_error_with_empty_message_and_empty_str_falls_back_to_repr(self):
         """Errors that stringify to an empty string (e.g. TimeoutError) still yield a message."""
         mock_client = Mock()
-        okta_error = asyncio.TimeoutError()
+        okta_error = TimeoutError()
 
         async def mock_list_users():
             return None, Mock(), okta_error
