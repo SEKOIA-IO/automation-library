@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Move from Poetry to `uv`.
+
 ## 2026-08-28 - 2.76.3
 
 ### Fixed
@@ -251,7 +255,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add a test to check if we can update an asset with a list of tags
-- 
+-
 ## 2026-02-27 - 2.69.2
 
 ### Fixed
@@ -376,7 +380,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add dual-mode event fetching: all events vs new events since last trigger
 - Save fetched events to events.json alongside alert.json
 - Add comprehensive test coverage (18 new tests) for event fetching functionality
-- Fix mypy type errors with proper None checks and type annotations  
+- Fix mypy type errors with proper None checks and type annotations
 - Add graceful degradation: trigger continues if event fetching fails
 - Update manifest with new configuration parameters and output schema
 
@@ -590,7 +594,7 @@ Support for file input - action synchronize asset
 ### Added
 
 - Update Alert trigger with rule_names_filter
- 
+
 ## 2025-01-27 - 2.67.3
 
 ### Fixed
@@ -624,7 +628,7 @@ Support for file input - action synchronize asset
 
 ### Changed
 
-- Change `Update Alert Status` to support `status names` as input 
+- Change `Update Alert Status` to support `status names` as input
 
 ## 2024-12-12 - 2.66.1
 
@@ -675,7 +679,7 @@ Support for file input - action synchronize asset
 
 ### Changed
 
-- Change `Update Alert Status` to support `status names` as input 
+- Change `Update Alert Status` to support `status names` as input
 
 ## 2024-10-08 - 2.64.6
 
@@ -694,7 +698,7 @@ Support for file input - action synchronize asset
 
 ### Changed
 
-- Return more information in Sekoia Alert comment trigger 
+- Return more information in Sekoia Alert comment trigger
 
 ## 2024-10-04 - 2.64.3
 
@@ -882,4 +886,3 @@ Support for file input - action synchronize asset
 ### Added
 
 - Add the action that let us get reports from a specific term
-

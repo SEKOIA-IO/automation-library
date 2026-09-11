@@ -1,13 +1,44 @@
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.12.13,<0.13.0"]
+build-backend = "uv_build"
 
-[tool.poetry]
-name = "Automation Module for Sekoia.io"
-description = ""
+[project]
+name = "sekoiaio"
 version = "2.76.0"
+description = ""
 authors = []
-package-mode = false
+requires-python = ">=3.11,<3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    "requests",
+    "sekoia-automation-sdk>=1.24.0,<2",
+    "kafka-python",
+    "tenacity",
+    "ujson",
+    "websocket-client",
+    "gevent",
+    "orjson",
+    "structlog>=25.5.0,<26",
+    "smart-open>=7.5.0,<8",
+    "black>=26.1.0,<27",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "requests",
+    "requests-mock",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.build-backend]
+module-root = ""
 
 [tool.black]
 line-length = 119
@@ -22,26 +53,6 @@ line_length = 119
 target-version = "py311"
 line-length = 119
 fix = true
-
-[tool.poetry.dependencies]
-python = ">=3.11,<3.12"
-requests = "*"
-sekoia-automation-sdk = "^1.24.0"
-kafka-python = "*"
-tenacity = "*"
-ujson = "*"
-websocket-client = "*"
-gevent = "*"
-orjson = "*"
-structlog = "^25.5.0"
-smart-open = "^7.5.0"
-black = "^26.1.0"
-
-[tool.poetry.dev-dependencies]
-pytest = "*"
-pytest-cov = "*"
-requests = "*"
-requests-mock = "*"
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]
