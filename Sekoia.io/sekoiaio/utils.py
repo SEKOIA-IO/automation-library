@@ -1,10 +1,10 @@
 import json
-import pathlib
 import sys
 from datetime import datetime
 from functools import cache
 
 from sekoia_automation.action import GenericAPIAction
+from sekoia_automation.settings import Settings
 
 
 @cache
@@ -12,7 +12,8 @@ def user_agent() -> str:
     version: str = "unknown"
 
     try:
-        manifest = json.load(pathlib.Path("manifest.json").open())
+        with (Settings().base_directory / "manifest.json").open() as f:
+            manifest = json.load(f)
         version = manifest["version"]
     except Exception:
         pass

@@ -14,7 +14,7 @@ classifiers = [
 ]
 dependencies = [
     "requests",
-    "sekoia-automation-sdk>=1.24.0,<2",
+    "sekoia-automation-sdk>=1.26.0,<2",
     "kafka-python",
     "tenacity",
     "ujson",
