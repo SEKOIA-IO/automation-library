@@ -2,6 +2,7 @@ import os
 import time
 from threading import Thread
 from unittest.mock import MagicMock, patch
+
 import pytest
 import requests_mock
 from requests import Response
@@ -15,10 +16,12 @@ from sekoiaio.triggers.intelligence import (
 feed_objects = {"items": [f"STIX item {i}" for i in range(200)], "next_cursor": "abcd"}
 
 
-def object_factory(index: int, sources: list[str] = []):
+def object_factory(index: int, sources: list[str] | None = None):
     """
     Fixture to create a STIX object for testing.
     """
+    if sources is None:
+        sources = []
     return {
         "id": f"object-{index}",
         "name": f"Object {index}",
@@ -37,7 +40,6 @@ def trigger(data_storage):
     # Define a log function to capture log messages
     def fake_log_cb(message: str, level: str):
         print(message)
-        return None
 
     trigger = FeedConsumptionTrigger(data_path=data_storage)
     # mock the log function of trigger that requires network access to the api for reporting

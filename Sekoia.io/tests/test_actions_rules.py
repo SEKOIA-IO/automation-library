@@ -2,7 +2,8 @@ from urllib.parse import unquote as url_decoder
 
 import requests_mock
 from tenacity import wait_none
-from sekoiaio.operation_center import GetRule, EnableRule, DisableRule, DeleteRule, CreateRule, UpdateRule
+
+from sekoiaio.operation_center import CreateRule, DeleteRule, DisableRule, EnableRule, GetRule, UpdateRule
 
 module_base_url = "http://fake.url/"
 base_url = module_base_url + "api/v1/sic/"

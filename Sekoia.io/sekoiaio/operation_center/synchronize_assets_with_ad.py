@@ -1,6 +1,6 @@
 import json
 from functools import cached_property
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import urljoin
 
 import requests
@@ -25,10 +25,10 @@ class UnexpectedJSONResponseError(Exception):
 
 
 class Arguments(BaseModel):
-    user_ad_data: Optional[Dict[str, Any]] = None
-    asset_synchronization_configuration: Dict[str, Any]
+    user_ad_data: dict[str, Any] | None = None
+    asset_synchronization_configuration: dict[str, Any]
     community_uuid: str
-    user_ad_file: Optional[str] = None
+    user_ad_file: str | None = None
 
 
 class SynchronizeAssetsWithAD(Action):
@@ -119,7 +119,7 @@ class SynchronizeAssetsWithAD(Action):
             )
             return
 
-    def merge_assets(self, destination: str, sources: List[str]) -> None:
+    def merge_assets(self, destination: str, sources: list[str]) -> None:
         api_path = urljoin(self.base_url + "/", "v2/asset-management/assets/merge")
         payload = {"destination": destination, "sources": sources}
         response = self.session.post(api_path, json=payload)
@@ -130,8 +130,8 @@ class SynchronizeAssetsWithAD(Action):
             )
             return
 
-    def run(self, arguments: dict) -> Optional[Dict[str, List[Dict[str, Any]]]]:
-        responses: List[Dict[str, Any]] = []
+    def run(self, arguments: dict) -> dict[str, list[dict[str, Any]]] | None:
+        responses: list[dict[str, Any]] = []
         asset_conf = arguments["asset_synchronization_configuration"]
         community_uuid = arguments["community_uuid"]
         user_ad_data = self.json_argument("user_ad_data", arguments)
@@ -180,9 +180,7 @@ class SynchronizeAssetsWithAD(Action):
 
             detection_properties = {}
             for prop, keys in detection_properties_config.items():
-                values = [
-                    single_user_ad_data[key] for key in keys if key in single_user_ad_data and single_user_ad_data[key]
-                ]
+                values = [single_user_ad_data[key] for key in keys if single_user_ad_data.get(key)]
                 if values:
                     detection_properties[prop] = values
 

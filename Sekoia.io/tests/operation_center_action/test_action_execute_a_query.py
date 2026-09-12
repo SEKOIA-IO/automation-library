@@ -1,5 +1,5 @@
 import re
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -8,9 +8,9 @@ from requests.exceptions import HTTPError
 
 from sekoiaio.operation_center.execute_a_query import (
     ExecuteAQuery,
+    ExecuteAQueryArguments,
     QueryExecutionError,
     QueryListingError,
-    ExecuteAQueryArguments,
 )
 
 BASE_URL = "https://fake.url/"
@@ -367,11 +367,10 @@ def test_wait_for_query_completion_error_in_loop(requests_mock):
         ],
     )
 
-    with patch("sekoiaio.operation_center.execute_a_query.sleep"):
-        with pytest.raises(QueryExecutionError):
-            action._wait_for_query_completion_step(
-                SAMPLE_QUERY_RUN["uuid"], lambda status: status == "pending", timeout=60
-            )
+    with patch("sekoiaio.operation_center.execute_a_query.sleep"), pytest.raises(QueryExecutionError):
+        action._wait_for_query_completion_step(
+            SAMPLE_QUERY_RUN["uuid"], lambda status: status == "pending", timeout=60
+        )
 
     assert len(action._logs) == 1
     assert action._logs[0]["level"] == "error"

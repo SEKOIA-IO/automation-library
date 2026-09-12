@@ -1,7 +1,7 @@
 import time
 import uuid
 from collections import OrderedDict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from posixpath import join as urljoin
 from threading import Event, Lock, Thread
 from typing import Any
@@ -154,9 +154,9 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
         response.raise_for_status()
         try:
             return response.json()
-        except Exception as exp:
+        except Exception:
             self.log("Failed to parse JSON response from Alert API", level="error", content=response.text)
-            raise exp
+            raise
 
 
 class AlertCreatedTrigger(SecurityAlertsTrigger):
@@ -174,9 +174,7 @@ class AlertStatusChangedTrigger(SecurityAlertsTrigger):
     HANDLED_EVENT_SUB_TYPES = [("alert", "updated")]
 
     def _filter_notifications(self, message) -> bool:
-        if message.get("attributes", {}).get("updated", {}).get("status"):
-            return True
-        return False
+        return bool(message.get("attributes", {}).get("updated", {}).get("status"))
 
 
 class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
@@ -303,9 +301,9 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
         response.raise_for_status()
         try:
             return response.json()
-        except Exception as exp:
+        except Exception:
             self.log("Failed to parse JSON response from Alert Comment API", level="error", content=response.text)
-            raise exp
+            raise
 
 
 # ==============================================================================
@@ -640,8 +638,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         self.state_manager = AlertStateManager(state_path, logger=self.log)
 
         base_url = self.module.configuration["base_url"].rstrip("/")
-        if base_url.endswith("/api"):
-            base_url = base_url[:-4]
+        base_url = base_url.removesuffix("/api")
         self._events_api_path = f"{base_url}/api/v1/sic/conf/events"
 
         self._http_session = requests.Session()
@@ -709,7 +706,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             return None
         try:
             return int(raw_count)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             self.log(message=f"Invalid event count in notification: {raw_count!r}", level="warning")
             return None
 
@@ -873,7 +870,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         """
         # Use current time as default for temporal fields not in notification
         # This is reasonable since alert:created means the alert was just created
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.now(UTC).isoformat()
 
         return {
             "uuid": alert_attrs.get("uuid"),
@@ -973,7 +970,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             "first_seen_at": alert.get("first_seen_at"),
             "events_count": context.get("current_count", 0),
             "trigger_context": {
-                "triggered_at": datetime.now(timezone.utc).isoformat(),
+                "triggered_at": datetime.now(UTC).isoformat(),
                 "trigger_type": "alert_events_threshold",
                 **context,
             },
@@ -1300,7 +1297,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
     def _cleanup_old_states(self) -> None:
         """Clean up state entries for old alerts (runs at most once per day)."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         if self._last_cleanup and (now - self._last_cleanup).total_seconds() < 86400:
             return
