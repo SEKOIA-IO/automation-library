@@ -1,6 +1,6 @@
 # flake8: noqa: E402
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from posixpath import join as urljoin
 
 from tenacity import Retrying, wait_exponential, stop_after_attempt
@@ -113,7 +113,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         ws.send('{"action": "upgrade"}')
 
     def on_error(self, _, error: Exception):
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         if self._last_error and now < self._last_error + timedelta(seconds=10):
             # Prevent from sending too many exceptions
             return
@@ -134,7 +134,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         # Reset teardown so we can run again the app from the start
         with self._websocket.has_done_teardown_lock:
             self._websocket.has_done_teardown = False
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         if self._last_close and now < self._last_close + timedelta(seconds=10):
             # Prevent from sending too many logs
             return
