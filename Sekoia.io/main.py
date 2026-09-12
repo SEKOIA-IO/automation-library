@@ -98,7 +98,7 @@ from sekoiaio.triggers.intelligence import (
 )
 from sekoiaio.workspace import GetCommunity
 
-if __name__ == "__main__":
+def main():
     module = Module()
 
     module.register(ActivateCountermeasure, "patch-alerts/countermeasures/{cm_uuid}/activate")
@@ -180,3 +180,12 @@ if __name__ == "__main__":
     module.register(FeedIOCConsumptionTrigger, "feed_ioc_consumption_trigger")
 
     module.run()
+
+
+def fission_main():
+    main()
+    return "ok"
+
+
+if __name__ == "__main__":
+    main()
