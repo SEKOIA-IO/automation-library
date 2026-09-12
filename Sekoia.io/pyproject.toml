@@ -15,15 +15,12 @@ classifiers = [
 dependencies = [
     "requests",
     "sekoia-automation-sdk>=1.26.0,<2",
-    "kafka-python",
     "tenacity",
-    "ujson",
     "websocket-client",
     "gevent",
     "orjson",
     "structlog>=25.5.0,<26",
     "smart-open>=7.5.0,<8",
-    "black>=26.1.0,<27",
 ]
 
 [dependency-groups]
