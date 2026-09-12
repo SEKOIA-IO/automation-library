@@ -1,4 +1,3 @@
-# flake8: noqa: E402
 import sys
 
 # Patch before any import pulls in ssl (via requests/urllib3), otherwise

@@ -1,8 +1,9 @@
-import pytest
 import json
-from urllib.parse import urljoin
-from typing import List, Dict, Any
+from typing import Any
 from unittest.mock import patch
+from urllib.parse import urljoin
+
+import pytest
 
 # Adjust the import path according to your project structure
 from sekoiaio.operation_center.synchronize_assets_with_ad import (
@@ -12,7 +13,7 @@ from sekoiaio.operation_center.synchronize_assets_with_ad import (
 
 # Mock Module class to provide configuration to the action
 class MockModule:
-    def __init__(self, configuration: Dict[str, Any]):
+    def __init__(self, configuration: dict[str, Any]):
         self.configuration = configuration
 
 
@@ -85,17 +86,12 @@ class TestSynchronizeAssetsWithAD:
         """
         # Extract configuration from the mock module
         base_url = action_instance.module.configuration["base_url"]
-        api_key = action_instance.module.configuration["api_key"]
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        }
+        action_instance.module.configuration["api_key"]
 
         # URLs
         assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
-        merge_url = urljoin(base_url + "/", "v2/asset-management/assets/merge")
-        update_url = urljoin(base_url + "/", "v2/asset-management/assets/asset-uuid-1")
+        urljoin(base_url + "/", "v2/asset-management/assets/merge")
+        urljoin(base_url + "/", "v2/asset-management/assets/asset-uuid-1")
         create_url = urljoin(base_url + "/", "v2/asset-management/assets")
 
         # Helper functions to match specific GET requests
@@ -151,9 +147,9 @@ class TestSynchronizeAssetsWithAD:
         # 2. 2 GET for all the detection properties search
         # 3. PUT update asset
         # 4. POST merge assets
-        assert (
-            len(requests_mock.request_history) == 4
-        ), f"Expected 4 HTTP requests, got {len(requests_mock.request_history)}."
+        assert len(requests_mock.request_history) == 4, (
+            f"Expected 4 HTTP requests, got {len(requests_mock.request_history)}."
+        )
 
         # Optionally, verify the payloads of PUT and POST requests
         # Verify PUT request payload
@@ -180,18 +176,13 @@ class TestSynchronizeAssetsWithAD:
         """
         # Extract configuration from the mock module
         base_url = action_instance.module.configuration["base_url"]
-        api_key = action_instance.module.configuration["api_key"]
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        }
+        action_instance.module.configuration["api_key"]
 
         # URLs
         assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
-        merge_url = urljoin(base_url + "/", "v2/asset-management/assets/merge")
+        urljoin(base_url + "/", "v2/asset-management/assets/merge")
         update_url = urljoin(base_url + "/", "v2/asset-management/assets/asset-uuid-1")
-        create_url = urljoin(base_url + "/", "v2/asset-management/assets")
+        urljoin(base_url + "/", "v2/asset-management/assets")
 
         # Helper functions to match specific GET requests
         def match_asset_name(request):
@@ -246,9 +237,9 @@ class TestSynchronizeAssetsWithAD:
         # 2. 2 GET for all the detection properties search
         # 3. PUT update asset
         # 4. POST merge assets
-        assert (
-            len(requests_mock.request_history) == 4
-        ), f"Expected 4 HTTP requests, got {len(requests_mock.request_history)}."
+        assert len(requests_mock.request_history) == 4, (
+            f"Expected 4 HTTP requests, got {len(requests_mock.request_history)}."
+        )
 
         # Optionally, verify the payloads of PUT and POST requests
         # Verify PUT request payload
@@ -274,18 +265,13 @@ class TestSynchronizeAssetsWithAD:
         """
         # Extract configuration from the mock module
         base_url = action_instance.module.configuration["base_url"]
-        api_key = action_instance.module.configuration["api_key"]
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        }
+        action_instance.module.configuration["api_key"]
 
         # URLs
         assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
         merge_url = urljoin(base_url + "/", "v2/asset-management/assets/merge")
         update_url = urljoin(base_url + "/", "v2/asset-management/assets/asset-uuid-1")
-        create_url = urljoin(base_url + "/", "v2/asset-management/assets")
+        urljoin(base_url + "/", "v2/asset-management/assets")
 
         # Helper functions to match specific GET requests
         def match_asset_name(request):
@@ -354,9 +340,9 @@ class TestSynchronizeAssetsWithAD:
         # 2. 2 GET for all the detection properties search
         # 3. PUT update asset
         # 4. POST merge assets
-        assert (
-            len(requests_mock.request_history) == 5
-        ), f"Expected 5 HTTP requests, got {len(requests_mock.request_history)}."
+        assert len(requests_mock.request_history) == 5, (
+            f"Expected 5 HTTP requests, got {len(requests_mock.request_history)}."
+        )
 
         # Optionally, verify the payloads of PUT and POST requests
         # Verify PUT request payload
@@ -413,16 +399,11 @@ class TestSynchronizeAssetsWithAD:
         with patch.object(SynchronizeAssetsWithAD, "json_argument", return_value=mock_user_ad_data) as mock_json_arg:
             # Extract configuration from the mock module
             base_url = action_instance.module.configuration["base_url"]
-            api_key = action_instance.module.configuration["api_key"]
-
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}",
-            }
+            action_instance.module.configuration["api_key"]
 
             # URLs
             assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
-            merge_url = urljoin(base_url + "/", "v2/asset-management/assets/merge")
+            urljoin(base_url + "/", "v2/asset-management/assets/merge")
             create_url = urljoin(base_url + "/", "v2/asset-management/assets")
 
             # Define how many times each GET request should be expected
@@ -510,9 +491,9 @@ class TestSynchronizeAssetsWithAD:
             ], "Destination asset UUID for bjones mismatch."
             assert response_item_2["found_assets"] == [], "Found assets for bjones should be empty."
 
-            assert (
-                len(requests_mock.request_history) == 8
-            ), f"Expected 6 HTTP requests, got {len(requests_mock.request_history)}."
+            assert len(requests_mock.request_history) == 8, (
+                f"Expected 6 HTTP requests, got {len(requests_mock.request_history)}."
+            )
 
             # Verify that `json_argument` was called once with the correct parameters
             mock_json_arg.assert_called_once_with("user_ad_data", arguments_with_file)
@@ -549,9 +530,9 @@ class TestSynchronizeAssetsWithAD:
             ]
 
             for req, expected_payload in zip(post_create_requests, expected_post_create_payloads):
-                assert (
-                    req.json() == expected_payload
-                ), f"POST create request payload mismatch for {expected_payload['name']}."
+                assert req.json() == expected_payload, (
+                    f"POST create request payload mismatch for {expected_payload['name']}."
+                )
 
     def test_get_assets_non_json_response_sets_action_error(self, requests_mock, action_instance, arguments):
         base_url = action_instance.module.configuration["base_url"]
@@ -738,8 +719,9 @@ class TestSynchronizeAssetsWithAD:
         )
         requests_mock.get(
             assets_url,
-            additional_matcher=lambda request: request.qs.get("also_search_in_detection_properties", [None])[0]
-            == "true",
+            additional_matcher=lambda request: (
+                request.qs.get("also_search_in_detection_properties", [None])[0] == "true"
+            ),
             json={"total": 0, "items": []},
             status_code=200,
         )
@@ -854,8 +836,9 @@ class TestSynchronizeAssetsWithAD:
         )
         requests_mock.get(
             assets_url,
-            additional_matcher=lambda request: request.qs.get("also_search_in_detection_properties", [None])[0]
-            == "true",
+            additional_matcher=lambda request: (
+                request.qs.get("also_search_in_detection_properties", [None])[0] == "true"
+            ),
             json={"total": 0, "items": []},
             status_code=200,
         )

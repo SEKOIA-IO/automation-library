@@ -1,20 +1,16 @@
-from uuid import UUID
 from posixpath import join as urljoin
-
-from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
+from uuid import UUID
 
 from pydantic import BaseModel
-
 from requests import Session
-
 from requests.exceptions import HTTPError, Timeout
 from tenacity import (
     retry,
-    wait_exponential,
-    stop_after_attempt,
     retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
 )
-
+from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
 
 from .base_sol import BaseSolAction
 
@@ -102,7 +98,7 @@ class DeleteDataset(BaseSolAction):
         :param dataset_uuid: UUID of the dataset to delete
         :raises requests.exceptions.HTTPError: If the API returns an error response
         """
-        response_delete = self.http_session.delete(f"{self.dataset_api_path}/{str(dataset_uuid)}", timeout=60)
+        response_delete = self.http_session.delete(f"{self.dataset_api_path}/{dataset_uuid!s}", timeout=60)
         try:
             response_delete.raise_for_status()
         except HTTPError as e:

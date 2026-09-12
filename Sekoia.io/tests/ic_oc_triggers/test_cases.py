@@ -133,7 +133,6 @@ def test_single_event_triggers_updated(
     trigger.send_event = MagicMock()
 
     with sample_siccaseapi_mock:
-
         # Edge case: notification with empty 'updated' attribute
         trigger.send_event.reset_mock()
         empty_updated_notification = {
@@ -282,7 +281,6 @@ def test_case_combined_filters(
 ):
     case_updated_trigger.send_event = MagicMock()
     with sample_siccaseapi_mock:
-
         mode = "manual" if sample_siccaseapi["manual"] else "automatic"
 
         # no match
@@ -601,12 +599,10 @@ def test_retrieve_case_and_comment_errors_are_logged(
         with pytest.raises(expected_exception):
             if use_wrapped:
                 if method_name == "_retrieve_case_from_caseapi":
-                    wrapped_case_method = getattr(SecurityCasesTrigger._retrieve_case_from_caseapi, "__wrapped__")
+                    wrapped_case_method = SecurityCasesTrigger._retrieve_case_from_caseapi.__wrapped__
                     wrapped_case_method(case_trigger, *call_args)
                 else:
-                    wrapped_comment_method = getattr(
-                        SecurityCasesTrigger._retrieve_comment_from_caseapi, "__wrapped__"
-                    )
+                    wrapped_comment_method = SecurityCasesTrigger._retrieve_comment_from_caseapi.__wrapped__
                     wrapped_comment_method(case_trigger, *call_args)
             else:
                 with patch("tenacity.nap.time"):

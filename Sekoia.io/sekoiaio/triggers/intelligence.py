@@ -136,7 +136,7 @@ class FeedConsumptionTrigger(Trigger):
                     sources_to_fetch.append(ref)
 
         # Remove duplicates
-        sources_to_fetch = sorted(list(set(sources_to_fetch)))
+        sources_to_fetch = sorted(set(sources_to_fetch))
 
         # Adding sources to the cache
         sources = self.fetch_objects(sources_to_fetch)

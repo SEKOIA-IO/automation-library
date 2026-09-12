@@ -1,9 +1,8 @@
-# flake8: noqa: E402
 import os
 from datetime import datetime, timedelta
 from posixpath import join as urljoin
 
-from tenacity import Retrying, wait_exponential, stop_after_attempt
+from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 from sekoiaio.utils import should_patch
 
