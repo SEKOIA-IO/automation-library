@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Move from Poetry to `uv`.
 - Move to Python 3.14.
+- Replace deprecated `datetime.utcnow()` calls with `datetime.now(UTC)`.
 
 ## 2026-08-28 - 2.76.3
 
