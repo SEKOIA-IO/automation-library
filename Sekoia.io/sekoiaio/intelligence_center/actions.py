@@ -2,6 +2,8 @@
 Module for actions that are not fully generic
 """
 
+from typing import ClassVar
+
 from sekoia_automation.action import GenericAPIAction
 
 from sekoiaio.intelligence_center import base_url
@@ -14,7 +16,7 @@ class EmptyBundleError(Exception):
 class PostBundleAction(GenericAPIAction):
     verb = "post"
     endpoint = base_url + "bundles"
-    query_parameters = ["auto_merge", "name", "enrich", "assigned_to"]
+    query_parameters: ClassVar[list[str]] = ["auto_merge", "name", "enrich", "assigned_to"]
 
     def get_body(self, arguments):
         data = self.json_argument("bundle", arguments)
@@ -35,7 +37,7 @@ class PostBundleAction(GenericAPIAction):
 class GetContextAction(GenericAPIAction):
     verb = "post"
     endpoint = base_url + "objects/search"
-    query_parameters = ["term", "sort"]
+    query_parameters: ClassVar[list[str]] = ["term", "sort"]
 
     def run(self, arguments) -> dict:
         results = super().run(arguments)

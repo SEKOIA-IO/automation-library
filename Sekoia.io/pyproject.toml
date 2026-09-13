@@ -55,3 +55,16 @@ packages = ["sekoiaio"]
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]
+
+[tool.ruff.lint]
+ignore = [
+    "B017",
+    "B904",
+    "BLE001",
+    "TRY002",
+    "S110",
+    "FIX003", # line-contains-xxx
+    "FIX004", # line-contains-hack
+    "C901",   # complex-structure
+    "PT011",  # pytest-raises-too-broad
+]
