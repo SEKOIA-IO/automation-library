@@ -1,12 +1,12 @@
 from posixpath import join as urljoin
-from typing import Any
+from typing import Any, ClassVar
 
 import requests
 from sekoia_automation.action import Action
 
 
 class UpdateAsset(Action):
-    ALLOWED_FIELDS = [
+    ALLOWED_FIELDS: ClassVar[list[str]] = [
         "entity_uuid",
         "name",
         "description",

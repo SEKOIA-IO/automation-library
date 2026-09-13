@@ -55,3 +55,25 @@ packages = ["sekoiaio"]
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "FIX", # flake8-fixme
+    "T20", # flake8-print
+    "PT",  # flake8-pytest-style
+]
+ignore = [
+    "B017",
+    "B904",
+    "FIX003", # line-contains-xxx
+    "FIX004", # line-contains-hack
+    "C901",   # complex-structure
+    "PT011",  # pytest-raises-too-broad
+]

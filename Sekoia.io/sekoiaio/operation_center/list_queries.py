@@ -1,20 +1,16 @@
-from requests import Session
 from posixpath import join as urljoin
-
 from typing import Any
 
 from pydantic import BaseModel
-
-from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
-
-from requests.exceptions import Timeout, HTTPError
-
+from requests import Session
+from requests.exceptions import HTTPError, Timeout
 from tenacity import (
     retry,
-    wait_exponential,
-    stop_after_attempt,
     retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
 )
+from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
 
 from .base_sol import BaseSolAction
 
@@ -89,7 +85,11 @@ class ListQueries(BaseSolAction):
                 response_list_query.raise_for_status()
             except HTTPError as e:
                 self.log(
-                    f"HTTP error when retrieving existing queries: {e}. Response status: {response_list_query.status_code}, Response text: {response_list_query.text}",
+                    (
+                        f"HTTP error when retrieving existing queries: {e}. "
+                        f"Response status: {response_list_query.status_code}, "
+                        f"Response text: {response_list_query.text}"
+                    ),
                     level="error",
                 )
                 raise

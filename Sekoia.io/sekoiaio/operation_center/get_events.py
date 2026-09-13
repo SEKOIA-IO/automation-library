@@ -2,13 +2,12 @@ from typing import Any
 
 import requests
 import urllib3
-from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from .base_get_event import BaseGetEvents
 
 
 class GetEvents(BaseGetEvents):
-
     @retry(
         reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
@@ -38,7 +37,10 @@ class GetEvents(BaseGetEvents):
                 response_events.raise_for_status()
             except requests.exceptions.HTTPError as e:
                 self.log(
-                    f"HTTP error when retrieving events for job {event_search_job_uuid}: {e}. Response status: {response_events.status_code}, Response text: {response_events.text}",
+                    (
+                        f"HTTP error when retrieving events for job {event_search_job_uuid}: {e}. "
+                        f"Response status: {response_events.status_code}, Response text: {response_events.text}"
+                    ),
                     level="error",
                 )
                 raise

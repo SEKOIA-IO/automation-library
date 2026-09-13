@@ -1,9 +1,7 @@
-import uuid
 from posixpath import join as urljoin
 
-import orjson
 import requests
-from tenacity import retry, wait_exponential, stop_after_attempt
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from sekoiaio.utils import user_agent
 
@@ -23,17 +21,11 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
 
     def _filter_by_mode(self, case) -> bool:
         mode_filter = self.configuration.get("mode_filter")
-        if mode_filter and case.get("manual") != (mode_filter == "manual"):
-            return False
-
-        return True
+        return not (mode_filter and case.get("manual") != (mode_filter == "manual"))
 
     def _filter_by_priority(self, case) -> bool:
         priority_uuids_filter = self.configuration.get("priority_uuids_filter")
-        if priority_uuids_filter and case.get("custom_priority_uuid") not in priority_uuids_filter:
-            return False
-
-        return True
+        return not (priority_uuids_filter and case.get("custom_priority_uuid") not in priority_uuids_filter)
 
     def _filter_by_assignees(self, case) -> bool:
         assignees_filter = self.configuration.get("assignees_filter")
@@ -45,14 +37,11 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
 
     def _filter_by_uuids(self, case) -> bool:
         case_uuids_filter = self.configuration.get("case_uuids_filter")
-        if (
+        return not (
             case_uuids_filter
             and case.get("uuid") not in case_uuids_filter
             and case.get("short_id") not in case_uuids_filter
-        ):
-            return False
-
-        return True
+        )
 
     @retry(
         reraise=True,
@@ -90,7 +79,7 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
         response.raise_for_status()
         try:
             return response.json()
-        except Exception as exp:
+        except Exception:
             self.log(
                 "Failed to parse JSON response from Case API",
                 level="error",
@@ -99,7 +88,7 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
                 status_code=response.status_code,
                 content=response.text,
             )
-            raise exp
+            raise
 
     @retry(
         reraise=True,
@@ -139,7 +128,7 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
         response.raise_for_status()
         try:
             return response.json()
-        except Exception as exp:
+        except Exception:
             self.log(
                 "Failed to parse JSON response from Case API",
                 level="error",
@@ -149,7 +138,7 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
                 status_code=response.status_code,
                 content=response.text,
             )
-            raise exp
+            raise
 
 
 class CaseCreatedTrigger(SecurityCasesTrigger):
@@ -260,7 +249,7 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
             "status_uuid",
             "verdict_uuid",
         ]:
-            if key in case_attrs.get("updated", {}).keys():
+            if key in case_attrs.get("updated", {}):
                 event[key] = case_attrs.get("updated", {}).get(key)
 
         self.send_event(
