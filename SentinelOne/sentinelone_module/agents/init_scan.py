@@ -1,4 +1,5 @@
 from typing import ClassVar
+
 from management.common.query_filter import QueryFilter
 from management.mgmtsdk_v2_1.services.agent_actions import AgentActionsFilter
 from pydantic import BaseModel

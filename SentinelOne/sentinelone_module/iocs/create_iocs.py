@@ -1,8 +1,8 @@
-from typing import ClassVar
-from management.common.query_filter import QueryFilter
 from collections import defaultdict
+from typing import ClassVar
 
 import pandas as pd
+from management.common.query_filter import QueryFilter
 from management.mgmtsdk_v2_1.services.threat_intelligence import Ioc, IocQueryFilter
 from pydantic import BaseModel
 

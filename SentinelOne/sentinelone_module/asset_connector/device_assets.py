@@ -122,6 +122,7 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
             "firewallEnabled": "enrichments.data.Firewall_status",
             "lastLoggedInUserName": "enrichments.data.Users",
             "osUsername": "enrichments.data.Users",
+            "agentVersion": "metadata.product.version",
         }
 
     def reset_checkpoint(self) -> None:

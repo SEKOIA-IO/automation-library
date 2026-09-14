@@ -1,4 +1,5 @@
 from typing import ClassVar
+
 from management.common.query_filter import QueryFilter
 from management.mgmtsdk_v2.services.threat import ThreatQueryFilter
 
