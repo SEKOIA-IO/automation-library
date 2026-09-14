@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-14 - 2.77.0
+
 ### Added
 
 - Add support for Fission execution engine.
