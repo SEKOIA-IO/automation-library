@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-14 - 2.10.30
+
+### Fixed
+
+- Refresh users whose authentication methods changed, based on directory audit logs, so the MFA status of already collected users is updated in the user asset connector
+
 ## 2026-08-25 - 2.10.29
 
 ### Changed

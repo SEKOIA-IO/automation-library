@@ -1,17 +1,22 @@
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from azure.identity.aio import ClientSecretCredential  # async credentials only
 from kiota_abstractions.base_request_configuration import RequestConfiguration
 from kiota_authentication_azure.azure_identity_authentication_provider import AzureIdentityAuthenticationProvider
 from msgraph import GraphRequestAdapter, GraphServiceClient
+from msgraph.generated.audit_logs.directory_audits.directory_audits_request_builder import (
+    DirectoryAuditsRequestBuilder,
+)
 from msgraph.generated.models.group import Group
 from msgraph.generated.models.microsoft_authenticator_authentication_method import (
     MicrosoftAuthenticatorAuthenticationMethod,
 )
+from msgraph.generated.models.o_data_errors.o_data_error import ODataError
 from msgraph.generated.models.phone_authentication_method import PhoneAuthenticationMethod
 from msgraph.generated.models.software_oath_authentication_method import SoftwareOathAuthenticationMethod
 from msgraph.generated.models.user import User
+from msgraph.generated.users.item.user_item_request_builder import UserItemRequestBuilder
 from msgraph.generated.users.users_request_builder import UsersRequestBuilder
 from sekoia_automation.asset_connector import AsyncAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
@@ -47,6 +52,30 @@ class EntraIDAssetConnector(AsyncAssetConnector):
     PRODUCT_NAME = "Microsoft Entra ID"
     PRODUCT_VERSION = "1.0"
     CHECKPOINT_TIME_OFFSET_SECONDS = 1
+    # Audit log entries can be delivered late: query a margin before the last run
+    AUDIT_LOOKBACK_SECONDS = 3 * 3600
+    # Audit log retention of tenants without Entra ID P1/P2
+    AUDIT_LOG_RETENTION_DAYS = 7
+    USER_SELECT_FIELDS = [
+        "id",
+        "displayName",
+        "mail",
+        "identities",
+        "createdDateTime",
+        "userPrincipalName",
+        "mailNickname",
+        "accountEnabled",
+        "department",
+        "jobTitle",
+        "employeeId",
+        "employeeType",
+        "signInActivity",
+        "companyName",
+        "officeLocation",
+        "isManagementRestricted",
+        "lastPasswordChangeDateTime",
+        "onPremisesSamAccountName",
+    ]
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -54,6 +83,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         self._client: GraphServiceClient | None = None
         self._credentials: ClientSecretCredential | None = None
         self._latest_time: float | None = None
+        self._pending_audit_date: str | None = None
 
     @property
     def most_recent_date_seen(self) -> str | None:
@@ -61,6 +91,13 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             most_recent_date_seen: str | None = cache.get("most_recent_date_seen", None)
 
             return most_recent_date_seen
+
+    @property
+    def most_recent_audit_date_seen(self) -> str | None:
+        with self.context as cache:
+            most_recent_audit_date_seen: str | None = cache.get("most_recent_audit_date_seen", None)
+
+            return most_recent_audit_date_seen
 
     @property
     def client(self) -> GraphServiceClient:
@@ -88,20 +125,26 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         self._client = None
 
     async def update_checkpoint(self) -> None:
-        if self._latest_time is None:
+        if self._latest_time is None and self._pending_audit_date is None:
             return
         with self.context as cache:
-            # We add offset to avoid fetching the same user again in the next run
-            cache["most_recent_date_seen"] = (
-                datetime.fromtimestamp(self._latest_time + self.CHECKPOINT_TIME_OFFSET_SECONDS, timezone.utc)
-                .replace(microsecond=0)
-                .isoformat()
-            )
+            if self._latest_time is not None:
+                # We add offset to avoid fetching the same user again in the next run
+                cache["most_recent_date_seen"] = (
+                    datetime.fromtimestamp(self._latest_time + self.CHECKPOINT_TIME_OFFSET_SECONDS, timezone.utc)
+                    .replace(microsecond=0)
+                    .isoformat()
+                )
+            if self._pending_audit_date is not None:
+                cache["most_recent_audit_date_seen"] = self._pending_audit_date
+                self._pending_audit_date = None
 
     async def reset_checkpoint(self) -> None:
         with self.context as cache:
             cache.pop("most_recent_date_seen", None)
+            cache.pop("most_recent_audit_date_seen", None)
         self._latest_time = None
+        self._pending_audit_date = None
 
     def get_mapped_fields(self) -> dict[str, str]:
         return {
@@ -313,26 +356,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         If last_run_date is provided, only fetch users created after that date.
         """
         query_params = UsersRequestBuilder.UsersRequestBuilderGetQueryParameters(
-            select=[
-                "id",
-                "displayName",
-                "mail",
-                "identities",
-                "createdDateTime",
-                "userPrincipalName",
-                "mailNickname",
-                "accountEnabled",
-                "department",
-                "jobTitle",
-                "employeeId",
-                "employeeType",
-                "signInActivity",
-                "companyName",
-                "officeLocation",
-                "isManagementRestricted",
-                "lastPasswordChangeDateTime",
-                "onPremisesSamAccountName",
-            ],
+            select=self.USER_SELECT_FIELDS,
             filter=f"createdDateTime ge {last_run_date}" if last_run_date else None,
             orderby=["createdDateTime asc"],
             count=True,
@@ -369,6 +393,54 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         except Exception as e:
             raise ValueError(f"Error fetching users: {e}") from e
 
+    async def fetch_mfa_updated_users(
+        self, since: datetime, excluded_user_ids: set[str]
+    ) -> AsyncGenerator[UserOCSFModel, None]:
+        """
+        Fetch users whose authentication methods changed since the given date, based on directory audit logs.
+        Users that are already collected are not collected again after an MFA change otherwise.
+        """
+        query_params = DirectoryAuditsRequestBuilder.DirectoryAuditsRequestBuilderGetQueryParameters(
+            filter=(
+                "loggedByService eq 'Authentication Methods' "
+                f"and activityDateTime ge {since.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            ),
+        )
+
+        user_ids: dict[str, None] = {}
+        try:
+            audits = await self.client.audit_logs.directory_audits.get(
+                request_configuration=RequestConfiguration(query_parameters=query_params)
+            )
+            while audits is not None:
+                for audit in audits.value or []:
+                    for target in audit.target_resources or []:
+                        if (target.type or "").lower() == "user" and target.id and target.id not in excluded_user_ids:
+                            user_ids[target.id] = None
+
+                if audits.odata_next_link is None:
+                    break
+                audits = await self.client.audit_logs.directory_audits.with_url(audits.odata_next_link).get()
+        except Exception as e:
+            raise ValueError(f"Error fetching authentication methods audit logs: {e}") from e
+
+        user_query_params = UserItemRequestBuilder.UserItemRequestBuilderGetQueryParameters(
+            select=self.USER_SELECT_FIELDS
+        )
+        for user_id in user_ids:
+            try:
+                user = await self.client.users.by_user_id(user_id).get(
+                    request_configuration=RequestConfiguration(query_parameters=user_query_params)
+                )
+            except ODataError as e:
+                if e.response_status_code == 404:
+                    self.log(message=f"User {user_id} no longer exists, skipping MFA refresh", level="warning")
+                    continue
+                raise ValueError(f"Error fetching user {user_id}: {e}") from e
+
+            if user is not None:
+                yield await self.fetch_user(user)
+
     async def get_assets(self) -> AsyncGenerator[UserOCSFModel, None]:
         """Fetch user assets from Microsoft Graph API.
 
@@ -377,8 +449,38 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         """
         # Fetch users from Microsoft Graph API
         last_run_date: str | None = self.most_recent_date_seen
+        last_audit_date: str | None = self.most_recent_audit_date_seen
+        run_start = datetime.now(timezone.utc).replace(microsecond=0)
         try:
+            sent_user_ids: set[str] = set()
             async for user in self.fetch_new_users(last_run_date=last_run_date):
+                if user.user.uid:
+                    sent_user_ids.add(user.user.uid)
                 yield user
+
+            refreshed_users = 0
+            # First run fetches every user: nothing to refresh
+            if last_audit_date:
+                since = datetime.fromisoformat(last_audit_date)
+                if run_start - since > timedelta(days=self.AUDIT_LOG_RETENTION_DAYS):
+                    self.log(
+                        message=(
+                            f"Last MFA refresh was on {last_audit_date}, beyond the audit log retention "
+                            "of some tenants: MFA changes may be missed"
+                        ),
+                        level="warning",
+                    )
+                async for user in self.fetch_mfa_updated_users(
+                    since - timedelta(seconds=self.AUDIT_LOOKBACK_SECONDS), sent_user_ids
+                ):
+                    refreshed_users += 1
+                    yield user
+
+            if refreshed_users:
+                # Saved by update_checkpoint once the refreshed users are pushed
+                self._pending_audit_date = run_start.isoformat()
+            else:
+                with self.context as cache:
+                    cache["most_recent_audit_date_seen"] = run_start.isoformat()
         finally:
             await self.close_client()
