@@ -1,8 +1,9 @@
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 import pytest
 import requests
 import urllib3
+
 from sekoiaio.operation_center.get_events import GetEvents
 
 module_base_url = "https://fake.url/"
@@ -431,7 +432,7 @@ def test_wait_for_search_job_polling_error(requests_mock):
     )
 
     # Mock multiple status checks - first one succeeds, second one fails
-    status_mock = requests_mock.get(
+    requests_mock.get(
         "https://fake.url/api/v1/sic/conf/events/search/jobs/483d36a5-8538-49c4-be19-49b669f90bf8",
         [
             # Initial status check (job not started yet)

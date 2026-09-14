@@ -25,9 +25,9 @@ def test_list_alerts(requests_mock):
     assert requests_mock.call_count == 1
     history = requests_mock.request_history
     assert history[0].method == "GET"
-    assert (
-        history[0].url
-        == f"{base_url}?match%5Buuid%5D={alert_uuid}&date%5Bcreated_at%5D=2025-11-12T07%3A38%3A22.000%2B00%3A00%2C2025-11-12T08%3A38%3A22.000%2B00%3A00"
+    assert history[0].url == (
+        f"{base_url}?match%5Buuid%5D={alert_uuid}&date%5Bcreated_at%5D="
+        "2025-11-12T07%3A38%3A22.000%2B00%3A00%2C2025-11-12T08%3A38%3A22.000%2B00%3A00"
     )
 
 
