@@ -3,9 +3,14 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from sentinelone_module.base import SentinelOneConfiguration, SentinelOneModule
-from sentinelone_module.deep_visibility.query import QueryDeepVisibilityAction, QueryDeepVisibilityArguments
+from sentinelone_module.deep_visibility.query import (
+    DeepVisibilityEvent,
+    QueryDeepVisibilityAction,
+    QueryDeepVisibilityArguments,
+)
 
 
 @pytest.fixture(scope="module")
@@ -236,3 +241,27 @@ def test_list_remote_scripts_integration(symphony_storage):
     result = action.run(arguments)
     assert result is not None
     assert result["status"] == "succeed"
+
+
+def test_deep_visibility_event_coerces_numbers_to_string_fields():
+    event = DeepVisibilityEvent(dstPort=443, pid=12345, fileSize=4096, parentPid=42, srcPort=55000)
+
+    assert event.dstPort == "443"
+    assert event.pid == "12345"
+    assert event.fileSize == "4096"
+    assert event.parentPid == "42"
+    assert event.srcPort == 55000
+
+
+def test_deep_visibility_event_optional_fields_default_to_none():
+    event = DeepVisibilityEvent()
+
+    assert event.dstIp is None
+    assert event.dnsRequest is None
+    assert event.user is None
+    assert event.eventType is None
+
+
+def test_deep_visibility_event_rejects_invalid_src_port():
+    with pytest.raises(ValidationError, match="srcPort"):
+        DeepVisibilityEvent(srcPort="not-an-integer")

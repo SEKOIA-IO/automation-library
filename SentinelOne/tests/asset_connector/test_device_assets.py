@@ -1101,3 +1101,49 @@ def test_map_fields_no_threat_enrichments(test_sentinelone_device_asset_connecto
     assert update_enrichment is None
     assert threats_enrichment is None
     assert infection_enrichment is None
+
+
+def test_get_mapped_fields(test_sentinelone_device_asset_connector):
+    fields = test_sentinelone_device_asset_connector.get_mapped_fields()
+
+    assert isinstance(fields, dict)
+    assert fields
+    assert all(isinstance(key, str) and isinstance(value, str) for key, value in fields.items())
+    assert fields["uuid"] == "device.uid"
+    assert fields["agentVersion"] == "metadata.product.version"
+
+
+def test_reset_checkpoint(test_sentinelone_device_asset_connector):
+    connector = test_sentinelone_device_asset_connector
+
+    connector.new_most_recent_date = "2025-01-01T00:00:00.000000Z"
+    connector.update_checkpoint()
+    assert connector.most_recent_date_seen == "2025-01-01T00:00:00.000000Z"
+
+    connector.reset_checkpoint()
+
+    assert connector.new_most_recent_date is None
+    assert connector.most_recent_date_seen is None
+
+
+def test_mapping_change_resets_checkpoint_and_refetches_all_devices(
+    test_sentinelone_device_asset_connector, sample_agent
+):
+    connector = test_sentinelone_device_asset_connector
+    connector._client_mock.get.return_value = {
+        "data": [sample_agent.model_dump()],
+        "errors": None,
+        "pagination": {"nextCursor": None},
+    }
+    connector.new_most_recent_date = "2025-01-01T00:00:00.000000Z"
+    connector.update_checkpoint()
+
+    connector._check_schema_and_reset_if_needed()
+    connector.fetch_agents()
+    assert connector._client_mock.get.call_args.kwargs["params"]["createdAt__gt"] == "2025-01-01T00:00:00.000000Z"
+
+    changed_fields = {**connector.get_mapped_fields(), "computerName": "device.name"}
+    with patch.object(connector, "get_mapped_fields", return_value=changed_fields):
+        connector._check_schema_and_reset_if_needed()
+    connector.fetch_agents()
+    assert connector._client_mock.get.call_args.kwargs["params"] == {"limit": 100}

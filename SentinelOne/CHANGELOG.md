@@ -7,22 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-09-14 - 1.23.3
-
-### Changed
-
-- Fetch threats through the management library's `threats.get` service instead of a raw `client.get` call
-
-### Fixed
-
-- Fix threat event duplication by reading `createdAt` from the nested `threatInfo` field so the checkpoint offset advances correctly on the v2.1 threats API
-
-## 2026-09-04 - 1.23.2
-
-### Fixed
-
-- Fix device asset connector: stop assigning the device `modelName` to `device.vendor_name`; `vendor_name` must represent the device hardware vendor, not the model
-
 ## 2026-07-29 - 1.23.1
 
 ### Fixed
