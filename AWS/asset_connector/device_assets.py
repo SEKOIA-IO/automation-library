@@ -368,7 +368,8 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
             hypervisor = instance.Hypervisor
 
             # Extract vendor and model from instance type
-            vendor_name = "Amazon Web Services"
+            # vendor_name is left as None: AWS is the cloud provider, not the hardware vendor
+            # of the underlying physical device (which is not exposed via the EC2 API).
             model = instance.InstanceType
 
             # Extract autoscale group from tags
@@ -415,7 +416,7 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
                 subnet=subnet,
                 domain=domain,
                 hypervisor=hypervisor,
-                vendor_name=vendor_name,
+                vendor_name=None,
                 model=model,
                 boot_time=boot_time_timestamp,
                 created_time=created_timestamp,

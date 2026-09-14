@@ -23,3 +23,9 @@ class DeleteMessageAction(MicrosoftGraphActionBase):
             timeout=60,
         )
         self.handle_response(response)
+
+        return {
+            "status": "deleted",
+            "action": "delete_a_message",
+            "target_message_id": message_id,
+        }

@@ -2,16 +2,19 @@
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
-name = "Automation module for Akamai"
-version = "0.0"
+[project]
+name = "automation-module-akamai"
+version = "1.0.2"
 description = ""
-authors = []
+requires-python = ">=3.10,<3.12"
+dynamic = ["dependencies"]
+
+[tool.poetry]
 package-mode = false
 
 [tool.black]
 line-length = 119
-target-version = ["py38"]
+target-version = ["py310"]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -27,6 +30,9 @@ requests-ratelimiter = "^0.7.0"
 requests = "^2.32.3"
 cachetools = "^5.5.2"
 structlog = "^25.2.0"
+pydantic = ">=2.10,<3.0"
+prometheus-client = ">=0.21.0,<0.22.0"
+urllib3 = ">=2,<3"
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]

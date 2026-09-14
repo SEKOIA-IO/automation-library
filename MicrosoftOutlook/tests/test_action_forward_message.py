@@ -18,4 +18,9 @@ def test_forward_message(configured_action):
         )
 
         action = configured_action(ForwardMessageAction)
-        action.run(arguments={"user": "1111", "message_id": "2222", "recipients": ["john.doe@example.com"]})
+        result = action.run(arguments={"user": "1111", "message_id": "2222", "recipients": ["john.doe@example.com"]})
+        assert result == {
+            "status": "forwarded",
+            "action": "forward_message",
+            "target_message_id": "2222",
+        }

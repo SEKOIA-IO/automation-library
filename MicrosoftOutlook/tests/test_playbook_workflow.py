@@ -61,21 +61,21 @@ def test_playbook_workflow_detect_confirm_resolve_delete(configured_action, mess
 
         search_action = configured_action(SearchMessagesAction)
         search_result = search_action.run(arguments={"user": "1111", **message_identifier})
-        assert len(search_result["value"]) == 1
-        assert "urgent" in search_result["value"][0]["subject"].lower()
+        assert len(search_result["messages"]) == 1
+        assert "urgent" in search_result["messages"][0]["subject"].lower()
 
         resolve_action = configured_action(ResolveMessageAction)
         resolve_result = resolve_action.run(arguments={"user": "1111", **message_identifier})
-        graph_message_id = resolve_result["graph_message_id"]
-        assert graph_message_id == "graph-item-id-1"
+        message_id = resolve_result["message_id"]
+        assert message_id == "graph-item-id-1"
 
         get_action = configured_action(GetMessageAction)
-        message_details = get_action.run(arguments={"user": "1111", "message_id": graph_message_id})
-        assert message_details["id"] == graph_message_id
-        assert "suspension" in message_details["bodyPreview"].lower()
+        message_details = get_action.run(arguments={"user": "1111", "message_id": message_id})
+        assert message_details["message_id"] == message_id
+        assert "suspension" in message_details["body_preview"].lower()
 
         delete_action = configured_action(DeleteMessageAction)
-        delete_action.run(arguments={"user": "1111", "message_id": graph_message_id})
+        delete_action.run(arguments={"user": "1111", "message_id": message_id})
 
 
 def test_resolve_message_item_index_out_of_range(configured_action):
