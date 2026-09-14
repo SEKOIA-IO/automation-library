@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-11 - 1.1.6
+
+### Fixed
+
+- Fix duplicated events by stopping pagination when the API reports `has_more=false` instead of re-using the reset cursor
+
 ## 2026-07-30 - 1.1.5
 
 ### Changed
