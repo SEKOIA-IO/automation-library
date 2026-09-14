@@ -1,4 +1,5 @@
 import uuid
+from urllib.parse import parse_qs, urlparse
 
 from sekoiaio.operation_center import ListAlerts
 
@@ -68,3 +69,26 @@ def test_list_alerts_drops_empty_and_false_parameters(requests_mock):
     # booleans normalized to lowercase, never Python's capital "True"
     assert "visible=true" in url
     assert "visible=True" not in url
+
+
+def test_list_alerts_forwards_resolved_title_and_custom_field(requests_mock):
+    """Alerts without a custom title display their rule name as title.
+
+    `match[title]` misses them; `match[resolved_title]` is the filter matching
+    the displayed title, so it must reach the API along with `match[custom_field]`.
+    """
+    action = ListAlerts()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    title = "CrowdStrike Falcon Intrusion Detection Informational Severity"
+    custom_field = "123e4567-e89b-12d3-a456-426614174000:Phishing"
+    arguments = {
+        "match[title]": "",
+        "match[resolved_title]": title,
+        "match[custom_field]": custom_field,
+    }
+    requests_mock.get(base_url, json={"total": 0, "items": []})
+
+    action.run(arguments)
+
+    sent = parse_qs(urlparse(requests_mock.request_history[0].url).query)
+    assert sent == {"match[resolved_title]": [title], "match[custom_field]": [custom_field]}
