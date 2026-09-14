@@ -54,7 +54,10 @@ class RemoveFromBlocklistAction(NetskopeAction):
         blocklist_name = self.execute_request(
             "PATCH",
             f"api/v2/policy/urllist/{args.blocklist_id}/replace",
-            json={"data": {"type": blocklist_type, "urls": remaining_items}, "name": blocklist_name},
+            json={
+                "data": {"type": blocklist_type, "urls": remaining_items},
+                "name": blocklist_name,
+            },
         ).get("name", blocklist_name)
 
         # Deploy the changes

@@ -1,4 +1,5 @@
 import time
+from json.decoder import JSONDecodeError
 from threading import Thread
 from unittest.mock import MagicMock, Mock, patch
 
@@ -322,6 +323,103 @@ def test_next_batch_403_service_with_json_error_message(trigger):
         )
 
 
+def test_next_batch_409_conflict_retries_with_default_wait(trigger):
+    with (
+        patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_requests.get(
+            "https://my.fake.sekoia/api/v2/events/dataexport/alerts/dlp",
+            status_code=409,
+            json={"message": "Concurrency conflict, retry later"},
+        )
+
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+        consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
+        start_time = 1666711174.0
+        end_time = start_time + 1
+        mock_time.time.side_effect = [start_time, end_time]
+
+        consumer.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 0
+        trigger.log.assert_any_call(
+            message=(
+                "Concurrency conflict while fetching events for alert-dlp: "
+                '409 {"message": "Concurrency conflict, retry later"}. '
+                "Retrying in 5 seconds"
+            ),
+            level="warning",
+        )
+        mock_time.sleep.assert_called_once_with(5)
+
+
+def test_next_batch_409_conflict_uses_retry_after_header(trigger):
+    with (
+        patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_requests.get(
+            "https://my.fake.sekoia/api/v2/events/dataexport/alerts/dlp",
+            status_code=409,
+            text='{"message": "Concurrency conflict, retry later"}',
+            headers={"Retry-After": "12"},
+        )
+
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+        consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
+        start_time = 1666711174.0
+        end_time = start_time + 1
+        mock_time.time.side_effect = [start_time, end_time]
+
+        consumer.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 0
+        mock_time.sleep.assert_called_once_with(12)
+
+
+def test_next_batch_409_conflict_uses_wait_time_when_retry_after_invalid(trigger):
+    with patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time:
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+        response = Mock(
+            status_code=409,
+            text='{"message": "Concurrency conflict, retry later"}',
+            headers={"Retry-After": "soon"},
+        )
+        response.json.return_value = {"wait_time": 7.9}
+        iterator.next = Mock(return_value=response)
+        consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
+        start_time = 1666711174.0
+        end_time = start_time + 1
+        mock_time.time.side_effect = [start_time, end_time]
+
+        consumer.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 0
+        mock_time.sleep.assert_called_once_with(7)
+
+
+def test_next_batch_409_conflict_defaults_when_json_is_invalid(trigger):
+    with patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time:
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+        response = Mock(
+            status_code=409,
+            text="invalid-json",
+            headers={"Retry-After": "invalid"},
+        )
+        response.json.side_effect = JSONDecodeError("invalid", "invalid-json", 0)
+        iterator.next = Mock(return_value=response)
+        consumer = NetskopeEventConsumer(trigger, "alert-dlp", iterator)
+        start_time = 1666711174.0
+        end_time = start_time + 1
+        mock_time.time.side_effect = [start_time, end_time]
+
+        consumer.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 0
+        mock_time.sleep.assert_called_once_with(5)
+
+
 def test_create_iterators(trigger):
     iterators = trigger.create_iterators(trigger.dataexports)
 
@@ -470,7 +568,7 @@ def test_run_logs_exception_when_consumer_start_fails(trigger):
     trigger.log_exception.assert_called_once()
 
 
-@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}" ".issubset(os.environ.keys()) == False")
+@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}.issubset(os.environ.keys()) == False")
 def test_fetch_next_batch_integration(integration_trigger):
     trigger = integration_trigger
     iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
@@ -484,7 +582,7 @@ def test_fetch_next_batch_integration(integration_trigger):
     assert len(calls) > 0
 
 
-@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}" ".issubset(os.environ.keys()) == False")
+@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}.issubset(os.environ.keys()) == False")
 def test_run_integration(integration_trigger):
     trigger = integration_trigger
     main_thread = Thread(target=trigger.run)
