@@ -97,10 +97,18 @@ def test_pull_threats(threat_consumer, threat_1, threat_2):
         intake_key=threat_consumer.configuration.intake_key, type="threats"
     ).set.call_args_list == [
         call(
-            int((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(threat_1.threatInfo.createdAt)).total_seconds())
+            int(
+                (
+                    datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(threat_1.threatInfo.createdAt)
+                ).total_seconds()
+            )
         ),
         call(
-            int((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(threat_2.threatInfo.createdAt)).total_seconds())
+            int(
+                (
+                    datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(threat_2.threatInfo.createdAt)
+                ).total_seconds()
+            )
         ),
     ]
 
