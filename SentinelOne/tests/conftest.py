@@ -7,7 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 from management.mgmtsdk_v2.entities.activity import Activity
-from management.mgmtsdk_v2.entities.threat import Threat
+from management.mgmtsdk_v2_1.entities.threat import Threat
 from sekoia_automation import constants
 
 from sentinelone_module.base import SentinelOneConfiguration, SentinelOneModule
@@ -107,18 +107,18 @@ def activity_2():
 
 @pytest.fixture
 def threat_1():
-    threat = dict(
-        createdAt="2021-03-09T13:03:22.026416Z",
-        id=(str(random.randint(0, 1000000)),),
+    threat = Threat(
+        id=str(random.randint(0, 1000000)),
+        threatInfo={"createdAt": "2021-03-09T13:03:22.026416Z"},
     )
     yield threat
 
 
 @pytest.fixture
 def threat_2():
-    threat = dict(
-        createdAt="2021-03-09T15:41:54.448862Z",
-        id=(str(random.randint(0, 1000000)),),
+    threat = Threat(
+        id=str(random.randint(0, 1000000)),
+        threatInfo={"createdAt": "2021-03-09T15:41:54.448862Z"},
     )
     yield threat
 
