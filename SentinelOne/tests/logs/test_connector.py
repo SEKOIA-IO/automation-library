@@ -80,10 +80,10 @@ def test_pull_threats(threat_consumer, threat_1, threat_2):
 
     response_1 = MockResponse(pagination={"nextCursor": "foo"}, data=[threat_1])
     response_2 = MockResponse(pagination={"nextCursor": None}, data=[threat_2])
-    threat_consumer.management_client.client.get.side_effect = [response_1, response_2]
+    threat_consumer.management_client.threats.get.side_effect = [response_1, response_2]
     threat_consumer.pull_events(most_recent_datetime_seen)
 
-    assert threat_consumer.management_client.client.get.call_count == 2
+    assert threat_consumer.management_client.threats.get.call_count == 2
     assert threat_consumer.connector.push_events_to_intakes.call_args_list == [
         call(threat_consumer._serialize_events([threat_1])),
         call(threat_consumer._serialize_events([threat_2])),
@@ -97,10 +97,18 @@ def test_pull_threats(threat_consumer, threat_1, threat_2):
         intake_key=threat_consumer.configuration.intake_key, type="threats"
     ).set.call_args_list == [
         call(
-            int((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(threat_1["createdAt"])).total_seconds())
+            int(
+                (
+                    datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(threat_1.threatInfo.createdAt)
+                ).total_seconds()
+            )
         ),
         call(
-            int((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(threat_2["createdAt"])).total_seconds())
+            int(
+                (
+                    datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(threat_2.threatInfo.createdAt)
+                ).total_seconds()
+            )
         ),
     ]
 
@@ -111,7 +119,7 @@ def test_pull_threats_donot_collect_threats_twice(threat_consumer, threat_1, thr
     EVENTS_LAG.labels = MagicMock()
     most_recent_datetime_seen = datetime.datetime(2024, 1, 23, 11, 6, 34)
 
-    threat_consumer.management_client.client.get.return_value = MockResponse(
+    threat_consumer.management_client.threats.get.return_value = MockResponse(
         pagination={"nextCursor": None}, data=[threat_1]
     )
     threat_consumer.pull_events(most_recent_datetime_seen)
@@ -128,7 +136,7 @@ def test_pull_threats_have_errors(threat_consumer, threat_1, threat_2):
     EVENTS_LAG.labels = MagicMock()
     most_recent_datetime_seen = datetime.datetime(2024, 1, 23, 11, 6, 34)
 
-    threat_consumer.management_client.client.get.return_value = MockResponse(
+    threat_consumer.management_client.threats.get.return_value = MockResponse(
         pagination={"nextCursor": None}, data=[threat_1], errors="Specific error"
     )
 
