@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Generator
 
-from pydantic.v1 import Field
+from pydantic import Field
 from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
 from sekoia_automation.connector import DefaultConnectorConfiguration
 
