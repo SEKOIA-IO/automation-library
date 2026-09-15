@@ -1,4 +1,5 @@
 from asset_connector.device_assets import MicrosoftDefenderDeviceAssetConnector
+from asset_connector.vulnerability_assets import MicrosoftDefenderVulnerabilityAssetConnector
 from microsoftdefender_modules import MicrosoftDefenderModule
 from microsoftdefender_modules.account_validator import MicrosoftDefenderAccountValidator
 from microsoftdefender_modules.action_cancel_machine_action import CancelMachineAction
@@ -28,5 +29,8 @@ if __name__ == "__main__":
     module.register(CancelMachineAction, "CancelMachineAction")
     module.register(MicrosoftDefenderGraphAPIAlerts, "connector_microsoft_defender_xdr")
     module.register(MicrosoftDefenderDeviceAssetConnector, "microsoft_defender_device_asset_connector")
+    module.register(
+        MicrosoftDefenderVulnerabilityAssetConnector, "microsoft_defender_vulnerability_asset_connector"
+    )
     module.register(MicrosoftDefenderGraphAPIIncidents, "connector_defender_incidents")
     module.run()
