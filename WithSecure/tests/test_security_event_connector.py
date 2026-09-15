@@ -349,3 +349,55 @@ def test_next_batch_with_form_urlencoded_format(trigger, message1, message2):
         trigger.next_batch()
         assert len(trigger.push_events_to_intakes.mock_calls) == 1
         assert len(trigger.push_events_to_intakes.mock_calls[0][2]["events"]) == 2
+
+
+def test_fetch_events_with_30_day_window_split(trigger, message1, message2):
+    """Test that events are fetched in 30-day windows when the range exceeds 30 days"""
+    
+    def custom_matcher(request: requests.PreparedRequest):
+        if request.url == API_AUTHENTICATION_URL:
+            resp = requests.Response()
+            resp._content = json.dumps(
+                {
+                    "access_token": "dummy-test-token",
+                    "token_type": "Bearer",
+                    "expires_in": 1799,
+                }
+            ).encode()
+            resp.status_code = 200
+            return resp
+        elif request.url.startswith(API_SECURITY_EVENTS_URL):
+            # Parse the request body to check persistenceTimestampStart and persistenceTimestampEnd
+            body = request.body
+            assert "persistenceTimestampStart" in body
+            assert "persistenceTimestampEnd" in body
+            
+            # Verify that the time range does not exceed 30 days
+            # Extract the timestamps from the body
+            import re
+            start_match = re.search(r'persistenceTimestampStart=([^&]+)', body)
+            end_match = re.search(r'persistenceTimestampEnd=([^&]+)', body)
+            
+            if start_match and end_match:
+                start_str = start_match.group(1)
+                end_str = end_match.group(1)
+                start_date = datetime.fromisoformat(start_str)
+                end_date = datetime.fromisoformat(end_str)
+                
+                # Verify the range is <= 30 days
+                range_days = (end_date - start_date).total_seconds() / 86400
+                assert range_days <= 30, f"Time range {range_days} days exceeds 30-day limit"
+            
+            resp = requests.Response()
+            resp._content = json.dumps({"items": [message1, message2]}).encode()
+            resp.status_code = 200
+            return resp
+        return None
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.add_matcher(custom_matcher)
+        # Set the from_date to 35 days ago to trigger window splitting
+        trigger.from_date = datetime.now(timezone.utc) - timedelta(days=35)
+        trigger.next_batch()
+        # Should have made requests with 30-day windows
+        assert len(trigger.push_events_to_intakes.mock_calls) >= 1

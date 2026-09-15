@@ -93,15 +93,20 @@ class SecurityEventsConnector(Connector):
                 flattened_data.append((key, value))
         return flattened_data
 
-    def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
+    def __fetch_events_for_window(
+        self, start_date: datetime, end_date: datetime
+    ) -> Generator[list[dict[str, Any]], None, None]:
         """
-        Fetch all the events that occurred after the specified from date
+        Fetch all events within a specific time window using pagination.
+        The WithSecure API requires that persistenceTimestampStart and persistenceTimestampEnd
+        are no more than 30 days apart.
         """
         # Create body of request
         # More information is here:
         # https://connect.withsecure.com/api-reference/elements#post-/security-events/v1/security-events
         data: dict[str, Any] = {
-            "persistenceTimestampStart": from_date.isoformat(),
+            "persistenceTimestampStart": start_date.isoformat(),
+            "persistenceTimestampEnd": end_date.isoformat(),
             "exclusiveStart": True,
             "limit": API_FETCH_EVENTS_PAGE_SIZE,
             "order": "asc",
@@ -119,7 +124,7 @@ class SecurityEventsConnector(Connector):
             # Remove null bytes if any
             unnulled_value = response.content.replace(b"\x00", b"")
 
-            # If messages aren’t valid UTF-8 message, replace invalid characters.
+            # If messages aren't valid UTF-8 message, replace invalid characters.
             decoded_value = unnulled_value.decode("utf-8", "replace")
 
             payload = orjson.loads(decoded_value)
@@ -153,6 +158,32 @@ class SecurityEventsConnector(Connector):
                 payload = response.json()
             except Exception as any_exception:
                 raise FetchEventsException(human_readable_api_exception(any_exception))
+
+    def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
+        """
+        Fetch all the events that occurred after the specified from date.
+        The WithSecure API enforces a 30-day limitation on the persistenceTimestamp range,
+        so we need to split the fetch into multiple 30-day windows if necessary.
+        """
+        now = datetime.now(timezone.utc)
+        max_window = timedelta(days=30)
+        current_start = from_date
+
+        # Split the time range into 30-day windows
+        while current_start < now and not self._stop_event.is_set():
+            # Calculate the end of the current window (max 30 days from start)
+            current_end = min(current_start + max_window, now)
+
+            # Fetch all events in this window
+            for events in self.__fetch_events_for_window(current_start, current_end):
+                yield events
+
+            # Move to the next window
+            current_start = current_end
+
+            # If we've reached now, we're done
+            if current_start >= now:
+                break
 
     def fetch_events(self) -> Generator[list[dict[str, Any]], None, None]:
         most_recent_date_seen = self.from_date
