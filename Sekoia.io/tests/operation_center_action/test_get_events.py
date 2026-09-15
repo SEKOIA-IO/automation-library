@@ -726,3 +726,36 @@ def test_get_job_result_with_retries_on_connection_timeout(requests_mock):
     with patch("tenacity.nap.time"):
         results: dict = action.run(arguments)
         assert results["events"] == events
+
+
+def test_get_events_search_job_not_successful(requests_mock):
+    action = GetEvents()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    arguments = {
+        "query": 'event.dataset:"email_events"',
+        "earliest_time": "-1d",
+        "latest_time": "now",
+    }
+
+    requests_mock.post(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs",
+        json={"uuid": "483d36a5-8538-49c4-be19-49b669f90bf8"},
+    )
+    requests_mock.get(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs/483d36a5-8538-49c4-be19-49b669f90bf8",
+        [
+            {"json": {"status": 1, "uuid": "483d36a5-8538-49c4-be19-49b669f90bf8"}},
+            {"json": {"status": 3, "uuid": "483d36a5-8538-49c4-be19-49b669f90bf8"}},
+        ],
+    )
+    events_mock = requests_mock.get(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs/483d36a5-8538-49c4-be19-49b669f90bf8/events",
+        json={"items": [], "total": 0},
+    )
+
+    with pytest.raises(RuntimeError, match="ended with status 3"):
+        action.run(arguments)
+
+    assert not events_mock.called
+    assert action._logs[-1]["level"] == "error"

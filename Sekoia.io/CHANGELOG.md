@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-15 - 2.77.1
+
+### Fixed
+
+- Raise an error in `Get Events` and `Get Event Field Common Values` actions when the event search job fails, instead of returning empty results
+- Stop treating failed event search jobs as successful in `Alert Events Threshold` trigger
+
 ## 2026-09-14 - 2.77.0
 
 ### Added
