@@ -111,19 +111,19 @@ def test_run_to_list_detections_for_an_incident_1(action):
         )
 
         mock_requests.get(
-            API_LIST_DETECTION_URL + "?incidentId={0}".format(incident_id),
+            API_LIST_DETECTION_URL + f"?incidentId={incident_id}",
             complete_qs=True,
             status_code=207,
             json=response_payload_0,
         )
         mock_requests.get(
-            API_LIST_DETECTION_URL + "?incidentId={0}&anchor=next_anchor_0".format(incident_id),
+            API_LIST_DETECTION_URL + f"?incidentId={incident_id}&anchor=next_anchor_0",
             complete_qs=True,
             status_code=207,
             json=response_payload_1,
         )
         mock_requests.get(
-            API_LIST_DETECTION_URL + "?incidentId={0}&anchor=next_anchor_1".format(incident_id),
+            API_LIST_DETECTION_URL + f"?incidentId={incident_id}&anchor=next_anchor_1",
             complete_qs=True,
             status_code=207,
             json=response_payload_2,

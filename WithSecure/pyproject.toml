@@ -1,77 +1,60 @@
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
-name = "Sekoia.io Automation Module for WithSecure"
-version = "2.4"
+[project]
+name = "automation-module-withsecure"
+version = "0.0"
 description = ""
 authors = []
-package-mode = false
+requires-python = ">=3.14,<4"
+dependencies = [
+    "sekoia-automation-sdk>=1.26.0,<2",
+    "structlog>=22.3.0,<23",
+    "requests>=2.31.0,<3",
+    "tenacity>=8.3.0,<9",
+]
 
-[tool.black]
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "requests",
+    "requests-mock",
+    "pytest-mock>=3.10.0",
+]
+lint = [
+    "ruff>=0.14",
+    "mypy",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "lint"]
+
+[tool.ruff]
 line-length = 119
-target-version = ["py310"]
-include = "\\.pyi?$"
+target-version = "py314"
 
-[tool.isort]
-profile = "black"
-line_length = 119
+[tool.ruff.lint]
+select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]
 
 [tool.mypy]
-strict = true
+python_version = "3.14"
+install_types = true
+non_interactive = true
 ignore_missing_imports = true
-allow_subclassing_any = true
-allow_untyped_calls = true
-pretty = true
-show_error_codes = true
-implicit_reexport = true
-allow_untyped_decorators = true
-warn_return_any = true
-exclude = ["tests/*"]
-
-[tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-structlog = "^22.3.0"
-requests = "^2.31.0"
-tenacity = "^8.3.0"
+show_column_numbers = true
+exclude = ["tests/"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
+addopts = """
+    --cache-clear
+    --cov=withsecure
+    --cov-report=term-missing:skip-covered
+    -ra
+"""
 testpaths = ["tests"]
-filterwarnings = [
-  "error",
-  "ignore::DeprecationWarning",
-  "ignore:.*unclosed.*:ResourceWarning",
-]
-addopts = "  --strict-markers\n  --tb=short\n  --cov=withsecure\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n"
 
-[tool.poetry.dependencies.sekoia-automation-sdk]
-version = "^1.17.2"
-extras = ["all"]
-
-[tool.poe.tasks.lint]
-help = "Make code linting and formatting."
-[[tool.poe.tasks.lint.sequence]]
-cmd = "poetry run autoflake --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables */**/*.py"
-
-[[tool.poe.tasks.lint.sequence]]
-cmd = "poetry run black ."
-
-[[tool.poe.tasks.lint.sequence]]
-cmd = "poetry run isort ."
-
-[[tool.poe.tasks.lint.sequence]]
-cmd = "poetry run mypy ."
-
-[tool.poetry.group.dev.dependencies]
-pytest = "*"
-pytest-cov = "*"
-requests-mock = "*"
-pytest-mock = "^3.10.0"
-autoflake = "^1.4"
-isort = "^5.10.1"
-
-[tool.poetry.group.dev.dependencies.poethepoet]
-version = "^0.16.5"
-extras = ["poetry_plugin"]
+[tool.coverage.run]
+omit = ["tests/*", "main.py"]

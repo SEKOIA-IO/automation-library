@@ -79,7 +79,7 @@ def test_incorrect_param(action):
         )
 
         with pytest.raises(ValidationError):
-            response = action.run(
+            action.run(
                 arguments=ActionArguments(
                     target="e297cbf5-ba53-4e66-909c-6d87527c4e98",
                     organization_id="7301935a-6715-473b-a5af-9130e8c84821",

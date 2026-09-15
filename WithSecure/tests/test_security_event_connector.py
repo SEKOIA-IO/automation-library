@@ -1,7 +1,7 @@
 import json
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from signal import SIGINT
 from threading import Thread
 from unittest.mock import MagicMock
@@ -62,7 +62,7 @@ def message1():
             "systemDataLevel": "Information",
             "userPrincipalName": "domainadmin",
         },
-        "persistenceTimestamp": (datetime(2023, 3, 30, 16, 52, 20, 354, tzinfo=timezone.utc).isoformat()),
+        "persistenceTimestamp": (datetime(2023, 3, 30, 16, 52, 20, 354, tzinfo=UTC).isoformat()),
         "id": "6c85ad33-de08-3156-9354-e235ebf96b93_0",
         "device": {"name": "DC", "id": "00000000-0000-0000-0000-000000000000"},
         "clientTimestamp": "2023-03-30T16:52:18.628Z",
@@ -88,7 +88,7 @@ def message2():
             "resolution": "CONFIRMED",
             "userSam": "TEST\\Frank",
         },
-        "persistenceTimestamp": (datetime(2023, 3, 30, 14, 34, 5, 876, tzinfo=timezone.utc).isoformat()),
+        "persistenceTimestamp": (datetime(2023, 3, 30, 14, 34, 5, 876, tzinfo=UTC).isoformat()),
         "id": "00000000-0000-0000-0000-000000000000_0",
         "device": {"name": "WKS-10-PLAIN", "id": "00000000-0000-0000-0000-000000000000"},
         "clientTimestamp": "2023-03-30T14:12:56Z",
@@ -310,9 +310,9 @@ def test_run_properly_handle_any_exception(trigger):
 
 def test_load_recent_date_seen(trigger):
     with trigger.context as c:
-        c["most_recent_date_seen"] = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()
+        c["most_recent_date_seen"] = (datetime.now(UTC) - timedelta(days=3)).isoformat()
 
-    assert trigger.most_recent_date_seen < datetime.now(timezone.utc) - timedelta(days=3)
+    assert trigger.most_recent_date_seen < datetime.now(UTC) - timedelta(days=3)
 
 
 def test_next_batch_with_form_urlencoded_format(trigger, message1, message2):

@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## 2026-09-15 - 2.17.1
+
+### Fixed
+
+- Cap the security events start date to the last 30 days to avoid the API rejecting requests whose `persistenceTimestamp` range exceeds 30 days
+
+## 2026-09-15 - 2.17.0
+
+### Changed
+
+- Migrated module from Poetry to uv
+
 ## 2025-10-20 - 2.16.4
 
 ### Fixed
