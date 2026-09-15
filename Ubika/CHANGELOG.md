@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Refactor the NextGen connectors to use a single `filters.fromDate` timestamp cursor
+  instead of the `TimeStepper` time windows, aligning them with the other connectors
+- A failed batch is now logged and retried on the next iteration instead of stopping
+  the connector
+
+### Removed
+
+- Remove the unused `timedelta` configuration parameter from the NextGen connectors
+
 ## 2026-08-21 - 1.1.3
 
 ### Changed
