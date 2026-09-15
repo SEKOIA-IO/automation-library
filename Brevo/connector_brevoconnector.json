@@ -1,0 +1,37 @@
+{
+  "name": "BrevoConnector",
+  "description": "BrevoConnector",
+  "uuid": "e826aa2c-c8d6-5fb0-9762-033fc5486319",
+  "docker_parameters": "BrevoConnector",
+  "arguments": {
+    "properties": {
+      "intake_server": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Intake Server"
+      },
+      "intake_key": {
+        "title": "Intake Key",
+        "type": "string"
+      },
+      "polling_interval": {
+        "default": 5,
+        "description": "Polling interval in minutes",
+        "title": "Polling Interval",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "title": "BrevoConnectorConfiguration",
+    "type": "object"
+  }
+}
