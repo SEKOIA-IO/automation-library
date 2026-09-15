@@ -29,8 +29,6 @@ if __name__ == "__main__":
     module.register(CancelMachineAction, "CancelMachineAction")
     module.register(MicrosoftDefenderGraphAPIAlerts, "connector_microsoft_defender_xdr")
     module.register(MicrosoftDefenderDeviceAssetConnector, "microsoft_defender_device_asset_connector")
-    module.register(
-        MicrosoftDefenderVulnerabilityAssetConnector, "microsoft_defender_vulnerability_asset_connector"
-    )
+    module.register(MicrosoftDefenderVulnerabilityAssetConnector, "microsoft_defender_vulnerability_asset_connector")
     module.register(MicrosoftDefenderGraphAPIIncidents, "connector_defender_incidents")
     module.run()
