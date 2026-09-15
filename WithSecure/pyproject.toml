@@ -34,6 +34,9 @@ target-version = "py314"
 
 [tool.ruff.lint]
 select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
+# N815: pydantic model fields must match the WithSecure API JSON (mixedCase)
+# N818: keep existing exception names without the Error suffix
+ignore = ["N815", "N818"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ARG"]
