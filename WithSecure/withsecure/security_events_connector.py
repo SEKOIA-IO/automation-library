@@ -63,13 +63,18 @@ class SecurityEventsConnector(Connector):
             # parse the most recent date seen
             most_recent_date_seen = datetime.fromisoformat(most_recent_date_seen_str)
 
-            # The API rejects a persistenceTimestamp range exceeding 30 days.
-            # Cap the start date so it stays within the allowed window.
-            earliest_allowed = now - API_SECURITY_EVENTS_MAX_RANGE
-            if most_recent_date_seen < earliest_allowed:
-                most_recent_date_seen = earliest_allowed
+            return self._cap_start_date(most_recent_date_seen)
 
-            return most_recent_date_seen
+    def _cap_start_date(self, start_date: datetime) -> datetime:
+        """
+        Cap the start date so the persistenceTimestamp range stays within the
+        30-day window enforced by the API, even for long-running processes
+        that receive no events.
+        """
+        earliest_allowed = datetime.now(UTC) - API_SECURITY_EVENTS_MAX_RANGE
+        if start_date < earliest_allowed:
+            return earliest_allowed
+        return start_date
 
     @cached_property
     def client(self) -> ApiClient:
@@ -166,7 +171,9 @@ class SecurityEventsConnector(Connector):
                 raise FetchEventsException(human_readable_api_exception(any_exception))
 
     def fetch_events(self) -> Generator[list[dict[str, Any]]]:
-        most_recent_date_seen = self.from_date
+        # Re-apply the 30-day cap on each batch so a long-running process
+        # without new events never sends a range exceeding the API limit.
+        most_recent_date_seen = self._cap_start_date(self.from_date)
 
         try:
             for next_events in self.__fetch_next_events(most_recent_date_seen):

@@ -43,6 +43,7 @@ ignore = ["N815", "N818"]
 
 [tool.mypy]
 python_version = "3.14"
+files = ["."]
 install_types = true
 non_interactive = true
 ignore_missing_imports = true

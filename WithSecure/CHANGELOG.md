@@ -10,7 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
-- Cap the security events start date to the last 30 days to avoid the API rejecting requests whose `persistenceTimestamp` range exceeds 30 days
+- Cap the security events start date to the last 30 days before every request to avoid the API rejecting requests whose `persistenceTimestamp` range exceeds 30 days, including for long-running processes that receive no events
+- Configure mypy `files` so the CI type-checks the module
 
 ## 2026-09-15 - 2.17.0
 

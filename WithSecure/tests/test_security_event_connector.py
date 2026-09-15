@@ -315,6 +315,70 @@ def test_load_recent_date_seen(trigger):
     assert trigger.most_recent_date_seen < datetime.now(UTC) - timedelta(days=3)
 
 
+def test_most_recent_date_seen_is_capped_to_30_days(trigger):
+    """A stored checkpoint older than 30 days must be capped to the API window."""
+    with trigger.context as c:
+        c["most_recent_date_seen"] = (datetime.now(UTC) - timedelta(days=45)).isoformat()
+
+    most_recent_date_seen = trigger.most_recent_date_seen
+
+    # capped to ~30 days ago (never older than the 30-day window)
+    assert most_recent_date_seen >= datetime.now(UTC) - timedelta(days=30, seconds=5)
+
+
+def test_cap_start_date_across_boundary(trigger):
+    now = datetime.now(UTC)
+
+    # within the window: unchanged
+    recent = now - timedelta(days=10)
+    assert trigger._cap_start_date(recent) == recent
+
+    # beyond the window: capped to ~30 days ago
+    stale = now - timedelta(days=60)
+    capped = trigger._cap_start_date(stale)
+    assert capped > stale
+    assert capped >= now - timedelta(days=30, seconds=5)
+
+
+def test_fetch_events_reapplies_cap_for_long_running_process(trigger, message1, message2):
+    """
+    Regression: an in-memory from_date older than 30 days (e.g. a long-running
+    process without new events) must be re-capped before each request so the
+    persistenceTimestamp range never exceeds 30 days.
+    """
+    # simulate a stale in-memory checkpoint set at startup 45 days ago
+    trigger.from_date = datetime.now(UTC) - timedelta(days=45)
+
+    captured_start: list[str] = []
+
+    def custom_matcher(request: requests.PreparedRequest):
+        resp = requests.Response()
+        if request.url == API_AUTHENTICATION_URL:
+            resp._content = json.dumps(
+                {"access_token": "dummy-test-token", "token_type": "Bearer", "expires_in": 1799}
+            ).encode()
+            resp.status_code = 200
+            return resp
+        elif request.url.startswith(API_SECURITY_EVENTS_URL):
+            for key, value in (pair.split("=", 1) for pair in request.body.split("&")):
+                if key == "persistenceTimestampStart":
+                    captured_start.append(value)
+            resp._content = json.dumps({"items": [message1, message2]}).encode()
+            resp.status_code = 200
+            return resp
+        return None
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.add_matcher(custom_matcher)
+        trigger.next_batch()
+
+    assert captured_start
+    from urllib.parse import unquote
+
+    start_date = datetime.fromisoformat(unquote(captured_start[0]))
+    assert start_date >= datetime.now(UTC) - timedelta(days=30, seconds=5)
+
+
 def test_next_batch_with_form_urlencoded_format(trigger, message1, message2):
     """Test that engineGroup parameters are correctly repeated in form-urlencoded format"""
 
