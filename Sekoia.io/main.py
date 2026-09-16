@@ -1,7 +1,9 @@
 # flake8: noqa: E402
-from sekoiaio.utils import should_patch
+import sys
 
-if should_patch():
+# Patch before any import pulls in ssl (via requests/urllib3), otherwise
+# gevent patches an already-loaded ssl module and HTTPS calls hit RecursionError.
+if len(sys.argv) >= 2 and sys.argv[1].endswith("_trigger"):
     from gevent import monkey
 
     monkey.patch_all()
@@ -87,6 +89,7 @@ from sekoiaio.triggers.alerts import (
 )
 from sekoiaio.triggers.cases import (
     CaseAlertsUpdatedTrigger,
+    CaseCommentCreatedTrigger,
     CaseCreatedTrigger,
     CaseUpdatedTrigger,
 )
@@ -171,6 +174,7 @@ if __name__ == "__main__":
     module.register(CaseCreatedTrigger, "case_created_trigger")
     module.register(CaseUpdatedTrigger, "case_updated_trigger")
     module.register(CaseAlertsUpdatedTrigger, "case_alerts_updated_trigger")
+    module.register(CaseCommentCreatedTrigger, "case_comment_created_trigger")
 
     # Intelligence Center Triggers
     module.register(FeedConsumptionTrigger, "feed_consumption_trigger")

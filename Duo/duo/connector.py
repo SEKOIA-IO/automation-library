@@ -2,7 +2,6 @@ import datetime
 import time
 from functools import cached_property
 from threading import Event, Lock, Thread
-from typing import Optional
 
 import duo_client
 import orjson
@@ -24,7 +23,7 @@ class DuoLogsConsumer(Thread):
     Each endpoint of Duo Admin API is consumed in its own separate thread.
     """
 
-    def __init__(self, connector: "DuoAdminLogsConnector", log_type: LogType, checkpoint: Optional[dict] = None):
+    def __init__(self, connector: DuoAdminLogsConnector, log_type: LogType, checkpoint: dict | None = None):
         super().__init__()
 
         self.connector = connector
@@ -186,7 +185,7 @@ class DuoLogsConsumer(Thread):
             delta_sleep = self.frequency - batch_duration
             if delta_sleep > 0:
                 self.log(
-                    message=f"Next batch of {self.log_label} events in the future. " f"Waiting {delta_sleep} seconds",
+                    message=f"Next batch of {self.log_label} events in the future. Waiting {delta_sleep} seconds",
                     level="info",
                 )
                 time.sleep(delta_sleep)

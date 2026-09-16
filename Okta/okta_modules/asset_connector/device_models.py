@@ -1,6 +1,6 @@
 """Pydantic models for Okta device API responses."""
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -24,14 +24,14 @@ class OktaDeviceDisplayName(BaseModel):
 class OktaDeviceLinkHints(BaseModel):
     """HTTP method hints attached to an Okta device link."""
 
-    allow: Optional[list[str]] = None
+    allow: list[str] | None = None
 
 
 class OktaDeviceLink(BaseModel):
     """Hypermedia link returned by the Okta device API."""
 
     href: str
-    hints: Optional[OktaDeviceLinkHints] = None
+    hints: OktaDeviceLinkHints | None = None
 
 
 class OktaDeviceEmbeddedResources(BaseModel):
@@ -47,14 +47,14 @@ class OktaDeviceProfile(BaseModel):
     platform: str
     registered: bool
     secureHardwarePresent: bool
-    osVersion: Optional[str] = None
-    serialNumber: Optional[str] = None
-    sid: Optional[str] = None
-    diskEncryptionType: Optional[str] = None
-    manufacturer: Optional[str] = None
-    model: Optional[str] = None
-    imei: Optional[str] = None
-    udid: Optional[str] = None
+    osVersion: str | None = None
+    serialNumber: str | None = None
+    sid: str | None = None
+    diskEncryptionType: str | None = None
+    manufacturer: str | None = None
+    model: str | None = None
+    imei: str | None = None
+    udid: str | None = None
 
 
 class OktaDevice(BaseModel):
@@ -64,11 +64,11 @@ class OktaDevice(BaseModel):
     status: str
     created: str
     lastUpdated: str
-    lastSeen: Optional[str] = None
+    lastSeen: str | None = None
     profile: OktaDeviceProfile
-    resourceType: Optional[str] = None
-    resourceDisplayName: Optional[OktaDeviceDisplayName] = None
-    resourceAlternateId: Optional[str] = None
-    resourceId: Optional[str] = None
-    links: Optional[dict[str, OktaDeviceLink | list[OktaDeviceLink]]] = Field(default=None, alias="_links")
-    embedded: Optional[OktaDeviceEmbeddedResources] = Field(default=None, alias="_embedded")
+    resourceType: str | None = None
+    resourceDisplayName: OktaDeviceDisplayName | None = None
+    resourceAlternateId: str | None = None
+    resourceId: str | None = None
+    links: dict[str, OktaDeviceLink | list[OktaDeviceLink]] | None = Field(default=None, alias="_links")
+    embedded: OktaDeviceEmbeddedResources | None = Field(default=None, alias="_embedded")

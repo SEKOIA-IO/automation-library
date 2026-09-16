@@ -127,12 +127,12 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
             # Parse the most recent requested date
             most_recent_date = isoparse(most_recent_date_str)
 
-            # Ensure we do not go back more than one month
+            # Ensure we do not go back more than one week
             now = datetime.now(UTC)
-            one_month_ago = now - timedelta(days=30)
-            # If the most recent date is older than one month, set it to one month ago
-            if most_recent_date < one_month_ago:
-                most_recent_date = one_month_ago
+            one_week_ago = now - timedelta(days=7)
+            # If the most recent date is older than one week, set it to one week ago
+            if most_recent_date < one_week_ago:
+                most_recent_date = one_week_ago
 
             # Create a time stepper from the most recent date seen
             return TimeStepper.create_from_time(

@@ -38,7 +38,7 @@ class DownloadFileAction(HTTPActionBase):
             dict[str, str]:
         """
         return {
-            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+            "User-Agent": "sekoiaio-connector/{}-{}".format(
                 self.module.manifest.get("slug"), self.module.manifest.get("version")
             ),
         }

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.121.1] - 2026-08-21
+
+### Changed
+
+- Migrate module packaging from Poetry to uv (with ruff and mypy)
+
 ## [1.120.5] - 2026-08-11
 
 ### Added
@@ -28,12 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extend and centralize HTTP status class handling for informational (1xx), success (2xx), redirection (3xx), client error (4xx), and server error (5xx) responses
 - Ensure `Download File` action also uses centralized URL validation and HTTP response handling from `HTTPActionBase`
 - Increase automated test coverage to 100%
-
-## [1.120.4] - 2026-03-26
-
-### Fixed
-
-- Move URL field validation to the module
 
 ## [1.120.3] - 2026-03-19
 

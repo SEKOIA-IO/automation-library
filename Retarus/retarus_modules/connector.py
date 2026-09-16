@@ -1,7 +1,7 @@
 import os
 import queue
 import time
-from typing import Any, Optional
+from typing import Any
 
 from sekoia_automation.connector import Connector
 
@@ -13,7 +13,7 @@ from retarus_modules.metrics import OUTGOING_EVENTS
 class RetarusConnector(Connector):
     configuration: RetarusConfig
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         super().__init__(*args, **kwargs)
 
         # create the events queue

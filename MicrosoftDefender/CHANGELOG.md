@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-09-14 - 1.4.0
+
+### Added
+
+- Add the Microsoft Defender vulnerability asset connector that collects vulnerabilities and their affected devices from the Defender for Endpoint API (`/api/vulnerabilities/machinesVulnerabilities`, enriched with `/api/machines` and `/api/vulnerabilities`) and maps them to the OCSF Vulnerability Finding class.
+
+## 2026-08-18 - 1.3.7
+
+### Changed
+
+- Update the minimum frequency value from 1 second to 3 hours (10800 seconds) for the device asset connector to avoid excessive API calls and potential throttling.
+
 ## 2026-08-18 - 1.3.6
 
 ### Fixed

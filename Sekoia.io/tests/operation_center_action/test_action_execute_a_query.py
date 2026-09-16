@@ -1,5 +1,5 @@
 import re
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -36,7 +36,11 @@ SAMPLE_QUERY: dict = {
     "described_by_ai": None,
     "definition": {
         "ql_query": "events\n| where timestamp between (?time.start .. ?time.end)\n| limit 2",
-        "community_uuids": [],
+        "community_uuids": [
+            "11111111-1111-1111-1111-111111111111",
+            "22222222-2222-2222-2222-222222222212",
+            "33333333-3333-3333-3333-333333333333",
+        ],
         "intake_uuids": None,
         "parent_community_uuid": None,
         "is_shared_run": False,
@@ -269,7 +273,7 @@ def test_trigger_query_execution_http_error(requests_mock):
     with pytest.raises(requests.exceptions.HTTPError):
         action.trigger_query_execution(
             query_uuid=UUID(SAMPLE_QUERY["uuid"]),
-            query_definition="SELECT * FROM events",
+            query_definition={"ql_query": "SELECT * FROM events"},
             query_parameters=None,
         )
 
@@ -497,3 +501,33 @@ def test_execute_query_full_polling_cycle(requests_mock):
         )
 
     assert result["query_result"] == "final_result"
+
+
+def test_execute_query_omits_community_uuids(requests_mock):
+    action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
+
+    requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", json=SAMPLE_QUERY)
+    requests_mock.get(f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "done"})
+    requests_mock.get(
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
+        text="final_result",
+    )
+
+    action.trigger_query_execution = MagicMock()
+    action.trigger_query_execution.return_value = SAMPLE_QUERY_RUN["uuid"]
+
+    action.run(
+        {
+            "query_uuid": SAMPLE_QUERY["uuid"],
+            "result_format": "jsonl",
+        }
+    )
+
+    # Make sure community_uuids was not sent
+    expected_definition = dict(SAMPLE_QUERY["definition"])
+    del expected_definition["community_uuids"]
+    action.trigger_query_execution.assert_called_with(
+        query_uuid=UUID(SAMPLE_QUERY["uuid"]), query_definition=expected_definition, query_parameters=None
+    )

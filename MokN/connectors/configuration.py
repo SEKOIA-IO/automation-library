@@ -45,5 +45,5 @@ class MoknLoginAttemptsTriggerConfiguration(DefaultConnectorConfiguration):
             10,
             9,
         ],
-        description=("List of MokN status codes included in the polling query. " "Accepts integer values."),
+        description=("List of MokN status codes included in the polling query. Accepts integer values."),
     )

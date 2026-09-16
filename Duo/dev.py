@@ -15,7 +15,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def dumb_log(message: str, level: str, **kwargs):
+def dumb_log(message: str, level: str, **_kwargs):
     log_level = logging.getLevelName(level.upper())
     logger.log(log_level, message)
 

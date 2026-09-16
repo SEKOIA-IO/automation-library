@@ -7,12 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-08-19 - 1.0.19
+
+## 2026-08-19 - 1.0.20
 
 ### Fixed
 
 - Fix checkpoint using `first_found` instead of `last_found`, causing the connector to re-fetch all vulnerabilities on every run
 - Add finding ID deduplication cache to prevent duplicate assets from Tenable's inclusive `since` filter
+
+## 2026-08-28 - 1.0.19
+
+### Changed
+
+- Add dedicated Pydantic model files split by endpoint: `models/vuln_export_model.py` (Export Vulnerabilities), `models/assets_export_model.py` (Export Assets v2), `models/asset_details_model.py` (Get Asset Details)
+- Migrate `vulnerability_asset.py` to use new split Pydantic models (`Vulnerability` from `vuln_export_model`, `AssetDetails` and `NetworkInterface` from `asset_details_model`) instead of the legacy monolithic `model.py`
+- Add missing fields to all models
 
 ## 2026-07-29 - 1.0.18
 

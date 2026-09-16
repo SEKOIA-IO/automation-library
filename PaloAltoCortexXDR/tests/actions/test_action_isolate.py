@@ -65,7 +65,7 @@ def test_run_isolate_action(isolate_action, arguments_0, arguments_1):
             },
         )
 
-        assert isolate_action.run(arguments_0) == {"result": "123"}
+        assert isolate_action.run(arguments_0.dict()) == {"result": "123"}
 
         mock.post(
             url,
@@ -100,7 +100,7 @@ def test_run_unisolate_action(unisolate_action, arguments_0, arguments_1):
             },
         )
 
-        assert unisolate_action.run(arguments_0) == {"result": "123"}
+        assert unisolate_action.run(arguments_0.dict()) == {"result": "123"}
 
         mock.post(
             url,

@@ -1,0 +1,28 @@
+{
+  "type": "akamai_siem",
+  "format": "json",
+  "version": "1.0",
+  "attackData": {
+    "configId": "123456",
+    "policyId": "2_123",
+    "clientIP": "1.2.3.4",
+    "rules": [
+      {
+        "rule": "REP_1234",
+        "ruleVersion": "",
+        "ruleMessage": "Web Attackers (High Threat)",
+        "ruleData": "WEBATCK=10",
+        "ruleAction": "deny"
+      }
+    ]
+  },
+  "httpMessage": {
+    "requestId": "abc123",
+    "start": "1765196327",
+    "protocol": "HTTP/1.1",
+    "method": "GET",
+    "host": "example.com",
+    "port": "443",
+    "path": "/.git/config"
+  }
+}

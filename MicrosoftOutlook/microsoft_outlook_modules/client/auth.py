@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import requests
 from requests.auth import AuthBase
@@ -38,11 +38,11 @@ class GraphApiAuthentication(AuthBase):
         )
 
     def get_credentials(self) -> MicrosoftDefenderCredentials:
-        current_dt = datetime.utcnow()
+        current_dt = datetime.now(UTC)
 
         if self.__api_credentials is None or current_dt + timedelta(seconds=300) >= self.__api_credentials.expires_at:
             # https://learn.microsoft.com/en-us/graph/auth-v2-service?tabs=http#token-request
-            url = "https://login.microsoftonline.com/%s/oauth2/v2.0/token" % self.__tenant_id
+            url = f"https://login.microsoftonline.com/{self.__tenant_id}/oauth2/v2.0/token"
             body = {
                 "scope": "https://graph.microsoft.com/.default",
                 "client_id": self.__app_id,

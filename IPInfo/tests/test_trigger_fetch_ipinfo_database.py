@@ -1,6 +1,6 @@
+import os
 import time
 from signal import SIGINT
-import os
 from threading import Thread
 from unittest.mock import MagicMock
 
@@ -23,9 +23,7 @@ def trigger(symphony_storage, request_mock, config_storage):
     trigger.configuration = {"interval": 0, "chunk_size": 10000}
     trigger.module.configuration = module_configuration
     trigger._token = "token"
-    config_storage.joinpath(
-        TriggerFetchIPInfoDatabase.CALLBACK_URL_FILE_NAME
-    ).write_text("https://callback.url/")
+    config_storage.joinpath(TriggerFetchIPInfoDatabase.CALLBACK_URL_FILE_NAME).write_text("https://callback.url/")
     request_mock.post(trigger.callback_url)
     request_mock.post(trigger.logs_url)
     yield trigger
@@ -44,10 +42,7 @@ def test_get_ipinfo_database(trigger, symphony_storage, request_mock):
         assert trigger._fetch_database() is None
         assert request_mock.called
         caller_params = request_mock.request_history[1].json()
-        assert (
-            "name" in caller_params
-            and caller_params["name"] == "IPINFO.IO List Chunk 0-161"
-        )
+        assert "name" in caller_params and caller_params["name"] == "IPINFO.IO List Chunk 0-161"
         assert "event" in caller_params
         assert "directory" in caller_params
 
@@ -68,9 +63,7 @@ def test_parse_db_rows_ipv4(trigger, mocked_uuid):
                 "name": "Cogent Communications",
                 "number": 174,
                 "type": "autonomous-system",
-                "x_inthreat_sources_refs": [
-                    "identity--1e9f6197-b3a0-4665-88e7-767929d013a4"
-                ],
+                "x_inthreat_sources_refs": ["identity--1e9f6197-b3a0-4665-88e7-767929d013a4"],
             },
             {
                 "id": "observable-relationship--00000000-0000-0000-0000-000000000000",
@@ -78,17 +71,13 @@ def test_parse_db_rows_ipv4(trigger, mocked_uuid):
                 "source_ref": "ipv6-addr--00000000-0000-0000-0000-000000000000",
                 "target_ref": "autonomous-system--00000000-0000-0000-0000-000000000000",
                 "type": "observable-relationship",
-                "x_inthreat_sources_refs": [
-                    "identity--1e9f6197-b3a0-4665-88e7-767929d013a4"
-                ],
+                "x_inthreat_sources_refs": ["identity--1e9f6197-b3a0-4665-88e7-767929d013a4"],
             },
             {
                 "id": "ipv6-addr--00000000-0000-0000-0000-000000000000",
                 "type": "ipv6-addr",
                 "value": "2001:550:2:8::2b:1/128",
-                "x_inthreat_sources_refs": [
-                    "identity--1e9f6197-b3a0-4665-88e7-767929d013a4"
-                ],
+                "x_inthreat_sources_refs": ["identity--1e9f6197-b3a0-4665-88e7-767929d013a4"],
                 "x_inthreat_tags": [
                     {
                         "name": "country:CA",
@@ -120,9 +109,7 @@ def test_parse_db_rows_ipv4(trigger, mocked_uuid):
                 "name": "Cogent Communications",
                 "number": 174,
                 "type": "autonomous-system",
-                "x_inthreat_sources_refs": [
-                    "identity--1e9f6197-b3a0-4665-88e7-767929d013a4"
-                ],
+                "x_inthreat_sources_refs": ["identity--1e9f6197-b3a0-4665-88e7-767929d013a4"],
             },
             {
                 "id": "observable-relationship--00000000-0000-0000-0000-000000000000",
@@ -130,17 +117,13 @@ def test_parse_db_rows_ipv4(trigger, mocked_uuid):
                 "source_ref": "ipv4-addr--00000000-0000-0000-0000-000000000000",
                 "target_ref": "autonomous-system--00000000-0000-0000-0000-000000000000",
                 "type": "observable-relationship",
-                "x_inthreat_sources_refs": [
-                    "identity--1e9f6197-b3a0-4665-88e7-767929d013a4"
-                ],
+                "x_inthreat_sources_refs": ["identity--1e9f6197-b3a0-4665-88e7-767929d013a4"],
             },
             {
                 "id": "ipv4-addr--00000000-0000-0000-0000-000000000000",
                 "type": "ipv4-addr",
                 "value": "38.28.1.68/32",
-                "x_inthreat_sources_refs": [
-                    "identity--1e9f6197-b3a0-4665-88e7-767929d013a4"
-                ],
+                "x_inthreat_sources_refs": ["identity--1e9f6197-b3a0-4665-88e7-767929d013a4"],
                 "x_inthreat_tags": [
                     {
                         "name": "country:CZ",
@@ -229,9 +212,7 @@ def test_parse_db_rows_ipv4_empty_as_name(trigger, mocked_uuid):
                 "name": "AS174",
                 "number": 174,
                 "type": "autonomous-system",
-                "x_inthreat_sources_refs": [
-                    "identity--1e9f6197-b3a0-4665-88e7-767929d013a4"
-                ],
+                "x_inthreat_sources_refs": ["identity--1e9f6197-b3a0-4665-88e7-767929d013a4"],
             },
             {
                 "id": "observable-relationship--00000000-0000-0000-0000-000000000000",
@@ -239,17 +220,13 @@ def test_parse_db_rows_ipv4_empty_as_name(trigger, mocked_uuid):
                 "source_ref": "ipv6-addr--00000000-0000-0000-0000-000000000000",
                 "target_ref": "autonomous-system--00000000-0000-0000-0000-000000000000",
                 "type": "observable-relationship",
-                "x_inthreat_sources_refs": [
-                    "identity--1e9f6197-b3a0-4665-88e7-767929d013a4"
-                ],
+                "x_inthreat_sources_refs": ["identity--1e9f6197-b3a0-4665-88e7-767929d013a4"],
             },
             {
                 "id": "ipv6-addr--00000000-0000-0000-0000-000000000000",
                 "type": "ipv6-addr",
                 "value": "2001:550:2:8::2b:1/128",
-                "x_inthreat_sources_refs": [
-                    "identity--1e9f6197-b3a0-4665-88e7-767929d013a4"
-                ],
+                "x_inthreat_sources_refs": ["identity--1e9f6197-b3a0-4665-88e7-767929d013a4"],
                 "x_inthreat_tags": [
                     {
                         "name": "country:CA",

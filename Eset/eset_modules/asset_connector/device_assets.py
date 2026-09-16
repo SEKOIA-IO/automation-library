@@ -9,7 +9,6 @@ from pydantic.v1 import ValidationError
 from requests.exceptions import RequestException
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
-from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.asset_connector.models.ocsf.device import (
     Device,
     DeviceOCSFModel,
@@ -22,6 +21,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeId,
     OSTypeStr,
 )
+from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.storage import PersistentJSON
 
 from eset_modules.asset_connector.models import (
@@ -387,6 +387,41 @@ class EsetDeviceAssetConnector(AssetConnector):
         except Exception as e:
             self.log(f"Device iteration failed: {e}", level="error")
             raise
+
+    def get_mapped_fields(self) -> dict[str, str]:
+        """Return the ESET -> OCSF field mapping used to fingerprint the device schema.
+
+        Mirrors the dynamic fields declared in ``device_mapping.yml``. Static OCSF constants are
+        excluded: they never depend on the ESET payload, so they cannot invalidate a checkpoint.
+        Fields feeding the same OCSF attribute (``deviceType``/``isMobile``) are declared separately
+        so that changing either one is detected.
+        """
+        return {
+            "uuid": "device.uid",
+            "displayName": "device.hostname",
+            "originalDisplayName": "device.hostname",
+            "description": "device.desc",
+            "deviceType": "device.type",
+            "isMobile": "device.type_id",
+            "operatingSystem.familyId": "device.os.type",
+            "operatingSystem.displayName": "device.os.name",
+            "primaryLocalIpAddress": "device.ip",
+            "publicIpAddress": "device.network_interfaces.ip",
+            "hardwareProfiles.networkAdapters.macAddress": "device.network_interfaces.mac",
+            "hardwareProfiles.networkAdapters.caption": "device.network_interfaces.name",
+            "hardwareProfiles.manufacturer": "device.vendor_name",
+            "hardwareProfiles.model": "device.model",
+            "managementDomain": "device.domain",
+            "lastSyncTime": "device.last_seen_time",
+            "parentGroupUuid": "device.groups",
+        }
+
+    def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so every device is collected again on the next cycle."""
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self._latest_time = None
+        self.log("Checkpoint reset - a full device re-collection will occur on the next cycle", level="info")
 
     def update_checkpoint(self) -> None:
         """Persist the latest timestamp seen to the context file."""

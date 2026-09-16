@@ -1,6 +1,6 @@
 import json
-from typing import Any, List, Dict
-from unittest.mock import patch, PropertyMock
+from typing import Any
+from unittest.mock import PropertyMock, patch
 
 import pytest
 
@@ -8,13 +8,13 @@ from usta_modules.usta_atp_connector import UstaAPIError, UstaAtpConnector
 from usta_modules.usta_sdk import UstaAuthenticationError
 
 
-class StopTest(Exception):
+class StopTestError(Exception):
     """Custom exception used to break the infinite run loop during testing."""
 
     pass
 
 
-def test_happy_path(atp_connector: UstaAtpConnector, sample_events: List[Dict[str, Any]]) -> None:
+def test_happy_path(atp_connector: UstaAtpConnector, sample_events: list[dict[str, Any]]) -> None:
     """Tests the end-to-end success scenario.
 
     Verifies that the connector correctly fetches events from the API,
@@ -28,14 +28,14 @@ def test_happy_path(atp_connector: UstaAtpConnector, sample_events: List[Dict[st
 
     with (
         patch("usta_modules.usta_atp_connector.UstaClient") as mock_usta_client,
-        patch("time.sleep", side_effect=StopTest),
+        patch("time.sleep", side_effect=StopTestError),
     ):
         mock_instance = mock_usta_client.return_value
         mock_instance.iter_compromised_credentials.return_value = sample_events
 
         try:
             atp_connector.run()
-        except StopTest:
+        except StopTestError:
             pass
 
         # Verify events were pushed
@@ -56,14 +56,14 @@ def test_forward_empty_list_of_events(atp_connector: UstaAtpConnector) -> None:
     """
     with (
         patch("usta_modules.usta_atp_connector.UstaClient") as mock_usta_client,
-        patch("time.sleep", side_effect=StopTest),
+        patch("time.sleep", side_effect=StopTestError),
     ):
         mock_instance = mock_usta_client.return_value
         mock_instance.iter_compromised_credentials.return_value = []
 
         try:
             atp_connector.run()
-        except StopTest:
+        except StopTestError:
             pass
 
         atp_connector.push_events_to_intakes.assert_not_called()
@@ -93,13 +93,13 @@ def test_connector_polling_logs(atp_connector: UstaAtpConnector) -> None:
     # Note: running=True is already set in conftest.py
     with (
         patch("usta_modules.usta_atp_connector.UstaClient") as mock_usta_client,
-        patch("time.sleep", side_effect=StopTest),
+        patch("time.sleep", side_effect=StopTestError),
     ):
         mock_usta_client.return_value.iter_compromised_credentials.return_value = []
 
         try:
             atp_connector.run()
-        except StopTest:
+        except StopTestError:
             pass
 
         atp_connector.log.assert_any_call(message="Polling USTA security intelligence API...", level="info")
@@ -116,13 +116,13 @@ def test_connector_api_error_handling(atp_connector: UstaAtpConnector) -> None:
     """
     with (
         patch("usta_modules.usta_atp_connector.UstaClient") as mock_usta_client,
-        patch("time.sleep", side_effect=StopTest),
+        patch("time.sleep", side_effect=StopTestError),
     ):
         mock_usta_client.return_value.iter_compromised_credentials.side_effect = UstaAPIError("Connection Timeout")
 
         try:
             atp_connector.run()
-        except StopTest:
+        except StopTestError:
             pass
 
         atp_connector.log.assert_any_call(message="USTA-SDK Error: Connection Timeout", level="error")

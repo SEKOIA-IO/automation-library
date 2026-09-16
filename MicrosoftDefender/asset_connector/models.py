@@ -38,3 +38,61 @@ class DefenderMachineListResponse(BaseModel):
 
     value: list[DefenderMachine] = []
     odata_next_link: Optional[str] = Field(None, alias="@odata.nextLink")
+
+
+class DefenderMachineVulnerability(BaseModel):
+    """Model for a machine-vulnerability relation from
+    GET /api/vulnerabilities/machinesVulnerabilities."""
+
+    model_config = ConfigDict(extra="allow")
+
+    id: str
+    cveId: Optional[str] = None
+    machineId: Optional[str] = None
+    fixingKbId: Optional[str] = None
+    productName: Optional[str] = None
+    productVendor: Optional[str] = None
+    productVersion: Optional[str] = None
+    severity: Optional[str] = None
+
+
+class DefenderMachineVulnerabilityListResponse(BaseModel):
+    """Paginated response from GET /api/vulnerabilities/machinesVulnerabilities."""
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    value: list[DefenderMachineVulnerability] = []
+    odata_next_link: Optional[str] = Field(None, alias="@odata.nextLink")
+
+
+class DefenderVulnerability(BaseModel):
+    """Model for a vulnerability (CVE) from GET /api/vulnerabilities."""
+
+    model_config = ConfigDict(extra="allow")
+
+    id: str
+    name: Optional[str] = None
+    description: Optional[str] = None
+    severity: Optional[str] = None
+    cvssV3: Optional[float] = None
+    cvssVector: Optional[str] = None
+    exposedMachines: Optional[int] = None
+    publishedOn: Optional[str] = None
+    updatedOn: Optional[str] = None
+    firstDetected: Optional[str] = None
+    publicExploit: Optional[bool] = None
+    exploitVerified: Optional[bool] = None
+    exploitInKit: Optional[bool] = None
+    exploitTypes: list[str] = []
+    exploitUris: list[str] = []
+    cveSupportability: Optional[str] = None
+    tags: list[str] = []
+
+
+class DefenderVulnerabilityListResponse(BaseModel):
+    """Paginated response from GET /api/vulnerabilities."""
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    value: list[DefenderVulnerability] = []
+    odata_next_link: Optional[str] = Field(None, alias="@odata.nextLink")

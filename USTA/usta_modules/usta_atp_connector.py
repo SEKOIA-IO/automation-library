@@ -1,6 +1,6 @@
 import json
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sekoia_automation.connector import Connector
 
@@ -26,7 +26,7 @@ class UstaAtpConnector(Connector):
         self.log(message=f"Start fetching events - running={self.running}", level="info")
 
         usta_cli = UstaClient(token=self.module.configuration.api_key)
-        date_cursor = datetime.now(timezone.utc) - timedelta(days=self.configuration.max_historical_days)
+        date_cursor = datetime.now(UTC) - timedelta(days=self.configuration.max_historical_days)
         # Iterate until the Connector is shut down by Sekoia
         while self.running:
             self.log(message="Polling USTA security intelligence API...", level="info")
@@ -37,14 +37,14 @@ class UstaAtpConnector(Connector):
                 for event in usta_cli.iter_compromised_credentials(start=date_cursor.isoformat()):
                     collected_events.append(json.dumps(event))
             except UstaAuthenticationError as e:
-                self.log(message=f"USTA Authentication Error: {str(e)}", level="critical")
+                self.log(message=f"USTA Authentication Error: {e!s}", level="critical")
                 raise e
             except UstaAPIError as e:
                 self.log(message=f"USTA-SDK Error: {e}", level="error")
 
             # Push events to Sekoia platform
             if collected_events:
-                date_cursor = datetime.now(timezone.utc)
+                date_cursor = datetime.now(UTC)
                 self.log(
                     message=f"{len(collected_events)} events collected",
                     level="info",

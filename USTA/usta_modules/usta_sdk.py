@@ -1,4 +1,5 @@
-from typing import Any, Dict, Iterator, List, Optional, cast
+from collections.abc import Iterator
+from typing import Any, cast
 
 from requests import RequestException
 from requests.adapters import HTTPAdapter
@@ -51,7 +52,7 @@ class UstaClient:
     # ──────────────────────────────────────────────────────────────────────────
     # INTERNAL REQUEST HANDLER
     # ──────────────────────────────────────────────────────────────────────────
-    def _request(self, method: str, url_or_path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _request(self, method: str, url_or_path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """Performs an HTTP request and handles errors.
 
         Args:
@@ -79,7 +80,7 @@ class UstaClient:
                 timeout=self.timeout,
             )
         except RequestException as e:
-            raise UstaAPIError(f"Network request failed: {str(e)}") from e
+            raise UstaAPIError(f"Network request failed: {e!s}") from e
 
         # Basic network error handling
         if response.status_code >= 500:
@@ -102,7 +103,7 @@ class UstaClient:
             data = response.json()
             if not isinstance(data, dict):
                 raise UstaAPIError("Invalid JSON format: Expected a dictionary.")
-            return cast(Dict[str, Any], data)
+            return cast(dict[str, Any], data)
         except ValueError:
             raise UstaAPIError("Invalid JSON received from server.")
 
@@ -110,7 +111,7 @@ class UstaClient:
     # QUERY PARAMETER BUILDER
     # ──────────────────────────────────────────────────────────────────────────
     @staticmethod
-    def _clean_params(params: Dict[str, Any]) -> Dict[str, Any]:
+    def _clean_params(params: dict[str, Any]) -> dict[str, Any]:
         """Removes None values and converts lists to comma-separated strings.
 
         Args:
@@ -134,19 +135,19 @@ class UstaClient:
     # ──────────────────────────────────────────────────────────────────────────
     def get_compromised_credentials(
         self,
-        page: Optional[int] = None,
-        size: Optional[int] = None,
-        company_id: Optional[List[str]] = None,
-        end: Optional[str] = None,
-        is_corporate: Optional[bool] = None,
-        ordering: Optional[List[str]] = None,
-        password: Optional[str] = None,
-        password_complexity_score: Optional[List[str]] = None,
-        password_contains: Optional[List[str]] = None,
-        source: Optional[List[str]] = None,
-        start: Optional[str] = None,
-        status: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        page: int | None = None,
+        size: int | None = None,
+        company_id: list[str] | None = None,
+        end: str | None = None,
+        is_corporate: bool | None = None,
+        ordering: list[str] | None = None,
+        password: str | None = None,
+        password_complexity_score: list[str] | None = None,
+        password_contains: list[str] | None = None,
+        source: list[str] | None = None,
+        start: str | None = None,
+        status: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Fetch compromised credentials tickets using available filters.
 
         Args:
@@ -192,7 +193,7 @@ class UstaClient:
     # ──────────────────────────────────────────────────────────────────────────
     # PAGINATION HELPER — iterate through all pages
     # ──────────────────────────────────────────────────────────────────────────
-    def iter_compromised_credentials(self, **filters: Any) -> Iterator[Dict[str, Any]]:
+    def iter_compromised_credentials(self, **filters: Any) -> Iterator[dict[str, Any]]:
         """Generator that yields results from all pages automatically.
 
         Args:
