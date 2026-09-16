@@ -5,6 +5,7 @@ import pytest
 import requests_mock
 
 from sophos_module.base import SophosModule
+from sophos_module.trigger_sophos_xdr_query import SophosXDRQueryTrigger
 from sophos_module.trigger_sophos_xdr_query import SophosXDRIOCQuery
 
 
@@ -389,3 +390,32 @@ def test_observe_items_events_lag_with_calendar_time_camel_case(trigger):
             {"calendarTime": "2023-07-03T11:22:45.000Z"},
         ]
     )
+
+
+def test_run_compatible_query_failed_after_all_templates(trigger):
+    trigger.post_query = Mock(return_value=("failed", None))
+
+    result, query_id = trigger.run_compatible_query()
+
+    assert (result, query_id) == ("failed", None)
+    assert trigger.post_query.call_count == len(trigger.queries)
+    assert trigger.log.call_count >= 1
+
+
+def test_parse_timestamp_handles_invalid_values(trigger):
+    assert trigger._parse_timestamp(None) is None
+    assert trigger._parse_timestamp(123) is None
+    assert trigger._parse_timestamp("") is None
+    assert trigger._parse_timestamp("not-a-date") is None
+
+
+def test_extract_event_timestamp_falls_back_to_created_at(trigger):
+    item = {"createdAt": "2023-07-03T11:28:45.000Z"}
+
+    assert trigger._extract_event_timestamp(item) is not None
+
+
+def test_base_queries_property_default_behavior(trigger):
+    base_queries = SophosXDRQueryTrigger.queries.fget(trigger)
+
+    assert base_queries == [trigger.query]
