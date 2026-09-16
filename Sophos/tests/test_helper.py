@@ -9,6 +9,14 @@ def test_translate_fields():
     }
 
 
+def test_translate_fields_with_created_at_camel_case():
+    assert translate_fields({"name": "name", "source": "source", "createdAt": "createdAt"}) == {
+        "name": "name",
+        "suser": "source",
+        "rt": "createdAt",
+    }
+
+
 def test_strip_null_values():
     assert strip_null_values({"name1": "value1", "name2": None, "name3": "value3"}) == {
         "name1": "value1",
