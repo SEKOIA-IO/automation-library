@@ -1,0 +1,48 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Anozrway",
+    "type": "object",
+    "properties": {
+      "anozrway_base_url": {
+        "type": "string",
+        "description": "Anozrway API base URL",
+        "default": "https://balise.anozrway.com"
+      },
+      "anozrway_token_url": {
+        "type": "string",
+        "description": "Anozrway OAuth2 token URL",
+        "default": "https://auth.anozrway.com/oauth2/token"
+      },
+      "anozrway_client_id": {
+        "type": "string",
+        "description": "Anozrway OAuth2 Client ID"
+      },
+      "anozrway_client_secret": {
+        "type": "string",
+        "description": "Anozrway OAuth2 Client Secret",
+        "secret": true
+      },
+      "anozrway_x_restrict_access_token": {
+        "type": "string",
+        "description": "Anozrway additional authorization token (x-restrict-access header)",
+        "secret": true
+      },
+      "timeout_seconds": {
+        "type": "integer",
+        "description": "HTTP timeout in seconds",
+        "default": 30,
+        "minimum": 1,
+        "maximum": 120
+      }
+    },
+    "required": ["anozrway_client_id", "anozrway_client_secret"],
+    "secrets": ["anozrway_client_secret", "anozrway_x_restrict_access_token"]
+  },
+  "description": "Anozrway provides domain-based breach and leak intelligence through a secured API.",
+  "name": "Anozrway",
+  "slug": "anozrway",
+  "uuid": "a07647cb-d88b-4c62-9012-72d5e50d26d2",
+  "version": "1.0.0",
+  "categories": ["Threat Intelligence"]
+}
