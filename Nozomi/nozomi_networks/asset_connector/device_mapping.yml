@@ -1,0 +1,197 @@
+mapping:
+  ocsf_class: "Device Inventory Info"
+  class_uid: 5001
+  ocsf_version: "1.5.0"
+
+  samples:
+    - name: "Nozomi Guardian asset (controller)"
+      description: "Raw asset returned by the Guardian/CMC query API (query=assets)"
+      data: |
+        {
+          "name": "AC 800M PM851",
+          "id": "9e917f4e-e542-4e25-9715-74883145c532",
+          "ip": ["192.168.196.234"],
+          "mac_address": ["00:00:23:18:28:42"],
+          "mac_vendor": ["ABB"],
+          "os": "",
+          "roles": ["producer"],
+          "vendor": "ABB",
+          "firmware_version": "5.1.100.13",
+          "product_name": "AC 800M PM851",
+          "serial_number": "",
+          "type": "controller",
+          "protocols": ["cotp", "mms"],
+          "zones": ["Production_B"],
+          "levels": ["2"],
+          "created_at": "1724888822710",
+          "last_activity_time": "1789542303500",
+          "device_id": "d648bf95-cdd8-4985-a4ab-631ea594fccb"
+        }
+
+  fields:
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      logic: "Always 2 for the 'Collect' activity"
+      description: "OCSF activity ID"
+    - source: "static: Collect"
+      target: "activity_name"
+      type: "string"
+      logic: "Constant"
+      description: "OCSF activity name"
+    - source: "static: Discovery"
+      target: "category_name"
+      type: "string"
+      logic: "Constant"
+      description: "OCSF category name"
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      logic: "Constant"
+      description: "OCSF category UID"
+    - source: "static: Device Inventory Info"
+      target: "class_name"
+      type: "string"
+      logic: "Constant"
+      description: "OCSF class name"
+    - source: "static: 5001"
+      target: "class_uid"
+      type: "integer"
+      logic: "Constant"
+      description: "OCSF class UID"
+    - source: "static: Device Inventory Info: Collect"
+      target: "type_name"
+      type: "string"
+      logic: "Constant"
+      description: "OCSF type name"
+    - source: "static: 500102"
+      target: "type_uid"
+      type: "integer"
+      logic: "Constant"
+      description: "OCSF type UID"
+    - source: "asset.created_at"
+      target: "time"
+      type: "timestamp"
+      logic: "Convert epoch-milliseconds string to Unix epoch seconds; falls back to now() if missing"
+      description: "OCSF event timestamp"
+
+    - source: "asset.id"
+      target: "device.uid"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Unique device identifier"
+    - source: "asset.name || asset.id"
+      target: "device.hostname"
+      type: "string"
+      logic: "Use asset name, fall back to id (hostname is required)"
+      description: "Device hostname"
+    - source: "asset.name"
+      target: "device.name"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Device name"
+    - source: "asset.type"
+      target: "device.type / device.type_id"
+      type: "string"
+      logic: "Map Nozomi asset type to OCSF DeviceTypeId (server->1, desktop/workstation->2, mobile->5, virtual->6, firewall->9, switch->10, unknown type->OTHER 99, missing->UNKNOWN 0)"
+      description: "OCSF device type"
+    - source: "asset.os"
+      target: "device.os.name / device.os.type / device.os.type_id"
+      type: "string"
+      logic: "Normalize os string to OCSF OSTypeStr/OSTypeId; unknown value->OTHER; empty->os omitted"
+      description: "Operating system"
+    - source: "asset.ip[0]"
+      target: "device.ip"
+      type: "string"
+      logic: "First IP address of the asset"
+      description: "Primary IP address"
+    - source: "asset.ip[] + asset.mac_address[0]"
+      target: "device.network_interfaces[]"
+      type: "object"
+      logic: "One wired NetworkInterface per IP, all sharing the first MAC address; MAC-only assets yield a single interface"
+      description: "Network interfaces"
+    - source: "asset.vendor || asset.mac_vendor[0]"
+      target: "device.vendor_name"
+      type: "string"
+      logic: "Use vendor, fall back to first mac_vendor"
+      description: "Device vendor"
+    - source: "asset.product_name"
+      target: "device.model"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Device model / product name"
+    - source: "asset.created_at"
+      target: "device.created_time / device.first_seen_time"
+      type: "timestamp"
+      logic: "Convert epoch-milliseconds string to Unix epoch seconds"
+      description: "Creation / first seen time"
+    - source: "asset.last_activity_time"
+      target: "device.last_seen_time"
+      type: "timestamp"
+      logic: "Convert epoch-milliseconds string to Unix epoch seconds"
+      description: "Last seen time"
+
+    - source: "asset.firmware_version"
+      target: "enrichments[] (name=firmware_version)"
+      type: "string"
+      logic: "Added as enrichment when present"
+      description: "Firmware version enrichment"
+    - source: "asset.serial_number"
+      target: "enrichments[] (name=serial_number)"
+      type: "string"
+      logic: "Added as enrichment when present"
+      description: "Serial number enrichment"
+    - source: "asset.zones / asset.roles / asset.protocols / asset.levels"
+      target: "enrichments[]"
+      type: "string"
+      logic: "Each non-empty list is joined with ', ' and added as a named enrichment"
+      description: "OT context enrichments"
+
+  ocsf_samples:
+    - name: "Transformed OCSF Device"
+      description: "The OCSF Device inventory output after transformation"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "Device Inventory Info",
+          "class_uid": 5001,
+          "type_name": "Device Inventory Info: Collect",
+          "type_uid": 500102,
+          "time": 1724888822.71,
+          "metadata": {
+            "product": {"name": "Nozomi Networks", "version": "1.0.0"},
+            "version": "1.5.0"
+          },
+          "device": {
+            "type": "Other",
+            "type_id": 99,
+            "uid": "9e917f4e-e542-4e25-9715-74883145c532",
+            "hostname": "AC 800M PM851",
+            "name": "AC 800M PM851",
+            "ip": "192.168.196.234",
+            "network_interfaces": [
+              {
+                "hostname": "AC 800M PM851",
+                "ip": "192.168.196.234",
+                "mac": "00:00:23:18:28:42",
+                "type": "Wired",
+                "type_id": 1
+              }
+            ],
+            "vendor_name": "ABB",
+            "model": "AC 800M PM851",
+            "created_time": 1724888822.71,
+            "first_seen_time": 1724888822.71,
+            "last_seen_time": 1789542303.5
+          },
+          "enrichments": [
+            {"name": "firmware_version", "value": "5.1.100.13"},
+            {"name": "zones", "value": "Production_B"},
+            {"name": "roles", "value": "producer"},
+            {"name": "protocols", "value": "cotp, mms"},
+            {"name": "levels", "value": "2"}
+          ]
+        }
