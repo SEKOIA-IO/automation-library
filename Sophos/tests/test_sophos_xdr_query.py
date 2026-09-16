@@ -377,11 +377,7 @@ def test_getting_results_with_compatibility_fallback_query(
 
         trigger.getting_results("7")
 
-        query_calls = [
-            call
-            for call in mock.request_history
-            if call.method == "POST" and call.url == url
-        ]
+        query_calls = [call for call in mock.request_history if call.method == "POST" and call.url == url]
         assert len(query_calls) == 2
         assert trigger.push_events_to_intakes.call_count == 1
 
