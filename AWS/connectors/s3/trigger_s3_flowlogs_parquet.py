@@ -62,7 +62,7 @@ class BaseAwsS3FlowLogsParquetRecordsTrigger:
                 if not self.check_all_ips_are_private(record, ("srcaddr", "dstaddr")):
                     yield orjson.dumps(record).decode("utf-8")
                 else:
-                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc()
 
 
 class AwsS3FlowLogsParquetRecordsTrigger(
