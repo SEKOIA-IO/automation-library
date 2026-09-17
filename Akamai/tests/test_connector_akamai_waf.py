@@ -993,3 +993,41 @@ def test_next_batch_deduplicates_missing_request_id_when_timestamp_is_invalid(tr
         trigger.next_batch()
 
     assert trigger.push_events_to_intakes.call_count == 1
+
+
+def test_scalability_labels_reads_descriptor(trigger):
+    labels = trigger.scalability_labels
+
+    assert labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "true",
+    }
+
+
+def test_scalability_labels_fallback_on_read_error(trigger):
+    with patch("akamai_modules.connector_akamai_waf.Path.read_bytes") as mock_read:
+        mock_read.side_effect = FileNotFoundError
+
+        labels = trigger.scalability_labels
+
+    assert labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "false",
+    }
+
+
+def test_scalability_labels_falls_back_to_trigger(trigger):
+    real_read_bytes = Path.read_bytes
+
+    def fake_read_bytes(self):
+        if self.name == "connector_akamai_waf_logs.json":
+            return orjson.dumps({"docker_parameters": "akamai_waf_logs"})
+        return real_read_bytes(self)
+
+    with patch("akamai_modules.connector_akamai_waf.Path.read_bytes", autospec=True, side_effect=fake_read_bytes):
+        labels = trigger.scalability_labels
+
+    assert labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "true",
+    }
