@@ -1,0 +1,89 @@
+name: viewHostDiff
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.base_url}}/v2/hosts/{{inputs.ip}}/diff'
+      auth:
+        basic:
+          username: '{{inputs.username}}'
+          password: '{{inputs.password}}'
+      params:
+        ip_b: '{{inputs.ip_b}}'
+        at_time: '{{inputs.at_time}}'
+        at_time_b: '{{inputs.at_time_b}}'
+    asserts:
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: You must authenticate with a valid API ID and secret.
+      error_422:
+        predicate: '{{response.status_code != 422}}'
+        fail: Invalid IP address.
+      error_429:
+        predicate: '{{response.status_code != 429}}'
+        fail: Too many requests.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: 'The diff endpoint generates a JSONPatch (RFC6902) formatted patch by
+  comparing a host against another host (or itself) at
+
+  optionally given points in time.
+
+
+  The host as specified by the IP in the path and the `at_time` parameter is referred
+  to as the original host, or simply "A".
+
+  The host specified by the parameters `ip_b` and `at_time_b` is referred to as "B".
+
+
+  The differential generated provides a sequence of steps needed to transform Host
+  A into Host B.
+
+  '
+inputs:
+  ip_b:
+    type: string
+    description: The IP Address of the other host. If not set, defaults to the host
+      provided in the path. Referred to as Host B.
+  ip:
+    type: string
+    description: The IP Address of the requested host.
+  at_time:
+    type: string
+    description: "Fetches the Censys view of a host and its services at the specified\
+      \ point in time. Requires historical API access. \nNanosecond precision is allowed.\
+      \ Uses RFC3339 Timestamp."
+  at_time_b:
+    type: string
+    description: 'The point in time used as the basis for Host B.
+
+
+      Requires historical API access.
+
+      Nanosecond precision is allowed. Uses RFC3339 Timestamp.
+
+      '
+  password:
+    type: string
+    description: The password for basic authentication
+    default: '{{password}}'
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://search.censys.io/api
+  username:
+    type: string
+    description: The username for basic authentication
+    default: '{{username}}'

@@ -1,0 +1,63 @@
+name: getHostsByCert
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.base_url}}/v2/certificates/{{inputs.fingerprint}}/hosts'
+      auth:
+        basic:
+          username: '{{inputs.username}}'
+          password: '{{inputs.password}}'
+      params:
+        cursor: '{{inputs.cursor}}'
+    asserts:
+      error_429:
+        predicate: '{{response.status_code != 429}}'
+        fail: Too many requests.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: "_This API endpoint is __deprecated__ and scheduled for removal during\
+  \ a future release._\nUsers should migrate to using the search endpoint on the Host\
+  \ index using the `services.certificate: {fingerprint}` query\nto find any hosts\
+  \ currently presenting a certificate.\n\nReturns a list of hosts which contain services\
+  \ presenting this certificate,\nincluding when the certificate was first observed.\n\
+  \n**Cursor Pagination**\n\nThis endpoint relies on using cursors for efficient pagination.\
+  \ Each result may\nreturn a `next` cursor value which can be used to fetch additional\
+  \ pages of results.\nThis endpoint only support forward-pagination.\n\n```json\n\
+  {\n  \"links\": {\n    \"next\": \"nextCursorToken\"\n  },\n  [Rest of Response]\n\
+  }\n```\nThe returned cursor token values can be added to the endpoint as a `cursor`\n\
+  parameter to fetch the next page of results.\nThe entire set of results can be iterated\
+  \ page-by-page using returned\ncursors. If no cursor is given, the first page will\
+  \ be returned.\n"
+inputs:
+  password:
+    type: string
+    description: The password for basic authentication
+    default: '{{password}}'
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://search.censys.io/api
+  cursor:
+    type: string
+    description: Cursor token from the API response, which fetches the next or previous
+      page of hits when added to the endpoint URL.
+  fingerprint:
+    type: string
+    description: The SHA-256 fingerprint of the requested certificate.
+  username:
+    type: string
+    description: The username for basic authentication
+    default: '{{username}}'

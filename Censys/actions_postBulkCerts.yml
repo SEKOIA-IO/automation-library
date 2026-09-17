@@ -1,0 +1,65 @@
+name: postBulkCerts
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.base_url}}/v2/certificates/bulk'
+      auth:
+        basic:
+          username: '{{inputs.username}}'
+          password: '{{inputs.password}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Bad Request.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: You must authenticate with a valid API ID and secret.
+      error_422:
+        predicate: '{{response.status_code != 422}}'
+        fail: Invalid SHA-256 fingerprint.
+      error_429:
+        predicate: '{{response.status_code != 429}}'
+        fail: Too many requests.
+      error_500:
+        predicate: '{{response.status_code != 500}}'
+        fail: An unexpected error occurred when trying to execute your query. Try
+          again at a later time or contact us at [support@censys.io](mailto:support@censys.io)
+          if the problem persists.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: "Fetches the certificate records for the specified SHA-256 fingerprints,\
+  \ including parsed data, certificate transparency log information, root store trust\
+  \ information, zlint results, and Censys observation metadata. \n\n If found, each\
+  \ requested certificate will be available in the list of returned certificates.\
+  \ If a certificate is not present in the dataset and is not found, it will be omitted\
+  \ from the list of results. If all certificates cannot be found, an empty list will\
+  \ be returned."
+inputs:
+  password:
+    type: string
+    description: The password for basic authentication
+    default: '{{password}}'
+  username:
+    type: string
+    description: The username for basic authentication
+    default: '{{username}}'
+  fingerprints:
+    type: array
+    description: The SHA-256 fingerprints of the requested certificate records.
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://search.censys.io/api
