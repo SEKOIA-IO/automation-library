@@ -391,7 +391,9 @@ class AkamaiWAFLogsConnector(Connector):
                         events_in_page += 1
 
                         if len(chunk) >= self.chunk_size:
-                            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(chunk))
+                            INCOMING_MESSAGES.labels(
+                                intake_key=self.configuration.intake_key, **self.scalability_labels
+                            ).inc(len(chunk))
                             yield chunk
                             chunk = []
 
@@ -413,7 +415,9 @@ class AkamaiWAFLogsConnector(Connector):
                         if events_in_page > 0:
                             # Yield remaining events that didn't fill a full chunk
                             if chunk:
-                                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(chunk))
+                                INCOMING_MESSAGES.labels(
+                                    intake_key=self.configuration.intake_key, **self.scalability_labels
+                                ).inc(len(chunk))
                                 yield chunk
                                 chunk = []
 
@@ -433,7 +437,9 @@ class AkamaiWAFLogsConnector(Connector):
                                 ),
                                 level="info",
                             )
-                            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
+                            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
+                                0
+                            )
                             return
 
             if offset is None:
@@ -644,7 +650,9 @@ class AkamaiWAFLogsConnector(Connector):
                     ),
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(batch_of_events)
+                )
 
                 self.push_events_to_intakes(events=batch_of_events)
                 self.save_events_cache()
@@ -670,7 +678,9 @@ class AkamaiWAFLogsConnector(Connector):
             ),
             level="debug",
         )
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            batch_duration
+        )
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
