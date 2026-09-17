@@ -14,7 +14,12 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from . import OnePasswordModule
 from .client import ApiClient
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+)
 
 
 class OnePasswordConnectorConfiguration(DefaultConnectorConfiguration):
@@ -26,7 +31,7 @@ class OnePasswordEndpoint(Thread):
     METHOD_URI: str
     FEATURE_NAME: str
 
-    def __init__(self, connector: OnePasswordConnector) -> None:
+    def __init__(self, connector: "OnePasswordConnector") -> None:
         super().__init__()
         self._stop_event = Event()
         self.name = self.FEATURE_NAME
@@ -79,20 +84,30 @@ class OnePasswordEndpoint(Thread):
             events = page.get("items", [])
 
             if len(events) > 0:
-                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.name).inc(
-                    len(events)
-                )
+                INCOMING_MESSAGES.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.name,
+                    **self.connector.scalability_labels,
+                ).inc(len(events))
                 yield events
 
             else:
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(0)
+                EVENTS_LAG.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.name,
+                    **self.connector.scalability_labels,
+                ).set(0)
                 return
 
             # Stop once the API signals there are no more pages. The cursor returned with
             # `has_more=false` is a reset cursor meant for the next polling cycle; re-using it
             # here would re-deliver already-seen events and produce duplicates.
             if not page.get("has_more", False):
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(0)
+                EVENTS_LAG.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.name,
+                    **self.connector.scalability_labels,
+                ).set(0)
                 return
 
             data = {"cursor": page["cursor"]}
@@ -121,9 +136,11 @@ class OnePasswordEndpoint(Thread):
 
             now = datetime.now(UTC)
             current_lag = now - most_recent_date_seen
-            EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(
-                int(current_lag.total_seconds())
-            )
+            EVENTS_LAG.labels(
+                intake_key=self.connector.configuration.intake_key,
+                type=self.name,
+                **self.connector.scalability_labels,
+            ).set(int(current_lag.total_seconds()))
 
     def next_batch(self) -> None:
         # save the starting time
@@ -139,9 +156,11 @@ class OnePasswordEndpoint(Thread):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.name).inc(
-                    len(batch_of_events)
-                )
+                OUTCOMING_EVENTS.labels(
+                    intake_key=self.connector.configuration.intake_key,
+                    type=self.name,
+                    **self.connector.scalability_labels,
+                ).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -154,9 +173,11 @@ class OnePasswordEndpoint(Thread):
         # get the ending time and compute the duration to fetch the events
         batch_duration = int(batch_end_time - batch_start_time)
 
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.name).observe(
-            batch_duration
-        )
+        FORWARD_EVENTS_DURATION.labels(
+            intake_key=self.connector.configuration.intake_key,
+            type=self.name,
+            **self.connector.scalability_labels,
+        ).observe(batch_duration)
 
         self.log(
             message=f"{self.name}: Fetched and forwarded events in {batch_duration} seconds",
@@ -218,6 +239,23 @@ class OnePasswordConnector(Connector):
     @cached_property
     def client(self) -> ApiClient:
         return ApiClient(api_token=self.module.configuration.api_token)
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from the connector descriptor (JSON file)."""
+        descriptor_file = Path(__file__).resolve().parent.parent / "connector_1password_epm.json"
+        try:
+            loaded_file = orjson.loads(descriptor_file.read_bytes())
+        except (OSError, orjson.JSONDecodeError):
+            loaded_file = {}
+
+        labels = loaded_file.get("labels", {})
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     @cached_property
     def get_allowed_endpoints(self) -> list:

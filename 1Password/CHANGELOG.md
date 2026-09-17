@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-11 - 1.1.7
+
+### Fixed
+
+- Add scalability labels to prometheus metrics.
+
 ## 2026-09-11 - 1.1.6
 
 ### Fixed

@@ -182,3 +182,24 @@ def test_stop_consumers(trigger):
 
     assert consumers["auditevents"] is not None
     assert consumers["auditevents"].stop.called
+
+
+def test_scalability_labels_reads_descriptor(trigger):
+    labels = trigger.scalability_labels
+
+    assert labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "true",
+    }
+
+
+def test_scalability_labels_fallback_on_read_error(trigger):
+    with patch("onepassword_modules.connector_1password_epm.Path.read_bytes") as mock_read:
+        mock_read.side_effect = FileNotFoundError
+
+        labels = trigger.scalability_labels
+
+    assert labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "false",
+    }
