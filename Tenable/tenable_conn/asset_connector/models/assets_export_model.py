@@ -115,6 +115,7 @@ class AwsCloud(BaseModel):
 class AzureCloud(BaseModel):
     vm_id: Optional[str] = None
     resource_id: Optional[str] = None
+    location: Optional[str] = None
 
 
 class GcpCloud(BaseModel):
