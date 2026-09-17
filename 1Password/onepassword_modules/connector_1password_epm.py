@@ -253,7 +253,7 @@ class OnePasswordConnector(Connector):
         for descriptor in descriptors:
             try:
                 loaded_file = orjson.loads(descriptor.read_bytes())
-            except (OSError, orjson.JSONDecodeError):
+            except OSError, orjson.JSONDecodeError:
                 continue
             labels = loaded_file.get("labels", {})
             if labels:
