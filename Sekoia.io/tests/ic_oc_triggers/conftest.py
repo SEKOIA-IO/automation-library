@@ -15,6 +15,7 @@ from .samples import (
     samplenotif_case_updated,  # noqa: F401
     samplenotif_case_has_new_alert,  # noqa: F401
     samplenotif_case_has_updated_alerts,  # noqa: F401
+    samplenotif_case_comment_created,  # noqa: F401
     sample_case_notifications,  # noqa: F401
     sample_siccaseapi,  # noqa: F401
 )
