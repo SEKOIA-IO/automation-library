@@ -56,12 +56,12 @@ class BeyondTrustPRAPlatformConnector(BeyondTrustBaseConnector):
             return
 
         if "<error" in response.text and self.NO_DATA_ERROR_MESSAGE in response.text:
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
             # Just no new events for the requested interval.
             return
 
         if self._check_xml_error(response):
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
             return
 
         sessions_ids = parse_session_list(response.content)
@@ -78,7 +78,7 @@ class BeyondTrustPRAPlatformConnector(BeyondTrustBaseConnector):
                 most_recent_date_seen = session_end_time
 
             parsed_events = parse_session(response.content)
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(parsed_events))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(parsed_events))
 
             self.sessions_cache[session_id] = 1
             yield parsed_events
@@ -91,4 +91,4 @@ class BeyondTrustPRAPlatformConnector(BeyondTrustBaseConnector):
 
             now = int(datetime.now(timezone.utc).timestamp())
             current_lag = now - most_recent_date_seen
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)

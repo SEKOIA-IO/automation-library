@@ -1,7 +1,8 @@
 import time
 from abc import abstractmethod
 from functools import cached_property
-from typing import Generator
+from pathlib import Path
+from typing import Any, Generator
 
 import orjson
 import requests
@@ -14,6 +15,42 @@ from .metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 class BeyondTrustBaseConnector(Connector):
     module: BeyondTrustModule
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from the running connector descriptor.
+
+        The module exposes several connectors, so the descriptor is identified by
+        matching its ``docker_parameters`` with the command used to start the pod.
+        The connector descriptor is preferred, with a fallback to the trigger one.
+        """
+        command = self.module.command
+        labels: dict[str, Any] = {}
+
+        if command:
+            module_dir = Path(__file__).resolve().parent.parent
+            descriptors = sorted(
+                module_dir.glob("*.json"),
+                key=lambda path: 0 if path.name.startswith("connector_") else 1,
+            )
+            for descriptor in descriptors:
+                try:
+                    data = orjson.loads(descriptor.read_bytes())
+                except (OSError, orjson.JSONDecodeError):
+                    continue
+                if data.get("docker_parameters") != command:
+                    continue
+                descriptor_labels = data.get("labels", {})
+                if descriptor_labels:
+                    labels = descriptor_labels
+                    break
+
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     @cached_property
     def client(self) -> ApiClient:
@@ -66,7 +103,7 @@ class BeyondTrustBaseConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -77,7 +114,7 @@ class BeyondTrustBaseConnector(Connector):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         self.log(message=f"Fetched and forwarded events in {batch_duration} seconds", level="info")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
 
         delta_sleep = self.configuration.frequency - batch_duration
         if delta_sleep > 0:
