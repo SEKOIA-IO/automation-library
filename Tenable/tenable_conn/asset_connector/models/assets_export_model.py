@@ -150,6 +150,7 @@ class AssetExportV2(BaseModel):
     """
 
     id: str
+    name: Optional[str] = None  # Not part of AssetExportV2 model
     has_agent: Optional[bool] = None
     has_plugin_results: Optional[bool] = None
     agent_uuid: Optional[str] = None
