@@ -2,7 +2,8 @@ import asyncio
 import time
 from asyncio import Queue
 from datetime import UTC, datetime, timedelta
-from functools import reduce
+from functools import cached_property, reduce
+from pathlib import Path
 from typing import Any, cast
 
 import orjson
@@ -120,6 +121,32 @@ class PullFindingsConnector(AsyncConnector):
 
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """Get scalability labels from the connector descriptor, falling back to the trigger."""
+        module_dir = Path(__file__).resolve().parent.parent
+        descriptors = [
+            module_dir / "connector_pull_findings.json",
+            module_dir / "trigger_pull_findings.json",
+        ]
+
+        labels: dict[str, Any] = {}
+        for descriptor in descriptors:
+            try:
+                data = orjson.loads(descriptor.read_bytes())
+            except (OSError, orjson.JSONDecodeError):
+                continue
+            labels = data.get("labels", {})
+            if labels:
+                break
+
+        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
+        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
+        return {
+            "scalable_horizontally": scalable_horizontally,
+            "scalable_vertically": scalable_vertically,
+        }
 
     def get_checkpoint(self) -> Checkpoint:
         """
@@ -281,14 +308,14 @@ class PullFindingsConnector(AsyncConnector):
                         logger.info("No new events to forward")
 
                     # report the lag
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
 
                     # report the number of forwarded events
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result_count)
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(result_count)
 
                     # compute and report the duration to fetch the events
                     batch_duration = int(processing_end - processing_start)
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
 
                     # compute the remaining sleeping time. If greater than 0, sleep
                     delta_sleep = self.configuration.frequency - batch_duration
