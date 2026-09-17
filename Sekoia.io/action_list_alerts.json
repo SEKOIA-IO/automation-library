@@ -70,7 +70,13 @@
       },
       "match[title]": {
         "in": "query",
-        "type": "string"
+        "type": "string",
+        "description": "Match alerts by their custom title (separated by commas). Alerts without a custom title are not matched: use match[resolved_title] to match the title displayed on the alert."
+      },
+      "match[resolved_title]": {
+        "in": "query",
+        "type": "string",
+        "description": "Match alerts by the title displayed on the alert: the custom title if present, otherwise the rule name (separated by commas)."
       },
       "match[asset_uuid]": {
         "in": "query",
@@ -95,6 +101,11 @@
       "match[verdict_uuid]": {
         "in": "query",
         "type": "string"
+      },
+      "match[custom_field]": {
+        "in": "query",
+        "type": "string",
+        "description": "Match alerts by a custom field value using the 'uuid:value' format (e.g. '123e4567-e89b-12d3-a456-426614174000:Phishing'), or by field existence using the custom field UUID alone."
       },
       "match[short_id]": {
         "in": "query",
