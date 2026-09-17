@@ -135,7 +135,7 @@ class PullFindingsConnector(AsyncConnector):
         for descriptor in descriptors:
             try:
                 data = orjson.loads(descriptor.read_bytes())
-            except (OSError, orjson.JSONDecodeError):
+            except OSError, orjson.JSONDecodeError:
                 continue
             labels = data.get("labels", {})
             if labels:
@@ -308,14 +308,20 @@ class PullFindingsConnector(AsyncConnector):
                         logger.info("No new events to forward")
 
                     # report the lag
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
+                        current_lag
+                    )
 
                     # report the number of forwarded events
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(result_count)
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                        result_count
+                    )
 
                     # compute and report the duration to fetch the events
                     batch_duration = int(processing_end - processing_start)
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
+                    FORWARD_EVENTS_DURATION.labels(
+                        intake_key=self.configuration.intake_key, **self.scalability_labels
+                    ).observe(batch_duration)
 
                     # compute the remaining sleeping time. If greater than 0, sleep
                     delta_sleep = self.configuration.frequency - batch_duration
