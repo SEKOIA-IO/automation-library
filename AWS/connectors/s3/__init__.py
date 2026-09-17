@@ -124,9 +124,9 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                 if not message_records:
                     continue_receiving = False
 
-                INCOMING_EVENTS.labels(
-                    intake_key=self.configuration.intake_key, **self.scalability_labels
-                ).inc(len(message_records))
+                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(message_records)
+                )
                 for record in message_records:
                     try:
                         s3_bucket, s3_key = self._get_object_from_notification(record)
@@ -247,9 +247,9 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
             last_processed = key
 
-            INCOMING_EVENTS.labels(
-                intake_key=self.configuration.intake_key, **self.scalability_labels
-            ).inc(len(object_records))
+            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(object_records)
+            )
             records.extend(object_records)
 
             if len(records) >= self.limit_of_events_to_push:

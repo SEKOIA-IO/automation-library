@@ -95,9 +95,9 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
                     processing_end = time.time()
                     batch_duration = processing_end - processing_start
 
-                    OUTCOMING_EVENTS.labels(
-                        intake_key=self.configuration.intake_key, **self.scalability_labels
-                    ).inc(message_count)
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                        message_count
+                    )
                     FORWARD_EVENTS_DURATION.labels(
                         intake_key=self.configuration.intake_key, **self.scalability_labels
                     ).observe(processing_end - processing_start)
@@ -123,9 +123,9 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
                         ).observe(0)
 
                     # report the current lag
-                    EVENTS_LAG.labels(
-                        intake_key=self.configuration.intake_key, **self.scalability_labels
-                    ).set(current_lag)
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
+                        current_lag
+                    )
 
                     # compute the remaining sleeping time. If greater than 0 and no messages were fetched, sleep
                     delta_sleep = self.configuration.frequency - batch_duration
