@@ -120,7 +120,9 @@ class BeyondTrustPRASyslogConnector(BeyondTrustBaseConnector):
 
                     now = int(datetime.now(timezone.utc).timestamp())
                     current_lag = now - most_recent_timestamp
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
+                        current_lag
+                    )
             except zipfile.BadZipFile:
                 self.log("Downloaded content is not a valid ZIP archive", level="warning")
                 return
@@ -139,7 +141,9 @@ class BeyondTrustPRASyslogConnector(BeyondTrustBaseConnector):
                     message=f"Forwarded {len(events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                    len(events)
+                )
                 self.push_events_to_intakes(events=events)
             else:
                 self.log(
@@ -150,7 +154,9 @@ class BeyondTrustPRASyslogConnector(BeyondTrustBaseConnector):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         self.log(message=f"Fetched and forwarded events in {batch_duration} seconds", level="info")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).observe(
+            batch_duration
+        )
 
         delta_sleep = self.configuration.frequency - batch_duration
         if delta_sleep > 0:

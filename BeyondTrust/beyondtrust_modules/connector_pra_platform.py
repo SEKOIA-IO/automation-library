@@ -78,7 +78,9 @@ class BeyondTrustPRAPlatformConnector(BeyondTrustBaseConnector):
                 most_recent_date_seen = session_end_time
 
             parsed_events = parse_session(response.content)
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(len(parsed_events))
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(parsed_events)
+            )
 
             self.sessions_cache[session_id] = 1
             yield parsed_events
