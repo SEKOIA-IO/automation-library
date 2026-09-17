@@ -242,14 +242,23 @@ class OnePasswordConnector(Connector):
 
     @cached_property
     def scalability_labels(self) -> dict[str, str]:
-        """Get scalability labels from the connector descriptor (JSON file)."""
-        descriptor_file = Path(__file__).resolve().parent.parent / "connector_1password_epm.json"
-        try:
-            loaded_file = orjson.loads(descriptor_file.read_bytes())
-        except (OSError, orjson.JSONDecodeError):
-            loaded_file = {}
+        """Get scalability labels from the connector descriptor, falling back to the trigger."""
+        module_dir = Path(__file__).resolve().parent.parent
+        descriptors = [
+            module_dir / "connector_1password_epm.json",
+            module_dir / "trigger_1password_epm.json",
+        ]
 
-        labels = loaded_file.get("labels", {})
+        labels: dict[str, Any] = {}
+        for descriptor in descriptors:
+            try:
+                loaded_file = orjson.loads(descriptor.read_bytes())
+            except (OSError, orjson.JSONDecodeError):
+                continue
+            labels = loaded_file.get("labels", {})
+            if labels:
+                break
+
         scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
         scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
         return {
