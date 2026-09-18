@@ -10,7 +10,11 @@ import orjson
 import pandas as pd
 
 from aws_helpers.utils import AsyncReader
-from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3LogsBaseConfiguration, AwsS3QueuedConfiguration
+from connectors.s3 import (
+    AbstractAwsS3QueuedConnector,
+    AwsS3LogsBaseConfiguration,
+    AwsS3QueuedConfiguration,
+)
 from connectors.s3.provider import AwsAccountProvider
 
 
@@ -149,7 +153,7 @@ class BaseAwsS3CloudFrontTrigger:
         # Starting records from second element, skipping version
         kv_records = self.data_to_kv(records[1:])
 
-        for record in list(islice(self.logs_aggregation(kv_records), self.configuration.skip_first, None)):
+        for record in islice(self.logs_aggregation(kv_records), self.configuration.skip_first, None):
             yield record
 
 
