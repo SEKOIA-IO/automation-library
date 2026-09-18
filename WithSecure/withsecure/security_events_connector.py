@@ -1,8 +1,8 @@
 import time
 from collections.abc import Generator
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from typing import Any, Optional
+from typing import Any
 
 import orjson
 import requests
@@ -13,7 +13,12 @@ from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 from withsecure import WithSecureModule
 from withsecure.client import ApiClient
-from withsecure.constants import API_FETCH_EVENTS_PAGE_SIZE, API_SECURITY_EVENTS_URL, API_TIMEOUT
+from withsecure.constants import (
+    API_FETCH_EVENTS_PAGE_SIZE,
+    API_SECURITY_EVENTS_MAX_RANGE,
+    API_SECURITY_EVENTS_URL,
+    API_TIMEOUT,
+)
 from withsecure.helpers import human_readable_api_exception
 from withsecure.logging import get_logger
 from withsecure.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
@@ -40,14 +45,14 @@ class SecurityEventsConnector(Connector):
     module: WithSecureModule
     configuration: SecurityEventsConnectorConfiguration
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self.from_date = self.most_recent_date_seen
 
     @property
     def most_recent_date_seen(self) -> datetime:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         with self.context as cache:
             most_recent_date_seen_str = cache.get("most_recent_date_seen")
@@ -58,7 +63,18 @@ class SecurityEventsConnector(Connector):
             # parse the most recent date seen
             most_recent_date_seen = datetime.fromisoformat(most_recent_date_seen_str)
 
-            return most_recent_date_seen
+            return self._cap_start_date(most_recent_date_seen)
+
+    def _cap_start_date(self, start_date: datetime) -> datetime:
+        """
+        Cap the start date so the persistenceTimestamp range stays within the
+        30-day window enforced by the API, even for long-running processes
+        that receive no events.
+        """
+        earliest_allowed = datetime.now(UTC) - API_SECURITY_EVENTS_MAX_RANGE
+        if start_date < earliest_allowed:
+            return earliest_allowed
+        return start_date
 
     @cached_property
     def client(self) -> ApiClient:
@@ -93,7 +109,7 @@ class SecurityEventsConnector(Connector):
                 flattened_data.append((key, value))
         return flattened_data
 
-    def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
+    def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]]]:
         """
         Fetch all the events that occurred after the specified from date
         """
@@ -119,7 +135,7 @@ class SecurityEventsConnector(Connector):
             # Remove null bytes if any
             unnulled_value = response.content.replace(b"\x00", b"")
 
-            # If messages aren’t valid UTF-8 message, replace invalid characters.
+            # If messages aren't valid UTF-8 message, replace invalid characters.
             decoded_value = unnulled_value.decode("utf-8", "replace")
 
             payload = orjson.loads(decoded_value)
@@ -154,8 +170,10 @@ class SecurityEventsConnector(Connector):
             except Exception as any_exception:
                 raise FetchEventsException(human_readable_api_exception(any_exception))
 
-    def fetch_events(self) -> Generator[list[dict[str, Any]], None, None]:
-        most_recent_date_seen = self.from_date
+    def fetch_events(self) -> Generator[list[dict[str, Any]]]:
+        # Re-apply the 30-day cap on each batch so a long-running process
+        # without new events never sends a range exceeding the API limit.
+        most_recent_date_seen = self._cap_start_date(self.from_date)
 
         try:
             for next_events in self.__fetch_next_events(most_recent_date_seen):
@@ -180,7 +198,7 @@ class SecurityEventsConnector(Connector):
                 cache["most_recent_date_seen"] = most_recent_date_seen.isoformat()
 
             # Update the current lag only if the most_recent_date_seen was updated
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             current_lag = now - most_recent_date_seen
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
 
