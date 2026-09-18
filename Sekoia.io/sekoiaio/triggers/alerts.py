@@ -1123,7 +1123,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
         start_time = time.time()
 
-        # Poll until job is done (status 0=pending, 1=running, 2+=done).
+        # Poll until job is done (status 0=pending, 1=running, 2=succeeded, 3+=failed).
         # Transient errors (timeouts, 5xx) are logged and retried on the next
         # poll cycle to stay consistent with the other API helpers.
         while True:
@@ -1151,8 +1151,16 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                     error=str(exc),
                 )
             else:
-                if status >= 2:
+                if status == 2:
                     return True
+                if status > 2:
+                    self.log(
+                        message=f"Search job {job_uuid} ended with status {status}",
+                        level="error",
+                        job_uuid=job_uuid,
+                        status=status,
+                    )
+                    return False
 
             if time.time() - start_time > timeout:
                 self.log(
@@ -1258,7 +1266,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         job_uuid = self._trigger_event_search_job(alert_short_id, earliest_time, last_seen_at, max_events)
 
         if not self._wait_for_search_job(job_uuid):
-            self.log(message="Search job timed out", level="error", alert_uuid=alert_uuid, job_uuid=job_uuid)
+            self.log(message="Search job did not succeed", level="error", alert_uuid=alert_uuid, job_uuid=job_uuid)
             return None
 
         return self._get_search_job_results(job_uuid)
@@ -1288,7 +1296,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             job_uuid = self._trigger_event_search_job(alert_short_id, first_seen_at, last_seen_at, limit=1)
 
             if not self._wait_for_search_job(job_uuid):
-                self.log(message="Search job timed out for event counting", level="error", alert_uuid=alert_uuid)
+                self.log(message="Search job did not succeed for event counting", level="error", alert_uuid=alert_uuid)
                 return None
 
             data = self._get_search_job_events_page(job_uuid, limit=1, offset=0)

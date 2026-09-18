@@ -1201,6 +1201,24 @@ class TestAlertEventsThresholdTrigger_EventFetching:
 
         assert result is False
 
+    def test_wait_for_search_job_not_successful(self, threshold_trigger, requests_mock):
+        threshold_trigger._ensure_initialized()
+
+        job_uuid = "job-uuid-12345"
+
+        requests_mock.get(
+            f"http://fake.url/api/v1/sic/conf/events/search/jobs/{job_uuid}",
+            [
+                {"json": {"status": 1}},
+                {"json": {"status": 3}},
+            ],
+        )
+
+        with patch("time.sleep"):
+            result = threshold_trigger._wait_for_search_job(job_uuid, timeout=10)
+
+        assert result is False
+
     def test_get_search_job_results_success(self, threshold_trigger, sample_events, requests_mock):
         """Test retrieving search job results."""
         threshold_trigger._ensure_initialized()

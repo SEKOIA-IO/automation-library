@@ -91,7 +91,7 @@ class BaseGetEvents(Action):
     )
     def _wait_for_search_job_step(
         self, event_search_job_uuid: str, should_we_wait: Callable[[int], bool], action: str, timeout: int = 300
-    ) -> None:
+    ) -> int:
         """
         Wait for a step in the search job execution
 
@@ -99,6 +99,7 @@ class BaseGetEvents(Action):
         :param should_we_wait: A function that takes the current status and returns True if we should keep waiting
         :param action: The expected action to be performed
         :param timeout: The maximum time to wait in seconds
+        :return: The job status once the step is over
         """
         start_wait = time.time()
 
@@ -135,6 +136,8 @@ class BaseGetEvents(Action):
             if time.time() - start_wait > timeout:
                 raise TimeoutError(f"Event search job {event_search_job_uuid} took more than {timeout}s to {action}")
 
+        return response_get.json()["status"]
+
     def wait_for_search_job_execution(self, event_search_job_uuid: str) -> None:
         # Wait for job to start (20 min)
         self._wait_for_search_job_step(
@@ -144,12 +147,17 @@ class BaseGetEvents(Action):
             1200,
         )
         # Wait for job to complete (30 min)
-        self._wait_for_search_job_step(
+        status = self._wait_for_search_job_step(
             event_search_job_uuid,
             lambda status: status == 1,  # Wait for status to change from 1 (in progress)
             "complete",
             1800,
         )
+        # Terminal statuses are 2, 3 and 4; only 2 means the search succeeded
+        if status != 2:
+            message = f"Event search job {event_search_job_uuid} ended with status {status}"
+            self.log(message, level="error")
+            raise RuntimeError(message)
 
     def run(self, arguments: dict):
         raise NotImplementedError()
