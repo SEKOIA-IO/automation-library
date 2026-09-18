@@ -88,6 +88,10 @@ class AsyncReader(Protocol):
     async def read(self, size: int = -1, /) -> Any:
         return NotImplemented
 
+    @abstractmethod
+    async def peek(self, size: int = -1, /) -> Any:
+        return NotImplemented
+
 
 # mypy: ignore-errors
 async def async_gzip_open(
