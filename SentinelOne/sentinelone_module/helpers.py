@@ -24,8 +24,14 @@ def to_rfc3339(date: datetime):
     return date.astimezone(UTC).strftime(RFC3339_STRICT_FORMAT)
 
 
+# SentinelOne's threats/fetch-file endpoint only preserves this subset of special characters
+# in the ZIP passphrase. Using characters outside this set (e.g. " ' ` \) makes SentinelOne
+# encrypt the archive with a sanitized password, causing a "Bad password" error on extraction.
+PASSWORD_SPECIAL_CHARACTERS = "!#$%&()*+,-.:;<=>?@[]^_{|}~"
+
+
 def generate_password(length: int = 64) -> str:
-    alphabet = string.ascii_letters + string.digits + string.punctuation
+    alphabet = string.ascii_letters + string.digits + PASSWORD_SPECIAL_CHARACTERS
 
     while True:
         candidate = "".join(secrets.choice(alphabet) for i in range(max(10, length)))
@@ -33,7 +39,7 @@ def generate_password(length: int = 64) -> str:
             any(c.islower() for c in candidate)
             and any(c.isupper() for c in candidate)
             and any(c.isdigit() for c in candidate)
-            and any(True if c in string.punctuation else False for c in candidate)
+            and any(c in PASSWORD_SPECIAL_CHARACTERS for c in candidate)
         ):
             return candidate
 
