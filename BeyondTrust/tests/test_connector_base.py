@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import Any, cast
 from unittest.mock import MagicMock
 
+import orjson
 import pytest
 import requests
 
@@ -145,3 +147,169 @@ def test_next_batch_no_events_and_no_sleep_branch(data_storage):
         sleep_mock.assert_not_called()
 
     connector.log.assert_any_call(message="No events to forward", level="info")
+
+
+def _patch_descriptors(monkeypatch, files):
+    """Replace the on-disk descriptor scan with an in-memory set.
+
+    Args:
+        monkeypatch: pytest monkeypatch fixture.
+        files: mapping of ``filename -> content`` where content is a dict
+            (serialized as JSON), raw ``bytes``, or an ``Exception`` instance to
+            raise when the descriptor is read.
+    """
+    paths = [Path(name) for name in files]
+
+    def fake_glob(self, pattern):
+        assert pattern == "*.json"
+        return list(paths)
+
+    def fake_read_bytes(self):
+        content = files[self.name]
+        if isinstance(content, Exception):
+            raise content
+        if isinstance(content, (bytes, bytearray)):
+            return bytes(content)
+        return orjson.dumps(content)
+
+    monkeypatch.setattr("beyondtrust_modules.connector_base.Path.glob", fake_glob)
+    monkeypatch.setattr("beyondtrust_modules.connector_base.Path.read_bytes", fake_read_bytes)
+
+
+def _connector_with_command(data_storage, command):
+    # scalability_labels only depends on module.command and the descriptor files,
+    # so no connector configuration is needed here.
+    module = _build_module()
+    module._command = command
+    return _BaseConnectorForTests(module=module, data_path=data_storage)
+
+
+def test_scalability_labels_prefers_connector_descriptor(data_storage, monkeypatch):
+    """When both descriptors match the command, the connector_* one wins."""
+    _patch_descriptors(
+        monkeypatch,
+        {
+            "trigger_beyondtrust_pra.json": {
+                "docker_parameters": "run_connector",
+                "labels": {"scalable_horizontally": True, "scalable_vertically": True},
+            },
+            "connector_beyondtrust_pra.json": {
+                "docker_parameters": "run_connector",
+                "labels": {"scalable_horizontally": False, "scalable_vertically": True},
+            },
+        },
+    )
+
+    connector = _connector_with_command(data_storage, "run_connector")
+
+    # Values come from the connector_* descriptor and are normalized to lowercase strings.
+    assert connector.scalability_labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "true",
+    }
+
+
+def test_scalability_labels_falls_back_to_trigger_descriptor(data_storage, monkeypatch):
+    """The trigger_* descriptor is used when the connector_* one does not provide labels."""
+    _patch_descriptors(
+        monkeypatch,
+        {
+            # connector_* matches the command but carries no labels -> keep looking.
+            "connector_beyondtrust_pra.json": {"docker_parameters": "run_connector"},
+            "trigger_beyondtrust_pra.json": {
+                "docker_parameters": "run_connector",
+                "labels": {"scalable_horizontally": True, "scalable_vertically": False},
+            },
+        },
+    )
+
+    connector = _connector_with_command(data_storage, "run_connector")
+
+    assert connector.scalability_labels == {
+        "scalable_horizontally": "true",
+        "scalable_vertically": "false",
+    }
+
+
+def test_scalability_labels_default_when_no_descriptor_matches(data_storage, monkeypatch):
+    """A command with no matching descriptor yields the non-scalable default."""
+    _patch_descriptors(
+        monkeypatch,
+        {
+            "connector_beyondtrust_pra.json": {
+                "docker_parameters": "other_connector",
+                "labels": {"scalable_horizontally": True, "scalable_vertically": True},
+            },
+        },
+    )
+
+    connector = _connector_with_command(data_storage, "run_connector")
+
+    assert connector.scalability_labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "false",
+    }
+
+
+def test_scalability_labels_skips_invalid_descriptors(data_storage, monkeypatch):
+    """Unreadable / malformed descriptors are skipped without breaking resolution."""
+    _patch_descriptors(
+        monkeypatch,
+        {
+            # connector_* sorted first but cannot be parsed -> skipped.
+            "connector_beyondtrust_pra.json": orjson.JSONDecodeError("boom", "", 0),
+            "trigger_beyondtrust_pra_broken.json": OSError("cannot read"),
+            "trigger_beyondtrust_pra.json": {
+                "docker_parameters": "run_connector",
+                "labels": {"scalable_horizontally": False, "scalable_vertically": True},
+            },
+        },
+    )
+
+    connector = _connector_with_command(data_storage, "run_connector")
+
+    assert connector.scalability_labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "true",
+    }
+
+
+def test_scalability_labels_default_when_only_matching_descriptor_is_invalid(data_storage, monkeypatch):
+    """If the only matching descriptor is invalid, fall back to the default."""
+    _patch_descriptors(
+        monkeypatch,
+        {
+            "connector_beyondtrust_pra.json": orjson.JSONDecodeError("boom", "", 0),
+        },
+    )
+
+    connector = _connector_with_command(data_storage, "run_connector")
+
+    assert connector.scalability_labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "false",
+    }
+
+
+def test_scalability_labels_default_when_no_command(data_storage, monkeypatch):
+    """Without a command, no descriptor is read and the default is returned."""
+    glob_calls = []
+
+    def fake_glob(self, pattern):
+        glob_calls.append(pattern)
+        return []
+
+    monkeypatch.setattr("beyondtrust_modules.connector_base.Path.glob", fake_glob)
+    # module.command falls back to sys.argv when _command is unset; neutralize it
+    # so the "no command" branch is genuinely exercised.
+    monkeypatch.setattr("sys.argv", ["pytest"])
+    monkeypatch.delenv("SYMPHONY_RUNTIME", raising=False)
+
+    connector = _connector_with_command(data_storage, None)
+
+    assert connector.scalability_labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "false",
+    }
+    # The descriptor directory must not even be scanned when there is no command.
+    assert glob_calls == []

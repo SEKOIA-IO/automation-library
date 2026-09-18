@@ -1,5 +1,7 @@
+from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
+import orjson
 import pytest
 import requests_mock
 
@@ -182,3 +184,45 @@ def test_stop_consumers(trigger):
 
     assert consumers["auditevents"] is not None
     assert consumers["auditevents"].stop.called
+
+
+def test_scalability_labels_reads_descriptor(trigger):
+    labels = trigger.scalability_labels
+
+    assert labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "true",
+    }
+
+
+def test_scalability_labels_fallback_on_read_error(trigger):
+    with patch("onepassword_modules.connector_1password_epm.Path.read_bytes") as mock_read:
+        mock_read.side_effect = FileNotFoundError
+
+        labels = trigger.scalability_labels
+
+    assert labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "false",
+    }
+
+
+def test_scalability_labels_falls_back_to_trigger(trigger):
+    real_read_bytes = Path.read_bytes
+
+    def fake_read_bytes(self):
+        if self.name == "connector_1password_epm.json":
+            return orjson.dumps({"docker_parameters": "get_1password_epm_events"})
+        return real_read_bytes(self)
+
+    with patch(
+        "onepassword_modules.connector_1password_epm.Path.read_bytes",
+        autospec=True,
+        side_effect=fake_read_bytes,
+    ):
+        labels = trigger.scalability_labels
+
+    assert labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "true",
+    }

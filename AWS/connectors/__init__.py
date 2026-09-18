@@ -3,8 +3,11 @@
 import asyncio
 import time
 from abc import ABCMeta
+from functools import cached_property
+from pathlib import Path
 from typing import Any, Optional
 
+import orjson
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
@@ -25,6 +28,44 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
 
     module: AwsModule
     configuration: AbstractAwsConnectorConfiguration
+
+    @cached_property
+    def scalability_labels(self) -> dict[str, str]:
+        """
+        Read the scalability labels from the connector's JSON descriptor.
+
+        Looks for the descriptor (connector_*.json first, then trigger_*.json) whose
+        ``docker_parameters`` matches the running command, and returns its ``labels``
+        as Prometheus label values. Defaults to non-scalable when nothing is found.
+
+        Returns:
+            dict[str, str]:
+        """
+        default = {"scalable_horizontally": "false", "scalable_vertically": "false"}
+
+        command = self.module.command
+        if not command:
+            return default
+
+        module_root = Path(__file__).resolve().parent.parent
+        descriptors = sorted(module_root.glob("connector_*.json")) + sorted(module_root.glob("trigger_*.json"))
+
+        for descriptor in descriptors:
+            try:
+                data = orjson.loads(descriptor.read_bytes())
+            except (OSError, orjson.JSONDecodeError):
+                continue
+
+            if data.get("docker_parameters") != command:
+                continue
+
+            labels = data.get("labels", {})
+            return {
+                "scalable_horizontally": str(labels.get("scalable_horizontally", False)).lower(),
+                "scalable_vertically": str(labels.get("scalable_vertically", False)).lower(),
+            }
+
+        return default
 
     async def next_batch(self) -> tuple[int, list[int]]:
         """
@@ -54,10 +95,12 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
                     processing_end = time.time()
                     batch_duration = processing_end - processing_start
 
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(message_count)
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                        processing_end - processing_start
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                        message_count
                     )
+                    FORWARD_EVENTS_DURATION.labels(
+                        intake_key=self.configuration.intake_key, **self.scalability_labels
+                    ).observe(processing_end - processing_start)
 
                     if message_count > 0:
                         self.log(message="Pushed {0} records".format(message_count), level="info")
@@ -70,13 +113,19 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
                         current_lag = min(messages_age)
 
                         for age in messages_age:
-                            MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).observe(age)
+                            MESSAGES_AGE.labels(
+                                intake_key=self.configuration.intake_key, **self.scalability_labels
+                            ).observe(age)
                     else:
                         self.log(message="No records to forward", level="info")
-                        MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).observe(0)
+                        MESSAGES_AGE.labels(
+                            intake_key=self.configuration.intake_key, **self.scalability_labels
+                        ).observe(0)
 
                     # report the current lag
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(
+                        current_lag
+                    )
 
                     # compute the remaining sleeping time. If greater than 0 and no messages were fetched, sleep
                     delta_sleep = self.configuration.frequency - batch_duration

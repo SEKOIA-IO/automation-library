@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-18 - 1.38.2
+
+### Added
+
+- Add `scalable_horizontally` and `scalable_vertically` labels to the connector descriptors and expose them on the
+  Prometheus metrics. The SQS-based S3 connectors are horizontally scalable (multiple pods consume the same queue),
+  while the no-SQS listing connector and the asset connectors are not scalable.
+
 ## 2026-09-04 - 1.38.1
 
 ### Fixed
