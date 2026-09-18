@@ -31,7 +31,7 @@ class OnePasswordEndpoint(Thread):
     METHOD_URI: str
     FEATURE_NAME: str
 
-    def __init__(self, connector: "OnePasswordConnector") -> None:
+    def __init__(self, connector: OnePasswordConnector) -> None:
         super().__init__()
         self._stop_event = Event()
         self.name = self.FEATURE_NAME
