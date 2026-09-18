@@ -23,6 +23,8 @@ class BaseAwsS3FlowLogsTrigger:
     configuration: AwsS3FlowLogsConfiguration
     name = "AWS S3 Flow Logs"
 
+    scalability_labels: dict[str, str]
+
     def _warn_parquet_content(self) -> None:
         """Log a warning when Parquet content is sent to the text flow logs trigger."""
         cast(Any, self).log(
