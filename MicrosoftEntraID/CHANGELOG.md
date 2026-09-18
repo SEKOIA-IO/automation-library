@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Refresh users whose authentication methods changed, based on directory audit logs, so the MFA status of already collected users is updated in the user asset connector
+- On upgrade, the first run of the user asset connector refreshes users with authentication method changes over the whole audit log retention
 
 ## 2026-08-25 - 2.10.29
 

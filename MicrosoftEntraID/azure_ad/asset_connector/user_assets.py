@@ -56,6 +56,8 @@ class EntraIDAssetConnector(AsyncAssetConnector):
     AUDIT_LOOKBACK_SECONDS = 3 * 3600
     # Audit log retention of tenants without Entra ID P1/P2
     AUDIT_LOG_RETENTION_DAYS = 7
+    # Audit log retention of tenants with Entra ID P1/P2
+    AUDIT_LOG_MAX_RETENTION_DAYS = 30
     USER_SELECT_FIELDS = [
         "id",
         "displayName",
@@ -397,8 +399,8 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         self, since: datetime, excluded_user_ids: set[str]
     ) -> AsyncGenerator[UserOCSFModel, None]:
         """
-        Fetch users whose authentication methods changed since the given date, based on directory audit logs.
-        Users that are already collected are not collected again after an MFA change otherwise.
+        Re-fetch users whose authentication methods changed since the given date, based on directory audit logs.
+        Users already emitted during the current run are excluded.
         """
         query_params = DirectoryAuditsRequestBuilder.DirectoryAuditsRequestBuilderGetQueryParameters(
             filter=(
@@ -459,10 +461,10 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 yield user
 
             refreshed_users = 0
-            # First run fetches every user: nothing to refresh
+            since: datetime | None = None
             if last_audit_date:
-                since = datetime.fromisoformat(last_audit_date)
-                if run_start - since > timedelta(days=self.AUDIT_LOG_RETENTION_DAYS):
+                last_audit = datetime.fromisoformat(last_audit_date)
+                if run_start - last_audit > timedelta(days=self.AUDIT_LOG_RETENTION_DAYS):
                     self.log(
                         message=(
                             f"Last MFA refresh was on {last_audit_date}, beyond the audit log retention "
@@ -470,9 +472,13 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                         ),
                         level="warning",
                     )
-                async for user in self.fetch_mfa_updated_users(
-                    since - timedelta(seconds=self.AUDIT_LOOKBACK_SECONDS), sent_user_ids
-                ):
+                since = last_audit - timedelta(seconds=self.AUDIT_LOOKBACK_SECONDS)
+            elif last_run_date:
+                # Upgrade from a version without audit checkpoint: scan the whole audit retention
+                since = run_start - timedelta(days=self.AUDIT_LOG_MAX_RETENTION_DAYS)
+            # First run fetches every user: nothing to refresh
+            if since:
+                async for user in self.fetch_mfa_updated_users(since, sent_user_ids):
                     refreshed_users += 1
                     yield user
 
