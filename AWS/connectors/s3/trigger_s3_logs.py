@@ -3,7 +3,7 @@
 from collections.abc import AsyncGenerator
 from itertools import islice
 
-from aws_helpers.utils import AsyncReader, unescape_string
+from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3LogsBaseConfiguration, AwsS3QueuedConfiguration
 from connectors.s3.provider import AwsAccountProvider
 
@@ -32,12 +32,12 @@ class BaseAwsS3LogsTrigger:
         """
         content = await stream.read()
 
-        records = [record for record in content.decode("utf-8").split(self.configuration.sep) if len(record) > 0]
+        records = (record for record in content.decode("utf-8").split(self.configuration.sep) if len(record) > 0)
 
         if self.configuration.ignore_comments:
-            records = [record for record in records if not record.strip().startswith("#")]
+            records = (record for record in records if not record.strip().startswith("#"))
 
-        for record in list(islice(records, self.configuration.skip_first, None)):
+        for record in islice(records, self.configuration.skip_first, None):
             yield record
 
 

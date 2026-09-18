@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-18 - 1.38.2
+
+### Changed
+
+- Optimize several connector methods to reduce memory usage and improve performance when processing large S3 objects, especially for CloudTrail and VPC Flowlogs events. This includes streaming data processing and more efficient event extraction.
+- Use ijson for parsing JSON events in S3 objects, which is more memory-efficient for large datasets.
+
 ## 2026-09-04 - 1.38.1
 
 ### Fixed
