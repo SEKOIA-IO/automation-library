@@ -9,15 +9,13 @@ from typing import Any
 import orjson
 import pandas as pd
 
-from aws_helpers.utils import AsyncReader, unescape_string
+from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3LogsBaseConfiguration, AwsS3QueuedConfiguration
 from connectors.s3.provider import AwsAccountProvider
 
 
 class AwsS3CloudFrontConfiguration(AwsS3QueuedConfiguration, AwsS3LogsBaseConfiguration):
     """AwsS3CloudFrontTrigger configuration."""
-
-    pass
 
 
 class BaseAwsS3CloudFrontTrigger:

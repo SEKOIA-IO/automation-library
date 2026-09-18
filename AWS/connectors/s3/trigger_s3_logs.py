@@ -3,7 +3,7 @@
 from collections.abc import AsyncGenerator
 from itertools import islice
 
-from aws_helpers.utils import AsyncReader, unescape_string
+from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3LogsBaseConfiguration, AwsS3QueuedConfiguration
 from connectors.s3.provider import AwsAccountProvider
 
