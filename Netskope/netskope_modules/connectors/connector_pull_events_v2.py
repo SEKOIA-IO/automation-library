@@ -1,6 +1,7 @@
 import time
 from functools import cached_property
 from json.decoder import JSONDecodeError
+from math import ceil, isfinite
 from threading import Event, Thread
 
 import orjson
@@ -58,9 +59,9 @@ class NetskopeEventConsumer(Thread):
         retry_after = response.headers.get("Retry-After")
         if retry_after is not None:
             try:
-                retry_after_seconds = int(float(retry_after))
-                if retry_after_seconds > 0:
-                    return retry_after_seconds
+                retry_after_seconds = float(retry_after)
+                if isfinite(retry_after_seconds) and retry_after_seconds > 0:
+                    return max(1, ceil(retry_after_seconds))
             except ValueError:
                 pass
 
@@ -68,9 +69,9 @@ class NetskopeEventConsumer(Thread):
             content = response.json()
             if isinstance(content, dict):
                 wait_time = content.get("wait_time")
-                if isinstance(wait_time, (int, float)) and wait_time > 0:
-                    return int(wait_time)
-        except JSONDecodeError:
+                if isinstance(wait_time, (int, float)) and isfinite(wait_time) and wait_time > 0:
+                    return max(1, ceil(wait_time))
+        except (JSONDecodeError, ValueError):
             pass
 
         return 5
@@ -121,7 +122,7 @@ class NetskopeEventConsumer(Thread):
                         message=f"Cannot consume the service {self.name}. Error={message}",
                         level="error",
                     )
-            except JSONDecodeError:
+            except (JSONDecodeError, ValueError):
                 self.connector.log(
                     message=f"Cannot consume the service {self.name}. Error={response.text}",
                     level="error",
