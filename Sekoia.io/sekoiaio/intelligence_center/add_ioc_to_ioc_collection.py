@@ -1,5 +1,5 @@
 import ipaddress
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import requests
 from pydantic import TypeAdapter, ValidationError
@@ -18,7 +18,7 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
         """Post indicators to the IOC collection text endpoint."""
         data = {"format": indicator_type, "indicators": "\n".join(indicators)}
         if valid_for:
-            data["valid_until"] = datetime_to_str(datetime.now() + timedelta(days=valid_for))
+            data["valid_until"] = datetime_to_str(datetime.now(UTC) + timedelta(days=valid_for))
 
         result = requests.post(
             self.url("ioc-collections/" + ioc_collection_id + "/indicators/text"), json=data, headers=self.headers

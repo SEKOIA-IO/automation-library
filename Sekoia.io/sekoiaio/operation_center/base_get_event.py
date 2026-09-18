@@ -1,5 +1,5 @@
 import time
-from typing import Callable
+from collections.abc import Callable
 from posixpath import join as urljoin
 
 import requests
@@ -7,10 +7,10 @@ import urllib3
 from requests import Session
 from requests.adapters import HTTPAdapter
 from requests.structures import CaseInsensitiveDict
-from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from sekoia_automation.action import Action
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from urllib3.util.retry import Retry
 
-from sekoia_automation.action import Action
 from sekoiaio.utils import user_agent
 
 
@@ -75,7 +75,10 @@ class BaseGetEvents(Action):
             response_start.raise_for_status()
         except requests.exceptions.HTTPError as e:
             self.log(
-                f"HTTP error when triggering event search job: {e}. Response status: {response_start.status_code}, Response text: {response_start.text}",
+                (
+                    f"HTTP error when triggering event search job: {e}. "
+                    f"Response status: {response_start.status_code}, Response text: {response_start.text}"
+                ),
                 level="error",
             )
             raise
@@ -109,7 +112,10 @@ class BaseGetEvents(Action):
             response_get.raise_for_status()
         except requests.exceptions.HTTPError as e:
             self.log(
-                f"HTTP error during initial status check for job {event_search_job_uuid}: {e}. Response status: {response_get.status_code}, Response text: {response_get.text}",
+                (
+                    f"HTTP error during initial status check for job {event_search_job_uuid}: {e}. "
+                    f"Response status: {response_get.status_code}, Response text: {response_get.text}"
+                ),
                 level="error",
             )
             raise
@@ -127,7 +133,10 @@ class BaseGetEvents(Action):
                 response_get.raise_for_status()
             except requests.exceptions.HTTPError as e:
                 self.log(
-                    f"HTTP error during job status polling for job {event_search_job_uuid}: {e}. Response status: {response_get.status_code}, Response text: {response_get.text}",
+                    (
+                        f"HTTP error during job status polling for job {event_search_job_uuid}: {e}. "
+                        f"Response status: {response_get.status_code}, Response text: {response_get.text}"
+                    ),
                     level="error",
                 )
                 raise

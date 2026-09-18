@@ -15,7 +15,7 @@ def base_trigger(module_configuration):
     base_trigger.log = Mock()
     base_trigger.log_exception = Mock()
 
-    yield base_trigger
+    return base_trigger
 
 
 def test_sekoianotificationbasetrigger_handler_dispatch_invalid_messages(base_trigger):
@@ -87,7 +87,7 @@ def test_run_forbidden(base_trigger, requests_mock):
     requests_mock.get("http://fake.url/api/v1/me", status_code=403)
     with pytest.raises(HTTPError):
         base_trigger.run()
-        assert base_trigger._error_count == 5
+    assert base_trigger._error_count == 5
 
 
 def test_run(base_trigger, requests_mock):

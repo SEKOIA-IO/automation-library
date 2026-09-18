@@ -1,10 +1,10 @@
 import time
 import uuid
 from collections import OrderedDict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from posixpath import join as urljoin
 from threading import Event, Lock, Thread
-from typing import Any
+from typing import Any, ClassVar
 
 import orjson
 import requests
@@ -21,7 +21,11 @@ from .metrics import EVENTS_FILTERED, EVENTS_FORWARDED, STATE_SIZE, THRESHOLD_CH
 
 class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
     # List of alert types we can handle.
-    HANDLED_EVENT_SUB_TYPES = [("alert", "created"), ("alert", "updated"), ("alert-comment", "created")]
+    HANDLED_EVENT_SUB_TYPES: ClassVar[list[tuple[str, str]]] = [
+        ("alert", "created"),
+        ("alert", "updated"),
+        ("alert-comment", "created"),
+    ]
 
     def handle_event(self, message):
         """Handle alert messages.
@@ -55,13 +59,17 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
             self.log_exception(exp, message="Failed to fetch alert from Alert API")
             return
 
-        if rule_filter := self.configuration.get("rule_filter"):
-            if alert["rule"]["name"] != rule_filter and alert["rule"]["uuid"] != rule_filter:
-                return
+        if (
+            (rule_filter := self.configuration.get("rule_filter"))
+            and alert["rule"]["name"] != rule_filter
+            and alert["rule"]["uuid"] != rule_filter
+        ):
+            return
 
-        if rule_names_filter := self.configuration.get("rule_names_filter"):
-            if alert["rule"]["name"] not in rule_names_filter:
-                return
+        if (rule_names_filter := self.configuration.get("rule_names_filter")) and alert["rule"][
+            "name"
+        ] not in rule_names_filter:
+            return
 
         work_dir = self._data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
         alert_path = work_dir.joinpath("alert.json")
@@ -154,34 +162,32 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
         response.raise_for_status()
         try:
             return response.json()
-        except Exception as exp:
+        except Exception:
             self.log("Failed to parse JSON response from Alert API", level="error", content=response.text)
-            raise exp
+            raise
 
 
 class AlertCreatedTrigger(SecurityAlertsTrigger):
     # List of alert types we can handle.
-    HANDLED_EVENT_SUB_TYPES = [("alert", "created")]
+    HANDLED_EVENT_SUB_TYPES: ClassVar[list[tuple[str, str]]] = [("alert", "created")]
 
 
 class AlertUpdatedTrigger(SecurityAlertsTrigger):
     # List of alert types we can handle.
-    HANDLED_EVENT_SUB_TYPES = [("alert", "updated")]
+    HANDLED_EVENT_SUB_TYPES: ClassVar[list[tuple[str, str]]] = [("alert", "updated")]
 
 
 class AlertStatusChangedTrigger(SecurityAlertsTrigger):
     # List of alert types we can handle.
-    HANDLED_EVENT_SUB_TYPES = [("alert", "updated")]
+    HANDLED_EVENT_SUB_TYPES: ClassVar[list[tuple[str, str]]] = [("alert", "updated")]
 
     def _filter_notifications(self, message) -> bool:
-        if message.get("attributes", {}).get("updated", {}).get("status"):
-            return True
-        return False
+        return bool(message.get("attributes", {}).get("updated", {}).get("status"))
 
 
 class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
     # List of alert types we can handle.
-    HANDLED_EVENT_SUB_TYPES = [("alert-comment", "created")]
+    HANDLED_EVENT_SUB_TYPES: ClassVar[list[tuple[str, str]]] = [("alert-comment", "created")]
 
     def handle_event(self, message):
         """Handle alert messages.
@@ -220,13 +226,17 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
             self.log_exception(exp, message="Failed to fetch alert from Alert API")
             return
 
-        if rule_filter := self.configuration.get("rule_filter"):
-            if alert["rule"]["name"] != rule_filter and alert["rule"]["uuid"] != rule_filter:
-                return
+        if (
+            (rule_filter := self.configuration.get("rule_filter"))
+            and alert["rule"]["name"] != rule_filter
+            and alert["rule"]["uuid"] != rule_filter
+        ):
+            return
 
-        if rule_names_filter := self.configuration.get("rule_names_filter"):
-            if alert["rule"]["name"] not in rule_names_filter:
-                return
+        if (rule_names_filter := self.configuration.get("rule_names_filter")) and alert["rule"][
+            "name"
+        ] not in rule_names_filter:
+            return
 
         work_dir = self._data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
         alert_path = work_dir.joinpath("alert.json")
@@ -303,9 +313,9 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
         response.raise_for_status()
         try:
             return response.json()
-        except Exception as exp:
+        except Exception:
             self.log("Failed to parse JSON response from Alert Comment API", level="error", content=response.text)
-            raise exp
+            raise
 
 
 # ==============================================================================
@@ -421,7 +431,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
     """
 
     # Handle alert creation and updates
-    HANDLED_EVENT_SUB_TYPES = [("alert", "created"), ("alert", "updated")]
+    HANDLED_EVENT_SUB_TYPES: ClassVar[list[tuple[str, str]]] = [("alert", "created"), ("alert", "updated")]
 
     # Interval for periodic time threshold check (in seconds)
     # Check every 5 minutes to balance responsiveness vs resource usage
@@ -466,9 +476,9 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
         Must be called while holding self._locks_lock.
         """
-        for uuid in list(self._alert_locks.keys()):
-            if not self._alert_locks[uuid].locked():
-                del self._alert_locks[uuid]
+        for alert_uuid in list(self._alert_locks.keys()):
+            if not self._alert_locks[alert_uuid].locked():
+                del self._alert_locks[alert_uuid]
                 return
 
     def _start_time_threshold_thread(self) -> None:
@@ -640,8 +650,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         self.state_manager = AlertStateManager(state_path, logger=self.log)
 
         base_url = self.module.configuration["base_url"].rstrip("/")
-        if base_url.endswith("/api"):
-            base_url = base_url[:-4]
+        base_url = base_url.removesuffix("/api")
         self._events_api_path = f"{base_url}/api/v1/sic/conf/events"
 
         self._http_session = requests.Session()
@@ -709,7 +718,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             return None
         try:
             return int(raw_count)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             self.log(message=f"Invalid event count in notification: {raw_count!r}", level="warning")
             return None
 
@@ -812,7 +821,9 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             STATE_SIZE.set(len(self.state_manager.get_all_alerts()))
 
         self.log(
-            message=f"Triggered for alert {alert.get('short_id')}: {context['new_events']} new events ({trigger_reason})",
+            message=(
+                f"Triggered for alert {alert.get('short_id')}: {context['new_events']} new events ({trigger_reason})"
+            ),
             level="info",
             alert_uuid=alert_uuid,
         )
@@ -873,7 +884,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         """
         # Use current time as default for temporal fields not in notification
         # This is reasonable since alert:created means the alert was just created
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.now(UTC).isoformat()
 
         return {
             "uuid": alert_attrs.get("uuid"),
@@ -902,7 +913,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 "uuid": alert_attrs.get("entity_uuid"),
                 "name": alert_attrs.get("entity_name"),
             },
-            "assets": [{"uuid": uuid} for uuid in alert_attrs.get("assets_uuids", [])],
+            "assets": [{"uuid": asset_uuid} for asset_uuid in alert_attrs.get("assets_uuids", [])],
             # Temporal fields: use notification values if present, else current time
             # (alert:created means the alert was just created, so current time is reasonable)
             "created_at": alert_attrs.get("created_at", now_iso),
@@ -973,7 +984,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             "first_seen_at": alert.get("first_seen_at"),
             "events_count": context.get("current_count", 0),
             "trigger_context": {
-                "triggered_at": datetime.now(timezone.utc).isoformat(),
+                "triggered_at": datetime.now(UTC).isoformat(),
                 "trigger_type": "alert_events_threshold",
                 **context,
             },
@@ -1308,7 +1319,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
     def _cleanup_old_states(self) -> None:
         """Clean up state entries for old alerts (runs at most once per day)."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         if self._last_cleanup and (now - self._last_cleanup).total_seconds() < 86400:
             return

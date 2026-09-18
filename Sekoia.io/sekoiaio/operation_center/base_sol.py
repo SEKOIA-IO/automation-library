@@ -1,10 +1,9 @@
 from requests import Session
 from requests.adapters import HTTPAdapter
 from requests.structures import CaseInsensitiveDict
-
+from sekoia_automation.action import Action
 from urllib3.util.retry import Retry
 
-from sekoia_automation.action import Action
 from sekoiaio.utils import user_agent
 
 

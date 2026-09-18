@@ -8,7 +8,7 @@ INDICATORS_TEXT_ENDPOINT = f"http://fake.url/api/v2/inthreat/ioc-collections/{IO
 
 
 @pytest.mark.parametrize(
-    "arguments, expected_call_count, expected_fragment, expect_valid_until",
+    ("arguments", "expected_call_count", "expected_fragment", "expect_valid_until"),
     [
         (
             {
@@ -139,7 +139,7 @@ def test_add_ioc_incorrect_type():
 
 
 @pytest.mark.parametrize(
-    "arguments, error_match",
+    ("arguments", "error_match"),
     [
         (
             {

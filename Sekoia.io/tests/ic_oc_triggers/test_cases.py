@@ -25,7 +25,7 @@ def case_trigger(module_configuration, symphony_storage):
     case_trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
     case_trigger.log = Mock()
 
-    yield case_trigger
+    return case_trigger
 
 
 @pytest.fixture
@@ -34,11 +34,11 @@ def sample_siccaseapi_mock(sample_siccaseapi):
     mock = requests_mock.Mocker()
     mock.get(f"http://fake.url/api/v1/sic/cases/{case_uuid}", json=sample_siccaseapi)
 
-    yield mock
+    return mock
 
 
 def test_securitycasestrigger_init(case_trigger):
-    assert type(case_trigger) == SecurityCasesTrigger
+    assert type(case_trigger) is SecurityCasesTrigger
 
 
 def test_securitycasestrigger_retrieve_case_from_api(case_trigger, sample_siccaseapi):
@@ -59,7 +59,7 @@ def case_created_trigger(module_configuration, symphony_storage):
     trigger.module.configuration = module_configuration
     trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
 
-    yield trigger
+    return trigger
 
 
 @pytest.fixture
@@ -70,7 +70,7 @@ def case_updated_trigger(module_configuration, symphony_storage):
     trigger.module.configuration = module_configuration
     trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
 
-    yield trigger
+    return trigger
 
 
 @pytest.fixture
@@ -81,7 +81,7 @@ def case_alerts_updated_trigger(module_configuration, symphony_storage):
     trigger.module.configuration = module_configuration
     trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
 
-    yield trigger
+    return trigger
 
 
 @pytest.fixture
@@ -92,7 +92,7 @@ def case_comment_created_trigger(module_configuration, symphony_storage):
     trigger.module.configuration = module_configuration
     trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
 
-    yield trigger
+    return trigger
 
 
 def test_casecreatedtrigger_handler_dispatch_case_message(case_created_trigger, samplenotif_case_updated):
@@ -133,7 +133,6 @@ def test_single_event_triggers_updated(
     trigger.send_event = MagicMock()
 
     with sample_siccaseapi_mock:
-
         # Edge case: notification with empty 'updated' attribute
         trigger.send_event.reset_mock()
         empty_updated_notification = {
@@ -282,7 +281,6 @@ def test_case_combined_filters(
 ):
     case_updated_trigger.send_event = MagicMock()
     with sample_siccaseapi_mock:
-
         mode = "manual" if sample_siccaseapi["manual"] else "automatic"
 
         # no match
@@ -478,7 +476,7 @@ def test_invalid_events_dont_trigger_case_comments_added(
 
 
 @pytest.mark.parametrize(
-    "trigger_fixture,message_fixture",
+    ("trigger_fixture", "message_fixture"),
     [
         ("case_created_trigger", "samplenotif_case_created"),
         ("case_alerts_updated_trigger", "samplenotif_case_has_updated_alerts"),
@@ -497,7 +495,7 @@ def test_triggers_ignored_by_wrong_sub_event(request, trigger_fixture, message_f
 
 
 @pytest.mark.parametrize(
-    "trigger_fixture,message_fixture,uuid_key",
+    ("trigger_fixture", "message_fixture", "uuid_key"),
     [
         ("case_created_trigger", "samplenotif_case_created", "uuid"),
         ("case_updated_trigger", "samplenotif_case_updated", "uuid"),
@@ -546,7 +544,7 @@ def test_case_comment_created_trigger_filtered_out(
 
 
 @pytest.mark.parametrize(
-    "method_name,url_path,args,expected_exception,use_wrapped",
+    ("method_name", "url_path", "args", "expected_exception", "use_wrapped"),
     [
         (
             "_retrieve_case_from_caseapi",
@@ -598,25 +596,25 @@ def test_retrieve_case_and_comment_errors_are_logged(
         mock.get(api_url, text=payload, status_code=status_code)
 
         method = getattr(case_trigger, method_name)
-        with pytest.raises(expected_exception):
-            if use_wrapped:
-                if method_name == "_retrieve_case_from_caseapi":
-                    wrapped_case_method = getattr(SecurityCasesTrigger._retrieve_case_from_caseapi, "__wrapped__")
+
+        if use_wrapped:
+            if method_name == "_retrieve_case_from_caseapi":
+                wrapped_case_method = SecurityCasesTrigger._retrieve_case_from_caseapi.__wrapped__
+                with pytest.raises(expected_exception):
                     wrapped_case_method(case_trigger, *call_args)
-                else:
-                    wrapped_comment_method = getattr(
-                        SecurityCasesTrigger._retrieve_comment_from_caseapi, "__wrapped__"
-                    )
-                    wrapped_comment_method(case_trigger, *call_args)
             else:
-                with patch("tenacity.nap.time"):
-                    method(*call_args)
+                wrapped_comment_method = SecurityCasesTrigger._retrieve_comment_from_caseapi.__wrapped__
+                with pytest.raises(expected_exception):
+                    wrapped_comment_method(case_trigger, *call_args)
+        else:
+            with patch("tenacity.nap.time"), pytest.raises(expected_exception):
+                method(*call_args)
 
         case_trigger.log.assert_called()
 
 
 @pytest.mark.parametrize(
-    "trigger_fixture,message_fixture",
+    ("trigger_fixture", "message_fixture"),
     [
         ("case_created_trigger", "samplenotif_case_created"),
         ("case_updated_trigger", "samplenotif_case_updated"),

@@ -1,8 +1,8 @@
 # state_manager.py
 import json
-from datetime import datetime, timezone
-from pathlib import Path
 from collections.abc import Callable
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 
@@ -79,10 +79,10 @@ class AlertStateManager:
                 "alerts": {},
                 "metadata": {
                     "version": self.VERSION,
-                    "last_cleanup": datetime.now(timezone.utc).isoformat(),
+                    "last_cleanup": datetime.now(UTC).isoformat(),
                 },
             }
-        except (FileNotFoundError, IOError, OSError) as exc:
+        except (FileNotFoundError, OSError) as exc:
             # Handle both standard file errors and S3-specific errors (404, etc.)
             self._log(
                 "State file not found or inaccessible in S3, creating new state",
@@ -94,7 +94,7 @@ class AlertStateManager:
                 "alerts": {},
                 "metadata": {
                     "version": self.VERSION,
-                    "last_cleanup": datetime.now(timezone.utc).isoformat(),
+                    "last_cleanup": datetime.now(UTC).isoformat(),
                 },
             }
 
@@ -114,7 +114,7 @@ class AlertStateManager:
             "metadata",
             {
                 "version": self.VERSION,
-                "last_cleanup": datetime.now(timezone.utc).isoformat(),
+                "last_cleanup": datetime.now(UTC).isoformat(),
             },
         )
         return state
@@ -157,7 +157,7 @@ class AlertStateManager:
                 "alerts": {},
                 "metadata": {
                     "version": self.VERSION,
-                    "last_cleanup": datetime.now(timezone.utc).isoformat(),
+                    "last_cleanup": datetime.now(UTC).isoformat(),
                 },
             }
 
@@ -175,9 +175,7 @@ class AlertStateManager:
         - Adds 'last_event_at' field (timestamp of last event, default: None)
         """
         old_state.setdefault("alerts", {})
-        old_state.setdefault(
-            "metadata", {"version": self.VERSION, "last_cleanup": datetime.now(timezone.utc).isoformat()}
-        )
+        old_state.setdefault("metadata", {"version": self.VERSION, "last_cleanup": datetime.now(UTC).isoformat()})
 
         # Migrate each alert entry to add new fields (v1.0 -> v1.1)
         for alert_uuid, alert_state in old_state.get("alerts", {}).items():
@@ -230,7 +228,7 @@ class AlertStateManager:
             rule_name: Name of the rule
             event_count: Current event count
         """
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
 
         existing = self._state["alerts"].get(alert_uuid)
 
@@ -306,7 +304,7 @@ class AlertStateManager:
                 del self._state["alerts"][alert_uuid]
 
             if to_remove:
-                self._state["metadata"]["last_cleanup"] = datetime.now(timezone.utc).isoformat()
+                self._state["metadata"]["last_cleanup"] = datetime.now(UTC).isoformat()
                 # save back to S3
                 self._save_state_to_s3()
                 self._log(
@@ -359,7 +357,7 @@ class AlertStateManager:
             alert_info: Alert data to cache (from notification or API)
             event_count: Current event count from notification
         """
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
 
         existing = self._state["alerts"].get(alert_uuid)
 
@@ -416,7 +414,7 @@ class AlertStateManager:
         """
         from datetime import timedelta
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         required_duration = timedelta(hours=time_window_hours)
         pending_alerts: list[dict[str, Any]] = []
 
@@ -433,10 +431,10 @@ class AlertStateManager:
             # Determine reference time: last trigger or creation
             reference_str = state.get("last_triggered_at") or state.get("created_at") or state.get("last_event_at")
             try:
-                reference_time = datetime.fromisoformat(reference_str.replace("Z", "+00:00"))
+                reference_time = datetime.fromisoformat(reference_str)
                 if reference_time.tzinfo is None:
-                    reference_time = reference_time.replace(tzinfo=timezone.utc)
-            except (ValueError, AttributeError, TypeError):
+                    reference_time = reference_time.replace(tzinfo=UTC)
+            except ValueError, AttributeError, TypeError:
                 self._log(f"Invalid timestamp for alert {alert_uuid}", level="warning")
                 continue
 

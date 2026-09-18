@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import ClassVar
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
@@ -9,11 +9,11 @@ from sekoiaio.utils import FilteredQueryParametersAction
 
 class GetAlertArguments(BaseModel):
     uuid: str = Field(..., description="The identifier (UUID or short id) of the alert to retrieve")
-    stix: Optional[bool] = None
-    cases: Optional[bool] = None
+    stix: bool | None = None
+    cases: bool | None = None
 
     @model_validator(mode="after")
-    def validate_uuid(self) -> "GetAlertArguments":
+    def validate_uuid(self) -> GetAlertArguments:
 
         # emptiness check
         if self.uuid is None or not self.uuid.strip():
@@ -36,7 +36,7 @@ class GetAlertArguments(BaseModel):
 class GetAlert(FilteredQueryParametersAction):
     verb = "get"
     endpoint = base_url + "alerts/{uuid}"
-    query_parameters = ["stix", "cases"]
+    query_parameters: ClassVar[list[str]] = ["stix", "cases"]
 
     def run(self, arguments: GetAlertArguments) -> dict | None:
         # GenericAPIAction.run()/get_url()/get_query_parameters() expect a plain dict
