@@ -1,13 +1,17 @@
 """Contains AwsS3FlowLogsTrigger."""
 
 import ipaddress
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
 from itertools import islice
 from typing import Any, cast
 
 from aws_helpers.utils import AsyncReader, is_parquet_content
 from connectors.metrics import DISCARDED_EVENTS
-from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3LogsBaseConfiguration, AwsS3QueuedConfiguration
+from connectors.s3 import (
+    AbstractAwsS3QueuedConnector,
+    AwsS3LogsBaseConfiguration,
+    AwsS3QueuedConfiguration,
+)
 from connectors.s3.provider import AwsAccountProvider
 
 
@@ -54,6 +58,23 @@ class BaseAwsS3FlowLogsTrigger:
 
         return all([ip.is_private for ip in ips])
 
+    def _read_content(self, content: bytes) -> Generator[str, None, None]:
+        """
+        Read the content of the S3 Object
+
+        Args:
+            content: bytes
+
+        Returns:
+            Generator[str, None, None]: The content as a generator of strings
+        """
+        for record in content.decode("utf-8").split(self.configuration.sep):
+            if len(record) > 0:
+                if not self.check_all_ips_are_private(record):
+                    yield record
+                else:
+                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+
     async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """
         Parse content from S3 bucket.
@@ -70,18 +91,11 @@ class BaseAwsS3FlowLogsTrigger:
             self._warn_parquet_content()
             return
 
-        records: list[str] = []
-        for record in content.decode("utf-8").split(self.configuration.sep):
-            if len(record) > 0:
-                if not self.check_all_ips_are_private(record):
-                    records.append(record)
-                else:
-                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
-
+        records: Generator[str, None, None] = self._read_content(content)
         if self.configuration.ignore_comments:  # pragma: no cover
-            records = [record for record in records if not record.strip().startswith("#")]
+            records = (record for record in records if not record.strip().startswith("#"))
 
-        for record in list(islice(records, self.configuration.skip_first, None)):
+        for record in islice(records, self.configuration.skip_first, None):
             yield record
 
 
