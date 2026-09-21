@@ -255,3 +255,21 @@ async def test_findings_result_complex(
         assert result == findings_1 + findings_2 + findings_3
 
         await client.close()
+
+
+@pytest.mark.asyncio
+async def test_bitsight_client_proxy_support(api_token: str) -> None:
+    """
+    Test Client proxy support.
+    """
+    with patch.dict(
+        "os.environ",
+        {"HTTP_PROXY": "http://localhost:8080", "HTTPS_PROXY": "http://localhost:8080"},
+    ):
+        # Setup the client
+        client = BitsightClient(api_token)
+
+        async with client.session() as session:
+            assert session.trust_env is True
+
+        await client.close()

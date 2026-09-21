@@ -54,7 +54,7 @@ class BitsightClient:
             AsyncGenerator[ClientSession, None]:
         """
         if not self._session:
-            self._session = ClientSession()
+            self._session = ClientSession(trust_env=True)
 
         # Add concurrency to the session
         async with self._concurrency_limiter:
