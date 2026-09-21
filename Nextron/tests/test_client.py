@@ -1,5 +1,6 @@
 import json
 
+import pytest
 import requests_mock
 
 from thor_cloud_modules import client
@@ -18,6 +19,94 @@ def test_get_headers_uses_raw_api_key():
     headers = client.get_headers("test-key-123")
     assert headers["Authorization"] == "test-key-123"
     assert "Bearer" not in headers["Authorization"]
+
+
+def test_fetch_campaign():
+    with requests_mock.Mocker() as m:
+        matcher = m.get(
+            "https://thorcloud-lite.nextron-systems.com/api/v1/campaign",
+            json={"id": "camp-1", "active": True},
+        )
+        campaign = client.fetch_campaign(
+            "https://thorcloud-lite.nextron-systems.com", client.get_headers("k"), "camp-1"
+        )
+
+        assert campaign == {"id": "camp-1", "active": True}
+        assert matcher.last_request.qs["id"] == ["camp-1"]
+
+
+def test_create_campaign_posts_only_supplied_form_fields():
+    with requests_mock.Mocker() as m:
+        matcher = m.post(
+            "https://thorcloud-lite.nextron-systems.com/api/v1/campaign/create",
+            json={"id": "new-camp", "name": "Incident scan", "active": True},
+        )
+        campaign = client.create_campaign(
+            "https://thorcloud-lite.nextron-systems.com",
+            client.get_headers("k"),
+            {"name": "Incident scan", "description": None, "scan_limit": 0},
+        )
+
+        assert campaign["id"] == "new-camp"
+        assert matcher.last_request.text == "name=Incident+scan&scan_limit=0"
+
+
+def test_create_campaign_rejects_response_without_id():
+    with requests_mock.Mocker() as m:
+        m.post("https://thorcloud-lite.nextron-systems.com/api/v1/campaign/create", json={"active": True})
+
+        with pytest.raises(ValueError, match="without an id"):
+            client.create_campaign(
+                "https://thorcloud-lite.nextron-systems.com", client.get_headers("k"), {"name": "Broken"}
+            )
+
+
+def test_fetch_scan_profiles():
+    profiles = [{"index": 1, "name": "Quick Scan"}, {"index": 2, "name": "Full Scan"}]
+    with requests_mock.Mocker() as m:
+        m.get("https://thorcloud-lite.nextron-systems.com/api/v1/account/scanprofiles", json=profiles)
+
+        assert client.fetch_scan_profiles(
+            "https://thorcloud-lite.nextron-systems.com", client.get_headers("k")
+        ) == profiles
+
+
+def test_fetch_launcher_token_supports_json_response():
+    with requests_mock.Mocker() as m:
+        matcher = m.get(
+            "https://thorcloud-lite.nextron-systems.com/api/v1/download/token",
+            json={"token": "secret-token"},
+        )
+        token = client.fetch_launcher_token(
+            "https://thorcloud-lite.nextron-systems.com", client.get_headers("k"), "camp-1"
+        )
+
+        assert token == "secret-token"
+        assert matcher.last_request.qs["campaign"] == ["camp-1"]
+
+
+def test_fetch_launcher_token_supports_plain_text_response():
+    with requests_mock.Mocker() as m:
+        m.get(
+            "https://thorcloud-lite.nextron-systems.com/api/v1/download/token",
+            text="  secret-token  ",
+        )
+        token = client.fetch_launcher_token(
+            "https://thorcloud-lite.nextron-systems.com", client.get_headers("k"), "camp-1"
+        )
+
+        assert token == "secret-token"
+
+
+def test_build_launcher_url_encodes_token():
+    url = client.build_launcher_url(
+        "https://thorcloud-lite.nextron-systems.com", "token with + and /", "linux-bash"
+    )
+
+    assert url == (
+        "https://thorcloud-lite.nextron-systems.com/api/v1/scan/download/launcher"
+        "?type=linux-bash&token=token+with+%2B+and+%2F"
+    )
 
 
 def test_parse_campaigns():

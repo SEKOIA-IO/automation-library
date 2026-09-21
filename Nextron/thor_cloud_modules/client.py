@@ -8,7 +8,7 @@ import json
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from urllib.parse import urljoin
+from urllib.parse import urlencode, urljoin
 
 import requests
 
@@ -21,6 +21,11 @@ ENDPOINTS = {
 
 SCAN_SEARCH_PATH = "/api/v1/scan/search"
 SCAN_LOG_PATH = "/api/v1/scan/log"
+CAMPAIGN_PATH = "/api/v1/campaign"
+CAMPAIGN_CREATE_PATH = "/api/v1/campaign/create"
+SCAN_PROFILES_PATH = "/api/v1/account/scanprofiles"
+DOWNLOAD_TOKEN_PATH = "/api/v1/download/token"
+TOKEN_LAUNCHER_PATH = "/api/v1/scan/download/launcher"
 
 
 def get_base_url(product: str) -> str:
@@ -38,6 +43,80 @@ def get_headers(api_key: str) -> dict:
         "Authorization": api_key,
         "Accept": "application/json",
     }
+
+
+def fetch_campaign(base_url: str, headers: dict, campaign_id: str) -> dict:
+    """Fetch a campaign so callers can validate it before issuing a launcher."""
+    response = requests.get(
+        urljoin(base_url, CAMPAIGN_PATH),
+        headers=headers,
+        params={"id": campaign_id},
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def create_campaign(base_url: str, headers: dict, campaign: dict) -> dict:
+    """Create a THOR Cloud campaign from non-null form fields."""
+    response = requests.post(
+        urljoin(base_url, CAMPAIGN_CREATE_PATH),
+        headers=headers,
+        data={key: value for key, value in campaign.items() if value is not None},
+        timeout=30,
+    )
+    response.raise_for_status()
+    result = response.json()
+    if not isinstance(result, dict) or not result.get("id"):
+        raise ValueError("THOR Cloud returned a campaign response without an id")
+    return result
+
+
+def fetch_scan_profiles(base_url: str, headers: dict) -> list[dict]:
+    """Return the account's predefined scan profiles with their names and indexes."""
+    response = requests.get(urljoin(base_url, SCAN_PROFILES_PATH), headers=headers, timeout=30)
+    response.raise_for_status()
+    profiles = response.json()
+    if not isinstance(profiles, list):
+        raise ValueError("THOR Cloud returned an unsupported scan profiles response")
+    return profiles
+
+
+def fetch_launcher_token(base_url: str, headers: dict, campaign_id: str) -> str:
+    """Request a campaign-scoped token accepted by the public launcher endpoint."""
+    response = requests.get(
+        urljoin(base_url, DOWNLOAD_TOKEN_PATH),
+        headers=headers,
+        params={"campaign": campaign_id},
+        timeout=30,
+    )
+    response.raise_for_status()
+
+    # The Swagger document does not declare a response schema. Support both the
+    # JSON response used by newer deployments and a plain-text token response.
+    try:
+        payload = response.json()
+    except requests.exceptions.JSONDecodeError:
+        payload = None
+
+    if isinstance(payload, str):
+        token = payload
+    elif isinstance(payload, dict):
+        token = payload.get("token") or payload.get("data")
+        if isinstance(token, dict):
+            token = token.get("token")
+    else:
+        token = response.text
+
+    if not isinstance(token, str) or not token.strip():
+        raise ValueError("THOR Cloud returned an empty or unsupported launcher token response")
+    return token.strip()
+
+
+def build_launcher_url(base_url: str, token: str, launcher_type: str) -> str:
+    """Build the unauthenticated, token-scoped launcher download URL."""
+    query = urlencode({"type": launcher_type, "token": token})
+    return f"{urljoin(base_url, TOKEN_LAUNCHER_PATH)}?{query}"
 
 
 def parse_campaigns(campaigns: Optional[str]) -> Optional[list[str]]:
