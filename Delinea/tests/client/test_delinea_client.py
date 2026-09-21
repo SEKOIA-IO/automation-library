@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from unittest.mock import patch
 
 import pytest
 from aioresponses import aioresponses
@@ -85,7 +86,11 @@ async def test_client_get_auth_token_error_2(client: DelineaClient):
     assert client._access_token is None
 
     with aioresponses() as m:
-        m.post(f"{client.base_url}/identity/api/oauth2/token/xpmplatform", body="Internal Server Error", status=500)
+        m.post(
+            f"{client.base_url}/identity/api/oauth2/token/xpmplatform",
+            body="Internal Server Error",
+            status=500,
+        )
 
         with pytest.raises(DelineaError):
             await client.get_auth_token()
@@ -122,7 +127,9 @@ async def test_client_get_audit_events(client: DelineaClient):
             ],
         }
 
-        audit_events_url_1 = client.get_audit_events_url(start_date=start_date, page=1, end_date=end_date)
+        audit_events_url_1 = client.get_audit_events_url(
+            start_date=start_date, page=1, end_date=end_date
+        )
         m.get(audit_events_url_1, payload=first_response)
 
         m.post(
@@ -134,11 +141,15 @@ async def test_client_get_audit_events(client: DelineaClient):
         )
 
         second_response = {}
-        audit_events_url_2 = client.get_audit_events_url(start_date=start_date, page=2, end_date=end_date)
+        audit_events_url_2 = client.get_audit_events_url(
+            start_date=start_date, page=2, end_date=end_date
+        )
         m.get(audit_events_url_2, payload=second_response)
 
         result = []
-        async for event in client.get_audit_events(start_date=start_date, end_date=end_date):
+        async for event in client.get_audit_events(
+            start_date=start_date, end_date=end_date
+        ):
             result.append(event)
 
         assert len(result) == 2
@@ -146,3 +157,25 @@ async def test_client_get_audit_events(client: DelineaClient):
         assert result[1] == {"event_id": 2}
 
         await client.close()
+
+
+@pytest.mark.asyncio
+async def test_delinea_client_proxy_support(
+    base_url: str, client_id: str, client_secret: str
+):
+    """
+    Test Client proxy support.
+    """
+    with patch.dict(
+        "os.environ",
+        {"HTTP_PROXY": "http://localhost:8080", "HTTPS_PROXY": "http://localhost:8080"},
+    ):
+        # Setup the client
+        client = DelineaClient(
+            base_url=base_url,
+            client_id=client_id,
+            client_secret=client_secret,
+        )
+
+        async with client.session() as session:
+            assert session.trust_env is True
