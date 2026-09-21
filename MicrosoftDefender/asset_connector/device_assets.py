@@ -145,6 +145,13 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
             return RISK_LEVEL_MAP[normalized]
         return RiskLevelStr.OTHER, RiskLevelId.OTHER
 
+    @staticmethod
+    def _resolve_hostname(computer_dns_name: str | None) -> tuple[str, str | None]:
+        if not computer_dns_name:
+            return "", None
+        short_name, _, domain = computer_dns_name.strip().partition(".")
+        return short_name, domain or None
+
     def build_device_from_machine(
         self,
         machine: DefenderMachine,
@@ -245,12 +252,15 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
             if interfaces:
                 network_interfaces = interfaces
 
+        hostname, domain = self._resolve_hostname(machine.computerDnsName)
+
         return Device(
             type_id=device_type_id,
             type=device_type_str,
             uid=machine.id,
             uid_alt=uid_alt,
-            hostname=machine.computerDnsName or "",
+            hostname=hostname,
+            domain=domain,
             ip=machine.lastIpAddress,
             os=OperatingSystem(
                 name=os_name,

@@ -178,7 +178,8 @@ class TestBuildDeviceFromMachine:
         device = connector.build_device_from_machine(sample_defender_machine)
 
         assert device.uid == "1e5bc9d7e413ddd7902c2932e418702b84d0cc07"
-        assert device.hostname == "mymachine1.contoso.com"
+        assert device.hostname == "mymachine1"
+        assert device.domain == "contoso.com"
         assert device.type_id == DeviceTypeId.DESKTOP
         assert device.type == DeviceTypeStr.DESKTOP
         assert device.os.type == OSTypeStr.WINDOWS
@@ -195,7 +196,8 @@ class TestBuildDeviceFromMachine:
         device = connector.build_device_from_machine(sample_defender_machine, sample_managed_device)
 
         assert device.uid == "1e5bc9d7e413ddd7902c2932e418702b84d0cc07"
-        assert device.hostname == "mymachine1.contoso.com"
+        assert device.hostname == "mymachine1"
+        assert device.domain == "contoso.com"
         assert device.model == "Surface Pro 9"
         assert device.vendor_name == "Microsoft Corporation"
         assert device.is_compliant is True
@@ -211,8 +213,26 @@ class TestBuildDeviceFromMachine:
         result = connector.build_device_from_machine(machine)
         assert result.uid == "minimal-id"
         assert result.hostname == ""
+        assert result.domain is None
         assert result.os.type == OSTypeStr.UNKNOWN
         assert result.network_interfaces is None
+
+
+class TestResolveHostname:
+    @pytest.mark.parametrize(
+        "computer_dns_name,expected",
+        [
+            ("vdw109141.ad-its.credit-agricole.fr", ("vdw109141", "ad-its.credit-agricole.fr")),
+            ("mymachine1.contoso.com", ("mymachine1", "contoso.com")),
+            ("shortname", ("shortname", None)),
+            ("  padded.contoso.com  ", ("padded", "contoso.com")),
+            ("trailingdot.", ("trailingdot", None)),
+            (None, ("", None)),
+            ("", ("", None)),
+        ],
+    )
+    def test_resolve_hostname(self, connector, computer_dns_name, expected):
+        assert connector._resolve_hostname(computer_dns_name) == expected
 
 
 class TestBuildEnrichments:

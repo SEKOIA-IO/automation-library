@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-09-21 - 1.4.1
+
+### Fixed
+
+- The device asset connector now sends the short hostname in `hostname` and the remaining labels in `domain`, instead of putting the whole `computerDnsName` in `hostname`. A fully-qualified name there created an asset that no other intake or connector reporting the short name could match.
+
 ## 2026-09-14 - 1.4.0
 
 ### Added
