@@ -30,7 +30,7 @@ class BitsightClient:
         # We can't have more than 3 concurrent requests
         # https://help.bitsighttech.com/hc/en-us/articles/360036941374-Errors-and-Status-Codes#429
         self._concurrency_limiter = asyncio.Semaphore(3)
-        self._session = ClientSession()
+        self._session: ClientSession | None = None
 
     @classmethod
     def default_limiter(cls) -> AsyncLimiter:
@@ -53,6 +53,9 @@ class BitsightClient:
         Yields:
             AsyncGenerator[ClientSession, None]:
         """
+        if not self._session:
+            self._session = ClientSession()
+
         # Add concurrency to the session
         async with self._concurrency_limiter:
             async with self._rate_limiter:
@@ -163,3 +166,8 @@ class BitsightClient:
 
             if not next_url:
                 break
+
+    async def close(self) -> None:  # pragma: no cover
+        if self._session:
+            await self._session.close()
+            self._session = None
