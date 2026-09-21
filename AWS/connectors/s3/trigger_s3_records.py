@@ -133,7 +133,5 @@ class BaseAwsS3RecordsTrigger:
                 yield orjson.dumps(data).decode("utf-8")
 
 
-class AwsS3RecordsTrigger(
-    BaseAwsS3RecordsTrigger, AbstractAwsS3QueuedConnector, AwsAccountProvider
-):
+class AwsS3RecordsTrigger(BaseAwsS3RecordsTrigger, AbstractAwsS3QueuedConnector, AwsAccountProvider):
     """AWS S3 Records Trigger connector."""
