@@ -18,7 +18,7 @@ from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId
 from sekoia_automation.module import Module
 
 from asset_connector.device_assets import MicrosoftDefenderDeviceAssetConnector
-from asset_connector.models import DefenderMachine
+from asset_connector.models import DefenderMachine, resolve_hostname
 
 
 @pytest.fixture
@@ -231,8 +231,8 @@ class TestResolveHostname:
             ("", ("", None)),
         ],
     )
-    def test_resolve_hostname(self, connector, computer_dns_name, expected):
-        assert connector._resolve_hostname(computer_dns_name) == expected
+    def test_resolve_hostname(self, computer_dns_name, expected):
+        assert resolve_hostname(computer_dns_name) == expected
 
 
 class TestBuildEnrichments:
