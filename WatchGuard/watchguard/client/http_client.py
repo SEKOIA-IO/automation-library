@@ -52,7 +52,7 @@ class WatchGuardClient(object):
             AsyncGenerator[ClientSession, None]:
         """
         if self._session is None:
-            self._session = ClientSession()
+            self._session = ClientSession(trust_env=True)
 
         if self._rate_limiter_daily and self._rate_limiter_second:
             async with self._rate_limiter_daily:

@@ -259,3 +259,13 @@ async def test_fetch_data_2(
             result.append(item)
 
         assert result == expected_data["data"]
+
+
+@pytest.mark.asyncio
+async def test_watchguard_client_proxy_support(http_client: WatchGuardClient) -> None:
+    """
+    Test client proxy support.
+    """
+
+    async with http_client.session() as session:
+        assert session.trust_env is True
