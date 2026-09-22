@@ -127,9 +127,7 @@ async def test_client_get_audit_events(client: DelineaClient):
             ],
         }
 
-        audit_events_url_1 = client.get_audit_events_url(
-            start_date=start_date, page=1, end_date=end_date
-        )
+        audit_events_url_1 = client.get_audit_events_url(start_date=start_date, page=1, end_date=end_date)
         m.get(audit_events_url_1, payload=first_response)
 
         m.post(
@@ -141,15 +139,11 @@ async def test_client_get_audit_events(client: DelineaClient):
         )
 
         second_response = {}
-        audit_events_url_2 = client.get_audit_events_url(
-            start_date=start_date, page=2, end_date=end_date
-        )
+        audit_events_url_2 = client.get_audit_events_url(start_date=start_date, page=2, end_date=end_date)
         m.get(audit_events_url_2, payload=second_response)
 
         result = []
-        async for event in client.get_audit_events(
-            start_date=start_date, end_date=end_date
-        ):
+        async for event in client.get_audit_events(start_date=start_date, end_date=end_date):
             result.append(event)
 
         assert len(result) == 2
@@ -160,9 +154,7 @@ async def test_client_get_audit_events(client: DelineaClient):
 
 
 @pytest.mark.asyncio
-async def test_delinea_client_proxy_support(
-    base_url: str, client_id: str, client_secret: str
-):
+async def test_delinea_client_proxy_support(base_url: str, client_id: str, client_secret: str):
     """
     Test Client proxy support.
     """

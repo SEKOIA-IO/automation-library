@@ -79,9 +79,7 @@ class DelineaClient(object):
 
         token: str | None = data.get("access_token")
         if not token:
-            raise ValueError(
-                f"Delinea auth response does not contain a access token. Response: {data}"
-            )
+            raise ValueError(f"Delinea auth response does not contain a access token. Response: {data}")
 
         self._access_token = token
         self._expires_in = data.get("expires_in", 60)
@@ -132,9 +130,7 @@ class DelineaClient(object):
 
         async with self.session() as session:
             response = await session.get(
-                self.get_audit_events_url(
-                    start_date=start_date, page=page, end_date=end_date
-                ),
+                self.get_audit_events_url(start_date=start_date, page=page, end_date=end_date),
                 headers=headers,
             )
 
@@ -147,14 +143,10 @@ class DelineaClient(object):
 
         return data.get("auditEvents", [])
 
-    async def get_audit_events(
-        self, start_date: datetime, end_date: datetime
-    ) -> AsyncGenerator[dict[str, Any], None]:
+    async def get_audit_events(self, start_date: datetime, end_date: datetime) -> AsyncGenerator[dict[str, Any], None]:
         page = 1
         while True:
-            events = await self._get_audit_events(
-                start_date=start_date, end_date=end_date, page=page
-            )
+            events = await self._get_audit_events(start_date=start_date, end_date=end_date, page=page)
             if not events:
                 break
 
