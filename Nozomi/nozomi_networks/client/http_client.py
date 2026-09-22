@@ -49,7 +49,7 @@ class NozomiClient(object):
             AsyncGenerator[ClientSession, None]:
         """
         if self._session is None:
-            self._session = ClientSession(headers=self._default_headers)
+            self._session = ClientSession(headers=self._default_headers, trust_env=True)
 
         if self._rate_limiter:
             async with self._rate_limiter:
