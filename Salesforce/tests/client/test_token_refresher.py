@@ -189,3 +189,26 @@ async def test_salesforce_refresher_instance(http_token, session_faker, token_re
     await instance1.close()
     await instance2.close()
     await instance3.close()
+
+
+@pytest.mark.asyncio
+async def test_salesforce_token_refresher_proxy_support(session_faker):
+    """
+    Test salesforce proxy support.
+    """
+    SalesforceTokenRefresher._session = None
+
+    client_id = session_faker.word()
+    client_secret = session_faker.word()
+    auth_url = session_faker.uri()
+    ttl = session_faker.pyint()
+
+    token_refresher = await SalesforceTokenRefresher.instance(client_id, client_secret, auth_url, ttl)
+
+    async with token_refresher.session() as session:
+        assert session.trust_env is True
+
+    await token_refresher.close()
+    if SalesforceTokenRefresher._session is not None:
+        await SalesforceTokenRefresher._session.close()
+        SalesforceTokenRefresher._session = None

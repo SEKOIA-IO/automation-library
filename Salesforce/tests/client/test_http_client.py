@@ -459,3 +459,18 @@ async def test_salesforce_http_client_get_log_file_content_3(session_faker, http
         await delete_file(result_file)
 
         assert file_content == list(csv.DictReader(csv_content.splitlines(), delimiter=","))
+
+
+@pytest.mark.asyncio
+async def test_salesforce_client_proxy_support(session_faker) -> None:
+    """
+    Test client proxy support.
+    """
+    http_client = SalesforceHttpClient(
+        client_id=session_faker.pystr(),
+        client_secret=session_faker.pystr(),
+        base_url=session_faker.uri(),
+    )
+
+    async with http_client.session() as session:
+        assert session.trust_env is True
