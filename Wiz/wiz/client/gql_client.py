@@ -60,7 +60,6 @@ class WizResult(BaseModel):
 
 
 class WizErrors(Exception):
-
     def __init__(self, message: str | None = None) -> None:
         super().__init__(message)
         self.message = message
@@ -96,7 +95,13 @@ class WizGqlClient(object):
         self.timeout = 60 if timeout is None else timeout  # default to 60s, preserve explicit falsy values
 
     @classmethod
-    def create(cls, client_id: str, client_secret: str, tenant_url: str, timeout: int | None = None) -> "WizGqlClient":
+    def create(
+        cls,
+        client_id: str,
+        client_secret: str,
+        tenant_url: str,
+        timeout: int | None = None,
+    ) -> "WizGqlClient":
         auth_url = WizTokenRefresher.create_url_from_tenant(tenant_url)
         token_refresher = WizTokenRefresher(client_id, client_secret, auth_url)
 

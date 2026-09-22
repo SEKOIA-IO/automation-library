@@ -147,7 +147,11 @@ class WizTokenRefresher(object):
 
         refresh_in = expires_in - 1
 
-        logger.info("Scheduling token refresh in {refresh_in} seconds {at}", refresh_in=refresh_in, at=time.time())
+        logger.info(
+            "Scheduling token refresh in {refresh_in} seconds {at}",
+            refresh_in=refresh_in,
+            at=time.time(),
+        )
 
         async def _refresh() -> None:
             await asyncio.sleep(refresh_in)
@@ -163,7 +167,9 @@ class WizTokenRefresher(object):
             self._token_refresh_task.cancel()
 
     @asynccontextmanager
-    async def with_access_token(self) -> AsyncGenerator[WizToken, None]:  # pragma: no cover
+    async def with_access_token(
+        self,
+    ) -> AsyncGenerator[WizToken, None]:  # pragma: no cover
         """
         Get access token.
 

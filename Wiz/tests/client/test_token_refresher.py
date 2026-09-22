@@ -127,7 +127,12 @@ async def test_wiz_refresher_always_provide_fresh_token(http_token, session_fake
             "access_token": "token_expired_quickly",
             "refresh_token": "refresh_token",
         },
-        {"token_type": "Bearer", "expires_in": 600, "access_token": "fresh_token", "refresh_token": "refresh_token"},
+        {
+            "token_type": "Bearer",
+            "expires_in": 600,
+            "access_token": "fresh_token",
+            "refresh_token": "refresh_token",
+        },
     ]
 
     token_refresher = WizTokenRefresher(
