@@ -297,7 +297,11 @@ class SalesforceHttpClient(object):
         Returns:
             SalesforceEventLogFilesResponse:
         """
-        logger.info("Getting log files from Salesforce. Start date is {0}, end date is {1}", start_from, end_at)
+        logger.info(
+            "Getting log files from Salesforce. Start date is {0}, end date is {1}",
+            start_from,
+            end_at,
+        )
 
         query = self._log_files_query(start_from, end_at, log_type)
 
@@ -308,7 +312,11 @@ class SalesforceHttpClient(object):
             if not result.done:
                 raise ValueError("Salesforce response is not done")
 
-        logger.info("Got {0} log files from Salesforce. Start date is {1}", len(result.records), start_from)
+        logger.info(
+            "Got {0} log files from Salesforce. Start date is {1}",
+            len(result.records),
+            start_from,
+        )
 
         return result
 
