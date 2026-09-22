@@ -32,7 +32,9 @@ def client_config(session_faker: Faker) -> WatchGuardClientConfig:
 
 
 @pytest.fixture
-async def http_client(client_config: WatchGuardClientConfig) -> AsyncGenerator["WatchGuardClient", None]:
+async def http_client(
+    client_config: WatchGuardClientConfig,
+) -> AsyncGenerator["WatchGuardClient", None]:
     """
     Create an instance of the WatchGuardClient with the provided credentials.
 
@@ -51,7 +53,9 @@ async def http_client(client_config: WatchGuardClientConfig) -> AsyncGenerator["
 
 @pytest.mark.asyncio
 async def test_fetch_auth_token(
-    http_client: WatchGuardClient, client_config: WatchGuardClientConfig, session_faker: Faker
+    http_client: WatchGuardClient,
+    client_config: WatchGuardClientConfig,
+    session_faker: Faker,
 ) -> None:
     """
     Test fetching the authentication token from the WatchGuard API.
@@ -123,7 +127,9 @@ async def test_fetch_auth_token_no_access_token(
 
 @pytest.mark.asyncio
 async def test_fetch_data_1(
-    http_client: WatchGuardClient, client_config: WatchGuardClientConfig, session_faker: Faker
+    http_client: WatchGuardClient,
+    client_config: WatchGuardClientConfig,
+    session_faker: Faker,
 ) -> None:
     """
     Test fetching data from the WatchGuard API.
@@ -151,7 +157,9 @@ async def test_fetch_data_1(
         mocked_responses.post(
             auth_token_url,
             callback=aioresponses_callback(
-                expected_token, auth=aiohttp.BasicAuth(client_config.username, client_config.password), status=200
+                expected_token,
+                auth=aiohttp.BasicAuth(client_config.username, client_config.password),
+                status=200,
             ),
         )
 
@@ -180,7 +188,9 @@ async def test_fetch_data_1(
 
 @pytest.mark.asyncio
 async def test_fetch_data_2(
-    http_client: WatchGuardClient, client_config: WatchGuardClientConfig, session_faker: Faker
+    http_client: WatchGuardClient,
+    client_config: WatchGuardClientConfig,
+    session_faker: Faker,
 ) -> None:
     """
     Test fetching data from the WatchGuard API.
@@ -226,7 +236,9 @@ async def test_fetch_data_2(
         mocked_responses.post(
             auth_token_url,
             callback=aioresponses_callback(
-                expected_token, auth=aiohttp.BasicAuth(client_config.username, client_config.password), status=200
+                expected_token,
+                auth=aiohttp.BasicAuth(client_config.username, client_config.password),
+                status=200,
             ),
         )
 
