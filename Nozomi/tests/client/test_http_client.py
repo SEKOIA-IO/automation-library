@@ -14,7 +14,9 @@ from ..helpers import aioresponses_callback
 
 
 @pytest.fixture
-async def http_client(nozomi_config: dict[str, str]) -> AsyncGenerator["NozomiClient", None]:
+async def http_client(
+    nozomi_config: dict[str, str],
+) -> AsyncGenerator["NozomiClient", None]:
     """
     Create an instance of the client with the provided credentials.
 
@@ -132,7 +134,11 @@ async def test_fetch_data_1(http_client: NozomiClient, nozomi_config: dict[str, 
         auth_token = session_faker.word()
         mocked_responses.post(
             auth_token_url,
-            callback=aioresponses_callback({}, response_headers={"Authorization": f"Bearer {auth_token}"}, status=200),
+            callback=aioresponses_callback(
+                {},
+                response_headers={"Authorization": f"Bearer {auth_token}"},
+                status=200,
+            ),
         )
 
         start_date = datetime.datetime.now()
@@ -227,7 +233,11 @@ async def test_fetch_data_2(http_client: NozomiClient, nozomi_config: dict[str, 
         auth_token = session_faker.word()
         mocked_responses.post(
             auth_token_url,
-            callback=aioresponses_callback({}, response_headers={"Authorization": f"Bearer {auth_token}"}, status=200),
+            callback=aioresponses_callback(
+                {},
+                response_headers={"Authorization": f"Bearer {auth_token}"},
+                status=200,
+            ),
         )
 
         start_date = datetime.datetime.now()
