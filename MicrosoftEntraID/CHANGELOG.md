@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-22 - 2.10.30
+
+### Fixed
+
+- Re-fetch already collected users, a slice per run and oldest first, so that changes to
+  their account status, groups, admin roles, MFA or profile reach the asset inventory.
+  `createdDateTime` never changes, so the incremental query alone never saw them again.
+  The slice size is the `refresh_users_per_cycle` configuration, 0 to disable it.
+- Stop skipping users created in the same second as the last one collected. The checkpoint
+  is now the exact creation date of that user, and the users already collected at that date
+  are skipped by id instead of by a one second offset.
+
 ## 2026-08-25 - 2.10.29
 
 ### Changed

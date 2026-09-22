@@ -28,10 +28,16 @@
           "description": "Batch size",
           "minimum": 1,
           "default": 100
+      },
+      "refresh_users_per_cycle": {
+          "type": "integer",
+          "description": "Number of already collected users re-fetched per run to keep their attributes up to date, 0 to disable",
+          "minimum": 0,
+          "default": 1000
       }
     },
     "required": ["sekoia_api_key"],
     "secrets": ["sekoia_api_key"],
-    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"]
+    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size", "refresh_users_per_cycle"]
   }
 }
