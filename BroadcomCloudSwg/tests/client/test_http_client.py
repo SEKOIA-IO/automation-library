@@ -60,21 +60,16 @@ async def test_broadcom_cloud_swg_client_get_real_time_log_data_url(
         session_faker: Faker
     """
     end_date_now = datetime.now(tz=pytz.utc)
-    first_start_date = end_date_now - timedelta(
-        seconds=session_faker.random.randint(1, 30)
-    )
+    first_start_date = end_date_now - timedelta(seconds=session_faker.random.randint(1, 30))
 
     first_result, first_result_timestamp = client.get_real_time_log_data_url(
         start_date=first_start_date,
     )
 
-    first_expected_result = (
-        "{0}/reportpod/logs/sync?endDate={1}&startDate={2}&token=none".format(
-            client.base_url,
-            0,
-            int(first_start_date.replace(minute=0, second=0, microsecond=0).timestamp())
-            * 1000,
-        )
+    first_expected_result = "{0}/reportpod/logs/sync?endDate={1}&startDate={2}&token=none".format(
+        client.base_url,
+        0,
+        int(first_start_date.replace(minute=0, second=0, microsecond=0).timestamp()) * 1000,
     )
 
     assert str(first_result) == first_expected_result
@@ -87,28 +82,18 @@ async def test_broadcom_cloud_swg_client_get_real_time_log_data_url(
         start_date=second_start_date, token=token, max_mb=max_mb
     )
 
-    second_expected_result = (
-        "{0}/reportpod/logs/sync?endDate={1}&startDate={2}&token={3}".format(
-            client.base_url,
-            int(end_date_now.replace(minute=0, second=0, microsecond=0).timestamp())
-            * 1000,
-            int(
-                second_start_date.replace(minute=0, second=0, microsecond=0).timestamp()
-            )
-            * 1000,
-            token,
-        )
+    second_expected_result = "{0}/reportpod/logs/sync?endDate={1}&startDate={2}&token={3}".format(
+        client.base_url,
+        int(end_date_now.replace(minute=0, second=0, microsecond=0).timestamp()) * 1000,
+        int(second_start_date.replace(minute=0, second=0, microsecond=0).timestamp()) * 1000,
+        token,
     )
 
     assert str(second_result) == second_expected_result
 
-    third_start_date = end_date_now - timedelta(
-        days=session_faker.random.randint(1, 30)
-    )
+    third_start_date = end_date_now - timedelta(days=session_faker.random.randint(1, 30))
     with pytest.raises(ValueError):
-        client.get_real_time_log_data_url(
-            start_date=third_start_date, token=token, max_mb=max_mb
-        )
+        client.get_real_time_log_data_url(start_date=third_start_date, token=token, max_mb=max_mb)
 
 
 @pytest.mark.asyncio
@@ -125,9 +110,7 @@ async def test_broadcom_cloud_swg_client_get_report_sync_exception(
         session_faker: Faker
     """
     with aioresponses() as mocked_responses:
-        start_date = datetime.utcnow() - timedelta(
-            seconds=session_faker.random.randint(1, 29)
-        )
+        start_date = datetime.utcnow() - timedelta(seconds=session_faker.random.randint(1, 29))
 
         requested_url, _ = client.get_real_time_log_data_url(start_date=start_date)
         token = session_faker.word()
@@ -216,9 +199,7 @@ async def test_broadcom_cloud_swg_client_get_report_sync_2(
         expected_start_date = datetime.now(pytz.utc) - timedelta(hours=2)
         input_token = session_faker.word()
 
-        url, _ = client.get_real_time_log_data_url(
-            start_date=expected_start_date, token=input_token
-        )
+        url, _ = client.get_real_time_log_data_url(start_date=expected_start_date, token=input_token)
 
         response_token = session_faker.word()
 
@@ -328,9 +309,7 @@ async def test_parse_input_string():
 
     input_string = "value1 value2 value3"
     expected_output = {"field1": "value1", "field2": "value2", "field3": "value3"}
-    result = BroadcomCloudSwgClient.parse_input_string(
-        input_string, fields=["field1", "field2", "field3"]
-    )
+    result = BroadcomCloudSwgClient.parse_input_string(input_string, fields=["field1", "field2", "field3"])
     assert result == expected_output
 
     input_string = "value1 value2 value3 value4"
@@ -353,9 +332,7 @@ async def test_parse_string_as_headers():
     result = BroadcomCloudSwgClient.parse_string_as_headers(input_string)
     assert result == ["field1", "field2", "field3"]
 
-    input_string = "#Fields: {0}".format(
-        " ".join(BroadcomCloudSwgClient.full_list_of_elff_fields())
-    )
+    input_string = "#Fields: {0}".format(" ".join(BroadcomCloudSwgClient.full_list_of_elff_fields()))
     result = BroadcomCloudSwgClient.parse_string_as_headers(input_string)
     assert result == BroadcomCloudSwgClient.full_list_of_elff_fields()
 
@@ -786,21 +763,10 @@ async def test_parse_headers_and_values():
         "x-bluecoat-placeholder": "test",
     }
 
-    assert (
-        BroadcomCloudSwgClient.parse_string_as_headers(input_string) == expected_headers
-    )
-    assert (
-        BroadcomCloudSwgClient.parse_input_string(input_1, expected_headers)
-        == expected_parsed1
-    )
-    assert (
-        BroadcomCloudSwgClient.parse_input_string(input_2, expected_headers)
-        == expected_parsed2
-    )
-    assert (
-        BroadcomCloudSwgClient.parse_input_string(input_3, expected_headers)
-        == expected_parsed3
-    )
+    assert BroadcomCloudSwgClient.parse_string_as_headers(input_string) == expected_headers
+    assert BroadcomCloudSwgClient.parse_input_string(input_1, expected_headers) == expected_parsed1
+    assert BroadcomCloudSwgClient.parse_input_string(input_2, expected_headers) == expected_parsed2
+    assert BroadcomCloudSwgClient.parse_input_string(input_3, expected_headers) == expected_parsed3
 
 
 @pytest.mark.asyncio

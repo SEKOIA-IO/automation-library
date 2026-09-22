@@ -79,9 +79,7 @@ class BroadcomCloudSwgClient(object):
         if cls._retry_client is None:
             cls._retry_client = RetryClient(
                 client_session=cls._session,
-                retry_options=ExponentialRetry(
-                    attempts=5, start_timeout=60, max_timeout=360, statuses={423}
-                ),
+                retry_options=ExponentialRetry(attempts=5, start_timeout=60, max_timeout=360, statuses={423}),
                 logger=logger,
             )
 
@@ -122,10 +120,7 @@ class BroadcomCloudSwgClient(object):
             "limit": 1000,
         }
 
-        return (
-            str(URL("{0}/reportpod/logs/list".format(self.base_url)).with_query(params))
-            + "&api"
-        )
+        return str(URL("{0}/reportpod/logs/list".format(self.base_url)).with_query(params)) + "&api"
 
     async def list_of_files(
         self,
@@ -150,9 +145,7 @@ class BroadcomCloudSwgClient(object):
         _start_date = start_date or datetime.now(pytz.utc) - timedelta(days=1)
         _end_date = end_date or datetime.now(pytz.utc)
 
-        url = self.list_of_files_to_process_url(
-            start_date=_start_date, end_date=_end_date
-        )
+        url = self.list_of_files_to_process_url(start_date=_start_date, end_date=_end_date)
 
         logger.info("Getting list of available files for download : {0}".format(url))
 
@@ -182,14 +175,7 @@ class BroadcomCloudSwgClient(object):
             "items": ",".join([str(v) for v in items]),
         }
 
-        return (
-            str(
-                URL("{0}/reportpod/logs/download".format(self.base_url)).with_query(
-                    params
-                )
-            )
-            + "&api"
-        )
+        return str(URL("{0}/reportpod/logs/download".format(self.base_url)).with_query(params)) + "&api"
 
     async def download_file(self, file_id: int) -> str:
         """
@@ -260,15 +246,9 @@ class BroadcomCloudSwgClient(object):
             _start_date = _start_date.astimezone(pytz.utc)
 
         if (current_date - _start_date) > timedelta(hours=2):
-            raise ValueError(
-                "Start date should not be less then 2 hours ago in UTC timezone."
-            )
+            raise ValueError("Start date should not be less then 2 hours ago in UTC timezone.")
 
-        _end_time = (
-            (_start_date + timedelta(hours=1))
-            .replace(minute=0, second=0, microsecond=0)
-            .timestamp()
-        )
+        _end_time = (_start_date + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0).timestamp()
         if _start_date == current_date:
             _end_time = 0
 
@@ -311,33 +291,19 @@ class BroadcomCloudSwgClient(object):
             "Content-Encoding": "gzip",
         }
 
-        _start_date = (
-            start_date
-            if start_date is not None
-            else datetime.now(pytz.utc) - timedelta(hours=2)
-        )
+        _start_date = start_date if start_date is not None else datetime.now(pytz.utc) - timedelta(hours=2)
 
-        logger.info(
-            "Try to use near realtime sync report with next start date: {0}".format(
-                _start_date
-            )
-        )
+        logger.info("Try to use near realtime sync report with next start date: {0}".format(_start_date))
 
-        url, file_id = self.get_real_time_log_data_url(
-            start_date=_start_date, token=token
-        )
+        url, file_id = self.get_real_time_log_data_url(start_date=_start_date, token=token)
 
-        file_name, response_headers = await self.perform_download_file_request(
-            str(url), headers
-        )
+        file_name, response_headers = await self.perform_download_file_request(str(url), headers)
         logger.info("Response headers are: {0}".format(response_headers))
 
         return file_name, file_id
 
     @classmethod
-    def parse_input_string(
-        cls, value: str, fields: list[str] | None = None
-    ) -> dict[str, str]:
+    def parse_input_string(cls, value: str, fields: list[str] | None = None) -> dict[str, str]:
         """
         Parse line string and returns a dict representation.
 
@@ -382,9 +348,7 @@ class BroadcomCloudSwgClient(object):
 
         result = dict(zip(_fields, _values))
 
-        return {
-            key: result.get(key, "") for key in result.keys() if result.get(key) != "-"
-        }
+        return {key: result.get(key, "") for key in result.keys() if result.get(key) != "-"}
 
     async def perform_download_file_request(
         self, url: str, headers: dict[str, str]
@@ -406,15 +370,9 @@ class BroadcomCloudSwgClient(object):
         async with self.session() as session:
             async with session.get(url, headers=headers) as response:
                 if response.status != 200:
-                    raise ValueError(
-                        "Cannot get data. Status code is {0}".format(response.status)
-                    )
+                    raise ValueError("Cannot get data. Status code is {0}".format(response.status))
 
-                logger.info(
-                    "URL {0}: Response from Broadcom for have 200 status. Start to save archive.".format(
-                        url
-                    )
-                )
+                logger.info("URL {0}: Response from Broadcom for have 200 status. Start to save archive.".format(url))
 
                 response_headers = response.headers
                 file_name = await save_aiohttp_response(response)
@@ -444,9 +402,7 @@ class BroadcomCloudSwgClient(object):
         """
         if value.startswith("#") and "Fields:" in value:
             return [
-                element
-                for element in value.rstrip("\n").split(" ")
-                if "Fields:" not in element and "#" not in element
+                element for element in value.rstrip("\n").split(" ") if "Fields:" not in element and "#" not in element
             ]
 
         return None
@@ -615,17 +571,13 @@ class BroadcomCloudSwgClient(object):
         # Sorting the data is important for the groupby to work correctly
         sorted_data = sorted(data, key=_group_key)
 
-        grouped_data = {
-            key: list(group) for key, group in groupby(sorted_data, key=_group_key)
-        }
+        grouped_data = {key: list(group) for key, group in groupby(sorted_data, key=_group_key)}
 
         result = []
         for key, group in grouped_data.items():
             if len(group) > 0:
                 time_taken = int(group[0].get("time-taken", 0))
-                start_time = datetime.strptime(
-                    group[0].get("time", ""), cls._time_format
-                )
+                start_time = datetime.strptime(group[0].get("time", ""), cls._time_format)
                 end_time = datetime.strptime(group[0].get("time", ""), cls._time_format)
                 count = 0
 
