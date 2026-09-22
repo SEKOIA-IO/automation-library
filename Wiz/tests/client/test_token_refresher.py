@@ -162,3 +162,24 @@ async def test_wiz_refresher_always_provide_fresh_token(http_token, session_fake
         assert token.access_token == "fresh_token"
 
     await token_refresher.close()
+
+
+@pytest.mark.asyncio
+async def test_wiz_token_refresher_proxy_support(session_faker):
+    """
+    Test Wiz proxy support.
+    """
+    WizTokenRefresher._session = None
+
+    token_refresher = WizTokenRefresher(
+        session_faker.word(),
+        session_faker.word(),
+        session_faker.uri(),
+    )
+
+    assert token_refresher.session().trust_env is True
+
+    await token_refresher.close()
+    if WizTokenRefresher._session is not None:
+        await WizTokenRefresher._session.close()
+        WizTokenRefresher._session = None

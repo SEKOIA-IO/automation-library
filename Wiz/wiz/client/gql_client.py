@@ -118,6 +118,7 @@ class WizGqlClient(object):
                 transport = AIOHTTPTransport(
                     url=urljoin(self.tenant_url, "graphql"),
                     headers={"Authorization": f"Bearer {token.access_token}"},
+                    client_session_args={"trust_env": True},
                 )
 
                 yield Client(transport=transport, execute_timeout=self.timeout)
