@@ -73,7 +73,7 @@ class TrellixTokenRefresher(object):
             ClientSession:
         """
         if not cls._session:
-            cls._session = ClientSession()
+            cls._session = ClientSession(trust_env=True)
 
         return cls._session
 

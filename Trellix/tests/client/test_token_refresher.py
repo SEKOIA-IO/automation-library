@@ -284,3 +284,26 @@ async def test_trellix_refresher_always_provide_fresh_token(http_token, session_
         assert token.token.access_token == "fresh_token"
 
     await token_refresher.close()
+
+
+@pytest.mark.asyncio
+async def test_trellix_token_refresher_proxy_support(session_faker):
+    """
+    Test Trellix proxy support.
+    """
+    TrellixTokenRefresher._session = None
+
+    token_refresher = TrellixTokenRefresher(
+        session_faker.word(),
+        session_faker.word(),
+        session_faker.word(),
+        session_faker.uri(),
+        Scope.complete_set_of_scopes(),
+    )
+
+    assert token_refresher.session().trust_env is True
+
+    await token_refresher.close()
+    if TrellixTokenRefresher._session is not None:
+        await TrellixTokenRefresher._session.close()
+        TrellixTokenRefresher._session = None
