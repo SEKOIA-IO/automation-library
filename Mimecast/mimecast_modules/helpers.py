@@ -13,9 +13,7 @@ import xxhash
 
 
 class AsyncGeneratorConverter:
-    def __init__(
-        self, async_generator: AsyncGenerator, loop: asyncio.AbstractEventLoop
-    ):
+    def __init__(self, async_generator: AsyncGenerator, loop: asyncio.AbstractEventLoop):
         self.async_iterator = aiter(async_generator)
         self.loop = loop
 
@@ -79,9 +77,7 @@ async def async_download_batch(urls: list[str]) -> AsyncGenerator[dict, None]:
                 yield json.loads(line)
 
 
-def download_batches(
-    urls: list[str], loop: asyncio.AbstractEventLoop | None = None
-) -> Generator[dict, None, None]:
+def download_batches(urls: list[str], loop: asyncio.AbstractEventLoop | None = None) -> Generator[dict, None, None]:
     if loop:
         yield from AsyncGeneratorConverter(async_download_batch(urls), loop)
 
