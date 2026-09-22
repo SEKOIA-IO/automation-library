@@ -964,6 +964,35 @@ async def test_get_assets_refreshes_mfa_updated_users(test_entra_id_asset_connec
 
 
 @pytest.mark.asyncio
+async def test_get_assets_saves_audit_date_when_refreshed_users_fill_the_last_batch(test_entra_id_asset_connector):
+    last_audit_date = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0) - datetime.timedelta(days=1)
+    with test_entra_id_asset_connector.context as cache:
+        cache["most_recent_audit_date_seen"] = last_audit_date.isoformat()
+
+    async def mock_fetch_mfa_updated_users(since, excluded_user_ids):
+        yield MagicMock()
+        yield MagicMock()
+
+    test_entra_id_asset_connector.fetch_new_users = empty_async_generator
+    test_entra_id_asset_connector.fetch_mfa_updated_users = mock_fetch_mfa_updated_users
+
+    # The SDK pushes and checkpoints every full batch, then the residual one.
+    # Two refreshed users with a batch size of two leave no residual batch.
+    batch_size = 2
+    batch = []
+    async for asset in test_entra_id_asset_connector.get_assets():
+        batch.append(asset)
+        if len(batch) == batch_size:
+            await test_entra_id_asset_connector.update_checkpoint()
+            batch = []
+    if batch:
+        await test_entra_id_asset_connector.update_checkpoint()
+
+    new_audit_date = datetime.datetime.fromisoformat(test_entra_id_asset_connector.most_recent_audit_date_seen)
+    assert new_audit_date > last_audit_date
+
+
+@pytest.mark.asyncio
 async def test_get_assets_warns_when_mfa_refresh_is_beyond_audit_retention(test_entra_id_asset_connector):
     last_audit_date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=8)
     with test_entra_id_asset_connector.context as cache:

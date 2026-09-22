@@ -460,7 +460,6 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                     sent_user_ids.add(user.user.uid)
                 yield user
 
-            refreshed_users = 0
             since: datetime | None = None
             if last_audit_date:
                 last_audit = datetime.fromisoformat(last_audit_date)
@@ -477,14 +476,20 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 # Upgrade from a version without audit checkpoint: scan the whole audit retention
                 since = run_start - timedelta(days=self.AUDIT_LOG_MAX_RETENTION_DAYS)
             # First run fetches every user: nothing to refresh
+            last_refreshed_user: UserOCSFModel | None = None
             if since:
                 async for user in self.fetch_mfa_updated_users(since, sent_user_ids):
-                    refreshed_users += 1
-                    yield user
+                    if last_refreshed_user is not None:
+                        yield last_refreshed_user
+                    last_refreshed_user = user
 
-            if refreshed_users:
-                # Saved by update_checkpoint once the refreshed users are pushed
+            if last_refreshed_user is not None:
+                # Set before the last yield, not after: the consumer pushes the batch
+                # holding that user before asking for another asset, and asks for none
+                # when the refreshed users exactly fill it. update_checkpoint saves the
+                # position when that push succeeds.
                 self._pending_audit_date = run_start.isoformat()
+                yield last_refreshed_user
             else:
                 with self.context as cache:
                     cache["most_recent_audit_date_seen"] = run_start.isoformat()
