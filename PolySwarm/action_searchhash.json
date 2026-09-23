@@ -1,0 +1,85 @@
+{
+  "name": "SearchHash",
+  "description": "Look up a hash against what PolySwarm already knows. Read-only: nothing is submitted, no scan quota is spent, and an unseen hash comes back as unknown rather than an error. Use ScanFile to submit a file for a fresh verdict instead.",
+  "uuid": "d4e6d0c8-5c5d-59bd-87ff-2be80c6efe58",
+  "docker_parameters": "SearchHash",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "query_hash": {
+        "type": "string",
+        "description": "The hash (SHA256, SHA1, or MD5) to look up. Nothing is submitted to PolySwarm: this is a read-only search and spends no scan quota."
+      },
+      "detect_threshold": {
+        "type": "integer",
+        "default": 1,
+        "description": "How many malicious engine detections activate the detected branch. Default of 1 flags on any single detection."
+      }
+    },
+    "required": [
+      "query_hash"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "benign_detections": {
+        "type": "integer",
+        "description": "Number of benign detections"
+      },
+      "families": {
+        "type": "array",
+        "description": "Every malware family PolySwarm associates with the artifact, from the normalised engine name and the tag link surface. Empty when PolySwarm carries no family.",
+        "items": {
+          "type": "string"
+        }
+      },
+      "family": {
+        "type": "string",
+        "description": "Malware family name, when the metadata carries one"
+      },
+      "first_seen": {
+        "type": "string",
+        "description": "First seen timestamp"
+      },
+      "malicious_detections": {
+        "type": "integer",
+        "description": "Number of malicious detections"
+      },
+      "permalink": {
+        "type": "string",
+        "description": "Link to the PolySwarm scan result"
+      },
+      "polyscore": {
+        "type": "number",
+        "description": "PolySwarm threat score (0.0 - 1.0)"
+      },
+      "tags": {
+        "type": "array",
+        "description": "Tags associated with the artifact on the PolySwarm tag link surface. Empty when there are none or when the plan does not carry tag access.",
+        "items": {
+          "type": "string"
+        }
+      },
+      "threat_actor": {
+        "type": "string",
+        "description": "Threat actor named by an actor tag on the artifact. PolySwarm has no dedicated actor field, so this is only populated when a tag names one, and is an empty string otherwise."
+      },
+      "found": {
+        "type": "boolean",
+        "description": "Whether PolySwarm has seen this artifact at all"
+      },
+      "total_detections": {
+        "type": "integer",
+        "description": "How many engines returned a verdict, malicious or benign, excluding those that abstained"
+      }
+    }
+  },
+  "outputs": {
+    "detected": "PolySwarm engines detected this artifact",
+    "not detected": "PolySwarm has scanned this artifact and no engine detected it",
+    "unknown": "PolySwarm has never seen this artifact"
+  }
+}
