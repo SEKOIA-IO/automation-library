@@ -21,7 +21,8 @@
       },
       "base_url": {
         "description": "Url of salesforce instance. Consists of https://<instance>.salesforce.com",
-        "type": "string"
+        "type": "string",
+	"format": "uri"
       }
     },
     "required": [
