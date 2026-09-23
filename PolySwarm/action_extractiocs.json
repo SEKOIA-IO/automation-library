@@ -1,0 +1,93 @@
+{
+  "name": "ExtractIocs",
+  "description": "Extract hashes, IPs, domains, URLs and email addresses from text or a file, refanging defanged forms such as hxxp and [.]. Unlike every other action here, this never calls the PolySwarm API: local only, costs nothing, spends no quota.",
+  "uuid": "693a92e2-d6e0-5301-b209-5bd11f774e10",
+  "docker_parameters": "ExtractIocs",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "Text to extract indicators from. Supply this or a file, not both. Nothing is sent to PolySwarm: this runs locally and spends no quota."
+      },
+      "file": {
+        "type": "string",
+        "description": "Name of a text file to extract indicators from, relative to the run data directory where Sekoia delivers it. Supply this or text, not both. Nothing is sent to PolySwarm: this runs locally and spends no quota."
+      }
+    }
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "ipv4": {
+        "type": "array",
+        "description": "Routable IPv4 addresses found in the text",
+        "items": {
+          "type": "string"
+        }
+      },
+      "ipv6": {
+        "type": "array",
+        "description": "Routable IPv6 addresses found in the text",
+        "items": {
+          "type": "string"
+        }
+      },
+      "domain": {
+        "type": "array",
+        "description": "Domain names found on their own, excluding those that only appear inside a URL or an email address",
+        "items": {
+          "type": "string"
+        }
+      },
+      "url": {
+        "type": "array",
+        "description": "URLs found in the text, refanged and with trailing sentence punctuation removed",
+        "items": {
+          "type": "string"
+        }
+      },
+      "md5": {
+        "type": "array",
+        "description": "MD5 hashes found in the text",
+        "items": {
+          "type": "string"
+        }
+      },
+      "sha1": {
+        "type": "array",
+        "description": "SHA1 hashes found in the text",
+        "items": {
+          "type": "string"
+        }
+      },
+      "sha256": {
+        "type": "array",
+        "description": "SHA256 hashes found in the text",
+        "items": {
+          "type": "string"
+        }
+      },
+      "email": {
+        "type": "array",
+        "description": "Email addresses found in the text",
+        "items": {
+          "type": "string"
+        }
+      },
+      "reserved_ip": {
+        "type": "array",
+        "description": "Private, loopback, link local, multicast and other reserved addresses, reported separately from the routable ones rather than dropped",
+        "items": {
+          "type": "string"
+        }
+      },
+      "total_count": {
+        "type": "integer",
+        "description": "Total number of indicators returned across every list, including the reserved addresses"
+      }
+    }
+  }
+}

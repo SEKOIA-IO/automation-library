@@ -1,0 +1,79 @@
+[project]
+name = "polyswarm-automation-module"
+version = "1.1.1"
+description = ""
+authors = []
+requires-python = ">=3.11,<4"
+
+dependencies = [
+    "sekoia-automation-sdk>=1.23.0,<2",
+    "polyswarm-api (>=3.20.0,<4.0.0)"
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "requests",
+    "requests-mock",
+    "ruff>=0.14",
+    "mypy",
+]
+
+
+[build-system]
+requires = ["uv_build>=0.9.7,<1.0.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 119
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]
+
+[tool.mypy]
+python_version = "3.14"
+files = ["."]
+install_types = true
+non_interactive = true
+ignore_missing_imports = true
+show_column_numbers = true
+exclude = ["tests/"]
+
+[tool.black]
+line-length = 119
+target-version = ['py311']
+include = '\.pyi?$'
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "tests",
+]
+markers = [
+    "integration: live API tests (require POLYSWARM_API_KEY)",
+]
+addopts = '''
+  --strict-markers
+  --tb=short
+  --cov=polyswarm_modules
+  --cov-branch
+  --cov-report=html
+  --cov-report=term-missing:skip-covered
+  --cov-fail-under=85
+  --capture=sys
+  -m "not integration"
+'''

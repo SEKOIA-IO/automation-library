@@ -1,0 +1,124 @@
+{
+  "name": "AccountUsage",
+  "description": "Reach for this when a playbook starts failing PolySwarm actions. Reports the account, plan and remaining quota behind the configured key, so you can tell whether it is a bad key, an unsupported feature, or spent quota. Never returns the API key.",
+  "uuid": "fc19eec6-1005-5a46-843e-d48e90b4b4e2",
+  "docker_parameters": "AccountUsage",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "account_name": {
+        "type": "string",
+        "description": "Name of the account the API key belongs to"
+      },
+      "account_number": {
+        "type": "string",
+        "description": "PolySwarm account number"
+      },
+      "account_type": {
+        "type": "string",
+        "description": "Account type, for example user or team"
+      },
+      "communities": {
+        "type": "array",
+        "description": "Communities the account may query",
+        "items": {
+          "type": "string"
+        }
+      },
+      "daily_api_limit": {
+        "type": "integer",
+        "description": "Daily API request allowance, or null when the plan does not meter daily requests"
+      },
+      "daily_api_remaining": {
+        "type": "integer",
+        "description": "Daily API requests still available, or null when the plan does not meter daily requests"
+      },
+      "exhausted_features": {
+        "type": "array",
+        "description": "Names of the features whose remaining uses have reached zero, which is the usual reason a working playbook starts failing",
+        "items": {
+          "type": "string"
+        }
+      },
+      "features": {
+        "type": "array",
+        "description": "Per feature quota as the platform meters it. The plan decides what appears here, so scans, hunting and sandbox detonations are entries in this list rather than fields of their own",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Feature name"
+            },
+            "tag": {
+              "type": "string",
+              "description": "Feature tag used by the platform"
+            },
+            "base_uses": {
+              "type": "integer",
+              "description": "Uses included for the plan period, or null when the feature is not metered by count"
+            },
+            "remaining_uses": {
+              "type": "integer",
+              "description": "Uses still available in the plan period, or null when the feature is not metered by count"
+            },
+            "overage": {
+              "type": "integer",
+              "description": "Uses consumed beyond the included allowance, or null when the feature allows no overage"
+            },
+            "kind": {
+              "type": "string",
+              "description": "Feature kind as the platform reports it. A boolean feature is an entitlement that is on or off rather than a quota"
+            },
+            "enabled": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "Whether a boolean entitlement is switched on. Null for a metered feature"
+            },
+            "unlimited": {
+              "type": "boolean",
+              "description": "True when the platform reports the allowance as unmetered"
+            }
+          }
+        }
+      },
+      "has_stream_access": {
+        "type": "boolean",
+        "description": "Whether the account may consume the PolySwarm stream"
+      },
+      "is_trial": {
+        "type": "boolean",
+        "description": "Whether the account is on a trial plan"
+      },
+      "is_trial_expired": {
+        "type": "boolean",
+        "description": "Whether the trial has ended"
+      },
+      "plan_name": {
+        "type": "string",
+        "description": "Name of the plan or tier the account is on"
+      },
+      "plan_period_end": {
+        "type": "string",
+        "description": "End of the current plan period, which is when metered quotas reset"
+      },
+      "plan_period_start": {
+        "type": "string",
+        "description": "Start of the current plan period"
+      },
+      "tenant": {
+        "type": "string",
+        "description": "Tenant the account belongs to, empty on accounts with no tenant"
+      }
+    }
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "name": "ScanUrl",
+  "description": "Submit a URL to PolySwarm's engine marketplace for a fresh multi-engine verdict. Spends a scan and creates account activity; reuses an existing result unless force_rescan is set.",
+  "uuid": "c75531ef-eba1-54a8-8591-8466f15c6892",
+  "docker_parameters": "ScanUrl",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "The URL to scan. Submitted to PolySwarm's engine marketplace, which spends a scan unless a matching result already exists."
+      },
+      "scan_config": {
+        "type": "string",
+        "description": "How long PolySwarm waits for engines to answer before returning a verdict: 'default' is fastest; 'more-time' and 'most-time' wait longer so more engines can finish, at the cost of a slower playbook run.",
+        "default": "more-time",
+        "enum": [
+          "default",
+          "more-time",
+          "most-time"
+        ]
+      },
+      "detect_threshold": {
+        "type": "integer",
+        "default": 1,
+        "description": "How many malicious engine detections activate the detected branch. Default of 1 flags on any single detection."
+      },
+      "force_rescan": {
+        "type": "boolean",
+        "default": false,
+        "description": "Skip the check for an existing result and submit a new scan. This spends a scan even when PolySwarm already has a result for this URL, so leave it off unless you need a fresh verdict."
+      }
+    },
+    "required": [
+      "url"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "sha256": {
+        "type": "string",
+        "description": "SHA256 hash of the scanned URL artifact"
+      },
+      "permalink": {
+        "type": "string",
+        "description": "Link to the PolySwarm scan result"
+      },
+      "polyscore": {
+        "type": "number",
+        "description": "PolySwarm threat score (0.0 - 1.0)"
+      },
+      "extended_type": {
+        "type": "string",
+        "description": "Artifact type classification"
+      },
+      "malicious_count": {
+        "type": "integer",
+        "description": "Number of engines that flagged the URL as malicious"
+      },
+      "benign_count": {
+        "type": "integer",
+        "description": "Number of engines that flagged the URL as benign"
+      },
+      "total_count": {
+        "type": "integer",
+        "description": "Total number of engines that responded"
+      },
+      "failed": {
+        "type": "boolean",
+        "description": "Whether the scan failed"
+      },
+      "cached": {
+        "type": "boolean",
+        "description": "Whether the result came from an existing scan instead of a new submission"
+      },
+      "assertions": {
+        "type": "array",
+        "description": "Individual engine verdicts",
+        "items": {
+          "type": "object",
+          "properties": {
+            "engine_name": {
+              "type": "string",
+              "description": "Name of the engine that returned this verdict"
+            },
+            "author_name": {
+              "type": "string",
+              "description": "Name of the party that authored the engine"
+            },
+            "verdict": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "What the engine answered: true for malicious, false for benign, null when the engine abstained, which counts as neither"
+            }
+          }
+        }
+      }
+    }
+  },
+  "outputs": {
+    "detected": "PolySwarm engines detected this artifact",
+    "not detected": "PolySwarm has scanned this artifact and no engine detected it"
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "name": "SearchMetadata",
+  "description": "Run an operator supplied Lucene style query against the PolySwarm metadata index, the same endpoint and query language the PolySwarm intel feed connector drives on a schedule, exposed here directly so a playbook can ask any query instead of the fixed family, tag and polyscore filters the connector applies. This action only reads the index and spends no scanning quota.",
+  "uuid": "8470d489-3b63-4799-99c0-5b834d4e9229",
+  "docker_parameters": "SearchMetadata",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Lucene style query against the PolySwarm metadata search endpoint, for example 'scan.latest_scan.polyscore:>=0.9 AND tags:\"ransomware\"'. This action only reads the index and spends no scanning quota."
+      },
+      "limit": {
+        "type": "integer",
+        "default": 20,
+        "minimum": 1,
+        "maximum": 200,
+        "description": "Maximum number of matching artifacts to return, from 1 up to a hard ceiling of 200 so a broad query cannot run away. Defaults to 20."
+      },
+      "include": {
+        "type": "array",
+        "description": "Fields to include in each returned document, wildcard suffixes accepted (for example 'scan.*'). Passed straight through to the PolySwarm metadata endpoint. Leave empty to let the endpoint decide what a document carries.",
+        "items": {
+          "type": "string"
+        }
+      },
+      "exclude": {
+        "type": "array",
+        "description": "Fields to exclude from each returned document, wildcard suffixes accepted. Passed straight through to the PolySwarm metadata endpoint.",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "query"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "found": {
+        "type": "boolean",
+        "description": "Whether the query matched at least one artifact"
+      },
+      "results": {
+        "type": "array",
+        "description": "Matching artifacts, up to limit. Empty when nothing matched.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "sha256": {
+              "type": "string",
+              "description": "SHA256 hash of the artifact"
+            },
+            "sha1": {
+              "type": "string",
+              "description": "SHA1 hash of the artifact, when the document carries one"
+            },
+            "md5": {
+              "type": "string",
+              "description": "MD5 hash of the artifact, when the document carries one"
+            },
+            "malicious_detections": {
+              "type": "integer",
+              "description": "Number of engines that returned a malicious verdict"
+            },
+            "benign_detections": {
+              "type": "integer",
+              "description": "Number of engines that returned a benign verdict"
+            },
+            "total_detections": {
+              "type": "integer",
+              "description": "Total number of engines that returned a verdict"
+            },
+            "polyscore": {
+              "type": "number",
+              "description": "PolySwarm threat score (0.0 - 1.0), when the document carries one"
+            },
+            "permalink": {
+              "type": "string",
+              "description": "Link to the PolySwarm scan result"
+            },
+            "family": {
+              "type": "string",
+              "description": "Malware family name, when the metadata carries one"
+            },
+            "families": {
+              "type": "array",
+              "description": "Every malware family PolySwarm associates with the artifact. Empty when PolySwarm carries no family.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "tags": {
+              "type": "array",
+              "description": "Tags PolySwarm associates with the artifact. Empty when there are none.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "first_seen": {
+              "type": "string",
+              "description": "First seen timestamp, when the document carries one"
+            },
+            "last_scanned": {
+              "type": "string",
+              "description": "Last scanned timestamp, when the document carries one"
+            },
+            "mimetype": {
+              "type": "string",
+              "description": "MIME type of the artifact, when the document carries one"
+            },
+            "filenames": {
+              "type": "array",
+              "description": "Filenames PolySwarm has seen for the artifact",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "returned_count": {
+        "type": "integer",
+        "description": "Number of artifacts actually returned in results"
+      },
+      "limit": {
+        "type": "integer",
+        "description": "The limit this call ran with"
+      },
+      "truncated": {
+        "type": "boolean",
+        "description": "True when more artifacts matched the query than limit allowed to be returned. A truncated answer is not a complete one: raise limit or narrow the query to see the rest."
+      }
+    }
+  },
+  "outputs": {
+    "found": "The query matched at least one artifact, and every match was returned",
+    "not found": "The query matched no artifacts in PolySwarm",
+    "truncated": "The query matched more artifacts than limit allowed to be returned, so this answer is incomplete"
+  }
+}
