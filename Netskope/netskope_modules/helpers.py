@@ -30,7 +30,8 @@ def get_index_name(prefix: str, event_type: NetskopeEventType, alert_type: Netsk
     """
     # otherwise, create it
     hash_sum = hashlib.sha256()
-    hash_sum.update(prefix.encode("utf-8"))
+    if prefix is not None:
+        hash_sum.update(prefix.encode("utf-8"))
     hash_sum.update(event_type.value.encode("utf-8"))
 
     if event_type == "alert" and alert_type is not None:

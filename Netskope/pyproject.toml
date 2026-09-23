@@ -21,6 +21,10 @@ line_length = 119
 [tool.mypy]
 exclude = ["tests/*", "dev.py"]
 
+[[tool.mypy.overrides]]
+module = ["sekoia_automation.*", "netskope_api.*"]
+ignore_missing_imports = true
+
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
 netskopesdk = "^0.0.41"
