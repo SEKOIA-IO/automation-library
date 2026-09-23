@@ -80,3 +80,45 @@ def test_get_hostnames_by_ip():
             ]
         ).dict()
         assert res == expected_result
+
+
+def test_get_hostnames_by_ip_no_result():
+    instance_url = "https://test.hurukau.io"
+    api_token = "11111111111111111111111111111111"
+
+    action = GetHostnamesByIP()
+    action.module.configuration = {"url": instance_url, "api_token": api_token}
+
+    target_ip = "10.0.0.42"
+
+    with requests_mock.Mocker() as mock:
+        mock.get(
+            f"{instance_url}/api/data/endpoint/Agent/",
+            json={"count": 0, "results": []},
+            headers={"Authorization": f"Token {api_token}"},
+        )
+
+        # No agent matches the IP: the action must return an empty list, not fail
+        res = action.run({"target_ip": target_ip, "get_only_last_seen": True})
+        assert res == {"hostnames": []}
+
+        res = action.run({"target_ip": target_ip, "get_only_last_seen": False})
+        assert res == {"hostnames": []}
+
+
+def test_get_hostnames_by_ip_missing_results_key():
+    instance_url = "https://test.hurukau.io"
+    api_token = "11111111111111111111111111111111"
+
+    action = GetHostnamesByIP()
+    action.module.configuration = {"url": instance_url, "api_token": api_token}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(
+            f"{instance_url}/api/data/endpoint/Agent/",
+            json={"count": 0},
+            headers={"Authorization": f"Token {api_token}"},
+        )
+
+        res = action.run({"target_ip": "10.0.0.42", "get_only_last_seen": True})
+        assert res == {"hostnames": []}
