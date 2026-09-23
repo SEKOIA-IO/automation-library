@@ -73,6 +73,7 @@ class BroadcomCloudSwgClient(object):
                 timeout=timeout,
                 headers={"Accept-Encoding": "gzip"},
                 auto_decompress=True,
+                trust_env=True,
             )
 
         if cls._retry_client is None:
@@ -553,7 +554,9 @@ class BroadcomCloudSwgClient(object):
             list[dict[str, Any]]:
         """
 
-        def _group_key(item: dict[str, Any]) -> tuple[Any, Any, Any, Any, Any, Any, Any, Any]:
+        def _group_key(
+            item: dict[str, Any],
+        ) -> tuple[Any, Any, Any, Any, Any, Any, Any, Any]:
             return (
                 item.get("c-ip", ""),
                 item.get("cs-userdn", ""),
@@ -584,7 +587,8 @@ class BroadcomCloudSwgClient(object):
                         time_taken = entry_time_taken
 
                     entry_start_time = datetime.strptime(
-                        entry.get("start-time") or entry.get("time", ""), cls._time_format
+                        entry.get("start-time") or entry.get("time", ""),
+                        cls._time_format,
                     )
 
                     entry_end_time = datetime.strptime(

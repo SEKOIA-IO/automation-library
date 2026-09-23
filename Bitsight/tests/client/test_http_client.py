@@ -1,6 +1,7 @@
 """All necessary tests for http client."""
 
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from aioresponses import aioresponses
@@ -112,6 +113,8 @@ async def test_get_findings_raises_value_error_1(api_token: str, company_id: str
     with pytest.raises(ValueError):
         await client.get_findings()
 
+    await client.close()
+
 
 @pytest.mark.asyncio
 async def test_get_findings_raises_value_if_error_http_status(
@@ -139,6 +142,8 @@ async def test_get_findings_raises_value_if_error_http_status(
 
         assert "Failed to get findings: 300: error" in str(error)
 
+        await client.close()
+
 
 @pytest.mark.asyncio
 async def test_get_findings_1(
@@ -165,6 +170,8 @@ async def test_get_findings_1(
 
         assert result == findings
         assert url is None
+
+        await client.close()
 
 
 @pytest.mark.asyncio
@@ -194,6 +201,8 @@ async def test_get_findings_2(
 
         assert result == findings
         assert url == next_url
+
+        await client.close()
 
 
 @pytest.mark.asyncio
@@ -244,3 +253,23 @@ async def test_findings_result_complex(
             result.append(finding)
 
         assert result == findings_1 + findings_2 + findings_3
+
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_bitsight_client_proxy_support(api_token: str) -> None:
+    """
+    Test Client proxy support.
+    """
+    with patch.dict(
+        "os.environ",
+        {"HTTP_PROXY": "http://localhost:8080", "HTTPS_PROXY": "http://localhost:8080"},
+    ):
+        # Setup the client
+        client = BitsightClient(api_token)
+
+        async with client.session() as session:
+            assert session.trust_env is True
+
+        await client.close()

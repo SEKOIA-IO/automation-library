@@ -173,7 +173,9 @@ async def test_salesforce_http_client_request_headers(session_faker, http_token,
     token_refresher_session.post.return_value.__aenter__.return_value.json.return_value = token_data
 
     client = SalesforceHttpClient(
-        client_id=session_faker.pystr(), client_secret=session_faker.pystr(), base_url=base_url
+        client_id=session_faker.pystr(),
+        client_secret=session_faker.pystr(),
+        base_url=base_url,
     )
 
     result_headers = await client._request_headers()
@@ -198,7 +200,9 @@ async def test_salesforce_http_client_get_log_files(
         http_client_session: MagicMock
     """
     client = SalesforceHttpClient(
-        client_id=session_faker.pystr(), client_secret=session_faker.pystr(), base_url=session_faker.uri()
+        client_id=session_faker.pystr(),
+        client_secret=session_faker.pystr(),
+        base_url=session_faker.uri(),
     )
 
     token_data = http_token.dict()
@@ -318,14 +322,18 @@ async def test_salesforce_http_client_get_log_file_content(session_faker, http_t
         )
 
         client = SalesforceHttpClient(
-            client_id=session_faker.pystr(), client_secret=session_faker.pystr(), base_url=base_url
+            client_id=session_faker.pystr(),
+            client_secret=session_faker.pystr(),
+            base_url=base_url,
         )
 
         token_data = http_token.dict()
         token_data["id"] = token_data["tid"]
 
         mocked_responses.post(
-            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url), status=200, payload=token_data
+            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url),
+            status=200,
+            payload=token_data,
         )
 
         mocked_responses.get(
@@ -364,14 +372,18 @@ async def test_salesforce_http_client_get_log_file_content_2(session_faker, http
         )
 
         client = SalesforceHttpClient(
-            client_id=session_faker.pystr(), client_secret=session_faker.pystr(), base_url=base_url
+            client_id=session_faker.pystr(),
+            client_secret=session_faker.pystr(),
+            base_url=base_url,
         )
 
         token_data = http_token.dict()
         token_data["id"] = token_data["tid"]
 
         mocked_responses.post(
-            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url), status=200, payload=token_data
+            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url),
+            status=200,
+            payload=token_data,
         )
 
         mocked_responses.get(
@@ -419,24 +431,35 @@ async def test_salesforce_http_client_get_log_file_content_3(session_faker, http
         )
 
         client = SalesforceHttpClient(
-            client_id=session_faker.pystr(), client_secret=session_faker.pystr(), base_url=base_url
+            client_id=session_faker.pystr(),
+            client_secret=session_faker.pystr(),
+            base_url=base_url,
         )
 
         token_data = http_token.dict()
         token_data["id"] = token_data["tid"]
 
         mocked_responses.post(
-            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url), status=200, payload=token_data
+            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url),
+            status=200,
+            payload=token_data,
         )
 
         mocked_responses.get(
             url="{0}{1}".format(base_url, log_file.LogFile),
             status=401,
-            payload=[{"errorCode": "INVALID_SESSION_ID", "message": "Session expired or invalid"}],
+            payload=[
+                {
+                    "errorCode": "INVALID_SESSION_ID",
+                    "message": "Session expired or invalid",
+                }
+            ],
         )
 
         mocked_responses.post(
-            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url), status=200, payload=token_data
+            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url),
+            status=200,
+            payload=token_data,
         )
 
         mocked_responses.get(
@@ -459,3 +482,18 @@ async def test_salesforce_http_client_get_log_file_content_3(session_faker, http
         await delete_file(result_file)
 
         assert file_content == list(csv.DictReader(csv_content.splitlines(), delimiter=","))
+
+
+@pytest.mark.asyncio
+async def test_salesforce_client_proxy_support(session_faker) -> None:
+    """
+    Test client proxy support.
+    """
+    http_client = SalesforceHttpClient(
+        client_id=session_faker.pystr(),
+        client_secret=session_faker.pystr(),
+        base_url=session_faker.uri(),
+    )
+
+    async with http_client.session() as session:
+        assert session.trust_env is True

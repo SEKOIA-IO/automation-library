@@ -41,7 +41,7 @@ async def gather_with_concurrency(n: int, *tasks):
 
 
 async def async_fetch_content(url: str) -> bytes:
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(trust_env=True) as session:
         async with session.get(url) as response:
             return await response.read()
 

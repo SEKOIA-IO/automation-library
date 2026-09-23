@@ -56,7 +56,11 @@ async def test_wiz_gql_client_get_audit_logs(
 
     with aioresponses() as mocked_responses:
         mocked_responses.post(auth_url, status=200, payload=http_token.dict())
-        mocked_responses.post(tenant_url + "graphql", status=200, payload={"data": audit_logs_response_with_next_page})
+        mocked_responses.post(
+            tenant_url + "graphql",
+            status=200,
+            payload={"data": audit_logs_response_with_next_page},
+        )
         mocked_responses.post(tenant_url + "graphql", status=200, payload={"data": audit_logs_response})
 
         result = await wiz_gql_client.get_audit_logs(date)
@@ -122,7 +126,11 @@ async def test_wiz_gql_client_get_audit_logs_error_1(
 
     with aioresponses() as mocked_responses:
         mocked_responses.post(auth_url, status=200, payload=http_token.dict())
-        mocked_responses.post(tenant_url + "graphql", status=200, payload={"data": {"errors": ["some_error"]}})
+        mocked_responses.post(
+            tenant_url + "graphql",
+            status=200,
+            payload={"data": {"errors": ["some_error"]}},
+        )
 
         with pytest.raises(WizErrors):
             await wiz_gql_client.get_audit_logs(date)
@@ -246,7 +254,11 @@ async def test_wiz_gql_client_get_alerts(
 
     with aioresponses() as mocked_responses:
         mocked_responses.post(auth_url, status=200, payload=http_token.dict())
-        mocked_responses.post(tenant_url + "graphql", status=200, payload={"data": alerts_response_with_next_page})
+        mocked_responses.post(
+            tenant_url + "graphql",
+            status=200,
+            payload={"data": alerts_response_with_next_page},
+        )
         mocked_responses.post(tenant_url + "graphql", status=200, payload={"data": alerts_response})
 
         result = await wiz_gql_client.get_alerts(date)
@@ -287,10 +299,14 @@ async def test_wiz_gql_client_get_cloud_configuration_findings(
     with aioresponses() as mocked_responses:
         mocked_responses.post(auth_url, status=200, payload=http_token.dict())
         mocked_responses.post(
-            tenant_url + "graphql", status=200, payload={"data": cloud_configuration_findings_response_with_next_page}
+            tenant_url + "graphql",
+            status=200,
+            payload={"data": cloud_configuration_findings_response_with_next_page},
         )
         mocked_responses.post(
-            tenant_url + "graphql", status=200, payload={"data": cloud_configuration_findings_response}
+            tenant_url + "graphql",
+            status=200,
+            payload={"data": cloud_configuration_findings_response},
         )
 
         result = await wiz_gql_client.get_cloud_configuration_findings(date)
@@ -358,7 +374,11 @@ async def test_wiz_gql_client_get_cloud_configuration_findings_error_1(
 
     with aioresponses() as mocked_responses:
         mocked_responses.post(auth_url, status=200, payload=http_token.dict())
-        mocked_responses.post(tenant_url + "graphql", status=200, payload={"data": {"errors": ["some_error"]}})
+        mocked_responses.post(
+            tenant_url + "graphql",
+            status=200,
+            payload={"data": {"errors": ["some_error"]}},
+        )
 
         with pytest.raises(WizErrors):
             await wiz_gql_client.get_cloud_configuration_findings(date)
@@ -393,9 +413,15 @@ async def test_wiz_gql_client_get_vulnerability_findings(
     with aioresponses() as mocked_responses:
         mocked_responses.post(auth_url, status=200, payload=http_token.dict())
         mocked_responses.post(
-            tenant_url + "graphql", status=200, payload={"data": vulnerability_findings_response_with_next_page}
+            tenant_url + "graphql",
+            status=200,
+            payload={"data": vulnerability_findings_response_with_next_page},
         )
-        mocked_responses.post(tenant_url + "graphql", status=200, payload={"data": vulnerability_findings_response})
+        mocked_responses.post(
+            tenant_url + "graphql",
+            status=200,
+            payload={"data": vulnerability_findings_response},
+        )
 
         result = await wiz_gql_client.get_vulnerability_findings(date)
         expected_result = WizResult.from_vulnerability_findings_response(
@@ -462,9 +488,40 @@ async def test_wiz_gql_client_get_vulnerability_findings_error_1(
 
     with aioresponses() as mocked_responses:
         mocked_responses.post(auth_url, status=200, payload=http_token.dict())
-        mocked_responses.post(tenant_url + "graphql", status=200, payload={"data": {"errors": ["some_error"]}})
+        mocked_responses.post(
+            tenant_url + "graphql",
+            status=200,
+            payload={"data": {"errors": ["some_error"]}},
+        )
 
         with pytest.raises(WizErrors):
             await wiz_gql_client.get_vulnerability_findings(date)
+
+        await wiz_gql_client.close()
+
+
+@pytest.mark.asyncio
+async def test_wiz_client_proxy_support(http_token, wiz_gql_client, auth_url, tenant_url) -> None:
+    """
+    Test WizGqlClient proxy support
+
+    Args:
+        wiz_gql_client: WizGqlClient
+    """
+
+    with aioresponses() as mocked_responses:
+        mocked_responses.post(auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(
+            tenant_url + "graphql",
+            status=200,
+            payload={"data": {"errors": ["some_error"]}},
+        )
+
+        async with wiz_gql_client._session() as client:
+            # Initialize the transport
+            await client.transport.connect()
+
+            # Check if the transport is using the system's proxy settings
+            assert client.transport.session.trust_env is True
 
         await wiz_gql_client.close()

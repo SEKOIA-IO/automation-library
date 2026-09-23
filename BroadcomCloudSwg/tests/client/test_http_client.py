@@ -1,6 +1,7 @@
 """Tests related to client."""
 
 from datetime import datetime, timedelta
+from unittest.mock import patch
 
 import aiofiles
 import pytest
@@ -293,7 +294,9 @@ async def test_list_of_files(
         second_start_date = datetime.now(pytz.utc) - timedelta(days=1)
         second_end_date = datetime.now(pytz.utc)
         mocked_responses.get(
-            client.list_of_files_to_process_url(second_start_date, second_end_date), status=200, payload=data1
+            client.list_of_files_to_process_url(second_start_date, second_end_date),
+            status=200,
+            payload=data1,
         )
 
         result1 = await client.list_of_files()
@@ -764,3 +767,23 @@ async def test_parse_headers_and_values():
     assert BroadcomCloudSwgClient.parse_input_string(input_1, expected_headers) == expected_parsed1
     assert BroadcomCloudSwgClient.parse_input_string(input_2, expected_headers) == expected_parsed2
     assert BroadcomCloudSwgClient.parse_input_string(input_3, expected_headers) == expected_parsed3
+
+
+@pytest.mark.asyncio
+async def test_client_proxy_support(session_faker: Faker):
+    """
+    Test client proxy support.
+    """
+    with patch.dict(
+        "os.environ",
+        {"HTTP_PROXY": "http://localhost:8080", "HTTPS_PROXY": "http://localhost:8080"},
+    ):
+        # Setup the client
+        client = BroadcomCloudSwgClient(
+            username=session_faker.word(),
+            password=session_faker.word(),
+            base_url=session_faker.uri(),
+        )
+
+        async with client.session() as session:
+            assert session._client.trust_env is True
