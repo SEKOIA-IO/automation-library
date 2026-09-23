@@ -171,3 +171,5 @@ async def test_delinea_client_proxy_support(base_url: str, client_id: str, clien
 
         async with client.session() as session:
             assert session.trust_env is True
+
+        await client.close()

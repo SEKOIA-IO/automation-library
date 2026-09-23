@@ -770,7 +770,7 @@ async def test_parse_headers_and_values():
 
 
 @pytest.mark.asyncio
-async def test_delinea_client_proxy_support(session_faker: Faker):
+async def test_client_proxy_support(session_faker: Faker):
     """
     Test client proxy support.
     """
