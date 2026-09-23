@@ -1,21 +1,24 @@
 from aiolimiter import AsyncLimiter
-from pydantic.v1 import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class SalesforceModuleConfig(BaseModel):
     """Configuration for SalesforceModule."""
 
-    client_secret: str = Field(secret=True)
+    client_secret: str = Field(..., json_schema_extra={"secret": True})
     client_id: str = Field(required=True, description="Salesforce client id")
     base_url: HttpUrl = Field(required=True, description="Salesforce auth url")
-    org_type: str = Field(default="production", required=True, description="Salesforce org type")
+    org_type: str = Field(
+        default="production", required=True, description="Salesforce org type"
+    )
     rate_limit: str | None = Field(
+        None,
         description=(
             "Rate limit for requests to salesforce."
             "Value should have next format {max_rate}/{time_period}. For example: 3/60"
             "If value is empty, Sekoia will use default rate limits. More information you can find in docs:"
             "https://developer.salesforce.com/docs/atlas.en-us.salesforce_app_limits_cheatsheet.meta/salesforce_app_limits_cheatsheet/salesforce_app_limits_platform_api.htm"
-        )
+        ),
     )
 
     @property
