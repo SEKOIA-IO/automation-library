@@ -319,6 +319,7 @@ async def test_trellix_http_client_retry(
     session_faker: Faker,
     http_token: HttpToken,
     edr_alert_event_response: tuple[dict[str, Any], TrellixResponse[EdrAlertAttributes]],
+    aioresponses_uppercase_method,
 ):
     """
     Test get edr alert events.
@@ -327,6 +328,7 @@ async def test_trellix_http_client_retry(
         session_faker: Faker
         http_token: HttpToken
         edr_alert_event_response: tuple[dict[str, Any], TrellixResponse[EdrAlertAttributes]]
+        aioresponses_uppercase_method: None
     """
     with aioresponses() as mocked_responses:
         base_url = session_faker.uri()
@@ -375,6 +377,7 @@ async def test_trellix_http_client_api_limit_exhausted(
     session_faker: Faker,
     http_token: HttpToken,
     edr_alert_event_response: tuple[dict[str, Any], TrellixResponse[EdrAlertAttributes]],
+    aioresponses_uppercase_method,
 ):
     """
     Test get edr alert events.
@@ -383,6 +386,7 @@ async def test_trellix_http_client_api_limit_exhausted(
         session_faker: Faker
         http_token: HttpToken
         edr_alert_event_response: tuple[dict[str, Any], TrellixResponse[EdrAlertAttributes]]
+        aioresponses_uppercase_method: None
     """
     with aioresponses() as mocked_responses:
         base_url = session_faker.uri()
