@@ -38,7 +38,7 @@ runs:
     - name: Execute Mypy
       shell: bash
       run: |
-        uv run mypy
+        uv run mypy .
       working-directory: ${{ inputs.module }}
 
     - name: Execute Python tests
