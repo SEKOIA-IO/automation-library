@@ -1,0 +1,25 @@
+{
+  "configuration": {
+    "properties": {
+      "api_key": {
+        "description": "API Key",
+        "title": "Api Key",
+        "type": "string"
+      }
+    },
+    "required": [
+      "api_key"
+    ],
+    "title": "BrevoHttpModuleConfiguration",
+    "type": "object",
+    "secrets": [
+      "api_key"
+    ]
+  },
+  "description": "",
+  "name": "BrevoHTTP",
+  "slug": "brevohttp",
+  "categories": [],
+  "uuid": "bb6a8a71-32f5-4db1-81bc-e32258c42451",
+  "version": "0.2.1"
+}
