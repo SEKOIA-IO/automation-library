@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-29 - 1.3.12
+
+### Fixed
+
+- Improve connector behavior on temporary connection issues and recovery logging
+
 ## 2025-11-03 - 1.3.11
 
 ### Changed

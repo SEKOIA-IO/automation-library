@@ -5,6 +5,7 @@ import orjson
 import pytest
 import requests_mock
 from freezegun import freeze_time
+from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import HTTPError
 from sekoia_automation.storage import PersistentJSON
 
@@ -363,6 +364,46 @@ def test_getting_data_with_permission_failure(trigger, alert_query_2):
         assert trigger.log.mock_calls == [
             call(level="critical", message="Permission denied: The operation isn't allowed for these credentials")
         ]
+
+
+@freeze_time("2024-01-23 10:00:00")
+def test_getting_data_with_connection_failure(trigger, alert_query_2):
+    with (
+        patch("cortex_module.cortex_edr_connector.time") as mock_time,
+        patch.object(
+            trigger,
+            "get_all_alerts",
+            side_effect=RequestsConnectionError("Remote end closed connection without response"),
+        ),
+    ):
+        trigger.forward_next_batch()
+
+        trigger.log.assert_any_call(
+            level="warning",
+            message="Temporary connection issue while fetching Cortex alerts, will retry on next run",
+        )
+
+
+@freeze_time("2024-01-23 10:00:00")
+def test_getting_data_reconnect_notification(trigger, alert_query_2):
+    with (
+        patch("cortex_module.cortex_edr_connector.time") as mock_time,
+        patch.object(
+            trigger,
+            "get_all_alerts",
+            side_effect=[RequestsConnectionError("Remote end closed connection without response"), None],
+        ),
+    ):
+        trigger.forward_next_batch()
+        trigger.forward_next_batch()
+
+        trigger.log.assert_any_call(
+            level="warning",
+            message="Temporary connection issue while fetching Cortex alerts, will retry on next run",
+        )
+        trigger.log.assert_any_call(
+            level="info", message="Cortex connection restored, the connector reconnected successfully"
+        )
 
 
 def test_splitting_events(trigger, alert_response_4):
