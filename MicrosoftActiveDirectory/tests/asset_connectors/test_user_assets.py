@@ -5,6 +5,7 @@ import pytest
 from ldap3.core.exceptions import LDAPException, LDAPSessionTerminatedByServerError
 from ldap3.core.timezone import OffsetTzInfo
 from sekoia_automation.asset_connector.models.ocsf.user import AccountTypeId, UserOCSFModel, UserTypeId, UserTypeStr
+from sekoia_automation.storage import PersistentJSON
 
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
 from microsoft_ad.models.common_models import LDAPUserAttributes
@@ -350,3 +351,29 @@ def test_entries_deduplicates_by_dn(connector):
     entries = list(connector._entries())
 
     assert len(entries) == 1
+
+
+def test_get_mapped_fields(connector):
+    fields = connector.get_mapped_fields()
+
+    assert isinstance(fields, dict)
+    assert fields
+    assert all(isinstance(key, str) and isinstance(value, str) for key, value in fields.items())
+    assert fields["objectSid"] == "user.uid"
+
+
+def test_reset_checkpoint(connector, tmp_path):
+    connector.context = PersistentJSON("context.json", tmp_path)
+    connector._latest_time = "20250101000000.0Z"
+    connector._seen_sids = {"S-1-5-21-1"}
+    connector.update_checkpoint()
+
+    assert connector.most_recent_datetime == "20250101000000.0Z"
+    assert connector.seen_sids_at_checkpoint == {"S-1-5-21-1"}
+
+    connector.reset_checkpoint()
+
+    assert connector._latest_time is None
+    assert connector._seen_sids == set()
+    assert connector.most_recent_datetime is None
+    assert connector.seen_sids_at_checkpoint == set()
