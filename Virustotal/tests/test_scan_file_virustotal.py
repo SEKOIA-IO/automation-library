@@ -1,7 +1,9 @@
 import time
 from unittest.mock import patch
 
+import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from virustotal.action_virustotal_scanfile import VirusTotalScanFileAction
 
@@ -404,3 +406,29 @@ def test_virustotal_scan_file(mock_sleep):
             "&resource=131f95c51cc819465fa1797f6ccacf9d494aaaff46fa3eac73ae63ffbdfd8267"
             "-1565249201"
         )
+
+
+@patch("virustotal.action_virustotal_scanfile.open", create=True)
+@patch("virustotal.action_virustotal_scanfile.os.path.getsize")
+def test_virustotal_scan_file_returns_none_if_file_empty(mock_getsize, mock_open, requests_mock):
+    vt: VirusTotalScanFileAction = VirusTotalScanFileAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+
+    with pytest.raises(ValidationError):
+        vt.run({"file": ""})
+    assert requests_mock.call_count == 0
+    mock_getsize.assert_not_called()
+    mock_open.assert_not_called()
+
+
+@patch("virustotal.action_virustotal_scanfile.open", create=True)
+@patch("virustotal.action_virustotal_scanfile.os.path.getsize")
+def test_virustotal_scan_file_returns_none_if_file_missing(mock_getsize, mock_open, requests_mock):
+    vt: VirusTotalScanFileAction = VirusTotalScanFileAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+
+    with pytest.raises(ValidationError):
+        vt.run({})
+    assert requests_mock.call_count == 0
+    mock_getsize.assert_not_called()
+    mock_open.assert_not_called()

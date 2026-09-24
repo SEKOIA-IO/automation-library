@@ -1,4 +1,6 @@
+import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from virustotal.action_virustotal_scanip import VirusTotalScanIPAction
 
@@ -303,3 +305,30 @@ def test_virustotal_scan_ip():
             "?apikey=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
             "&ip=50.116.99.126"
         )
+
+
+def test_virustotal_scan_ip_returns_none_if_ip_empty(requests_mock):
+    vt: VirusTotalScanIPAction = VirusTotalScanIPAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+
+    with pytest.raises(ValidationError):
+        vt.run({"ip": ""})
+    assert requests_mock.call_count == 0
+
+
+def test_virustotal_scan_ip_returns_none_if_ip_invalid(requests_mock):
+    vt: VirusTotalScanIPAction = VirusTotalScanIPAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+
+    with pytest.raises(ValidationError):
+        vt.run({"ip": "not-an-ip"})
+    assert requests_mock.call_count == 0
+
+
+def test_virustotal_scan_ip_returns_none_if_ip_missing(requests_mock):
+    vt: VirusTotalScanIPAction = VirusTotalScanIPAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+
+    with pytest.raises(ValidationError):
+        vt.run({})
+    assert requests_mock.call_count == 0
