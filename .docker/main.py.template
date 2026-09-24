@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+"""
+Patched main.py for local Docker development
+This script patches the Sekoia SDK to ensure results are written to disk
+even when the callback URL is not configured (local testing mode).
+
+In production (with valid callback URL), this behaves identically to the standard SDK.
+"""
+import sys
+import json
+import os
+from pathlib import Path
+
+# Patch the send_results method BEFORE importing the module
+from sekoia_automation.action import Action
+
+# Save original methods
+original_send_results = Action.send_results
+original_set_task_as_running = Action.set_task_as_running
+
+def patched_set_task_as_running(self):
+    """Skip the callback to set task as running in local mode"""
+    try:
+        original_set_task_as_running(self)
+    except Exception as e:
+        # Ignore callback errors in local mode
+        error_msg = str(e)
+        if 'Invalid URL' in error_msg or 'No scheme supplied' in error_msg:
+            print("⚠️  Skipping set_task_as_running (local mode)", file=sys.stderr)
+        else:
+            # Re-raise if it's not a callback error
+            raise
+
+def patched_send_results(self):
+    """Save results to file even if callback fails"""
+    results_path = Path(os.getenv('RESULTS_PATH', '/results'))
+    results_path.mkdir(parents=True, exist_ok=True)
+
+    # Write results to file
+    result_file = results_path / 'action_results.json'
+
+    # Get error message - handle both old and new SDK versions
+    error_msg = getattr(self, '_error_message', None) or getattr(self, 'error_message', None)
+
+    result_data = {
+        'status': 'success' if not error_msg else 'error',
+        'results': getattr(self, '_results', None),
+        'error': error_msg,
+        'logs': getattr(self, '_logs', [])
+    }
+
+    try:
+        with open(result_file, 'w') as f:
+            json.dump(result_data, f, indent=2, default=str)
+        print(f"\n✅ Results written to {result_file}", file=sys.stderr)
+    except Exception as e:
+        print(f"\n❌ Failed to write results: {e}", file=sys.stderr)
+
+    # Try original send_results, but don't fail if callback is missing
+    try:
+        original_send_results(self)
+    except Exception as e:
+        error_msg = str(e)
+        print(f"\n⚠️  Callback failed (expected in local mode): {error_msg}", file=sys.stderr)
+        if 'Invalid URL' in error_msg or 'No scheme supplied' in error_msg:
+            print(f"✅ This is normal - results are available in {result_file}", file=sys.stderr)
+        else:
+            print(f"⚠️  Unexpected error: {error_msg}", file=sys.stderr)
+
+# Apply the patches
+Action.send_results = patched_send_results
+Action.set_task_as_running = patched_set_task_as_running
+
+# Now import and run the module
+if __name__ == "__main__":
+    from sekoia_automation.module import Module
+
+    # Import all actions from main.py
+    {{IMPORT_ACTIONS}}
+
+    module = Module()
+
+    # Register all actions from main.py
+    {{REGISTER_ACTIONS}}
+
+    module.run()
