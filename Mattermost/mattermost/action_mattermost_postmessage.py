@@ -1,9 +1,18 @@
-# natives
+import requests
+from typing import Annotated
 
 # third parties
-import requests
+from pydantic import BaseModel, Field, StringConstraints
 from requests import Response
 from sekoia_automation.action import Action
+
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class MattermostPostMessageArguments(BaseModel):
+    message: NonEmptyStr = Field(..., description="The message to post")
+    channel: str | None = None
+    username: str | None = None
 
 
 class MattermostPostMessageAction(Action):
@@ -14,12 +23,12 @@ class MattermostPostMessageAction(Action):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def run(self, arguments) -> dict:
+    def run(self, arguments: MattermostPostMessageArguments) -> dict | None:
         hook_url: str = self.module.configuration.get("hook_url")
 
-        text: str = arguments["message"]
-        channel: str = arguments.get("channel")
-        username: str | None = arguments.get("username")
+        text: str = arguments.message
+        channel: str | None = arguments.channel
+        username: str | None = arguments.username
 
         params: dict = {
             "text": text,

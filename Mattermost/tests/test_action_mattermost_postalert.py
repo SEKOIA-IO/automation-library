@@ -4,7 +4,9 @@
 import json
 
 # third parties
+import pytest
 import requests_mock
+from pydantic import ValidationError
 
 # internals
 from mattermost.action_mattermost_postalert import MattermostPostAlertAction
@@ -76,3 +78,79 @@ def test_mattermost_postalert_default():
             "icon_url": "https://app.sekoia.io/user/favicon.ico",
             "username": "Blue boat",
         }
+
+
+@pytest.mark.parametrize("arguments", [{}, {"alert_uuid": ""}, {"alert_uuid": "   "}])
+def test_mattermost_postalert_requires_alert_uuid(arguments):
+    hook_url: str = "https://my.chat.mattermost/hooks/123456"
+
+    mt: MattermostPostAlertAction = MattermostPostAlertAction()
+    mt.module.configuration = {"hook_url": hook_url}
+    arguments.setdefault("api_key", "AZERTYUI987654345678")
+    arguments.setdefault("base_url", "https://api.sekoia.io/")
+
+    with requests_mock.Mocker() as mock:
+        with pytest.raises(ValidationError):
+            mt.run(arguments)
+
+    assert mock.call_count == 0
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("alert_uuid", "not-a-uuid"),
+        ("base_url", "not a url"),
+        ("api_key", ""),
+        ("api_key", "   "),
+    ],
+)
+def test_mattermost_postalert_rejects_invalid_arguments(field, value):
+    hook_url: str = "https://my.chat.mattermost/hooks/123456"
+
+    mt: MattermostPostAlertAction = MattermostPostAlertAction()
+    mt.module.configuration = {"hook_url": hook_url}
+    arguments = {
+        "alert_uuid": "bec203a3-bc70-4430-80ad-f72fe11f3ad8",
+        "api_key": "AZERTYUI987654345678",
+        "base_url": "https://api.sekoia.io/",
+    }
+    arguments[field] = value
+
+    with requests_mock.Mocker() as mock:
+        with pytest.raises(ValidationError):
+            mt.run(arguments)
+
+    assert mock.call_count == 0
+
+
+def test_mattermost_postalert_accepts_short_id():
+    hook_url: str = "https://my.chat.mattermost/hooks/123456"
+
+    mt: MattermostPostAlertAction = MattermostPostAlertAction()
+    mt.module.configuration = {"hook_url": hook_url}
+
+    alert_short_id = "AL13426AYUU"
+    base_url = "https://api.sekoia.io/"
+    api_key = "AZERTYUI987654345678"
+
+    alert_info = {
+        "urgency": {"current_value": 10, "display": "low"},
+        "short_id": alert_short_id,
+        "entity": {"name": "Blue boat"},
+        "title": "Super test alert",
+        "alert_type": {"category": "malicious-code", "value": "malware"},
+        "source": "10.10.10.10",
+        "target": "test.com.fake",
+        "details": "no detail provided",
+    }
+    with requests_mock.Mocker() as mock:
+        mock.get(
+            f"{base_url}v1/sic/alerts/{alert_short_id}",
+            json=alert_info,
+        )
+        mock.post(hook_url, text="ok")
+
+        mt.run({"alert_uuid": alert_short_id, "api_key": api_key, "base_url": base_url})
+
+        assert mock.call_count == 2
