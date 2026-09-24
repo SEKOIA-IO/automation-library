@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-20 - 1.7.3
+
+### Fixed
+
+- Allow creating Darktrace integration without Cloud API credentials for On-Premise syslog setups.
+- Validate Cloud API credentials only when the Darktrace connector is started.
+
 ## 2026-08-20 - 1.7.2
 
 ### Changed
