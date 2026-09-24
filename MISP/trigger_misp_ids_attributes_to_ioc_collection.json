@@ -1,0 +1,68 @@
+{
+  "uuid": "9bfd6d9d-3f64-4ec0-bdb5-6253677af671",
+  "name": "MISP IDS Attributes to IOC Collection",
+  "docker_parameters": "trigger-misp-ids-to-ioc-collection",
+  "description": "Periodically retrieves IDS-flagged attributes from a MISP instance and pushes them to a Sekoia.io IOC Collection",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Trigger Configuration",
+    "properties": {
+      "ioc_collection_server": {
+        "type": "string",
+        "default": "https://api.sekoia.io",
+        "description": "Sekoia.io API server URL (e.g., https://api.sekoia.io)"
+      },
+      "ioc_collection_uuid": {
+        "type": "string",
+        "description": "UUID of the target IOC Collection in Sekoia.io format: ioc-collection--xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      },
+      "lookback_days": {
+        "type": "string",
+        "description": "Number of days to look back when retrieving attributes (e.g., '1' for last 1 day, '7' for last 7 days)",
+        "pattern": "^[0-9]+$"
+      },
+      "sleep_time": {
+        "type": "integer",
+        "description": "Time in seconds between polling cycles (minimum: 60 seconds)",
+        "minimum": 60
+      },
+      "sekoia_api_key": {
+        "type": "string",
+        "description": "Sekoia.io API key with write permissions to the IOC Collection",
+        "secret": true
+      },
+      "verify_ssl": {
+        "type": "boolean",
+        "default": true,
+        "description": "Whether to verify TLS certificates when connecting to MISP and Sekoia.io APIs. Disable only if using a self-signed certificate."
+      }
+    },
+    "required": [
+      "ioc_collection_uuid",
+      "sekoia_api_key"
+    ],
+    "secrets": [
+      "sekoia_api_key"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Results",
+    "properties": {
+      "iocs_submitted": {
+        "type": "integer",
+        "description": "Number of IOCs successfully submitted to the Sekoia IOC Collection API"
+      },
+      "iocs_skipped_invalid": {
+        "type": "integer",
+        "description": "Number of IOCs skipped due to invalid format"
+      },
+      "attributes_processed": {
+        "type": "integer",
+        "description": "Total number of new MISP attributes processed in this cycle"
+      }
+    }
+  }
+}

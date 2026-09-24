@@ -146,7 +146,7 @@ class MISPTrigger(Trigger):
 
             if not (event["Event"]["Object"] or event["Event"]["Attribute"]):
                 # Event does not contain any updated attribute
-                self._logger.info(f"Skippink event '{event_id}' because it has no updated attribute")
+                self._logger.info(f"Skipping event '{event_id}' because it has no updated attribute")
                 continue
 
             self._logger.info(f"Processing event '{event_id}'")

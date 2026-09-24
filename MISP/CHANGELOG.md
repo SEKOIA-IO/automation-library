@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+
+## 2026-03-05 - 2.9.0
+
+### Added
+
+- New Misp trigger to synchronize IDS attributes in an IOC Collection.
+
+## 2026-01-29 - 2.8.3
+
+### Added
+
+- Automatic proxy detection from environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`) when no explicit proxy configuration is provided in module settings
+- Type annotations for improved code quality and IDE support
+
 ## 2024-05-28 - 2.8.0
 
 ### Changed
