@@ -147,7 +147,10 @@ def test_is_gzip_compressed(trigger, content, expected):
 
 @pytest.mark.parametrize(
     "content,expected_events",
-    [(b"data1\ndata2\ndata3", ["data1", "data2", "data3"]), (b"data1\ndata\xd8\ndata3", None)],
+    [
+        (b"data1\ndata2\ndata3", ["data1", "data2", "data3"]),
+        (b"data1\ndata\xd8\ndata3", None),
+    ],
 )
 def test_process_messages(trigger, content, expected_events):
     assert trigger.process_messages(content) == expected_events
@@ -159,13 +162,21 @@ def test_run(trigger):
     with (
         patch("netskope_modules.connectors.connector_pubsub_lite.AsyncSubscriberClient") as mock,
         patch(
-            "netskope_modules.connectors.connector_pubsub_lite.PubSubLite.subscription_path", new_callable=PropertyMock
+            "netskope_modules.connectors.connector_pubsub_lite.PubSubLite.subscription_path",
+            new_callable=PropertyMock,
         ) as mock_sub_path,
         patch(
-            "netskope_modules.connectors.connector_pubsub_lite.AsyncSubscriberClient.subscribe", new_callable=AsyncMock
+            "netskope_modules.connectors.connector_pubsub_lite.AsyncSubscriberClient.subscribe",
+            new_callable=AsyncMock,
         ),
-        patch("netskope_modules.connectors.connector_pubsub_lite.PubSubLite.load_checkpoint", new_callable=AsyncMock),
-        patch("netskope_modules.connectors.connector_pubsub_lite.PubSubLite.save_checkpoint", new_callable=AsyncMock),
+        patch(
+            "netskope_modules.connectors.connector_pubsub_lite.PubSubLite.load_checkpoint",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "netskope_modules.connectors.connector_pubsub_lite.PubSubLite.save_checkpoint",
+            new_callable=AsyncMock,
+        ),
         patch("netskope_modules.connectors.connector_pubsub_lite.AdminClient"),
     ):
         trigger.last_seen_timestamp = datetime(year=2023, month=3, day=11, hour=13, minute=21, second=23)
@@ -174,9 +185,18 @@ def test_run(trigger):
 
         instance.__aenter__.return_value.subscribe.return_value = AsyncIterator(
             seq=[
-                create_async_message(b"data1", datetime(year=2023, month=3, day=11, hour=13, minute=21, second=23)),
-                create_async_message(b"data2", datetime(year=2023, month=3, day=11, hour=13, minute=21, second=45)),
-                create_async_message(b"data3", datetime(year=2023, month=3, day=11, hour=13, minute=45, second=11)),
+                create_async_message(
+                    b"data1",
+                    datetime(year=2023, month=3, day=11, hour=13, minute=21, second=23),
+                ),
+                create_async_message(
+                    b"data2",
+                    datetime(year=2023, month=3, day=11, hour=13, minute=21, second=45),
+                ),
+                create_async_message(
+                    b"data3",
+                    datetime(year=2023, month=3, day=11, hour=13, minute=45, second=11),
+                ),
             ]
         )
 
