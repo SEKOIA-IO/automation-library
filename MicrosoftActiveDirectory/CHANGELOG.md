@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-08 - 1.5.9
+
+### Fixed
+
+- The user asset connector now skips an LDAP entry that has no attributes instead of raising. The raise previously aborted the whole collection cycle and could get stuck re-hitting the same malformed entry every cycle.
+
 ## 2026-07-13 - 1.5.8
 
 ### Fixed
