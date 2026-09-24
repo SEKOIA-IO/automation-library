@@ -1,0 +1,268 @@
+{
+  "uuid": "d4b8a1e4-9c7f-44c1-9a53-2f0b8a3d99c3",
+  "name": "Get File Behaviour",
+  "description": "Retrieve sandbox behaviour for a file hash from Google Threat Intelligence",
+  "docker_parameters": "get_file_behaviour",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "file_hash": {
+        "type": "string",
+        "description": "File hash to query (MD5, SHA1, or SHA256)"
+      }
+    },
+    "required": [
+      "file_hash"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Get File Behaviour Results",
+    "properties": {
+      "success": {
+        "type": "boolean"
+      },
+      "data": {
+        "type": "object",
+        "description": "Container for the file behaviour data",
+        "properties": {
+          "behaviours_count": {
+            "type": "integer",
+            "description": "Total number of behaviour reports retrieved"
+          },
+          "file_hash": {
+            "type": "string",
+            "description": "The file hash that was queried"
+          },
+          "behaviours": {
+            "type": "array",
+            "description": "Array of behaviour report objects from different sandboxes",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Type of the object (always 'file_behaviour')",
+                  "enum": [
+                    "file_behaviour"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "description": "Unique identifier for the behaviour report (hash_sandboxname)"
+                },
+                "sandbox_name": {
+                  "type": "string",
+                  "description": "Name of the sandbox that analyzed the file (e.g., 'C2AE', 'CAPA', 'VirusTotal Jujubox')"
+                },
+                "analysis_date": {
+                  "type": "integer",
+                  "description": "Unix timestamp of when the analysis was performed"
+                },
+                "last_modification_date": {
+                  "type": "integer",
+                  "description": "Unix timestamp of the last modification to this report"
+                },
+                "behash": {
+                  "type": "string",
+                  "description": "Behavioral hash of the file execution"
+                },
+                "has_html_report": {
+                  "type": "boolean",
+                  "description": "Indicates if an HTML report is available for download"
+                },
+                "has_pcap": {
+                  "type": "boolean",
+                  "description": "Indicates if a PCAP network capture is available for download"
+                },
+                "has_evtx": {
+                  "type": "boolean",
+                  "description": "Indicates if Windows event logs (EVTX) are available"
+                },
+                "has_memdump": {
+                  "type": "boolean",
+                  "description": "Indicates if a memory dump is available for download"
+                },
+                "verdicts": {
+                  "type": "array",
+                  "description": "List of verdicts from the sandbox analysis",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "processes_tree": {
+                  "type": "array",
+                  "description": "Tree structure of processes created during execution",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "process_id": {
+                        "type": "string",
+                        "description": "Process ID (PID)"
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Process name and command line"
+                      },
+                      "children": {
+                        "type": "array",
+                        "description": "Child processes spawned by this process"
+                      }
+                    }
+                  }
+                },
+                "processes_created": {
+                  "type": "integer",
+                  "description": "Number of processes created during execution"
+                },
+                "processes_terminated": {
+                  "type": "array",
+                  "description": "List of processes terminated during execution",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "command_executions": {
+                  "type": "array",
+                  "description": "List of command-line executions observed",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "files_opened": {
+                  "type": "array",
+                  "description": "List of files accessed during execution",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "files_written": {
+                  "type": "integer",
+                  "description": "Number of files written to disk"
+                },
+                "files_deleted": {
+                  "type": "integer",
+                  "description": "Number of files deleted during execution"
+                },
+                "registry_keys_opened": {
+                  "type": "array",
+                  "description": "List of Windows registry keys accessed",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "registry_keys_set": {
+                  "type": "integer",
+                  "description": "Number of registry keys modified"
+                },
+                "modules_loaded": {
+                  "type": "array",
+                  "description": "List of DLLs and modules loaded during execution",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "ip_traffic": {
+                  "type": "array",
+                  "description": "Network traffic observed during execution",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "destination_ip": {
+                        "type": "string",
+                        "description": "Destination IP address"
+                      },
+                      "destination_port": {
+                        "type": "integer",
+                        "description": "Destination port number"
+                      },
+                      "transport_layer_protocol": {
+                        "type": "string",
+                        "description": "Protocol used (TCP/UDP)",
+                        "enum": [
+                          "TCP",
+                          "UDP",
+                          "ICMP"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "dns_lookups": {
+                  "type": "integer",
+                  "description": "Number of DNS queries performed"
+                },
+                "mitre_attack_techniques": {
+                  "type": "array",
+                  "description": "MITRE ATT&CK techniques observed in the behavior",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "MITRE technique ID (e.g., 'T1055')"
+                      },
+                      "signature_description": {
+                        "type": "string",
+                        "description": "Description of the observed technique"
+                      }
+                    }
+                  }
+                },
+                "tags": {
+                  "type": "array",
+                  "description": "Tags categorizing the observed behavior",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "text_highlighted": {
+                  "type": "array",
+                  "description": "Important strings or patterns highlighted in the analysis",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "sigma_analysis_results": {
+                  "type": "array",
+                  "description": "Results from Sigma rule matching",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "rule_title": {
+                        "type": "string"
+                      },
+                      "rule_level": {
+                        "type": "string"
+                      },
+                      "match_context": {
+                        "type": "array",
+                        "items": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "type",
+                "id",
+                "sandbox_name",
+                "analysis_date"
+              ]
+            }
+          }
+        },
+        "required": [
+          "behaviours_count",
+          "file_hash",
+          "behaviours"
+        ]
+      }
+    }
+  },
+  "slug": "get_file_behaviour_in_gti"
+}
