@@ -1,0 +1,18 @@
+# Local virtualenv — must not overwrite the image's /app/.venv built by uv sync
+.venv/
+
+# Test suite and coverage artifacts
+tests/
+.coverage
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+
+# Docs and VCS metadata
+*.md
+CHANGELOG.md
+.gitignore
+
+# Python bytecode caches
+**/__pycache__
+**/*.pyc
