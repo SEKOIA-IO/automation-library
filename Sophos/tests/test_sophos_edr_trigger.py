@@ -107,6 +107,72 @@ def test_fetch_next_events(trigger):
         assert len(calls) > 0
 
 
+def test_fetch_next_events_with_created_at_camel_case(trigger):
+    host = "https://api-eu02.central.sophos.com"
+    url = f"{host}/siem/v1/events"
+
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            f"{trigger.module.configuration.oauth2_authorization_url}",
+            status_code=200,
+            json={
+                "access_token": "access_token",
+                "refresh_token": "refresh_token",
+                "token_type": "bearer",
+                "message": "OK",
+                "errorCode": "success",
+                "expires_in": 3600,
+            },
+        )
+
+        mock.get(
+            f"{trigger.module.configuration.api_host}/whoami/v1",
+            status_code=200,
+            json={
+                "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
+                "idType": "tenant",
+                "apiHosts": {
+                    "global": "https://api.central.sophos.com",
+                    "dataRegion": host,
+                },
+            },
+        )
+
+        response = {
+            "has_more": False,
+            "next_cursor": "VjJfQ1VSU09SfDIwMTktMDQtMDFUMTg6MjU6NDEuNjA2Wg==",
+            "items": [
+                {
+                    "when": "2019-04-01T15:11:09.759Z",
+                    "id": "cbaff14f-a36b-46bd-8e83-6017ad79cdef",
+                    "customer_id": "816f36ee-dd2e-4ccd-bb12-cea766c28ade",
+                    "severity": "low",
+                    "createdAt": "2019-04-01T15:11:09.984Z",
+                    "type": "Event::Endpoint::Registered",
+                    "source": "n/a",
+                    "name": "New server registered",
+                }
+            ],
+        }
+
+        mock.get(url, json=response)
+        trigger.forward_next_batches()
+
+        calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+        assert len(calls) > 0
+
+
+def test_parse_timestamp_handles_invalid_values(trigger):
+    assert trigger._parse_timestamp(None) is None
+    assert trigger._parse_timestamp(123) is None
+    assert trigger._parse_timestamp("") is None
+    assert trigger._parse_timestamp("not-a-date") is None
+
+
+def test_get_most_recent_timestamp_returns_none_without_parseable_fields(trigger):
+    assert trigger._get_most_recent_timestamp_from_items([{"foo": "bar"}]) is None
+
+
 @pytest.mark.skipif("{'SOPHOS_CLIENT_ID', 'SOPHOS_CLIENT_SECRET'}.issubset(os.environ.keys()) == False")
 def test_forward_next_batches_integration(symphony_storage):
     module = SophosModule()
