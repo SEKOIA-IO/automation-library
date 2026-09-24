@@ -3,6 +3,7 @@ import os
 import time
 from datetime import datetime, timezone
 from functools import cached_property
+from hashlib import sha1
 from typing import Any, Optional, Union, cast
 
 import orjson
@@ -14,7 +15,10 @@ from azure.storage.blob.aio import BlobServiceClient
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
+from .logger import get_logger
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, MESSAGES_AGE, OUTCOMING_EVENTS
+
+logger = get_logger()
 
 
 class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
@@ -77,6 +81,7 @@ class AzureEventsHubTrigger(AsyncConnector):
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "10"), 10)  # 10 seconds default
         self._frequency = int(os.environ.get("FREQUENCY_MAX_TIME", "10"), 10)
         self._has_more_events = True
+        self._log_record_checksum = bool(os.getenv("AZURE_LOG_RECORDS_CHECKSUM", "0"))
 
     @cached_property
     def client(self) -> Client:
@@ -168,8 +173,22 @@ class AzureEventsHubTrigger(AsyncConnector):
                             )
                             continue
 
+                        # Dump the record into a JSON document
+                        content = orjson.dumps(record)
+
+                        # If requested, log the checksum (SHA1) of the record
+                        if self._log_record_checksum:
+                            logger.info("Collect record %s", sha1(content).hexdigest())
+
+                        # Add the record to the batch of events
                         records.append(orjson.dumps(record).decode("utf-8"))
+
                     else:
+                        # If requested, log the checksum (SHA1) of the record
+                        if self._log_record_checksum:
+                            logger.info("Collect record %s", sha1(content.encode("utf-8")).hexdigest())
+
+                        # Add the record to the batch of events
                         records.append(record)
 
         if len(records) > 0:
