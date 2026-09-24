@@ -1,5 +1,7 @@
 """Tests related to token refresher."""
 
+from unittest.mock import patch
+
 import pytest
 from aioresponses import aioresponses
 
@@ -159,3 +161,34 @@ async def test_github_token_refresher_instance(base_url, session_faker, pem_cont
     await instance2.close()
     await instance3.close()
     await instance4.close()
+
+
+@pytest.mark.asyncio
+async def test_github_token_refresher_proxy_support(
+    base_url,
+    session_faker,
+    pem_content,
+):
+    """
+    Test GithubClient proxy support.
+
+    Args:
+        session_faker: Faker
+        pem_content: str
+    """
+    app_id = session_faker.pyint()
+    organization = session_faker.word()
+    proxy_url = session_faker.uri()
+
+    with patch.dict("os.environ", {"HTTP_PROXY": proxy_url}):
+        # Setup the client
+        refresher = await PemGithubTokenRefresher.instance(
+            base_url, pem_content, organization, app_id
+        )
+
+        async with refresher.session() as session:
+            assert session.trust_env is True
+
+        await refresher.close()
+        await PemGithubTokenRefresher._session.close()
+        PemGithubTokenRefresher._session = None
