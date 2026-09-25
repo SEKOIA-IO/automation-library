@@ -88,8 +88,10 @@ class AsyncReader(Protocol):
     async def read(self, size: int = -1, /) -> Any:
         return NotImplemented
 
+
+class PeekableAsyncReader(Protocol):
     @abstractmethod
-    async def peek(self, size: int = -1, /) -> Any:
+    async def peek(self, size: int, /) -> Any:
         return NotImplemented
 
 
@@ -119,3 +121,67 @@ async def async_gzip_open(
     )
     f = await loop.run_in_executor(executor, cb)
     return AsyncBufferedReader(f, loop=loop, executor=executor)  # type: ignore[arg-type]
+
+
+class PeekableStreamReader:
+    """
+    A wrapper around an AsyncReader that allows peeking at the next bytes without consuming them.
+    """
+
+    def __init__(self, stream: AsyncReader):
+        """
+        Initialize the PeekableStreamReader.
+
+        Args:
+            stream: AsyncReader
+        """
+        # underlying stream to read from
+        self._stream = stream
+
+        # buffer to hold peeked data
+        self._buffer = b""
+
+    async def read(self, size: int = -1) -> bytes:
+        """
+        Read bytes from the stream, consuming them.
+
+        Args:
+            size: int - The number of bytes to read. If -1, read until EOF.
+        Returns:
+            bytes: The bytes read from the stream.
+        """
+        # If size is -1, read all remaining data from the stream.
+        if size == -1:
+            data = await self._stream.read()
+            return self._buffer + data
+
+        # If the buffer has enough data, return it and clear the buffer.
+        if len(self._buffer) >= size:
+            result = self._buffer[:size]
+            self._buffer = self._buffer[size:]
+            return result
+
+        # If the buffer doesn't have enough data, read the remaining bytes from the stream.
+        data = await self._stream.read(size - len(self._buffer))
+        result = self._buffer + data
+        self._buffer = b""
+        return result
+
+    async def peek(self, size: int) -> bytes:
+        """
+        Peek at the next bytes in the stream without consuming them.
+
+        Args:
+            size: int - The number of bytes to peek at.
+        Returns:
+            bytes: The next bytes in the stream.
+        """
+        # If the buffer doesn't have enough data, read from the stream until we have enough.
+        while len(self._buffer) < size:
+            data = await self._stream.read(size - len(self._buffer))
+            if not data:
+                break
+            self._buffer += data
+
+        # Return the requested number of bytes from the buffer
+        return self._buffer[:size]
