@@ -172,12 +172,29 @@ class JiraCreateIssueRequest:
 
     def fill_priority(self, prev_step: dict) -> None:
         if self.args.priority:
-            priority_values = self.field_allowed_values.get("Priority", ["Low", "Basse"])
-            if not priority_values or self.args.priority not in priority_values:
-                self.action.log(message="Priority `%s` does not exist or N/A for this issue type" % self.args.priority, level="error")
+            # Default to empty dict if metadata has no allowedValues for Priority
+            priority_values = self.field_allowed_values.get("Priority") or {}
+    
+            # Fallback dictionary mapping names/translations to Jira priority IDs
+            fallback_priority_ids = {
+                "Low": "4",
+                "Basse": "4",
+                "Medium": "3",
+                "Moyenne": "3",
+                "High": "2",
+                "Haute": "2",
+            }
+    
+            if self.args.priority in priority_values:
+                prev_step["priority"] = {"id": priority_values[self.args.priority]}
+            elif self.args.priority in fallback_priority_ids:
+                prev_step["priority"] = {"id": fallback_priority_ids[self.args.priority]}
+            else:
+                self.action.log(
+                    message="Priority `%s` does not exist or is not available for this issue type" % self.args.priority,
+                    level="error",
+                )
                 raise ValueError
-
-            prev_step["priority"] = {"id": priority_values[self.args.priority]}
 
     def fill_custom_fields(self, prev_step: dict) -> None:
         # https://support.atlassian.com/cloud-automation/docs/advanced-field-editing-using-json/
