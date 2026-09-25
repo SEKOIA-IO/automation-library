@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-25 - 2.9.4
+
+### Added
+
+- Add the ability to log the checksum (SHA1) of the forwarded recorded for investigation purpose (Need to set up an environment variable)
+
 ## 2026-09-08 - 2.9.3
 
 ### Changed
