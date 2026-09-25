@@ -172,9 +172,9 @@ class JiraCreateIssueRequest:
 
     def fill_priority(self, prev_step: dict) -> None:
         if self.args.priority:
-            priority_values = self.field_allowed_values["Priority"]
+            priority_values = self.field_allowed_values.get("Priority", ["Low", "Basse"])
             if not priority_values or self.args.priority not in priority_values:
-                self.action.log(message="Priority `%s` does not exist" % self.args.priority, level="error")
+                self.action.log(message="Priority `%s` does not exist or N/A for this issue type" % self.args.priority, level="error")
                 raise ValueError
 
             prev_step["priority"] = {"id": priority_values[self.args.priority]}
