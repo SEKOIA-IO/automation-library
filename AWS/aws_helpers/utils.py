@@ -2,12 +2,15 @@ import asyncio
 import codecs
 import gzip
 from abc import abstractmethod
+from collections.abc import AsyncGenerator, AsyncIterable
 from concurrent.futures import Executor
 from functools import partial
-from typing import Any, BinaryIO, Protocol
+from typing import Any, BinaryIO, Protocol, TypeVar
 from urllib.parse import unquote
 
 from aiofiles.threadpool.binary import AsyncBufferedReader
+
+T = TypeVar("T")
 
 
 def is_gzip_compressed(content: bytes) -> bool:
@@ -185,3 +188,56 @@ class PeekableStreamReader:
 
         # Return the requested number of bytes from the buffer
         return self._buffer[:size]
+
+
+async def async_islice(iterable: AsyncIterable[T], start: int, stop: int | None = None) -> AsyncGenerator[T, None]:
+    """
+    Async equivalent of itertools.islice, for async iterables.
+
+    Args:
+        iterable: AsyncIterable[T]
+        start: int - The number of items to skip before yielding.
+        stop: int | None - The index at which to stop yielding (exclusive). If None, yield until exhaustion.
+
+    Returns:
+        AsyncGenerator[T, None]: An async generator yielding items in the [start, stop) range.
+    """
+    index = 0
+    async for item in iterable:
+        if stop is not None and index >= stop:
+            break
+
+        if index >= start:
+            yield item
+
+        index += 1
+
+
+async def split_stream_by_separator(
+    stream: AsyncReader, separator: bytes, chunk_size: int = 1024
+) -> AsyncGenerator[bytes, None]:
+    """
+    Split a stream into chunks based on a separator.
+
+    Args:
+        stream: AsyncReader
+        separator: bytes
+
+    Returns:
+        AsyncGenerator[bytes, None]: An async generator yielding chunks of data.
+    """
+    buffer = b""
+    while True:
+        chunk = await stream.read(chunk_size)
+        if not chunk:
+            if buffer:
+                yield buffer
+            break
+
+        buffer += chunk
+        while True:
+            index = buffer.find(separator)
+            if index == -1:
+                break
+            yield buffer[:index]
+            buffer = buffer[index + len(separator) :]
