@@ -9,6 +9,7 @@ import pytest
 from faker import Faker
 
 from aws_helpers.utils import (
+    PeekableStreamReader,
     async_gzip_open,
     get_content,
     is_gzip_compressed,
@@ -16,6 +17,7 @@ from aws_helpers.utils import (
     normalize_s3_key,
     unescape_string,
 )
+from tests.helpers import async_temporary_file
 
 
 def test_normalize_s3_key():
@@ -92,3 +94,22 @@ def test_unescape_separator():
     # Need to be backward compatible - we had literal values before
     test_2 = "\r\n\t,"
     assert unescape_string(test_2) == "\r\n\t,"
+
+
+@pytest.mark.asyncio
+async def test_peekable_stream_reader():
+    content = b"data"
+    async with async_temporary_file(content) as f:
+        reader = PeekableStreamReader(f)
+
+        # Test peek
+        peeked_content = await reader.peek(len(content))
+        assert peeked_content == content
+        assert await reader.peek(1) == content[0:1]  # Ensure peek doesn't consume
+
+        # Test read
+        read_content = await reader.read(len(content))
+        assert read_content == content
+
+        # Test that the stream is now at the end
+        assert await reader.read(1) == b""
