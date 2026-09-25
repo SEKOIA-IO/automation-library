@@ -171,30 +171,42 @@ class JiraCreateIssueRequest:
             prev_step["labels"] = self.args.labels.split(",")
 
     def fill_priority(self, prev_step: dict) -> None:
-        if self.args.priority:
-            # Default to empty dict if metadata has no allowedValues for Priority
-            priority_values = self.field_allowed_values.get("Priority") or {}
+        if not self.args.priority:
+            return
     
-            # Fallback dictionary mapping names/translations to Jira priority IDs
-            fallback_priority_ids = {
-                "Low": "4",
-                "Basse": "4",
-                "Medium": "3",
-                "Moyenne": "3",
-                "High": "2",
-                "Haute": "2",
-            }
+        priority_values = self.field_allowed_values.get("Priority") or {}
     
-            if self.args.priority in priority_values:
-                prev_step["priority"] = {"id": priority_values[self.args.priority]}
-            elif not priority_values and self.args.priority in fallback_priority_ids:
-                prev_step["priority"] = {"id": fallback_priority_ids[self.args.priority]}
-            else:
-                self.action.log(
-                    message="Priority `%s` does not exist or is not available for this issue type" % self.args.priority,
-                    level="error",
-                )
-                raise ValueError
+        fallback_priority_ids = {
+            "Highest": "1",
+            "Très élevée": "1",
+            "High": "2",
+            "Haute": "2",
+            "Medium": "3",
+            "Moyenne": "3",
+            "Low": "4",
+            "Basse": "4",
+            "Lowest": "5",
+            "Très basse": "5",
+        }
+    
+        priority = self.args.priority
+    
+        if priority in priority_values:
+            priority_id = priority_values[priority]
+        elif priority in fallback_priority_ids:
+            priority_id = fallback_priority_ids[priority]
+        else:
+            self.action.log(
+                message="Priority `%s` does not exist or is not available for this issue type"
+                % priority,
+                level="error",
+            )
+            raise ValueError(
+                "Priority `%s` does not exist or is not available for this issue type"
+                % priority
+            )
+    
+        prev_step["priority"] = {"id": priority_id}
 
     def fill_custom_fields(self, prev_step: dict) -> None:
         # https://support.atlassian.com/cloud-automation/docs/advanced-field-editing-using-json/
