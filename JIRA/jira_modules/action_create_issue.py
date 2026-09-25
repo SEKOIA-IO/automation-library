@@ -187,7 +187,7 @@ class JiraCreateIssueRequest:
     
             if self.args.priority in priority_values:
                 prev_step["priority"] = {"id": priority_values[self.args.priority]}
-            elif self.args.priority in fallback_priority_ids:
+            elif not priority_values and self.args.priority in fallback_priority_ids:
                 prev_step["priority"] = {"id": fallback_priority_ids[self.args.priority]}
             else:
                 self.action.log(
