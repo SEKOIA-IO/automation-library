@@ -183,7 +183,7 @@ class AzureEventsHubTrigger(AsyncConnector):
 
                         # If requested, log the checksum (SHA1) of the record
                         if self._log_record_checksum:
-                            logger.info("Collect record", checksum=sha1(content).hexdigest())
+                            logger.info("Collect record", checksum=sha1(content, usedforsecurity=False).hexdigest())
 
                         # Add the record to the batch of events
                         records.append(content.decode("utf-8"))
@@ -191,7 +191,10 @@ class AzureEventsHubTrigger(AsyncConnector):
                     else:
                         # If requested, log the checksum (SHA1) of the record
                         if self._log_record_checksum:
-                            logger.info("Collect record", checksum=sha1(record.encode("utf-8")).hexdigest())
+                            logger.info(
+                                "Collect record",
+                                checksum=sha1(record.encode("utf-8"), usedforsecurity=False).hexdigest(),
+                            )
 
                         # Add the record to the batch of events
                         records.append(record)
