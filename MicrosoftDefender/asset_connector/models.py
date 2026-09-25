@@ -3,6 +3,14 @@ from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
+def resolve_hostname(computer_dns_name: Optional[str]) -> tuple[str, Optional[str]]:
+    """Split a Defender computerDnsName into its short hostname and its domain."""
+    if not computer_dns_name:
+        return "", None
+    short_name, _, domain = computer_dns_name.strip().partition(".")
+    return short_name, domain or None
+
+
 class DefenderMachine(BaseModel):
     """Model for a machine from the Defender for Endpoint API."""
 
