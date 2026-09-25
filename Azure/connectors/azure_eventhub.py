@@ -81,7 +81,12 @@ class AzureEventsHubTrigger(AsyncConnector):
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "10"), 10)  # 10 seconds default
         self._frequency = int(os.environ.get("FREQUENCY_MAX_TIME", "10"), 10)
         self._has_more_events = True
-        self._log_record_checksum = bool(os.getenv("AZURE_LOG_RECORDS_CHECKSUM", "0"))
+        self._log_record_checksum = os.getenv("AZURE_LOG_RECORDS_CHECKSUM", "false").lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
 
     @cached_property
     def client(self) -> Client:
@@ -178,15 +183,15 @@ class AzureEventsHubTrigger(AsyncConnector):
 
                         # If requested, log the checksum (SHA1) of the record
                         if self._log_record_checksum:
-                            logger.info("Collect record %s", sha1(content).hexdigest())
+                            logger.info("Collect record", checksum=sha1(content).hexdigest())
 
                         # Add the record to the batch of events
-                        records.append(orjson.dumps(record).decode("utf-8"))
+                        records.append(content.decode("utf-8"))
 
                     else:
                         # If requested, log the checksum (SHA1) of the record
                         if self._log_record_checksum:
-                            logger.info("Collect record %s", sha1(content.encode("utf-8")).hexdigest())
+                            logger.info("Collect record", checksum=sha1(record.encode("utf-8")).hexdigest())
 
                         # Add the record to the batch of events
                         records.append(record)
