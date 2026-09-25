@@ -9,13 +9,17 @@ import pytest
 from faker import Faker
 
 from aws_helpers.utils import (
+    PeekableStreamReader,
     async_gzip_open,
+    async_islice,
     get_content,
     is_gzip_compressed,
     is_parquet_content,
     normalize_s3_key,
     unescape_string,
+    split_stream_by_separator,
 )
+from tests.helpers import async_temporary_file
 
 
 def test_normalize_s3_key():
@@ -92,3 +96,63 @@ def test_unescape_separator():
     # Need to be backward compatible - we had literal values before
     test_2 = "\r\n\t,"
     assert unescape_string(test_2) == "\r\n\t,"
+
+
+@pytest.mark.asyncio
+async def test_peekable_stream_reader():
+    content = b"data"
+    async with async_temporary_file(content) as f:
+        reader = PeekableStreamReader(f)
+
+        # Test peek
+        peeked_content = await reader.peek(len(content))
+        assert peeked_content == content
+        assert await reader.peek(1) == content[0:1]  # Ensure peek doesn't consume
+
+        # Test read
+        read_content = await reader.read(len(content))
+        assert read_content == content
+
+        # Test that the stream is now at the end
+        assert await reader.read(1) == b""
+
+
+@pytest.mark.parametrize(
+    "content, expected_chunks",
+    [
+        (b"line1\nline2\nline3", [b"line1", b"line2", b"line3"]),
+        (b"line1\nline2\nline3\n", [b"line1", b"line2", b"line3"]),
+        (b"line1\nline2\nline3\n\n", [b"line1", b"line2", b"line3", b""]),
+    ],
+)
+@pytest.mark.asyncio
+async def test_split_stream_by_separator(content, expected_chunks):
+    async with async_temporary_file(content) as f:
+        chunks = []
+        async for chunk in split_stream_by_separator(f, b"\n"):
+            chunks.append(chunk)
+        assert chunks == expected_chunks
+
+
+@pytest.mark.parametrize(
+    "items, start, stop, expected",
+    [
+        ([1, 2, 3, 4, 5], 0, None, [1, 2, 3, 4, 5]),
+        ([1, 2, 3, 4, 5], 2, None, [3, 4, 5]),
+        ([1, 2, 3, 4, 5], 0, 3, [1, 2, 3]),
+        ([1, 2, 3, 4, 5], 2, 4, [3, 4]),
+        ([1, 2, 3, 4, 5], 10, None, []),
+        ([1, 2, 3, 4, 5], 0, 0, []),
+        ([], 0, None, []),
+    ],
+)
+@pytest.mark.asyncio
+async def test_async_islice(items, start, stop, expected):
+    """Test async_islice function."""
+
+    async def async_iterable():
+        for item in items:
+            yield item
+
+    result = [item async for item in async_islice(async_iterable(), start, stop)]
+    assert result == expected

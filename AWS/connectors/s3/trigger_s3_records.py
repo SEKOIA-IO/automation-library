@@ -1,11 +1,12 @@
 """Contains AwsS3RecordsTrigger."""
 
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Any, cast
 
+import ijson
 import orjson
 
-from aws_helpers.utils import AsyncReader
+from aws_helpers.utils import AsyncReader, PeekableAsyncReader, PeekableStreamReader
 from connectors.s3 import AbstractAwsS3QueuedConnector
 from connectors.s3.provider import AwsAccountProvider
 
@@ -95,6 +96,22 @@ class BaseAwsS3RecordsTrigger:
 
         return len(supported) == 0 and len(unsupported) != 0
 
+    async def _is_stream_empty(self, stream: PeekableAsyncReader) -> bool:
+        """
+        Check if the stream is empty.
+
+        Args:
+            stream: PeekableAsyncReader
+        Returns:
+            bool:
+        """
+        first_byte = await stream.peek(1)
+
+        if first_byte == b"":
+            return True
+        else:
+            return False
+
     async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """
         Parse content from S3 bucket.
@@ -105,12 +122,15 @@ class BaseAwsS3RecordsTrigger:
         Returns:
              Generator:
         """
-        content = await stream.read()
+        if getattr(stream, "peek", None) is None:
+            reader = PeekableStreamReader(stream)
+        else:
+            reader = cast(PeekableAsyncReader, stream)
 
-        if len(content) == 0:
+        if await self._is_stream_empty(reader):
             return
 
-        for data in orjson.loads(content).get("Records", []):
+        async for data in ijson.items(reader, "Records.item"):
             # https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-log-file-examples.html
             # Go through each element in list and add to result_data if it is a valid payload based on this
             # https://github.com/SEKOIA-IO/automation-library/issues/346
