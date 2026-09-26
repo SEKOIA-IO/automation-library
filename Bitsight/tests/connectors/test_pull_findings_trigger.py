@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from aioresponses import aioresponses
@@ -286,3 +286,22 @@ async def test_pull_findings_connector_next_batch(connector: PullFindingsConnect
         )
 
         assert connector.get_checkpoint().dict() == finish_checkpoint.dict()
+
+
+def test_scalability_labels_reads_descriptor(connector):
+    assert connector.scalability_labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "false",
+    }
+
+
+def test_scalability_labels_fallback_on_read_error(connector):
+    with patch("connectors.pull_findings_trigger.Path.read_bytes") as mock_read:
+        mock_read.side_effect = FileNotFoundError
+
+        labels = connector.scalability_labels
+
+    assert labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "false",
+    }
