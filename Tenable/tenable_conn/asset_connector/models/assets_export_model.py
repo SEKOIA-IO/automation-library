@@ -115,6 +115,7 @@ class AwsCloud(BaseModel):
 class AzureCloud(BaseModel):
     vm_id: Optional[str] = None
     resource_id: Optional[str] = None
+    location: Optional[str] = None
 
 
 class GcpCloud(BaseModel):
@@ -150,6 +151,7 @@ class AssetExportV2(BaseModel):
     """
 
     id: str
+    name: Optional[str] = None  # Not part of AssetExportV2 model
     has_agent: Optional[bool] = None
     has_plugin_results: Optional[bool] = None
     agent_uuid: Optional[str] = None
