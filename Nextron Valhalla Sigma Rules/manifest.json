@@ -1,0 +1,34 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Nextron Valhalla Sigma Rules",
+    "type": "object",
+    "properties": {
+      "valhalla_api_key": {
+        "type": "string",
+        "title": "Valhalla API key",
+        "description": "API key from valhalla.nextron-systems.com. The default is the public demo key, which only grants the community feed.",
+        "default": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "sekoia_api_key": {
+        "type": "string",
+        "title": "Sekoia API key",
+        "description": "Bearer token from Sekoia (Settings → Workspace → API Keys). Used to push rules into the Sekoia Rules Catalog."
+      },
+      "sekoia_base_url": {
+        "type": "string",
+        "title": "Sekoia API base URL",
+        "description": "Region-specific base URL. Default https://api.sekoia.io covers FRA1. For FRA2/MCO1/UAE1 use https://app.<region>.sekoia.io/api.",
+        "default": "https://api.sekoia.io"
+      }
+    },
+    "required": ["sekoia_api_key"],
+    "secrets": ["valhalla_api_key", "sekoia_api_key"]
+  },
+  "description": "Nextron Valhalla Sigma Rules integration for Sekoia XDR",
+  "name": "Nextron Valhalla Sigma Rules",
+  "slug": "nextron-valhalla-sigma-rules",
+  "categories": ["Threat Intelligence"],
+  "uuid": "a81edea4-3259-4c20-b68d-0bdc923349d7",
+  "version": "1.0.2"
+}
