@@ -41,7 +41,7 @@ class DelineaClient(object):
             AsyncGenerator[ClientSession, None]:
         """
         if self._session is None:
-            self._session = ClientSession()
+            self._session = ClientSession(trust_env=True)
 
         if self._rate_limiter:
             async with self._rate_limiter:
@@ -87,7 +87,10 @@ class DelineaClient(object):
         return token
 
     def get_audit_events_url(
-        self, start_date: datetime, page: int | None = None, end_date: datetime | None = None
+        self,
+        start_date: datetime,
+        page: int | None = None,
+        end_date: datetime | None = None,
     ) -> str:
         params = {
             "StartDateTime": start_date.isoformat(),
@@ -106,7 +109,10 @@ class DelineaClient(object):
         return f"{self.base_url}/audit/api/audit-events?{query_string}"
 
     async def _get_audit_events(
-        self, start_date: datetime, page: int | None = None, end_date: datetime | None = None
+        self,
+        start_date: datetime,
+        page: int | None = None,
+        end_date: datetime | None = None,
     ) -> list[dict[str, Any]]:
         """
         Fetch data from the Delinea API.

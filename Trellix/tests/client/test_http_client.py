@@ -319,6 +319,7 @@ async def test_trellix_http_client_retry(
     session_faker: Faker,
     http_token: HttpToken,
     edr_alert_event_response: tuple[dict[str, Any], TrellixResponse[EdrAlertAttributes]],
+    aioresponses_uppercase_method,
 ):
     """
     Test get edr alert events.
@@ -327,6 +328,7 @@ async def test_trellix_http_client_retry(
         session_faker: Faker
         http_token: HttpToken
         edr_alert_event_response: tuple[dict[str, Any], TrellixResponse[EdrAlertAttributes]]
+        aioresponses_uppercase_method: None
     """
     with aioresponses() as mocked_responses:
         base_url = session_faker.uri()
@@ -375,6 +377,7 @@ async def test_trellix_http_client_api_limit_exhausted(
     session_faker: Faker,
     http_token: HttpToken,
     edr_alert_event_response: tuple[dict[str, Any], TrellixResponse[EdrAlertAttributes]],
+    aioresponses_uppercase_method,
 ):
     """
     Test get edr alert events.
@@ -383,6 +386,7 @@ async def test_trellix_http_client_api_limit_exhausted(
         session_faker: Faker
         http_token: HttpToken
         edr_alert_event_response: tuple[dict[str, Any], TrellixResponse[EdrAlertAttributes]]
+        aioresponses_uppercase_method: None
     """
     with aioresponses() as mocked_responses:
         base_url = session_faker.uri()
@@ -423,3 +427,27 @@ async def test_trellix_http_client_api_limit_exhausted(
 
             assert result == expected_result_dto
             mock_sleep.assert_called_once_with(300)
+
+
+@pytest.mark.asyncio
+async def test_trellix_client_proxy_support(session_faker) -> None:
+    """
+    Test Client proxy support.
+    """
+    base_url = session_faker.uri()
+    base_auth_url = session_faker.uri()
+    client_id = session_faker.word()
+    client_secret = session_faker.word()
+    api_key = session_faker.word()
+
+    # Setup the client
+    client = await TrellixHttpClient.instance(
+        client_id,
+        client_secret,
+        api_key,
+        base_auth_url,
+        base_url,
+    )
+
+    async with client.session() as session:
+        assert session._client.trust_env is True

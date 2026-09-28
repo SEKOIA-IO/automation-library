@@ -7,6 +7,7 @@ from typing import Any, List
 from unittest.mock import patch
 
 import pytest
+from aioresponses.core import RequestMatch
 from faker import Faker
 from sekoia_automation import constants
 
@@ -89,6 +90,31 @@ def token_refresher_session():
     """
     with patch.object(TrellixTokenRefresher, "_session") as session_mock:
         yield session_mock
+
+
+@pytest.fixture
+def aioresponses_uppercase_method():
+    """
+    `aioresponses` builds its mocked `ClientResponse` with a lower-cased HTTP
+    method (see `RequestMatch.__init__`), whereas real `aiohttp` responses always
+    carry an upper-cased method. `aiohttp-retry` relies on `response.method` being
+    upper-cased to decide whether a response is eligible for retry, so without this
+    fixture, retries are silently skipped for every mocked response.
+
+    This fixture patches `RequestMatch._build_response` to upper-case the method
+    before building the response, so mocked responses behave like real ones.
+
+    Yields:
+        None:
+    """
+    original_build_response = RequestMatch._build_response
+
+    def patched_build_response(self, *args, **kwargs):
+        kwargs["method"] = kwargs["method"].upper()
+        return original_build_response(self, *args, **kwargs)
+
+    with patch.object(RequestMatch, "_build_response", patched_build_response):
+        yield
 
 
 @pytest.fixture

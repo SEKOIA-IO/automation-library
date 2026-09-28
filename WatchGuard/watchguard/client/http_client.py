@@ -52,7 +52,7 @@ class WatchGuardClient(object):
             AsyncGenerator[ClientSession, None]:
         """
         if self._session is None:
-            self._session = ClientSession()
+            self._session = ClientSession(trust_env=True)
 
         if self._rate_limiter_daily and self._rate_limiter_second:
             async with self._rate_limiter_daily:
@@ -123,11 +123,17 @@ class WatchGuardClient(object):
             raise ValueError("Period must be either 1 or 7 days.")
 
         async def fetch_func(auth_token: str) -> dict[str, Any]:
-            headers = {"WatchGuard-API-Key": self.config.application_key, "Authorization": f"Bearer {auth_token}"}
+            headers = {
+                "WatchGuard-API-Key": self.config.application_key,
+                "Authorization": f"Bearer {auth_token}",
+            }
             async with self.session() as session:
                 response = await session.get(
                     "{0}/rest/endpoint-security/management/api/v1/accounts/{1}/securityevents/{2}/export/{3}".format(
-                        self.config.base_url, self.config.account_id, security_event.value, period
+                        self.config.base_url,
+                        self.config.account_id,
+                        security_event.value,
+                        period,
                     ),
                     headers=headers,
                 )

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-22 - 1.1.4
+
+### Fixed
+
+- Add support for HTTP/HTTPS proxy environment variables
+
 ## 2025-07-08 - 1.1.3
 
 ### Changed

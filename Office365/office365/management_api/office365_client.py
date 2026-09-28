@@ -38,7 +38,7 @@ class Office365API:
             client_credential=client_secret,
             authority=self._normalize_office365_url(),
         )
-        self._session = ClientSession()
+        self._session = ClientSession(trust_env=True)
         self._token_expiration = 0
         self._publisher_id = publisher_id
 

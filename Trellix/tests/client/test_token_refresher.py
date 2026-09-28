@@ -54,7 +54,11 @@ async def test_trellix_refresher_refresh_token_1(http_token, session_faker):
         auth_url = session_faker.uri()
 
         token_refresher = TrellixTokenRefresher(
-            session_faker.word(), session_faker.word(), session_faker.word(), auth_url, Scope.complete_set_of_scopes()
+            session_faker.word(),
+            session_faker.word(),
+            session_faker.word(),
+            auth_url,
+            Scope.complete_set_of_scopes(),
         )
 
         mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
@@ -251,8 +255,18 @@ async def test_trellix_refresher_always_provide_fresh_token(http_token, session_
     token_refresher_session.post = MagicMock()
     token_refresher_session.post.return_value.__aenter__.return_value.status = 200
     token_refresher_session.post.return_value.__aenter__.return_value.json.side_effect = [
-        {"tid": 233264798, "token_type": "Bearer", "expires_in": 2, "access_token": "token_expired_quickly"},
-        {"tid": 233264799, "token_type": "Bearer", "expires_in": 600, "access_token": "fresh_token"},
+        {
+            "tid": 233264798,
+            "token_type": "Bearer",
+            "expires_in": 2,
+            "access_token": "token_expired_quickly",
+        },
+        {
+            "tid": 233264799,
+            "token_type": "Bearer",
+            "expires_in": 600,
+            "access_token": "fresh_token",
+        },
     ]
 
     token_refresher = TrellixTokenRefresher(
@@ -284,3 +298,26 @@ async def test_trellix_refresher_always_provide_fresh_token(http_token, session_
         assert token.token.access_token == "fresh_token"
 
     await token_refresher.close()
+
+
+@pytest.mark.asyncio
+async def test_trellix_token_refresher_proxy_support(session_faker):
+    """
+    Test Trellix proxy support.
+    """
+    TrellixTokenRefresher._session = None
+
+    token_refresher = TrellixTokenRefresher(
+        session_faker.word(),
+        session_faker.word(),
+        session_faker.word(),
+        session_faker.uri(),
+        Scope.complete_set_of_scopes(),
+    )
+
+    assert token_refresher.session().trust_env is True
+
+    await token_refresher.close()
+    if TrellixTokenRefresher._session is not None:
+        await TrellixTokenRefresher._session.close()
+        TrellixTokenRefresher._session = None

@@ -873,3 +873,20 @@ async def test_get_content_translates_runtime_error(mock_azure_authentication, t
             await client.get_content("https://manage.office.com/api/v1.0/foo")
     finally:
         await client.close()
+
+
+@pytest.mark.asyncio
+async def test_office_client_proxy_support(mock_azure_authentication, tenant_id):
+    """
+    Test CLient proxy support
+    """
+    client = Office365API(
+        client_id="client_id",
+        client_secret="client_secret",
+        tenant_id=tenant_id,
+    )
+
+    async with client._fresh_session() as session:
+        assert session.trust_env is True
+
+    await client.close()

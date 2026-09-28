@@ -123,7 +123,8 @@ class TrellixHttpClient(object):
             cls._session = RetryClient(
                 retry_options=RetryWithRateLimiter(
                     ExponentialRetry(attempts=3, start_timeout=5.0, statuses={429}, max_timeout=60.0)
-                )
+                ),
+                trust_env=True,
             )
 
         if cls._rate_limiter and cls._rate_limiter_per_day:
