@@ -1,5 +1,6 @@
 """Tests related to token refresher."""
 
+from posixpath import join as urljoin
 from unittest.mock import MagicMock
 
 import pytest
@@ -63,7 +64,7 @@ async def test_salesforce_refresher_refresh_token_1(http_token, session_faker):
         )
 
         mocked_responses.post(
-            "{0}/services/oauth2/token?grant_type=client_credentials".format(auth_url), status=200, payload=token_data
+            urljoin(auth_url, "services/oauth2/token?grant_type=client_credentials"), status=200, payload=token_data
         )
 
         await token_refresher.refresh_token()
@@ -96,7 +97,7 @@ async def test_salesforce_refresher_refresh_token_failed(session_faker):
         error_response = {"error": "invalid_grant", "error_description": "authentication failure"}
 
         mocked_responses.post(
-            "{0}/services/oauth2/token?grant_type=client_credentials".format(auth_url),
+            urljoin(auth_url, "services/oauth2/token?grant_type=client_credentials"),
             status=400,
             payload=error_response,
         )
