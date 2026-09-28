@@ -8,9 +8,7 @@ class SalesforceModuleConfig(BaseModel):
     client_secret: str = Field(..., json_schema_extra={"secret": True})
     client_id: str = Field(required=True, description="Salesforce client id")
     base_url: HttpUrl = Field(required=True, description="Salesforce auth url")
-    org_type: str = Field(
-        default="production", required=True, description="Salesforce org type"
-    )
+    org_type: str = Field(default="production", required=True, description="Salesforce org type")
     rate_limit: str | None = Field(
         None,
         description=(
