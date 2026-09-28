@@ -5,10 +5,10 @@ from pydantic import BaseModel, Field, HttpUrl
 class SalesforceModuleConfig(BaseModel):
     """Configuration for SalesforceModule."""
 
-    client_secret: str = Field(..., json_schema_extra={"secret": True})
-    client_id: str = Field(required=True, description="Salesforce client id")
-    base_url: HttpUrl = Field(required=True, description="Salesforce auth url")
-    org_type: str = Field(default="production", required=True, description="Salesforce org type")
+    client_secret: str = Field(json_schema_extra={"secret": True})
+    client_id: str = Field(description="Salesforce client id")
+    base_url: HttpUrl = Field(description="Salesforce auth url")
+    org_type: str = Field(default="production", description="Salesforce org type")
     rate_limit: str | None = Field(
         None,
         description=(
