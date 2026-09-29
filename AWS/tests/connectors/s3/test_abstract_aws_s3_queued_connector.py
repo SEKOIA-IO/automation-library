@@ -2,6 +2,7 @@
 
 import os
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import BinaryIO
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
@@ -452,3 +453,49 @@ async def test_abstract_aws_s3_queued_connector_next_batch_without_prefix_filter
 
     # Both messages should be processed
     assert result[0] == 2
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_queued_connector_next_batch_pushes_before_deleting_messages(
+    session_faker: Faker, abstract_queued_connector: AbstractAwsS3QueuedConnector, sqs_message: str
+):
+    """
+    Test that the events of a receive are pushed before its messages are deleted, even when fewer
+    events than the batch size are collected, and that the batch ends after a single receive.
+    """
+    abstract_queued_connector.limit_of_events_to_push = 10000
+    sqs_messages = [(sqs_message, session_faker.pyint(min_value=1, max_value=1000)) for _ in range(10)]
+    data_content = session_faker.word()
+    calls: list[str] = []
+
+    @asynccontextmanager
+    async def receive_messages(**kwargs):
+        calls.append("receive")
+        yield sqs_messages
+        calls.append("delete")
+
+    async def push_data_to_intakes(events: list[str]) -> list[str]:
+        calls.append("push")
+        return events
+
+    abstract_queued_connector.push_data_to_intakes = push_data_to_intakes
+
+    async def read_key():
+        return await async_bytesIO(data_content.encode("utf-8"))
+
+    mock_sqs = MagicMock()
+    mock_sqs.receive_messages = MagicMock(side_effect=receive_messages)
+
+    mock_s3 = MagicMock()
+    mock_s3.read_key = MagicMock()
+    mock_s3.read_key.return_value.__aenter__.side_effect = read_key
+
+    connector_type = type(abstract_queued_connector)
+    with (
+        patch.object(connector_type, "sqs_wrapper", new_callable=PropertyMock, return_value=mock_sqs),
+        patch.object(connector_type, "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3),
+    ):
+        result = await abstract_queued_connector.next_batch()
+
+    assert calls == ["receive", "push", "delete"]
+    assert result == (len(sqs_messages), [timestamp for _, timestamp in sqs_messages])
