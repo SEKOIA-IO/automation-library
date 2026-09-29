@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-29 - 1.38.2
+
+### Changed
+
+- S3 connectors: log the size of each fetched S3 object and the number of records parsed from it
+- Avoid an extra in-memory copy of S3 objects when detecting gzip compression
+
+### Fixed
+
+- SQS-based S3 connectors: push the events of each SQS receive before deleting the messages, instead of
+  accumulating events over several receives until 10,000 were collected (delayed events and data loss on restart)
+- SQS: keep the consumed messages in the queue when their processing fails (e.g. intake push error), so they are
+  redelivered instead of being deleted and lost
+
 ## 2026-09-04 - 1.38.1
 
 ### Fixed
