@@ -105,7 +105,7 @@ class GetSignInsResults(BaseModel):
 
 class GetSignInsAction(MicrosoftGraphAction):
     name = "Get SignIns"
-    description = "Get the last sign ins of an Azure AD user. Requires the AuditLog.Read.All and Directory.Read.All app permissions."  # noqa: E501
+    description = "Get the last sign ins of an Azure AD user. Requires the AuditLog.Read.All app permissions."  # noqa: E501
     # results_model doesn't support async model
     # results_model = GetSignInsResults
 
@@ -129,7 +129,7 @@ class GetSignInsAction(MicrosoftGraphAction):
 
 class RevokeSignInsSessionsAction(MicrosoftGraphAction):
     name = "Revoke SignIns Sessions"
-    description = "Invalidates all the refresh tokens issued to applications for a user. Requires the User.ReadWrite.All or Directory.ReadWrite.All permissions."  # noqa: E501
+    description = "Invalidates all the refresh tokens issued to applications for a user. Requires the User.RevokeSessions.All app permissions."  # noqa: E501
 
     async def query_revoke_signin(self, signIn_param, req_conf):
         return await self.client.users.by_user_id(signIn_param).revoke_sign_in_sessions.post(
