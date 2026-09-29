@@ -499,3 +499,48 @@ async def test_abstract_aws_s3_queued_connector_next_batch_pushes_before_deletin
 
     assert calls == ["receive", "push", "delete"]
     assert result == (len(sqs_messages), [timestamp for _, timestamp in sqs_messages])
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_queued_connector_next_batch_does_not_delete_messages_on_push_failure(
+    session_faker: Faker, abstract_queued_connector: AbstractAwsS3QueuedConnector, sqs_message: str
+):
+    """
+    Test that the messages are not deleted when pushing the events to the intake fails.
+    """
+    abstract_queued_connector.limit_of_events_to_push = 10000
+    sqs_messages = [(sqs_message, session_faker.pyint(min_value=1, max_value=1000))]
+    data_content = session_faker.word()
+
+    abstract_queued_connector.push_data_to_intakes = AsyncMock(side_effect=RuntimeError("intake unavailable"))
+
+    async def read_key():
+        return await async_bytesIO(data_content.encode("utf-8"))
+
+    mock_s3 = MagicMock()
+    mock_s3.read_key = MagicMock()
+    mock_s3.read_key.return_value.__aenter__.side_effect = read_key
+
+    mock_client = MagicMock()
+    mock_client.receive_message = AsyncMock(
+        return_value={
+            "Messages": [
+                {"Body": body, "ReceiptHandle": session_faker.word(), "Attributes": {"SentTimestamp": timestamp}}
+                for body, timestamp in sqs_messages
+            ]
+        }
+    )
+    mock_client.delete_message = AsyncMock(return_value={})
+
+    connector_type = type(abstract_queued_connector)
+    with (
+        patch.object(connector_type, "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3),
+        patch.object(SqsWrapper, "queue_url", AsyncMock(return_value=session_faker.url())),
+        patch.object(SqsWrapper, "get_client") as mock_get_client,
+    ):
+        mock_get_client.return_value.__aenter__.return_value = mock_client
+
+        with pytest.raises(RuntimeError):
+            await abstract_queued_connector.next_batch()
+
+    mock_client.delete_message.assert_not_called()

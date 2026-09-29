@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - SQS-based S3 connectors: push the events of each SQS receive before deleting the messages, instead of
   accumulating events over several receives until 10,000 were collected (delayed events and data loss on restart)
+- SQS: keep the consumed messages in the queue when their processing fails (e.g. intake push error), so they are
+  redelivered instead of being deleted and lost
 
 ## 2026-09-04 - 1.38.1
 
