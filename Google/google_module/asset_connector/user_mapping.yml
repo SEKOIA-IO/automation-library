@@ -1,0 +1,343 @@
+mapping:
+  ocsf_class: "User Inventory Info"
+  class_uid: 5003
+  ocsf_version: "1.6.0"
+
+  samples:
+    - name: "Administrator with organization"
+      description: "Google Workspace user returned by the Directory API users.list endpoint, member of the Engineering group"
+      data: |
+        {
+          "kind": "admin#directory#user",
+          "id": "100000000000000000001",
+          "etag": "\"etag-1\"",
+          "primaryEmail": "jane.doe@example.com",
+          "name": {
+            "givenName": "Jane",
+            "familyName": "Doe",
+            "fullName": "Jane Doe",
+            "displayName": "Jane D."
+          },
+          "isAdmin": true,
+          "isDelegatedAdmin": false,
+          "suspended": false,
+          "archived": false,
+          "isEnrolledIn2Sv": true,
+          "isEnforcedIn2Sv": false,
+          "lastLoginTime": "2026-09-28T08:15:00.000Z",
+          "creationTime": "2021-03-01T10:00:00.000Z",
+          "orgUnitPath": "/Engineering",
+          "organizations": [
+            {
+              "name": "Example Corp",
+              "title": "CTO",
+              "department": "Engineering",
+              "location": "Paris",
+              "primary": true
+            }
+          ],
+          "externalIds": [
+            {
+              "type": "organization",
+              "value": "E-42"
+            }
+          ],
+          "customerId": "C00000000"
+        }
+    - name: "Group"
+      description: "Group returned by the Directory API groups.list endpoint. Its members come from members.list"
+      data: |
+        {
+          "kind": "admin#directory#group",
+          "id": "000000000000001",
+          "email": "engineering@example.com",
+          "name": "Engineering",
+          "description": "Engineers",
+          "directMembersCount": "12"
+        }
+
+  fields:
+    # EVENT CLASSIFICATION
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      description: "OCSF activity ID – always 2 for Collect"
+
+    - source: "static: Collect"
+      target: "activity_name"
+      type: "string"
+      description: "OCSF activity name"
+
+    - source: "static: Discovery"
+      target: "category_name"
+      type: "string"
+      description: "OCSF category name"
+
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      description: "OCSF category UID"
+
+    - source: "static: User Inventory Info"
+      target: "class_name"
+      type: "string"
+      description: "OCSF class name"
+
+    - source: "static: 5003"
+      target: "class_uid"
+      type: "integer"
+      description: "OCSF class UID"
+
+    - source: "static: User Inventory Info: Collect"
+      target: "type_name"
+      type: "string"
+      description: "OCSF type name"
+
+    - source: "static: 500302"
+      target: "type_uid"
+      type: "integer"
+      description: "OCSF type UID"
+
+    - source: "static: Informational"
+      target: "severity"
+      type: "string"
+      description: "Event severity"
+
+    - source: "static: 1"
+      target: "severity_id"
+      type: "integer"
+      description: "OCSF severity ID"
+
+    # METADATA
+    - source: "static: Google Workspace"
+      target: "metadata.product.name"
+      type: "string"
+      description: "Source product name"
+
+    - source: "static: Google"
+      target: "metadata.product.vendor_name"
+      type: "string"
+      description: "Source product vendor"
+
+    - source: "static: N/A"
+      target: "metadata.product.version"
+      type: "string"
+      description: "Product version"
+
+    - source: "static: 1.6.0"
+      target: "metadata.version"
+      type: "string"
+      description: "OCSF schema version"
+
+    # TIMESTAMPS
+    - source: "creationTime"
+      target: "time"
+      type: "timestamp"
+      logic: "Parse ISO-8601 timestamp; convert to Unix epoch float"
+      description: "Creation date of the user"
+
+    # USER FIELDS
+    - source: "id"
+      target: "user.uid"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Unique Google Workspace user identifier"
+
+    - source: "primaryEmail"
+      target: "user.name / user.email_addr"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Primary email address, used as login"
+
+    - source: "primaryEmail (part after '@')"
+      target: "user.domain"
+      type: "string"
+      logic: "Domain of the primary email address"
+      description: "Google Workspace domain of the user"
+
+    - source: "name.fullName"
+      target: "user.full_name"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Full name of the user"
+
+    - source: "name.displayName"
+      target: "user.display_name"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Display name of the user"
+
+    - source: "isEnrolledIn2Sv"
+      target: "user.has_mfa"
+      type: "boolean"
+      logic: "Direct mapping"
+      description: "Whether the user is enrolled in 2-step verification"
+
+    - source: "isAdmin || isDelegatedAdmin"
+      target: "user.type_id / user.type"
+      type: "integer / string"
+      logic: "Super administrator or delegated administrator → 2 / Admin, otherwise 1 / User"
+      description: "OCSF user type"
+
+    - source: "id + primaryEmail"
+      target: "user.account"
+      type: "object"
+      logic: "uid=id, name=primaryEmail, type_id=15 / type=Google Workspace"
+      description: "Google Workspace account of the user"
+
+    - source: "groups.list + members.list"
+      target: "user.groups[]"
+      type: "array"
+      logic: "Groups the user is a direct member of (member type USER), plus the groups whose member is the whole customer (member type CUSTOMER): uid=group id, name=group name (fallback: group email), desc=group description (omitted when empty). Sorted by uid; omitted when the user has no group. EXTERNAL and GROUP members are ignored"
+      description: "Google Workspace group memberships"
+
+    - source: "organizations[primary].name (fallback: user.domain)"
+      target: "user.org.name"
+      type: "string"
+      logic: "Name of the primary organization, or the first one when none is flagged primary; the email domain when the user has no organization"
+      description: "Organization of the user"
+
+    - source: "orgUnitPath"
+      target: "user.org.ou_name"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Organizational unit of the user in Google Workspace"
+
+    - source: "name.givenName"
+      target: "user.ldap_person.given_name"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Given name of the user"
+
+    - source: "name.familyName"
+      target: "user.ldap_person.surname"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Family name of the user"
+
+    - source: "organizations[primary].title"
+      target: "user.ldap_person.job_title"
+      type: "string"
+      logic: "Title in the primary organization"
+      description: "Job title of the user"
+
+    - source: "organizations[primary].department"
+      target: "user.ldap_person.department"
+      type: "string"
+      logic: "Department in the primary organization"
+      description: "Department of the user"
+
+    - source: "organizations[primary].location"
+      target: "user.ldap_person.office_location"
+      type: "string"
+      logic: "Location in the primary organization"
+      description: "Office location of the user"
+
+    - source: "externalIds[type=organization].value"
+      target: "user.ldap_person.employee_uid"
+      type: "string"
+      logic: "Value of the first external id of type organization"
+      description: "Employee identifier"
+
+    # ENRICHMENTS
+    - source: "static: access_control / google_workspace"
+      target: "enrichments[0].name / enrichments[0].value"
+      type: "string"
+      description: "Enrichment describing the account state"
+
+    - source: "suspended, archived"
+      target: "enrichments[0].data.is_enabled"
+      type: "boolean"
+      logic: "False when the user is suspended or archived, True otherwise"
+      description: "Whether the account can be used"
+
+    - source: "lastLoginTime"
+      target: "enrichments[0].data.last_logon"
+      type: "string"
+      logic: "Direct mapping; omitted when the user never logged in (1970-01-01T00:00:00.000Z)"
+      description: "Date of the last login"
+
+    # CHECKPOINT
+    - source: "OCSF output per user"
+      target: "context.known_users[id]"
+      type: "string"
+      logic: "Every cycle lists all users. A fingerprint of each OCSF output is stored per user id; users whose fingerprint did not change since the previous cycle are not pushed. Users no longer listed are dropped from the cache once a cycle lists every user."
+      description: "Change detection: the Directory API has no modification date to filter on"
+
+  not_mapped:
+    - field: "isEnforcedIn2Sv"
+      reason: "Enforcement policy, not the enrollment state of the user"
+    - field: "etag"
+      reason: "Change detection uses the OCSF output instead, so changes to unmapped fields are not pushed"
+
+  ocsf_samples:
+    - name: "Administrator with organization – OCSF output"
+      description: "Transformed OCSF UserOCSFModel for the administrator sample, member of the Engineering group"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "User Inventory Info",
+          "class_uid": 5003,
+          "type_name": "User Inventory Info: Collect",
+          "type_uid": 500302,
+          "severity": "Informational",
+          "severity_id": 1,
+          "time": 1614592800.0,
+          "metadata": {
+            "product": {
+              "name": "Google Workspace",
+              "vendor_name": "Google",
+              "version": "N/A"
+            },
+            "version": "1.6.0"
+          },
+          "user": {
+            "has_mfa": true,
+            "name": "jane.doe@example.com",
+            "uid": "100000000000000000001",
+            "account": {
+              "name": "jane.doe@example.com",
+              "type_id": 15,
+              "type": "Google Workspace",
+              "uid": "100000000000000000001"
+            },
+            "groups": [
+              {
+                "name": "Engineering",
+                "desc": "Engineers",
+                "uid": "000000000000001"
+              }
+            ],
+            "full_name": "Jane Doe",
+            "email_addr": "jane.doe@example.com",
+            "display_name": "Jane D.",
+            "domain": "example.com",
+            "type_id": 2,
+            "type": "Admin",
+            "org": {
+              "name": "Example Corp",
+              "ou_name": "/Engineering"
+            },
+            "ldap_person": {
+              "job_title": "CTO",
+              "department": "Engineering",
+              "employee_uid": "E-42",
+              "given_name": "Jane",
+              "surname": "Doe",
+              "office_location": "Paris"
+            }
+          },
+          "enrichments": [
+            {
+              "name": "access_control",
+              "value": "google_workspace",
+              "data": {
+                "is_enabled": true,
+                "last_logon": "2026-09-28T08:15:00.000Z"
+              }
+            }
+          ]
+        }
