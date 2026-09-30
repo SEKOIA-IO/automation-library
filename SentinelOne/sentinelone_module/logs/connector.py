@@ -8,11 +8,11 @@ from time import sleep, time
 from cachetools import Cache, LRUCache
 from management.mgmtsdk_v2.client import ManagementResponse
 from management.mgmtsdk_v2.entities.activity import Activity
-from management.mgmtsdk_v2.entities.threat import Threat
 from management.mgmtsdk_v2.exceptions import SentinelBaseException, UnauthorizedException
 from management.mgmtsdk_v2.services.activity import ActivitiesFilter
-from management.mgmtsdk_v2.services.threat import ThreatQueryFilter
+from management.mgmtsdk_v2_1.entities.threat import Threat
 from management.mgmtsdk_v2_1.mgmt import Management
+from management.mgmtsdk_v2_1.services.threat import ThreatQueryFilter
 from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector
 
@@ -127,7 +127,8 @@ class SentinelOneLogsConsumer(Thread):
         for event in events:
             event_dict = event if isinstance(event, dict) else event.__dict__
             non_empty_json = {k: v for (k, v) in event_dict.items() if v is not None}
-            non_empty_json_str = json.dumps(non_empty_json)
+            # library entities nest sub-objects, so serialize them via their __dict__
+            non_empty_json_str = json.dumps(non_empty_json, default=lambda o: o.__dict__)
             serialized_events.append(non_empty_json_str)
         return serialized_events
 
@@ -282,9 +283,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
         events_ids = []
         while self.running:
             # Fetch threats
-            threat_response: ManagementResponse | None = self.management_client.client.get(
-                endpoint="threats", params=query_filter.filters
-            )
+            threat_response: ManagementResponse | None = self.management_client.threats.get(query_filter)
 
             if threat_response is None:
                 raise SENTINEL_ONE_EMPTY_RESPONSE
@@ -300,7 +299,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
                 break
 
             # discard already collected events
-            selected_events = filter_collected_events(threats, lambda threat: threat["id"], self.session_events_cache)
+            selected_events = filter_collected_events(threats, lambda threat: threat.id, self.session_events_cache)
 
             # Push events
             if len(selected_events) > 0:

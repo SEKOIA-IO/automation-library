@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from shutil import rmtree
 from tempfile import mkdtemp
-from typing import Callable, Type
 
 import pytest
 from sekoia_automation import constants
@@ -21,10 +21,10 @@ def data_storage():
 
 
 @pytest.fixture
-def configured_action() -> Callable[[Type[MicrosoftGraphActionBase]], MicrosoftGraphActionBase]:
-    def _configured_action(action_cls: Type[MicrosoftGraphActionBase]) -> MicrosoftGraphActionBase:
+def configured_action() -> Callable[[type[MicrosoftGraphActionBase]], MicrosoftGraphActionBase]:
+    def _configured_action(action_cls: type[MicrosoftGraphActionBase]) -> MicrosoftGraphActionBase:
         module = MicrosoftOutlookModule()
-        module.configuration = {
+        module.configuration = {  # type: ignore[assignment]
             "tenant_id": "test_tenant_id",
             "client_id": "32747e7c-2eff-43ea-a9c7-e783b9d2f930",
             "client_secret": "client_secret",

@@ -503,3 +503,34 @@ def test_get_custom_verdict():
         history = mock.request_history
         assert history[0].method == "GET"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
+
+
+def test_list_cases_drops_empty_parameters():
+    """Search Cases has the same unset-filter problem as Search Alerts.
+
+    The node sends an empty string for every text filter the user left
+    untouched; forwarding them makes the API return no case at all.
+    """
+    action: ListsCases = ListsCases()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    arguments = {
+        "match[status_name]": "",  # unset filter -> must be dropped
+        "match[tags]": "",  # unset filter -> must be dropped
+        "match[assignees]": None,  # unset filter -> must be dropped
+        "match[created_by]": "analyst",  # set filter -> must be kept
+        "limit": 20,
+        "offset": 0,  # int 0 -> must be kept
+    }
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{base_url}cases", json={"items": [], "total": 0})
+
+        action.run(arguments)
+
+        sent = mock.request_history[0].qs
+        assert "match[status_name]" not in sent
+        assert "match[tags]" not in sent
+        assert "match[assignees]" not in sent
+        assert sent["match[created_by]"] == ["analyst"]
+        assert sent["limit"] == ["20"]
+        assert sent["offset"] == ["0"]

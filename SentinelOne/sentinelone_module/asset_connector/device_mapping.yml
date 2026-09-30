@@ -295,12 +295,6 @@ mapping:
       logic: "Direct mapping of device model name"
       description: "Device model name"
 
-    - source: "modelName"
-      target: "device.vendor_name"
-      type: "string"
-      logic: "Direct mapping of modelName as vendor_name (Device.vendor_name)"
-      description: "Device vendor name (mapped from modelName)"
-
     # DEVICE TIMESTAMPS
     - source: "createdAt"
       target: "device.created_time"
@@ -492,7 +486,6 @@ mapping:
             "type": "Desktop",
             "type_id": 2,
             "model": "Latitude 5540",
-            "vendor_name": "Latitude 5540",
             "ip": "192.168.1.100",
             "subnet": null,
             "is_managed": true,

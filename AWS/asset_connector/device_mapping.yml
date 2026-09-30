@@ -330,12 +330,6 @@ mapping:
       logic: "Direct mapping (e.g., 'xen', 'nitro')"
       description: "Hypervisor type"
 
-    - source: "static: Amazon Web Services"
-      target: "device.vendor_name"
-      type: "string"
-      logic: "Always 'Amazon Web Services'"
-      description: "Device vendor name"
-
     - source: "InstanceType"
       target: "device.model"
       type: "string"
@@ -414,7 +408,6 @@ mapping:
             "hostname": "ec2-11-22-44-66.compute-1.amazonaws.com",
             "type": "Server",
             "type_id": 1,
-            "vendor_name": "Amazon Web Services",
             "ip": "1.2.3.4",
             "model": "t3.medium",
             "image_id": "ami-0c55b159cbfafe1f0",

@@ -103,6 +103,10 @@
 		{
 			"name": "Duo",
 			"path": "Duo"
+		},
+		{
+			"name": "Okta",
+			"path": "Okta"
 		}
 	],
 	"settings": {

@@ -1,11 +1,11 @@
 import signal
 import time
 from collections.abc import Generator
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from posixpath import join as urljoin
 from threading import Event
-from typing import Any, Optional
+from typing import Any
 
 import orjson
 import requests
@@ -24,7 +24,7 @@ from okta_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_M
 logger = get_logger()
 
 
-class FetchEventsException(Exception):
+class FetchEventsError(Exception):
     pass
 
 
@@ -43,7 +43,7 @@ class SystemLogConnector(Connector):
     module: OktaModule
     configuration: SystemLogConnectorConfiguration
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         super().__init__(*args, **kwargs)
         self._stop_event = Event()
         self.context = PersistentJSON("events_cache.json", self._data_path)
@@ -90,7 +90,7 @@ class SystemLogConnector(Connector):
             # save the events cache to the context
             context["events_cache"] = list(self.events_cache.keys())
 
-    def exit(self, _: Any, __: Optional[Any]) -> None:
+    def exit(self, _: Any, __: Any | None) -> None:
         self.log(message="Stopping OKTA system logs connector", level="info")
         # Exit signal received, asking the processor to stop
         self._stop_event.set()
@@ -115,9 +115,9 @@ class SystemLogConnector(Connector):
             except Exception:
                 pass
 
-            raise FetchEventsException(message)
+            raise FetchEventsError(message)
 
-    def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
+    def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]]]:
         # set parameters
         params: dict[str, str | int] = {
             "since": from_date.isoformat(),
@@ -134,9 +134,9 @@ class SystemLogConnector(Connector):
 
         # get the first page of events
         headers = {"Accept": "application/json"}
-        url = urljoin(self.module.configuration.base_url, "api/v1/logs")
+        url: str | None = urljoin(self.module.configuration.base_url, "api/v1/logs")
 
-        params_to_use: None | dict[str, str | int] = params
+        params_to_use: dict[str, str | int] | None = params
 
         while url is not None and not self._stop_event.is_set():
             response = self.client.get(url, params=params_to_use, headers=headers)
@@ -170,34 +170,39 @@ class SystemLogConnector(Connector):
             if url is None:
                 return
 
-    def fetch_events(self) -> Generator[list[dict[str, Any]], None, None]:
-        most_recent_date_seen = self.cursor.offset
+    def fetch_events(self) -> Generator[list[dict[str, Any]]]:
+        start_offset = self.cursor.offset
+        # Track the raw (un-rounded) most recent event timestamp ever seen
+        last_event_date_seen = start_offset
 
-        try:
-            for next_events in self.__fetch_next_events(most_recent_date_seen):
-                if next_events:
-                    # get the greater date seen in this list of events
-                    events_date: list[str] = sorted(
-                        x["published"] for x in next_events if x.get("published") is not None
-                    )
+        for next_events in self.__fetch_next_events(start_offset):
+            if next_events:
+                # get the greater date seen in this list of events
+                events_date: list[str] = sorted(x["published"] for x in next_events if x.get("published") is not None)
 
-                    last_event_date = isoparse(events_date[-1])
+                last_event_date = isoparse(events_date[-1])
 
-                    # save the greater date ever seen
-                    if last_event_date > most_recent_date_seen:
-                        most_recent_date_seen = get_upper_second(
-                            last_event_date
-                        )  # get the upper second to exclude the most recent event seen
+                # save the greater date ever seen
+                if last_event_date > last_event_date_seen:
+                    last_event_date_seen = last_event_date
 
-                    # forward current events
-                    yield next_events
-        finally:
-            # save the most recent date
-            if most_recent_date_seen > self.cursor.offset:
-                self.cursor.offset = most_recent_date_seen
+                # forward current events
+                yield next_events
 
-        now = datetime.now(timezone.utc)
-        current_lag = now - most_recent_date_seen
+                # Persist a *raw* intermediate checkpoint after each pushed page so a restart
+                # replays at most one page. Rounding up to the next second here could skip a
+                # later-page event sharing that second; duplicates from the inclusive `since`
+                # filter are absorbed by the events cache.
+                if last_event_date_seen > self.cursor.offset:
+                    self.cursor.offset = last_event_date_seen
+
+        # Pagination fully drained: round up to the next second to exclude the most recent event
+        # seen from the next fetch (the `since` filter is inclusive).
+        if last_event_date_seen > start_offset:
+            self.cursor.offset = get_upper_second(last_event_date_seen)
+
+        now = datetime.now(UTC)
+        current_lag = now - self.cursor.offset
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
 
     def next_batch(self) -> None:

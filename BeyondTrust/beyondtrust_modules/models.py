@@ -1,7 +1,7 @@
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 
 class BeyondTrustModuleConfiguration(BaseModel):
     base_url: str = Field(..., description="Base URL")
     client_id: str = Field(..., description="Client ID")
-    client_secret: str = Field(..., description="Client secret", secret=True)
+    client_secret: str = Field(..., description="Client secret", json_schema_extra={"secret": True})

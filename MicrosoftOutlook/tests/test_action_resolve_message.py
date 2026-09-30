@@ -1,6 +1,7 @@
+from urllib.parse import unquote_plus
+
 import pytest
 import requests_mock
-from urllib.parse import unquote_plus
 
 from microsoft_outlook_modules.action_base import GraphAPIException
 from microsoft_outlook_modules.action_resolve_message import ResolveMessageAction
@@ -41,6 +42,24 @@ def test_resolve_message_not_found_error(configured_action):
             action.run(arguments={"user": "1111", "email_message_id": "<sample-message-id@example.com>"})
 
 
+def test_resolve_message_raises_when_selected_message_id_is_not_string(configured_action):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages",
+            json={"value": [{"id": None, "subject": "test-subject"}]},
+        )
+
+        action = configured_action(ResolveMessageAction)
+        with pytest.raises(ValueError, match="Unable to resolve a valid string message_id"):
+            action.run(arguments={"user": "1111", "email_message_id": "<sample-message-id@example.com>"})
+
+
 def test_resolve_message_defaults_to_first_result(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
@@ -57,9 +76,35 @@ def test_resolve_message_defaults_to_first_result(configured_action):
         action = configured_action(ResolveMessageAction)
         result = action.run(arguments={"user": "1111", "email_message_id": "<sample-message-id@example.com>"})
 
-        assert result["graph_message_id"] == "graph-item-id-1"
+        assert result["message_id"] == "graph-item-id-1"
         assert result["selected_index"] == 0
         assert result["total_results"] == 2
+
+
+def test_resolve_message_omits_message_id_for_candidates_with_non_string_id(configured_action):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages",
+            json={
+                "value": [
+                    {"id": "graph-item-id-1", "subject": "selected"},
+                    {"id": None, "subject": "secondary"},
+                ]
+            },
+        )
+
+        action = configured_action(ResolveMessageAction)
+        result = action.run(arguments={"user": "1111", "email_message_id": "<sample-message-id@example.com>"})
+
+        assert result["message_id"] == "graph-item-id-1"
+        assert result["messages"][0]["message_id"] == "graph-item-id-1"
+        assert "message_id" not in result["messages"][1]
 
 
 def test_resolve_message_most_recent_and_item_index(configured_action):
@@ -93,7 +138,7 @@ def test_resolve_message_most_recent_and_item_index(configured_action):
         request = mock.request_history[1]
         decoded_query = unquote_plus(request.url.split("?", maxsplit=1)[1])
         assert "$orderby=receivedDateTime desc" in decoded_query
-        assert result["graph_message_id"] == "graph-item-id-2"
+        assert result["message_id"] == "graph-item-id-2"
 
 
 def test_resolve_message_by_network_message_id_fallback_on_empty_result(configured_action):
@@ -130,7 +175,7 @@ def test_resolve_message_by_network_message_id_fallback_on_empty_result(configur
         action = configured_action(ResolveMessageAction)
         result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
 
-        assert result["graph_message_id"] == "graph-item-id-3"
+        assert result["message_id"] == "graph-item-id-3"
         assert result["total_results"] == 1
 
 
@@ -171,7 +216,7 @@ def test_resolve_message_by_network_message_id_fallback_on_inefficient_filter(co
         action = configured_action(ResolveMessageAction)
         result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
 
-        assert result["graph_message_id"] == "graph-item-id-4"
+        assert result["message_id"] == "graph-item-id-4"
         assert result["total_results"] == 1
 
 

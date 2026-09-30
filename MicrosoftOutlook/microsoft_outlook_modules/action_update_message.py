@@ -1,5 +1,6 @@
 from typing import Any, Literal
 
+import requests
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .action_base import MicrosoftGraphActionBase
@@ -83,4 +84,16 @@ class UpdateMessageAction(MicrosoftGraphActionBase):
         )
         self.handle_response(response)
 
-        return response.json()
+        result: dict[str, Any] = {}
+        try:
+            parsed_body = response.json()
+            if isinstance(parsed_body, dict):
+                result = parsed_body
+        except requests.exceptions.JSONDecodeError:
+            result = {}
+
+        resolved_message_id = result.get("id") if isinstance(result.get("id"), str) else message_id
+        normalized_result = self._snake_case_keys(result)
+        normalized_result.pop("id", None)
+        normalized_result["message_id"] = resolved_message_id
+        return normalized_result

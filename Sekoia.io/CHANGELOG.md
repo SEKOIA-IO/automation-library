@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-30 - 2.78.1
+
+### Fixed
+
+- Do not crash the alert triggers when the Alert API returns a `null` verdict, which happens for verdicts set by Roy when the API key cannot read AI investigations
+
+## 2026-09-18 - 2.78.0
+
+### Added
+
+- Add support for Fission execution engine.
+
+### Changed
+
+- Move from Poetry to `uv`.
+- Move to Python 3.14.
+- Replace deprecated `datetime.utcnow()` calls with `datetime.now(UTC)`.
+- Get rid of unused dependencies (`ujson`, `black`, `kafka-python`).
+- Update Python dependencies.
+
+## 2026-09-15 - 2.77.1
+
+### Fixed
+
+- Raise an error in `Get Events` and `Get Event Field Common Values` actions when the event search job fails, instead of returning empty results
+- Stop treating failed event search jobs as successful in `Alert Events Threshold` trigger
+
+## 2026-09-14 - 2.77.0
+
+### Added
+
+- `Search Alerts` action: add the `match[resolved_title]` and `match[custom_field]` filters. `match[resolved_title]` matches the title displayed on the alert (the custom title, otherwise the rule name). `match[title]` only matches custom titles, so it returned no result for alerts titled after their rule.
+
+## 2026-08-28 - 2.76.3
+
+### Fixed
+
+- Do not include community UUIDs in request for `Execute a Query` action to avoid permission issues
+
+## 2026-08-27 - 2.76.2
+
+### Fixed
+
+- Apply gevent monkey-patching before any import pulls in `ssl` (via `requests`/`urllib3`), and restrict it to trigger executions. Patching an already-loaded `ssl` module caused `RecursionError` on HTTPS calls.
+
+## 2026-08-27 - 2.76.1
+
+### Fixed
+
+- `Search Alerts`, `Search Cases` and `Get Alert` actions: only forward the query parameters the user actually set. The playbook node populates every argument declared in the manifest, including empty strings for untouched text filters and `False` for untouched booleans; the API treats any parameter present in the query string as an active filter (e.g. `match[title]=` matches nothing, `is_assigned_to_case=false` excludes assigned alerts), so these unset values made the searches return no result. They are now dropped, and kept booleans are normalized to lowercase `true` instead of Python's `True`.
+
 ## 2026-08-21 - 2.76.0
 
 ### Added
@@ -233,7 +284,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add a test to check if we can update an asset with a list of tags
-- 
+-
 ## 2026-02-27 - 2.69.2
 
 ### Fixed
@@ -358,7 +409,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add dual-mode event fetching: all events vs new events since last trigger
 - Save fetched events to events.json alongside alert.json
 - Add comprehensive test coverage (18 new tests) for event fetching functionality
-- Fix mypy type errors with proper None checks and type annotations  
+- Fix mypy type errors with proper None checks and type annotations
 - Add graceful degradation: trigger continues if event fetching fails
 - Update manifest with new configuration parameters and output schema
 
@@ -572,7 +623,7 @@ Support for file input - action synchronize asset
 ### Added
 
 - Update Alert trigger with rule_names_filter
- 
+
 ## 2025-01-27 - 2.67.3
 
 ### Fixed
@@ -606,7 +657,7 @@ Support for file input - action synchronize asset
 
 ### Changed
 
-- Change `Update Alert Status` to support `status names` as input 
+- Change `Update Alert Status` to support `status names` as input
 
 ## 2024-12-12 - 2.66.1
 
@@ -657,7 +708,7 @@ Support for file input - action synchronize asset
 
 ### Changed
 
-- Change `Update Alert Status` to support `status names` as input 
+- Change `Update Alert Status` to support `status names` as input
 
 ## 2024-10-08 - 2.64.6
 
@@ -676,7 +727,7 @@ Support for file input - action synchronize asset
 
 ### Changed
 
-- Return more information in Sekoia Alert comment trigger 
+- Return more information in Sekoia Alert comment trigger
 
 ## 2024-10-04 - 2.64.3
 
@@ -864,4 +915,3 @@ Support for file input - action synchronize asset
 ### Added
 
 - Add the action that let us get reports from a specific term
-

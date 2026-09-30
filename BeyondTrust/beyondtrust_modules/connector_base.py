@@ -9,10 +9,7 @@ from sekoia_automation.connector import Connector
 
 from . import BeyondTrustModule
 from .client import ApiClient
-from .logging import get_logger
 from .metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
-
-logger = get_logger()
 
 
 class BeyondTrustBaseConnector(Connector):
@@ -31,18 +28,18 @@ class BeyondTrustBaseConnector(Connector):
             level = "critical" if response.status_code in [401, 403] else "error"
 
             message = f"Request to BeyondTrust API failed with status {response.status_code} - {response.reason}"
+            log_extras = {}
 
             try:
                 error = response.json()
-                logger.error(
-                    message,
-                    error_message=error.get("message"),
-                    error_number=error.get("number"),
-                )
+                log_extras = {
+                    "error_message": error.get("message"),
+                    "error_number": error.get("number"),
+                }
             except Exception:
                 pass
 
-            self.log(message=message, level=level)
+            self.log(message=message, level=level, **log_extras)
 
         return not response.ok
 

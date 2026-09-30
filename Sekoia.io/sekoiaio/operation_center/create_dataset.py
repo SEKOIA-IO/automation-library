@@ -1,18 +1,14 @@
 from posixpath import join as urljoin
 
 from pydantic import BaseModel
-
 from requests import Session
-from requests.exceptions import Timeout, HTTPError
-
-
+from requests.exceptions import HTTPError, Timeout
 from tenacity import (
     retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
 )
-
 from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
 
 from .base_sol import BaseSolAction
@@ -64,7 +60,11 @@ class CreateDataset(BaseSolAction):
             response_create.raise_for_status()
         except HTTPError as e:
             self.log(
-                f"HTTP error when creating dataset: {e}. Response status: {response_create.status_code}, Response text: {response_create.text}",
+                (
+                    f"HTTP error when creating dataset: {e}. "
+                    f"Response status: {response_create.status_code}, "
+                    f"Response text: {response_create.text}"
+                ),
                 level="error",
             )
             raise
@@ -97,6 +97,7 @@ class CreateDataset(BaseSolAction):
         # Encode the dataset string to bytes for multipart upload
         encoded_dataset = self.encode_dataset(arguments.dataset)
 
-        # Create the dataset, the validation is built-in in the API and will return an error if the dataset is not valid
+        # Create the dataset, the validation is built-in in the API and will return an error if the dataset is not
+        # valid
         self.create_dataset(encoded_dataset, arguments.name)
         return CreateDatasetResults()

@@ -33,3 +33,9 @@ class ForwardMessageAction(MicrosoftGraphActionBase):
             timeout=60,
         )
         self.handle_response(response)
+
+        return {
+            "status": "forwarded",
+            "action": "forward_message",
+            "target_message_id": message_id,
+        }

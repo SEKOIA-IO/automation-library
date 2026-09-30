@@ -1,7 +1,8 @@
-# flake8: noqa: E402
-from sekoiaio.utils import should_patch
+import sys
 
-if should_patch():
+# Patch before any import pulls in ssl (via requests/urllib3), otherwise
+# gevent patches an already-loaded ssl module and HTTPS calls hit RecursionError.
+if len(sys.argv) >= 2 and sys.argv[1].endswith("_trigger"):
     from gevent import monkey
 
     monkey.patch_all()
@@ -97,7 +98,8 @@ from sekoiaio.triggers.intelligence import (
 )
 from sekoiaio.workspace import GetCommunity
 
-if __name__ == "__main__":
+
+def main():
     module = Module()
 
     module.register(ActivateCountermeasure, "patch-alerts/countermeasures/{cm_uuid}/activate")
@@ -179,3 +181,12 @@ if __name__ == "__main__":
     module.register(FeedIOCConsumptionTrigger, "feed_ioc_consumption_trigger")
 
     module.run()
+
+
+def fission_main():
+    main()
+    return "ok"
+
+
+if __name__ == "__main__":
+    main()

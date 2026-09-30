@@ -26,8 +26,7 @@ class OktaAccountValidator(AccountValidator):
 
     def validate(self) -> bool:
         try:
-            loop = asyncio.get_event_loop()
-            _, _, err = loop.run_until_complete(self.client.list_users())
+            _, _, err = asyncio.run(self.client.list_users())
             if not err:
                 return True
 
