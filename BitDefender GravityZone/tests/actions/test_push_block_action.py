@@ -70,7 +70,18 @@ def test_push_connection_block(symphony_storage):
         )
         arguments = BlockListModel(
             type="connection",
-            rules=[RuleModel(details=ConnectionModel(ruleName="BlockConnection"))],
+            rules=[
+                RuleModel(
+                    details=ConnectionModel(
+                        ruleName="BlockConnection",
+                        commandLine=None,
+                        ipVersion=None,
+                        localAddress=None,
+                        remoteAddress=None,
+                        directlyConnected=None,
+                    )
+                )
+            ],
         ).dict(exclude_none=True, by_alias=True)
 
         response = action.run(arguments)
