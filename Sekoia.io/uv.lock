@@ -1364,7 +1364,7 @@ wheels = [
 
 [[package]]
 name = "sekoiaio"
-version = "2.78.0"
+version = "2.78.1"
 source = { virtual = "." }
 dependencies = [
     { name = "gevent" },
