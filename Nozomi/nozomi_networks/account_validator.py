@@ -10,6 +10,7 @@ class NozomiAccountValidator(AccountValidator):
     module: NozomiModule
 
     def validate(self) -> bool:
+        client: NozomiQueryClient | None = None
         try:
             client = NozomiQueryClient(
                 key_name=self.module.configuration.key_name,
@@ -20,4 +21,7 @@ class NozomiAccountValidator(AccountValidator):
         except Exception as e:
             self.error(f"Impossible to authenticate to the Nozomi Networks API: {e}")
             return False
+        finally:
+            if client is not None:
+                client.close()
         return True
