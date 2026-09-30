@@ -66,6 +66,40 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             return "(&(objectCategory=person)(objectClass=user))"
         return f"(&(objectCategory=person)(objectClass=user)(whenCreated>={self.most_recent_datetime}))"
 
+    def get_mapped_fields(self) -> dict[str, str]:
+        """
+        Return the LDAP -> OCSF field mapping used for schema-change fingerprinting.
+
+        Static OCSF constants are excluded: they never depend on the LDAP payload, so they
+        cannot invalidate a checkpoint.
+        """
+        return {
+            "objectSid": "user.uid",
+            "objectGUID": "user.uid_alt",
+            "userPrincipalName": "user.account.name",
+            "givenName": "user.name",
+            "sn": "user.name",
+            "displayName": "user.full_name",
+            "mail": "user.email_addr",
+            "distinguishedName": "user.domain",
+            "memberOf": "user.groups.name",
+            "sAMAccountName": "user.type",
+            "userAccountControl": "enrichments.data.is_enabled",
+            "lastLogon": "enrichments.data.last_logon",
+            "badPwdCount": "enrichments.data.bad_password_count",
+            "logonCount": "enrichments.data.number_of_logons",
+            "whenCreated": "time",
+        }
+
+    def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so every user is collected again on the next cycle."""
+        with self.context as cache:
+            cache.pop("most_recent_datetime", None)
+            cache.pop("seen_sids_at_checkpoint", None)
+        self._latest_time = None
+        self._seen_sids = set()
+        self.log("Checkpoint reset - a full user re-collection will occur on the next cycle", level="info")
+
     def update_checkpoint(self) -> None:
         if self._latest_time is None:
             return
