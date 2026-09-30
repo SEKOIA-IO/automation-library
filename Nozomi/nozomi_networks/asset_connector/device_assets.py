@@ -1,6 +1,7 @@
 from collections.abc import Generator
 from datetime import datetime, timezone
 from functools import cached_property
+from typing import Any
 
 from pydantic.v1 import ValidationError
 from sekoia_automation.asset_connector import AssetConnector
@@ -62,7 +63,7 @@ class NozomiDeviceAssetConnector(AssetConnector):
         "switch": (DeviceTypeStr.SWITCH, DeviceTypeId.SWITCH),
     }
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("device_context.json", self._data_path)
         self._client: NozomiQueryClient | None = None
