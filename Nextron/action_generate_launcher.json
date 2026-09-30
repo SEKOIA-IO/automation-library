@@ -1,0 +1,191 @@
+{
+  "uuid": "a9b2367c-b039-469c-a4c8-1949e3c3ee7a",
+  "name": "Generate THOR Cloud launcher",
+  "slug": "generate_launcher",
+  "description": "Link an existing or create a new THOR Cloud campaign, then generate a launcher URL and an OS-specific download-and-run command. The returned URL and command contain a sensitive campaign token and must not be logged or shared.",
+  "docker_parameters": "GenerateLauncherAction",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "oneOf": [
+      {
+        "title": "Use an existing campaign",
+        "properties": {
+          "campaign_mode": {
+            "title": "Campaign selection",
+            "type": "string",
+            "const": "existing",
+            "default": "existing"
+          },
+          "campaign_id": {
+            "title": "Campaign ID",
+            "type": "string",
+            "description": "UUID of an active THOR Cloud campaign"
+          },
+          "launcher_type": {
+            "title": "Target operating system",
+            "type": "string",
+            "description": "Launcher matching the target asset operating system",
+            "enum": [
+              "windows-powershell",
+              "linux-bash",
+              "mac-bash"
+            ],
+            "enumNames": [
+              "Windows (PowerShell)",
+              "Linux (Bash)",
+              "macOS (Bash)"
+            ]
+          },
+          "product": {
+            "title": "THOR Cloud product",
+            "type": "string",
+            "default": "thor_cloud_lite",
+            "enum": [
+              "thor_cloud_lite",
+              "thor_cloud"
+            ],
+            "enumNames": [
+              "THOR Cloud Lite",
+              "THOR Cloud"
+            ]
+          }
+        },
+        "required": [
+          "campaign_mode",
+          "campaign_id",
+          "launcher_type"
+        ]
+      },
+      {
+        "title": "Create a new campaign",
+        "properties": {
+          "campaign_mode": {
+            "title": "Campaign selection",
+            "type": "string",
+            "const": "new",
+            "default": "new"
+          },
+          "campaign_name": {
+            "title": "Campaign name",
+            "type": "string",
+            "description": "Name of the campaign to create"
+          },
+          "campaign_description": {
+            "title": "Campaign description",
+            "type": "string",
+            "description": "Optional description of the new campaign"
+          },
+          "assigned_contract": {
+            "title": "Contract ID",
+            "type": "string",
+            "description": "Optional contract identifier used to license scans"
+          },
+          "end_date": {
+            "title": "Expiration date",
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional campaign expiration in RFC 3339 format, including timezone"
+          },
+          "scan_profile": {
+            "title": "Scan profile name",
+            "type": "string",
+            "description": "Optional predefined profile name exactly as shown in THOR Cloud; it is resolved through the account scan profiles API"
+          },
+          "scan_limit": {
+            "title": "Scan limit",
+            "type": "integer",
+            "minimum": 0,
+            "description": "Optional maximum number of scans; zero means unlimited"
+          },
+          "scan_threads": {
+            "title": "Scanner threads",
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional number of scanner threads"
+          },
+          "launcher_type": {
+            "title": "Target operating system",
+            "type": "string",
+            "description": "Launcher matching the target asset operating system",
+            "enum": [
+              "windows-powershell",
+              "linux-bash",
+              "mac-bash"
+            ],
+            "enumNames": [
+              "Windows (PowerShell)",
+              "Linux (Bash)",
+              "macOS (Bash)"
+            ]
+          },
+          "product": {
+            "title": "THOR Cloud product",
+            "type": "string",
+            "default": "thor_cloud_lite",
+            "enum": [
+              "thor_cloud_lite",
+              "thor_cloud"
+            ],
+            "enumNames": [
+              "THOR Cloud Lite",
+              "THOR Cloud"
+            ]
+          }
+        },
+        "required": [
+          "campaign_mode",
+          "campaign_name",
+          "launcher_type"
+        ]
+      }
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "campaign_id": {
+        "type": "string",
+        "description": "UUID of the THOR Cloud campaign"
+      },
+      "campaign_name": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Name of the linked or newly created campaign"
+      },
+      "campaign_created": {
+        "type": "boolean",
+        "description": "Whether this action created the campaign"
+      },
+      "launcher_type": {
+        "type": "string",
+        "description": "Generated launcher type"
+      },
+      "launcher_url": {
+        "type": "string",
+        "format": "uri",
+        "description": "Sensitive tokenized URL from which the target can download the launcher"
+      },
+      "filename": {
+        "type": "string",
+        "description": "Suggested launcher filename"
+      },
+      "command": {
+        "type": "string",
+        "description": "Sensitive OS-specific command that downloads and runs the launcher"
+      }
+    },
+    "required": [
+      "campaign_id",
+      "campaign_name",
+      "campaign_created",
+      "launcher_type",
+      "launcher_url",
+      "filename",
+      "command"
+    ]
+  }
+}
