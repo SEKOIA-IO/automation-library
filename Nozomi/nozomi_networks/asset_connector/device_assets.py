@@ -110,11 +110,11 @@ class NozomiDeviceAssetConnector(AssetConnector):
             return None
         try:
             millis = int(value)
-        except (TypeError, ValueError):
+            if millis <= 0:
+                return None
+            return datetime.fromtimestamp(millis / 1000, tz=timezone.utc)
+        except (TypeError, ValueError, OverflowError, OSError):
             return None
-        if millis <= 0:
-            return None
-        return datetime.fromtimestamp(millis / 1000, tz=timezone.utc)
 
     @staticmethod
     def extract_os_type(os_type: str | None) -> str:
