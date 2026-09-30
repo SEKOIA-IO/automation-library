@@ -5,6 +5,7 @@ import pytest
 import requests_mock
 
 from sophos_module.base import SophosModule
+from sophos_module.trigger_sophos_xdr_query import SophosXDRQueryTrigger
 from sophos_module.trigger_sophos_xdr_query import SophosXDRIOCQuery
 
 
@@ -334,3 +335,87 @@ def test_getting_next_results(
         assert trigger.events_sum == 8
         assert trigger.cursor.offset.date() == datetime.now(timezone.utc).date()
         assert trigger.query["from"] == trigger.from_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def test_getting_results_with_compatibility_fallback_query(
+    trigger, authorization_message, whoami_message, queryRun_message, queryStatus_message, queryResults_message
+):
+    host = "https://api-eu01.central.sophos.com"
+    url = f"{host}/xdr-query/v1/queries/runs"
+    url_query_status = f"{host}/xdr-query/v1/queries/runs/7d00cf17-a987-4d07-ac88-93d4df89fa73"
+    url_results = (
+        f"{host}/xdr-query/v1/queries/runs/7d00cf17-a987-4d07-ac88-93d4df89fa73/results?maxSize=1000&pageSize=7"
+    )
+
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            f"{trigger.module.configuration.oauth2_authorization_url}",
+            status_code=200,
+            json=authorization_message,
+        )
+
+        mock.get(
+            f"{trigger.module.configuration.api_host}/whoami/v1",
+            status_code=200,
+            json=whoami_message,
+        )
+
+        mock.post(
+            url,
+            [
+                {
+                    "status_code": 400,
+                    "json": {
+                        "error": "ValidationException",
+                        "message": "column ioc_detection_weight does not exist",
+                    },
+                },
+                {"status_code": 200, "json": queryRun_message},
+            ],
+        )
+        mock.get(url_query_status, json=queryStatus_message)
+        mock.get(url_results, json=queryResults_message)
+
+        trigger.getting_results("7")
+
+        query_calls = [call for call in mock.request_history if call.method == "POST" and call.url == url]
+        assert len(query_calls) == 2
+        assert trigger.push_events_to_intakes.call_count == 1
+
+
+def test_observe_items_events_lag_with_calendar_time_camel_case(trigger):
+    trigger._observe_items_events_lag(
+        [
+            {"calendarTime": "2023-07-03T11:28:45.000Z"},
+            {"calendarTime": "2023-07-03T11:22:45.000Z"},
+        ]
+    )
+
+
+def test_run_compatible_query_failed_after_all_templates(trigger):
+    trigger.post_query = Mock(return_value=("failed", None))
+
+    result, query_id = trigger.run_compatible_query()
+
+    assert (result, query_id) == ("failed", None)
+    assert trigger.post_query.call_count == len(trigger.queries)
+    assert trigger.log.call_count >= 1
+
+
+def test_parse_timestamp_handles_invalid_values(trigger):
+    assert trigger._parse_timestamp(None) is None
+    assert trigger._parse_timestamp(123) is None
+    assert trigger._parse_timestamp("") is None
+    assert trigger._parse_timestamp("not-a-date") is None
+
+
+def test_extract_event_timestamp_falls_back_to_created_at(trigger):
+    item = {"createdAt": "2023-07-03T11:28:45.000Z"}
+
+    assert trigger._extract_event_timestamp(item) is not None
+
+
+def test_base_queries_property_default_behavior(trigger):
+    base_queries = SophosXDRQueryTrigger.queries.fget(trigger)
+
+    assert base_queries == [trigger.query]
