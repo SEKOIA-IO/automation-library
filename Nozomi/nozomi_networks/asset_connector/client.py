@@ -76,19 +76,34 @@ class NozomiQueryClient:
         self._authorization = f"{token_type} {access_token}"
 
     @staticmethod
-    def build_assets_query(from_timestamp_ms: int | None, skip: int, head: int) -> str:
+    def build_assets_query(
+        from_timestamp_ms: int | None,
+        head: int,
+        inclusive: bool = False,
+    ) -> str:
         """
         Build the N2QL query string for assets, filtered and ordered by ``created_at``.
 
         Args:
-            from_timestamp_ms: Lower bound (exclusive) on ``created_at`` in epoch ms.
-            skip: Number of records to skip (pagination offset).
+            from_timestamp_ms: Lower bound on ``created_at`` in epoch ms.
             head: Maximum number of records to return (page size).
+            inclusive: Use ``>=`` instead of ``>`` for the lower bound.
         """
         query = "assets"
         if from_timestamp_ms is not None:
-            query += f" | where created_at > {from_timestamp_ms}"
-        query += " | sort created_at asc"
+            operator = ">=" if inclusive else ">"
+            query += f" | where created_at {operator} {from_timestamp_ms}"
+        query += f" | sort created_at asc | head {head}"
+        return query
+
+    @staticmethod
+    def build_same_timestamp_query(timestamp_ms: int, skip: int, head: int) -> str:
+        """
+        Build the N2QL query string for all assets sharing one ``created_at`` value.
+
+        Sorting on the unique ``id`` makes the offset pagination deterministic.
+        """
+        query = f"assets | where created_at == {timestamp_ms} | sort id asc"
         if skip:
             query += f" | skip {skip}"
         query += f" | head {head}"
@@ -120,35 +135,85 @@ class NozomiQueryClient:
         data: dict[str, Any] = response.json()
         return data
 
-    def fetch_assets(self, from_timestamp_ms: int | None) -> Generator[list[NozomiAsset], None, None]:
+    def _query_assets(self, query: str) -> list[NozomiAsset]:
+        logger.info("Querying Nozomi assets: {query}", query=query)
+        try:
+            raw = self._do_query(query)
+        except RequestException as error:
+            raise NozomiQueryError(0, f"Query request error: {error}") from error
+        return NozomiAssetPage.parse_obj(raw).result
+
+    def _fetch_same_timestamp(self, timestamp_ms: int) -> list[NozomiAsset]:
+        assets: list[NozomiAsset] = []
+        skip = 0
+        while True:
+            page = self._query_assets(self.build_same_timestamp_query(timestamp_ms, skip, self.page_size))
+            assets.extend(page)
+            if len(page) < self.page_size:
+                return assets
+            skip += self.page_size
+
+    @staticmethod
+    def _created_at_ms(asset: NozomiAsset) -> int | None:
+        try:
+            return int(asset.created_at) if asset.created_at else None
+        except ValueError:
+            return None
+
+    def fetch_assets(
+        self,
+        from_timestamp_ms: int | None,
+        exclude_ids: set[str] | None = None,
+    ) -> Generator[list[NozomiAsset], None, None]:
         """
         Fetch assets page by page, yielding parsed assets for each page.
 
+        ``created_at`` is not unique, so a page may end in the middle of a group of
+        assets sharing the same timestamp. When a page is full, the whole group for
+        its last timestamp is fetched (sorted by ``id``) before moving on with a
+        strict ``created_at >`` cursor, so no asset is skipped or duplicated.
+
         Args:
-            from_timestamp_ms: Only assets created strictly after this epoch-ms value
+            from_timestamp_ms: Only assets created at or after this epoch-ms value
                 are returned. ``None`` fetches all assets.
+            exclude_ids: IDs of assets created exactly at ``from_timestamp_ms`` that
+                were already collected and must not be returned again.
         """
-        skip = 0
+        exclude_ids = exclude_ids or set()
+        cursor = from_timestamp_ms
+        inclusive = from_timestamp_ms is not None
 
         while True:
-            query = self.build_assets_query(from_timestamp_ms, skip, self.page_size)
-            logger.info("Querying Nozomi assets: {query}", query=query)
-
-            try:
-                raw = self._do_query(query)
-            except RequestException as error:
-                raise NozomiQueryError(0, f"Query request error: {error}") from error
-
-            page = NozomiAssetPage.parse_obj(raw)
-            if not page.result:
+            page = self._query_assets(self.build_assets_query(cursor, self.page_size, inclusive))
+            if not page:
                 return
 
-            yield page.result
+            is_last_page = len(page) < self.page_size
+            timestamps = [ts for ts in (self._created_at_ms(asset) for asset in page) if ts is not None]
+            last_timestamp = max(timestamps) if timestamps else None
 
-            if len(page.result) < self.page_size:
+            if not is_last_page and last_timestamp is None:
+                logger.warning("Full page of Nozomi assets without a valid created_at, stopping pagination")
+
+            if not is_last_page and last_timestamp is not None:
+                page = [asset for asset in page if self._created_at_ms(asset) != last_timestamp]
+                page.extend(self._fetch_same_timestamp(last_timestamp))
+
+            if from_timestamp_ms is not None and exclude_ids:
+                page = [
+                    asset
+                    for asset in page
+                    if not (self._created_at_ms(asset) == from_timestamp_ms and asset.id in exclude_ids)
+                ]
+
+            if page:
+                yield page
+
+            if is_last_page or last_timestamp is None:
                 return
 
-            skip += self.page_size
+            cursor = last_timestamp
+            inclusive = False
 
     def close(self) -> None:  # pragma: no cover
         self._session.close()

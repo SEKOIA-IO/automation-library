@@ -66,11 +66,15 @@ class NozomiDeviceAssetConnector(AssetConnector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("device_context.json", self._data_path)
         self._client: NozomiQueryClient | None = None
+        self._latest_checkpoint: tuple[int, set[str]] | None = None
 
     @property
-    def most_recent_date_seen(self) -> str | None:
+    def checkpoint(self) -> tuple[int | None, set[str]]:
+        """Return the last collected ``created_at`` (epoch ms) and the IDs of the assets sharing it."""
         with self.context as cache:
-            return cache.get("most_recent_date_seen")
+            timestamp_ms = cache.get("most_recent_created_at_ms")
+            ids = cache.get("most_recent_ids") or []
+        return (int(timestamp_ms) if timestamp_ms is not None else None), set(ids)
 
     @cached_property
     def _version(self) -> str:
@@ -225,35 +229,39 @@ class NozomiDeviceAssetConnector(AssetConnector):
         )
 
     def iterate_assets(self) -> Generator[list[NozomiAsset], None, None]:
-        from_date = self.most_recent_date_seen
-        from_timestamp_ms: int | None = None
-        if from_date:
-            parsed = datetime.fromisoformat(from_date)
-            from_timestamp_ms = int(parsed.timestamp() * 1000)
+        from_timestamp_ms, seen_ids = self.checkpoint
 
         self.log(
-            f"Starting Nozomi asset iteration - Checkpoint: {from_date or 'None'}",
+            f"Starting Nozomi asset iteration - Checkpoint: {from_timestamp_ms or 'None'}",
             level="info",
         )
 
-        max_created: datetime | None = datetime.fromisoformat(from_date) if from_date else None
+        max_timestamp_ms = from_timestamp_ms
+        max_ids = set(seen_ids)
 
-        for assets in self.client.fetch_assets(from_timestamp_ms):
+        for assets in self.client.fetch_assets(from_timestamp_ms, exclude_ids=seen_ids):
             for asset in assets:
-                created = self._parse_epoch_ms(asset.created_at)
-                if created and (max_created is None or created > max_created):
-                    max_created = created
+                created_ms = NozomiQueryClient._created_at_ms(asset)
+                if created_ms is None:
+                    continue
+                if max_timestamp_ms is None or created_ms > max_timestamp_ms:
+                    max_timestamp_ms = created_ms
+                    max_ids = {asset.id}
+                elif created_ms == max_timestamp_ms:
+                    max_ids.add(asset.id)
 
             yield assets
 
-        if max_created is not None:
-            self._latest_time = max_created.isoformat()
+        if max_timestamp_ms is not None:
+            self._latest_checkpoint = (max_timestamp_ms, max_ids)
 
     def update_checkpoint(self) -> None:
-        if self._latest_time:
+        if self._latest_checkpoint:
+            timestamp_ms, ids = self._latest_checkpoint
             with self.context as cache:
-                cache["most_recent_date_seen"] = self._latest_time
-            self.log(f"Checkpoint updated - New timestamp: {self._latest_time}", level="debug")
+                cache["most_recent_created_at_ms"] = timestamp_ms
+                cache["most_recent_ids"] = sorted(ids)
+            self.log(f"Checkpoint updated - New created_at: {timestamp_ms}", level="debug")
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
         self.log("Nozomi device asset generation started", level="info")
