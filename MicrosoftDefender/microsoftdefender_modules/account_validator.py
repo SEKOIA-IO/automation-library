@@ -20,11 +20,17 @@ class MicrosoftDefenderAccountValidator(AccountValidator):
         )
 
     def validate(self) -> bool:
-        try:
-            url = urljoin(self.client.base_url, "/api/machines?$top=1")
-            response = self.client.get(url)
-            response.raise_for_status()
-        except Exception as e:
-            self.error(f"Failed to validate Microsoft Defender credentials: {e}")
-            return False
+        endpoints = [
+            "/api/machines?$top=1",
+            "/api/vulnerabilities?$top=1",
+            "/api/vulnerabilities/machinesVulnerabilities?$top=1",
+        ]
+        for endpoint in endpoints:
+            try:
+                url = urljoin(self.client.base_url, endpoint)
+                response = self.client.get(url)
+                response.raise_for_status()
+            except Exception as e:
+                self.error(f"Failed to validate Microsoft Defender credentials: {e}")
+                return False
         return True
