@@ -8,10 +8,10 @@ mapping:
       description: "Raw asset returned by the Guardian/CMC query API (query=assets)"
       data: |
         {
-          "name": "AC 800M PM851",
-          "id": "9e917f4e-e542-4e25-9715-74883145c532",
-          "ip": ["192.168.196.234"],
-          "mac_address": ["00:00:23:18:28:42"],
+          "name": "plc-01",
+          "id": "00000000-0000-4000-8000-000000000001",
+          "ip": ["192.0.2.10"],
+          "mac_address": ["00:00:5e:00:53:01"],
           "mac_vendor": ["ABB"],
           "os": "",
           "roles": ["producer"],
@@ -25,7 +25,7 @@ mapping:
           "levels": ["2"],
           "created_at": "1724888822710",
           "last_activity_time": "1789542303500",
-          "device_id": "d648bf95-cdd8-4985-a4ab-631ea594fccb"
+          "device_id": "00000000-0000-4000-8000-0000000000d1"
         }
 
   fields:
@@ -168,15 +168,15 @@ mapping:
           "device": {
             "type": "Other",
             "type_id": 99,
-            "uid": "9e917f4e-e542-4e25-9715-74883145c532",
-            "hostname": "AC 800M PM851",
-            "name": "AC 800M PM851",
-            "ip": "192.168.196.234",
+            "uid": "00000000-0000-4000-8000-000000000001",
+            "hostname": "plc-01",
+            "name": "plc-01",
+            "ip": "192.0.2.10",
             "network_interfaces": [
               {
-                "hostname": "AC 800M PM851",
-                "ip": "192.168.196.234",
-                "mac": "00:00:23:18:28:42",
+                "hostname": "plc-01",
+                "ip": "192.0.2.10",
+                "mac": "00:00:5e:00:53:01",
                 "type": "Wired",
                 "type_id": 1
               }
