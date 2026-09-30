@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-30 - [1.0.7]
+
+### Fixed
+- Add api_key to secrets
+
 ## 2025-08-26 - [1.0.6]
 
 ### Fixed
