@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -14,7 +15,6 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceTypeId,
     DeviceTypeStr,
 )
-
 
 BASE_URL = "https://guardian.test"
 SIGN_IN_URL = f"{BASE_URL}/api/open/sign_in"
@@ -245,16 +245,116 @@ def test_client_sign_in_failure():
 
 def test_build_assets_query():
     client = NozomiQueryClient("k", "t", BASE_URL, page_size=500)
-    q = client.build_assets_query(1724888822710, 0, 500)
-    assert "assets" in q
-    assert "where created_at > 1724888822710" in q
-    assert "sort created_at asc" in q
-    assert "head 500" in q
-    assert "skip" not in q
+    q = client.build_assets_query(1724888822710, 500)
+    assert q == "assets | where created_at > 1724888822710 | sort created_at asc | head 500"
 
-    q2 = client.build_assets_query(None, 500, 500)
-    assert "where" not in q2
-    assert "skip 500" in q2
+    q_inclusive = client.build_assets_query(1724888822710, 500, inclusive=True)
+    assert "where created_at >= 1724888822710" in q_inclusive
+
+    q_all = client.build_assets_query(None, 500)
+    assert "where" not in q_all
+    assert "skip" not in q_all
+
+
+def test_build_same_timestamp_query():
+    q = NozomiQueryClient.build_same_timestamp_query(1000, 0, 500)
+    assert q == "assets | where created_at == 1000 | sort id asc | head 500"
+    assert "skip 500" in NozomiQueryClient.build_same_timestamp_query(1000, 500, 500)
+
+
+class FakeN2QLBackend:
+    """
+    Minimal N2QL emulator for the asset queries built by the client.
+
+    Assets sharing the same ``created_at`` are returned in a different order on
+    every call, mimicking a backend without a deterministic tie-breaker.
+    """
+
+    QUERY_RE = re.compile(
+        r"^assets"
+        r"(?: \| where created_at (?P<op>>=|>|==) (?P<ts>\d+))?"
+        r" \| sort (?P<sort>created_at|id) asc"
+        r"(?: \| skip (?P<skip>\d+))?"
+        r" \| head (?P<head>\d+)$"
+    )
+
+    def __init__(self, assets: list[dict]) -> None:
+        self.assets = assets
+        self.queries: list[str] = []
+        self._calls = 0
+
+    def __call__(self, request, context):
+        query = request.qs["query"][0]
+        self.queries.append(query)
+        match = self.QUERY_RE.match(query)
+        assert match, f"Unexpected query: {query}"
+
+        items = list(self.assets)
+        if match["op"]:
+            ts = int(match["ts"])
+            compare = {">": lambda v: v > ts, ">=": lambda v: v >= ts, "==": lambda v: v == ts}[match["op"]]
+            items = [a for a in items if compare(int(a["created_at"]))]
+
+        self._calls += 1
+        if match["sort"] == "id":
+            items.sort(key=lambda a: a["id"])
+        else:
+            # Shuffle ties differently on each call before the (stable) sort
+            rotation = self._calls % max(len(items), 1)
+            items = items[rotation:] + items[:rotation]
+            items.sort(key=lambda a: int(a["created_at"]))
+
+        skip = int(match["skip"] or 0)
+        head = int(match["head"])
+        return {"result": items[skip : skip + head]}
+
+
+def _asset(asset_id: str, created_at: int) -> dict:
+    return {"id": asset_id, "created_at": str(created_at)}
+
+
+def test_client_fetch_assets_ties_across_page_boundary():
+    assets = [_asset("a", 1000)] + [_asset(f"t{i}", 2000) for i in range(5)] + [_asset("z", 3000)]
+    backend = FakeN2QLBackend(assets)
+    client = NozomiQueryClient("k", "t", BASE_URL, page_size=2)
+
+    with requests_mock.Mocker() as m:
+        m.post(SIGN_IN_URL, status_code=200, json={"access_token": "xyz", "token_type": "Bearer"})
+        m.get(QUERY_URL, json=backend)
+        ids = [asset.id for page in client.fetch_assets(None) for asset in page]
+
+    assert sorted(ids) == sorted(a["id"] for a in assets)
+    assert len(ids) == len(set(ids))
+    assert not any("skip" in q and "sort created_at" in q for q in backend.queries)
+
+
+def test_client_fetch_assets_excludes_already_seen_ids_at_checkpoint():
+    assets = [_asset("old", 1000), _asset("seen", 2000), _asset("late", 2000), _asset("new", 3000)]
+    backend = FakeN2QLBackend(assets)
+    client = NozomiQueryClient("k", "t", BASE_URL, page_size=10)
+
+    with requests_mock.Mocker() as m:
+        m.post(SIGN_IN_URL, status_code=200, json={"access_token": "xyz", "token_type": "Bearer"})
+        m.get(QUERY_URL, json=backend)
+        ids = [asset.id for page in client.fetch_assets(2000, exclude_ids={"seen"}) for asset in page]
+
+    assert sorted(ids) == ["late", "new"]
+    assert "where created_at >= 2000" in backend.queries[0]
+
+
+def test_client_fetch_assets_large_tie_group_at_checkpoint():
+    assets = [_asset(f"t{i}", 2000) for i in range(5)] + [_asset("new", 3000)]
+    backend = FakeN2QLBackend(assets)
+    client = NozomiQueryClient("k", "t", BASE_URL, page_size=2)
+
+    with requests_mock.Mocker() as m:
+        m.post(SIGN_IN_URL, status_code=200, json={"access_token": "xyz", "token_type": "Bearer"})
+        m.get(QUERY_URL, json=backend)
+        ids = [
+            asset.id for page in client.fetch_assets(2000, exclude_ids={f"t{i}" for i in range(5)}) for asset in page
+        ]
+
+    assert ids == ["new"]
 
 
 # --- get_assets integration ---
@@ -264,31 +364,41 @@ def test_get_assets_yields_models(test_connector, sample_assets):
     with requests_mock.Mocker() as m:
         m.post(SIGN_IN_URL, status_code=200, json={"access_token": "xyz", "token_type": "Bearer"})
         m.get(QUERY_URL, status_code=200, json={"result": sample_assets})
-
-        with patch.object(
-            type(test_connector),
-            "most_recent_date_seen",
-            new_callable=lambda: property(lambda self: None),
-        ):
-            assets = list(test_connector.get_assets())
+        assets = list(test_connector.get_assets())
 
     assert len(assets) == 2
     assert all(isinstance(a, DeviceOCSFModel) for a in assets)
 
 
-def test_get_assets_updates_checkpoint(test_connector, sample_assets):
+def test_get_assets_updates_checkpoint(test_connector):
+    assets = [_asset("a", 1000), _asset("b", 2000), _asset("c", 2000)]
     with requests_mock.Mocker() as m:
         m.post(SIGN_IN_URL, status_code=200, json={"access_token": "xyz", "token_type": "Bearer"})
-        m.get(QUERY_URL, status_code=200, json={"result": sample_assets})
+        m.get(QUERY_URL, json=FakeN2QLBackend(assets))
+        list(test_connector.get_assets())
 
-        with patch.object(
-            type(test_connector),
-            "most_recent_date_seen",
-            new_callable=lambda: property(lambda self: None),
-        ):
-            list(test_connector.get_assets())
-
-        test_connector.update_checkpoint()
+    test_connector.update_checkpoint()
 
     with test_connector.context as cache:
-        assert cache.get("most_recent_date_seen") is not None
+        assert cache.get("most_recent_created_at_ms") == 2000
+        assert cache.get("most_recent_ids") == ["b", "c"]
+
+
+def test_get_assets_resumes_from_checkpoint_without_losing_same_timestamp(test_connector):
+    with test_connector.context as cache:
+        cache["most_recent_created_at_ms"] = 2000
+        cache["most_recent_ids"] = ["b"]
+
+    assets = [_asset("a", 1000), _asset("b", 2000), _asset("late", 2000)]
+    backend = FakeN2QLBackend(assets)
+    with requests_mock.Mocker() as m:
+        m.post(SIGN_IN_URL, status_code=200, json={"access_token": "xyz", "token_type": "Bearer"})
+        m.get(QUERY_URL, json=backend)
+        collected = [asset.device.uid for asset in test_connector.get_assets()]
+
+    test_connector.update_checkpoint()
+
+    assert collected == ["late"]
+    with test_connector.context as cache:
+        assert cache.get("most_recent_created_at_ms") == 2000
+        assert cache.get("most_recent_ids") == ["b", "late"]
