@@ -1,0 +1,140 @@
+{
+  "name": "SearchHashes",
+  "description": "Look up a list of hashes against what PolySwarm already knows: a read-only search that submits nothing, one API request per distinct hash. PolySwarm has no batch endpoint, so a list of fifty hashes costs fifty requests; duplicates are only paid for once, lookups run sequentially, and a usage limit stops the run and returns what was already gathered.",
+  "uuid": "e9ee0708-c8a1-5510-a3bf-4918f9292dc4",
+  "docker_parameters": "SearchHashes",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "hashes": {
+        "type": "array",
+        "description": "Hashes (SHA256, SHA1 or MD5) to look up. Read-only: nothing is submitted to PolySwarm. At most 100 distinct hashes per call, and each distinct hash costs one PolySwarm API request.",
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 100
+      },
+      "include_assertions": {
+        "type": "boolean",
+        "description": "Include the individual engine verdicts for every hash. Off by default, because it makes the result much larger.",
+        "default": false
+      }
+    },
+    "required": [
+      "hashes"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "results": {
+        "type": "array",
+        "description": "One row per hash that PolySwarm returned a verdict for",
+        "items": {
+          "type": "object",
+          "properties": {
+            "hash": {
+              "type": "string",
+              "description": "The hash as it was looked up"
+            },
+            "sha256": {
+              "type": "string",
+              "description": "SHA256 hash of the artifact"
+            },
+            "malicious_count": {
+              "type": "integer",
+              "description": "Number of engines that returned a malicious verdict"
+            },
+            "benign_count": {
+              "type": "integer",
+              "description": "Number of engines that returned a benign verdict. Engines that abstained are counted in neither column."
+            },
+            "total_count": {
+              "type": "integer",
+              "description": "Total number of engines that returned a verdict"
+            },
+            "polyscore": {
+              "type": "number",
+              "description": "PolySwarm threat score (0.0 - 1.0)"
+            },
+            "permalink": {
+              "type": "string",
+              "description": "Link to the PolySwarm scan result"
+            },
+            "family": {
+              "type": "string",
+              "description": "Malware family name, when the metadata carries one"
+            },
+            "assertions": {
+              "type": "array",
+              "description": "Individual engine verdicts, present only when include_assertions is set",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "engine_name": {
+                    "type": "string",
+                    "description": "Name of the engine that returned this verdict"
+                  },
+                  "author_name": {
+                    "type": "string",
+                    "description": "Name of the party that authored the engine"
+                  },
+                  "verdict": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ],
+                    "description": "True for malicious, false for benign. Null when the engine abstained rather than answering."
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "not_found": {
+        "type": "array",
+        "description": "Hashes PolySwarm has never seen",
+        "items": {
+          "type": "string"
+        }
+      },
+      "errors": {
+        "type": "array",
+        "description": "Hashes that could not be looked up, with the reason for each",
+        "items": {
+          "type": "object",
+          "properties": {
+            "hash": {
+              "type": "string",
+              "description": "The hash this error applies to"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Why this hash could not be looked up"
+            }
+          }
+        }
+      },
+      "requested_count": {
+        "type": "integer",
+        "description": "Number of distinct hashes to look up after deduplication"
+      },
+      "queried_count": {
+        "type": "integer",
+        "description": "Number of PolySwarm API requests this call spent, one per hash looked up"
+      },
+      "rate_limited": {
+        "type": "boolean",
+        "description": "True when a usage limit stopped the run before every hash was looked up"
+      }
+    }
+  },
+  "outputs": {
+    "detected": "At least one of the looked up hashes was detected by PolySwarm",
+    "not detected": "PolySwarm returned a verdict for every hash that was queried and none was detected",
+    "partial": "A usage limit stopped the run before every hash was looked up, so the results are incomplete and must not be read as a clean answer"
+  }
+}

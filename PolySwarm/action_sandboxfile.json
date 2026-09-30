@@ -1,0 +1,89 @@
+{
+  "name": "SandboxFile",
+  "description": "Submit a file to PolySwarm for sandbox detonation and return the task identity immediately, without blocking for the result. PolySwarm's SandboxCompleted trigger already exists to start a playbook when a detonation finishes: submit here and let the trigger wake the next step, rather than holding this run open for the up to fifteen minutes a real detonation can take. An optional wait argument is available for interactive use, off by default and bounded to a short ceiling. Looks for an existing report for the same file and provider first, so a resubmission does not spend a duplicate detonation, unless force says otherwise.",
+  "uuid": "7c6538e9-6b6e-5974-9d04-8441c1c9026d",
+  "docker_parameters": "SandboxFile",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "file": {
+        "type": "string",
+        "description": "Name of the file to detonate, relative to the run data directory"
+      },
+      "sandbox": {
+        "type": "string",
+        "description": "Sandbox provider slug (e.g. 'cape', 'triage')",
+        "default": "cape"
+      },
+      "vm_slug": {
+        "type": "string",
+        "description": "Sandbox image to detonate in. Leave empty and PolySwarm picks one that can take this kind of artifact, which is the safe choice because the available images change",
+        "default": ""
+      },
+      "network_enabled": {
+        "type": "boolean",
+        "description": "Whether the sandbox VM has internet access",
+        "default": true
+      },
+      "force": {
+        "type": "boolean",
+        "description": "Skip the existing report lookup and submit a fresh detonation even when one is already available",
+        "default": false
+      },
+      "wait": {
+        "type": "boolean",
+        "description": "Block until the detonation reaches a terminal status before returning, for interactive use. Off by default: the SandboxCompleted trigger already exists to start a playbook when a detonation finishes, so the normal path is to submit here and let the trigger wake the next step instead of holding this run open.",
+        "default": false
+      },
+      "max_wait_seconds": {
+        "type": "integer",
+        "description": "Only used when wait is enabled. Upper bound on how long to block for a terminal status, in seconds, capped at 300 regardless of the value supplied",
+        "default": 60,
+        "minimum": 1,
+        "maximum": 300
+      }
+    },
+    "required": [
+      "file"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "sandbox_task_id": {
+        "type": "string",
+        "description": "The sandbox task ID"
+      },
+      "sha256": {
+        "type": "string",
+        "description": "SHA256 hash of the detonated file"
+      },
+      "sandbox": {
+        "type": "string",
+        "description": "Sandbox provider used"
+      },
+      "vm_slug": {
+        "type": "string",
+        "description": "VM slug requested for this detonation"
+      },
+      "status": {
+        "type": "string",
+        "description": "Task status at submission, or its terminal status when wait was enabled (e.g. PENDING, RUNNING, SUCCEEDED, FAILED)"
+      },
+      "already_analysed": {
+        "type": "boolean",
+        "description": "True when an existing report for this file and provider was found and reused instead of spending a new detonation"
+      },
+      "report_url": {
+        "type": "string",
+        "description": "PolySwarm API URL that returns this sandbox task and its report once it is finished. Fetch it with the Report action using the sha256 and sandbox from this response, or wait for the SandboxCompleted trigger"
+      }
+    }
+  },
+  "outputs": {
+    "submitted": "The file was submitted for a fresh detonation",
+    "already analysed": "An existing report for this file and provider was found; no new detonation was spent"
+  }
+}

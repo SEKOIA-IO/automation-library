@@ -1,0 +1,92 @@
+{
+  "name": "SandboxIp",
+  "description": "Detonate an IP address in PolySwarm's sandbox by converting it to a URL first, and return the task identity immediately, without blocking for the result. PolySwarm has no IP detonation: this action turns the address into http://<ip>/ and detonates that, and the response carries the exact target that was actually detonated so an analyst reading the result understands why it names a URL rather than the IP. An address with no web service listening on it will usually detonate to very little: expect a mostly empty report unless something answers on the port the sandbox connects to. Loopback, link-local, private and reserved addresses are refused rather than sent to PolySwarm's public community. PolySwarm's SandboxCompleted trigger already exists to start a playbook when a detonation finishes: submit here and let the trigger wake the next step, rather than holding this run open for the up to fifteen minutes a real detonation can take. An optional wait argument is available for interactive use, off by default and bounded to a short ceiling. Looks for an existing report for the same target and provider first, so a resubmission does not spend a duplicate detonation, unless force says otherwise.",
+  "uuid": "286ba7f1-6fc4-51ce-b16a-5d0d77ce773f",
+  "docker_parameters": "SandboxIp",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "ip": {
+        "type": "string",
+        "description": "The IP address to detonate"
+      },
+      "sandbox": {
+        "type": "string",
+        "description": "Sandbox provider slug (e.g. 'cape', 'triage')",
+        "default": "cape"
+      },
+      "vm_slug": {
+        "type": "string",
+        "description": "Sandbox image to detonate in. Leave empty and PolySwarm picks one that can take this kind of artifact, which is the safe choice because the available images change",
+        "default": ""
+      },
+      "force": {
+        "type": "boolean",
+        "description": "Skip the existing report lookup and submit a fresh detonation even when one is already available",
+        "default": false
+      },
+      "wait": {
+        "type": "boolean",
+        "description": "Block until the detonation reaches a terminal status before returning, for interactive use. Off by default: the SandboxCompleted trigger already exists to start a playbook when a detonation finishes, so the normal path is to submit here and let the trigger wake the next step instead of holding this run open.",
+        "default": false
+      },
+      "max_wait_seconds": {
+        "type": "integer",
+        "description": "Only used when wait is enabled. Upper bound on how long to block for a terminal status, in seconds, capped at 300 regardless of the value supplied",
+        "default": 60,
+        "minimum": 1,
+        "maximum": 300
+      }
+    },
+    "required": [
+      "ip"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "sandbox_task_id": {
+        "type": "string",
+        "description": "The sandbox task ID"
+      },
+      "ip": {
+        "type": "string",
+        "description": "The IP address that was requested"
+      },
+      "target": {
+        "type": "string",
+        "description": "The exact URL that was actually detonated, built from the requested IP"
+      },
+      "sha256": {
+        "type": "string",
+        "description": "SHA256 hash PolySwarm assigned the target, when available"
+      },
+      "sandbox": {
+        "type": "string",
+        "description": "Sandbox provider used"
+      },
+      "vm_slug": {
+        "type": "string",
+        "description": "VM slug requested for this detonation"
+      },
+      "status": {
+        "type": "string",
+        "description": "Task status at submission, or its terminal status when wait was enabled (e.g. PENDING, RUNNING, SUCCEEDED, FAILED)"
+      },
+      "already_analysed": {
+        "type": "boolean",
+        "description": "True when an existing report for this target and provider was found and reused instead of spending a new detonation"
+      },
+      "report_url": {
+        "type": "string",
+        "description": "PolySwarm API URL that returns this sandbox task and its report once it is finished. Fetch it with the Report action using the sha256 and sandbox from this response, or wait for the SandboxCompleted trigger"
+      }
+    }
+  },
+  "outputs": {
+    "submitted": "The target was submitted for a fresh detonation",
+    "already analysed": "An existing report for this target and provider was found; no new detonation was spent"
+  }
+}

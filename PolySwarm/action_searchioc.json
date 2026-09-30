@@ -1,0 +1,132 @@
+{
+  "name": "SearchIoc",
+  "description": "Pivot from an indicator of compromise (IP, domain, TTP or imphash) to the PolySwarm artifacts associated with it, the pivot capability the PolySwarm app for Splunk has and this integration otherwise lacks. Wraps api.search_by_ioc, which accepts exactly one of the four indicator types. This action only reads and spends no scanning quota.",
+  "uuid": "77c9c9a6-9793-4848-be3d-b138d8e4347c",
+  "docker_parameters": "SearchIoc",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "ip": {
+        "type": "string",
+        "description": "Pivot on this IP address: return the artifacts PolySwarm has seen communicate with it. This action only reads and spends no scanning quota. Supply exactly one of ip, domain, ttp or imphash."
+      },
+      "domain": {
+        "type": "string",
+        "description": "Pivot on this domain: return the artifacts PolySwarm has seen communicate with it. This action only reads and spends no scanning quota. Supply exactly one of ip, domain, ttp or imphash."
+      },
+      "ttp": {
+        "type": "string",
+        "description": "Pivot on this TTP identifier, as PolySwarm's sandbox analysis records it: return the artifacts associated with it. This action only reads and spends no scanning quota. Supply exactly one of ip, domain, ttp or imphash."
+      },
+      "imphash": {
+        "type": "string",
+        "description": "Pivot on this import hash (imphash): return the artifacts PolySwarm has seen share it. This action only reads and spends no scanning quota. Supply exactly one of ip, domain, ttp or imphash."
+      }
+    }
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "found": {
+        "type": "boolean",
+        "description": "Whether PolySwarm returned at least one artifact for the indicator"
+      },
+      "indicator_type": {
+        "type": "string",
+        "description": "Which of ip, domain, ttp or imphash was supplied"
+      },
+      "indicator": {
+        "type": "string",
+        "description": "The indicator value that was searched for"
+      },
+      "results": {
+        "type": "array",
+        "description": "Artifacts PolySwarm associates with the indicator. Empty when PolySwarm has never seen it.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "sha256": {
+              "type": "string",
+              "description": "SHA256 hash of the artifact"
+            },
+            "sha1": {
+              "type": "string",
+              "description": "SHA1 hash of the artifact, when the document carries one"
+            },
+            "md5": {
+              "type": "string",
+              "description": "MD5 hash of the artifact, when the document carries one"
+            },
+            "malicious_detections": {
+              "type": "integer",
+              "description": "Number of engines that returned a malicious verdict"
+            },
+            "benign_detections": {
+              "type": "integer",
+              "description": "Number of engines that returned a benign verdict"
+            },
+            "total_detections": {
+              "type": "integer",
+              "description": "Total number of engines that returned a verdict"
+            },
+            "polyscore": {
+              "type": "number",
+              "description": "PolySwarm threat score (0.0 - 1.0), when the document carries one"
+            },
+            "permalink": {
+              "type": "string",
+              "description": "Link to the PolySwarm scan result"
+            },
+            "family": {
+              "type": "string",
+              "description": "Malware family name, when the metadata carries one"
+            },
+            "families": {
+              "type": "array",
+              "description": "Every malware family PolySwarm associates with the artifact. Empty when PolySwarm carries no family.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "tags": {
+              "type": "array",
+              "description": "Tags PolySwarm associates with the artifact. Empty when there are none.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "first_seen": {
+              "type": "string",
+              "description": "First seen timestamp, when the document carries one"
+            },
+            "last_scanned": {
+              "type": "string",
+              "description": "Last scanned timestamp, when the document carries one"
+            },
+            "mimetype": {
+              "type": "string",
+              "description": "MIME type of the artifact, when the document carries one"
+            },
+            "filenames": {
+              "type": "array",
+              "description": "Filenames PolySwarm has seen for the artifact",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "returned_count": {
+        "type": "integer",
+        "description": "Number of artifacts returned in results"
+      }
+    }
+  },
+  "outputs": {
+    "found": "PolySwarm returned at least one artifact for the indicator",
+    "not found": "PolySwarm has never seen this indicator"
+  }
+}

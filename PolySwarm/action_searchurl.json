@@ -1,0 +1,85 @@
+{
+  "name": "SearchUrl",
+  "description": "Look up any existing PolySwarm verdict for a URL. This action only reads: it spends no scanning quota and creates no activity on the account. To submit the URL for a fresh scan instead, use ScanUrl.",
+  "uuid": "81b109cb-725d-4372-ae14-4d0b44fab106",
+  "docker_parameters": "SearchUrl",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "The URL to search for"
+      },
+      "detect_threshold": {
+        "type": "integer",
+        "default": 1,
+        "description": "How many malicious engine detections activate the detected branch"
+      }
+    },
+    "required": [
+      "url"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "found": {
+        "type": "boolean",
+        "description": "Whether PolySwarm has an existing, complete verdict for this URL"
+      },
+      "sha256": {
+        "type": "string",
+        "description": "SHA256 hash of the recorded URL artifact"
+      },
+      "permalink": {
+        "type": "string",
+        "description": "Link to the PolySwarm scan result"
+      },
+      "polyscore": {
+        "type": "number",
+        "description": "PolySwarm threat score (0.0 - 1.0)"
+      },
+      "malicious_count": {
+        "type": "integer",
+        "description": "Number of engines that flagged the URL as malicious"
+      },
+      "benign_count": {
+        "type": "integer",
+        "description": "Number of engines that flagged the URL as benign"
+      },
+      "total_count": {
+        "type": "integer",
+        "description": "Total number of engines that returned a verdict, excluding those that abstained"
+      },
+      "last_scanned": {
+        "type": "string",
+        "description": "When PolySwarm last scanned this URL"
+      },
+      "assertions": {
+        "type": "array",
+        "description": "Individual engine verdicts",
+        "items": {
+          "type": "object",
+          "properties": {
+            "engine_name": {
+              "type": "string"
+            },
+            "author_name": {
+              "type": "string"
+            },
+            "verdict": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  "outputs": {
+    "detected": "PolySwarm engines detected this artifact",
+    "not detected": "PolySwarm has scanned this artifact and no engine detected it",
+    "unknown": "PolySwarm has never seen this artifact"
+  }
+}

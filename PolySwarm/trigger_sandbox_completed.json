@@ -1,0 +1,112 @@
+{
+  "name": "Sandbox detonation completed",
+  "description": "Start a playbook run whenever a PolySwarm sandbox detonation finishes. The trigger polls the sandbox tasks created by the configured PolySwarm account and emits one event per task that reaches a terminal status, carrying the hash, the sandbox provider, the status, the task identifier and where the report can be fetched. Identifiers already emitted are persisted, so a restart does not replay them. The report body itself is not embedded: call the Report action with the sha256 and sandbox from the event to retrieve it.",
+  "uuid": "d267419a-7330-4ba8-8d77-9e35473aebd9",
+  "docker_parameters": "SandboxCompleted",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Trigger Arguments",
+    "type": "object",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Seconds to wait between two polls of the PolySwarm sandbox task list",
+        "default": 60,
+        "minimum": 10,
+        "maximum": 86400
+      },
+      "sandbox": {
+        "type": "string",
+        "description": "Only emit events for this sandbox provider slug, for example 'cape' or 'triage'. Leave empty to emit for every provider."
+      },
+      "emit_failed": {
+        "type": "boolean",
+        "description": "Emit an event for detonations that ended in FAILED as well as SUCCEEDED",
+        "default": true
+      },
+      "max_tasks_per_cycle": {
+        "type": "integer",
+        "description": "How many of the most recent sandbox tasks to examine on each poll. A completed task is only missed if the account creates more than this many tasks within one poll.",
+        "default": 200,
+        "minimum": 1,
+        "maximum": 500
+      },
+      "page_size": {
+        "type": "integer",
+        "description": "How many sandbox tasks to request per page from the PolySwarm API. Capped at ten: the task listing endpoint does not answer at all for a larger page",
+        "default": 10,
+        "minimum": 1,
+        "maximum": 10
+      }
+    },
+    "required": []
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Trigger results",
+    "type": "object",
+    "properties": {
+      "sandbox_task_id": {
+        "type": "string",
+        "description": "Identifier of the sandbox task"
+      },
+      "sha256": {
+        "type": "string",
+        "description": "SHA256 of the detonated artifact"
+      },
+      "sandbox": {
+        "type": "string",
+        "description": "Sandbox provider that ran the detonation"
+      },
+      "status": {
+        "type": "string",
+        "description": "Terminal status of the task, SUCCEEDED or FAILED"
+      },
+      "community": {
+        "type": "string",
+        "description": "PolySwarm community the task ran in"
+      },
+      "instance_id": {
+        "type": "string",
+        "description": "Artifact instance the detonation belongs to"
+      },
+      "created": {
+        "type": "string",
+        "description": "When the task was created, as reported by PolySwarm"
+      },
+      "expiration": {
+        "type": "string",
+        "description": "When PolySwarm expires the task, if it reports one"
+      },
+      "report_available": {
+        "type": "boolean",
+        "description": "Whether a report can be fetched for this detonation. The event never carries the report itself: fetch it with the Report action using the sha256 and sandbox from this event"
+      },
+      "report_url": {
+        "type": "string",
+        "description": "PolySwarm API URL that returns this sandbox task and its report"
+      },
+      "portal_url": {
+        "type": "string",
+        "description": "PolySwarm portal page for the artifact instance"
+      },
+      "sandbox_artifact_count": {
+        "type": "integer",
+        "description": "Number of artifacts the detonation produced"
+      },
+      "detected_at": {
+        "type": "string",
+        "description": "When the trigger observed the task as complete, UTC, ISO 8601"
+      }
+    },
+    "required": [
+      "sandbox_task_id",
+      "sha256",
+      "sandbox",
+      "status",
+      "report_available",
+      "report_url",
+      "detected_at"
+    ]
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "name": "PolySwarm Intel Feed",
+  "description": "Pull new PolySwarm artifacts on a schedule and forward them to an intake. Each poll queries the PolySwarm metadata search for artifacts created since the last checkpoint, filtered server side by malware family, tag and minimum PolyScore, and pushes one event per artifact. The connector remembers its position between runs, so a restart neither repeats nor skips. Note that the PolySwarm API answers newest first and offers no page size or sort control, so a poll that would exceed max_events_per_run is refused whole rather than forwarded in part.",
+  "uuid": "016f713b-c50e-4643-958e-bf472b4a5c29",
+  "docker_parameters": "polyswarm_intel_feed",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "PolySwarm Intel Feed",
+    "type": "object",
+    "properties": {
+      "intake_server": {
+        "type": "string",
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io"
+      },
+      "intake_key": {
+        "type": "string",
+        "description": "Intake key to use when sending events"
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Seconds between polls. PolySwarm indexes continuously, so a shorter interval mainly buys freshness and costs API calls.",
+        "minimum": 60,
+        "maximum": 86400,
+        "default": 900
+      },
+      "families": {
+        "type": "array",
+        "description": "Malware families to pull, for example emotet. At most three are used and the rest are ignored. Matched server side against every field PolySwarm carries family attribution on. Whitespace is removed from a family name, so use a tag for a value that needs a space. Leave this and tags empty to pull the feed:premium tag.",
+        "items": {
+          "type": "string"
+        },
+        "default": []
+      },
+      "tags": {
+        "type": "array",
+        "description": "Tags to pull, for example ransomware or sector:healthcare. At most three are used and the rest are ignored. Matched server side as an exact tag, so a namespaced tag is given in full.",
+        "items": {
+          "type": "string"
+        },
+        "default": []
+      },
+      "min_polyscore": {
+        "type": "number",
+        "description": "Only artifacts scoring at or above this are pulled. 0.7 is the score PolySwarm tooling bands as malicious. Lowering it widens the pull into the suspicious band and increases volume.",
+        "exclusiveMinimum": 0,
+        "maximum": 1,
+        "default": 0.7
+      },
+      "lookback_minutes": {
+        "type": "integer",
+        "description": "How far back the first poll reaches, in minutes. It applies only while the connector has no checkpoint; later polls start where the last one ended. Capped at 30 days.",
+        "minimum": 1,
+        "maximum": 43200,
+        "default": 1440
+      },
+      "lag_seconds": {
+        "type": "integer",
+        "description": "How far behind the clock each window closes, in seconds. This keeps a window from closing over artifacts PolySwarm has accepted but not yet indexed.",
+        "minimum": 0,
+        "maximum": 3600,
+        "default": 300
+      },
+      "max_events_per_run": {
+        "type": "integer",
+        "description": "Safety ceiling on the events one poll may push. A window holding more is refused whole: nothing is pushed and the checkpoint does not move, because PolySwarm answers newest first and a partial window cannot be resumed. Raise it, or narrow the filters, if the connector reports the ceiling.",
+        "minimum": 1,
+        "maximum": 1000,
+        "default": 200
+      },
+      "community": {
+        "type": "string",
+        "description": "PolySwarm community to pull from. Leave empty to use the community configured on the module. Set it only to pull two communities into two intakes from two connectors."
+      }
+    },
+    "required": [
+      "intake_key"
+    ]
+  }
+}

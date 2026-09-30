@@ -1,0 +1,32 @@
+{
+  "configuration": {
+    "properties": {
+      "apikey": {
+        "type": "string",
+        "description": "PolySwarm API key"
+      },
+      "community": {
+        "type": "string",
+        "description": "PolySwarm community",
+        "default": "default"
+      }
+    },
+    "required": [
+      "apikey"
+    ],
+    "title": "PolyswarmModuleConfiguration",
+    "type": "object",
+    "secrets": [
+      "apikey"
+    ]
+  },
+  "description": "Enrich threat indicators with crowdsourced malware analysis verdicts from PolySwarm's detection engine marketplace. Submit file hashes, URLs, and domains to PolySwarm and retrieve multi-engine scan results, threat scores, and detection metadata directly within Sekoia workflows.",
+  "name": "PolySwarm",
+  "slug": "polyswarm",
+  "categories": [
+    "Threat Intelligence"
+  ],
+  "uuid": "a268e99e-bf36-4015-af10-5050958f9080",
+  "version": "1.1.1",
+  "supports_validation": true
+}
