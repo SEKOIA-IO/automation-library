@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-30 - 2.78.1
+
+### Fixed
+
+- Do not crash the alert triggers when the Alert API returns a `null` verdict, which happens for verdicts set by Roy when the API key cannot read AI investigations
+
 ## 2026-09-18 - 2.78.0
 
 ### Added
