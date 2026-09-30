@@ -191,9 +191,7 @@ class NozomiDeviceAssetConnector(AssetConnector):
         enrichments: list[DeviceEnrichmentObject] = []
 
         if asset.firmware_version:
-            enrichments.append(
-                DeviceEnrichmentObject(name="firmware_version", value=asset.firmware_version)
-            )
+            enrichments.append(DeviceEnrichmentObject(name="firmware_version", value=asset.firmware_version))
         if asset.serial_number:
             enrichments.append(DeviceEnrichmentObject(name="serial_number", value=asset.serial_number))
         if asset.zones:
@@ -225,7 +223,6 @@ class NozomiDeviceAssetConnector(AssetConnector):
             device=self.build_device(asset),
             enrichments=self.build_enrichments(asset),
         )
-
 
     def iterate_assets(self) -> Generator[list[NozomiAsset], None, None]:
         from_date = self.most_recent_date_seen
