@@ -143,33 +143,32 @@ class NozomiDeviceAssetConnector(AssetConnector):
         return self.DEVICE_TYPE_MAP.get(asset_type.strip().lower(), (DeviceTypeStr.OTHER, DeviceTypeId.OTHER))
 
     def build_network_interfaces(self, asset: NozomiAsset) -> list[NetworkInterface] | None:
-        if not asset.ip and not asset.mac_address:
+        """
+        Build network interfaces from the asset IP and MAC lists.
+
+        The API returns ``ip`` and ``mac_address`` as independent lists without any
+        IP/MAC relationship. They are only paired when the asset has a single MAC
+        (single-NIC device); otherwise IPs and MACs are exported as separate
+        interfaces so that no MAC is lost and no association is invented.
+        """
+        ips = list(dict.fromkeys(ip for ip in asset.ip if ip))
+        macs = list(dict.fromkeys(mac for mac in asset.mac_address if mac))
+        if not ips and not macs:
             return None
 
-        primary_mac = asset.mac_address[0] if asset.mac_address else None
-        interfaces = [
-            NetworkInterface(
+        def interface(ip: str | None = None, mac: str | None = None) -> NetworkInterface:
+            return NetworkInterface(
                 hostname=asset.name,
                 ip=ip,
-                mac=primary_mac,
+                mac=mac,
                 type=NetworkInterfaceTypeStr.WIRED,
                 type_id=NetworkInterfaceTypeId.WIRED,
             )
-            for ip in asset.ip
-        ]
 
-        # Represent MAC-only assets (no IP) with a single interface.
-        if not interfaces and primary_mac:
-            interfaces.append(
-                NetworkInterface(
-                    hostname=asset.name,
-                    mac=primary_mac,
-                    type=NetworkInterfaceTypeStr.WIRED,
-                    type_id=NetworkInterfaceTypeId.WIRED,
-                )
-            )
+        if len(macs) == 1 and ips:
+            return [interface(ip=ip, mac=macs[0]) for ip in ips]
 
-        return interfaces or None
+        return [interface(ip=ip) for ip in ips] + [interface(mac=mac) for mac in macs]
 
     def build_device(self, asset: NozomiAsset) -> Device:
         created = self._parse_epoch_ms(asset.created_at)
