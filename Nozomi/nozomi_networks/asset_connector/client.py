@@ -77,24 +77,23 @@ class NozomiQueryClient:
 
     @staticmethod
     def build_assets_query(
-        from_timestamp_ms: int | None,
+        from_timestamp_ms: int,
         head: int,
         inclusive: bool = False,
     ) -> str:
         """
         Build the N2QL query string for assets, filtered and ordered by ``created_at``.
 
+        A lower bound is always applied so that assets without a ``created_at``
+        never match and pagination always moves forward.
+
         Args:
             from_timestamp_ms: Lower bound on ``created_at`` in epoch ms.
             head: Maximum number of records to return (page size).
             inclusive: Use ``>=`` instead of ``>`` for the lower bound.
         """
-        query = "assets"
-        if from_timestamp_ms is not None:
-            operator = ">=" if inclusive else ">"
-            query += f" | where created_at {operator} {from_timestamp_ms}"
-        query += f" | sort created_at asc | head {head}"
-        return query
+        operator = ">=" if inclusive else ">"
+        return f"assets | where created_at {operator} {from_timestamp_ms} | sort created_at asc | head {head}"
 
     @staticmethod
     def build_same_timestamp_query(timestamp_ms: int, skip: int, head: int) -> str:
@@ -173,6 +172,11 @@ class NozomiQueryClient:
         its last timestamp is fetched (sorted by ``id``) before moving on with a
         strict ``created_at >`` cursor, so no asset is skipped or duplicated.
 
+        ``created_at`` is the creation time of the asset record and is always set by
+        Nozomi. Assets without a valid ``created_at`` are not collected: every query
+        carries a ``created_at`` lower bound (``>= 0`` on the first run), so they never
+        match, and any that slip through are dropped.
+
         Args:
             from_timestamp_ms: Only assets created at or after this epoch-ms value
                 are returned. ``None`` fetches all assets.
@@ -180,22 +184,28 @@ class NozomiQueryClient:
                 were already collected and must not be returned again.
         """
         exclude_ids = exclude_ids or set()
-        cursor = from_timestamp_ms
-        inclusive = from_timestamp_ms is not None
+        cursor = from_timestamp_ms if from_timestamp_ms is not None else 0
+        inclusive = True
 
         while True:
-            page = self._query_assets(self.build_assets_query(cursor, self.page_size, inclusive))
-            if not page:
+            raw_page = self._query_assets(self.build_assets_query(cursor, self.page_size, inclusive))
+            if not raw_page:
                 return
 
-            is_last_page = len(page) < self.page_size
-            timestamps = [ts for ts in (self._created_at_ms(asset) for asset in page) if ts is not None]
-            last_timestamp = max(timestamps) if timestamps else None
+            is_last_page = len(raw_page) < self.page_size
+            page = [asset for asset in raw_page if self._created_at_ms(asset) is not None]
+            if len(page) != len(raw_page):
+                logger.warning(
+                    "Dropped {count} Nozomi asset(s) without a valid created_at",
+                    count=len(raw_page) - len(page),
+                )
+            if not page:
+                # Only reachable if the API ignores the created_at filter; stop rather than loop.
+                return
 
-            if not is_last_page and last_timestamp is None:
-                logger.warning("Full page of Nozomi assets without a valid created_at, stopping pagination")
+            last_timestamp = max(self._created_at_ms(asset) or 0 for asset in page)
 
-            if not is_last_page and last_timestamp is not None:
+            if not is_last_page:
                 page = [asset for asset in page if self._created_at_ms(asset) != last_timestamp]
                 page.extend(self._fetch_same_timestamp(last_timestamp))
 
@@ -209,7 +219,7 @@ class NozomiQueryClient:
             if page:
                 yield page
 
-            if is_last_page or last_timestamp is None:
+            if is_last_page:
                 return
 
             cursor = last_timestamp

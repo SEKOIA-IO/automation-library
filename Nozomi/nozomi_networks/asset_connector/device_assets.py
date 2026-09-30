@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic.v1 import ValidationError
 from sekoia_automation.asset_connector import AssetConnector
+from sekoia_automation.asset_connector.models.connector import AssetList
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.device import (
     Device,
@@ -68,6 +69,7 @@ class NozomiDeviceAssetConnector(AssetConnector):
         self.context = PersistentJSON("device_context.json", self._data_path)
         self._client: NozomiQueryClient | None = None
         self._latest_checkpoint: tuple[int, set[str]] | None = None
+        self._push_failed = False
 
     @property
     def checkpoint(self) -> tuple[int | None, set[str]]:
@@ -256,13 +258,31 @@ class NozomiDeviceAssetConnector(AssetConnector):
         if max_timestamp_ms is not None:
             self._latest_checkpoint = (max_timestamp_ms, max_ids)
 
+    def post_assets_to_api(self, assets: AssetList, asset_connector_api_url: str) -> dict[str, str] | None:
+        """Push a batch and remember whether it made it through."""
+        response: dict[str, str] | None = super().post_assets_to_api(assets, asset_connector_api_url)
+        if response is None:
+            # The batch was dropped: hold the checkpoint back so the next cycle collects it again.
+            self._push_failed = True
+        return response
+
+    def asset_fetch_cycle(self) -> None:
+        """Run a fetch cycle, then commit the checkpoint only if every batch was pushed."""
+        self._latest_checkpoint = None
+        self._push_failed = False
+        super().asset_fetch_cycle()
+        # The SDK only commits after each successful push, which misses the checkpoint when the
+        # asset count is an exact multiple of batch_size. An interrupted cycle raises and never gets here.
+        self.update_checkpoint()
+
     def update_checkpoint(self) -> None:
-        if self._latest_checkpoint:
-            timestamp_ms, ids = self._latest_checkpoint
-            with self.context as cache:
-                cache["most_recent_created_at_ms"] = timestamp_ms
-                cache["most_recent_ids"] = sorted(ids)
-            self.log(f"Checkpoint updated - New created_at: {timestamp_ms}", level="debug")
+        if self._latest_checkpoint is None or self._push_failed:
+            return
+        timestamp_ms, ids = self._latest_checkpoint
+        with self.context as cache:
+            cache["most_recent_created_at_ms"] = timestamp_ms
+            cache["most_recent_ids"] = sorted(ids)
+        self.log(f"Checkpoint updated - New created_at: {timestamp_ms}", level="debug")
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
         self.log("Nozomi device asset generation started", level="info")

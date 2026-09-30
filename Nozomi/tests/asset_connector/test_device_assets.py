@@ -250,10 +250,7 @@ def test_build_assets_query():
 
     q_inclusive = client.build_assets_query(1724888822710, 500, inclusive=True)
     assert "where created_at >= 1724888822710" in q_inclusive
-
-    q_all = client.build_assets_query(None, 500)
-    assert "where" not in q_all
-    assert "skip" not in q_all
+    assert "skip" not in q_inclusive
 
 
 def test_build_same_timestamp_query():
@@ -293,7 +290,8 @@ class FakeN2QLBackend:
         if match["op"]:
             ts = int(match["ts"])
             compare = {">": lambda v: v > ts, ">=": lambda v: v >= ts, "==": lambda v: v == ts}[match["op"]]
-            items = [a for a in items if compare(int(a["created_at"]))]
+            # Like N2QL, a missing created_at never matches a comparison
+            items = [a for a in items if a.get("created_at") and compare(int(a["created_at"]))]
 
         self._calls += 1
         if match["sort"] == "id":
@@ -302,7 +300,7 @@ class FakeN2QLBackend:
             # Shuffle ties differently on each call before the (stable) sort
             rotation = self._calls % max(len(items), 1)
             items = items[rotation:] + items[:rotation]
-            items.sort(key=lambda a: int(a["created_at"]))
+            items.sort(key=lambda a: int(a.get("created_at") or 0))
 
         skip = int(match["skip"] or 0)
         head = int(match["head"])
@@ -357,6 +355,45 @@ def test_client_fetch_assets_large_tie_group_at_checkpoint():
     assert ids == ["new"]
 
 
+def test_client_fetch_assets_first_run_uses_lower_bound():
+    backend = FakeN2QLBackend([_asset("a", 1000)])
+    client = NozomiQueryClient("k", "t", BASE_URL, page_size=10)
+
+    with requests_mock.Mocker() as m:
+        m.post(SIGN_IN_URL, status_code=200, json={"access_token": "xyz", "token_type": "Bearer"})
+        m.get(QUERY_URL, json=backend)
+        list(client.fetch_assets(None))
+
+    assert backend.queries[0] == "assets | where created_at >= 0 | sort created_at asc | head 10"
+
+
+def test_client_fetch_assets_skips_assets_without_created_at():
+    # A full page of assets without created_at must not stall pagination
+    assets = [{"id": f"null{i}"} for i in range(3)] + [_asset(f"a{i}", 1000 + i) for i in range(5)]
+    backend = FakeN2QLBackend(assets)
+    client = NozomiQueryClient("k", "t", BASE_URL, page_size=2)
+
+    with requests_mock.Mocker() as m:
+        m.post(SIGN_IN_URL, status_code=200, json={"access_token": "xyz", "token_type": "Bearer"})
+        m.get(QUERY_URL, json=backend)
+        ids = [asset.id for page in client.fetch_assets(None) for asset in page]
+
+    assert ids == [f"a{i}" for i in range(5)]
+
+
+def test_client_fetch_assets_drops_assets_without_created_at_if_api_returns_them():
+    # Backend ignoring the filter: only full pages of invalid assets
+    client = NozomiQueryClient("k", "t", BASE_URL, page_size=2)
+
+    with requests_mock.Mocker() as m:
+        m.post(SIGN_IN_URL, status_code=200, json={"access_token": "xyz", "token_type": "Bearer"})
+        m.get(QUERY_URL, json={"result": [{"id": "x"}, {"id": "y", "created_at": "bad"}]})
+        pages = list(client.fetch_assets(None))
+
+    assert pages == []
+    assert m.call_count == 2  # sign-in + a single query, no infinite loop
+
+
 # --- get_assets integration ---
 
 
@@ -402,3 +439,69 @@ def test_get_assets_resumes_from_checkpoint_without_losing_same_timestamp(test_c
     with test_connector.context as cache:
         assert cache.get("most_recent_created_at_ms") == 2000
         assert cache.get("most_recent_ids") == ["b", "late"]
+
+
+# --- checkpoint lifecycle during a fetch cycle ---
+
+PUSH_URL = "https://sekoia.io/api/v2/asset-management/asset-connector/fake-connector-uuid"
+
+
+@pytest.fixture
+def cycle_connector(test_connector):
+    test_connector.module._connector_configuration_uuid = "fake-connector-uuid"
+    test_connector.configuration = {
+        "sekoia_base_url": "https://sekoia.io",
+        "sekoia_api_key": "fake_api_key",
+        "frequency": 60,
+        "batch_size": 2,
+    }
+    with patch("sekoia_automation.asset_connector.connector.time.sleep"):
+        yield test_connector
+
+
+def _stored_checkpoint(connector):
+    with connector.context as cache:
+        return cache.get("most_recent_created_at_ms"), cache.get("most_recent_ids")
+
+
+def test_fetch_cycle_commits_checkpoint_when_count_is_multiple_of_batch_size(cycle_connector):
+    assets = [_asset(f"a{i}", 1000 + i) for i in range(4)]  # 4 assets, batch_size=2
+    with requests_mock.Mocker() as m:
+        m.post(SIGN_IN_URL, status_code=200, json={"access_token": "xyz", "token_type": "Bearer"})
+        m.get(QUERY_URL, json=FakeN2QLBackend(assets))
+        push = m.post(PUSH_URL, status_code=200, json={})
+        cycle_connector.asset_fetch_cycle()
+
+    assert push.call_count == 2
+    assert _stored_checkpoint(cycle_connector) == (1003, ["a3"])
+
+
+def test_fetch_cycle_does_not_commit_checkpoint_when_a_batch_fails(cycle_connector):
+    assets = [_asset(f"a{i}", 1000 + i) for i in range(3)]
+    with requests_mock.Mocker() as m:
+        m.post(SIGN_IN_URL, status_code=200, json={"access_token": "xyz", "token_type": "Bearer"})
+        m.get(QUERY_URL, json=FakeN2QLBackend(assets))
+        # First (full) batch fails, final partial batch succeeds
+        m.post(PUSH_URL, [{"status_code": 500, "text": ""}, {"status_code": 200, "json": {}}])
+        cycle_connector.asset_fetch_cycle()
+
+    assert _stored_checkpoint(cycle_connector) == (None, None)
+
+
+def test_fetch_cycle_does_not_commit_stale_checkpoint_from_failed_cycle(cycle_connector):
+    assets = [_asset("a0", 1000)]
+    backend = FakeN2QLBackend(assets)
+    with requests_mock.Mocker() as m:
+        m.post(SIGN_IN_URL, status_code=200, json={"access_token": "xyz", "token_type": "Bearer"})
+        m.get(QUERY_URL, json=backend)
+        m.post(PUSH_URL, [{"status_code": 500, "text": ""}, {"status_code": 200, "json": {}}])
+
+        # Cycle 1: the only batch fails -> nothing committed
+        cycle_connector.asset_fetch_cycle()
+        assert _stored_checkpoint(cycle_connector) == (None, None)
+
+        # Cycle 2: starts again from scratch and commits once the push succeeds
+        cycle_connector.asset_fetch_cycle()
+
+    assert "where created_at >= 0" in backend.queries[-1]
+    assert _stored_checkpoint(cycle_connector) == (1000, ["a0"])
