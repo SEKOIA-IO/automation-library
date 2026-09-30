@@ -8,7 +8,6 @@ class UbikaCloudProtectorNextGenTrafficLogsConnector(UbikaCloudProtectorNextGenB
     """
     Connector that continuously polls the Ubika Cloud Protector NextGen
     traffic-logs endpoint and forwards them to the configured intake.
-    Uses TimeStepper to manage time ranges.
     """
 
     NAME: str = "Ubika Cloud Protector NextGen Traffic Logs"
