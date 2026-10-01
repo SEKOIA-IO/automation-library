@@ -43,7 +43,7 @@ def test_model_validation(configuration, expected_exception, validate_exception)
     if expected_exception:
         with pytest.raises(expected_exception) as exc_info:
             SalesforceModuleConfig(**configuration)
-            if validate_exception and callable(validate_exception):
-                assert validate_exception(exc_info)
+        if validate_exception and callable(validate_exception):
+            assert validate_exception(exc_info)
     else:
         SalesforceModuleConfig(**configuration)
