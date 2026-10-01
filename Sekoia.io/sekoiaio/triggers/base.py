@@ -1,10 +1,3 @@
-# flake8: noqa: E402
-import os
-from datetime import datetime, timedelta
-from posixpath import join as urljoin
-
-from tenacity import Retrying, wait_exponential, stop_after_attempt
-
 from sekoiaio.utils import should_patch
 
 if should_patch():
@@ -12,11 +5,16 @@ if should_patch():
 
     monkey.patch_all()
 
+
 import json
+import os
+from datetime import UTC, datetime, timedelta
+from posixpath import join as urljoin
 from urllib.parse import urlparse
 
 import requests
 from sekoia_automation.trigger import Trigger
+from tenacity import Retrying, stop_after_attempt, wait_exponential
 from websocket import WebSocketApp, WebSocketTimeoutException, setdefaulttimeout
 
 from sekoiaio.triggers.messages_processor import MessagesProcessor
@@ -113,7 +111,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         ws.send('{"action": "upgrade"}')
 
     def on_error(self, _, error: Exception):
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         if self._last_error and now < self._last_error + timedelta(seconds=10):
             # Prevent from sending too many exceptions
             return
@@ -134,7 +132,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         # Reset teardown so we can run again the app from the start
         with self._websocket.has_done_teardown_lock:
             self._websocket.has_done_teardown = False
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         if self._last_close and now < self._last_close + timedelta(seconds=10):
             # Prevent from sending too many logs
             return

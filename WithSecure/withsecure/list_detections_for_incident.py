@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -31,7 +31,7 @@ class Detection(BaseModel):
 
 
 class DetectionItems(BaseModel):
-    detections: List[Detection] = []
+    detections: list[Detection] = []
 
 
 class ListDetectionForIncident(IncidentOperationAction):

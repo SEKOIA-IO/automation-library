@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pytest
 import requests_mock
 from tenacity import wait_none
+
 from sekoiaio.intelligence_center.actions import PostBundleAction
 
 
