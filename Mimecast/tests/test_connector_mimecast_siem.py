@@ -506,7 +506,7 @@ def test_next_batch_logs_no_events_and_does_not_sleep_if_batch_is_long(trigger, 
     with patch.object(consumer, "fetch_events", return_value=iter([])), patch(
         "mimecast_modules.connector_mimecast_siem.time"
     ) as mock_time:
-        mock_time.time.side_effect = [0.0, 120.0]
+        mock_time.time.side_effect = [0.0, 120.0, 121.0]
         consumer.next_batch()
 
     trigger.log.assert_any_call(message="process: No events to forward", level="info")
@@ -623,7 +623,132 @@ def test_next_batch_handles_empty_batch_inside_iteration(trigger, api_client):
     with patch.object(worker, "fetch_events", return_value=iter([[]])), patch(
         "mimecast_modules.connector_mimecast_siem.time"
     ) as mock_time:
-        mock_time.time.side_effect = [0.0, 2.0]
+        mock_time.time.side_effect = [0.0, 2.0, 3.0]
         worker.next_batch()
 
     trigger.push_events_to_intakes.assert_not_called()
+
+
+def test_fetch_events_handles_non_json_http_error_response(trigger, api_client):
+    consumer = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
+
+    error = requests.exceptions.HTTPError()
+    error.response = Mock(status_code=401, text="Gateway timeout")
+    error.response.json.side_effect = ValueError("not json")
+
+    with patch.object(consumer, "_MimecastSIEMWorker__fetch_next_events", side_effect=error):
+        with pytest.raises(requests.exceptions.HTTPError):
+            list(consumer.fetch_events())
+
+    trigger.log.assert_called_with(message="Authentication failed: Gateway timeout", level="error")
+
+
+def test_fetch_next_events_does_not_overwrite_existing_cursor_with_empty_next_page(trigger, api_client):
+    consumer = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
+    consumer.cursor.offset = "existing-token"
+
+    response = Mock(status_code=200)
+    response.raise_for_status.return_value = None
+    response.json.return_value = {"value": [], "isCaughtUp": True}
+
+    with patch.object(consumer, "_MimecastSIEMWorker__build_fetch_params", return_value={}), patch.object(
+        consumer, "_MimecastSIEMWorker__get_next_batch_of_events", return_value=response
+    ), patch("mimecast_modules.connector_mimecast_siem.download_batches", return_value=iter(())), patch(
+        "mimecast_modules.connector_mimecast_siem.batched", return_value=[]
+    ):
+        list(getattr(consumer, "_MimecastSIEMWorker__fetch_next_events")())
+
+    assert consumer.cursor.offset == "existing-token"
+
+
+@pytest.mark.parametrize(
+    "json_value,text_value,expected",
+    [
+        ([{"message": "ignored"}], "", ""),
+        ({"fail": "not-a-list"}, "", ""),
+        ({"fail": []}, "upstream proxy html error", "upstream proxy html error"),
+    ],
+)
+def test_extract_error_message_handles_unexpected_shapes(json_value, text_value, expected):
+    response = Mock()
+    response.json.return_value = json_value
+    response.text = text_value
+
+    extract_message = getattr(MimecastSIEMWorker, "_MimecastSIEMWorker__extract_error_message")
+    message = extract_message(response)
+
+    assert message == expected
+
+
+def test_next_batch_logs_compact_summary_and_rate_limited_lag_warning(trigger, api_client):
+    worker = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
+    worker._last_events_lag_seconds = 90_000
+    events = [
+        {"timestamp": 2_000_000, "aggregateId": "c", "processingId": "d"},
+        {"timestamp": 1_000_000, "aggregateId": "a", "processingId": "b"},
+        {"timestamp": 1_500_000, "aggregateId": "m", "processingId": "n"},
+        {"timestamp": "invalid", "aggregateId": "x", "processingId": "y"},
+    ]
+
+    with patch.object(worker, "fetch_events", side_effect=[iter([events]), iter([events])]), patch(
+        "mimecast_modules.connector_mimecast_siem.time"
+    ) as mock_time, patch("mimecast_modules.connector_mimecast_siem.logger.info") as logger_info:
+        mock_time.time.side_effect = [0.0, 2.0, 3.0, 5.0, 6.0, 8.0]
+
+        worker.next_batch()
+        worker.next_batch()
+
+    summary_calls = [call for call in logger_info.call_args_list if call.args and call.args[0] == "Batch summary"]
+    assert len(summary_calls) == 2
+    assert (
+        trigger.log.mock_calls.count(
+            call(
+                level="warning",
+                message=(
+                    "process: Event lag is high (90000s >= 86400s). " "Connector is likely catching up older events"
+                ),
+            )
+        )
+        == 1
+    )
+
+
+def test_get_next_batch_of_events_tracks_timeout_counters(trigger, api_client):
+    worker = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
+    worker.client = Mock()
+    worker.client.get.side_effect = requests.exceptions.ReadTimeout("timeout")
+
+    with pytest.raises(requests.exceptions.ReadTimeout):
+        getattr(worker, "_MimecastSIEMWorker__get_next_batch_of_events")("https://example.test", {})
+
+    assert worker._batch_retry_count == 1
+    assert worker._batch_timeout_count == 1
+
+
+def test_get_next_batch_of_events_tracks_generic_timeout_counters(trigger, api_client):
+    worker = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
+    worker.client = Mock()
+    worker.client.get.side_effect = requests.exceptions.Timeout("timeout")
+
+    with pytest.raises(requests.exceptions.Timeout):
+        getattr(worker, "_MimecastSIEMWorker__get_next_batch_of_events")("https://example.test", {})
+
+    assert worker._batch_retry_count == 1
+    assert worker._batch_timeout_count == 1
+
+
+def test_get_next_batch_of_events_counts_reauth_retry(trigger, api_client):
+    worker = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
+
+    unauthorized = Mock(status_code=401, reason="Unauthorized", text="")
+    successful = Mock(status_code=200)
+
+    worker.client = Mock()
+    worker.client.get.side_effect = [unauthorized, successful]
+    worker.client.auth = Mock()
+
+    response = getattr(worker, "_MimecastSIEMWorker__get_next_batch_of_events")("https://example.test", {})
+
+    assert response is successful
+    assert worker.client.auth.get_credentials.call_count == 1
+    assert worker._batch_retry_count == 1
