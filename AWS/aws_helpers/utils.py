@@ -234,12 +234,14 @@ async def split_stream_by_separator(
     Returns:
         AsyncGenerator[bytes, None]: An async generator yielding chunks of data.
     """
-    buffer = b""
+    buffer = bytearray()
     while True:
         chunk = await stream.read(chunk_size)
+
+        # If the chunk is empty, no more data to read. Yield any remaining buffer and exit.
         if not chunk:
             if buffer:
-                yield buffer
+                yield bytes(buffer)
             break
 
         buffer += chunk
@@ -247,5 +249,5 @@ async def split_stream_by_separator(
             index = buffer.find(separator)
             if index == -1:
                 break
-            yield buffer[:index]
+            yield bytes(buffer[:index])
             buffer = buffer[index + len(separator) :]
