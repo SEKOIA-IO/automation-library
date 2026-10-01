@@ -1,7 +1,3 @@
-from itertools import islice
-from typing import AsyncGenerator
-
-from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3ListConnector, AwsS3ListConfiguration, AwsS3LogsBaseConfiguration
 from connectors.s3.provider import AwsAccountProvider
 from connectors.s3.trigger_s3_logs import BaseAwsS3LogsTrigger
