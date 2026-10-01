@@ -204,6 +204,9 @@ async def async_islice(iterable: AsyncIterable[T], start: int, stop: int | None 
     Returns:
         AsyncGenerator[T, None]: An async generator yielding items in the [start, stop) range.
     """
+    if start < 0 or (stop is not None and stop < 0):
+        raise ValueError("start and stop must be non-negative integers")
+
     index = 0
     iterator = aiter(iterable)
     while stop is None or index < stop:
