@@ -130,7 +130,7 @@ class BaseAwsS3RecordsTrigger:
         if await self._is_stream_empty(reader):
             return
 
-        async for data in ijson.items(reader, "Records.item"):
+        async for data in ijson.items_async(reader, "Records.item", use_float=True):
             # https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-log-file-examples.html
             # Go through each element in list and add to result_data if it is a valid payload based on this
             # https://github.com/SEKOIA-IO/automation-library/issues/346
