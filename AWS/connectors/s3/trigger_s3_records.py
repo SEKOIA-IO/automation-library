@@ -125,7 +125,7 @@ class BaseAwsS3RecordsTrigger:
         if getattr(stream, "peek", None) is None:
             reader = PeekableStreamReader(stream)
         else:
-            reader = cast(PeekableAsyncReader, stream)
+            reader = cast(PeekableStreamReader, stream)
 
         if await self._is_stream_empty(reader):
             return
