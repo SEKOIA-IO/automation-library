@@ -17,9 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Increase test coverage to `100%`
+- Prevent worker crashes on non-JSON/empty HTTP error bodies, which could amplify ingestion delays under repeated retries
+- Stabilize per-log-type checkpoint updates by preserving the previous cursor when `@nextPage` is empty or missing
+- Add low-noise batch diagnostics with a compact structured summary (fetched/forwarded counts, event time window, lag, retries, and timeouts)
+- Add high-lag warnings with built-in rate-limiting to avoid log spam while surfacing prolonged catch-up phases
+- Track request retry/timeout counts per batch to improve correlation between network instability and delayed alerting
+- Increase test coverage to 100%
 - Generalize the use of `pytest.mark.parametrize` across test suites where applicable
-
 
 ## [1.1.15] - 2026-01-07
 
