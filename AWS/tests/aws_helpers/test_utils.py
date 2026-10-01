@@ -129,7 +129,7 @@ async def test_peekable_stream_reader():
 async def test_split_stream_by_separator(content, expected_chunks):
     async with async_temporary_file(content) as f:
         chunks = []
-        async for chunk in split_stream_by_separator(f, b"\n"):
+        async for chunk in split_stream_by_separator(f, b"\n", chunk_size=4):
             chunks.append(chunk)
         assert chunks == expected_chunks
 
