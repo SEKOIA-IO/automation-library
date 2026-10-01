@@ -234,6 +234,10 @@ async def split_stream_by_separator(
     Returns:
         AsyncGenerator[bytes, None]: An async generator yielding chunks of data.
     """
+    # if a separator is not supplied, default to b' '
+    if not separator:
+        separator = b" "
+
     buffer = bytearray()
     while True:
         chunk = await stream.read(chunk_size)
