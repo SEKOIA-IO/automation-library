@@ -25,10 +25,10 @@ QUERY_URL = f"{BASE_URL}/api/open/query/do"
 def sample_assets() -> list[dict]:
     return [
         {
-            "name": "AC 800M PM851",
-            "id": "9e917f4e-e542-4e25-9715-74883145c532",
-            "ip": ["192.168.196.234"],
-            "mac_address": ["00:00:23:18:28:42"],
+            "name": "plc-01",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "ip": ["192.0.2.10"],
+            "mac_address": ["00:00:5e:00:53:01"],
             "mac_vendor": ["ABB"],
             "os": "",
             "roles": ["producer"],
@@ -42,13 +42,13 @@ def sample_assets() -> list[dict]:
             "levels": ["2"],
             "created_at": "1724888822710",
             "last_activity_time": "1789542303500",
-            "device_id": "d648bf95-cdd8-4985-a4ab-631ea594fccb",
+            "device_id": "00000000-0000-4000-8000-0000000000d1",
         },
         {
-            "name": "IEC61850.local",
-            "id": "dbcc4903-65b8-4703-b1e5-29eb2312c4ce",
-            "ip": ["10.41.132.164", "fe80::4eb:628b:8423:2816"],
-            "mac_address": ["d0:03:4b:18:9e:41"],
+            "name": "media-player-01.local",
+            "id": "00000000-0000-4000-8000-000000000002",
+            "ip": ["198.51.100.20", "2001:db8::20"],
+            "mac_address": ["00:00:5e:00:53:02"],
             "mac_vendor": ["Apple"],
             "os": "tvOS",
             "roles": ["other"],
@@ -60,7 +60,7 @@ def sample_assets() -> list[dict]:
             "zones": ["Undefined"],
             "created_at": "1724888832629",
             "last_activity_time": "1789542241632",
-            "device_id": "d0:03:4b:18:9e:41",
+            "device_id": "00:00:5e:00:53:02",
         },
     ]
 
@@ -131,15 +131,40 @@ def test_build_network_interfaces(test_connector, sample_assets):
     interfaces = test_connector.build_network_interfaces(asset)
     assert interfaces is not None
     assert len(interfaces) == 2
-    assert all(iface.mac == "d0:03:4b:18:9e:41" for iface in interfaces)
+    assert all(iface.mac == "00:00:5e:00:53:02" for iface in interfaces)
+
+
+def test_build_network_interfaces_multiple_macs_are_not_paired(test_connector):
+    asset = NozomiAsset(
+        id="multi",
+        ip=["192.0.2.1", "192.0.2.2"],
+        mac_address=["00:00:5e:00:53:01", "00:00:5e:00:53:02", "00:00:5e:00:53:01"],
+    )
+    interfaces = test_connector.build_network_interfaces(asset)
+    assert [(i.ip, i.mac) for i in interfaces] == [
+        ("192.0.2.1", None),
+        ("192.0.2.2", None),
+        (None, "00:00:5e:00:53:01"),
+        (None, "00:00:5e:00:53:02"),
+    ]
+
+
+def test_build_network_interfaces_ip_only_and_mac_only(test_connector):
+    ip_only = test_connector.build_network_interfaces(NozomiAsset(id="a", ip=["192.0.2.1"]))
+    assert [(i.ip, i.mac) for i in ip_only] == [("192.0.2.1", None)]
+
+    mac_only = test_connector.build_network_interfaces(NozomiAsset(id="b", mac_address=["00:00:5e:00:53:01"]))
+    assert [(i.ip, i.mac) for i in mac_only] == [(None, "00:00:5e:00:53:01")]
+
+    assert test_connector.build_network_interfaces(NozomiAsset(id="c", ip=[""], mac_address=[])) is None
 
 
 def test_build_device(test_connector, sample_assets):
     asset = NozomiAsset.parse_obj(sample_assets[0])
     device = test_connector.build_device(asset)
     assert device.uid == asset.id
-    assert device.hostname == "AC 800M PM851"
-    assert device.ip == "192.168.196.234"
+    assert device.hostname == "plc-01"
+    assert device.ip == "192.0.2.10"
     assert device.vendor_name == "ABB"
     assert device.model == "AC 800M PM851"
     assert device.type_id == DeviceTypeId.OTHER
