@@ -63,6 +63,7 @@ class MimecastSIEMWorker(Thread):
         self.events_cache: Cache = self.load_events_cache()
         self._batch_retry_count = 0
         self._batch_timeout_count = 0
+        self._batch_events_fetched_from_mimecast = 0
         self._last_events_lag_seconds = 0
         self._last_lag_warning_ts: dict[int, float] = {}
 
@@ -78,21 +79,26 @@ class MimecastSIEMWorker(Thread):
     def _reset_batch_diagnostics(self) -> None:
         self._batch_retry_count = 0
         self._batch_timeout_count = 0
+        self._batch_events_fetched_from_mimecast = 0
+
+    def _observe_adapter_retry(self) -> None:
+        self._batch_retry_count += 1
 
     def _tracked_get(self, url: str, params: dict[str, int | str]) -> requests.Response:
+        if hasattr(self.client, "set_retry_observer"):
+            self.client.set_retry_observer(self._observe_adapter_retry)
+
         try:
             return self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
         except requests.exceptions.ReadTimeout:
-            self._batch_retry_count += 1
             self._batch_timeout_count += 1
             raise
         except requests.exceptions.Timeout:
-            self._batch_retry_count += 1
             self._batch_timeout_count += 1
             raise
-        except requests.exceptions.RequestException:
-            self._batch_retry_count += 1
-            raise
+        finally:
+            if hasattr(self.client, "clear_retry_observer"):
+                self.client.clear_retry_observer()
 
     @staticmethod
     def _format_event_timestamp(timestamp_ms: int | float | None) -> str | None:
@@ -125,16 +131,21 @@ class MimecastSIEMWorker(Thread):
 
     def _log_batch_summary(
         self,
-        fetched_events_count: int,
+        post_filter_events_count: int,
         forwarded_events_count: int,
         min_event_ts: int | float | None,
         max_event_ts: int | float | None,
         batch_duration: int,
+        failed: bool = False,
+        error_type: str | None = None,
+        error_message: str | None = None,
     ) -> None:
-        logger.info(
+        log_method = logger.warning if failed else logger.info
+        log_method(
             "Batch summary",
             log_type=self.log_type,
-            fetched_events=fetched_events_count,
+            fetched_events=self._batch_events_fetched_from_mimecast,
+            post_filter_events=post_filter_events_count,
             forwarded_events=forwarded_events_count,
             min_event_ts=self._format_event_timestamp(min_event_ts),
             max_event_ts=self._format_event_timestamp(max_event_ts),
@@ -143,6 +154,9 @@ class MimecastSIEMWorker(Thread):
             timeout_count=self._batch_timeout_count,
             has_cursor=bool(self.cursor.offset),
             batch_duration=batch_duration,
+            failed=failed,
+            error_type=error_type,
+            error_message=error_message,
         )
 
     @property
@@ -330,6 +344,7 @@ class MimecastSIEMWorker(Thread):
 
             for events in batched(events_gen, EVENTS_BATCH_SIZE):
                 logger.debug("Collected events", nb_url=len(events), log_type=self.log_type)
+                self._batch_events_fetched_from_mimecast += len(events)
                 events = self.__filter_events(events)
 
                 if len(events) > 0:
@@ -402,64 +417,83 @@ class MimecastSIEMWorker(Thread):
         # save the starting time
         batch_start_time = time.time()
         self._reset_batch_diagnostics()
-        fetched_events_count = 0
+        post_filter_events_count = 0
         forwarded_events_count = 0
         min_event_ts: int | float | None = None
         max_event_ts: int | float | None = None
 
-        # Fetch next batch
-        has_forwarded_events: bool = False
-        for events in self.fetch_events():
-            fetched_events_count += len(events)
-            for event in events:
-                event_ts = event.get("timestamp")
-                if not isinstance(event_ts, (int, float)):
-                    continue
+        try:
+            # Fetch next batch
+            has_forwarded_events: bool = False
+            for events in self.fetch_events():
+                post_filter_events_count += len(events)
+                for event in events:
+                    event_ts = event.get("timestamp")
+                    if not isinstance(event_ts, (int, float)):
+                        continue
 
-                if min_event_ts is None or event_ts < min_event_ts:
-                    min_event_ts = event_ts
-                if max_event_ts is None or event_ts > max_event_ts:
-                    max_event_ts = event_ts
+                    if min_event_ts is None or event_ts < min_event_ts:
+                        min_event_ts = event_ts
+                    if max_event_ts is None or event_ts > max_event_ts:
+                        max_event_ts = event_ts
 
-            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
+                batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
 
-            # if the batch is full, push it
-            if len(batch_of_events) > 0:
+                # if the batch is full, push it
+                if len(batch_of_events) > 0:
+                    self.log(
+                        message=f"{self.log_type}: Forwarded {len(batch_of_events)} events to the intake",
+                        level="info",
+                    )
+                    forwarded_events_count += len(batch_of_events)
+                    OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(
+                        len(batch_of_events)
+                    )
+                    self.connector.push_events_to_intakes(events=batch_of_events)
+                    has_forwarded_events = True
+
+            # log if no events were collected and forwarded
+            if not has_forwarded_events:
                 self.log(
-                    message=f"{self.log_type}: Forwarded {len(batch_of_events)} events to the intake",
+                    message=f"{self.log_type}: No events to forward",
                     level="info",
                 )
-                forwarded_events_count += len(batch_of_events)
-                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(len(batch_of_events))
-                self.connector.push_events_to_intakes(events=batch_of_events)
-                has_forwarded_events = True
 
-        # log if no events were collected and forwarded
-        if not has_forwarded_events:
-            self.log(
-                message=f"{self.log_type}: No events to forward",
-                level="info",
+            # get the ending time and compute the duration to fetch the events
+            batch_end_time = time.time()
+            batch_duration = int(batch_end_time - batch_start_time)
+            logger.info("Fetched and forwarded events", log_type=self.log_type, duration=batch_duration)
+            self._log_batch_summary(
+                post_filter_events_count=post_filter_events_count,
+                forwarded_events_count=forwarded_events_count,
+                min_event_ts=min_event_ts,
+                max_event_ts=max_event_ts,
+                batch_duration=batch_duration,
             )
+            self._emit_lag_warning_if_needed()
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key).observe(batch_duration)
 
-        # get the ending time and compute the duration to fetch the events
-        batch_end_time = time.time()
-        batch_duration = int(batch_end_time - batch_start_time)
-        logger.info("Fetched and forwarded events", log_type=self.log_type, duration=batch_duration)
-        self._log_batch_summary(
-            fetched_events_count=fetched_events_count,
-            forwarded_events_count=forwarded_events_count,
-            min_event_ts=min_event_ts,
-            max_event_ts=max_event_ts,
-            batch_duration=batch_duration,
-        )
-        self._emit_lag_warning_if_needed()
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key).observe(batch_duration)
-
-        # compute the remaining sleeping time. If greater than 0, sleep
-        delta_sleep = self.connector.configuration.frequency - batch_duration
-        if delta_sleep > 0:
-            self.log(message=f"{self.log_type}: Next batch in the future. Waiting {delta_sleep} seconds", level="info")
-            time.sleep(delta_sleep)
+            # compute the remaining sleeping time. If greater than 0, sleep
+            delta_sleep = self.connector.configuration.frequency - batch_duration
+            if delta_sleep > 0:
+                self.log(
+                    message=f"{self.log_type}: Next batch in the future. Waiting {delta_sleep} seconds",
+                    level="info",
+                )
+                time.sleep(delta_sleep)
+        except Exception as error:
+            batch_duration = int(time.time() - batch_start_time)
+            self._log_batch_summary(
+                post_filter_events_count=post_filter_events_count,
+                forwarded_events_count=forwarded_events_count,
+                min_event_ts=min_event_ts,
+                max_event_ts=max_event_ts,
+                batch_duration=batch_duration,
+                failed=True,
+                error_type=type(error).__name__,
+                error_message=str(error)[:256],
+            )
+            raise
 
     def run(self) -> None:
         while self.running:

@@ -26,3 +26,28 @@ def test_api_client_configures_headers_and_adapters() -> None:
     assert isinstance(default_adapter, HTTPAdapter)
     assert isinstance(batch_adapter.max_retries, Retry)
     assert isinstance(default_adapter.max_retries, Retry)
+
+    assert callable(client._notify_retry_observer)
+    client.set_retry_observer(lambda: None)
+    client.clear_retry_observer()
+
+
+def test_api_client_notifies_retry_observer() -> None:
+    limiter = Limiter(RequestRate(limit=50, interval=Duration.MINUTE))
+    auth = Mock(spec=AuthBase)
+    observer = Mock()
+
+    client = ApiClient(auth=auth, limiter_batch=limiter, limiter_default=limiter)
+    client.set_retry_observer(observer)
+    client._notify_retry_observer()
+
+    observer.assert_called_once()
+
+
+def test_api_client_notify_retry_observer_without_registered_callback() -> None:
+    limiter = Limiter(RequestRate(limit=50, interval=Duration.MINUTE))
+    auth = Mock(spec=AuthBase)
+
+    client = ApiClient(auth=auth, limiter_batch=limiter, limiter_default=limiter)
+    client.clear_retry_observer()
+    client._notify_retry_observer()

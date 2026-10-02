@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import cast
+from typing import Any, cast
 from unittest.mock import MagicMock, Mock, PropertyMock, call, patch
 
 import pytest
@@ -713,6 +713,41 @@ def test_next_batch_logs_compact_summary_and_rate_limited_lag_warning(trigger, a
     )
 
 
+def test_batch_summary_reports_pre_filter_and_post_filter_counts(trigger, api_client):
+    worker = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
+
+    event = {"timestamp": 2_000_000, "aggregateId": "a", "processingId": "b"}
+    response_1 = Mock(status_code=200)
+    response_1.raise_for_status.return_value = None
+    response_1.json.return_value = {
+        "value": [{"url": "https://s3-something.amazonaws.com/log1.json.gz"}],
+        "@nextPage": "next-token",
+        "isCaughtUp": False,
+    }
+    response_2 = Mock(status_code=200)
+    response_2.raise_for_status.return_value = None
+    response_2.json.return_value = {"value": [], "isCaughtUp": True}
+
+    with patch.object(worker, "_MimecastSIEMWorker__build_fetch_params", return_value={}), patch.object(
+        worker, "_MimecastSIEMWorker__get_next_batch_of_events", side_effect=[response_1, response_2]
+    ), patch("mimecast_modules.connector_mimecast_siem.download_batches", return_value=iter([event])), patch(
+        "mimecast_modules.connector_mimecast_siem.batched", return_value=[[event], [event]]
+    ), patch(
+        "mimecast_modules.connector_mimecast_siem.logger.info"
+    ) as logger_info, patch(
+        "mimecast_modules.connector_mimecast_siem.time"
+    ) as mock_time:
+        mock_time.time.side_effect = [0.0, 2.0, 3.0]
+        worker.next_batch()
+
+    summary_calls = [call_args for call_args in logger_info.call_args_list if call_args.args[0] == "Batch summary"]
+    assert len(summary_calls) == 1
+    summary_kwargs = summary_calls[0].kwargs
+    assert summary_kwargs["fetched_events"] == 4
+    assert summary_kwargs["post_filter_events"] == 1
+    assert summary_kwargs["forwarded_events"] == 1
+
+
 def test_get_next_batch_of_events_tracks_timeout_counters(trigger, api_client):
     worker = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
     worker.client = Mock()
@@ -721,7 +756,7 @@ def test_get_next_batch_of_events_tracks_timeout_counters(trigger, api_client):
     with pytest.raises(requests.exceptions.ReadTimeout):
         getattr(worker, "_MimecastSIEMWorker__get_next_batch_of_events")("https://example.test", {})
 
-    assert worker._batch_retry_count == 1
+    assert worker._batch_retry_count == 0
     assert worker._batch_timeout_count == 1
 
 
@@ -733,7 +768,7 @@ def test_get_next_batch_of_events_tracks_generic_timeout_counters(trigger, api_c
     with pytest.raises(requests.exceptions.Timeout):
         getattr(worker, "_MimecastSIEMWorker__get_next_batch_of_events")("https://example.test", {})
 
-    assert worker._batch_retry_count == 1
+    assert worker._batch_retry_count == 0
     assert worker._batch_timeout_count == 1
 
 
@@ -752,3 +787,61 @@ def test_get_next_batch_of_events_counts_reauth_retry(trigger, api_client):
     assert response is successful
     assert worker.client.auth.get_credentials.call_count == 1
     assert worker._batch_retry_count == 1
+
+
+def test_tracked_get_counts_adapter_level_retries_via_observer(trigger, api_client):
+    worker = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
+    response = Mock(status_code=200)
+
+    class FakeClient:
+        def __init__(self):
+            self.observer = None
+
+        def set_retry_observer(self, observer):
+            self.observer = observer
+
+        def clear_retry_observer(self):
+            self.observer = None
+
+        def get(self, *args, **kwargs):
+            assert self.observer is not None
+            self.observer()
+            self.observer()
+            return response
+
+    worker.client = cast(Any, FakeClient())
+
+    result = worker._tracked_get("https://example.test", {})
+
+    assert result is response
+    assert worker._batch_retry_count == 2
+
+
+def test_next_batch_emits_failed_summary_before_reraise(trigger, api_client):
+    worker = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
+
+    with patch.object(worker, "fetch_events", side_effect=requests.exceptions.ReadTimeout("timeout")), patch(
+        "mimecast_modules.connector_mimecast_siem.time.time", return_value=10.0
+    ), patch.object(worker, "_log_batch_summary") as log_summary:
+        with pytest.raises(requests.exceptions.ReadTimeout):
+            worker.next_batch()
+
+    log_summary.assert_called_once()
+    assert log_summary.call_args.kwargs["failed"] is True
+    assert log_summary.call_args.kwargs["error_type"] == "ReadTimeout"
+
+
+def test_tracked_get_without_observer_methods(trigger, api_client):
+    worker = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
+    response = Mock(status_code=200)
+
+    class PlainClient:
+        def get(self, *args, **kwargs):
+            return response
+
+    worker.client = cast(Any, PlainClient())
+
+    result = worker._tracked_get("https://example.test", {})
+
+    assert result is response
+    assert worker._batch_retry_count == 0
