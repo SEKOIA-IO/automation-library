@@ -1,15 +1,15 @@
 # third parties
+from _io import StringIO
 from typing import Any
 from uuid import uuid4
 
 import orjson
-from _io import StringIO
 from lxml import etree
 from lxml.html import document_fromstring
 
 # internal
 from sekoia_automation.action import Action
-from sekoia_automation.exceptions import MissingActionArgumentError, MissingActionArgumentFileError  # noqa
+from sekoia_automation.exceptions import MissingActionArgumentError, MissingActionArgumentFileError
 
 
 class FileUtilsReadXMLFile(Action):
@@ -73,7 +73,7 @@ class FileUtilsReadXMLFile(Action):
             else:
                 try:
                     f.write(orjson.dumps(result).decode("utf-8"))
-                except (TypeError, ValueError):
+                except TypeError, ValueError:
                     f.write(result)
 
         return {"output_path": filename}

@@ -19,9 +19,9 @@ def symphony_storage():
     constants.SYMPHONY_STORAGE = original_storage
 
 
-def testGetCurrentTime():
+def test_get_current_time():
     action = GetCurrentTimeAction()
-    request = Arguments(selectedTimezone="UTC 0")
+    request = Arguments(selected_timezone="UTC 0")
     reponse = action.run(request)
     assert match(r"^[0-9]+$", str(reponse["epoch"]))
     assert match(
@@ -32,7 +32,7 @@ def testGetCurrentTime():
 
 def test_get_current_time_2():
     action = GetCurrentTimeAction()
-    request = Arguments(selectedNamedTimezone="Europe/Paris")
+    request = Arguments(selected_named_timezone="Europe/Paris")
     reponse = action.run(request)
     assert match(r"^[0-9]+$", str(reponse["epoch"]))
     assert match(
@@ -43,11 +43,11 @@ def test_get_current_time_2():
 
 def test_incorrect_inputs():
     action = GetCurrentTimeAction()
-    request = Arguments(selectedTimezone=None, selectedNamedTimezone=None)
+    request = Arguments(selected_timezone=None, selected_named_timezone=None)
     with pytest.raises(ValueError):
         action.run(request)
 
     action = GetCurrentTimeAction()
-    request = Arguments(selectedNamedTimezone="SomethingNotExisting")
+    request = Arguments(selected_named_timezone="SomethingNotExisting")
     with pytest.raises(ValueError):
         action.run(request)

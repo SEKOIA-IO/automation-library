@@ -1,14 +1,14 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 from sekoia_automation.action import Action
 
 
 class Arguments(BaseModel):
     # this will remain for the backward compatibility
-    selectedTimezone: (
+    selected_timezone: (
         Literal[
             "UTC -12",
             "UTC -11",
@@ -39,7 +39,7 @@ class Arguments(BaseModel):
         | None
     ) = None
 
-    selectedNamedTimezone: str | None = None
+    selected_named_timezone: str | None = None
 
 
 class GetCurrentTimeAction(Action):
@@ -50,33 +50,33 @@ class GetCurrentTimeAction(Action):
     def _utc_to_gmt(self, value):
         offset_hours = int(value.split(" ")[1].strip())
 
-        current_time = datetime.utcnow()
+        current_time = datetime.now(UTC).replace(tzinfo=None)
 
         result_time = current_time + timedelta(hours=offset_hours)
 
         return result_time
 
     def run(self, ra: Arguments) -> dict:
-        if not ra.selectedNamedTimezone and not ra.selectedTimezone:
+        if not ra.selected_named_timezone and not ra.selected_timezone:
             self.log(message="You should set a timezone", level="error")
             raise ValueError("No timezone defined in the configuration")
 
         # new field has a higher priority
-        if ra.selectedNamedTimezone:
-            self.log(message=f"Retrieving current time for {ra.selectedNamedTimezone}", level="info")
+        if ra.selected_named_timezone:
+            self.log(message=f"Retrieving current time for {ra.selected_named_timezone}", level="info")
             try:
-                tz = ZoneInfo(ra.selectedNamedTimezone)
+                tz = ZoneInfo(ra.selected_named_timezone)
 
             except ZoneInfoNotFoundError as err:
                 self.log_exception(err)
-                raise ValueError(f"Invalid timezone: {ra.selectedNamedTimezone}")
+                raise ValueError(f"Invalid timezone: {ra.selected_named_timezone}")
 
             # we need to get time in correct timezone, but we don't need the timezone itself
             date_to_return = datetime.now(tz).replace(tzinfo=None)
 
         else:
-            self.log(message=f"Retrieving current time for {ra.selectedTimezone}", level="info")
-            date_to_return = self._utc_to_gmt(ra.selectedTimezone)
+            self.log(message=f"Retrieving current time for {ra.selected_timezone}", level="info")
+            date_to_return = self._utc_to_gmt(ra.selected_timezone)
 
         return {
             "epoch": int(date_to_return.timestamp()),
