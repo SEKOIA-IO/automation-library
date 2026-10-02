@@ -70,7 +70,7 @@ class AsyncGithubClient:
             AsyncGenerator[ClientSession, None]:
         """
         if cls._session is None:
-            cls._session = ClientSession()
+            cls._session = ClientSession(trust_env=True)
 
         if cls._rate_limiter:
             async with cls._rate_limiter:
