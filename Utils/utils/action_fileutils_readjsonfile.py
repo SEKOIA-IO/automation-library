@@ -46,6 +46,6 @@ class FileUtilsReadJSONFile(Action):
             else:
                 try:
                     f.write(orjson.dumps(result).decode("utf-8"))
-                except (TypeError, ValueError):
+                except TypeError, ValueError:
                     f.write(result)
         return {"output_path": filename}
