@@ -5,15 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## Unreleased
 
-## [1.121.1] - 2026-08-21
+## 1.122.0 - 2026-10-02
+
+### Added
+
+- Add support for Fission execution engine.
+
+### Changed
+
+- Update Python dependencies.
+
+## 1.121.1 - 2026-08-21
 
 ### Changed
 
 - Migrate module packaging from Poetry to uv (with ruff and mypy)
 
-## [1.120.5] - 2026-08-11
+## 1.120.5 - 2026-08-11
 
 ### Added
 
@@ -35,80 +45,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ensure `Download File` action also uses centralized URL validation and HTTP response handling from `HTTPActionBase`
 - Increase automated test coverage to 100%
 
-## [1.120.3] - 2026-03-19
+## 1.120.3 - 2026-03-19
 
 ### Changed
 
 - Update dependencies
 
-## [1.120.2] - 2026-02-26
+## 1.120.2 - 2026-02-26
 
 ### Fixed
 
 - Fix relative path variable
 
-## [1.120.1] - 2026-01-21
+## 1.120.1 - 2026-01-21
 
 ### Fixed
 
 - Fix bearer authentication
 
-## [1.120.0] - 2026-01-13
+## 1.120.0 - 2026-01-13
 
 ### Added
 
 - Add authentication fields
 
-## [1.119.6] - 2025-10-07
+## 1.119.6 - 2025-10-07
 
 ### Fixed
 
 - Convert dictionary representation provided in the params argument into actual dict
 
-## [1.119.5] - 2025-10-03
+## 1.119.5 - 2025-10-03
 
 ### Changed
 
 - Allow to supply a dictionary in the params argument
 
-## [1.119.4] - 2025-06-30
+## 1.119.4 - 2025-06-30
 
 ### Fixed
 
 - Rollback to the previous version since a new front bug was introduced
 
-## [1.119.3] - 2025-06-26
+## 1.119.3 - 2025-06-26
 
 ### Fixed
 
 - Fix URL Request schema to accept any JSON
 
 
-## [1.119.2] - 2025-06-26
+## 1.119.2 - 2025-06-26
 
 ### Fixed
 
 - Fix URL Request schema to accept an array of JSON for the JSON field
 
-## [1.119.1] - 2023-11-01
+## 1.119.1 - 2023-11-01
 
 ### Changed
 
 - Add additional user-agent to work with api
 
-## [1.119.0] - 2024-05-28
+## 1.119.0 - 2024-05-28
 
 ### Changed
 
 - Upgrade sekoia-automation-sdk
 
-## [1.118.0] - 2024-01-05
+## 1.118.0 - 2024-01-05
 
 ### Changed
 
 - Support 204 response with application/json header
 
-## [1.116.0] - 2023-11-22
+## 1.116.0 - 2023-11-22
 
 ### Changed
 

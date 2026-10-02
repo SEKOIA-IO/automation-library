@@ -1,11 +1,11 @@
 [project]
 name = "automation-module-http"
-version = "0.0"
+version = "1.122.0"
 description = ""
 authors = []
 requires-python = ">=3.14,<4"
 dependencies = [
-	"sekoia-automation-sdk>=1.23.1,<2",
+	"sekoia-automation-sdk>=1.26.0,<2",
 	"requests>=2.32.5,<3",
 	"tenacity>=9.1.4,<10",
 ]
@@ -24,7 +24,6 @@ lint = [
 
 [tool.uv]
 package = false
-default-groups = ["dev", "lint"]
 
 [tool.ruff]
 line-length = 119
