@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Move from Poetry to `uv`.
+- Move to Python 3.14.
+
 ## 2025-12-11 - 1.4.7
 
 ### Fixed
@@ -53,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Little fix in the declaration 
+- Little fix in the declaration
 
 ## 2023-12-20 - 1.3.0
 
