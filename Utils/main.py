@@ -7,7 +7,8 @@ from utils.action_groupby import GroupProcessor
 from utils.action_utils_wait import UtilsWait
 from utils.password_generator import PasswordGenerator
 
-if __name__ == "__main__":
+
+def main():
     module = Module()
 
     module.register(FileUtilsReadJSONFile, "fileutils_readjsonfile")
@@ -18,3 +19,12 @@ if __name__ == "__main__":
     module.register(GroupProcessor, "action_groupby")
 
     module.run()
+
+
+def fission_main():
+    main()
+    return "ok"
+
+
+if __name__ == "__main__":
+    main()
