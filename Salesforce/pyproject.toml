@@ -69,11 +69,11 @@ filterwarnings = [
 addopts = "  --strict-markers\n  --tb=short\n  --cov=salesforce\n  --cov=client\n  --cov=logger\n  --cov=utils\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n  --numprocesses=auto\n  --asyncio-mode=auto\n"
 
 [tool.poetry.dependencies.sekoia-automation-sdk]
-version = "^1.22.1"
+version = "^1.26.0"
 extras = ["all"]
 
 [tool.poetry.dev-dependencies.black]
-version = "^24.3.0"
+version = "^25.11.0"
 extras = ["colorama"]
 
 [tool.poetry.dev-dependencies.poethepoet]

@@ -1,6 +1,7 @@
 """Tests related to connector."""
 
 from datetime import datetime, timedelta, timezone
+from posixpath import join as urljoin
 from shutil import rmtree
 from tempfile import mkdtemp
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -382,7 +383,7 @@ async def test_salesforce_connector_get_salesforce_events(
 
     with aioresponses() as mocked_responses:
         mocked_responses.post(
-            "{0}/services/oauth2/token?grant_type=client_credentials".format(salesforce_url),
+            urljoin(salesforce_url, "services/oauth2/token?grant_type=client_credentials"),
             status=200,
             payload=token_data,
         )
@@ -403,7 +404,7 @@ async def test_salesforce_connector_get_salesforce_events(
         )
 
         mocked_responses.get(
-            url="{0}{1}".format(salesforce_url, event_log_file.LogFile),
+            url=urljoin(salesforce_url, event_log_file.LogFile.lstrip("/")),
             status=200,
             body=csv_content.encode("utf-8"),
             headers={"Content-Length": "{0}".format(len(csv_content.encode("utf-8")))},
@@ -451,7 +452,7 @@ async def test_salesforce_connector_get_salesforce_events_1(
 
     with aioresponses() as mocked_responses:
         mocked_responses.post(
-            "{0}/services/oauth2/token?grant_type=client_credentials".format(salesforce_url),
+            urljoin(salesforce_url, "services/oauth2/token?grant_type=client_credentials"),
             status=200,
             payload=token_data,
         )
@@ -473,7 +474,7 @@ async def test_salesforce_connector_get_salesforce_events_1(
 
         # We try to return too large file to process it memory at this place, putting Content-Length to 1GB
         mocked_responses.get(
-            url="{0}{1}".format(salesforce_url, event_log_file.LogFile),
+            url=urljoin(salesforce_url, event_log_file.LogFile.lstrip("/")),
             status=200,
             body=csv_content.encode("utf-8"),
             headers={"Content-Length": "{0}".format(1024 * 1024 * 1024)},
@@ -525,7 +526,7 @@ async def test_salesforce_connector_get_salesforce_events_2(
 
     with aioresponses() as mocked_responses:
         mocked_responses.post(
-            "{0}/services/oauth2/token?grant_type=client_credentials".format(salesforce_url),
+            urljoin(salesforce_url, "services/oauth2/token?grant_type=client_credentials"),
             status=200,
             payload=token_data,
         )
@@ -547,7 +548,7 @@ async def test_salesforce_connector_get_salesforce_events_2(
 
         # We try to return too large file to process it memory at this place, putting Content-Length to 1GB
         mocked_responses.get(
-            url="{0}{1}".format(salesforce_url, event_log_file.LogFile),
+            url=urljoin(salesforce_url, event_log_file.LogFile.lstrip("/")),
             status=200,
             body=csv_content.encode("utf-8"),
             headers={"Content-Length": "{0}".format(1024 * 1024 * 1024)},
@@ -603,7 +604,7 @@ async def test_salesforce_connector_skips_processed_log_files(
 
     with aioresponses() as mocked_responses:
         mocked_responses.post(
-            "{0}/services/oauth2/token?grant_type=client_credentials".format(salesforce_url),
+            urljoin(salesforce_url, "services/oauth2/token?grant_type=client_credentials"),
             status=200,
             payload=token_data,
         )
