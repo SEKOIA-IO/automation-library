@@ -2,6 +2,7 @@ from microsoft_ad.account_validator import MicrosoftADAccountValidator
 from microsoft_ad.actions_base import MicrosoftADModule
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
 from microsoft_ad.search_actions import SearchAction
+from microsoft_ad.sync_assets_actions import SynchronizeAssetsAction
 from microsoft_ad.user_actions import DisableUserAction, EnableUserAction, ResetUserPasswordAction
 
 if __name__ == "__main__":
@@ -12,4 +13,5 @@ if __name__ == "__main__":
     module.register(DisableUserAction, "DisableUserAction")
     module.register(ResetUserPasswordAction, "ResetUserPasswordAction")
     module.register(SearchAction, "search-ad")
+    module.register(SynchronizeAssetsAction, "SynchronizeAssetsAction")
     module.run()

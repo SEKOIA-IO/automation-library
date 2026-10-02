@@ -1,0 +1,113 @@
+{
+  "name": "Synchronize AD assets with Sekoia.io",
+  "description": "Read users from Active Directory and create, merge or update the matching account assets in Sekoia.io. Designed to run on an on-premise runner.",
+  "uuid": "8109d625-424c-4edb-bafc-81261932c898",
+  "docker_parameters": "SynchronizeAssetsAction",
+  "arguments": {
+    "title": "SynchronizeAssetsArguments",
+    "type": "object",
+    "properties": {
+      "basedn": {
+        "title": "BaseDN",
+        "description": "The starting point of the users search within your Directory (e.g DC=example-domain,DC=com)",
+        "type": "string"
+      },
+      "search_filter": {
+        "title": "Search Filter",
+        "description": "LDAP filter selecting the users to synchronize",
+        "type": "string",
+        "default": "(&(objectCategory=person)(objectClass=user))"
+      },
+      "asset_synchronization_configuration": {
+        "title": "Assets configuration",
+        "description": "Mapping of AD attributes to the asset. e.g {\"asset_name_field\": \"sAMAccountName\", \"detection_properties\": {\"email\": [\"mail\"]}, \"contextual_properties\": {\"department\": \"department\"}}",
+        "type": "object",
+        "properties": {
+          "asset_name_field": {
+            "description": "AD attribute used as asset name",
+            "type": "string"
+          },
+          "detection_properties": {
+            "description": "Asset detection property to the list of AD attributes providing its values",
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "contextual_properties": {
+            "description": "Asset contextual property to the AD attribute providing its value",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "asset_name_field"
+        ]
+      },
+      "community_uuid": {
+        "title": "Community UUID",
+        "description": "Community of the assets. Searches, creations and merges are restricted to it",
+        "type": "string"
+      },
+      "sekoia_api_key": {
+        "title": "Sekoia.io API key",
+        "description": "API key allowed to read, create and update assets in the community",
+        "type": "string"
+      },
+      "sekoia_base_url": {
+        "title": "Sekoia.io base URL",
+        "description": "Base URL of the Sekoia.io API of your region",
+        "type": "string",
+        "default": "https://api.sekoia.io"
+      },
+      "delay_between_requests": {
+        "title": "Delay between requests",
+        "description": "Pause in seconds before each Sekoia.io API request, to stay under the rate limit",
+        "type": "number",
+        "minimum": 0,
+        "default": 0.2
+      }
+    },
+    "required": [
+      "basedn",
+      "asset_synchronization_configuration",
+      "community_uuid",
+      "sekoia_api_key"
+    ],
+    "secrets": [
+      "sekoia_api_key"
+    ]
+  },
+  "results": {
+    "title": "Results",
+    "type": "object",
+    "properties": {
+      "total": {
+        "description": "Number of AD users read",
+        "type": "integer"
+      },
+      "created": {
+        "description": "Number of assets created",
+        "type": "integer"
+      },
+      "updated": {
+        "description": "Number of assets updated",
+        "type": "integer"
+      },
+      "merged": {
+        "description": "Number of assets merged into another one",
+        "type": "integer"
+      },
+      "skipped": {
+        "description": "Number of AD users skipped (missing name attribute, several assets with the same name)",
+        "type": "integer"
+      }
+    }
+  },
+  "slug": "synchronize_assets"
+}

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-16 - 1.6.0
+
+### Added
+
+- Add action to synchronize Active Directory users with Sekoia.io assets from an on-premise runner, with community-scoped searches, request throttling and retries on HTTP 429
+
 ## 2026-07-13 - 1.5.8
 
 ### Fixed
