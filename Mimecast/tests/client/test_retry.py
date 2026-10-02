@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from unittest.mock import Mock
 
 import pytest
 from urllib3.response import HTTPResponse
@@ -30,3 +31,19 @@ def test_get_retry_after(headers: dict[str, str], has_retry_after: bool) -> None
     value = Retry().get_retry_after(response)
 
     assert (value is not None) is has_retry_after
+
+
+def test_retry_increment_notifies_observer() -> None:
+    observer = Mock()
+    retry = Retry(total=1, retry_observer=observer)
+
+    retry.increment(method="GET", url="https://example.test", error=Exception("boom"))
+
+    observer.assert_called_once()
+
+
+def test_retry_increment_without_observer() -> None:
+    retry = Retry(total=1)
+    next_retry = retry.increment(method="GET", url="https://example.test", error=Exception("boom"))
+
+    assert isinstance(next_retry, Retry)
