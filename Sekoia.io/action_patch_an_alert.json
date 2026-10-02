@@ -48,6 +48,12 @@
         "maxLength": 10000,
         "description": "Title of the alert",
         "in": "body"
+      },
+      "assignee": {
+        "type": "string",
+        "format": "uuid",
+        "description": "UUID of the user assigned to the alert",
+        "in": "body"
       }
     },
     "required": [
@@ -287,6 +293,10 @@
       },
       "target": {
         "type": "string"
+      },
+      "assignee": {
+        "type": "string",
+        "format": "uuid"
       }
     }
   },
