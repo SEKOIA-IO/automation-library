@@ -20,7 +20,7 @@ runs:
       id: install-dependencies
       shell: bash
       run: |
-        uv sync --all-extras --dev --frozen
+        uv sync --all-extras --all-groups --dev --frozen
       working-directory: ${{ inputs.module }}
 
     - name: Execute Ruff lint
