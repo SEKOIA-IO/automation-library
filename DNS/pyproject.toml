@@ -1,26 +1,23 @@
 [project]
 name = "automation-module-dns"
-version = "0.2.0"
+version = "0.3.0"
 description = "DNS automation module for Sekoia.io"
 authors = [{ name = "Khadim Bamba", email = "khadimkd004@gmail.com" }]
 requires-python = ">=3.14,<4"
 dependencies = [
-	"sekoia-automation-sdk>=1.23.1,<2",
+	"sekoia-automation-sdk>=1.26.0,<2",
 ]
 
 [dependency-groups]
 dev = [
 	"pytest>=9.0.3,<10",
 	"pytest-cov>=7.0.0,<8",
-]
-lint = [
 	"ruff>=0.14",
 	"mypy",
 ]
 
 [tool.uv]
 package = false
-default-groups = ["dev", "lint"]
 
 [tool.ruff]
 line-length = 119
@@ -53,4 +50,3 @@ pythonpath = ["."]
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]
-
