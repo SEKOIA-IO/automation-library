@@ -1,11 +1,11 @@
 [project]
 name = "automation-module-http"
-version = "0.0"
+version = "1.121.1"
 description = ""
 authors = []
 requires-python = ">=3.14,<4"
 dependencies = [
-	"sekoia-automation-sdk>=1.23.1,<2",
+	"sekoia-automation-sdk>=1.26.0,<2",
 	"requests>=2.32.5,<3",
 	"tenacity>=9.1.4,<10",
 ]
@@ -16,15 +16,12 @@ dev = [
 	"pytest-cov>=7.0.0,<8",
 	"requests",
 	"requests-mock>=1.12.1,<2",
-]
-lint = [
 	"ruff>=0.14",
 	"mypy",
 ]
 
 [tool.uv]
 package = false
-default-groups = ["dev", "lint"]
 
 [tool.ruff]
 line-length = 119
