@@ -23,7 +23,7 @@ class GetPrivateDomainsAction(Action):
             if item.strip() and not item.startswith("//")
         ]
 
-    def run(self, arguments: dict) -> dict:
+    def run(self, _arguments: dict) -> dict:
         raw = self._download_domain_list()
         domains = self._extract_private_domains(raw)
         return self.json_result("domains", domains)

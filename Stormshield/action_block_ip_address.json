@@ -1,0 +1,49 @@
+{
+  "name": "Block IP address",
+  "description": "Block an IPv4 or IPv6 address on Stormshield SNS.",
+  "uuid": "843522e6-ccb6-4adb-aa1f-8c9ec2034dc7",
+  "docker_parameters": "stormshield_sns_block_ip",
+  "arguments": {
+    "title": "BlockIPAddressArguments",
+    "type": "object",
+    "properties": {
+      "ip_address": {
+        "title": "IP Address",
+        "description": "IPv4 or IPv6 address to block",
+        "type": "string"
+      },
+      "duration_s": {
+        "title": "Duration (seconds)",
+        "description": "Duration in seconds for which the IP should be blocked",
+        "type": "integer",
+        "default": 3600
+      }
+    },
+    "required": [
+      "ip_address",
+      "duration_s"
+    ]
+  },
+  "results": {
+    "title": "Results",
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string"
+      },
+      "ip_address": {
+        "type": "string"
+      },
+      "duration_s": {
+        "type": "integer"
+      },
+      "message": {
+        "type": "string"
+      },
+      "response": {
+        "type": "object"
+      }
+    }
+  },
+  "slug": "block_ip_address"
+}

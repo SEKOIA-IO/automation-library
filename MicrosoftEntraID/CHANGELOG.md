@@ -7,6 +7,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-25 - 2.10.29
+
+### Changed
+
+- Set default frequency to 86400s (1 day) and minimum to 10800s (3 hours) in user asset connector
+
+## 2026-08-25 - 2.10.28
+
+### Changed
+
+- Add again `created_date_time` → `time` field mapping from `EntraIDAssetConnector.get_mapped_fields` to activate the reset checkpoint feature for this asset connector.
+
+## 2026-08-25 - 2.10.27
+
+### Changed
+
+- Remove `created_date_time` → `time` field mapping from `EntraIDAssetConnector.get_mapped_fields`
+
+## 2026-07-27 - 2.10.26
+
+### Added
+
+- Implement `get_mapped_fields` and `reset_checkpoint` abstract methods on `EntraIDAssetConnector` to support automatic checkpoint reset on field mapping changes
+
+## 2026-07-29 - 2.10.25
+
+### Fixed
+
+- Update the capability of the user asset connector
+
+## 2026-07-08 - 2.10.24
+
+### Fixed
+
+- Reset the Microsoft Graph client when timeout-related exceptions occur in the asset connector loop
+- Add a regression test for Graph `PoolTimeout` handling and client reset behavior
+
+
+## 2026-06-16 - 2.10.23
+
+### Fixed
+
+- Fix Account validator to check all permissions needed for the asset connector
+
+## 2026-05-21 - 2.10.22
+
+### Fixed
+
+- Fix checkpoint for sign-in events
+
+## 2026-05-05 - 2.10.21
+
+### Fixed
+
+- Fix HTTP transport resource leak in `EntraIDAssetConnector` by persisting `ClientSecretCredential` and closing it after each run
+
+## 2026-04-21 - 2.10.20
+
+### Changed
+
+- Update the sekoia-automation-sdk dependency to version 1.22.5
+
+## 2026-03-29 - 2.10.19
+
+### Changed
+
+- Update fields yaml file for asset connector
+
+## 2026-03-13 - 2.10.18
+
+### Added
+
+- Add `uid_alt` (on-premises SAM account name) and `last_time_password_change` fields to the asset connector user mapping, leveraging new SDK fields
+
+### Fixed
+
+- Fix `user_mapping.yml` to match actual OCSF SDK model fields and real implementation values (account type, enrichment names, removed non-existent fields)
+
+## 2026-02-20 - 2.10.17
+
+### Changed
+
+- Update sekoia-automation-sdk dependency to version 1.22.3
+- Update black dependency to version 26.1.0
+
+## 2026-02-23 - 2.10.16
+
+### Changed
+
+- Update field descriptions for "Reset User Password" actions
+
 ## 2026-02-11 - 2.10.15
 
 ### Added

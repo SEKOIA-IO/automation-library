@@ -1,0 +1,29 @@
+{
+  "name": "Get latest events from BeyondTrust Vault Account Activity",
+  "description": "Fetch BeyondTrust Vault Account Activity events",
+  "uuid": "8640adf6-d9b8-433a-a706-b24a6cb4dca5",
+  "docker_parameters": "connector_beyondtrust_pra_vault_account_activity",
+  "arguments": {
+    "title": "BeyondTrustPRAVaultAccountActivityConfiguration",
+    "type": "object",
+    "properties": {
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "frequency": {
+        "description": "Batch frequency in seconds",
+        "default": 300,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "intake_key"
+    ]
+  }
+}

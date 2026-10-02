@@ -1,6 +1,5 @@
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
-from functools import cached_property
 
 from azure.identity.aio import ClientSecretCredential  # async credentials only
 from kiota_abstractions.base_request_configuration import RequestConfiguration
@@ -53,6 +52,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._client: GraphServiceClient | None = None
+        self._credentials: ClientSecretCredential | None = None
         self._latest_time: float | None = None
 
     @property
@@ -65,12 +65,12 @@ class EntraIDAssetConnector(AsyncAssetConnector):
     @property
     def client(self) -> GraphServiceClient:
         if self._client is None:
-            credentials = ClientSecretCredential(
+            self._credentials = ClientSecretCredential(
                 tenant_id=self.module.configuration.tenant_id,
                 client_id=self.module.configuration.client_id,
                 client_secret=self.module.configuration.client_secret,
             )
-            auth_provider = AzureIdentityAuthenticationProvider(credentials)
+            auth_provider = AzureIdentityAuthenticationProvider(self._credentials)
             adapter = GraphRequestAdapter(auth_provider)
             self._client = GraphServiceClient(request_adapter=adapter)
 
@@ -79,6 +79,13 @@ class EntraIDAssetConnector(AsyncAssetConnector):
     @client.setter
     def client(self, value: GraphServiceClient) -> None:
         self._client = value
+
+    async def close_client(self) -> None:
+        """Close the Graph client and credentials to release HTTP transport resources."""
+        if self._credentials is not None:
+            await self._credentials.close()
+            self._credentials = None
+        self._client = None
 
     async def update_checkpoint(self) -> None:
         if self._latest_time is None:
@@ -90,6 +97,28 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 .replace(microsecond=0)
                 .isoformat()
             )
+
+    async def reset_checkpoint(self) -> None:
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self._latest_time = None
+
+    def get_mapped_fields(self) -> dict[str, str]:
+        return {
+            "id": "user.uid",
+            "display_name": "user.full_name",
+            "mail": "user.email_addr",
+            "user_principal_name": "user.name",
+            "company_name": "user.org.name",
+            "office_location": "user.org.ou_name",
+            "on_premises_sam_account_name": "user.uid_alt",
+            "account_enabled": "enrichments.account.data.is_enabled",
+            "department": "enrichments.employment.value",
+            "job_title": "enrichments.employment.value",
+            "sign_in_activity.last_sign_in_date_time": "enrichments.account.data.last_logon",
+            "last_password_change_date_time": "enrichments.account.data.last_time_password_change",
+            "created_date_time": "time",
+        }
 
     def map_fields(self, user: User, has_mfa: bool, groups: list[UserOCSFGroup], is_admin: bool) -> UserOCSFModel:
         """Map fields from User to UserOCSFModel.
@@ -149,6 +178,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             type_id=user_type_id,
             type=user_type_str,
             org=org,
+            uid_alt=user.on_premises_sam_account_name,
         )
 
         # Build enrichment data
@@ -161,6 +191,9 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 user.sign_in_activity.last_sign_in_date_time.isoformat()
                 if user.sign_in_activity and user.sign_in_activity.last_sign_in_date_time
                 else None
+            ),
+            last_time_password_change=(
+                user.last_password_change_date_time.timestamp() if user.last_password_change_date_time else None
             ),
         )
 
@@ -196,7 +229,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             time=datetime.timestamp(user.created_date_time) if user.created_date_time is not None else 0,
             metadata=metadata,
             user=user_data,
-            type_name="User Inventory",
+            type_name="User Inventory Info: Collect",
             enrichments=enrichments or None,
         )
         return user_ocsf_model
@@ -208,7 +241,6 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         groups: list[UserOCSFGroup] = []
         try:
             user_groups = await self.client.users.by_user_id(user_id).member_of.get()
-
             if user_groups and user_groups.value:
                 for group in user_groups.value:
                     if isinstance(group, Group):
@@ -298,6 +330,8 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 "companyName",
                 "officeLocation",
                 "isManagementRestricted",
+                "lastPasswordChangeDateTime",
+                "onPremisesSamAccountName",
             ],
             filter=f"createdDateTime ge {last_run_date}" if last_run_date else None,
             orderby=["createdDateTime asc"],
@@ -343,5 +377,8 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         """
         # Fetch users from Microsoft Graph API
         last_run_date: str | None = self.most_recent_date_seen
-        async for user in self.fetch_new_users(last_run_date=last_run_date):
-            yield user
+        try:
+            async for user in self.fetch_new_users(last_run_date=last_run_date):
+                yield user
+        finally:
+            await self.close_client()

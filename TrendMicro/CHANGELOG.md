@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-24 - 1.6.4
+
+### Changed
+
+- Log server response in case of an error
+- Ignore trailing slashes in configured URL
+- Update dependencies
+
 ## 2025-08-08 - 1.6.2
 
 ### Changed

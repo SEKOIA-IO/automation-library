@@ -57,9 +57,20 @@ mapping:
               "assigned_date": "2025-09-08T12:47:56.934516164Z",
               "applied_date": "2025-09-08T12:49:50.129791663Z",
               "rule_groups": []
+              "firewall": "enabled"
             }
           },
-          "groups": [],
+          "groups": [
+          {,
+              "id": "default",
+              "name": "default",
+              "description": "Default group for all devices"
+            },
+            {
+              "id": "managed-endpoints",
+              "name": "managed-endpoints"
+            }
+          ],
           "group_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
           "product_type_desc": "Server",
           "serial_number": "ec2c0000-0000-0000-0000-70de1a9d92c7",
@@ -82,6 +93,93 @@ mapping:
           "deployment_type": "Standard"
         }
   fields:
+    # OCSF EVENT CLASSIFICATION
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      logic: "Always 2 for 'Collect' activity"
+      description: "OCSF activity ID"
+
+    - source: "static: Collect"
+      target: "activity_name"
+      type: "string"
+      logic: "Always 'Collect' for asset inventory"
+      description: "OCSF activity name"
+
+    - source: "static: Discovery"
+      target: "category_name"
+      type: "string"
+      logic: "Always 'Discovery'"
+      description: "OCSF category name"
+
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      logic: "Always 5 for Discovery category"
+      description: "OCSF category UID"
+
+    - source: "static: Device Inventory Info"
+      target: "class_name"
+      type: "string"
+      logic: "Always 'Device Inventory Info'"
+      description: "OCSF class name"
+
+    - source: "static: 5001"
+      target: "class_uid"
+      type: "integer"
+      logic: "Always 5001 for Device Inventory Info"
+      description: "OCSF class UID"
+
+    - source: "static: 500102"
+      target: "type_uid"
+      type: "integer"
+      logic: "Always 500102 for Device Inventory Info: Collect type"
+      description: "OCSF type UID"
+
+    - source: "static: Device Inventory Info: Collect"
+      target: "type_name"
+      type: "string"
+      logic: "Always 'Device Inventory Info: Collect' for this specific event type"
+      description: "OCSF type name"
+
+    - source: "static: Informational"
+      target: "severity"
+      type: "string"
+      logic: "Always 'Informational' for inventory events"
+      description: "Event severity"
+
+    - source: "static: 1"
+      target: "severity_id"
+      type: "integer"
+      logic: "Always 1 for Informational severity"
+      description: "OCSF severity ID"
+
+    # TIMESTAMPS
+    - source: "modified_timestamp"
+      target: "time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch; use for OCSF event timestamp; fallback to first_seen"
+      description: "OCSF event timestamp"
+
+    # METADATA
+    - source: "static: CrowdStrike Falcon"
+      target: "metadata.product.name"
+      type: "string"
+      logic: "Always 'CrowdStrike Falcon'"
+      description: "Source product name"
+
+    - source: "static: N/A"
+      target: "metadata.product.version"
+      type: "string"
+      logic: "CrowdStrike API does not provide a single product version field; using 'N/A'"
+      description: "Product version"
+
+    - source: "static: 1.6.0"
+      target: "metadata.version"
+      type: "string"
+      logic: "Fixed OCSF schema version"
+      description: "OCSF schema version"
+
     # DEVICE IDENTIFICATION
     - source: "device_id"
       target: "device.uid"
@@ -95,19 +193,18 @@ mapping:
       logic: "Direct mapping of device hostname"
       description: "Device hostname"
 
-    - source: "hostname"
-      target: "device.name"
+    - source: "product_type_desc"
+      target: "device.type"
       type: "string"
-      logic: "Direct mapping of device hostname as name"
-      description: "Device name"
+      logic: "Map product_type_desc: 'server'→Server, 'workstation'→Desktop, 'desktop'→Desktop, 'laptop'→Laptop, 'mobile'→Mobile, 'tablet'→Tablet, 'virtual'→Virtual"
+      description: "Device type"
 
-    - source: "serial_number"
-      target: "device.uid_alt"
-      type: "string"
-      logic: "Direct mapping of device serial number"
-      description: "Alternative device identifier (serial number)"
+    - source: "product_type_desc"
+      target: "device.type_id"
+      type: "integer"
+      logic: "Map device type to OCSF ID: Server→1, Desktop→2, Laptop→8, Mobile→9, Tablet→10, Virtual→16, Unknown→0"
+      description: "OCSF device type ID"
 
-    # OPERATING SYSTEM
     - source: "platform_name"
       target: "device.os.type"
       type: "string"
@@ -126,37 +223,11 @@ mapping:
       logic: "Direct mapping of OS version string (e.g., '10 (Build 19045)', 'Ubuntu 20.04 LTS')"
       description: "Operating system name with version"
 
-    # DEVICE CLASSIFICATION
-    - source: "product_type_desc"
-      target: "device.type"
-      type: "string"
-      logic: "Map product_type_desc: 'server'→Server, 'workstation'→Desktop, 'desktop'→Desktop, 'laptop'→Laptop, 'mobile'→Mobile, 'tablet'→Tablet, 'virtual'→Virtual"
-      description: "Device type"
-
-    - source: "product_type_desc"
-      target: "device.type_id"
-      type: "integer"
-      logic: "Map device type to OCSF ID: Server→1, Desktop→2, Laptop→8, Mobile→9, Tablet→10, Virtual→16, Unknown→0"
-      description: "OCSF device type ID"
-
-    # HARDWARE
-    - source: "system_manufacturer"
-      target: "device.vendor_name"
-      type: "string"
-      logic: "Direct mapping of system manufacturer"
-      description: "Device hardware vendor/manufacturer"
-
-    - source: "system_product_name"
-      target: "device.model"
-      type: "string"
-      logic: "Direct mapping of system product name"
-      description: "Device model name"
-
-    - source: "bios_manufacturer"
-      target: "device.hypervisor"
-      type: "string"
-      logic: "Direct mapping of BIOS manufacturer (hypervisor for virtual devices)"
-      description: "Hypervisor or BIOS manufacturer"
+    - source: "external_ip"
+      target: "device.ip"
+      type: "ip"
+      logic: "Direct mapping of external IP address as primary device IP"
+      description: "Primary device IP address"
 
     # NETWORK INTERFACES - PRIMARY
     - source: "local_ip"
@@ -202,60 +273,78 @@ mapping:
       logic: "Always 'connection' for second network interface if it exists"
       description: "Connection interface name"
 
-    # PRIMARY IP ADDRESS
-    - source: "local_ip"
-      target: "device.ip"
-      type: "ip"
-      logic: "Prefer local_ip for primary device IP"
-      description: "Primary device IP address"
-
-    # NETWORK LOCATION
-    - source: "machine_domain"
-      target: "device.domain"
-      type: "string"
-      logic: "Direct mapping of machine domain"
-      description: "Device domain membership"
-
     - source: "default_gateway_ip"
       target: "device.subnet"
       type: "ip"
       logic: "Direct mapping of gateway IP as subnet reference"
       description: "Default gateway/subnet identifier"
 
-    # DEVICE GROUPS
-    - source: "groups[]"
-      target: "device.groups[]"
-      type: "object"
-      logic: "Map each group ID to a Group object with uid and name (fetched from API)"
-      description: "Device group memberships and assignments"
-
-    # SECURITY & POLICY STATUS
-    - source: "device_policies.firewall.applied"
-      target: "device.is_managed"
-      type: "boolean"
-      logic: "true if firewall policy is applied; indicates device is actively managed"
-      description: "Whether device is under active management"
-
-    - source: "status + reduced_functionality_mode + filesystem_containment_status"
-      target: "device.is_compliant"
-      type: "boolean"
-      logic: "true if status='normal' AND reduced_functionality_mode='no' AND filesystem_containment_status='normal'; else false; null if unable to determine"
-      description: "Device compliance status"
-
-    - source: "static: Informational"
-      target: "device.state"
+    - source: "serial_number"
+      target: "device.uid_alt"
       type: "string"
-      logic: "Map status field: 'normal'→'Normal', 'issue'→'Issue', 'offline'→'Offline'"
-      description: "Device operational state"
+      logic: "Direct mapping of device serial number"
+      description: "Alternative device identifier (serial number)"
 
-    # AGENT & SOFTWARE
-    - source: "agent_version"
-      target: "device.agent_version"
+    - source: "machine_domain"
+      target: "device.domain"
       type: "string"
-      logic: "Direct mapping of CrowdStrike agent version"
-      description: "CrowdStrike Falcon agent version"
+      logic: "Direct mapping of machine domain"
+      description: "Device domain membership"
 
-    # GEOGRAPHIC/ORGANIZATIONAL
+    - source: "hostname"
+      target: "device.name"
+      type: "string"
+      logic: "Direct mapping of device hostname as name"
+      description: "Device name"
+
+    - source: "first_seen"
+      target: "device.first_seen_time"
+      type: "timestamp"
+      logic: "Transform first_seen to timestamp"
+      description: "First seen timestamp for device"
+
+    - source: "last_seen"
+      target: "device.last_seen_time"
+      type: "timestamp"
+      logic: "Transform last_seen to timestamp"
+      description: "Last seen timestamp for device"
+
+    - source: "first_seen"
+      target: "device.created_time"
+      type: "timestamp"
+      logic: "Use first_seen as device created_time; convert to timestamp"
+      description: "Device creation timestamp"
+
+    - source: "agent_local_time"
+      target: "device.boot_time"
+      type: "timestamp"
+      logic: "Use agent_local_time as proxy for device boot time; convert to timestamp"
+      description: "Device boot time (approximation from agent local time)"
+
+    - source: "system_product_name"
+      target: "device.model"
+      type: "string"
+      logic: "Direct mapping of system product name"
+      description: "Device model name"
+
+    - source: "system_manufacturer"
+      target: "device.vendor_name"
+      type: "string"
+      logic: "Direct mapping of system manufacturer"
+      description: "Device hardware vendor/manufacturer"
+
+    - source: "bios_manufacturer"
+      target: "device.hypervisor"
+      type: "string"
+      logic: "Direct mapping of BIOS manufacturer (hypervisor for virtual devices)"
+      description: "Hypervisor or BIOS manufacturer"
+
+    - source: "product_type_desc"
+      target: "device.desc"
+      type: "string"
+      logic: "Direct mapping of product type description"
+      description: "Device description based on product type"
+
     - source: "zone_group"
       target: "device.region"
       type: "string"
@@ -268,123 +357,66 @@ mapping:
       logic: "Direct mapping of CrowdStrike CID (customer ID)"
       description: "Organization/Customer unique identifier"
 
-    - source: "static: CrowdStrike"
+    - source: "service_provider"
       target: "device.org.name"
       type: "string"
-      logic: "Always 'CrowdStrike' as organization source"
+      logic: "Direct mapping of service provider as organization name"
       description: "Organization name"
 
-    # TIMESTAMPS
-    - source: "first_seen"
-      target: "device.created_time"
-      type: "timestamp"
-      logic: "Convert ISO 8601 to Unix epoch"
-      description: "Device first detection timestamp"
-
-    - source: "agent_local_time"
-      target: "device.boot_time"
-      type: "timestamp"
-      logic: "Convert ISO 8601 to Unix epoch; represents last known agent local time (proxy for boot)"
-      description: "Device boot time (approximation from agent local time)"
-
-    - source: "last_seen"
-      target: "device.updated_time"
-      type: "timestamp"
-      logic: "Convert ISO 8601 to Unix epoch"
-      description: "Device last seen/updated timestamp"
-
-    - source: "modified_timestamp"
-      target: "time"
-      type: "timestamp"
-      logic: "Convert ISO 8601 to Unix epoch; use for OCSF event timestamp; fallback to first_seen"
-      description: "OCSF event timestamp"
-
-    # DESCRIPTION
-    - source: "product_type_desc + platform_name"
-      target: "device.desc"
+    - source: "id"
+      target: "device.groups[].uid"
       type: "string"
-      logic: "Concatenate as '<product_type_desc> - <platform_name>' (e.g., 'Workstation - Windows')"
-      description: "Device description"
+      logic: "Map each group ID to device.groups array with uid"
+      description: "Unique identifier for device group membership"
 
-    # METADATA
-    - source: "static: CrowdStrike Falcon"
-      target: "metadata.product.name"
+    - source: "name"
+      target: "device.groups[].name"
       type: "string"
-      logic: "Always 'CrowdStrike Falcon'"
-      description: "Source product name"
+      logic: "Map each group name to device.groups array with name"
+      description: "Name of device group membership"
 
-    - source: "agent_version"
-      target: "metadata.product.version"
+    - source: "desc"
+      target: "device.groups[].desc"
       type: "string"
-      logic: "Direct mapping of agent_version"
-      description: "Product version (agent version)"
+      logic: "Optional description for device group; not provided in CrowdStrike API, set to null or default value"
+      description: "Description of device group membership"
 
-    - source: "static: 1.6.0"
-      target: "metadata.version"
+    - source: "zone_group"
+      target: "device.location.region"
       type: "string"
-      logic: "Fixed OCSF schema version"
-      description: "OCSF schema version"
+      logic: "Map zone_group to device location region; use same value as device.region for consistency"
+      description: "Device geographic region (mapped from zone_group)"
 
-    # OCSF EVENT CLASSIFICATION
-    - source: "static: 2"
-      target: "activity_id"
-      type: "integer"
-      logic: "Always 2 for 'Collect' activity"
-      description: "OCSF activity ID"
+    - source: "static: True"
+      target: "device.is_managed"
+      type: "boolean"
+      logic: "Set to true because it's managed by crowdstrike falcon"
+      description: "Whether device is under active management"
 
-    - source: "static: Collect"
-      target: "activity_name"
+    - source: "status + reduced_functionality_mode + filesystem_containment_status"
+      target: "device.is_compliant"
+      type: "boolean"
+      logic: "true if status='normal' AND reduced_functionality_mode='no' AND filesystem_containment_status='normal'; else false; null if unable to determine"
+      description: "Device compliance status"
+
+    # ENRICHMENT
+    - source : "static: compliance"
+      target: "enrichment[].name"
       type: "string"
-      logic: "Always 'Collect' for asset inventory"
-      description: "OCSF activity name"
+      logic: "Always 'compliance' for this enrichment type"
+      description: "Enrichement compliance name"
 
-    - source: "static: Discovery"
-      target: "category_name"
+    - source: "static: hygiene"
+      target: "enrichment[].value"
       type: "string"
-      logic: "Always 'Discovery'"
-      description: "OCSF category name"
+      logic: "Always 'hygiene' for this enrichment value"
+      description: "Enrichement compliance value"
 
-    - source: "static: 5"
-      target: "category_uid"
-      type: "integer"
-      logic: "Always 5 for Discovery category"
-      description: "OCSF category UID"
-
-    - source: "static: Device Inventory Info"
-      target: "class_name"
+    - source: "device_policies.firewall"
+      target: "enrichment[].data.Firwall_status"
       type: "string"
-      logic: "Always 'Device Inventory Info'"
-      description: "OCSF class name"
-
-    - source: "static: 5001"
-      target: "class_uid"
-      type: "integer"
-      logic: "Always 5001 for Device Inventory Info"
-      description: "OCSF class UID"
-
-    - source: "computed: 500100 + activity_id"
-      target: "type_uid"
-      type: "integer"
-      logic: "Base 500100 + activity_id (2 = 500102)"
-      description: "OCSF type UID"
-
-    - source: "computed: class_name + ': ' + activity_name"
-      target: "type_name"
-      type: "string"
-      logic: "Concatenate 'Device Inventory Info: Collect'"
-      description: "OCSF type name"
-
-    - source: "static: Informational"
-      target: "severity"
-      type: "string"
-      logic: "Always 'Informational' for inventory events"
-      description: "Event severity"
-
-    - source: "static: 1"
-      target: "severity_id"
-      type: "integer"
-      logic: "Always 1 for Informational severity"
-      description: "OCSF severity ID"
+      logic: "If firwall is enabled, set to 'enabled'; if disabled, set to 'disabled''"
+      description: "Enrichement data value"
 
   ocsf_samples:
     - name: "Device Inventory Info"

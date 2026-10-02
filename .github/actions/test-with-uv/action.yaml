@@ -1,0 +1,49 @@
+name: Test with uv
+description: Test an automation module with uv project manager
+
+inputs:
+  module:
+    description: "The module to test"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      with:
+        enable-cache: true
+        working-directory: ${{ inputs.module }}
+        activate-environment: true
+
+    - name: Install Dependencies
+      id: install-dependencies
+      shell: bash
+      run: |
+        uv sync --all-extras --all-groups --dev --frozen
+      working-directory: ${{ inputs.module }}
+
+    - name: Execute Ruff lint
+      shell: bash
+      run: |
+        uv run ruff check . --output-format=github
+      working-directory: ${{ inputs.module }}
+
+    - name: Execute Ruff format check
+      shell: bash
+      run: |
+        uv run ruff format --check . --output-format=github
+      working-directory: ${{ inputs.module }}
+
+    - name: Execute Mypy
+      shell: bash
+      run: |
+        uv run mypy .
+      working-directory: ${{ inputs.module }}
+
+    - name: Execute Python tests
+      id: execute-tests
+      shell: bash
+      run: |
+        uv run pytest --junit-xml=junit.xml --cov-report term --cov-report xml:coverage.xml --cov . --cov-config pyproject.toml
+      working-directory: ${{ inputs.module }}

@@ -1,0 +1,161 @@
+{
+  "name": "Block SHA-1 and/or SHA-256",
+  "description": "Create a blocklist item for a SHA1 and/or SHA256 hash",
+  "uuid": "02495450-6a04-56f9-a127-54506af253fd",
+  "docker_parameters": "sentinelone_blocklist_create_item",
+  "arguments": {
+    "title": "CreateBlocklistItemActionArguments",
+    "type": "object",
+    "properties": {
+      "os_type": {
+        "title": "Os Type",
+        "type": "string",
+        "enum": ["linux", "macos", "windows", "windows_legacy"]
+      },
+      "source": {
+        "title": "Source",
+        "type": "string"
+      },
+      "description": {
+        "title": "Description",
+        "type": "string"
+      },
+      "sha_1": {
+        "title": "SHA-1",
+        "type": "string"
+      },
+      "sha_256": {
+        "title": "SHA-256",
+        "type": "string"
+      },
+      "filter_tenant_scope": {
+        "title": "Filter Tenant Scope",
+        "default": false,
+        "type": "boolean"
+      },
+      "filter_account_ids": {
+        "title": "Filter Account Ids",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "filter_site_ids": {
+        "title": "Filter Site Ids",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "filter_group_ids": {
+        "title": "Filter Group Ids",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "anyOf": [
+      { "required": ["os_type", "sha_1"] },
+      { "required": ["os_type", "sha_256"] }
+    ]
+  },
+  "results": {
+    "type": "object",
+    "required": ["data"],
+    "properties": {
+      "errors": {
+        "type": "array",
+        "description": "Errors",
+        "items": { "type": "object" },
+        "x-nullable": true
+      },
+      "data": {
+        "description": "Response data",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "description": "The ID of the restriction",
+              "type": "string"
+            },
+            "hashId": {
+              "type": "string",
+              "description": "Hash id"
+            },
+            "description": {
+              "type": ["string", "null"],
+              "description": "Description"
+            },
+            "userId": {
+              "type": "string",
+              "description": "ID of the creating user"
+            },
+            "userName": {
+              "type": "string",
+              "description": "Name of the creating user"
+            },
+            "source": {
+              "type": ["string", "null"],
+              "description": "Source: cloud, user, or action_from_threat",
+              "enum": ["user", "cloud", "action_from_threat", "catalog"]
+            },
+            "value": { "type": ["string", "null"], "description": "SHA1 hash" },
+            "sha256Value": {
+              "type": ["string", "null"],
+              "description": "SHA256 hash value"
+            },
+            "createdAt": {
+              "type": "string",
+              "description": "Timestamp of item creation"
+            },
+            "updatedAt": {
+              "type": "string",
+              "description": "Timestamp of item update"
+            },
+            "osType": {
+              "type": "string",
+              "description": "os_type",
+              "enum": ["macos", "windows", "linux", "windows_legacy"]
+            },
+            "type": { "type": "string", "description": "type" },
+            "scopeName": { "type": "string", "description": "Scope name" },
+            "scope": {
+              "description": "Scope",
+              "type": "object",
+              "properties": {
+                "groupIds": {
+                  "type": "array",
+                  "description": "Group ids",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "siteIds": {
+                  "type": "array",
+                  "description": "Site ids",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "accountIds": {
+                  "type": "array",
+                  "description": "Account ids",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "tenant": { "type": "boolean", "description": "Tenant" }
+              }
+            },
+            "notRecommended": {
+              "type": ["string", "null"],
+              "description": "Not recommended"
+            }
+          }
+        }
+      }
+    }
+  }
+}

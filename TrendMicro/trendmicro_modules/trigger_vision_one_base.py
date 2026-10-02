@@ -6,7 +6,7 @@ from typing import Generator
 
 import orjson
 import requests
-from pydantic import Field
+from pydantic.v1 import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from .client import TrendMicroVisionApiClient

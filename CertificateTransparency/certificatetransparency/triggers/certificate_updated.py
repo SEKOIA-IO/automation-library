@@ -1,4 +1,5 @@
 import re
+from typing import ClassVar
 
 import certstream
 import numpy
@@ -6,7 +7,7 @@ from sekoia_automation.trigger import Trigger
 
 
 class CertificateUpdatedTrigger(Trigger):
-    _ignoring: list[str] = ["email", "mail", "cloud"]
+    _ignoring: ClassVar[list[str]] = ["email", "mail", "cloud"]
 
     _re_split: re.Pattern
 
@@ -25,7 +26,7 @@ class CertificateUpdatedTrigger(Trigger):
         certstream.listen_for_events(self.analyse_domain, url="wss://certstream.calidog.io/")
         self.log("Trigger stopping")
 
-    def analyse_domain(self, message, context):
+    def analyse_domain(self, message, _context):
         """Callback method for a new event"""
 
         if message["message_type"] == "certificate_update":

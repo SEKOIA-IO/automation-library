@@ -3,16 +3,16 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "url": {
-        "description": "Url of the file to download",
+        "description": "URL of the file to download",
         "type": "string",
         "format": "uri"
       },
       "headers": {
-        "description": "Headers to use when sending the requests. i.e. {\"authorization\": \"Bearer foo\"}",
+        "description": "Headers to use when sending requests. e.g. {\"authorization\": \"Bearer foo\"}",
         "type": "object"
       },
       "verify_ssl": {
-        "description": "Wether the SSL certificate must be verified. Default to true.",
+        "description": "Whether the SSL certificate must be verified. Default to true.",
         "type": "boolean",
         "default": true
       }
@@ -23,19 +23,24 @@
     "title": "Arguments",
     "type": "object"
   },
-  "description": "Donwload the given file and save it",
+  "description": "Download the given file and save it",
   "docker_parameters": "download-file",
   "name": "Download File",
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "file_path": {
-        "description": "File path on disk",
+        "description": "Absolute file path on disk (legacy; prefer file_relative_path for chaining with other modules).",
+        "type": "string"
+      },
+      "file_relative_path": {
+        "description": "File path relative to the playbook data directory, suitable as input for other modules (for example: Scan File).",
         "type": "string"
       }
     },
     "required": [
-      "file_path"
+      "file_path",
+      "file_relative_path"
     ],
     "title": "Results",
     "type": "object"

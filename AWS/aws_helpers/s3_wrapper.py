@@ -1,20 +1,19 @@
 """Aws s3 wrapper."""
 
 import asyncio
-import gzip
 import io
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from aiofiles.threadpool.binary import AsyncBufferedReader
 from loguru import logger
-from pydantic.v1 import Field
-from sekoia_automation.aio.helpers.aws.client import AwsClient, AwsConfiguration
+from pydantic import Field
 
-from aws_helpers.utils import is_gzip_compressed, async_gzip_open, AsyncReader
+from aws_helpers.client import AwsClient, AwsClientConfiguration
+from aws_helpers.utils import AsyncReader, async_gzip_open, is_gzip_compressed
 
 
-class S3Configuration(AwsConfiguration):
+class S3Configuration(AwsClientConfiguration):
     """AWS S3 wrapper configuration."""
 
     bucket: str | None = Field(default=None, description="AWS S3 bucket name")
@@ -57,12 +56,51 @@ class S3Wrapper(AwsClient[S3Configuration]):
         async with self.get_client("s3") as s3:
             response = await s3.get_object(Bucket=bucket, Key=key)
             async with response["Body"] as stream:
-                with io.BytesIO(await stream.read()) as content:
-                    if is_gzip_compressed(content.getbuffer()):
-                        async_reader = await async_gzip_open(content, loop=loop)
-                    else:
-                        async_reader = AsyncBufferedReader(content, loop=loop, executor=None)
-                    try:
-                        yield async_reader
-                    finally:
-                        await async_reader.close()
+                raw = await stream.read()
+
+        # check the magic number on the raw bytes: BytesIO.getbuffer() would copy the whole object
+        compressed = is_gzip_compressed(raw)
+        logger.info(f"Read {len(raw)} bytes{' (gzip)' if compressed else ''} from object {key}")
+
+        with io.BytesIO(raw) as content:
+            if compressed:
+                async_reader = await async_gzip_open(content, loop=loop)
+            else:
+                async_reader = AsyncBufferedReader(content, loop=loop, executor=None)
+            try:
+                yield async_reader
+            finally:
+                await async_reader.close()
+
+    async def list_objects(
+        self,
+        bucket: str | None = None,
+        prefix: str | None = None,
+        start_after: str | None = None,
+    ) -> AsyncGenerator[dict, None]:
+        """
+        List the objects available in a S3 bucket.
+
+        The objects are returned in lexicographical order of their keys. The
+        ``start_after`` parameter relies on the ``list_objects_v2`` ``StartAfter``
+        option to only return the keys that are strictly greater than the marker,
+        which allows the caller to implement a checkpoint and avoid reading the
+        same object multiple times.
+        """
+        bucket = bucket or self._configuration.bucket
+
+        kwargs: dict[str, str] = {"Bucket": bucket} if bucket else {}
+        if prefix:
+            kwargs["Prefix"] = prefix
+
+        if start_after:
+            kwargs["StartAfter"] = start_after
+
+        logger.info(f"Listing objects from bucket {bucket}")
+
+        async with self.get_client("s3") as s3:
+            paginator = s3.get_paginator("list_objects_v2")
+            async for page in paginator.paginate(**kwargs):
+                for obj in page.get("Contents", []):
+                    if obj.get("Size", 0) > 0:
+                        yield obj

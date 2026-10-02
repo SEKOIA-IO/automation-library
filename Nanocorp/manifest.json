@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Nanocorp",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Nanocorp provides network observability and security events, offering centralized visibility and enhanced detection capabilities across the infrastructure.",
+  "name": "Nanocorp",
+  "uuid": "0ebb28ba-5748-4617-af1f-51b7ca31bf9a",
+  "version": "1.0.0",
+  "slug": "Nanocorp",
+  "categories": [
+    "Network"
+  ]
+}

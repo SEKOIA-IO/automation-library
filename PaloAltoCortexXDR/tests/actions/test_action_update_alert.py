@@ -52,4 +52,4 @@ def test_run_action(action, arguments):
             },
         )
 
-        assert action.run(arguments) == {"result": "123"}
+        assert action.run(arguments.dict()) == {"result": "123"}

@@ -449,7 +449,10 @@ def test_parse_db_invalid_rows(trigger, mocked_uuid):
     assert (
         list(
             trigger._parse_db_row(
-                b"1.0.16.0	2001:0db8:0000:85a3:0000:0000:ac1f:8001	2519	JP	VECTANT ARTERIA Networks Corporation\n",
+                (
+                    b"1.0.16.0	2001:0db8:0000:85a3:0000:0000:ac1f:8001	"
+                    b"2519	JP	VECTANT ARTERIA Networks Corporation\n"
+                ),
                 tag_valid_from="2020-05-29T20:37:43.010966Z",
                 tag_valid_until="2020-05-30T06:37:43.010966Z",
                 asn_cache=dict(),

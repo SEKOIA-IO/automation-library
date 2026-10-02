@@ -1,10 +1,11 @@
 from functools import cached_property
 from collections.abc import Generator
-from typing import Any, Literal
+from typing import Literal
 from datetime import datetime
 
 from dateutil.parser import isoparse
 from sekoia_automation.asset_connector import AssetConnector
+from sekoia_automation.asset_connector.models.connector import AssetList
 from sekoia_automation.asset_connector.models.ocsf.base import (
     Metadata,
     Product,
@@ -26,6 +27,7 @@ from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.storage import PersistentJSON
 
+from crowdstrike_falcon.asset_connectors.crowdstrike_device_model import CrowdStrikeDevice
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
 
 
@@ -39,6 +41,9 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._latest_id = None
+        self._push_failed = False
+        self._groups_cache: dict[str, Group] = {}
+        self._groups_fetch_disabled = False
 
     @property
     def most_recent_device_id(self) -> str | None:
@@ -83,13 +88,13 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
             return None
         return mac.replace("-", ":").upper()
 
-    def get_device_os(self, device: dict[str, Any]) -> OperatingSystem:
+    def get_device_os(self, device: CrowdStrikeDevice) -> OperatingSystem:
         """
         Determine the operating system from device data.
         Maps platform_name to OCSF OS type and includes version info.
         """
-        platform_name = device.get("platform_name")
-        os_version = device.get("os_version")
+        platform_name = device.platform_name
+        os_version = device.os_version
 
         if not platform_name:
             return OperatingSystem(
@@ -124,21 +129,21 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
             type_id=OSTypeId.UNKNOWN,
         )
 
-    def get_device_type(self, device: dict[str, Any]) -> tuple[DeviceTypeId, DeviceTypeStr]:
+    def get_device_type(self, device: CrowdStrikeDevice) -> tuple[DeviceTypeId, DeviceTypeStr]:
         """
         Determine the device type from product_type_desc.
         Maps CrowdStrike product types to OCSF device types.
         """
-        product_type_desc = device.get("product_type_desc", "")
-        device_type = product_type_desc.lower() if product_type_desc else ""
+        product_type_desc = device.product_type_desc or ""
+        device_type = product_type_desc.lower()
 
         type_mapping: dict[str, tuple[DeviceTypeId, DeviceTypeStr]] = {
             "server": (DeviceTypeId.SERVER, DeviceTypeStr.SERVER),
             "workstation": (DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP),
             "desktop": (DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP),
-            "laptop": (DeviceTypeId.LAPTOP, DeviceTypeStr.LAPTOP),
+            "laptop": (DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP),
             "mobile": (DeviceTypeId.MOBILE, DeviceTypeStr.MOBILE),
-            "tablet": (DeviceTypeId.TABLET, DeviceTypeStr.TABLET),
+            "tablet": (DeviceTypeId.MOBILE, DeviceTypeStr.MOBILE),
             "phone": (DeviceTypeId.MOBILE, DeviceTypeStr.MOBILE),
             "virtual": (DeviceTypeId.VIRTUAL, DeviceTypeStr.VIRTUAL),
         }
@@ -149,25 +154,25 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
 
         return DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN
 
-    def get_firewall_status(self, device: dict[str, Any]) -> Literal["Disabled", "Enabled"]:
+    def get_firewall_status(self, device: CrowdStrikeDevice) -> Literal["Disabled", "Enabled"]:
         """
         Determine firewall status from device policies.
         """
-        firewall_policy = device.get("device_policies", {}).get("firewall", {})
-        if firewall_policy.get("applied"):
+        firewall_policy = device.device_policies.get("firewall")
+        if firewall_policy and firewall_policy.applied:
             return "Enabled"
         return "Disabled"
 
-    def get_network_interfaces(self, device: dict[str, Any]) -> list[NetworkInterface] | None:
+    def get_network_interfaces(self, device: CrowdStrikeDevice) -> list[NetworkInterface] | None:
         """
         Extract network interfaces from device data.
         Creates interfaces for local IP, external IP, and connection IP.
         """
         interfaces: list[NetworkInterface] = []
 
-        local_ip = device.get("local_ip")
-        mac_address = device.get("mac_address")
-        hostname = device.get("hostname")
+        local_ip = device.local_ip
+        mac_address = device.mac_address
+        hostname = device.hostname
 
         if local_ip or mac_address:
             interfaces.append(
@@ -179,8 +184,8 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
                 )
             )
 
-        connection_ip = device.get("connection_ip")
-        connection_mac = device.get("connection_mac_address")
+        connection_ip = device.connection_ip
+        connection_mac = device.connection_mac_address
 
         if connection_ip and connection_ip != local_ip:
             interfaces.append(
@@ -193,61 +198,91 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
 
         return interfaces if interfaces else None
 
-    def get_groups(self, device: dict[str, Any]) -> list[Group] | None:
+    def fetch_groups(self, group_ids: list[str]) -> None:
+        """
+        Fetch, in a single request, the details of the groups that are not cached yet.
+
+        The details are unavailable when the API client misses the `Host groups: Read` scope.
+        In that case, the fetching is disabled for the remaining of the cycle to avoid
+        repeating a request that is known to fail for every device of the batch.
+        """
+        if self._groups_fetch_disabled:
+            return
+
+        # deduplicate the identifiers, keeping their order, and drop the already cached ones
+        missing_ids = [
+            group_id for group_id in dict.fromkeys(group_ids) if group_id and group_id not in self._groups_cache
+        ]
+
+        if not missing_ids:
+            return
+
+        try:
+            for group_info in self.client.get_host_groups(missing_ids):
+                group_id = group_info.get("id")
+                if not group_id:
+                    continue
+
+                self._groups_cache[group_id] = Group(
+                    uid=group_id,
+                    name=group_info.get("name") or "Unknown",
+                    desc=group_info.get("description") or None,
+                )
+        except Exception as e:
+            self._groups_fetch_disabled = True
+            self.log(
+                f"Failed to fetch group details: {e}. ",
+                level="warning",
+            )
+
+    def get_groups(self, device: CrowdStrikeDevice) -> list[Group] | None:
         """
         Extract groups from device data and fetch details from API.
+
+        Resolved groups are cached for the whole fetch cycle: a tenant has a handful of
+        host groups but tens of thousands of devices, and looking them up per device
+        turns the run into one extra API call per device.
         """
-        raw_groups = device.get("groups", [])
+        raw_groups = [group_id for group_id in device.groups if group_id]
         if not raw_groups:
             return None
 
-        groups: list[Group] = []
-        try:
-            for group_info in self.client.get_host_groups(raw_groups):
-                groups.append(
-                    Group(
-                        uid=group_info.get("id"),
-                        name=group_info.get("name", "Unknown"),
-                        desc=group_info.get("description") or None,
-                    )
-                )
-        except Exception as e:
-            self.log(f"Failed to fetch group details: {e}", level="warning")
-            groups = [Group(uid=g, name=g) for g in raw_groups if g]
+        self.fetch_groups(raw_groups)
 
-        return groups if groups else None
+        # fallback on the identifier as name for the groups without details
+        return [self._groups_cache.get(group_id) or Group(uid=group_id, name=group_id) for group_id in raw_groups]
 
-    def get_location(self, device: dict[str, Any]) -> GeoLocation | None:
+    def get_location(self, device: CrowdStrikeDevice) -> GeoLocation | None:
         """
         Extract geographic location from device data.
         Uses zone_group for region information.
         """
-        zone_group = device.get("zone_group")
+        zone_group = device.zone_group
         if zone_group:
             return GeoLocation(country=zone_group[:2].upper() if len(zone_group) >= 2 else None)
         return None
 
-    def get_organization(self, device: dict[str, Any]) -> Organization | None:
+    def get_organization(self, device: CrowdStrikeDevice) -> Organization | None:
         """
         Extract organization info from device data.
         Uses CID and service provider account info.
         """
-        cid = device.get("cid")
+        cid = device.cid
 
         if cid:
             return Organization(
                 uid=cid,
-                name=device.get("service_provider"),
+                name=device.service_provider or "Unknown",
             )
         return None
 
-    def is_device_compliant(self, device: dict[str, Any]) -> bool | None:
+    def is_device_compliant(self, device: CrowdStrikeDevice) -> bool | None:
         """
         Determine if device is compliant based on policies and status.
         """
-        status = device.get("status")
-        rfm = device.get("reduced_functionality_mode")
-        containment = device.get("filesystem_containment_status")
+        status = device.status
+        rfm = device.reduced_functionality_mode
+        containment = device.filesystem_containment_status
 
         # Device is compliant if status is normal, not in RFM, and not contained
         if status == "normal" and rfm == "no" and containment == "normal":
@@ -256,11 +291,16 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
             return False
         return None
 
-    def get_enrichments(self, device: dict[str, Any]) -> list[DeviceEnrichmentObject]:
+    def get_enrichments(self, device: CrowdStrikeDevice) -> list[DeviceEnrichmentObject]:
         """
         Create enrichment objects with additional CrowdStrike-specific data.
         """
         enrichments: list[DeviceEnrichmentObject] = []
+
+        users = [device.last_login_user] if device.last_login_user else None
+        fqdn = None
+        if device.hostname and device.machine_domain:
+            fqdn = f"{device.hostname}.{device.machine_domain}"
 
         enrichments.append(
             DeviceEnrichmentObject(
@@ -268,19 +308,21 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
                 value="hygiene",
                 data=DeviceDataObject(
                     Firewall_status=self.get_firewall_status(device),
+                    Users=users,
+                    Full_qualified_domain_name=fqdn,
                 ),
             )
         )
 
         return enrichments
 
-    def map_device_fields(self, device: dict[str, Any]) -> DeviceOCSFModel | None:
+    def map_device_fields(self, device: CrowdStrikeDevice) -> DeviceOCSFModel | None:
         """
         Map Crowdstrike device fields to OCSF device model.
         Extracts maximum fields from CrowdStrike API response.
         """
-        device_id = device.get("device_id")
-        hostname = device.get("hostname")
+        device_id = device.device_id
+        hostname = device.hostname
 
         if not device_id:
             self.log(f"Skipping device: missing device_id. Data: {device}", level="warning")
@@ -299,10 +341,10 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         type_id, type_str = self.get_device_type(device)
 
         # Timestamps
-        first_seen = device.get("first_seen")
-        last_seen = device.get("last_seen")
-        modified_timestamp = device.get("modified_timestamp")
-        agent_local_time = device.get("agent_local_time")
+        first_seen = device.first_seen
+        last_seen = device.last_seen
+        modified_timestamp = device.modified_timestamp
+        agent_local_time = device.agent_local_time
 
         # Create Device object with all available fields
         crowdstrike_device = Device(
@@ -314,12 +356,12 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
             # Operating System
             os=device_os,
             # Network
-            ip=device.get("external_ip"),
+            ip=device.external_ip,
             network_interfaces=self.get_network_interfaces(device),
-            subnet=device.get("default_gateway_ip"),
+            subnet=device.default_gateway_ip,
             # Identity
-            uid_alt=device.get("serial_number"),
-            domain=device.get("machine_domain") or None,
+            uid_alt=device.serial_number,
+            domain=device.machine_domain or None,
             name=hostname,
             # Timestamps
             first_seen_time=self.parse_timestamp(first_seen),
@@ -327,12 +369,12 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
             created_time=self.parse_timestamp(first_seen),
             boot_time=self.parse_timestamp(agent_local_time),
             # Hardware
-            model=device.get("system_product_name"),
-            vendor_name=device.get("system_manufacturer"),
-            hypervisor=device.get("bios_manufacturer"),
-            desc=device.get("product_type_desc"),
+            model=device.system_product_name,
+            vendor_name=device.system_manufacturer,
+            hypervisor=device.bios_manufacturer,
+            desc=device.product_type_desc,
             # Cloud/Virtual
-            region=device.get("zone_group"),
+            region=device.zone_group,
             # Organization
             org=self.get_organization(device),
             # Groups
@@ -372,29 +414,68 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
 
         return device_ocsf
 
+    def post_assets_to_api(self, assets: AssetList, asset_connector_api_url: str) -> dict[str, str] | None:
+        """Push a batch and remember whether it made it through."""
+        response = super().post_assets_to_api(assets, asset_connector_api_url)
+        if response is None:
+            # The batch was dropped, so the devices it carried were never ingested: hold
+            # the checkpoint back so the next cycle walks the whole listing again.
+            self._push_failed = True
+        return response
+
+    def asset_fetch_cycle(self) -> None:
+        """Run a fetch cycle, then commit the checkpoint if it collected everything."""
+        super().asset_fetch_cycle()
+        # Every batch of the cycle has been pushed by now, so this is the first moment we
+        # know the run was complete. An interrupted cycle raises and never gets here.
+        self.update_checkpoint()
+
     def update_checkpoint(self) -> None:
         """Update the checkpoint with the latest device ID."""
         self.log("Updating the device id !!", level="info")
-        if self._latest_id is None:
+        if self._latest_id is None or self._push_failed:
             return
         with self.context as cache:
             cache["most_recent_device_id"] = self._latest_id
             self.log(f"Device id was updated to {self._latest_id}", level="info")
 
-    def next_devices(self) -> Generator[dict[str, Any], None, None]:
+    def next_devices_batch(self, uuids_batch: list[str]) -> Generator[CrowdStrikeDevice, None, None]:
+        """
+        Fetch the information of a batch of devices, with the details of their groups.
+        """
+        devices = [
+            CrowdStrikeDevice.model_validate(device_info) for device_info in self.client.get_devices_infos(uuids_batch)
+        ]
+
+        self.fetch_groups([group_id for device in devices for group_id in device.groups])
+
+        yield from devices
+
+    def next_devices(self) -> Generator[CrowdStrikeDevice, None, None]:
         """
         Generator that yields device information from CrowdStrike API.
         Uses pagination and checkpoint to fetch only new devices.
+
+        The checkpoint is only advanced once the whole listing has been walked. The SDK
+        calls `update_checkpoint` after every batch it pushes, so remembering the newest
+        device id up front would make any interruption of the run (pod restart, API
+        error, rate limit) skip every device it had not reached yet, forever.
         """
         last_first_uuid = self.most_recent_device_id
+        newest_uuid: str | None = None
         uuids_batch: list[str] = []
+
+        # Nothing is collected yet: the pushes happening during this walk must not commit
+        # a checkpoint.
+        self._latest_id = None
+        self._push_failed = False
 
         for idx, device_uuid in enumerate(self.client.list_devices_uuids(limit=self.LIMIT, sort="first_seen.desc")):
             if idx == 0:
                 if device_uuid == last_first_uuid:
                     self.log("No device has been added !!", level="info")
                     return
-                self._latest_id = device_uuid
+                newest_uuid = device_uuid
 
             # Stop before the last seen device id
             if last_first_uuid and device_uuid == last_first_uuid:
@@ -404,21 +485,28 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
 
             if len(uuids_batch) >= self.LIMIT:
                 self.log(f"Found {len(uuids_batch)} devices !!", level="info")
-                for device_info in self.client.get_devices_infos(uuids_batch):
-                    yield device_info
+                yield from self.next_devices_batch(uuids_batch)
                 uuids_batch = []
 
         if uuids_batch:
             self.log(f"Found {len(uuids_batch)} devices in the last batch!!", level="info")
-            for device_info in self.client.get_devices_infos(uuids_batch):
-                yield device_info
+            yield from self.next_devices_batch(uuids_batch)
+
+        # The whole listing was walked: remember where we stopped. It is committed at the
+        # end of the cycle, once every batch has been pushed.
+        self._latest_id = newest_uuid
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
         """
         Main generator that yields OCSF-formatted device assets.
         """
         self.log("Start the getting assets generator !!", level="info")
+
+        # reset the group details collected in the previous cycle
+        self._groups_cache = {}
+        self._groups_fetch_disabled = False
+
         for device in self.next_devices():
             mapped = self.map_device_fields(device)
-            if mapped is not None:
+            if mapped is not None:  # pragma: no branch
                 yield mapped

@@ -1,5 +1,7 @@
 """Tests related to token refresher."""
 
+from unittest.mock import patch
+
 import pytest
 from aioresponses import aioresponses
 
@@ -7,7 +9,7 @@ from github_modules.async_client.token_refresher import PemGithubTokenRefresher
 
 
 @pytest.mark.asyncio
-async def test_github_refresher_refresh_token(session_faker, pem_content):
+async def test_github_refresher_refresh_token(base_url, session_faker, pem_content):
     """
     Test GithubTokenRefresher.refresh_token.
 
@@ -21,14 +23,17 @@ async def test_github_refresher_refresh_token(session_faker, pem_content):
 
     with aioresponses() as mocked_responses:
         mocked_responses.get(
-            "https://api.github.com/orgs/{0}/installation".format(organization),
+            f"{base_url}/orgs/{organization}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )
 
-        mocked_responses.post(access_tokens_url, status=200, payload={"token": expected_result})
+        mocked_responses.post(
+            access_tokens_url, status=200, payload={"token": expected_result}
+        )
 
         token_refresher = PemGithubTokenRefresher(
+            base_url,
             pem_content,
             organization,
             session_faker.pyint(),
@@ -43,7 +48,7 @@ async def test_github_refresher_refresh_token(session_faker, pem_content):
 
 
 @pytest.mark.asyncio
-async def test_github_refresher_get_token(session_faker, pem_content):
+async def test_github_refresher_get_token(base_url, session_faker, pem_content):
     """
     Test GithubTokenRefresher.get_token.
 
@@ -57,14 +62,17 @@ async def test_github_refresher_get_token(session_faker, pem_content):
 
     with aioresponses() as mocked_responses:
         mocked_responses.get(
-            "https://api.github.com/orgs/{0}/installation".format(organization),
+            f"{base_url}/orgs/{organization}/installation",
             status=200,
             payload={"access_tokens_url": access_tokens_url},
         )
 
-        mocked_responses.post(access_tokens_url, status=200, payload={"token": expected_result})
+        mocked_responses.post(
+            access_tokens_url, status=200, payload={"token": expected_result}
+        )
 
         token_refresher = PemGithubTokenRefresher(
+            base_url,
             pem_content,
             organization,
             session_faker.pyint(),
@@ -82,22 +90,7 @@ async def test_github_refresher_get_token(session_faker, pem_content):
 
 
 @pytest.mark.asyncio
-async def test_github_refresher_access_token_for_installation_url(session_faker):
-    """
-    Test GithubTokenRefresher.get_token.
-
-    Args:
-        session_faker: Faker
-    """
-    installation_id = session_faker.pyint()
-
-    assert PemGithubTokenRefresher.access_token_for_installation_url(
-        installation_id
-    ) == "https://api.github.com/app/installations/{0}/access_tokens".format(installation_id)
-
-
-@pytest.mark.asyncio
-async def test_github_refresher_incorrect_params(session_faker, pem_content):
+async def test_github_refresher_incorrect_params(base_url, session_faker, pem_content):
     """
     Test GithubTokenRefresher.init.
 
@@ -106,7 +99,9 @@ async def test_github_refresher_incorrect_params(session_faker, pem_content):
         pem_content: str
     """
     try:
-        PemGithubTokenRefresher(pem_content, session_faker.word(), session_faker.pyint(), 601)
+        PemGithubTokenRefresher(
+            base_url, pem_content, session_faker.word(), session_faker.pyint(), 601
+        )
 
         assert False
     except ValueError:
@@ -114,7 +109,7 @@ async def test_github_refresher_incorrect_params(session_faker, pem_content):
 
 
 @pytest.mark.asyncio
-async def test_github_token_refresher_instance(session_faker, pem_content):
+async def test_github_token_refresher_instance(base_url, session_faker, pem_content):
     """
     Test PemGithubTokenRefresher.instance method.
 
@@ -125,25 +120,75 @@ async def test_github_token_refresher_instance(session_faker, pem_content):
     app_id = session_faker.pyint()
     organization = session_faker.word()
     different_organization = session_faker.word()
+    other_base_url = "https://other.example.com"
 
-    instance1 = await PemGithubTokenRefresher.instance(pem_content, organization, app_id)
-    instance2 = await PemGithubTokenRefresher.instance(pem_content, organization, app_id)
-    instance3 = await PemGithubTokenRefresher.instance(pem_content, different_organization, app_id)
+    instance1 = await PemGithubTokenRefresher.instance(
+        base_url, pem_content, organization, app_id
+    )
+    instance2 = await PemGithubTokenRefresher.instance(
+        base_url, pem_content, organization, app_id
+    )
+    instance3 = await PemGithubTokenRefresher.instance(
+        base_url, pem_content, different_organization, app_id
+    )
+    instance4 = await PemGithubTokenRefresher.instance(
+        other_base_url, pem_content, organization, app_id
+    )
 
+    assert instance1.base_url == base_url
     assert instance1.pem_file == pem_content
     assert instance1.organization == organization
     assert instance1.app_id == app_id
 
     assert instance1 is instance2
+    assert instance1.base_url == instance2.base_url
     assert instance1.pem_file == instance2.pem_file
     assert instance1.organization == instance2.organization
     assert instance1.app_id == instance2.app_id
 
     assert instance3 is not instance1
+    assert instance3.base_url == base_url
     assert instance3.pem_file == instance1.pem_file
     assert instance3.app_id == instance1.app_id
     assert instance3.organization == different_organization
 
+    assert instance4 is not instance1
+    assert instance4.base_url == other_base_url
+    assert instance4.organization == organization
+    assert instance4.app_id == app_id
+
     await instance1.close()
     await instance2.close()
     await instance3.close()
+    await instance4.close()
+
+
+@pytest.mark.asyncio
+async def test_github_token_refresher_proxy_support(
+    base_url,
+    session_faker,
+    pem_content,
+):
+    """
+    Test GithubClient proxy support.
+
+    Args:
+        session_faker: Faker
+        pem_content: str
+    """
+    app_id = session_faker.pyint()
+    organization = session_faker.word()
+    proxy_url = session_faker.uri()
+
+    with patch.dict("os.environ", {"HTTP_PROXY": proxy_url}):
+        # Setup the client
+        refresher = await PemGithubTokenRefresher.instance(
+            base_url, pem_content, organization, app_id
+        )
+
+        async with refresher.session() as session:
+            assert session.trust_env is True
+
+        await refresher.close()
+        await PemGithubTokenRefresher._session.close()
+        PemGithubTokenRefresher._session = None

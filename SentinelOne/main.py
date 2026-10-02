@@ -1,7 +1,10 @@
+from sentinelone_module.account_validator import SentinelOneAccountValidator
 from sentinelone_module.agents.init_scan import InitiateScanAction
 from sentinelone_module.agents.isolation import DeisolateEndpointAction, IsolateEndpointAction
 from sentinelone_module.asset_connector.device_assets import SentinelOneDeviceAssetConnector
 from sentinelone_module.base import SentinelOneModule
+from sentinelone_module.blocklist.action_create_blocklist_item import CreateBlocklistItemAction
+from sentinelone_module.blocklist.action_delete_blocklist_item import DeleteBlocklistItemAction
 from sentinelone_module.deep_visibility.consumer import DeepVisibilityTrigger
 from sentinelone_module.deep_visibility.query import QueryDeepVisibilityAction
 from sentinelone_module.iocs.create_iocs import CreateIOCsAction
@@ -11,7 +14,6 @@ from sentinelone_module.singularity.connectors import SingularityIdentityConnect
 from sentinelone_module.threats.create_threat_note import CreateThreatNoteAction
 from sentinelone_module.threats.get_malwares import GetMalwaresAction
 from sentinelone_module.threats.update_threat_incident import UpdateThreatIncidentAction
-from sentinelone_module.account_validator import SentinelOneAccountValidator
 
 if __name__ == "__main__":
     module = SentinelOneModule()
@@ -29,4 +31,6 @@ if __name__ == "__main__":
     module.register(SentinelOneLogsConnector, "sentinelone_log_connector")
     module.register(SingularityIdentityConnector, "sentinelone_identity_connector")
     module.register(SentinelOneDeviceAssetConnector, "sentinelone_device_assets_connector")
+    module.register(CreateBlocklistItemAction, "sentinelone_blocklist_create_item")
+    module.register(DeleteBlocklistItemAction, "sentinelone_blocklist_delete_item")
     module.run()

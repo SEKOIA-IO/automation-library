@@ -1,0 +1,16 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Radware",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Radware is a leading provider of cybersecurity and application-delivery solutions that keep enterprise applications fast, available and secure across on-premises, cloud and hybrid environments.\n\nThe platform offers real-time DDoS protection, a web application firewall, application delivery controllers, bot management and API security, all unified under centralized management with advanced analytics and automation. By combining multi-layered defenses with performance optimization, Radware enables organizations to mitigate attacks, accelerate traffic and ensure continuous service availability",
+  "name": "Radware",
+  "uuid": "9b7eb4b3-c3f6-4240-b3e8-68aa030dbf2c",
+  "version": "1.0.0",
+  "slug": "Radware",
+  "categories": ["Network"]
+}
+

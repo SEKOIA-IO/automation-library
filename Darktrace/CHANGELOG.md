@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-20 - 1.7.2
+
+### Changed
+
+- Log response when it's not JSON
+- Upgrade sekoia-automation-sdk
+- Move to uv
+
 ## 2024-07-05 - 1.7.1
 
 ### Fixed

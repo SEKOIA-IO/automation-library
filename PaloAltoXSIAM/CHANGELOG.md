@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2025-05-28 - 0.1.0
+## 2026-03-31 - 1.0.1
+
+### Fixed
+
+- Regexp to extract value from STIX pattern
+
+## 2025-05-28 - 1.0.0
 
 ### Added
 

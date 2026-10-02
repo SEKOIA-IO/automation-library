@@ -2,6 +2,11 @@ import pytest
 from datetime import datetime
 from unittest.mock import Mock
 
+from crowdstrike_falcon.asset_connectors.crowdstrike_user_model import (
+    CrowdStrikeUser,
+    CrowdStrikeUserAccount,
+    CrowdStrikeUserRole,
+)
 from crowdstrike_falcon.asset_connectors.user_assets import CrowdstrikeUserAssetConnector
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
 from sekoia_automation.asset_connector.models.ocsf.user import (
@@ -80,69 +85,69 @@ class TestMapRiskLevel:
 
 class TestDetermineAccountType:
     def test_active_directory_by_datasource(self, connector):
-        account = {"dataSource": "ACTIVE_DIRECTORY"}
+        account = CrowdStrikeUserAccount(dataSource="ACTIVE_DIRECTORY")
         result = connector._determine_account_type(account)
         assert result == (AccountTypeId.LDAP_ACCOUNT, AccountTypeStr.LDAP_ACCOUNT)
 
     def test_active_directory_by_object_sid(self, connector):
-        account = {"dataSource": "OTHER", "objectSid": "S-1-5-21-123"}
+        account = CrowdStrikeUserAccount(dataSource="OTHER", objectSid="S-1-5-21-123")
         result = connector._determine_account_type(account)
         assert result == (AccountTypeId.LDAP_ACCOUNT, AccountTypeStr.LDAP_ACCOUNT)
 
     def test_azure_account(self, connector):
-        account = {"dataSource": "AZURE_AD"}
+        account = CrowdStrikeUserAccount(dataSource="AZURE_AD")
         result = connector._determine_account_type(account)
         assert result == (AccountTypeId.AZURE_AD_ACCOUNT, AccountTypeStr.AZURE_AD_ACCOUNT)
 
     def test_other_account(self, connector):
-        account = {"dataSource": "UNKNOWN_SOURCE"}
+        account = CrowdStrikeUserAccount(dataSource="UNKNOWN_SOURCE")
         result = connector._determine_account_type(account)
         assert result == (AccountTypeId.OTHER, AccountTypeStr.OTHER)
 
 
 class TestDetermineUserType:
     def test_admin_user(self, connector):
-        entity = {"roles": [{"type": "ADMIN"}]}
+        entity = CrowdStrikeUser(roles=[CrowdStrikeUserRole(type="ADMIN")])
         result = connector._determine_user_type(entity)
         assert result == (UserTypeId.ADMIN, UserTypeStr.ADMIN)
 
     def test_regular_user(self, connector):
-        entity = {"roles": [{"type": "USER"}]}
+        entity = CrowdStrikeUser(roles=[CrowdStrikeUserRole(type="USER")])
         result = connector._determine_user_type(entity)
         assert result == (UserTypeId.USER, UserTypeStr.USER)
 
     def test_no_roles(self, connector):
-        entity = {"roles": []}
+        entity = CrowdStrikeUser(roles=[])
         result = connector._determine_user_type(entity)
         assert result == (UserTypeId.USER, UserTypeStr.USER)
 
     def test_missing_roles(self, connector):
-        entity = {}
+        entity = CrowdStrikeUser()
         result = connector._determine_user_type(entity)
         assert result == (UserTypeId.USER, UserTypeStr.USER)
 
 
 class TestMapIdentityEntityFields:
     def test_map_identity_entity_fields_happy_path(self, connector):
-        entity = {
-            "entityId": "entity-123",
-            "primaryDisplayName": "Alice Smith",
-            "secondaryDisplayName": "alice.smith",
-            "emailAddresses": ["alice@example.com"],
-            "creationTime": "2025-01-01T12:00:00Z",
-            "riskScore": 0.66,
-            "riskScoreSeverity": "MEDIUM",
-            "accounts": [
-                {
-                    "dataSource": "ACTIVE_DIRECTORY",
-                    "domain": "CORP",
-                    "samAccountName": "asmith",
-                    "objectSid": "S-1-5-21-123",
-                    "enabled": True,
-                }
+        entity = CrowdStrikeUser(
+            entityId="entity-123",
+            primaryDisplayName="Alice Smith",
+            secondaryDisplayName="alice.smith",
+            emailAddresses=["alice@example.com"],
+            creationTime="2025-01-01T12:00:00Z",
+            riskScore=0.66,
+            riskScoreSeverity="MEDIUM",
+            accounts=[
+                CrowdStrikeUserAccount(
+                    dataSource="ACTIVE_DIRECTORY",
+                    domain="CORP",
+                    samAccountName="asmith",
+                    objectSid="S-1-5-21-123",
+                    enabled=True,
+                )
             ],
-            "roles": [{"type": "USER"}],
-        }
+            roles=[CrowdStrikeUserRole(type="USER")],
+        )
 
         result = connector.map_identity_entity_fields(entity)
 
@@ -163,10 +168,10 @@ class TestMapIdentityEntityFields:
         assert result.enrichments[0].data.is_enabled is True
 
     def test_map_identity_entity_fields_minimal(self, connector):
-        entity = {
-            "entityId": "entity-456",
-            "primaryDisplayName": "Bob",
-        }
+        entity = CrowdStrikeUser(
+            entityId="entity-456",
+            primaryDisplayName="Bob",
+        )
 
         result = connector.map_identity_entity_fields(entity)
 
@@ -188,16 +193,16 @@ class TestMapIdentityEntityFields:
             (None, 0),
         ]
         for input_score, expected_score in test_cases:
-            entity = {"entityId": "test", "primaryDisplayName": "Test", "riskScore": input_score}
+            entity = CrowdStrikeUser(entityId="test", primaryDisplayName="Test", riskScore=input_score)
             result = connector.map_identity_entity_fields(entity)
             assert result.user.risk_score == expected_score
 
     def test_map_identity_entity_fields_admin_role(self, connector):
-        entity = {
-            "entityId": "admin-123",
-            "primaryDisplayName": "Admin User",
-            "roles": [{"type": "ADMIN"}],
-        }
+        entity = CrowdStrikeUser(
+            entityId="admin-123",
+            primaryDisplayName="Admin User",
+            roles=[CrowdStrikeUserRole(type="ADMIN")],
+        )
 
         result = connector.map_identity_entity_fields(entity)
 
@@ -277,7 +282,7 @@ class TestFetchIdentityEntities:
         result = list(connector._fetch_identity_entities())
 
         assert len(result) == 1
-        assert result[0]["entityId"] == "2"
+        assert result[0].entityId == "2"
         assert connector._latest_time == "2025-01-02T10:00:00Z"
 
     def test_fetch_identity_entities_updates_checkpoint_on_new_data(self, connector):

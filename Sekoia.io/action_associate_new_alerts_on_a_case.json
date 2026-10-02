@@ -17,7 +17,7 @@
         "type": "array",
         "items": {
           "type": "string",
-	  "description": "UUID or short_id of the alert to attach to the case"
+          "description": "UUID or short_id of the alert to attach to the case"
         },
         "description": "The list of identifiers (UUID or short_id) of alerts to add",
         "in": "body"

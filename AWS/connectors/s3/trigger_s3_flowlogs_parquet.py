@@ -10,12 +10,14 @@ import pandas
 
 from aws_helpers.utils import AsyncReader
 from connectors.metrics import DISCARDED_EVENTS
-from connectors.s3 import AbstractAwsS3QueuedConnector
+from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from connectors.s3.provider import AwsAccountProvider
 
 
-class AwsS3FlowLogsParquetRecordsTrigger(AbstractAwsS3QueuedConnector):
+class BaseAwsS3FlowLogsParquetRecordsTrigger:
     """Implementation of AwsS3ParquetRecordsTrigger."""
 
+    configuration: AwsS3QueuedConfiguration
     name = "AWS S3 Parquet records"
 
     def check_all_ips_are_private(self, record: dict[str, Any], names: Sequence[str]) -> bool:
@@ -61,3 +63,9 @@ class AwsS3FlowLogsParquetRecordsTrigger(AbstractAwsS3QueuedConnector):
                     yield orjson.dumps(record).decode("utf-8")
                 else:
                     DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+
+
+class AwsS3FlowLogsParquetRecordsTrigger(
+    BaseAwsS3FlowLogsParquetRecordsTrigger, AbstractAwsS3QueuedConnector, AwsAccountProvider
+):
+    """AWS S3 Flow Logs Parquet Records Trigger connector."""

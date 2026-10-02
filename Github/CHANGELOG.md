@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-21 - 1.12.2
+
+### Fixed
+
+- Add support for HTTP/HTTPS proxy environment variables when calling GitHub API
+
+## 2026-08-19 - 1.12.1
+
+### Fixed
+
+- Adjust for async loop behaviour in Python 3.14
+
+## 2026-08-18 - 1.12.0
+
+### Changed
+
+- Provide details with authentication errors
+- Upgrade sekoia-automation-sdk to 1.24.0
+- Move to uv
+
+## 2026-04-14 - 1.11.4
+
+### Changed
+
+- Throw a Bad Credentials exception after retry
+- Upgrade sekoia-automation-sdk to 1.22.5
+
+## 2026-02-24 - 1.11.3
+
+### Changed
+
+- Change the way to handle the Bad Credentials exception
+
+## 2026-02-06 - 1.11.2
+
+### Fixed
+
+- Fix PEM authentication with custom domain
+
+### Changed
+
+- Stop connector with incorrect credentials
+- Upgrade sekoia-automation-sdk to 1.22.2
+
 ## 2026-01-21 - 1.11.1
 
 ### Fixed

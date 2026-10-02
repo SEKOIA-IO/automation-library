@@ -1,0 +1,109 @@
+{
+  "name": "Fetch MokN Login Attempts",
+  "description": "Collect MokN bait attempts and forward them to Sekoia.io",
+  "uuid": "4bf8b4c6-3f32-11f1-a7c1-6b0beb8b3414",
+  "docker_parameters": "mokn_login_attempts_trigger",
+  "slug": "mokn_login_attempts_trigger",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "intake_server": {
+        "title": "Intake Server",
+        "description": "Override the default intake server used by Sekoia.io",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "title": "Intake Key",
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "frequency": {
+        "title": "Frequency",
+        "description": "Polling interval in seconds",
+        "default": 60,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "chunk_size": {
+        "title": "Chunk Size",
+        "description": "Maximum number of events forwarded to the intake in a single batch",
+        "default": 100,
+        "minimum": 1,
+        "maximum": 1000,
+        "type": "integer"
+      },
+      "page_size": {
+        "title": "Page Size",
+        "description": "Number of login summaries requested per page",
+        "default": 100,
+        "minimum": 1,
+        "maximum": 1000,
+        "type": "integer"
+      },
+      "initial_lookback_minutes": {
+        "title": "Initial Lookback Minutes",
+        "description": "How far to look back when no checkpoint exists yet",
+        "default": 5,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "threat_levels": {
+        "title": "Threat Levels",
+        "description": "Threat levels filter applied to MokN login attempts",
+        "type": "array",
+        "default": [
+          "HIGH"
+        ],
+        "items": {
+          "type": "string",
+          "enum": [
+            "HIGH",
+            "MEDIUM",
+            "LOW"
+          ]
+        }
+      },
+      "pending": {
+        "title": "Pending",
+        "description": "Whether to restrict the query to pending attempts",
+        "default": true,
+        "type": "boolean"
+      },
+      "statuses": {
+        "title": "Statuses",
+        "description": "List of MokN status codes included in the polling query. Accepts integer values. Refer to the API documentation available in the console for the supported codes.",
+        "type": "array",
+        "items": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "enum": [
+                -2,
+                -1,
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "required": [
+      "frequency",
+      "intake_key"
+    ],
+    "title": "MoknLoginAttemptsTriggerConfiguration"
+  },
+  "results": {}
+}

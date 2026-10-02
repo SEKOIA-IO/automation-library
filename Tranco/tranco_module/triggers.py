@@ -51,7 +51,7 @@ class FetchTrancoListTrigger(Trigger):
         directory = str(work_dir.relative_to(self._data_path))
         file_path = str(chunk_path.relative_to(work_dir))
         self.send_event(
-            event_name=f"Tranco List Chunk {offset}-{offset+chunk_size}",
+            event_name=f"Tranco List Chunk {offset}-{offset + chunk_size}",
             event=dict(file_path=file_path, chunk_offset=offset, chunk_size=chunk_size),
             directory=directory,
             remove_directory=True,

@@ -78,102 +78,6 @@ mapping:
         }
 
   fields:
-    # USER IDENTIFICATION
-    - source: "UserId"
-      target: "user.uid"
-      type: "string"
-      logic: "Direct mapping of AWS IAM user ID"
-      description: "AWS IAM user unique identifier"
-
-    - source: "UserName"
-      target: "user.name"
-      type: "string"
-      logic: "Direct mapping of IAM username"
-      description: "AWS IAM username"
-
-    - source: "UserName"
-      target: "user.full_name"
-      type: "string"
-      logic: "Direct mapping of IAM username as full name"
-      description: "User full name (from IAM username)"
-
-    # ACCOUNT INFORMATION
-    - source: "Arn"
-      target: "user.account.uid"
-      type: "string"
-      logic: "Direct mapping of AWS ARN"
-      description: "AWS IAM user ARN (Amazon Resource Name)"
-
-    - source: "UserName"
-      target: "user.account.name"
-      type: "string"
-      logic: "Direct mapping of IAM username"
-      description: "Account username"
-
-    - source: "static: AWS IAM"
-      target: "user.account.type"
-      type: "string"
-      logic: "Always 'AWS IAM'"
-      description: "Account type identifier"
-
-    - source: "static: 40"
-      target: "user.account.type_id"
-      type: "integer"
-      logic: "Always 40 for AWS IAM account type"
-      description: "OCSF account type ID"
-
-    # USER PATH & HIERARCHY
-    - source: "Path"
-      target: "user.path"
-      type: "string"
-      logic: "Direct mapping of IAM path hierarchy"
-      description: "IAM user path in the hierarchy (e.g., '/service-role/', '/engineering/')"
-
-    # USER STATUS & SECURITY
-    - source: "ConsoleAccessEnabled"
-      target: "user.is_console_user"
-      type: "boolean"
-      logic: "true if login profile exists, false otherwise"
-      description: "Whether user has AWS Management Console access"
-
-    - source: "MFADevices | length > 0"
-      target: "user.has_mfa"
-      type: "boolean"
-      logic: "true if any MFA device is registered, false otherwise"
-      description: "Whether MFA is enabled for user account"
-
-    - source: "AccessKeys | filter(Status='Active') | length"
-      target: "user.access_keys_count"
-      type: "integer"
-      logic: "Count of active (non-deleted) access keys"
-      description: "Number of active programmatic access keys"
-
-    - source: "PasswordLastUsed"
-      target: "user.password_last_used_time"
-      type: "timestamp"
-      logic: "Convert ISO 8601 to Unix epoch; null if never used"
-      description: "Password/console last used timestamp (Unix epoch)"
-
-    # TAGS & METADATA
-    - source: "Tags[]"
-      target: "user.tags"
-      type: "object"
-      logic: "Convert array of {Key, Value} to key-value object"
-      description: "AWS resource tags (key-value pairs for cost allocation, environment, etc.)"
-
-    # TEMPORAL INFORMATION
-    - source: "CreateDate"
-      target: "user.created_time"
-      type: "timestamp"
-      logic: "Convert ISO 8601 to Unix epoch"
-      description: "User creation timestamp"
-
-    - source: "CreateDate"
-      target: "time"
-      type: "timestamp"
-      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp"
-      description: "OCSF event timestamp (user discovery time)"
-
     # OCSF EVENT CLASSIFICATION
     - source: "static: 2"
       target: "activity_id"
@@ -211,29 +115,24 @@ mapping:
       logic: "Always 5003 for User Inventory Info"
       description: "OCSF class UID"
 
-    - source: "computed: 500300 + activity_id"
+    - source: "static: 500301"
       target: "type_uid"
       type: "integer"
-      logic: "Base 500300 + activity_id (2 = 500302)"
+      logic: "Always 500301 for User Inventory Info: Collect type"
       description: "OCSF type UID"
 
-    - source: "computed: class_name + ': ' + activity_name"
+    - source: "static: 'User Inventory Info: Collect'"
       target: "type_name"
       type: "string"
-      logic: "Concatenate 'User Inventory Info: Collect'"
+      logic: "Always 'User Inventory Info: Collect'"
       description: "OCSF type name"
 
-    - source: "static: Informational"
-      target: "severity"
-      type: "string"
-      logic: "Always 'Informational' for inventory events"
-      description: "Event severity level"
-
-    - source: "static: 1"
-      target: "severity_id"
-      type: "integer"
-      logic: "Always 1 for Informational severity"
-      description: "OCSF severity ID"
+    # TIMESTAMP
+    - source: "CreateDate"
+      target: "time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp"
+      description: "OCSF event timestamp (user discovery time)"
 
     # METADATA
     - source: "static: AWS IAM"
@@ -242,11 +141,87 @@ mapping:
       logic: "Always 'AWS IAM'"
       description: "Source product name"
 
+    - source: "static: N/A"
+      target: "metadata.product.version"
+      type: "string"
+      logic: "There's no specific version for AWS IAM as it's a managed service; using 'N/A'"
+      description: "Source product version"
+
     - source: "static: 1.6.0"
       target: "metadata.version"
       type: "string"
       logic: "Fixed OCSF schema version"
       description: "OCSF schema version"
+
+    # USER IDENTIFICATION
+    - source: "UserName"
+      target: "user.name"
+      type: "string"
+      logic: "Direct mapping of IAM username"
+      description: "AWS IAM username"
+
+    - source: "Arn"
+      target: "user.uid"
+      type: "string"
+      logic: "Direct mapping of AWS IAM user ID"
+      description: "AWS IAM user unique identifier"
+
+    # GROUPS INFORMATION
+    - source: "Arn"
+      target: "user.groups[].uid"
+      type: "string"
+      logic: "Direct mapping of AWS ARN for group unique identifier"
+      description: "Group unique identifier (using ARN for uniqueness across accounts)"
+
+    - source: "GroupName"
+      target: "user.groups[].name"
+      type: "string"
+      logic: "Direct mapping of IAM group name"
+      description: ""
+
+    - source: "PolicyName"
+      target: "user.groups[].privileges[]"
+      type: "Array of strings"
+      logic: "This field captures the names of policies attached to the user or their groups."
+      description: "Privileges derived from IAM policies"
+
+    # MFA INFORMATION
+    - source: "MFADevices"
+      target: "user.has_mfa"
+      type: "boolean"
+      logic: "true if any MFA device is registered, false otherwise"
+      description: "Whether MFA is enabled for user account"
+
+    # ACCOUNT INFORMATION
+    - source: "UserName"
+      target: "user.account.name"
+      type: "string"
+      logic: "Direct mapping of IAM username"
+      description: "Account username"
+
+    - source: "Arn"
+      target: "user.account.uid"
+      type: "string"
+      logic: "Direct mapping of AWS ARN"
+      description: "AWS IAM user ARN (Amazon Resource Name)"
+
+    - source: "UserId"
+      target: "user.account.uid_alt"
+      type: "string"
+      logic: "Direct mapping of IAM UserId for alternative unique identifier"
+      description: "AWS IAM UserId (alternative unique identifier)"
+
+    - source: "static: AWS IAM"
+      target: "user.account.type"
+      type: "string"
+      logic: "Always 'AWS IAM'"
+      description: "Account type identifier"
+
+    - source: "static: 40"
+      target: "user.account.type_id"
+      type: "integer"
+      logic: "Always 40 for AWS IAM account type"
+      description: "OCSF account type ID"
 
   ocsf_samples:
     - name: "User Inventory Info: Collect"

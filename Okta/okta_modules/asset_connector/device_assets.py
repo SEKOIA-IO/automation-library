@@ -6,12 +6,11 @@ and format them according to OCSF standards.
 
 from collections.abc import AsyncGenerator
 from functools import cached_property
-from typing import Any, List, Optional
+from typing import Any
 from urllib.parse import urlencode
 
 from dateutil.parser import isoparse
 from okta.client import Client as OktaClient
-from pydantic import BaseModel, Field
 from sekoia_automation.asset_connector import AsyncAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.device import (
@@ -29,31 +28,24 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 from sekoia_automation.storage import PersistentJSON
 
 from okta_modules import OktaModule
+from okta_modules.asset_connector.device_models import (
+    OktaDevice,
+    OktaDeviceDisplayName,
+    OktaDeviceEmbeddedResources,
+    OktaDeviceLink,
+    OktaDeviceLinkHints,
+    OktaDeviceProfile,
+)
 
-
-class OktaDeviceProfile(BaseModel):
-    """Okta Device Profile."""
-
-    displayName: str
-    platform: str
-    registered: bool
-    secureHardwarePresent: bool
-    osVersion: str
-    serialNumber: Optional[str] = None
-    sid: Optional[str] = None
-    diskEncryptionType: Optional[str] = None
-    manufacturer: Optional[str] = None
-    model: Optional[str] = None
-
-
-class OktaDevice(BaseModel):
-    """Okta Device."""
-
-    id: str
-    status: str
-    created: str
-    lastUpdated: str
-    profile: OktaDeviceProfile
+__all__ = [
+    "OktaDevice",
+    "OktaDeviceAssetConnector",
+    "OktaDeviceDisplayName",
+    "OktaDeviceEmbeddedResources",
+    "OktaDeviceLink",
+    "OktaDeviceLinkHints",
+    "OktaDeviceProfile",
+]
 
 
 class OktaDeviceAssetConnector(AsyncAssetConnector):
@@ -74,7 +66,7 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
         """
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.new_most_recent_date: Optional[str] = None
+        self.new_most_recent_date: str | None = None
 
     @cached_property
     def client(self) -> OktaClient:
@@ -101,7 +93,7 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
 
         return result
 
-    def update_checkpoint(self) -> None:
+    async def update_checkpoint(self) -> None:
         """Update the checkpoint with the most recent date seen.
 
         Raises:
@@ -116,9 +108,19 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
                 cache["most_recent_date_seen"] = self.new_most_recent_date
                 self.log(f"Checkpoint updated with date: {self.new_most_recent_date}", level="info")
         except Exception as e:
-            self.log(f"Failed to update checkpoint: {str(e)}", level="error")
+            self.log(f"Failed to update checkpoint: {e!s}", level="error")
 
-    async def fetch_next_devices(self, url: str) -> tuple[List[OktaDevice], Any]:
+    async def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so all devices are re-fetched from scratch."""
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self.new_most_recent_date = None
+
+    def get_mapped_fields(self) -> dict[str, str]:
+        """Return the declared source-to-OCSF field mapping (empty: schema-change detection disabled)."""
+        return {}
+
+    async def fetch_next_devices(self, url: str) -> tuple[list[OktaDevice], Any]:
         """Fetch devices from the specified URL.
 
         Args:
@@ -129,17 +131,6 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
         """
         all_devices = []
         try:
-            query_params = {}
-            if self.most_recent_date_seen:
-                query_params = {
-                    "search": f'created gt "{self.most_recent_date_seen}"',
-                    "sortBy": "created",
-                    "sortOrder": "asc",
-                }
-            if query_params:
-                encoded_query_params = urlencode(query_params)
-                url += f"/?{encoded_query_params}"
-
             request, error = await self.client.get_request_executor().create_request(
                 method="GET", url=url, body={}, headers={}, oauth=False
             )
@@ -161,13 +152,22 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
             self.log(f"Exception while fetching devices from {url}: {e}", level="error")
             return [], None
 
-    async def next_list_devices(self) -> AsyncGenerator[OktaDevice, None]:
+    async def next_list_devices(self) -> AsyncGenerator[OktaDevice]:
         """Fetch all devices from Okta.
 
         Yields:
             Device objects from Okta.
         """
-        devices, response = await self.fetch_next_devices("/api/v1/devices")
+        url = "/api/v1/devices"
+        if self.most_recent_date_seen:
+            query_params = {
+                "search": f'created gt "{self.most_recent_date_seen}"',
+                "sortBy": "created",
+                "sortOrder": "asc",
+            }
+            url += f"?{urlencode(query_params)}"
+
+        devices, response = await self.fetch_next_devices(url)
         for device in devices:
             yield device
             self.new_most_recent_date = device.created
@@ -178,41 +178,49 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
                 yield device
                 self.new_most_recent_date = device.created
 
-    def get_device_os(self, platform: str, version: str) -> OperatingSystem:
+    def get_device_os(self, platform: str) -> OperatingSystem:
         """Get operating system information for a device.
 
         Args:
             platform: The device platform (windows, macos, linux, ios, android).
-            version: The operating system version.
 
         Returns:
             OperatingSystem object with mapped OS information.
         """
-        # Handle None or empty version
-        version = version or "Unknown"
-
         match platform.lower() if platform else "":
             case "windows":
-                return OperatingSystem(
-                    name="Windows", version=version, type=OSTypeStr.WINDOWS, type_id=OSTypeId.WINDOWS
-                )
+                return OperatingSystem(name="Windows", type=OSTypeStr.WINDOWS, type_id=OSTypeId.WINDOWS)
             case "macos":
-                return OperatingSystem(name="macOS", version=version, type=OSTypeStr.MACOS, type_id=OSTypeId.MACOS)
+                return OperatingSystem(name="macOS", type=OSTypeStr.MACOS, type_id=OSTypeId.MACOS)
             case "linux":
-                return OperatingSystem(name="Linux", version=version, type=OSTypeStr.LINUX, type_id=OSTypeId.LINUX)
+                return OperatingSystem(name="Linux", type=OSTypeStr.LINUX, type_id=OSTypeId.LINUX)
             case "ios":
-                return OperatingSystem(name="iOS", version=version, type=OSTypeStr.IOS, type_id=OSTypeId.IOS)
+                return OperatingSystem(name="iOS", type=OSTypeStr.IOS, type_id=OSTypeId.IOS)
             case "android":
-                return OperatingSystem(
-                    name="Android", version=version, type=OSTypeStr.ANDROID, type_id=OSTypeId.ANDROID
-                )
+                return OperatingSystem(name="Android", type=OSTypeStr.ANDROID, type_id=OSTypeId.ANDROID)
             case _:
                 return OperatingSystem(
                     name=platform if platform is not None else "Unknown",
-                    version=version,
                     type=OSTypeStr.OTHER,
                     type_id=OSTypeId.OTHER,
                 )
+
+    def get_device_type(self, platform: str) -> tuple[DeviceTypeStr, DeviceTypeId]:
+        """Get device type information based on platform.
+
+        Args:
+            platform: The device platform (windows, macos, linux, ios, android).
+
+        Returns:
+            Tuple of (DeviceTypeStr, DeviceTypeId) with mapped device type.
+        """
+        match platform.lower() if platform else "":
+            case "windows" | "macos":
+                return DeviceTypeStr.DESKTOP, DeviceTypeId.DESKTOP
+            case "android" | "ios":
+                return DeviceTypeStr.MOBILE, DeviceTypeId.MOBILE
+            case _:
+                return DeviceTypeStr.OTHER, DeviceTypeId.OTHER
 
     async def map_fields(self, okta_device: OktaDevice) -> DeviceOCSFModel:
         """Map Okta device data to OCSF format.
@@ -235,24 +243,38 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
         # Parse timestamps
         created_timestamp = isoparse(okta_device.created).timestamp()
         last_updated_timestamp = isoparse(okta_device.lastUpdated).timestamp()
+        last_seen_timestamp = (
+            isoparse(okta_device.lastSeen).timestamp() if okta_device.lastSeen else last_updated_timestamp
+        )
 
         # Determine management and compliance status
         is_managed = okta_device.profile.registered
         is_compliant = okta_device.status == "ACTIVE" and okta_device.profile.registered
 
+        # Determine device type based on platform
+        device_type, device_type_id = self.get_device_type(okta_device.profile.platform)
+
+        imei_list = [okta_device.profile.imei] if okta_device.profile.imei else None
+
         device = Device(
             hostname=okta_device.profile.displayName,
+            name=okta_device.profile.displayName,
             uid=okta_device.id,
-            type_id=DeviceTypeId.OTHER,
-            type=DeviceTypeStr.OTHER,
+            type_id=device_type_id,
+            type=device_type,
             location=None,
-            os=self.get_device_os(okta_device.profile.platform, okta_device.profile.osVersion),
+            os=self.get_device_os(okta_device.profile.platform),
             vendor_name=okta_device.profile.manufacturer,
             model=okta_device.profile.model,
+            udid=okta_device.profile.udid,
+            imei_list=imei_list,
             created_time=created_timestamp,
-            last_seen_time=last_updated_timestamp,
+            first_seen_time=created_timestamp,
+            last_seen_time=last_seen_timestamp,
             is_managed=is_managed,
             is_compliant=is_compliant,
+            is_trusted=okta_device.profile.secureHardwarePresent,
+            uid_alt=okta_device.profile.serialNumber,
         )
 
         # Build enrichment data
@@ -262,28 +284,24 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
         device_data_dict = {}
 
         # Add disk encryption if available
-        if okta_device.profile.diskEncryptionType:
-            # Map disk encryption type to partitions
-            partitions = {}
-            if okta_device.profile.diskEncryptionType == "ALL_INTERNAL_VOLUMES":
-                partitions["all_internal"] = "Enabled"
-            elif okta_device.profile.diskEncryptionType == "USER":
-                partitions["user"] = "Enabled"
-            elif okta_device.profile.diskEncryptionType == "FULL":
-                partitions["full"] = "Enabled"
-            else:
-                partitions["none"] = "Disabled"
+        encryption_type = okta_device.profile.diskEncryptionType
+        if encryption_type and encryption_type.upper() != "NONE":
+            match encryption_type.upper():
+                case "ALL_INTERNAL_VOLUMES":
+                    partitions = {"all_internal": "Enabled"}
+                case "USER":
+                    partitions = {"user": "Enabled"}
+                case "FULL" | "BITLOCKER" | "FILEVAULT":
+                    partitions = {"full": "Enabled"}
+                case _:
+                    partitions = {"full": "Enabled"}
 
             device_data_dict["Storage_encryption"] = EncryptionObject(partitions=partitions)
 
-        # Add hardware identifiers as user list (using available field)
+        # Add Windows SID as a hardware identifier in enrichment
         hardware_info = []
-        if okta_device.profile.serialNumber:
-            hardware_info.append(f"serial_number:{okta_device.profile.serialNumber}")
         if okta_device.profile.sid:
             hardware_info.append(f"windows_sid:{okta_device.profile.sid}")
-        if okta_device.profile.secureHardwarePresent is not None:
-            hardware_info.append(f"secure_hardware_present:{okta_device.profile.secureHardwarePresent}")
 
         if hardware_info:
             device_data_dict["Users"] = hardware_info
@@ -311,7 +329,7 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
             enrichments=enrichments if enrichments else None,
         )
 
-    async def get_assets(self) -> AsyncGenerator[DeviceOCSFModel, None]:
+    async def get_assets(self) -> AsyncGenerator[DeviceOCSFModel]:
         """Generate device assets from Okta.
 
         Yields:

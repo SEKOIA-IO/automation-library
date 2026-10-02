@@ -41,7 +41,7 @@ class SophosEDRAction(Action, ABC):
         base_url = self.region_base_url if use_region_url else self.module.configuration.api_host
         url = urljoin(base_url, url)
 
-        func: Callable[[Any], Any]
+        func: Callable[..., Any]
         if method.lower() == "post":
             func = self.client.post
 

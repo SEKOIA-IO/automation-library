@@ -1,4 +1,5 @@
 import asyncio
+import os
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
@@ -74,10 +75,13 @@ class WizConnector(AsyncConnector, ABC):
         if self._wiz_gql_client is not None:
             return self._wiz_gql_client
 
+        timeout = int(os.environ.get("WIZ_CLIENT_TIMEOUT", 60))
+
         self._wiz_gql_client = WizGqlClient.create(
             client_id=self.module.configuration.client_id,
             client_secret=self.module.configuration.client_secret,
             tenant_url=self.module.configuration.tenant_url,
+            timeout=timeout,
         )
 
         return self._wiz_gql_client

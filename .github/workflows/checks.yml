@@ -4,9 +4,9 @@ name: Check Automation Modules
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -15,17 +15,21 @@ defaults:
   run:
     working-directory: _utils
 
+permissions: {}
+
 jobs:
   check_modules:
+    permissions:
+      contents: read  # for actions/checkout to fetch code
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
 
       - name: Set up Python 3.10
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         id: setup-python
         with:
           python-version: "3.10"

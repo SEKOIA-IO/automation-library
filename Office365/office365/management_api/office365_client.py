@@ -16,6 +16,7 @@ from .errors import (
     FailedToGetO365AuditContent,
     FailedToGetO365SubscriptionContents,
     FailedToListO365Subscriptions,
+    SessionClosedError,
 )
 from .logging import get_logger
 
@@ -78,6 +79,9 @@ class Office365API:
 
         Check the expiration time of the current token and renew it if expired
         """
+        if self._session.closed:
+            raise SessionClosedError("Office365 client session is already closed")
+
         if time.time() > self._token_expiration - 10:
             await self._authenticate_client()
 
@@ -97,23 +101,38 @@ class Office365API:
         missing_types = EXPECTED_SUBSCRIPTIONS - already_enabled_types
 
         # Activate missing types
-        async with self._fresh_session() as session:
-            for content_type in missing_types:
-                # activate the subscription
-                base_url = OFFICE365_URL_BASE.format(tenant_id=self.tenant_id)
-                response = await session.post(f"{base_url}/subscriptions/start", params={"contentType": content_type})
-
-                # check HTTP status code
-                if response.status >= 400:
-                    raise FailedToActivateO365Subscription(status_code=response.status, body=await response.text())
-
-                subscription = await response.json()
-
-                if "error" in subscription:
-                    raise FailedToActivateO365Subscription(
-                        error_code=subscription["error"].get("code"),
-                        error_message=subscription["error"].get("message"),
+        try:
+            async with self._fresh_session() as session:
+                for content_type in missing_types:
+                    # activate the subscription
+                    base_url = OFFICE365_URL_BASE.format(tenant_id=self.tenant_id)
+                    response = await session.post(
+                        f"{base_url}/subscriptions/start", params={"contentType": content_type}
                     )
+
+                    try:
+                        subscription = await response.json(content_type=None)
+                    except Exception:
+                        subscription = None
+
+                    if isinstance(subscription, dict) and "error" in subscription:
+                        # AF20024 means the subscription is already enabled, which is fine
+                        if subscription["error"].get("code") == "AF20024":
+                            continue
+
+                        raise FailedToActivateO365Subscription(
+                            error_code=subscription["error"].get("code"),
+                            error_message=subscription["error"].get("message"),
+                        )
+
+                    # check HTTP status code
+                    if response.status >= 400:
+                        raise FailedToActivateO365Subscription(status_code=response.status, body=await response.text())
+
+        except RuntimeError as exc:
+            if "Session is closed" in str(exc):
+                raise SessionClosedError(str(exc)) from exc
+            raise
 
     async def list_subscriptions(self) -> list[str]:
         """
@@ -124,31 +143,37 @@ class Office365API:
         """
         base_url = OFFICE365_URL_BASE.format(tenant_id=self.tenant_id)
 
-        async with self._fresh_session() as session:
-            # get the list of subscriptions
-            response = await session.get(f"{base_url}/subscriptions/list")
+        try:
+            async with self._fresh_session() as session:
+                # get the list of subscriptions
+                response = await session.get(f"{base_url}/subscriptions/list")
 
-            # check HTTP status code
-            if response.status >= 400:
-                raise FailedToListO365Subscriptions(status_code=response.status, body=await response.text())
+                # check HTTP status code
+                if response.status >= 400:
+                    raise FailedToListO365Subscriptions(status_code=response.status, body=await response.text())
 
-            # get the body of the response
-            subscriptions = await response.json()
+                # get the body of the response
+                subscriptions = await response.json()
 
-            # check business errors
-            if "error" in subscriptions:
-                raise FailedToListO365Subscriptions(
-                    error_code=subscriptions["error"].get("code"), error_message=subscriptions["error"].get("message")
-                )
+                # check business errors
+                if "error" in subscriptions:
+                    raise FailedToListO365Subscriptions(
+                        error_code=subscriptions["error"].get("code"),
+                        error_message=subscriptions["error"].get("message"),
+                    )
 
-            # select active subscriptions
-            active_subscriptions = {
-                subscription["contentType"]
-                for subscription in subscriptions
-                if subscription["status"].lower() == OFFICE365_ACTIVE_SUBSCRIPTION_STATUS
-            }
+                # select active subscriptions
+                active_subscriptions = {
+                    subscription["contentType"]
+                    for subscription in subscriptions
+                    if subscription["status"].lower() == OFFICE365_ACTIVE_SUBSCRIPTION_STATUS
+                }
 
-            return list(active_subscriptions)
+                return list(active_subscriptions)
+        except RuntimeError as exc:
+            if "Session is closed" in str(exc):
+                raise SessionClosedError(str(exc)) from exc
+            raise
 
     async def get_subscription_contents(
         self,
@@ -192,27 +217,34 @@ class Office365API:
         next_page_uri: str | None = f"{base_url}/subscriptions/content?{query_string}"
         while next_page_uri is not None:
             # queries the contents for the current page
-            async with self._fresh_session() as session:
-                response = await session.get(
-                    next_page_uri,
-                )
-
-                # check HTTP status code
-                if response.status >= 400:
-                    raise FailedToGetO365SubscriptionContents(status_code=response.status, body=await response.text())
-
-                contents = await response.json()
-
-                # check business errors
-                if "error" in contents:
-                    raise FailedToGetO365SubscriptionContents(
-                        error_code=contents["error"].get("code"), error_message=contents["error"].get("message")
+            try:
+                async with self._fresh_session() as session:
+                    response = await session.get(
+                        next_page_uri,
                     )
 
-                yield contents
+                    # check HTTP status code
+                    if response.status >= 400:
+                        raise FailedToGetO365SubscriptionContents(
+                            status_code=response.status, body=await response.text()
+                        )
 
-                # get the uri for the next page if defined
-                next_page_uri = response.headers.get("NextPageUri")
+                    contents = await response.json()
+
+                    # check business errors
+                    if "error" in contents:
+                        raise FailedToGetO365SubscriptionContents(
+                            error_code=contents["error"].get("code"), error_message=contents["error"].get("message")
+                        )
+
+                    # get the uri for the next page if defined
+                    next_page_uri = response.headers.get("NextPageUri")
+            except RuntimeError as exc:
+                if "Session is closed" in str(exc):
+                    raise SessionClosedError(str(exc)) from exc
+                raise
+
+            yield contents
 
     async def get_content(self, content_uri: str) -> list[dict[str, Any]]:
         """
@@ -223,24 +255,29 @@ class Office365API:
         :rtype: list
         """
         # queries the contents for the current page
-        async with self._fresh_session() as session:
-            response = await session.get(
-                content_uri,
-            )
-
-            # check HTTP status code
-            if response.status >= 400:
-                raise FailedToGetO365AuditContent(status_code=response.status, body=await response.text())
-
-            content = await response.json(content_type=None)
-
-            # check business errors
-            if "error" in content:
-                raise FailedToGetO365AuditContent(
-                    error_code=content["error"].get("code"), error_message=content["error"].get("message")
+        try:
+            async with self._fresh_session() as session:
+                response = await session.get(
+                    content_uri,
                 )
 
-            return content
+                # check HTTP status code
+                if response.status >= 400:
+                    raise FailedToGetO365AuditContent(status_code=response.status, body=await response.text())
+
+                content = await response.json(content_type=None)
+
+                # check business errors
+                if "error" in content:
+                    raise FailedToGetO365AuditContent(
+                        error_code=content["error"].get("code"), error_message=content["error"].get("message")
+                    )
+
+                return content
+        except RuntimeError as exc:
+            if "Session is closed" in str(exc):
+                raise SessionClosedError(str(exc)) from exc
+            raise
 
     def _normalize_office365_url(self) -> str:
         """

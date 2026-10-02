@@ -4,14 +4,14 @@ import os
 from abc import ABCMeta
 from asyncio import BoundedSemaphore
 from collections.abc import AsyncGenerator
-from functools import cached_property
-from typing import Any, BinaryIO, Optional
+from typing import Any, Optional
 
 import orjson
+from loguru import logger
+from pydantic import BaseModel, Field
+from sekoia_automation.storage import PersistentJSON
 
-from aws_helpers.s3_wrapper import S3Configuration, S3Wrapper
-from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
-from aws_helpers.utils import normalize_s3_key, AsyncReader
+from aws_helpers.utils import AsyncReader, normalize_s3_key, unescape_string
 from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
 from connectors.metrics import INCOMING_EVENTS
 
@@ -23,6 +23,24 @@ class AwsS3QueuedConfiguration(AbstractAwsConnectorConfiguration):
     chunk_size: int = 10000
     delete_consumed_messages: bool = True
     queue_name: str
+    prefix_filter: str | None = None
+
+
+class AwsS3ListConfiguration(AbstractAwsConnectorConfiguration):
+    """Base configuration to work with AbstractAwsS3ListConnector (without SQS)."""
+
+    bucket: str
+    prefix_filter: str | None = None
+
+
+class AwsS3LogsBaseConfiguration(BaseModel):
+    skip_first: int = 0
+    separator: str = Field(min_length=1)
+
+    @property
+    def sep(self) -> str:
+        # actual separator
+        return unescape_string(self.separator)
 
 
 class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
@@ -39,41 +57,6 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 60))
         self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
         self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
-
-    @cached_property
-    def s3_wrapper(self) -> S3Wrapper:
-        """
-        Get S3 wrapper.
-
-        Returns:
-            S3Wrapper:
-        """
-        config = S3Configuration(
-            aws_access_key_id=self.module.configuration.aws_access_key,
-            aws_secret_access_key=self.module.configuration.aws_secret_access_key,
-            aws_region=self.module.configuration.aws_region_name,
-        )
-
-        return S3Wrapper(config)
-
-    @cached_property
-    def sqs_wrapper(self) -> SqsWrapper:
-        """
-        Get SQS wrapper.
-
-        Returns:
-            SqsWrapper:
-        """
-        config = SqsConfiguration(
-            frequency=self.configuration.sqs_frequency,
-            delete_consumed_messages=self.configuration.delete_consumed_messages,
-            queue_name=self.configuration.queue_name,
-            aws_access_key_id=self.module.configuration.aws_access_key,
-            aws_secret_access_key=self.module.configuration.aws_secret_access_key,
-            aws_region=self.module.configuration.aws_region_name,
-        )
-
-        return SqsWrapper(config)
 
     def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:  # pragma: no cover
         """
@@ -117,65 +100,160 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         result = 0
         timestamps_to_log: list[int] = []
 
-        continue_receiving = True
+        messages: list[tuple[str, int]]
+        async with self.sqs_wrapper.receive_messages(
+            max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
+        ) as messages:
+            message_records = []
 
-        while continue_receiving:
-            async with self.sqs_wrapper.receive_messages(
-                max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
-            ) as messages:
-                message_records = []
+            for message_data in messages:
+                message, message_timestamp = message_data
 
-                if not messages:
-                    continue_receiving = False
+                timestamps_to_log.append(message_timestamp)
+                try:
+                    # Records is a list of strings
+                    message_records.extend(self._get_notifs_from_sqs_message(message))
+                except ValueError as e:
+                    self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
-                for message_data in messages:
-                    message, message_timestamp = message_data
+            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_records))
+            for record in message_records:
+                try:
+                    s3_bucket, s3_key = self._get_object_from_notification(record)
 
-                    timestamps_to_log.append(message_timestamp)
-                    try:
-                        # Records is a list of strings
-                        message_records.extend(self._get_notifs_from_sqs_message(message))
-                    except ValueError as e:
-                        self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
+                    if s3_bucket is None:
+                        raise ValueError("Bucket is undefined", record)
 
-                if not message_records:
-                    continue_receiving = False
+                    if s3_key is None:
+                        raise ValueError("Key is undefined", record)
 
-                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_records))
-                for record in message_records:
-                    try:
-                        s3_bucket, s3_key = self._get_object_from_notification(record)
+                    normalized_key = normalize_s3_key(s3_key)
 
-                        if s3_bucket is None:
-                            raise ValueError("Bucket is undefined", record)
-
-                        if s3_key is None:
-                            raise ValueError("Key is undefined", record)
-
-                        normalized_key = normalize_s3_key(s3_key)
-
-                        async with (
-                            self.s3_fetch_concurrency_sem,
-                            self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as stream,
-                        ):
-                            async for event in self._parse_content(stream):
-                                records.append(event)
-
-                                if len(records) >= self.limit_of_events_to_push:
-                                    continue_receiving = False
-                                    result += len(await self.push_data_to_intakes(events=records))
-                                    records = []
-
-                    except Exception as e:
+                    if self.configuration.prefix_filter and not normalized_key.startswith(
+                        self.configuration.prefix_filter
+                    ):
                         self.log(
-                            message=f"Failed to fetch content of {record}: {str(e)}",
-                            level="warning",
+                            message=f"Skipping S3 object {normalized_key}: does not match prefix filter "
+                            f"'{self.configuration.prefix_filter}'",
+                            level="debug",
                         )
+                        continue
 
-            if not records:
-                continue_receiving = False
+                    stream: AsyncReader
+                    object_records = 0
+                    async with (
+                        self.s3_fetch_concurrency_sem,
+                        self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as stream,
+                    ):
+                        async for event in self._parse_content(stream):
+                            object_records += 1
+                            records.append(event)
+
+                            if len(records) >= self.limit_of_events_to_push:
+                                result += len(await self.push_data_to_intakes(events=records))
+                                records = []
+
+                    logger.info(f"Parsed {object_records} records from object {normalized_key}")
+
+                except Exception as e:
+                    self.log(
+                        message=f"Failed to fetch content of {record}: {str(e)}",
+                        level="warning",
+                    )
+
+            # push while still in the context: leaving it deletes the consumed messages
+            if records:
+                result += len(await self.push_data_to_intakes(events=records))
+
+        return result, timestamps_to_log
+
+
+class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
+    """
+    Connector that collects objects from a S3 bucket without relying on SQS notifications.
+
+    It lists the objects present in the bucket, reads every new object and uses a checkpoint
+    (the key of the last processed object) to avoid reading the same file multiple times.
+    """
+
+    configuration: AwsS3ListConfiguration
+
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+        super().__init__(*args, **kwargs)
+        self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
+        self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
+        self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
+        self.context = PersistentJSON("context.json", self.data_path)
+
+    def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:  # pragma: no cover
+        raise NotImplementedError()
+
+    def read_marker(self) -> str | None:
+        """Get the marker (key of the last processed object) from the previous run."""
+        with self.context as cache:
+            marker = cache.get("marker")
+            return marker if isinstance(marker, str) else None
+
+    def write_marker(self, marker: str) -> None:
+        """Persist the marker (key of the last processed object)."""
+        with self.context as cache:
+            cache["marker"] = marker
+
+    async def next_batch(self) -> tuple[int, list[int]]:
+        """List objects after the checkpoint, read each one and advance the marker."""
+        records: list[str] = []
+        result = 0
+        timestamps_to_log: list[int] = []
+
+        marker = self.read_marker()
+        last_committed = marker
+        last_processed = marker
+
+        async for s3_object in self.s3_wrapper.list_objects(
+            bucket=self.configuration.bucket,
+            prefix=self.configuration.prefix_filter,
+            start_after=marker,
+        ):
+            key = s3_object.get("Key")
+            if not key:
+                continue
+
+            normalized_key = normalize_s3_key(key)
+            last_modified = s3_object.get("LastModified")
+            if last_modified is not None:
+                timestamps_to_log.append(int(last_modified.timestamp() * 1000))
+
+            try:
+                stream: AsyncReader
+                async with (
+                    self.s3_fetch_concurrency_sem,
+                    self.s3_wrapper.read_key(bucket=self.configuration.bucket, key=normalized_key) as stream,
+                ):
+                    object_records = [event async for event in self._parse_content(stream)]
+
+                logger.info(f"Parsed {len(object_records)} records from object {key}")
+
+            except Exception as e:
+                # do not advance the marker past a failing object to avoid losing data.
+                self.log(message=f"Failed to fetch content of {key}: {str(e)}", level="warning")
+                break
+
+            last_processed = key
+
+            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(object_records))
+            records.extend(object_records)
+
+            if len(records) >= self.limit_of_events_to_push:
+                result += len(await self.push_data_to_intakes(events=records))
+                records = []
+                if last_processed is not None and last_processed != last_committed:
+                    self.write_marker(last_processed)
+                    last_committed = last_processed
 
         if records:
             result += len(await self.push_data_to_intakes(events=records))
+
+        if last_processed is not None and last_processed != last_committed:
+            self.write_marker(last_processed)
 
         return result, timestamps_to_log

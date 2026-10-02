@@ -1,7 +1,9 @@
-from sekoia_automation.account_validator import AccountValidator
 from functools import cached_property
-from sentinelone_module.client import SentinelOneClient
+
+from sekoia_automation.account_validator import AccountValidator
+
 from sentinelone_module.base import SentinelOneModule
+from sentinelone_module.client import SentinelOneClient
 
 
 class SentinelOneAccountValidator(AccountValidator):

@@ -49,10 +49,19 @@
         "description": "Title of the alert",
         "in": "body"
       },
-      "assignee": {
+      "verdict_uuid": {
+        "description": "Verdict of the alert",
         "type": "string",
-        "format": "uuid",
+        "in": "body"
+      },
+      "custom_status_uuid": {
+        "description": "Custom status of the alert",
+        "type": "string",
+        "in": "body"
+      },
+      "assignee": {
         "description": "UUID of the user assigned to the alert",
+        "type": "string",
         "in": "body"
       }
     },
@@ -143,6 +152,60 @@
             "type": "string"
           }
         }
+      },
+      "custom_status_uuid": {
+        "type": "string",
+        "format": "uuid",
+        "x-nullable": true,
+        "description": "UUID of the custom status associated to the alert"
+      },
+      "custom_status": {
+        "x-nullable": true,
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "stage": {
+            "type": "string"
+          }
+        }
+      },
+      "verdict_uuid": {
+        "type": "string",
+        "format": "uuid",
+        "x-nullable": true,
+        "description": "UUID of the verdict associated to the alert"
+      },
+      "verdict": {
+        "x-nullable": true,
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "stage": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "label",
+          "level",
+          "stage"
+        ]
       },
       "created_by": {
         "type": "string"

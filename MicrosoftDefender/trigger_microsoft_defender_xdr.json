@@ -1,0 +1,41 @@
+{
+  "description": "Fetch events from Microsoft Defender XDR",
+  "docker_parameters": "connector_microsoft_defender_xdr",
+  "name": "[BETA] Fetch events from Microsoft Defender XDR",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "timedelta": {
+        "type": "integer",
+        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events (default to 5 minutes ago)",
+        "default": 5
+      },
+      "start_time": {
+        "type": "integer",
+        "description": "The number of hours from which events should be queried.",
+        "default": 1
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "title": "Events",
+    "type": "object"
+  },
+  "results": {},
+  "uuid": "9d519e54-30fc-4b01-8c6a-e080b4c48a56"
+}

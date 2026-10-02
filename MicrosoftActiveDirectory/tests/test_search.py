@@ -1,12 +1,14 @@
-from microsoft_ad.actions_base import MicrosoftADModule, MicrosoftADAction
-from microsoft_ad.search_actions import SearchAction
-from unittest.mock import patch
-import pytest
-import json
-import orjson
 import datetime
-from ldap3.core.timezone import OffsetTzInfo
+import json
 from pathlib import Path
+from unittest.mock import patch
+
+import orjson
+import pytest
+from ldap3.core.timezone import OffsetTzInfo
+
+from microsoft_ad.actions_base import MicrosoftADAction, MicrosoftADModule
+from microsoft_ad.search_actions import SearchAction
 
 
 def configured_action(action: MicrosoftADAction, data_path: Path | None = None):

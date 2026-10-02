@@ -1,0 +1,30 @@
+{
+  "description": "Retrieve an existing Netskope blocklist",
+  "docker_parameters": "get_blocklist",
+  "name": "Get Blocklist",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_token": {
+        "type": "string",
+        "description": "API token for authentication"
+      },
+      "blocklist_id": {
+        "type": "string",
+        "description": "The ID of the blocklist"
+      }
+    },
+    "required": [
+      "api_token",
+      "blocklist_id"
+    ],
+    "title": "Get blocklist",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "0fb42646-ff78-4f7e-b8bf-becd6f73c911"
+}

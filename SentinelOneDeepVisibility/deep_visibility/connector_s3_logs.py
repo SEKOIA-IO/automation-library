@@ -1,8 +1,11 @@
+import os
 from collections.abc import AsyncGenerator
+from typing import Any, Optional
 
 import orjson
 from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from connectors.s3.provider import AwsAccountProvider
 from deep_visibility.metrics import DISCARDED_EVENTS
 
 EXCLUDED_EVENT_TYPES = [
@@ -14,11 +17,17 @@ EXCLUDED_EVENT_TYPES = [
 ]
 
 
-class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
+class DeepVisibilityConnector(AbstractAwsS3QueuedConnector, AwsAccountProvider):
     """Implementation of DeepVisibilityConnector."""
 
     configuration: AwsS3QueuedConfiguration
     name = "DeepVisibility AWS S3 Logs"
+
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+        """Init DeepVisibilityConnector."""
+
+        super().__init__(*args, **kwargs)
+        self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 300))
 
     async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """

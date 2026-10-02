@@ -1,17 +1,19 @@
 """Contains client to interact with Github API."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Union
+from typing import Any
 
 from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
 from multidict import MultiDictProxy
 from yarl import URL
 
+from github_modules.async_client import AuthenticationError
 from github_modules.async_client.token_refresher import PemGithubTokenRefresher
 
 
-class AsyncGithubClient(object):
+class AsyncGithubClient:
     """Async Github client."""
 
     _session: ClientSession | None = None
@@ -41,7 +43,7 @@ class AsyncGithubClient(object):
         self.api_key = api_key
 
         self.pem_file = pem_file
-        self.base_url = f'https://{base_url.removeprefix("http://").removeprefix("https://")}'
+        self.base_url = f"https://{base_url.removeprefix('http://').removeprefix('https://').rstrip('/')}"
         self.organization = organization
         self.app_id = app_id
 
@@ -68,7 +70,7 @@ class AsyncGithubClient(object):
             AsyncGenerator[ClientSession, None]:
         """
         if cls._session is None:
-            cls._session = ClientSession()
+            cls._session = ClientSession(trust_env=True)
 
         if cls._rate_limiter:
             async with cls._rate_limiter:
@@ -87,9 +89,10 @@ class AsyncGithubClient(object):
             raise ValueError("Pem file, organization and app id should be provided.")
 
         return await PemGithubTokenRefresher.instance(
-            self.pem_file,
-            self.organization,
-            self.app_id,
+            base_url=self.base_url,
+            pem_file=self.pem_file,
+            organization=self.organization,
+            app_id=self.app_id,
         )
 
     async def get_auth_headers(self, refresh_token: bool = False) -> dict[str, str]:
@@ -100,7 +103,7 @@ class AsyncGithubClient(object):
         }
 
         if self.api_key:
-            headers["Authorization"] = "token {0}".format(self.api_key)
+            headers["Authorization"] = f"token {self.api_key}"
         else:
             token_refresher = await self._get_token_refresher()
             if refresh_token:
@@ -108,7 +111,7 @@ class AsyncGithubClient(object):
 
             token = await token_refresher.get_access_token()
 
-            headers["Authorization"] = "Bearer {0}".format(token)
+            headers["Authorization"] = f"Bearer {token}"
 
         return headers
 
@@ -135,25 +138,41 @@ class AsyncGithubClient(object):
             list[dict[str, Any]]:
         """
         params: dict[str, Any] = (
-            {} if url else {"phrase": "created:>{0}".format(start_from), "order": "asc", "per_page": 100}
+            {}
+            if url
+            else {
+                "phrase": f"created:>{start_from}",
+                "order": "asc",
+                "per_page": 100,
+            }
         )
         request_url: str = url or self.audit_logs_url
 
         result: list[dict[str, Any]] = []
-        links: Union[MultiDictProxy[Union[str, URL]], dict[Any, Any]] = {}
+        links: MultiDictProxy[str | URL] | dict[Any, Any] = {}
         next_link: str | None = None
 
         async with self.session() as session:
             headers = await self.get_auth_headers()
 
-            async with session.get(request_url, params=params, headers=headers) as response:
+            async with session.get(
+                request_url, params=params, headers=headers
+            ) as response:
                 if response.status != 200:
                     headers = await self.get_auth_headers(refresh_token=True)
 
-                    async with session.get(request_url, params=params, headers=headers) as refreshed_response:
+                    async with session.get(
+                        request_url, params=params, headers=headers
+                    ) as refreshed_response:
+                        if refreshed_response.status == 401:
+                            raise AuthenticationError(
+                                "The authentication Failed. Please check you credendial. error=Bad credential status_code=401"
+                            )
+
                         result = await refreshed_response.json()
                         links = refreshed_response.links.get("next", {})
                         next_link = str(links.get("url")) if links.get("url") else None
+
                 else:
                     result = await response.json()
                     links = response.links.get("next", {})

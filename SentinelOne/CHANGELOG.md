@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-30 - 1.23.4
+
+### Fixed
+
+- Fix generated malware archive passwords so they only use the special characters preserved by SentinelOne's `threats/fetch-file` endpoint
+
+## 2026-09-14 - 1.23.3
+
+### Changed
+
+- Fetch threats through the management library's `threats.get` service instead of a raw `client.get` call
+
+### Fixed
+
+- Fix threat event duplication by reading `createdAt` from the nested `threatInfo` field so the checkpoint offset advances correctly on the v2.1 threats API
+
+## 2026-09-04 - 1.23.2
+
+### Fixed
+
+- Fix device asset connector: stop assigning the device `modelName` to `device.vendor_name`; `vendor_name` must represent the device hardware vendor, not the model
+
+## 2026-07-29 - 1.23.1
+
+### Fixed
+
+- Fix event duplication after unexpected pod restart by persisting the events cache to disk after each pagination page instead of only on clean shutdown
+
+## 2026-03-20 - 1.23.0
+
+### Added
+
+- Add action to add hash to the Blocklist
+- Add action to remove hash from the Blocklist
+
+### Changed
+
+- Updated dependencies
+
+## 2026-04-10 - 1.22.1
+
+### Fixed
+
+- Fix field mappings in `device_mapping.yml` to align with the actual OCSF models
+
+## 2026-03-12 - 1.22.0
+
+### Added
+
+- Add risk level determination based on infection state and active threats to device asset connector
+- Add organization data from SentinelOne account to device asset connector
+- Add domain enrichment to device asset connector
+
+### Changed
+
+- Update sekoia-automation-library SDK dependency to ^1.22.4
+
+### Fixed
+
+- Fix device type mapping for laptop (now correctly mapped to desktop) and tablet (now correctly mapped to mobile)
+
+## 2026-02-20 - 1.21.8
+
+### Fixed
+
+- Fix device asset boot_time field to use float timestamp instead of integer
+- Fix device asset vendor_name to use actual model name from agent data instead of hardcoded value
+
 ## 2026-02-11 - 1.21.7
 
 ### Added

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import inspect
 from typing import AsyncGenerator, Iterable
 
 from azure.identity.aio import ClientSecretCredential
@@ -129,10 +130,31 @@ class GraphApi(object):
 
         return writer.get_serialized_content().decode("utf-8")
 
-    async def close(self) -> None:  # pragma: no cover
-        if self._client:
-            self._client = None
+    async def close(self) -> None:
+        close_error: Exception | None = None
 
-        if self._credentials:
-            await self._credentials.close()
-            self._credentials = None
+        if self._client is not None:
+            try:
+                request_adapter = getattr(self._client, "request_adapter", None)
+                http_client = getattr(request_adapter, "http_client", None) if request_adapter is not None else None
+                close_method = getattr(http_client, "aclose", None) if http_client is not None else None
+                if callable(close_method):
+                    maybe_awaitable = close_method()
+                    if inspect.isawaitable(maybe_awaitable):
+                        await maybe_awaitable
+            except Exception as error:
+                close_error = error
+            finally:
+                self._client = None
+
+        if self._credentials is not None:
+            try:
+                await self._credentials.close()
+            except Exception as error:
+                if close_error is None:
+                    close_error = error
+            finally:
+                self._credentials = None
+
+        if close_error is not None:
+            raise close_error

@@ -3,7 +3,7 @@ repos:
     rev: v4.1.0
     hooks:
       - id: no-commit-to-branch
-        args: ['--branch', 'main', '--branch', 'production']
+        args: ['--branch', 'develop', '--branch', 'production']
       - id: check-json
       - id: check-yaml
       - id: check-toml

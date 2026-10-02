@@ -2,6 +2,8 @@ from microsoft_outlook_modules import MicrosoftOutlookModule
 from microsoft_outlook_modules.action_delete_message import DeleteMessageAction
 from microsoft_outlook_modules.action_forward_message import ForwardMessageAction
 from microsoft_outlook_modules.action_get_message import GetMessageAction
+from microsoft_outlook_modules.action_resolve_message import ResolveMessageAction
+from microsoft_outlook_modules.action_search_messages import SearchMessagesAction
 from microsoft_outlook_modules.action_send_message import SendMessageAction
 from microsoft_outlook_modules.action_update_message import UpdateMessageAction
 
@@ -12,4 +14,6 @@ if __name__ == "__main__":
     module.register(DeleteMessageAction, "action_delete_message")
     module.register(UpdateMessageAction, "action_update_message")
     module.register(SendMessageAction, "action_send_message")
+    module.register(SearchMessagesAction, "action_search_messages")
+    module.register(ResolveMessageAction, "action_resolve_message")
     module.run()

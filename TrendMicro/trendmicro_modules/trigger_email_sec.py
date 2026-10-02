@@ -6,7 +6,7 @@ from threading import Event, Lock, Thread
 from typing import Any, Generator
 
 import orjson
-from pydantic import Field
+from pydantic.v1 import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
@@ -33,7 +33,7 @@ class TrendMicroWorker(Thread):
         self.log_type = log_type
         self.connector = connector
 
-        self.service_url = connector.configuration.service_url
+        self.service_url = connector.configuration.service_url.rstrip("/")
         if self.service_url.startswith("http://"):
             self.service_url = "https://%s" % self.service_url[7:]
 
@@ -128,7 +128,7 @@ class TrendMicroWorker(Thread):
             self.log(
                 message=(
                     f"Request on Trend Micro Email Security API to fetch {response.url} "
-                    f"failed with status {response.status_code} - {response.reason}"
+                    f"failed with status {response.status_code} - {response.reason}: {response.text}"
                 ),
                 level="error",
             )

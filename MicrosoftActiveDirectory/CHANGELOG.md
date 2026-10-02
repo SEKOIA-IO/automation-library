@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-13 - 1.5.8
+
+### Fixed
+
+- Reconnect LDAP connection on any `LDAPException` (including `LDAPSessionTerminatedByServerError`) during paged search, not only on socket errors
+
+## 2026-07-09 - 1.5.7
+
+### Fixed
+
+- Fix duplication of assets by adding a cache in the context
+
+## 2026-07-07 - 1.5.6
+
+### Fixed
+
+- Reconnect LDAP connection automatically when the socket is closed between asset fetch cycles
+
+## 2026-07-06 - 1.5.5
+
+### Fixed
+
+- Classify machine/computer accounts (sAMAccountName or UPN local part ending with `$`) as `SYSTEM` instead of `USER`
+- Discard AD UPN-style values (e.g. `compte$@domain.ad.recouv`) from `email_addr` — they are not real email addresses
+
+## 2026-04-24 - 1.5.4
+
+### Fixed
+
+- Fix `AttributeError` on `basedn` field due to Pydantic v1/v2 mismatch in `MicrosoftADConnectorConfiguration`
+
+## 2026-04-10 - 1.5.3
+
+### Fixed
+
+- Fix field mappings in `user_mapping.yml` to align with the actual OCSF models
+
+## 2026-04-14 - 1.5.2
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.5
+- Update asset connector to use typed `LDAPUserAttributes` model instead of raw `dict[str, Any]`
+
+## 2026-03-04 - 1.5.1
+
+### Changed
+
+- Replace `display_name` filter parameter with `email` (mail attribute) for more precise user disambiguation across all user actions
+
+### Fixed
+
+- LDAP search filter incorrectly built when `username` is `None` or empty, causing the OR clause to match nothing (e.g. `(samaccountname=)`)
+- When only `email` is provided without `username`, the filter now correctly resolves to `(mail=<email>)` instead of the broken `(&(|(samaccountname=)...)(mail=<email>))`
+- Raise `ValueError` early when both `username` and `email` are missing
+
+## 2026-03-04 - 1.5.0
+
+### Added
+
+- Support for `display_name` parameter to narrow LDAP search when multiple users share the same email
+- Support for `apply_to_all` parameter to apply actions (disable, enable, reset password) to all matching users
 ## 2026-02-11 - 1.4.7
 
 ### Added

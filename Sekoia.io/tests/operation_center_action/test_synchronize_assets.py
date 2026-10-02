@@ -1,20 +1,19 @@
-import pytest
 import json
-from urllib.parse import urljoin
-from pydantic.v1 import BaseModel
-from typing import List, Dict, Any
+from typing import Any
 from unittest.mock import patch
+from urllib.parse import urljoin
+
+import pytest
 
 # Adjust the import path according to your project structure
 from sekoiaio.operation_center.synchronize_assets_with_ad import (
     SynchronizeAssetsWithAD,
-    Action,
 )
 
 
 # Mock Module class to provide configuration to the action
 class MockModule:
-    def __init__(self, configuration: Dict[str, Any]):
+    def __init__(self, configuration: dict[str, Any]):
         self.configuration = configuration
 
 
@@ -87,17 +86,9 @@ class TestSynchronizeAssetsWithAD:
         """
         # Extract configuration from the mock module
         base_url = action_instance.module.configuration["base_url"]
-        api_key = action_instance.module.configuration["api_key"]
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        }
 
         # URLs
         assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
-        merge_url = urljoin(base_url + "/", "v2/asset-management/assets/merge")
-        update_url = urljoin(base_url + "/", "v2/asset-management/assets/asset-uuid-1")
         create_url = urljoin(base_url + "/", "v2/asset-management/assets")
 
         # Helper functions to match specific GET requests
@@ -153,9 +144,9 @@ class TestSynchronizeAssetsWithAD:
         # 2. 2 GET for all the detection properties search
         # 3. PUT update asset
         # 4. POST merge assets
-        assert (
-            len(requests_mock.request_history) == 4
-        ), f"Expected 4 HTTP requests, got {len(requests_mock.request_history)}."
+        assert len(requests_mock.request_history) == 4, (
+            f"Expected 4 HTTP requests, got {len(requests_mock.request_history)}."
+        )
 
         # Optionally, verify the payloads of PUT and POST requests
         # Verify PUT request payload
@@ -182,18 +173,10 @@ class TestSynchronizeAssetsWithAD:
         """
         # Extract configuration from the mock module
         base_url = action_instance.module.configuration["base_url"]
-        api_key = action_instance.module.configuration["api_key"]
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        }
 
         # URLs
         assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
-        merge_url = urljoin(base_url + "/", "v2/asset-management/assets/merge")
         update_url = urljoin(base_url + "/", "v2/asset-management/assets/asset-uuid-1")
-        create_url = urljoin(base_url + "/", "v2/asset-management/assets")
 
         # Helper functions to match specific GET requests
         def match_asset_name(request):
@@ -248,9 +231,9 @@ class TestSynchronizeAssetsWithAD:
         # 2. 2 GET for all the detection properties search
         # 3. PUT update asset
         # 4. POST merge assets
-        assert (
-            len(requests_mock.request_history) == 4
-        ), f"Expected 4 HTTP requests, got {len(requests_mock.request_history)}."
+        assert len(requests_mock.request_history) == 4, (
+            f"Expected 4 HTTP requests, got {len(requests_mock.request_history)}."
+        )
 
         # Optionally, verify the payloads of PUT and POST requests
         # Verify PUT request payload
@@ -276,18 +259,11 @@ class TestSynchronizeAssetsWithAD:
         """
         # Extract configuration from the mock module
         base_url = action_instance.module.configuration["base_url"]
-        api_key = action_instance.module.configuration["api_key"]
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        }
 
         # URLs
         assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
         merge_url = urljoin(base_url + "/", "v2/asset-management/assets/merge")
         update_url = urljoin(base_url + "/", "v2/asset-management/assets/asset-uuid-1")
-        create_url = urljoin(base_url + "/", "v2/asset-management/assets")
 
         # Helper functions to match specific GET requests
         def match_asset_name(request):
@@ -356,9 +332,9 @@ class TestSynchronizeAssetsWithAD:
         # 2. 2 GET for all the detection properties search
         # 3. PUT update asset
         # 4. POST merge assets
-        assert (
-            len(requests_mock.request_history) == 5
-        ), f"Expected 5 HTTP requests, got {len(requests_mock.request_history)}."
+        assert len(requests_mock.request_history) == 5, (
+            f"Expected 5 HTTP requests, got {len(requests_mock.request_history)}."
+        )
 
         # Optionally, verify the payloads of PUT and POST requests
         # Verify PUT request payload
@@ -415,16 +391,9 @@ class TestSynchronizeAssetsWithAD:
         with patch.object(SynchronizeAssetsWithAD, "json_argument", return_value=mock_user_ad_data) as mock_json_arg:
             # Extract configuration from the mock module
             base_url = action_instance.module.configuration["base_url"]
-            api_key = action_instance.module.configuration["api_key"]
-
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}",
-            }
 
             # URLs
             assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
-            merge_url = urljoin(base_url + "/", "v2/asset-management/assets/merge")
             create_url = urljoin(base_url + "/", "v2/asset-management/assets")
 
             # Define how many times each GET request should be expected
@@ -493,7 +462,6 @@ class TestSynchronizeAssetsWithAD:
 
             # Assertions
             assert len(response) == 2, "Expected two response items for two users."
-            print(response)
             # Check first user response
             response_item_1 = response[0]
             assert response_item_1["created_asset"] is True, "Asset for asmith should be created."
@@ -512,9 +480,9 @@ class TestSynchronizeAssetsWithAD:
             ], "Destination asset UUID for bjones mismatch."
             assert response_item_2["found_assets"] == [], "Found assets for bjones should be empty."
 
-            assert (
-                len(requests_mock.request_history) == 8
-            ), f"Expected 6 HTTP requests, got {len(requests_mock.request_history)}."
+            assert len(requests_mock.request_history) == 8, (
+                f"Expected 6 HTTP requests, got {len(requests_mock.request_history)}."
+            )
 
             # Verify that `json_argument` was called once with the correct parameters
             mock_json_arg.assert_called_once_with("user_ad_data", arguments_with_file)
@@ -550,7 +518,356 @@ class TestSynchronizeAssetsWithAD:
                 },
             ]
 
-            for req, expected_payload in zip(post_create_requests, expected_post_create_payloads):
-                assert (
-                    req.json() == expected_payload
-                ), f"POST create request payload mismatch for {expected_payload['name']}."
+            for req, expected_payload in zip(post_create_requests, expected_post_create_payloads, strict=False):
+                assert req.json() == expected_payload, (
+                    f"POST create request payload mismatch for {expected_payload['name']}."
+                )
+
+    def test_get_assets_non_json_response_sets_action_error(self, requests_mock, action_instance, arguments):
+        base_url = action_instance.module.configuration["base_url"]
+        assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
+
+        def match_asset_name(request):
+            search_query = request.qs.get("search", [None])[0]
+            also_search = "also_search_in_detection_properties" in request.qs
+            return search_query == "jdoe" and not also_search
+
+        requests_mock.get(
+            assets_url,
+            additional_matcher=match_asset_name,
+            text="Gateway Timeout",
+            headers={"Content-Type": "text/html"},
+            status_code=200,
+            reason="OK",
+        )
+
+        resp = action_instance.run(arguments)
+
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "Expected JSON response for GET assets" in action_instance.error_message
+        assert "Gateway Timeout" in action_instance.error_message
+        assert action_instance.logs
+        assert any(
+            log["level"] == "error" and "Expected JSON response for GET assets" in log["message"]
+            for log in action_instance.logs
+        )
+
+    def test_missing_asset_name_returns_error(self, requests_mock, action_instance, arguments):
+        """Test error when asset_name_field value is missing in user_ad_data."""
+        arguments["user_ad_data"] = {"email": "test@example.com"}  # Missing 'username'
+
+        resp = action_instance.run(arguments)
+
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "does not contain the asset_name_field" in action_instance.error_message
+
+    def test_missing_module_configuration_returns_error(self, action_instance, arguments):
+        action_instance.module.configuration["base_url"] = ""
+
+        resp = action_instance.run(arguments)
+
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "Configuration must include base_url and api_key." in action_instance.error_message
+
+    def test_missing_asset_name_field_configuration_returns_error(self, action_instance, arguments):
+        arguments["asset_synchronization_configuration"].pop("asset_name_field")
+
+        resp = action_instance.run(arguments)
+
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "Configuration must include asset_name_field." in action_instance.error_message
+
+    def test_get_assets_http_error_sets_error(self, requests_mock, action_instance):
+        base_url = action_instance.module.configuration["base_url"]
+        assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
+        requests_mock.get(assets_url, status_code=500, text="boom", reason="Server Error")
+
+        resp = action_instance.get_assets("jdoe")
+
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "HTTP GET request failed" in action_instance.error_message
+
+    def test_post_request_http_error_sets_error(self, requests_mock, action_instance):
+        base_url = action_instance.module.configuration["base_url"]
+        endpoint = "v2/asset-management/assets"
+        requests_mock.post(urljoin(base_url + "/", endpoint), status_code=500, text="boom", reason="Server Error")
+
+        resp = action_instance.post_request(endpoint, json.dumps({"name": "jdoe"}))
+
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "HTTP POST request failed" in action_instance.error_message
+
+    def test_put_request_http_error_sets_error(self, requests_mock, action_instance):
+        base_url = action_instance.module.configuration["base_url"]
+        endpoint = "v2/asset-management/assets/asset-uuid-1"
+        requests_mock.put(urljoin(base_url + "/", endpoint), status_code=500, text="boom", reason="Server Error")
+
+        action_instance.put_request(endpoint, json.dumps({"name": "jdoe"}))
+
+        assert action_instance.error_message is not None
+        assert "HTTP PUT request failed" in action_instance.error_message
+
+    def test_merge_assets_http_error_sets_error(self, requests_mock, action_instance):
+        base_url = action_instance.module.configuration["base_url"]
+        endpoint = "v2/asset-management/assets/merge"
+        requests_mock.post(urljoin(base_url + "/", endpoint), status_code=500, text="boom", reason="Server Error")
+
+        action_instance.merge_assets("asset-uuid-1", ["asset-uuid-2"])
+
+        assert action_instance.error_message is not None
+        assert "HTTP POST merge request failed" in action_instance.error_message
+
+    def test_detection_property_lookup_error_aborts(self, requests_mock, action_instance, arguments):
+        base_url = action_instance.module.configuration["base_url"]
+        assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
+
+        def match_asset_name(request):
+            return (
+                request.qs.get("search", [None])[0] == "jdoe"
+                and "also_search_in_detection_properties" not in request.qs
+            )
+
+        def match_detection(request):
+            return request.qs.get("also_search_in_detection_properties", [None])[0] == "true"
+
+        requests_mock.get(
+            assets_url,
+            additional_matcher=match_asset_name,
+            json={"total": 1, "items": [{"uuid": "asset-uuid-1", "name": "jdoe", "atoms": []}]},
+            status_code=200,
+        )
+        requests_mock.get(
+            assets_url,
+            additional_matcher=match_detection,
+            status_code=500,
+            text="boom",
+            reason="Server Error",
+        )
+
+        resp = action_instance.run(arguments)
+
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "HTTP GET request failed" in action_instance.error_message
+
+    def test_put_failure_aborts_run(self, requests_mock, action_instance, arguments):
+        base_url = action_instance.module.configuration["base_url"]
+        assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
+        update_url = urljoin(base_url + "/", "v2/asset-management/assets/asset-uuid-1")
+
+        def match_asset_name(request):
+            return (
+                request.qs.get("search", [None])[0] == "jdoe"
+                and "also_search_in_detection_properties" not in request.qs
+            )
+
+        def match_detection(request):
+            return request.qs.get("also_search_in_detection_properties", [None])[0] == "true"
+
+        requests_mock.get(
+            assets_url,
+            additional_matcher=match_asset_name,
+            json={"total": 1, "items": [{"uuid": "asset-uuid-1", "name": "jdoe", "atoms": []}]},
+            status_code=200,
+        )
+        requests_mock.get(
+            assets_url,
+            additional_matcher=match_detection,
+            json={"total": 0, "items": []},
+            status_code=200,
+        )
+        requests_mock.put(update_url, status_code=500, text="boom", reason="Server Error")
+
+        resp = action_instance.run(arguments)
+
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "HTTP PUT request failed" in action_instance.error_message
+
+    def test_unexpected_asset_name_search_response_aborts(self, requests_mock, action_instance, arguments):
+        base_url = action_instance.module.configuration["base_url"]
+        assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
+
+        def match_asset_name(request):
+            return (
+                request.qs.get("search", [None])[0] == "jdoe"
+                and "also_search_in_detection_properties" not in request.qs
+            )
+
+        requests_mock.get(
+            assets_url,
+            additional_matcher=match_asset_name,
+            json={"total": 1, "items": [{"uuid": "asset-uuid-1", "name": "someone-else", "atoms": []}]},
+            status_code=200,
+        )
+        requests_mock.get(
+            assets_url,
+            additional_matcher=lambda request: (
+                request.qs.get("also_search_in_detection_properties", [None])[0] == "true"
+            ),
+            json={"total": 0, "items": []},
+            status_code=200,
+        )
+
+        resp = action_instance.run(arguments)
+
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "Unexpected asset name search response" in action_instance.error_message
+
+    def test_create_asset_http_error_aborts(self, requests_mock, action_instance, arguments):
+        base_url = action_instance.module.configuration["base_url"]
+        assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
+
+        def match_asset_name(request):
+            return (
+                request.qs.get("search", [None])[0] == "jdoe"
+                and "also_search_in_detection_properties" not in request.qs
+            )
+
+        def match_detection(request):
+            return request.qs.get("also_search_in_detection_properties", [None])[0] == "true"
+
+        requests_mock.get(
+            assets_url, additional_matcher=match_asset_name, json={"total": 0, "items": []}, status_code=200
+        )
+        requests_mock.get(
+            assets_url, additional_matcher=match_detection, json={"total": 0, "items": []}, status_code=200
+        )
+        requests_mock.post(assets_url, status_code=500, text="boom", reason="Server Error")
+
+        resp = action_instance.run(arguments)
+
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "HTTP POST request failed" in action_instance.error_message
+
+    def test_create_asset_missing_uuid_aborts(self, requests_mock, action_instance, arguments):
+        base_url = action_instance.module.configuration["base_url"]
+        assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
+
+        def match_asset_name(request):
+            return (
+                request.qs.get("search", [None])[0] == "jdoe"
+                and "also_search_in_detection_properties" not in request.qs
+            )
+
+        def match_detection(request):
+            return request.qs.get("also_search_in_detection_properties", [None])[0] == "true"
+
+        requests_mock.get(
+            assets_url, additional_matcher=match_asset_name, json={"total": 0, "items": []}, status_code=200
+        )
+        requests_mock.get(
+            assets_url, additional_matcher=match_detection, json={"total": 0, "items": []}, status_code=200
+        )
+        requests_mock.post(assets_url, json={}, status_code=200)
+
+        resp = action_instance.run(arguments)
+
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "Asset creation response does not contain uuid." in action_instance.error_message
+
+    def test_merge_failure_after_creation_aborts(self, requests_mock, action_instance, arguments):
+        base_url = action_instance.module.configuration["base_url"]
+        assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
+        merge_url = urljoin(base_url + "/", "v2/asset-management/assets/merge")
+
+        def match_asset_name(request):
+            return (
+                request.qs.get("search", [None])[0] == "jdoe"
+                and "also_search_in_detection_properties" not in request.qs
+            )
+
+        def match_detection(request):
+            return request.qs.get("also_search_in_detection_properties", [None])[0] == "true"
+
+        requests_mock.get(
+            assets_url, additional_matcher=match_asset_name, json={"total": 0, "items": []}, status_code=200
+        )
+        requests_mock.get(
+            assets_url,
+            additional_matcher=match_detection,
+            json={"total": 1, "items": [{"uuid": "asset-uuid-2", "name": "other"}]},
+            status_code=200,
+        )
+        requests_mock.post(assets_url, json={"uuid": "asset-uuid-1"}, status_code=200)
+        requests_mock.post(merge_url, status_code=500, text="boom", reason="Server Error")
+
+        resp = action_instance.run(arguments)
+
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "HTTP POST merge request failed" in action_instance.error_message
+
+    def test_multiple_assets_with_same_name_aborts(self, requests_mock, action_instance, arguments):
+        base_url = action_instance.module.configuration["base_url"]
+        assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
+
+        def match_asset_name(request):
+            return (
+                request.qs.get("search", [None])[0] == "jdoe"
+                and "also_search_in_detection_properties" not in request.qs
+            )
+
+        requests_mock.get(
+            assets_url,
+            additional_matcher=match_asset_name,
+            json={"total": 2, "items": [{"uuid": "asset-uuid-1"}, {"uuid": "asset-uuid-2"}]},
+            status_code=200,
+        )
+        requests_mock.get(
+            assets_url,
+            additional_matcher=lambda request: (
+                request.qs.get("also_search_in_detection_properties", [None])[0] == "true"
+            ),
+            json={"total": 0, "items": []},
+            status_code=200,
+        )
+
+        resp = action_instance.run(arguments)
+
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "Unexpected asset name search response" in action_instance.error_message
+
+    def test_merge_failure_for_existing_asset_aborts(self, requests_mock, action_instance, arguments):
+        base_url = action_instance.module.configuration["base_url"]
+        assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
+        merge_url = urljoin(base_url + "/", "v2/asset-management/assets/merge")
+
+        def match_asset_name(request):
+            return (
+                request.qs.get("search", [None])[0] == "jdoe"
+                and "also_search_in_detection_properties" not in request.qs
+            )
+
+        def match_detection(request):
+            return request.qs.get("also_search_in_detection_properties", [None])[0] == "true"
+
+        requests_mock.get(
+            assets_url,
+            additional_matcher=match_asset_name,
+            json={"total": 1, "items": [{"uuid": "asset-uuid-1", "name": "jdoe", "atoms": []}]},
+            status_code=200,
+        )
+        requests_mock.get(
+            assets_url,
+            additional_matcher=match_detection,
+            json={"total": 1, "items": [{"uuid": "asset-uuid-2", "name": "other"}]},
+            status_code=200,
+        )
+        requests_mock.post(merge_url, status_code=500, text="boom", reason="Server Error")
+
+        resp = action_instance.run(arguments)
+
+        assert resp is None
+        assert action_instance.error_message is not None
+        assert "HTTP POST merge request failed" in action_instance.error_message

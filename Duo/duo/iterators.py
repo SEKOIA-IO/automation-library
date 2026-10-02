@@ -1,11 +1,11 @@
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import duo_client
 from duo_client.logs import Telephony
 
 
 class DuoV1LogsIterator:
-    def __init__(self, func: Callable, min_time: int, limit: int = 1000, callback: Optional[Callable] = None):
+    def __init__(self, func: Callable, min_time: int, limit: int = 1000, callback: Callable | None = None):
         self.min_time = min_time
         self.func = func
         self.limit = limit
@@ -74,9 +74,7 @@ class DuoV2LogsIterator:
 
 
 class AdminLogsIterator(DuoV1LogsIterator):
-    def __init__(
-        self, client: duo_client.Admin, min_time: int, limit: int = 1000, callback: Optional[Callable] = None
-    ):
+    def __init__(self, client: duo_client.Admin, min_time: int, limit: int = 1000, callback: Callable | None = None):
         super().__init__(func=client.get_administrator_log, min_time=min_time, limit=limit, callback=callback)
 
 
@@ -102,7 +100,5 @@ class AuthLogsIterator(DuoV2LogsIterator):
 
 
 class OfflineLogsIterator(DuoV1LogsIterator):
-    def __init__(
-        self, client: duo_client.Admin, min_time: int, limit: int = 1000, callback: Optional[Callable] = None
-    ):
+    def __init__(self, client: duo_client.Admin, min_time: int, limit: int = 1000, callback: Callable | None = None):
         super().__init__(func=client.get_offline_log, min_time=min_time, limit=limit, callback=callback)

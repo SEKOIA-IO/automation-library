@@ -1,0 +1,27 @@
+{
+  "name": "Create Dataset",
+  "description": "Create a new dataset",
+  "uuid": "289de371-e78f-429c-a52b-0142780f8212",
+  "docker_parameters": "create-dataset",
+  "arguments": {
+    "title": "CreateDatasetArguments",
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "description": "Name of the dataset to create."
+      },
+      "dataset": {
+        "title": "Dataset",
+        "type": "string",
+        "description": "The content of the dataset to create, in CSV format."
+      }
+    },
+    "required": [
+      "name",
+      "dataset"
+    ]
+  },
+  "results": {}
+}

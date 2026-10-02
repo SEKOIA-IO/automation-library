@@ -58,3 +58,4 @@ class MicrosoftSentinelResponseModel(BaseModel):
     severity: Optional[str]
     status: Optional[str]
     title: Optional[str]
+    entities: Optional[List[Dict[str, Any]]] = None

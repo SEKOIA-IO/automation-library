@@ -158,7 +158,7 @@ def action():
 
 def mock_request(censys_mock, arguments, json):
     censys_mock.get(
-        f'https://www.censys.io/api/v1/view/{arguments["index"]}/{arguments["item"]}',
+        f"https://www.censys.io/api/v1/view/{arguments['index']}/{arguments['item']}",
         json=json,
     )
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, ClassVar
 
 from censys.base import CensysIndex
 from censys.certificates import CensysCertificates
@@ -8,7 +8,7 @@ from sekoia_automation.action import Action
 
 
 class CensysAction(Action):
-    index_classes = {
+    index_classes: ClassVar[dict[str, type[CensysIndex]]] = {
         "ipv4": CensysIPv4,
         "websites": CensysWebsites,
         "certificates": CensysCertificates,

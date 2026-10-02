@@ -1,17 +1,17 @@
+import gzip
 import ipaddress
 import json
-import time
-import gzip
 import logging
+import time
 import uuid
+from collections.abc import Iterator
 from datetime import datetime, timedelta
 from functools import cached_property
 from io import BytesIO
-from ipaddress import IPv6Network, IPv4Network
-from typing import Iterator
-from iso3166 import countries
+from ipaddress import IPv4Network, IPv6Network
 
 import requests
+from iso3166 import countries
 from sekoia_automation.storage import write
 from sekoia_automation.trigger import Trigger
 
@@ -27,9 +27,7 @@ class TriggerFetchIPInfoDatabase(Trigger):
     def tags_valid_for(self) -> int:
         if valid_for := self.configuration.get("tags_valid_for"):
             return valid_for
-        return min(
-            self.MAX_HOUR_TAG_VALID_FOR, self.configuration.get("interval", 24) * 3
-        )
+        return min(self.MAX_HOUR_TAG_VALID_FOR, self.configuration.get("interval", 24) * 3)
 
     @property
     def database_url(self):
@@ -92,21 +90,15 @@ class TriggerFetchIPInfoDatabase(Trigger):
         # The tags are valid for 10 days
         now: datetime = datetime.utcnow()
         tag_valid_from: str = self.datetime_to_str(now)
-        tag_valid_until: str = self.datetime_to_str(
-            now + timedelta(hours=self.tags_valid_for)
-        )
+        tag_valid_until: str = self.datetime_to_str(now + timedelta(hours=self.tags_valid_for))
         asn_cache: dict[int, dict] = dict()
 
         with gzip.open(BytesIO(response.content), mode="r") as gz:
             for row in gz.readlines():
-                yield from self._parse_db_row(
-                    row, tag_valid_from, tag_valid_until, asn_cache
-                )
+                yield from self._parse_db_row(row, tag_valid_from, tag_valid_until, asn_cache)
 
     @staticmethod
-    def build_chunks(
-        generator: Iterator[list], chunk_size: int
-    ) -> Iterator[tuple[list[dict], int]]:
+    def build_chunks(generator: Iterator[list], chunk_size: int) -> Iterator[tuple[list[dict], int]]:
         location_chunk: dict[str, dict] = {}
         chunk_offset: int = 0
 
@@ -121,21 +113,17 @@ class TriggerFetchIPInfoDatabase(Trigger):
         if location_chunk:
             yield list(location_chunk.values()), chunk_offset
 
-    def _get_observable_for_asn(
-        self, asn_cache: dict, asn_number: int, asn_name: str
-    ) -> dict:
+    def _get_observable_for_asn(self, asn_cache: dict, asn_number: int, asn_name: str) -> dict:
         asn_cache[asn_number] = {
             "type": "autonomous-system",
-            "id": f"autonomous-system--{str(uuid.uuid4())}",
+            "id": f"autonomous-system--{uuid.uuid4()!s}",
             "number": asn_number,
             "name": asn_name,
             "x_inthreat_sources_refs": [self.identity["id"]],
         }
         return asn_cache[asn_number]
 
-    def _get_tags(
-        self, country_code: str, tag_valid_from: str, tag_valid_until: str, row: bytes
-    ) -> list:
+    def _get_tags(self, country_code: str, tag_valid_from: str, tag_valid_until: str) -> list:
         try:
             # check the country code is valid
             country_info = countries.get(country_code)
@@ -184,13 +172,11 @@ class TriggerFetchIPInfoDatabase(Trigger):
             # Don't consider not routed IP segment
             return
 
-        tags = self._get_tags(country_code, tag_valid_from, tag_valid_until, row)
+        tags = self._get_tags(country_code, tag_valid_from, tag_valid_until)
         if asn_number in asn_cache:
             autonomous_system = asn_cache[asn_number]
         else:
-            autonomous_system = self._get_observable_for_asn(
-                asn_cache, asn_number, asn_name
-            )
+            autonomous_system = self._get_observable_for_asn(asn_cache, asn_number, asn_name)
 
         # yield observables for IP segments
         try:
@@ -214,9 +200,7 @@ class TriggerFetchIPInfoDatabase(Trigger):
             )
             for ip_range in ipaddress.summarize_address_range(ip_start, ip_end):
                 observable = self._create_observable(observable_type, ip_range, tags)
-                relationships = self._create_observable_relationship(
-                    observable, autonomous_system
-                )
+                relationships = self._create_observable_relationship(observable, autonomous_system)
                 result += [relationships, observable]
 
             yield result
@@ -234,15 +218,13 @@ class TriggerFetchIPInfoDatabase(Trigger):
     ) -> dict:
         return {
             "type": observable_type,
-            "id": f"{observable_type}--{str(uuid.uuid4())}",
+            "id": f"{observable_type}--{uuid.uuid4()!s}",
             "value": str(ip_range),
             "x_inthreat_tags": tags,
             "x_inthreat_sources_refs": [self.identity["id"]],
         }
 
-    def _create_observable_relationship(
-        self, observable: dict, autonomous_system: dict
-    ) -> dict:
+    def _create_observable_relationship(self, observable: dict, autonomous_system: dict) -> dict:
         return {
             "id": f"observable-relationship--{uuid.uuid4()}",
             "type": "observable-relationship",
@@ -252,25 +234,19 @@ class TriggerFetchIPInfoDatabase(Trigger):
             "relationship_type": "belongs-to",
         }
 
-    def create_event_for_chunk(
-        self, location_chunk_info: tuple[list[dict], int]
-    ) -> None:
+    def create_event_for_chunk(self, location_chunk_info: tuple[list[dict], int]) -> None:
         location_chunk = location_chunk_info[0]
         offset = location_chunk_info[1]
 
         # Add identity of the service to the bundle
         location_chunk.append(self.identity)
         chunk_size = len(location_chunk)
-        file_path = write(
-            "observables.json", json.dumps(location_chunk), data_path=self.data_path
-        )
+        file_path = write("observables.json", json.dumps(location_chunk), data_path=self.data_path)
         directory = file_path.parent.as_posix()
 
         self.send_event(
-            event_name=f"IPINFO.IO List Chunk {offset}-{offset+chunk_size}",
-            event=dict(
-                file_path="observables.json", chunk_offset=offset, chunk_size=chunk_size
-            ),
+            event_name=f"IPINFO.IO List Chunk {offset}-{offset + chunk_size}",
+            event=dict(file_path="observables.json", chunk_offset=offset, chunk_size=chunk_size),
             directory=directory,
             remove_directory=True,
         )

@@ -12,6 +12,7 @@ from collections.abc import Iterator
 from datetime import datetime, timedelta
 from io import BytesIO
 from ipaddress import IPv4Network, IPv6Network
+from typing import ClassVar
 
 import requests
 from iso3166 import countries
@@ -22,7 +23,7 @@ from iptoasn.utils import datetime_to_str
 
 class TriggerFetchIPtoASNDatabase(Trigger):
     MAX_HOUR_TAG_VALID_FOR = 15 * 24
-    database_urls = [
+    database_urls: ClassVar[list[str]] = [
         "https://iptoasn.com/data/ip2asn-v4.tsv.gz",
         "https://iptoasn.com/data/ip2asn-v6.tsv.gz",
     ]
@@ -84,7 +85,7 @@ class TriggerFetchIPtoASNDatabase(Trigger):
         file_path = str(chunk_path.relative_to(work_dir))
         chunk_size = len(location_chunk)
         self.send_event(
-            event_name=f"IPTOASN List Chunk {offset}-{offset+chunk_size}",
+            event_name=f"IPTOASN List Chunk {offset}-{offset + chunk_size}",
             event=dict(file_path=file_path, chunk_offset=offset, chunk_size=chunk_size),
             directory=directory,
             remove_directory=True,
@@ -125,7 +126,7 @@ class TriggerFetchIPtoASNDatabase(Trigger):
                 for row in gz.readlines():
                     yield from self._parse_db_row(row, tag_valid_from, tag_valid_until, asn_cache)
 
-    def _get_tags(self, country_code: str, tag_valid_from: str, tag_valid_until: str, row: bytes) -> list:
+    def _get_tags(self, country_code: str, tag_valid_from: str, tag_valid_until: str, _row: bytes) -> list:
         try:
             # check the country code is valid
             country_info = countries.get(country_code)
@@ -143,7 +144,7 @@ class TriggerFetchIPtoASNDatabase(Trigger):
     def _get_observable_for_asn(self, asn_cache: dict, asn_number: int, asn_name: str, tags: list) -> dict:
         asn_cache[asn_number] = {
             "type": "autonomous-system",
-            "id": f"autonomous-system--{str(uuid.uuid4())}",
+            "id": f"autonomous-system--{uuid.uuid4()!s}",
             "number": asn_number,
             "name": asn_name,
             "x_inthreat_tags": tags.copy(),
@@ -159,7 +160,7 @@ class TriggerFetchIPtoASNDatabase(Trigger):
     ) -> dict:
         return {
             "type": observable_type,
-            "id": f"{observable_type}--{str(uuid.uuid4())}",
+            "id": f"{observable_type}--{uuid.uuid4()!s}",
             "value": str(ip_range),
             "x_inthreat_tags": tags,
             "x_inthreat_sources_refs": [self.identity["id"]],

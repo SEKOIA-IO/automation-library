@@ -2,6 +2,9 @@
 
 from sekoia_automation.loguru.config import init_logging
 
+from asset_connector.device_assets import AwsDeviceAssetConnector
+from asset_connector.users_assets import AwsUsersAssetConnector
+from aws_helpers.account_validator import AwsAccountValidator
 from connectors import AwsModule
 from connectors.s3.logs.trigger_cloudtrail_logs import CloudTrailLogsTrigger
 from connectors.s3.logs.trigger_flowlog_records import FlowlogRecordsTrigger
@@ -9,12 +12,10 @@ from connectors.s3.trigger_s3_cloudfront import AwsS3CloudFrontTrigger
 from connectors.s3.trigger_s3_flowlogs import AwsS3FlowLogsTrigger
 from connectors.s3.trigger_s3_flowlogs_parquet import AwsS3FlowLogsParquetRecordsTrigger
 from connectors.s3.trigger_s3_logs import AwsS3LogsTrigger
+from connectors.s3.trigger_s3_logs_no_sqs import AwsS3LogsNoSqsTrigger
 from connectors.s3.trigger_s3_ocsf_parquet import AwsS3OcsfTrigger
 from connectors.s3.trigger_s3_records import AwsS3RecordsTrigger
 from connectors.trigger_sqs_messages import AwsSqsMessagesTrigger
-from asset_connector.device_assets import AwsDeviceAssetConnector
-from asset_connector.users_assets import AwsUsersAssetConnector
-from aws_helpers.account_validator import AwsAccountValidator
 
 if __name__ == "__main__":
     init_logging()
@@ -32,5 +33,6 @@ if __name__ == "__main__":
     module.register(AwsS3FlowLogsTrigger, "aws_s3_flowlogs_trigger")
     module.register(AwsS3CloudFrontTrigger, "aws_s3_cloudfront_trigger")
     module.register(AwsS3OcsfTrigger, "aws_s3_oscf_trigger")
+    module.register(AwsS3LogsNoSqsTrigger, "aws_s3_no_sqs_trigger")
 
     module.run()

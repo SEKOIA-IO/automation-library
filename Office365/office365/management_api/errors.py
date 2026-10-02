@@ -34,3 +34,9 @@ class FailedToGetO365SubscriptionContents(ContextualizedO365Exception):
 
 class FailedToGetO365AuditContent(ContextualizedO365Exception):
     pass
+
+
+class SessionClosedError(O365Exception):
+    """Raised when an Office365 API call is attempted on a closed aiohttp session."""
+
+    pass

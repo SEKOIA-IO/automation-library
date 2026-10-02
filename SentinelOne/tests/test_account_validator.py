@@ -1,7 +1,8 @@
 """Unit tests for SentinelOneAccountValidator."""
 
+from unittest.mock import Mock, PropertyMock, patch
+
 import pytest
-from unittest.mock import Mock, patch, PropertyMock
 
 from sentinelone_module.account_validator import SentinelOneAccountValidator
 from sentinelone_module.base import SentinelOneModule

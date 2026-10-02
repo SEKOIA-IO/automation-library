@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import orjson
 import pytest
@@ -135,11 +135,12 @@ async def test_trigger_sqs_messages(
 
     expected_result = len(expected_messages), expected_timestamps
 
-    connector.sqs_wrapper = MagicMock()
-    connector.sqs_wrapper.receive_messages = MagicMock()
-    connector.sqs_wrapper.receive_messages.return_value.__aenter__.return_value = valid_messages
+    mock_sqs_wrapper = MagicMock()
+    mock_sqs_wrapper.receive_messages = MagicMock()
+    mock_sqs_wrapper.receive_messages.return_value.__aenter__.return_value = valid_messages
 
-    assert await connector.next_batch() == expected_result
+    with patch.object(type(connector), "sqs_wrapper", new_callable=PropertyMock, return_value=mock_sqs_wrapper):
+        assert await connector.next_batch() == expected_result
 
 
 @pytest.mark.asyncio
@@ -175,13 +176,14 @@ async def test_trigger_sqs_messages_with_one_failed(
 
     expected_result = len(expected_messages), expected_timestamps
 
-    connector.sqs_wrapper = MagicMock()
-    connector.sqs_wrapper.receive_messages = MagicMock()
-    connector.sqs_wrapper.receive_messages.return_value.__aenter__.return_value = valid_messages + [
+    mock_sqs_wrapper = MagicMock()
+    mock_sqs_wrapper.receive_messages = MagicMock()
+    mock_sqs_wrapper.receive_messages.return_value.__aenter__.return_value = valid_messages + [
         (session_faker.word(), failed_message_timestamp)
     ]
 
-    assert await connector.next_batch() == expected_result
+    with patch.object(type(connector), "sqs_wrapper", new_callable=PropertyMock, return_value=mock_sqs_wrapper):
+        assert await connector.next_batch() == expected_result
 
 
 @pytest.mark.asyncio
@@ -213,11 +215,12 @@ async def test_trigger_sqs_with_custom_messages(
 
     expected_result = len(expected_messages), expected_timestamps
 
-    connector.sqs_wrapper = MagicMock()
-    connector.sqs_wrapper.receive_messages = MagicMock()
-    connector.sqs_wrapper.receive_messages.return_value.__aenter__.return_value = valid_messages
+    mock_sqs_wrapper = MagicMock()
+    mock_sqs_wrapper.receive_messages = MagicMock()
+    mock_sqs_wrapper.receive_messages.return_value.__aenter__.return_value = valid_messages
 
-    assert await connector.next_batch() == expected_result
+    with patch.object(type(connector), "sqs_wrapper", new_callable=PropertyMock, return_value=mock_sqs_wrapper):
+        assert await connector.next_batch() == expected_result
 
 
 @pytest.mark.parametrize(

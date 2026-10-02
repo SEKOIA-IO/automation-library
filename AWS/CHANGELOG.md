@@ -7,6 +7,117 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-01 - 1.38.3
+
+### Changed
+
+- Optimize several connector methods to reduce memory usage and improve performance when processing large S3 objects, especially for CloudTrail and VPC Flowlogs events. This includes streaming data processing and more efficient event extraction.
+- Use ijson for parsing JSON events in S3 objects, which is more memory-efficient for large datasets.
+
+## 2026-09-29 - 1.38.2
+
+### Changed
+
+- S3 connectors: log the size of each fetched S3 object and the number of records parsed from it
+- Avoid an extra in-memory copy of S3 objects when detecting gzip compression
+
+### Fixed
+
+- SQS-based S3 connectors: push the events of each SQS receive before deleting the messages, instead of
+  accumulating events over several receives until 10,000 were collected (delayed events and data loss on restart)
+- SQS: keep the consumed messages in the queue when their processing fails (e.g. intake push error), so they are
+  redelivered instead of being deleted and lost
+
+## 2026-09-04 - 1.38.1
+
+### Fixed
+
+- Fix device asset connector: stop setting `device.vendor_name` to "Amazon Web Services" for EC2 instances; AWS is the cloud provider, not the hardware vendor of the underlying physical device (which is not exposed by the EC2 API)
+
+## 2026-07-31 - 1.38.0
+
+### Added
+
+- Collect reconnaissance events in the AWS S3 CloudTrail records trigger that were previously filtered out by the
+  `List`/`Describe` prefix filters: `ec2:DescribeInstances`, `iam:ListRoles`, `iam:ListUsers`, `iam:ListAccessKeys`,
+  `secretsmanager:ListSecrets` and `ssm:DescribeParameters`
+
+## 2026-07-28 - 1.37.1
+
+### Fixed
+
+- Detect Apache Parquet-type VPC flow logs in the AWS S3 text flow logs trigger, and exit gracefully with a warning message instead of attempting UTF-8 decoding
+
+## 2026-06-19 - 1.37.0
+
+### Added
+
+- Fix asset connector dependencies
+
+## 2026-06-19 - 1.36.0
+
+### Added
+
+- Added S3 connector (without SQS)
+
+### Changed
+
+- Upgraded dependencies
+
+## 2026-04-28 - 1.35.3
+
+### Changed
+
+- Remove useless file
+
+## 2026-04-20 - 1.35.2
+
+### Changed
+
+- update aws asset connector (#2478)
+
+## 2026-03-29 - 1.35.1
+
+### Changed
+
+- Update the yaml file for asset connector
+
+## 2026-03-26 - 1.35.0
+
+### Added
+
+- Add STS support with temporary credentials caching
+
+## 2026-03-25 - 1.34.1
+
+### Fixed
+
+- Add `prefix_filter` to connector configuration
+
+## 2026-03-17 - 1.34.0
+
+### Added
+
+- Add optional `prefix_filter` parameter to all SQS-based S3 connectors. When set, only S3 objects whose key starts with the given prefix are processed. This allows filtering events when a single S3 bucket contains multiple log types (e.g. CloudTrail + other logs).
+
+## 2026-02-24 - 1.33.17
+
+### Changed
+
+- Accept human-readable separators (e.g. literal `\n` instead of new line in a field)
+
+## 2026-02-20 - 1.33.16
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.3
+
+## 2026-02-18 - 1.33.15
+
+### Changed
+
+- Change the way to provide the SQS client and the S3 client to the connector and trigger
+
 ## 2026-02-12 - 1.33.14
 
 ### Added

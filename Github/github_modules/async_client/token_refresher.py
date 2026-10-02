@@ -3,21 +3,29 @@
 import asyncio
 import time
 from asyncio import Lock, Task
-from typing import Optional
 
 import jwt
 from aiohttp import ClientSession
 from jwt import JWT
 
+from github_modules.async_client import AuthenticationError
 
-class PemGithubTokenRefresher(object):
+
+class PemGithubTokenRefresher:
     """Github token refresher that uses pem file content and org name to get access token."""
 
-    _instances: dict[str, "PemGithubTokenRefresher"] = {}
-    _locks: dict[str, Lock] = {}
+    _instances: dict[str, "PemGithubTokenRefresher"] = {}  # noqa: RUF012
+    _locks: dict[str, Lock] = {}  # noqa: RUF012
     _session: ClientSession | None = None
 
-    def __init__(self, pem_file: str, organization: str, app_id: int, token_ttl: int = 300):
+    def __init__(
+        self,
+        base_url: str,
+        pem_file: str,
+        organization: str,
+        app_id: int,
+        token_ttl: int = 300,
+    ):
         """
         Initialize GithubTokenRefresher.
 
@@ -26,6 +34,7 @@ class PemGithubTokenRefresher(object):
             https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation
 
         Args:
+            base_url: str
             pem_file: str
             organization: str
             token_ttl: int
@@ -33,13 +42,14 @@ class PemGithubTokenRefresher(object):
         if token_ttl > 600:
             raise ValueError("Token ttl can't be more than 600 seconds ( 10 minutes ).")
 
+        self.base_url = base_url
         self.token_ttl = token_ttl
         self.pem_file = pem_file
         self.organization = organization
         self.app_id = app_id
 
         self._token: str | None = None
-        self._token_refresh_task: Optional[Task[None]] = None
+        self._token_refresh_task: Task[None] | None = None
 
     @classmethod
     def session(cls) -> ClientSession:
@@ -52,18 +62,24 @@ class PemGithubTokenRefresher(object):
             ClientSession:
         """
         if not cls._session:
-            cls._session = ClientSession()
+            cls._session = ClientSession(trust_env=True)
 
         return cls._session
 
     @classmethod
     async def instance(
-        cls, pem_file: str, organization: str, app_id: int, token_ttl: int = 300
+        cls,
+        base_url: str,
+        pem_file: str,
+        organization: str,
+        app_id: int,
+        token_ttl: int = 300,
     ) -> "PemGithubTokenRefresher":
         """
         Get singleton PemGithubTokenRefresher instance for specified input params.
 
         Args:
+            base_url: str
             pem_file: str
             organization: str
             app_id: int
@@ -72,7 +88,7 @@ class PemGithubTokenRefresher(object):
         Returns:
             PemGithubTokenRefresher:
         """
-        refresher_unique_key = str(frozenset({pem_file, organization}))
+        refresher_unique_key = str(frozenset({base_url, pem_file, organization}))
         if not cls._locks.get(refresher_unique_key):
             cls._locks[refresher_unique_key] = asyncio.Lock()
 
@@ -80,6 +96,7 @@ class PemGithubTokenRefresher(object):
             async with cls._locks[refresher_unique_key]:
                 if not cls._instances.get(refresher_unique_key):
                     cls._instances[refresher_unique_key] = PemGithubTokenRefresher(
+                        base_url,
                         pem_file,
                         organization,
                         app_id,
@@ -99,20 +116,7 @@ class PemGithubTokenRefresher(object):
         Returns:
             str:
         """
-        return "https://api.github.com/orgs/{0}/installation".format(self.organization)
-
-    @staticmethod
-    def access_token_for_installation_url(installation_id: int) -> str:
-        """
-        Gets url to get access token for installation.
-
-        Args:
-            installation_id: int
-
-        Returns:
-            str:
-        """
-        return "https://api.github.com/app/installations/{0}/access_tokens".format(installation_id)
+        return f"{self.base_url}/orgs/{self.organization}/installation"
 
     def _get_jwt(self) -> str:
         """
@@ -140,15 +144,24 @@ class PemGithubTokenRefresher(object):
         headers = {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "Authorization": "Bearer {0}".format(self._get_jwt()),
+            "Authorization": f"Bearer {self._get_jwt()}",
         }
 
         session = self.session()
 
-        async with session.get(self.installation_request_url, headers=headers) as installation_response:
+        async with session.get(
+            self.installation_request_url, headers=headers
+        ) as installation_response:
             installation_info = await installation_response.json()
             access_token_url = installation_info.get("access_tokens_url")
-            async with session.post(access_token_url, headers=headers) as access_token_response:
+            if not access_token_url:
+                raise AuthenticationError(
+                    f"Authentication failed: {installation_info!s}"
+                )
+
+            async with session.post(
+                access_token_url, headers=headers
+            ) as access_token_response:
                 access_token_info = await access_token_response.json()
 
                 self._token = access_token_info.get("token")

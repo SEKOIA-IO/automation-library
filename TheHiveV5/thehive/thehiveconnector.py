@@ -6,8 +6,12 @@ Simple TheHive Alert Connector
 - Adds basic error handling and logging
 """
 
+import atexit
+import hashlib
 import logging
-from typing import Optional, Dict, List, Any
+import os
+import tempfile
+from typing import Callable, Optional, Dict, List, Any, Union
 
 from thehive4py import TheHiveApi
 from thehive4py.errors import TheHiveError
@@ -173,6 +177,126 @@ def key_exists(mapping: dict, key_to_check: str) -> bool:
     return key_to_check in mapping
 
 
+# Cache for CA certificate files to avoid creating duplicates
+_ca_file_cache: Dict[str, str] = {}
+_atexit_registered = False
+
+
+def _cleanup_ca_files() -> None:
+    """Clean up all cached CA certificate files at process exit."""
+    global _ca_file_cache
+    for ca_file in list(_ca_file_cache.values()):
+        try:
+            if os.path.exists(ca_file):
+                os.unlink(ca_file)
+        except OSError:
+            logger.warning("Failed to clean up temporary CA file: %s", ca_file)
+    _ca_file_cache.clear()
+
+
+def prepare_verify_param(
+    verify: bool,
+    ca_certificate: Optional[str] = None,
+    log_fn: Optional[Callable[[str, str], None]] = None,
+) -> Union[bool, str]:
+    """
+    Prepare the verify parameter for requests/thehive4py.
+
+    Args:
+        verify: Whether to verify the certificate
+        ca_certificate: PEM-encoded CA certificate content (optional)
+        log_fn: Optional logging callable with signature log_fn(message, level).
+                When provided, logs are emitted via this callable (e.g. self.log from a
+                Sekoia Action/Trigger) so they appear in the Sekoia UI. Falls back to
+                the stdlib logger when None.
+
+    Returns:
+        - False if verify is False
+        - Path to temp CA file if ca_certificate is provided
+        - True otherwise (use system CA store)
+    """
+    global _atexit_registered
+
+    def _log(message: str, level: str = "debug") -> None:
+        if log_fn is not None:
+            log_fn(message, level)
+        else:
+            getattr(logger, level, logger.debug)(message)
+
+    if not verify:
+        _log("[prepare_verify_param] verify_certificate=False — TLS verification DISABLED")
+        return False
+
+    if ca_certificate:
+        # Treat empty or whitespace-only certificate as no certificate
+        ca_certificate = ca_certificate.strip()
+        if not ca_certificate:
+            _log("[prepare_verify_param] ca_certificate provided but empty after strip — using system CA store")
+            return True
+
+        # Normalize line endings to Unix-style for consistent hashing
+        ca_certificate = ca_certificate.replace("\r\n", "\n").replace("\r", "\n")
+
+        # Use hash of certificate content as cache key to avoid duplicates
+        ca_hash = hashlib.sha256(ca_certificate.encode()).hexdigest()
+        _log(f"[prepare_verify_param] CA certificate SHA256: {ca_hash[:16]}… (first 16 chars)")
+
+        # Check cache with existence verification
+        if ca_hash in _ca_file_cache:
+            cached_path = _ca_file_cache[ca_hash]
+            try:
+                # Verify file still exists and is readable
+                with open(cached_path, "r") as f:
+                    f.read(1)
+                _log(f"[prepare_verify_param] CA cert cache HIT — reusing {cached_path}")
+                return cached_path
+            except (OSError, IOError):
+                # File was deleted or is inaccessible, remove from cache
+                _log("[prepare_verify_param] CA cert cache entry invalid (file gone), recreating")
+                del _ca_file_cache[ca_hash]
+
+        # Create new temp file with restricted permissions
+        fd, ca_file = tempfile.mkstemp(suffix=".pem", text=True)
+        _log(f"[prepare_verify_param] Creating new temp CA file: {ca_file}")
+        try:
+            # Set restrictive permissions (owner read/write only)
+            os.chmod(ca_file, 0o600)
+            with os.fdopen(fd, "w") as f:
+                f.write(ca_certificate)
+                f.flush()
+                os.fsync(f.fileno())
+            _log(f"[prepare_verify_param] CA cert written and fsynced to: {ca_file}")
+        except Exception as exc:
+            _log(
+                f"[prepare_verify_param] Failed to write CA cert to temp file: {exc}",
+                "error",
+            )
+            # Clean up on failure
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            try:
+                os.unlink(ca_file)
+            except OSError:
+                pass
+            raise
+
+        _ca_file_cache[ca_hash] = ca_file
+
+        # Register cleanup only once
+        if not _atexit_registered:
+            atexit.register(_cleanup_ca_files)
+            _atexit_registered = True
+            _log("[prepare_verify_param] atexit cleanup handler registered")
+
+        _log(f"[prepare_verify_param] TLS mode: CERT_REQUIRED with custom CA — verify={ca_file}")
+        return ca_file
+
+    _log("[prepare_verify_param] TLS mode: CERT_REQUIRED with system CA store")
+    return True
+
+
 class TheHiveConnector:
     """
     Minimal TheHive Alert Connector.
@@ -181,20 +305,59 @@ class TheHiveConnector:
         res = connector.alert_get("ALERT-ID")
     """
 
-    def __init__(self, url: str, api_key: str, organisation: str, verify: bool = True):
+    def __init__(
+        self,
+        url: str,
+        api_key: str,
+        organisation: str,
+        verify: bool = True,
+        ca_certificate: Optional[str] = None,
+        log_fn: Optional[Callable[[str, str], None]] = None,
+    ):
         if not api_key:
             raise ValueError("API key is required")
 
-        self.api = TheHiveApi(url=url, apikey=api_key, organisation=organisation, verify=verify)
+        # Store log_fn: when provided, logs go to the Sekoia UI via self.log; otherwise stdlib logger.
+        self._log_fn = log_fn
+
+        self._log(f"[TheHiveConnector.__init__] Initializing — url={url} organisation={organisation}")
+        self._log(
+            f"[TheHiveConnector.__init__] verify_certificate={verify} "
+            f"ca_certificate={'<provided>' if ca_certificate else '<not set>'}"
+        )
+
+        verify_param = prepare_verify_param(verify, ca_certificate, log_fn=log_fn)
+        self._log(f"[TheHiveConnector.__init__] verify param resolved to: {verify_param!r}")
+
+        try:
+            self.api = TheHiveApi(url=url, apikey=api_key, organisation=organisation, verify=verify_param)
+            self._log("[TheHiveConnector.__init__] TheHiveApi instance created successfully")
+        except Exception as exc:
+            self._log(
+                f"[TheHiveConnector.__init__] Failed to create TheHiveApi ({type(exc).__name__}): {exc}",
+                "error",
+            )
+            raise
+
+    def _log(self, message: str, level: str = "debug") -> None:
+        """Route a log line to the Sekoia UI (via log_fn) or fall back to stdlib logger."""
+        if self._log_fn is not None:
+            self._log_fn(message, level)
+        else:
+            getattr(logger, level, logger.debug)(message)
 
     def _safe_call(self, fn, *args, **kwargs):
+        fn_name = getattr(fn, "__name__", repr(fn))
+        self._log(f"[_safe_call] Calling {fn_name}")
         try:
-            return fn(*args, **kwargs)
+            result = fn(*args, **kwargs)
+            self._log(f"[_safe_call] {fn_name} returned successfully")
+            return result
         except TheHiveError as e:
-            logger.error("TheHive API error: %s", e)
+            self._log(f"[_safe_call] TheHive API error in {fn_name}: {e}", "error")
             raise
         except Exception as e:
-            logger.exception("Unexpected error calling TheHive")
+            self._log(f"[_safe_call] Unexpected error in {fn_name}: {e}", "error")
             raise
 
     # ---------------------- Alert actions ----------------------
@@ -226,7 +389,10 @@ class TheHiveConnector:
                     thehive_field = SEKOIA_TO_THEHIVE.get(k, "<unknown>")
                     # Skip observables with unknown data types
                     if thehive_field == "<unknown>":
-                        logging.warning("Skipping observable with unknown data type for field '%s'", k)
+                        logging.warning(
+                            "Skipping observable with unknown data type for field '%s'",
+                            k,
+                        )
                         continue
                     # Ensure data is a string
                     if not isinstance(v, str):
@@ -287,7 +453,10 @@ class TheHiveConnector:
                     results["success"].append(result)
                 except Exception as e:
                     logger.warning(
-                        "Failed to add observable (type=%s, data=%s): %s", obs.get("dataType"), obs.get("data"), e
+                        "Failed to add observable (type=%s, data=%s): %s",
+                        obs.get("dataType"),
+                        obs.get("data"),
+                        e,
                     )
                     results["failure"].append({"observable": obs, "error": str(e)})
 

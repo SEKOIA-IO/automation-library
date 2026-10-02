@@ -15,15 +15,8 @@
       },
       "status": {
         "type": "string",
-        "description": "Name of the status to update the alert to",
-        "in": "body",
-        "enum": [
-          "Pending",
-          "Acknowledged",
-          "Ongoing",
-          "Rejected",
-          "Closed"
-        ]
+        "description": "Name or UUID of the status to update the alert to (native or custom)",
+        "in": "body"
       },
       "comment": {
         "type": "string",

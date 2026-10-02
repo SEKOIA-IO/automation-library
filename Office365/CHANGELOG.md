@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-02 - 2.20.7
+
+### Fixed
+
+- Add intake_server to connector's manifests
+
+## 2026-07-01 - 2.20.6
+
+### Changed
+
+- Add retries for reading and writing context file
+
+## 2026-06-01 - 2.20.5
+
+### Fixed
+
+- Handle unexpected aiohttp session closures by raising `SessionClosedError` and rebuilding the Office365 client when needed.
+
+## 2026-05-22 - 2.20.4
+
+### Fixed
+
+- Ignore AF20024 error code when activating subscriptions, as it indicates the subscription is already enabled
+
+## 2026-04-27 - 2.20.3
+
+### Fixed
+
+- Log as critical when failing to activate the subscription
+- Fix the way to shut down the connector
+
+## 2026-04-16 - 2.20.2
+
+### Fixed
+
+- Fixed an issue where the asyncio event loop was closed after each run
+
+## 2026-03-19 - 2.20.1
+
+### Changed
+
+- Deprecate old Office 365 Message Trace connectors
+
+## 2026-03-05 - 2.20.0
+
+### Added
+
+- Add Office 365 Message Trace Graph API connector
+
+### Changed
+
+- Upgrade dependencies
+- Upgrade sekoia-automation-sdk
+
 ## 2025-12-19 - 2.19.1
 
 ### Changed

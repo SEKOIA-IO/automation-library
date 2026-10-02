@@ -1,15 +1,17 @@
 """Contains AwsS3RecordsTrigger."""
 
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Any, cast
 
+import ijson
 import orjson
 
-from aws_helpers.utils import AsyncReader
+from aws_helpers.utils import AsyncReader, PeekableAsyncReader, PeekableStreamReader
 from connectors.s3 import AbstractAwsS3QueuedConnector
+from connectors.s3.provider import AwsAccountProvider
 
 
-class AwsS3RecordsTrigger(AbstractAwsS3QueuedConnector):
+class BaseAwsS3RecordsTrigger:
     """Implementation of AwsS3RecordsTrigger."""
 
     name = "AWS S3 Records"
@@ -36,7 +38,8 @@ class AwsS3RecordsTrigger(AbstractAwsS3QueuedConnector):
                 "CreateTags",
                 "DeleteTags",
                 "DescribeAddresses",
-                "DescribeInstances",
+                # DescribeInstances is deliberately collected: it is a key reconnaissance action
+                # performed with stolen EC2 credentials. See _forced_events below.
                 "DescribeInstanceStatus",
                 "DescribePublicIpv4Pools",
                 "DescribeSubnets",
@@ -49,6 +52,15 @@ class AwsS3RecordsTrigger(AbstractAwsS3QueuedConnector):
             ],
         },
         "default": {"unsupported": ["List", "Describe", "GetRecords"]},
+    }
+
+    # Reconnaissance actions that must always be collected, even though their name matches one of the
+    # unsupported prefixes above. Keyed by eventSource, matched on the exact event name so that noisier
+    # neighbours (ListUserPolicies, ListSecretVersionIds, ...) keep being filtered out.
+    _forced_events = {
+        "iam.amazonaws.com": {"ListAccessKeys", "ListRoles", "ListUsers"},
+        "secretsmanager.amazonaws.com": {"ListSecrets"},
+        "ssm.amazonaws.com": {"DescribeParameters"},
     }
 
     @classmethod
@@ -64,6 +76,10 @@ class AwsS3RecordsTrigger(AbstractAwsS3QueuedConnector):
         """
         event_source = payload.get("eventSource", "")
         event_name = payload.get("eventName", "")
+
+        if event_name in cls._forced_events.get(event_source, set()):
+            return True
+
         if event_source not in cls._events_prefixes.keys():
             event_source = "default"
 
@@ -80,6 +96,22 @@ class AwsS3RecordsTrigger(AbstractAwsS3QueuedConnector):
 
         return len(supported) == 0 and len(unsupported) != 0
 
+    async def _is_stream_empty(self, stream: PeekableAsyncReader) -> bool:
+        """
+        Check if the stream is empty.
+
+        Args:
+            stream: PeekableAsyncReader
+        Returns:
+            bool:
+        """
+        first_byte = await stream.peek(1)
+
+        if first_byte == b"":
+            return True
+        else:
+            return False
+
     async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """
         Parse content from S3 bucket.
@@ -90,14 +122,21 @@ class AwsS3RecordsTrigger(AbstractAwsS3QueuedConnector):
         Returns:
              Generator:
         """
-        content = await stream.read()
+        if getattr(stream, "peek", None) is None:
+            reader = PeekableStreamReader(stream)
+        else:
+            reader = cast(PeekableStreamReader, stream)
 
-        if len(content) == 0:
+        if await self._is_stream_empty(reader):
             return
 
-        for data in orjson.loads(content).get("Records", []):
+        async for data in ijson.items_async(reader, "Records.item", use_float=True):
             # https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-log-file-examples.html
             # Go through each element in list and add to result_data if it is a valid payload based on this
             # https://github.com/SEKOIA-IO/automation-library/issues/346
             if len(data) > 0 and self.is_valid_payload(data):
                 yield orjson.dumps(data).decode("utf-8")
+
+
+class AwsS3RecordsTrigger(BaseAwsS3RecordsTrigger, AbstractAwsS3QueuedConnector, AwsAccountProvider):
+    """AWS S3 Records Trigger connector."""

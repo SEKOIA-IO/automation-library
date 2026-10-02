@@ -7,6 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-10 - 2.11.0
+
+### Changed
+
+- Migrated module from Poetry to uv
+
+## 2026-09-09 - 2.10.6
+
+### Fixed
+
+- Fix duplicated events in the system logs connector on restart during a large fetch: the checkpoint was only persisted after a full pagination drain, so a restart mid-drain replayed events already forwarded but no longer present in the bounded dedup cache. The checkpoint is now persisted after each page is pushed, bounding the replay to a single page that the cache fully deduplicates.
+
+## 2026-08-21 - 2.10.5
+
+### Fixed
+
+- Account validation now reports the real error to the platform instead of "Unknown error": the validator calls `self.error()` so the message reaches the UI, and falls back to `str(err)`/`repr(err)` when the Okta SDK error carries an empty `message`.
+
+## 2026-06-16 - 2.10.4
+
+### Fixed
+
+- Fix duplicated events in the system logs connector: the dedup cache and the checkpoint were sharing the same `context.json` file and overwriting each other on disk, causing one of them to be lost on restart. The dedup cache is now stored in a dedicated `events_cache.json` file (with backward-compatible migration from `context.json`).
+
+## 2026-04-24 - 2.10.3
+
+### Fixed
+
+- Fix account validator to detect authentication failures.
+
+## 2026-04-21 - 2.10.2
+
+### Changed
+
+- Upgrade `sekoia-automation-sdk` to 1.22.5 and add Okta device models for full API responses
+
+## 2026-03-29 - 2.10.1
+
+### Changed
+
+- Update the yaml file for asset connector
+
+## 2026-03-12 - 2.10.0
+
+### Added
+
+- Add `imei`, `udid`, and `lastSeen` fields to Okta device model
+- Add `name`, `udid`, `imei_list`, `first_seen_time`, `is_trusted`, and `uid_alt` fields to device asset output
+- Add organization mapping from user profile fields (organization, department, domain)
+- Add user enrichments with access control data (enabled status, last login, last password change)
+
+### Fixed
+
+- Fix Okta SDK attribute names to use snake_case (`first_name`, `last_name`, `display_name`)
+- Fix URL query parameter construction for device pagination (remove extra `/`)
+- Make `osVersion` optional in device profile model
+- Remove OS version from `get_device_os` to avoid errors on missing version data
+- Fix `type_uid` value in user OCSF model
+- Improve disk encryption type handling with `BITLOCKER` and `FILEVAULT` support
+
+
+## 2026-02-20 - 2.9.0
+
+### Added
+
+- Add get_device_type method to automatically classify devices as Desktop (Windows/macOS), Mobile (iOS/Android), or Other based on platform
+
+## 2026-02-18 - 2.8.15
+
+### Fixed
+
+- Fix async implementation of update_checkpoint method in asset connectors
+
 ## 2026-02-11 - 2.8.14
 
 ### Added

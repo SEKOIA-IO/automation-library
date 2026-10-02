@@ -44,197 +44,6 @@ mapping:
         }
 
   fields:
-    # USER IDENTIFICATION
-    - source: "entityId"
-      target: "user.uid"
-      type: "string"
-      logic: "Direct mapping of CrowdStrike entity unique ID"
-      description: "User unique identifier from CrowdStrike Identity Protection"
-
-    - source: "primaryDisplayName"
-      target: "user.name"
-      type: "string"
-      logic: "Direct mapping of primary display name"
-      description: "User display name (username)"
-
-    - source: "primaryDisplayName + secondaryDisplayName"
-      target: "user.full_name"
-      type: "string"
-      logic: "Concatenate primaryDisplayName and secondaryDisplayName with space; trim whitespace; fallback to primaryDisplayName if secondaryDisplayName is empty"
-      description: "User full name"
-
-    # EMAIL ADDRESSES
-    - source: "emailAddresses[0]"
-      target: "user.email_addr"
-      type: "string"
-      logic: "Extract first email from emailAddresses array; null if empty or array is missing"
-      description: "Primary email address"
-
-    - source: "emailAddresses[]"
-      target: "user.email_addresses"
-      type: "array[string]"
-      logic: "Direct mapping of all email addresses; empty array if none or field missing"
-      description: "All email addresses associated with user"
-
-    # ACCOUNT INFORMATION - PRIMARY ACCOUNT
-    - source: "accounts[0]"
-      target: "user.account"
-      type: "object"
-      logic: "Map primary account (first entry in accounts array); use sub-mappings below for account fields"
-      description: "Primary user account"
-
-    - source: "accounts[0].samAccountName || primaryDisplayName"
-      target: "user.account.name"
-      type: "string"
-      logic: "Direct mapping of SAM account name; fallback to primaryDisplayName if empty or missing"
-      description: "Account username (SAM account name)"
-
-    - source: "accounts[0].objectSid || accounts[0].objectGuid || entityId"
-      target: "user.account.uid"
-      type: "string"
-      logic: "Fallback chain: objectSid → objectGuid → entityId"
-      description: "Account unique identifier (SID or GUID)"
-
-    - source: "accounts[0].domain"
-      target: "user.account.domain"
-      type: "string"
-      logic: "Direct mapping of domain/realm name"
-      description: "Account domain or realm"
-
-    - source: "accounts[0].dataSource"
-      target: "user.account.type"
-      type: "string"
-      logic: "Map dataSource: 'ACTIVE_DIRECTORY'→'LDAP Account', 'AZURE_AD'→'Azure AD Account', else→'Other'"
-      description: "Account type (LDAP, Azure AD, etc.)"
-
-    - source: "accounts[0].dataSource"
-      target: "user.account.type_id"
-      type: "integer"
-      logic: "Map account type to OCSF ID: LDAP→11, AzureAD→12, Other→15"
-      description: "OCSF account type ID"
-
-    - source: "accounts[0].enabled"
-      target: "user.is_enabled"
-      type: "boolean"
-      logic: "Direct mapping; default to true if not specified"
-      description: "Whether account is enabled/active"
-
-    # ACCOUNT DESCRIPTION
-    - source: "accounts[0].description"
-      target: "user.account.desc"
-      type: "string"
-      logic: "Direct mapping of account description field; null if empty or missing"
-      description: "Account description or notes"
-
-    # ACCOUNT DETAILS - AD SPECIFIC
-    - source: "accounts[0].cn"
-      target: "user.cn"
-      type: "string"
-      logic: "Direct mapping of Distinguished Name common name (AD specific); null if missing"
-      description: "Active Directory common name"
-
-    - source: "accounts[0].title"
-      target: "user.title"
-      type: "string"
-      logic: "Direct mapping of job title; null if empty or missing"
-      description: "User job title (from AD attributes)"
-
-    - source: "accounts[0].department"
-      target: "user.department"
-      type: "string"
-      logic: "Direct mapping of department; null if empty or missing"
-      description: "User department (from AD attributes)"
-
-    # USER ROLES & TYPE
-    - source: "roles[]"
-      target: "user.roles"
-      type: "array[string]"
-      logic: "Extract all role types from roles array (e.g., 'BuiltinAdministratorRole', 'ProgrammaticUserAccountRole')"
-      description: "User roles and group memberships"
-
-    - source: "roles[] | filter(ADMIN)"
-      target: "user.type"
-      type: "string"
-      logic: "If any role contains 'ADMIN' (case-insensitive), type='Admin'; else type='User'"
-      description: "User type (Admin or regular User)"
-
-    - source: "roles[] | filter(ADMIN)"
-      target: "user.type_id"
-      type: "integer"
-      logic: "If any role contains 'ADMIN', type_id=1; else type_id=2 (OCSF User type mapping)"
-      description: "OCSF user type ID"
-
-    # RISK INFORMATION
-    - source: "riskScore"
-      target: "user.risk_score"
-      type: "integer"
-      logic: "Multiply riskScore (0-1 decimal) by 100 to get 0-100 scale; round to nearest integer"
-      description: "Risk score for user (0-100 scale)"
-
-    - source: "riskScoreSeverity"
-      target: "user.risk_level"
-      type: "string"
-      logic: "Direct mapping: 'CRITICAL'→'Critical', 'HIGH'→'High', 'MEDIUM'→'Medium', 'LOW'→'Low', 'INFO'→'Info'"
-      description: "Risk severity level"
-
-    - source: "riskScoreSeverity"
-      target: "user.risk_level_id"
-      type: "integer"
-      logic: "Map severity to OCSF RiskLevelId: Critical→1, High→2, Medium→3, Low→4, Info→5"
-      description: "OCSF risk level ID"
-
-    # USER LEARNING & ROLE STATUS
-    - source: "learned"
-      target: "user.learned"
-      type: "boolean"
-      logic: "Direct mapping; indicates if user was auto-discovered or manually defined"
-      description: "Whether user was learned by Identity Protection"
-
-    - source: "hasRole"
-      target: "user.has_role"
-      type: "boolean"
-      logic: "Direct mapping; indicates if user has assigned roles"
-      description: "Whether user has assigned roles"
-
-    # TEMPORAL INFORMATION
-    - source: "creationTime"
-      target: "user.created_time"
-      type: "timestamp"
-      logic: "Convert ISO 8601 to Unix epoch"
-      description: "User creation timestamp"
-
-    - source: "creationTime"
-      target: "time"
-      type: "timestamp"
-      logic: "Convert ISO 8601 to Unix epoch; use for OCSF event timestamp"
-      description: "OCSF event timestamp"
-
-    # DESCRIPTION
-    - source: "primaryDisplayName + riskScoreSeverity"
-      target: "user.desc"
-      type: "string"
-      logic: "Concatenate as '<primaryDisplayName> - Risk: <riskScoreSeverity>' (e.g., 'administrateur - Risk: MEDIUM')"
-      description: "User description with risk information"
-
-    # METADATA
-    - source: "static: CrowdStrike Falcon"
-      target: "metadata.product.name"
-      type: "string"
-      logic: "Always 'CrowdStrike Falcon'"
-      description: "Source product name"
-
-    - source: "static: Identity Protection"
-      target: "metadata.product.version"
-      type: "string"
-      logic: "Always 'Identity Protection' (module version)"
-      description: "Product module version"
-
-    - source: "static: 1.6.0"
-      target: "metadata.version"
-      type: "string"
-      logic: "Fixed OCSF schema version"
-      description: "OCSF schema version"
-
     # OCSF EVENT CLASSIFICATION
     - source: "static: 2"
       target: "activity_id"
@@ -245,7 +54,7 @@ mapping:
     - source: "static: Collect"
       target: "activity_name"
       type: "string"
-      logic: "Always 'Collect'"
+      logic: "Always 'Collect' for asset inventory"
       description: "OCSF activity name"
 
     - source: "static: Discovery"
@@ -272,16 +81,16 @@ mapping:
       logic: "Always 5003 for User Inventory Info"
       description: "OCSF class UID"
 
-    - source: "computed: 500300 + activity_id"
+    - source: "static: 500302"
       target: "type_uid"
       type: "integer"
-      logic: "Base 500300 + activity_id (2 = 500302)"
+      logic: "Always 500302 for User Inventory Info: Collect type"
       description: "OCSF type UID"
 
-    - source: "computed: class_name + ': ' + activity_name"
+    - source: "static: User Inventory"
       target: "type_name"
       type: "string"
-      logic: "Concatenate 'User Inventory Info: Collect'"
+      logic: "Always 'User Inventory' for this specific event type"
       description: "OCSF type name"
 
     - source: "static: Informational"
@@ -295,6 +104,141 @@ mapping:
       type: "integer"
       logic: "Always 1 for Informational severity"
       description: "OCSF severity ID"
+
+    # TIMESTAMPS
+    - source: "creationTime"
+      target: "time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch; use for OCSF event timestamp"
+      description: "OCSF event timestamp"
+
+    # METADATA
+    - source: "static: Crowdstrike Falcon"
+      target: "metadata.product.name"
+      type: "string"
+      logic: "Always 'Crowdstrike Falcon'"
+      description: "Source product name"
+
+    - source: "static: N/A"
+      target: "metadata.product.version"
+      type: "string"
+      logic: "CrowdStrike Identity Protection API does not provide a product version field; using 'N/A'"
+      description: "Product version"
+
+    - source: "static: 1.6.0"
+      target: "metadata.version"
+      type: "string"
+      logic: "Fixed OCSF schema version"
+      description: "OCSF schema version"
+
+    # USER IDENTIFICATION
+    - source: "entityId"
+      target: "user.uid"
+      type: "string"
+      logic: "Direct mapping of CrowdStrike entity unique ID"
+      description: "User unique identifier from CrowdStrike Identity Protection"
+
+    - source: "primaryDisplayName"
+      target: "user.name"
+      type: "string"
+      logic: "Direct mapping of primary display name"
+      description: "User display name (username)"
+
+    - source: "primaryDisplayName + secondaryDisplayName"
+      target: "user.full_name"
+      type: "string"
+      logic: "Concatenate primaryDisplayName and secondaryDisplayName with space; trim whitespace; fallback to primaryDisplayName if secondaryDisplayName is empty"
+      description: "User full name"
+
+    # EMAIL ADDRESS
+    - source: "emailAddresses[0]"
+      target: "user.email_addr"
+      type: "string"
+      logic: "Extract first email from emailAddresses array; null if empty or array is missing"
+      description: "Primary email address"
+
+    # DOMAIN
+    - source: "accounts[0].domain"
+      target: "user.domain"
+      type: "string"
+      logic: "Direct mapping of domain from primary account"
+      description: "User domain or realm (from AD account)"
+
+    # USER TYPE
+    - source: "roles[] | filter(ADMIN)"
+      target: "user.type"
+      type: "string"
+      logic: "If any role type contains 'ADMIN' (case-insensitive), type='Admin'; else type='User'"
+      description: "User type (Admin or regular User)"
+
+    - source: "roles[] | filter(ADMIN)"
+      target: "user.type_id"
+      type: "integer"
+      logic: "If any role type contains 'ADMIN', type_id=2; else type_id=1 (OCSF User type mapping)"
+      description: "OCSF user type ID"
+
+    # RISK INFORMATION
+    - source: "riskScore"
+      target: "user.risk_score"
+      type: "integer"
+      logic: "Multiply riskScore (0-1 decimal) by 100 to get 0-100 scale; round to nearest integer"
+      description: "Risk score for user (0-100 scale)"
+
+    - source: "riskScoreSeverity"
+      target: "user.risk_level"
+      type: "string"
+      logic: "Direct mapping: 'CRITICAL'→'Critical', 'HIGH'→'High', 'MEDIUM'→'Medium', 'LOW'→'Low', 'INFO'→'Info'"
+      description: "Risk severity level"
+
+    - source: "riskScoreSeverity"
+      target: "user.risk_level_id"
+      type: "integer"
+      logic: "Map severity to OCSF RiskLevelId: Critical→1, High→2, Medium→3, Low→4, Info→5"
+      description: "OCSF risk level ID"
+
+    # ACCOUNT INFORMATION
+    - source: "accounts[0].samAccountName || primaryDisplayName"
+      target: "user.account.name"
+      type: "string"
+      logic: "Direct mapping of SAM account name; fallback to primaryDisplayName if empty or missing"
+      description: "Account username (SAM account name)"
+
+    - source: "accounts[0].objectSid || accounts[0].objectGuid || entityId"
+      target: "user.account.uid"
+      type: "string"
+      logic: "Fallback chain: objectSid → objectGuid → entityId"
+      description: "Account unique identifier (SID or GUID)"
+
+    - source: "accounts[0].dataSource"
+      target: "user.account.type"
+      type: "string"
+      logic: "Map dataSource: 'ACTIVE_DIRECTORY' or objectSid present→'LDAP Account', 'AZURE_AD'→'Azure AD Account', else→'Other'"
+      description: "Account type (LDAP, Azure AD, etc.)"
+
+    - source: "accounts[0].dataSource"
+      target: "user.account.type_id"
+      type: "integer"
+      logic: "Map account type to OCSF ID: LDAP Account→11, Azure AD Account→12, Other→15"
+      description: "OCSF account type ID"
+
+    # ENRICHMENT
+    - source: "static: account_details"
+      target: "enrichments[0].name"
+      type: "string"
+      logic: "Always 'account_details' for this enrichment type"
+      description: "Enrichment name for account details"
+
+    - source: "accounts[0].dataSource"
+      target: "enrichments[0].value"
+      type: "string"
+      logic: "Resolved account type string (e.g., 'LDAP Account', 'Azure AD Account', 'Other')"
+      description: "Enrichment value: resolved account type string"
+
+    - source: "accounts[0].enabled"
+      target: "enrichments[0].data.is_enabled"
+      type: "boolean"
+      logic: "Direct mapping of account enabled status; null if field absent"
+      description: "Whether the account is enabled/active"
 
   ocsf_samples:
     - name: "User Inventory Info: Collect"

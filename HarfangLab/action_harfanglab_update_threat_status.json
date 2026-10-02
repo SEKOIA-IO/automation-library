@@ -18,24 +18,19 @@
       "new_status": {
         "description": "New status",
         "type": "string",
-        "enum": [
-          "closed",
-          "false_positive",
-          "investigating",
-          "new"
-        ]
+        "enum": ["closed", "false_positive", "investigating", "new"]
       },
       "update_by_query": {
         "description": "Update by query",
         "type": "boolean"
+      },
+      "tag_security_events": {
+        "description": "Tag security events",
+        "type": "boolean"
       }
     },
-    "required": [
-      "threat_ids",
-      "new_status",
-      "update_by_query"
-    ]
-},
+    "required": ["threat_ids", "new_status"]
+  },
   "results": {},
   "slug": "update_threat_status"
 }

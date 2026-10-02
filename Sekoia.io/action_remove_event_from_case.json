@@ -23,7 +23,7 @@
       "case_uuid",
       "event_id"
     ]
-},
+  },
   "results": {},
   "slug": "remove_event_from_case"
 }

@@ -1,9 +1,7 @@
-# coding: utf-8
-
 # natives
 import os
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 # third parties
 import pytest
@@ -11,7 +9,6 @@ import requests_mock
 
 # internals
 from harfanglab.get_process_list_action_v2 import GetProcessListActionV2
-from harfanglab.models import JobAction, JobTarget, JobTriggerResult
 
 
 @pytest.fixture
@@ -68,7 +65,7 @@ def test_with_one_target_group(symphony_storage, response_job_status_done):
     action = GetProcessListActionV2(data_path=symphony_storage)
     action.module.configuration = {"url": instance_url, "api_token": api_token}
 
-    with requests_mock.Mocker() as requests_mocker, patch("harfanglab.get_process_list_action_v2.sleep") as sleep_mock:
+    with requests_mock.Mocker() as requests_mocker, patch("harfanglab.get_process_list_action_v2.sleep"):
         # Example from api doc
         mocked_response = {
             "agent_count": "<integer>",

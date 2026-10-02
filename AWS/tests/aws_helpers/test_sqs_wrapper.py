@@ -178,3 +178,37 @@ async def test_receive_messages(sqs_wrapper, sqs_wrapper_configuration, session_
 
         mock_sqs.delete_message.assert_any_call(QueueUrl=queue_url, ReceiptHandle=receipt_handle_1)
         mock_sqs.delete_message.assert_any_call(QueueUrl=queue_url, ReceiptHandle=receipt_handle_2)
+
+
+@pytest.mark.asyncio
+async def test_receive_messages_does_not_delete_on_error(sqs_wrapper, session_faker):
+    """
+    Test receive_messages keeps the messages in the queue when the processing fails.
+
+    Args:
+        sqs_wrapper: SqsWrapper
+        session_faker: Faker
+    """
+    response = {
+        "Messages": [
+            {
+                "Body": session_faker.sentence(),
+                "ReceiptHandle": session_faker.word(),
+                "Attributes": {"SentTimestamp": session_faker.pyint(min_value=1, max_value=1000)},
+            }
+        ]
+    }
+
+    with patch("aws_helpers.sqs_wrapper.SqsWrapper.get_client") as mock_client:
+        mock_sqs = MagicMock()
+        mock_sqs.receive_message = AsyncMock(return_value=response)
+        mock_sqs.delete_message = AsyncMock(return_value={})
+        mock_sqs.get_queue_url = AsyncMock(return_value={"QueueUrl": session_faker.url()})
+
+        mock_client.return_value.__aenter__.return_value = mock_sqs
+
+        with pytest.raises(RuntimeError):
+            async with sqs_wrapper.receive_messages(max_messages=1):
+                raise RuntimeError("processing failed")
+
+        mock_sqs.delete_message.assert_not_called()

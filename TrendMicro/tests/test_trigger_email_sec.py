@@ -72,6 +72,23 @@ def response_message_empty():
     return b""
 
 
+def test_service_url_normalization(trigger):
+    # Without schema and with trailing slash
+    trigger.configuration.service_url = "api.tmes.trendmicro.eu/"
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    assert consumer.service_url == "https://api.tmes.trendmicro.eu"
+
+    # With incorrect schema and with trailing slash
+    trigger.configuration.service_url = "http://api.tmes.trendmicro.eu/"
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    assert consumer.service_url == "https://api.tmes.trendmicro.eu"
+
+    # With correct schema and with trailing slash
+    trigger.configuration.service_url = "https://api.tmes.trendmicro.eu/"
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    assert consumer.service_url == "https://api.tmes.trendmicro.eu"
+
+
 def test_start_consumers(trigger):
     with patch("trendmicro_modules.trigger_email_sec.TrendMicroWorker.start") as mock_start:
         consumers = trigger.start_consumers()

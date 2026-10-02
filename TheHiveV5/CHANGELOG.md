@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-20 - 1.1.3
+
+### Fixed
+
+- Apply linters
+
+## 2026-02-27 - 1.1.1
+
+### Added
+
+- Add debug-level observability logs across the full connection path to facilitate self service troubleshooting.
+
+## 2026-01-23 - 1.1.0
+
+### Added
+
+- Add optional `ca_certificate` configuration parameter for custom PKI/internal CA support in TLS connections
+- Implement CA certificate file caching to avoid creating duplicate temp files for the same certificate
+- Add robust cleanup mechanism for temporary CA files at process exit
+
 ## 2025-12-22 - 1.0.9
 
 ### Fixed

@@ -73,7 +73,7 @@ cmd = "poetry run isort ."
 cmd = "poetry run mypy ."
 
 [tool.poetry.group.dev.dependencies]
-pytest = "<8"
+pytest = "<10"
 pytest-cov = "*"
 pytest-asyncio = "*"
 pytest-xdist = "*"

@@ -1,32 +1,58 @@
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
-name = "Automation Module for Censys"
-description = ""
+[project]
+name = "automation-module-censys"
 version = "0.0"
+description = ""
 authors = []
-package-mode = false
+requires-python = ">=3.14,<4"
+dependencies = [
+	"sekoia-automation-sdk>=1.24.0,<2",
+	"censys>=0.0.8,<1",
+]
 
-[tool.black]
+[dependency-groups]
+dev = [
+	"pytest>=7.0",
+	"pytest-cov",
+	"requests",
+	"requests-mock",
+]
+lint = [
+	"ruff>=0.14",
+	"mypy",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "lint"]
+
+[tool.ruff]
 line-length = 119
-target-version = ["py38"]
-include = "\\.pyi?$"
+target-version = "py314"
 
-[tool.isort]
-profile = "black"
-line_length = 119
+[tool.ruff.lint]
+select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.13.0"
-censys = "^0.0.8"
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]
 
-[tool.poetry.dev-dependencies]
-pytest = "*"
-pytest-cov = "*"
-requests-mock = "*"
+[tool.mypy]
+python_version = "3.14"
+install_types = true
+non_interactive = true
+ignore_missing_imports = true
+show_column_numbers = true
+exclude = ["tests/"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+pythonpath = ["."]
+addopts = """
+	--cache-clear
+	--cov=censys_module
+	--cov-report=term-missing:skip-covered
+	-ra
+"""
+testpaths = ["tests"]
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]
