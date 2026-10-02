@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-30 - 1.23.4
+
+### Fixed
+
+- Fix generated malware archive passwords so they only use the special characters preserved by SentinelOne's `threats/fetch-file` endpoint
+
 ## 2026-09-14 - 1.23.3
 
 ### Changed
