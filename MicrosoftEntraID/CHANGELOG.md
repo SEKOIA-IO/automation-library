@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-29 - 2.10.30
+
+### Fixed
+
+- Remove useless permissions in the description of actions
+
 ## 2026-08-25 - 2.10.29
 
 ### Changed
