@@ -38,6 +38,11 @@ target-version = "py314"
 line-length = 119
 fix = true
 
+[tool.ruff.lint]
+ignore = [
+  "BLE001"
+]
+
 [tool.mypy]
 plugins = ["pydantic.mypy"]
 python_version = "3.14"
