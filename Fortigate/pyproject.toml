@@ -8,7 +8,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.14",
 ]
-dependencies = ["sekoia-automation-sdk>=1.13.0,<2"]
+dependencies = ["sekoia-automation-sdk>=1.26.1,<2"]
 
 [dependency-groups]
 dev = [

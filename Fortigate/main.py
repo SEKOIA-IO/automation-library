@@ -5,7 +5,8 @@ from fortigate.action_fortigate_add_group_address import FortigateAddGroupAddres
 from fortigate.action_fortigate_add_ip_address import FortigateAddIPAction
 from fortigate.action_fortigate_disable_local_user import FortigateDisableLocalUserAction
 
-if __name__ == "__main__":
+
+def main():
     module = Module()
     module.register(FortigateAddIPAction, "fortigate_add_ip_address")
     module.register(FortigateAddFQDNAction, "fortigate_add_fqdn")
@@ -13,3 +14,13 @@ if __name__ == "__main__":
     module.register(FortigateDisableLocalUserAction, "fortigate_disable_local_user")
 
     module.run()
+
+
+def fission_main() -> str:
+    main()
+
+    return "ok"
+
+
+if __name__ == "__main__":
+    main()

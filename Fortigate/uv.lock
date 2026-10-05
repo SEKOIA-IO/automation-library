@@ -490,7 +490,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "sekoia-automation-sdk", specifier = ">=1.13.0,<2" }]
+requires-dist = [{ name = "sekoia-automation-sdk", specifier = ">=1.26.1,<2" }]
 
 [package.metadata.requires-dev]
 dev = [
