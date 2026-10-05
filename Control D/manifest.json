@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Control D",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Control D is a modern and customizable DNS service that blocks threats, unwanted content and ads - on all devices. Onboard in minutes, and forget about it.",
+  "name": "Control D",
+  "uuid": "0bd2e850-3488-49cb-bcfb-48311ca75d10",
+  "version": "1.0.0",
+  "slug": "control-d",
+  "categories": [
+    "Network"
+  ]
+}
