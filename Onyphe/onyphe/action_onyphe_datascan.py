@@ -1,8 +1,43 @@
+import ipaddress
 from posixpath import join as urljoin
+from typing import Annotated
 
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    Field,
+    IPvAnyAddress,
+    StringConstraints,
+    model_validator,
+)
 from sekoia_automation.action import Action
 
-from onyphe.utils import get_arg_ip, get_with_paging
+from onyphe.utils import get_with_paging
+
+
+def prepare_ip(value: str | ipaddress.IPv4Address | ipaddress.IPv6Address | None):
+    if isinstance(value, str):
+        return value.strip()
+    if value is None or isinstance(value, (ipaddress.IPv4Address, ipaddress.IPv6Address)):
+        return value
+    raise ValueError("Input should be a string IP address")
+
+
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+StrippedIPvAnyAddress = Annotated[IPvAnyAddress, BeforeValidator(prepare_ip)]
+
+
+class OnypheDatascanArguments(BaseModel):
+    ip: StrippedIPvAnyAddress | None = Field(default=None, description="IP address to scan")
+    string: NonEmptyStr | None = Field(default=None, description="String to scan")
+    budget: int = Field(default=1, description="Maximum number of pages to fetch, or 0 for all pages")
+    first_page: int = Field(default=1, description="First page number to fetch")
+
+    @model_validator(mode="after")
+    def validate_entrypoint(self) -> "OnypheDatascanArguments":
+        if (self.ip is None) == (self.string is None):
+            raise ValueError("Please specify exactly one of 'ip' or 'string'")
+        return self
 
 
 class OnypheDatascanAction(Action):
@@ -23,19 +58,13 @@ class OnypheDatascanAction(Action):
     > Thus, we are able to identify multiple virtual hosts on a unique IP address.
     """
 
-    def run(self, arguments) -> dict:
+    def run(self, arguments: OnypheDatascanArguments) -> dict | None:
         url: str = "https://www.onyphe.io/api/v2/simple/"
-        if ("ip" in arguments) == ("string" in arguments):
-            raise TypeError("Invalid number of arguments. Please specify exactly one of 'ip' or 'string'")
-
-        if "ip" in arguments:
-            resource = get_arg_ip(arguments)
-        else:
-            resource = arguments["string"]
+        resource = str(arguments.ip) if arguments.ip is not None else arguments.string
+        assert resource is not None
 
         get_url: str = urljoin(url, "datascan/" + resource)
 
-        budget = arguments.get("budget", 1)
-        params = {"page": arguments.get("first_page", 1)}
+        params = {"page": arguments.first_page}
 
-        return get_with_paging(get_url, self.module.configuration, budget, params)
+        return get_with_paging(get_url, self.module.configuration, arguments.budget, params)
