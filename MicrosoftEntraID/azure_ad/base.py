@@ -101,6 +101,7 @@ class RequiredTwoUserArguments(SingleUserArguments):
     password: str | None = Field(
         default=None,
         description="Password of the delegated account used to reset the password",
+        json_schema_extra={"secret": True},
     )
 
     @model_validator(mode="before")
