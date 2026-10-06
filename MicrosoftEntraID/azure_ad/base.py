@@ -94,12 +94,24 @@ class RequiredTwoUserArguments(SingleUserArguments):
         default=None,
         description="New password required to reset the old one of course.",
     )
+    username: str | None = Field(
+        default=None,
+        description="Username of the delegated account used to reset the password",
+    )
+    password: str | None = Field(
+        default=None,
+        description="Password of the delegated account used to reset the password",
+        json_schema_extra={"secret": True},
+    )
 
     @model_validator(mode="before")
     @classmethod
     def validate_two_arguments(cls, values):
         if not ((values.get("id") or values.get("userPrincipalName")) and values.get("userNewPassword")):
-            raise ValueError("'userPrincipalName' and ('id' or 'userPrincipalName') should be specified")
+            raise ValueError("'userNewPassword' and ('id' or 'userPrincipalName') should be specified")
+
+        if not (values.get("username") and values.get("password")):
+            raise ValueError("'username' and 'password' of the delegated account should be specified")
 
         return values
 
