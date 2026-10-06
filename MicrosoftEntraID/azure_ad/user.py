@@ -115,13 +115,20 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
     name = "Reset User Password [DEPRECATED]"
     description = "Reset a user's password. You will need UserAuthenticationMethod.ReadWrite. All delegated permission."  # noqa: E501
 
+    _delegated_client: GraphServiceClient | None = None
+
     async def query_list_user_methods(self, user_param, req_conf):
-        return await self.client.users.by_user_id(user_param).authentication.password_methods.get(
+        return await self.delegated_client.users.by_user_id(user_param).authentication.password_methods.get(
             request_configuration=req_conf
         )
 
-    @cached_property
-    def client(self):
+    @property
+    def delegated_client(self) -> GraphServiceClient:
+        if self._delegated_client is None:
+            raise RuntimeError("Delegated client is not initialized")
+        return self._delegated_client
+
+    def build_delegated_client(self, username: str, password: str) -> GraphServiceClient:
         """
         Used client with preconfigured scopes for password reset action
         It's not a good practice to use. But the app permission is not supported for this action.
@@ -130,8 +137,8 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
         """
         credentials = UsernamePasswordCredential(
             client_id=self.module.configuration.client_id,
-            username=self.module.configuration.username,
-            password=self.module.configuration.password,
+            username=username,
+            password=password,
             tenant_id=self.module.configuration.tenant_id,
         )
 
@@ -143,12 +150,15 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
 
     async def query_reset_user_password(self, user_param, id_methods, req_body, req_conf):
         return (
-            await self.client.users.by_user_id(user_param)
+            await self.delegated_client.users.by_user_id(user_param)
             .authentication.methods.by_authentication_method_id(id_methods)
             .reset_password.post(body=req_body, request_configuration=req_conf)
         )
 
     async def run(self, arguments: RequiredTwoUserArguments):
+        if self._delegated_client is None:
+            self._delegated_client = self.build_delegated_client(arguments.username, arguments.password)
+
         request_configuration = MessagesRequestBuilder.MessagesRequestBuilderGetRequestConfiguration(
             options=[ResponseHandlerOption(NativeResponseHandler())],
         )

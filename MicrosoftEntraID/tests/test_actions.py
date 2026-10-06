@@ -195,7 +195,14 @@ async def test_reset_user_password():
     reset_async_mock = AsyncMock(return_value=reset_response)
     with patch("azure_ad.user.ResetUserPasswordAction.query_list_user_methods", side_effect=methods_async_mock):
         with patch("azure_ad.user.ResetUserPasswordAction.query_reset_user_password", side_effect=reset_async_mock):
-            results = await action.run({"userPrincipalName": "test@test.test", "userNewPassword": "test_password"})
+            results = await action.run(
+                {
+                    "userPrincipalName": "test@test.test",
+                    "userNewPassword": "test_password",
+                    "username": "admin@test.test",
+                    "password": "admin_password",
+                }
+            )
 
             assert results is None
 
