@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Update Python dependencies.
 
+### Fixed
+
+- Update typing to make Mypy happy.
+
 ## 1.121.1 - 2026-08-21
 
 ### Changed
