@@ -1,13 +1,14 @@
-from typing import Any, List
 from posixpath import join as urljoin
-from pydantic import BaseModel
+from typing import Any
+
 import requests
+from pydantic import BaseModel
 from sekoia_automation.action import Action
 
 
 class Arguments(BaseModel):
     destination: str
-    sources: List[str]
+    sources: list[str]
 
 
 class Response(BaseModel):

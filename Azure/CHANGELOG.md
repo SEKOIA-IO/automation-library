@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-25 - 2.9.4
+
+### Added
+
+ - Add the ability to log the SHA1 checksum of each forwarded record for investigation purposes. Set `AZURE_LOG_RECORDS_CHECKSUM=on` to enable it.
+
 ## 2026-09-08 - 2.9.3
 
 ### Changed

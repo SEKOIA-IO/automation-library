@@ -1,5 +1,5 @@
 import time
-from typing import Callable
+from collections.abc import Callable
 from posixpath import join as urljoin
 
 import requests
@@ -7,10 +7,10 @@ import urllib3
 from requests import Session
 from requests.adapters import HTTPAdapter
 from requests.structures import CaseInsensitiveDict
-from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from sekoia_automation.action import Action
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from urllib3.util.retry import Retry
 
-from sekoia_automation.action import Action
 from sekoiaio.utils import user_agent
 
 
@@ -75,7 +75,10 @@ class BaseGetEvents(Action):
             response_start.raise_for_status()
         except requests.exceptions.HTTPError as e:
             self.log(
-                f"HTTP error when triggering event search job: {e}. Response status: {response_start.status_code}, Response text: {response_start.text}",
+                (
+                    f"HTTP error when triggering event search job: {e}. "
+                    f"Response status: {response_start.status_code}, Response text: {response_start.text}"
+                ),
                 level="error",
             )
             raise
@@ -91,7 +94,7 @@ class BaseGetEvents(Action):
     )
     def _wait_for_search_job_step(
         self, event_search_job_uuid: str, should_we_wait: Callable[[int], bool], action: str, timeout: int = 300
-    ) -> None:
+    ) -> int:
         """
         Wait for a step in the search job execution
 
@@ -99,6 +102,7 @@ class BaseGetEvents(Action):
         :param should_we_wait: A function that takes the current status and returns True if we should keep waiting
         :param action: The expected action to be performed
         :param timeout: The maximum time to wait in seconds
+        :return: The job status once the step is over
         """
         start_wait = time.time()
 
@@ -108,7 +112,10 @@ class BaseGetEvents(Action):
             response_get.raise_for_status()
         except requests.exceptions.HTTPError as e:
             self.log(
-                f"HTTP error during initial status check for job {event_search_job_uuid}: {e}. Response status: {response_get.status_code}, Response text: {response_get.text}",
+                (
+                    f"HTTP error during initial status check for job {event_search_job_uuid}: {e}. "
+                    f"Response status: {response_get.status_code}, Response text: {response_get.text}"
+                ),
                 level="error",
             )
             raise
@@ -126,7 +133,10 @@ class BaseGetEvents(Action):
                 response_get.raise_for_status()
             except requests.exceptions.HTTPError as e:
                 self.log(
-                    f"HTTP error during job status polling for job {event_search_job_uuid}: {e}. Response status: {response_get.status_code}, Response text: {response_get.text}",
+                    (
+                        f"HTTP error during job status polling for job {event_search_job_uuid}: {e}. "
+                        f"Response status: {response_get.status_code}, Response text: {response_get.text}"
+                    ),
                     level="error",
                 )
                 raise
@@ -134,6 +144,8 @@ class BaseGetEvents(Action):
             # If we exceed the timeout, raise an error
             if time.time() - start_wait > timeout:
                 raise TimeoutError(f"Event search job {event_search_job_uuid} took more than {timeout}s to {action}")
+
+        return response_get.json()["status"]
 
     def wait_for_search_job_execution(self, event_search_job_uuid: str) -> None:
         # Wait for job to start (20 min)
@@ -144,12 +156,17 @@ class BaseGetEvents(Action):
             1200,
         )
         # Wait for job to complete (30 min)
-        self._wait_for_search_job_step(
+        status = self._wait_for_search_job_step(
             event_search_job_uuid,
             lambda status: status == 1,  # Wait for status to change from 1 (in progress)
             "complete",
             1800,
         )
+        # Terminal statuses are 2, 3 and 4; only 2 means the search succeeded
+        if status != 2:
+            message = f"Event search job {event_search_job_uuid} ended with status {status}"
+            self.log(message, level="error")
+            raise RuntimeError(message)
 
     def run(self, arguments: dict):
         raise NotImplementedError()

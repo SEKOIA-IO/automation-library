@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-16 - 1.2.0
+
+### Added
+
+- Add Nozomi device asset connector that fetches Guardian/CMC assets (`query=assets`) and maps them to the OCSF Device inventory model, using `created_at` for time-based filtering and checkpointing
+- Add an account validator that verifies Nozomi Networks credentials via API sign-in
+
 ## 2026-02-11 - 1.1.1
 
 ### Added
