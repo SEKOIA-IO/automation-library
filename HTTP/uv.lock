@@ -246,32 +246,31 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "mypy" },
+    { name = "pip" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "requests" },
     { name = "requests-mock" },
-]
-lint = [
-    { name = "mypy" },
     { name = "ruff" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "requests", specifier = ">=2.32.5,<3" },
-    { name = "sekoia-automation-sdk", specifier = ">=1.26.0,<2" },
+    { name = "sekoia-automation-sdk", specifier = ">=1.27.0,<2" },
     { name = "tenacity", specifier = ">=9.1.4,<10" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "mypy" },
+    { name = "mypy", specifier = ">=2.4.0" },
+    { name = "pip", specifier = ">=26.2.1" },
     { name = "pytest", specifier = ">=9.0.3,<10" },
     { name = "pytest-cov", specifier = ">=7.0.0,<8" },
     { name = "requests" },
     { name = "requests-mock", specifier = ">=1.12.1,<2" },
-]
-lint = [
-    { name = "mypy" },
     { name = "ruff", specifier = ">=0.14" },
 ]
 
@@ -1023,6 +1022,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pip"
+version = "26.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ae/15/4500e320e6b101ec3b719ae85b697d9940b6cda672bc555bd6016fc60c6f/pip-26.2.1.tar.gz", hash = "sha256:f6ad667e89a1fe78046c8f13232b247200f5258d7828f3f7883d660878e0813f", size = 1848877, upload-time = "2026-08-04T22:51:14.148Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f3/6e/1736e5b4ae2b778ef2f81c47d797de9f891d4d8acb047a24ca37a60294dd/pip-26.2.1-py3-none-any.whl", hash = "sha256:71138adf1f4ca900cdb7d289c21b7494329f2332b6d85f0e1c42108c0384ed3e", size = 1816632, upload-time = "2026-08-04T22:51:12.472Z" },
+]
+
+[[package]]
 name = "platformdirs"
 version = "4.12.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1518,7 +1526,7 @@ wheels = [
 
 [[package]]
 name = "sekoia-automation-sdk"
-version = "1.26.1"
+version = "1.27.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiocsv" },
@@ -1548,9 +1556,9 @@ dependencies = [
     { name = "typer" },
     { name = "uv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f8/99/43d94a905f5f413d4231cb7e03ab1ef3a30949f14cd3b456c99636fe1bb6/sekoia_automation_sdk-1.26.1.tar.gz", hash = "sha256:1c5d3c16f6b1dcc9c3e4cac3b2fd8937bcbc9fc67d9b46f16dcae180f9315288", size = 66060, upload-time = "2026-10-02T14:50:16.132Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/82/5a/02f77e44a12db0cd2d9babcd321cc628a684c85cdb0638e50c036341b763/sekoia_automation_sdk-1.27.0.tar.gz", hash = "sha256:79ec7c114322305a84196b9d6aabad07779aca2b2ef19fb40fc001d1161ff686", size = 66075, upload-time = "2026-10-06T16:12:47.511Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e8/63/f4dfdf3002f6bf3205767c0b0248783400289c19633b9efeca50910202f6/sekoia_automation_sdk-1.26.1-py3-none-any.whl", hash = "sha256:9f5cb9e57bbab013de39b0322018d779ad8590e223caed0ac682f2ab265bc696", size = 99488, upload-time = "2026-10-02T14:50:15.041Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/8b/89c988b52297ad2919972ffe178ae1f0e2e8c2fc3df9da975187c562c654/sekoia_automation_sdk-1.27.0-py3-none-any.whl", hash = "sha256:4c48b4dd2347b550fa6b3d40aa8e3035841b8837656c2f0b0d90e61d1990b8be", size = 99628, upload-time = "2026-10-06T16:12:46.49Z" },
 ]
 
 [[package]]
