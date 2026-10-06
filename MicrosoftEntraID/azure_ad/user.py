@@ -156,6 +156,9 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
         )
 
     async def run(self, arguments: RequiredTwoUserArguments):
+        if arguments.username is None or arguments.password is None:
+            raise ValueError("'username' and 'password' of the delegated account should be specified")
+
         if self._delegated_client is None:
             self._delegated_client = self.build_delegated_client(arguments.username, arguments.password)
 
