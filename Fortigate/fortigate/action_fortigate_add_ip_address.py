@@ -70,6 +70,5 @@ class FortigateAddIPAction(Action):
                     fw_port=base_port,
                     data=payload,
                 )
-                pass
 
         return payload
