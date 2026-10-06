@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Move to Python 3.14.
 - Apply Ruff.
 
+### Fixed
+
+- Update typing to make Mypy happy.
+
 ## 2025-12-11 - 1.4.7
 
 ### Fixed
