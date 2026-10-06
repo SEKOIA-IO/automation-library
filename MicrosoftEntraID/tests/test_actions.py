@@ -193,18 +193,25 @@ async def test_reset_user_password():
     reset_response.status_code = 202
 
     reset_async_mock = AsyncMock(return_value=reset_response)
-    with patch("azure_ad.user.ResetUserPasswordAction.query_list_user_methods", side_effect=methods_async_mock):
-        with patch("azure_ad.user.ResetUserPasswordAction.query_reset_user_password", side_effect=reset_async_mock):
-            results = await action.run(
-                {
-                    "userPrincipalName": "test@test.test",
-                    "userNewPassword": "test_password",
-                    "username": "admin@test.test",
-                    "password": "admin_password",
-                }
-            )
+    with (
+        patch(
+            "azure_ad.user.ResetUserPasswordAction.build_delegated_client", return_value=MagicMock()
+        ) as build_client_mock,
+        patch("azure_ad.user.ResetUserPasswordAction.query_list_user_methods", side_effect=methods_async_mock),
+        patch("azure_ad.user.ResetUserPasswordAction.query_reset_user_password", side_effect=reset_async_mock),
+    ):
+        results = await action.run(
+            {
+                "userPrincipalName": "test@test.test",
+                "userNewPassword": "test_password",
+                "username": "admin@test.test",
+                "password": "admin_password",
+            }
+        )
 
-            assert results is None
+        assert results is None
+        # Must use the action arguments, not the module configuration credentials
+        build_client_mock.assert_called_once_with("admin@test.test", "admin_password")
 
 
 @pytest.mark.asyncio
