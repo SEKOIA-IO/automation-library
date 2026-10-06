@@ -197,8 +197,12 @@ async def test_reset_user_password():
         patch(
             "azure_ad.user.ResetUserPasswordAction.build_delegated_client", return_value=MagicMock()
         ) as build_client_mock,
-        patch("azure_ad.user.ResetUserPasswordAction.query_list_user_methods", side_effect=methods_async_mock),
-        patch("azure_ad.user.ResetUserPasswordAction.query_reset_user_password", side_effect=reset_async_mock),
+        patch(
+            "azure_ad.user.ResetUserPasswordAction.query_list_user_methods", side_effect=methods_async_mock
+        ) as list_methods_mock,
+        patch(
+            "azure_ad.user.ResetUserPasswordAction.query_reset_user_password", side_effect=reset_async_mock
+        ) as reset_mock,
     ):
         results = await action.run(
             {
@@ -212,6 +216,15 @@ async def test_reset_user_password():
         assert results is None
         # Must use the action arguments, not the module configuration credentials
         build_client_mock.assert_called_once_with("admin@test.test", "admin_password")
+
+        list_methods_mock.assert_called_once()
+        assert list_methods_mock.call_args.args[0] == "test@test.test"
+
+        reset_mock.assert_called_once()
+        user_param, method_id, request_body, _ = reset_mock.call_args.args
+        assert user_param == "test@test.test"
+        assert method_id == "28c10230-6103-485e-b985-444c60001490"
+        assert request_body.new_password == "test_password"
 
 
 @pytest.mark.asyncio
