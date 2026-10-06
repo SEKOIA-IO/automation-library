@@ -8,7 +8,7 @@ from utils.action_utils_wait import UtilsWait
 from utils.password_generator import PasswordGenerator
 
 
-def main():
+def main() -> None:
     module = Module()
 
     module.register(FileUtilsReadJSONFile, "fileutils_readjsonfile")
@@ -21,7 +21,7 @@ def main():
     module.run()
 
 
-def fission_main():
+def fission_main() -> str:
     main()
     return "ok"
 

@@ -40,7 +40,7 @@ class FileUtilsReadJSONFile(Action):
             return {"output": result}
 
         filename = f"output-{uuid4()}.json"
-        with self._data_path.joinpath(filename).open("w") as f:
+        with self.data_path.joinpath(filename).open("w") as f:
             if isinstance(result, str):
                 f.write(result)
             else:

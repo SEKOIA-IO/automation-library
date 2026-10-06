@@ -36,7 +36,10 @@ class FileUtilsReadXMLFile(Action):
         if arguments.get("xpath") is not None:
             matched_value = tree.xpath(arguments.get("xpath"))
             return_list = arguments.get("return_list", False)
-            if len(matched_value) == 1 and not return_list:
+            if not isinstance(matched_value, list):
+                # XPath expressions such as `count()` or `string()` return a single value
+                result = [matched_value] if return_list else matched_value
+            elif len(matched_value) == 1 and not return_list:
                 result = matched_value[0]
             elif len(matched_value) > 1 or return_list:
                 result = matched_value
@@ -52,7 +55,7 @@ class FileUtilsReadXMLFile(Action):
             self._result_as_file = False
             return arguments[name]
         elif f"{name}_path" in arguments:
-            filepath = self._data_path.joinpath(arguments[f"{name}_path"])
+            filepath = self.data_path.joinpath(arguments[f"{name}_path"])
             if not filepath.is_file():
                 raise MissingActionArgumentFileError(filepath)
 
@@ -67,7 +70,7 @@ class FileUtilsReadXMLFile(Action):
             return {"output": result}
 
         filename = f"output-{uuid4()}.json"
-        with self._data_path.joinpath(filename).open("w") as f:
+        with self.data_path.joinpath(filename).open("w") as f:
             if isinstance(result, str):
                 f.write(result)
             else:
