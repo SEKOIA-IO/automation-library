@@ -7,7 +7,11 @@ from ldap3.core.exceptions import LDAPException
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.group import Group
-from sekoia_automation.asset_connector.models.ocsf.user import Account, AccountTypeId, AccountTypeStr
+from sekoia_automation.asset_connector.models.ocsf.user import (
+    Account,
+    AccountTypeId,
+    AccountTypeStr,
+)
 from sekoia_automation.asset_connector.models.ocsf.user import User as UserOCSF
 from sekoia_automation.asset_connector.models.ocsf.user import (
     UserDataObject,

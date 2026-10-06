@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 2026-07-29 - 1.5.8
+
+### Added
+
+- Add multi-domain LDAP discovery: user actions now support a `domain_controller` override to route operations to a specific domain controller.
+- Add `from_module` and `for_domain_controller` factory helpers on `LDAPClient` for explicit connection creation to named hosts.
 
 ## 2026-07-13 - 1.5.8
 
@@ -37,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fix `AttributeError` on `basedn` field due to Pydantic v1/v2 mismatch in `MicrosoftADConnectorConfiguration`
+- Allow AD user actions to target a child-domain LDAP server through an optional `domain_controller` argument, so central administrative accounts can operate in multi-domain environments
 
 ## 2026-04-10 - 1.5.3
 

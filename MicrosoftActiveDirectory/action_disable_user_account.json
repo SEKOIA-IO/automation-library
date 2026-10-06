@@ -17,6 +17,11 @@
         "description": "The starting point an LDAP server uses when searching for users authentication within your Directory. (e.g DC=example-domain,DC=com)",
         "type": "string"
       },
+      "domain_controller": {
+        "title": "Domain Controller",
+        "description": "Optional domain controller or LDAP server to target when the user is located in a child domain",
+        "type": "string"
+      },
       "email": {
         "title": "Email",
         "description": "Filter by email address (mail attribute) to narrow results when multiple users share the same name",
