@@ -1,14 +1,14 @@
 import re
 from functools import cached_property
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import requests
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from requests import Response
 
-from .action_base import HTTPActionBase
+from http_module.action_base import HTTPActionBase
 
 
 class DownloadFileActionArguments(BaseModel):
@@ -49,7 +49,8 @@ class DownloadFileAction(HTTPActionBase):
 
         It merges the argument's headers and the module's ones.
         """
-        headers = self.module.configuration.get("headers", {}).copy()
+
+        headers = cast(dict, self.module.configuration).get("headers", {}).copy()
         headers.update(arguments.headers)
         headers.update(self._http_default_headers)
 
@@ -75,7 +76,7 @@ class DownloadFileAction(HTTPActionBase):
         """
         filename = self._get_file_name(response)
         relative_path = Path(str(uuid4())) / filename
-        file_path = self._data_path / relative_path
+        file_path = self.data_path / relative_path
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with file_path.open("wb") as f:

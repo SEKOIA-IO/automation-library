@@ -9,8 +9,8 @@ from requests.auth import AuthBase, HTTPBasicAuth, HTTPDigestAuth
 from requests.exceptions import JSONDecodeError
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
-from .action_base import HTTPActionBase
-from .helpers import params_as_dict
+from http_module.action_base import HTTPActionBase
+from http_module.helpers import params_as_dict
 
 
 @lru_cache(maxsize=1)
