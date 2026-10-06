@@ -1,5 +1,6 @@
-from sekoia_automation.action import Action
 from typing import Any
+
+from sekoia_automation.action import Action
 
 
 class GroupProcessor(Action):
