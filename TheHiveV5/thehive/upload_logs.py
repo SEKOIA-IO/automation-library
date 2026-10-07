@@ -1,4 +1,6 @@
-from typing import Any
+from typing import Annotated, Any, Optional
+
+from pydantic import BaseModel, Field, StringConstraints
 from sekoia_automation.action import Action
 
 # Upload logs <-> Add an observable as a log file OR add_attachment in alert
@@ -7,9 +9,16 @@ from sekoia_automation.action import Action
 from .thehiveconnector import TheHiveConnector
 from .helpers import copy_to_tempfile
 
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class TheHiveUploadLogsArguments(BaseModel):
+    alert_id: NonEmptyStr = Field(..., description="The Unique identifier of the alert")
+    filepath: NonEmptyStr = Field(..., description="Path of the file to upload, relative to the action's data path")
+
 
 class TheHiveUploadLogsV5(Action):
-    def run(self, arguments: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    def run(self, arguments: TheHiveUploadLogsArguments) -> Optional[dict[str, list[dict[str, Any]]]]:
         api = TheHiveConnector(
             self.module.configuration["base_url"],
             self.module.configuration["apikey"],
@@ -19,8 +28,8 @@ class TheHiveUploadLogsV5(Action):
             log_fn=self.log,
         )
 
-        arg_alert_id = arguments["alert_id"]
-        arg_filepath = self.data_path.joinpath(arguments["filepath"])
+        arg_alert_id = arguments.alert_id
+        arg_filepath = self.data_path.joinpath(arguments.filepath)
 
         # Verify file exists before attempting upload
         if not arg_filepath.exists():

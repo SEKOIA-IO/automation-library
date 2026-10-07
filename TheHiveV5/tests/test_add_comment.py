@@ -1,5 +1,6 @@
 import requests_mock
 import pytest
+from pydantic import ValidationError
 
 from thehive.add_commment import TheHiveCreateCommentV5
 from thehive4py.types.comment import OutputComment
@@ -58,3 +59,33 @@ def test_add_comment_action_api_error(requests_mock):
         action.run({"alert_id": ALERT_ID, "message": MESSAGE})
 
     assert mock_alert.call_count == 1
+
+
+@pytest.mark.parametrize("alert_id", [None, "", "   "])
+def test_add_comment_action_requires_alert_id(alert_id, requests_mock):
+    action = TheHiveCreateCommentV5()
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+
+    with pytest.raises(ValidationError):
+        action.run({"alert_id": alert_id, "message": MESSAGE})
+
+    assert requests_mock.call_count == 0
+
+
+@pytest.mark.parametrize("message", [None, "", "   "])
+def test_add_comment_action_requires_message(message, requests_mock):
+    action = TheHiveCreateCommentV5()
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+
+    with pytest.raises(ValidationError):
+        action.run({"alert_id": ALERT_ID, "message": message})
+
+    assert requests_mock.call_count == 0
