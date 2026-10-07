@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-09-16 - 1.6.0
+## 2026-10-07 - 1.7.0
 
 ### Added
 
-- Add action to synchronize Active Directory users with Sekoia.io assets from an on-premise runner, with community-scoped searches, request throttling and retries on HTTP 429
+- The user asset connector can run on an on-premise runner: its manifest declares the `on_premise` execution mode and the `Collect Microsoft AD user assets (on-premise)` action, which runs one collection cycle of the connector
 
 ## 2026-07-13 - 1.5.8
 
