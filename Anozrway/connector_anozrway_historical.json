@@ -1,0 +1,51 @@
+{
+  "uuid": "e7a35a5a-2cda-4c8f-9c1a-2d27a5b9b65e",
+  "name": "Collect Anozrway Domain Events",
+  "description": "Fetch leak detection events from the Anozrway Balise Pipeline API and forward them to the Sekoia intake.",
+  "docker_parameters": "anozrway_historical",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Anozrway Historical Configuration",
+    "properties": {
+      "intake_server": {
+        "type": "string",
+        "description": "Server of the intake server",
+        "default": "https://intake.sekoia.io"
+      },
+      "intake_key": {
+        "type": "string",
+        "description": "Intake key for authentication"
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Polling interval in seconds",
+        "default": 3600,
+        "minimum": 300
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "Maximum chunk size for batch processing",
+        "default": 1000,
+        "minimum": 1
+      },
+      "context": {
+        "type": "string",
+        "description": "Anozrway business context for the search",
+        "default": "demo"
+      },
+      "domains": {
+        "type": "string",
+        "description": "Comma-separated list of domains to monitor (e.g., example.com,example.org)"
+      },
+      "lookback_days": {
+        "type": "integer",
+        "description": "Initial backfill when no checkpoint exists (days)",
+        "default": 7,
+        "minimum": 1,
+        "maximum": 30
+      }
+    },
+    "required": ["intake_key", "domains"]
+  }
+}
