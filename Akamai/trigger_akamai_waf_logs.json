@@ -32,5 +32,9 @@
       "config_id"
     ]
   },
-  "results": {}
+  "results": {},
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
+  }
 }

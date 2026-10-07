@@ -27,6 +27,8 @@ class BaseAwsS3FlowLogsTrigger:
     configuration: AwsS3FlowLogsConfiguration
     name = "AWS S3 Flow Logs"
 
+    scalability_labels: dict[str, str]
+
     def _warn_parquet_content(self) -> None:
         """Log a warning when Parquet content is sent to the text flow logs trigger."""
         cast(Any, self).log(
@@ -92,6 +94,7 @@ class BaseAwsS3FlowLogsTrigger:
             return
 
         records: Generator[str, None, None] = self._read_content(content)
+
         if self.configuration.ignore_comments:  # pragma: no cover
             records = (record for record in records if not record.strip().startswith("#"))
 

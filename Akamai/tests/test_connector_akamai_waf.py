@@ -993,3 +993,13 @@ def test_next_batch_deduplicates_missing_request_id_when_timestamp_is_invalid(tr
         trigger.next_batch()
 
     assert trigger.push_events_to_intakes.call_count == 1
+
+
+def test_scalability_labels_from_descriptor(trigger, monkeypatch):
+    monkeypatch.chdir(Path(__file__).resolve().parents[1])
+    trigger.module._command = "akamai_waf_logs"
+
+    assert trigger.scalability_labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "true",
+    }

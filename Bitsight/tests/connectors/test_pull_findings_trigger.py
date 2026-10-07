@@ -286,3 +286,13 @@ async def test_pull_findings_connector_next_batch(connector: PullFindingsConnect
         )
 
         assert connector.get_checkpoint().dict() == finish_checkpoint.dict()
+
+
+def test_scalability_labels_from_descriptor(connector, monkeypatch):
+    monkeypatch.chdir(Path(__file__).resolve().parents[2])
+    connector.module._command = "bitsight_findings"
+
+    assert connector.scalability_labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "false",
+    }
