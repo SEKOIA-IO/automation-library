@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add scalability labels (`scalable_horizontally`, `scalable_vertically`) to Prometheus metrics, read from the connector descriptor (matched by `docker_parameters`) with a fallback to the trigger descriptor
+- Add scalability labels (`scalable_horizontally`, `scalable_vertically`) to Prometheus metrics, resolved by the SDK from the connector descriptor (matched by `docker_parameters`) with a fallback to the trigger descriptor
 
 ## [1.4.1] - 2026-09-07
 

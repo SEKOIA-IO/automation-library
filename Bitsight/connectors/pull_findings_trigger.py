@@ -2,8 +2,7 @@ import asyncio
 import time
 from asyncio import Queue
 from datetime import UTC, datetime, timedelta
-from functools import cached_property, reduce
-from pathlib import Path
+from functools import reduce
 from typing import Any, cast
 
 import orjson
@@ -121,32 +120,6 @@ class PullFindingsConnector(AsyncConnector):
 
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-
-    @cached_property
-    def scalability_labels(self) -> dict[str, str]:
-        """Get scalability labels from the connector descriptor, falling back to the trigger."""
-        module_dir = Path(__file__).resolve().parent.parent
-        descriptors = [
-            module_dir / "connector_pull_findings.json",
-            module_dir / "trigger_pull_findings.json",
-        ]
-
-        labels: dict[str, Any] = {}
-        for descriptor in descriptors:
-            try:
-                data = orjson.loads(descriptor.read_bytes())
-            except OSError, orjson.JSONDecodeError:
-                continue
-            labels = data.get("labels", {})
-            if labels:
-                break
-
-        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
-        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
-        return {
-            "scalable_horizontally": scalable_horizontally,
-            "scalable_vertically": scalable_vertically,
-        }
 
     def get_checkpoint(self) -> Checkpoint:
         """

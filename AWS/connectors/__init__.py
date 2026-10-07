@@ -3,11 +3,8 @@
 import asyncio
 import time
 from abc import ABCMeta
-from functools import cached_property
-from pathlib import Path
 from typing import Any, Optional
 
-import orjson
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
@@ -28,44 +25,6 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
 
     module: AwsModule
     configuration: AbstractAwsConnectorConfiguration
-
-    @cached_property
-    def scalability_labels(self) -> dict[str, str]:
-        """
-        Read the scalability labels from the connector's JSON descriptor.
-
-        Looks for the descriptor (connector_*.json first, then trigger_*.json) whose
-        ``docker_parameters`` matches the running command, and returns its ``labels``
-        as Prometheus label values. Defaults to non-scalable when nothing is found.
-
-        Returns:
-            dict[str, str]:
-        """
-        default = {"scalable_horizontally": "false", "scalable_vertically": "false"}
-
-        command = self.module.command
-        if not command:
-            return default
-
-        module_root = Path(__file__).resolve().parent.parent
-        descriptors = sorted(module_root.glob("connector_*.json")) + sorted(module_root.glob("trigger_*.json"))
-
-        for descriptor in descriptors:
-            try:
-                data = orjson.loads(descriptor.read_bytes())
-            except (OSError, orjson.JSONDecodeError):
-                continue
-
-            if data.get("docker_parameters") != command:
-                continue
-
-            labels = data.get("labels", {})
-            return {
-                "scalable_horizontally": str(labels.get("scalable_horizontally", False)).lower(),
-                "scalable_vertically": str(labels.get("scalable_vertically", False)).lower(),
-            }
-
-        return default
 
     async def next_batch(self) -> tuple[int, list[int]]:
         """

@@ -241,32 +241,6 @@ class OnePasswordConnector(Connector):
         return ApiClient(api_token=self.module.configuration.api_token)
 
     @cached_property
-    def scalability_labels(self) -> dict[str, str]:
-        """Get scalability labels from the connector descriptor, falling back to the trigger."""
-        module_dir = Path(__file__).resolve().parent.parent
-        descriptors = [
-            module_dir / "connector_1password_epm.json",
-            module_dir / "trigger_1password_epm.json",
-        ]
-
-        labels: dict[str, Any] = {}
-        for descriptor in descriptors:
-            try:
-                loaded_file = orjson.loads(descriptor.read_bytes())
-            except OSError, orjson.JSONDecodeError:
-                continue
-            labels = loaded_file.get("labels", {})
-            if labels:
-                break
-
-        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
-        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
-        return {
-            "scalable_horizontally": scalable_horizontally,
-            "scalable_vertically": scalable_vertically,
-        }
-
-    @cached_property
     def get_allowed_endpoints(self) -> list:
         url = urljoin(self.base_url, "/api/v2/auth/introspect")
         response = self.client.get(url)

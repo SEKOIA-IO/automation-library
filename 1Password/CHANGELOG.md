@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Add scalability labels to prometheus metrics.
+- Add scalability labels (`scalable_horizontally`, `scalable_vertically`) to Prometheus metrics, resolved by the SDK from the connector/trigger descriptor
 
 ## 2026-09-11 - 1.1.6
 

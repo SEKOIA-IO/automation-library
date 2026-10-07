@@ -7,7 +7,6 @@ import urllib.parse
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
-from pathlib import Path
 from typing import Any, Generator, cast
 
 import orjson
@@ -92,32 +91,6 @@ class AkamaiWAFLogsConnector(Connector):
         """Persist cached event identifiers into checkpoint context."""
         with self.cursor._context as cache:
             cache["events_cache"] = list(self.events_cache.keys())
-
-    @cached_property
-    def scalability_labels(self) -> dict[str, str]:
-        """Get scalability labels from the connector descriptor, falling back to the trigger."""
-        module_dir = Path(__file__).resolve().parent.parent
-        descriptors = [
-            module_dir / "connector_akamai_waf_logs.json",
-            module_dir / "trigger_akamai_waf_logs.json",
-        ]
-
-        labels: dict[str, Any] = {}
-        for descriptor in descriptors:
-            try:
-                data = orjson.loads(descriptor.read_bytes())
-            except (OSError, orjson.JSONDecodeError):
-                continue
-            labels = data.get("labels", {})
-            if labels:
-                break
-
-        scalable_horizontally = str(labels.get("scalable_horizontally", False)).lower()
-        scalable_vertically = str(labels.get("scalable_vertically", False)).lower()
-        return {
-            "scalable_horizontally": scalable_horizontally,
-            "scalable_vertically": scalable_vertically,
-        }
 
     @cached_property
     def client(self) -> ApiClient:
