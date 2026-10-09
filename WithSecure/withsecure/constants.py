@@ -4,6 +4,7 @@ from posixpath import join as urljoin
 API_BASE_URL = "https://api.connect.withsecure.com"
 API_TIMEOUT = 5
 API_FETCH_EVENTS_PAGE_SIZE = 200
+API_LIST_DEVICES_PAGE_SIZE = 200
 API_AUTH_MAX_ATTEMPT = 7
 API_AUTH_RETRY_BACKOFF = 5
 # The API rejects any persistenceTimestamp range exceeding 30 days

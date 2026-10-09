@@ -1,0 +1,408 @@
+mapping:
+  ocsf_class: "Device Inventory Info"
+  class_uid: 5001
+  ocsf_version: "1.6.0"
+
+  samples:
+    - name: "WithSecure Elements computer sample"
+      description: "Sample device from WithSecure Elements API GET /devices/v1/devices"
+      data: |
+        {
+          "id": "e297cbf5-ba53-4e66-909c-000000000000",
+          "name": "EC2AMAZ-BOG9C6F",
+          "type": "computer",
+          "state": "active",
+          "company": {
+            "id": "00000000-0000-0000-0000-000000000000",
+            "name": "Example company"
+          },
+          "assetGroups": [
+            {
+              "id": "11111111-1111-1111-1111-111111111111",
+              "name": "Servers"
+            }
+          ],
+          "subscription": {
+            "productVariant": "serverprotection_premium_rdr",
+            "name": "EDR and EPP for Servers Premium",
+            "key": "0000-0000-0000-0000-0000"
+          },
+          "os": {
+            "name": "Windows Server 2022",
+            "version": "21H2",
+            "endOfLife": false
+          },
+          "lastUser": "EC2AMAZ-BOG9C6F\\Administrator",
+          "userPrincipalName": "",
+          "dnsAddress": "EC2AMAZ-BOG9C6F",
+          "firewallState": "enabled",
+          "protectionStatusOverview": "allOk",
+          "macAddresses": "0E-E3-1C-E3-00-00",
+          "ipAddresses": "172.31.40.211/20",
+          "publicIpAddress": "203.0.113.73",
+          "computerModel": "t3.large",
+          "serialNumber": "ec298270-651b-f728-d6be-000000000000",
+          "discEncryptionEnabled": false,
+          "statusUpdateTimestamp": "2023-05-20T13:15:16.550Z",
+          "registrationTimestamp": "2023-05-17T06:42:03.062Z",
+          "lastRestartTime": "2023-05-19T08:00:00Z",
+          "vmRiskScore": 42,
+          "online": true
+        }
+
+  fields:
+    # EVENT CLASSIFICATION
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      description: "OCSF activity ID – always 2 for Collect"
+
+    - source: "static: Collect"
+      target: "activity_name"
+      type: "string"
+      description: "OCSF activity name"
+
+    - source: "static: Discovery"
+      target: "category_name"
+      type: "string"
+      description: "OCSF category name"
+
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      description: "OCSF category UID"
+
+    - source: "static: Device Inventory Info"
+      target: "class_name"
+      type: "string"
+      description: "OCSF class name"
+
+    - source: "static: 5001"
+      target: "class_uid"
+      type: "integer"
+      description: "OCSF class UID"
+
+    - source: "static: Device Inventory Info: Collect"
+      target: "type_name"
+      type: "string"
+      description: "OCSF type name"
+
+    - source: "static: 500102"
+      target: "type_uid"
+      type: "integer"
+      description: "OCSF type UID"
+
+    - source: "static: Informational"
+      target: "severity"
+      type: "string"
+      description: "Event severity"
+
+    - source: "static: 1"
+      target: "severity_id"
+      type: "integer"
+      description: "Event severity ID"
+
+    - source: "statusUpdateTimestamp"
+      target: "time"
+      type: "timestamp"
+      logic: "ISO 8601 to Unix epoch; current time when absent"
+      description: "Event time"
+
+    # METADATA
+    - source: "static: WithSecure Elements"
+      target: "metadata.product.name"
+      type: "string"
+      description: "Product name"
+
+    - source: "static: WithSecure"
+      target: "metadata.product.vendor_name"
+      type: "string"
+      description: "Product vendor"
+
+    - source: "static: 1.6.0"
+      target: "metadata.version"
+      type: "string"
+      description: "OCSF schema version"
+
+    # DEVICE IDENTITY
+    - source: "id"
+      target: "device.uid"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Unique device identifier"
+
+    - source: "name, dnsAddress, id"
+      target: "device.hostname"
+      type: "string"
+      logic: "First non-empty value"
+      description: "Device hostname"
+
+    - source: "name"
+      target: "device.name"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Device name"
+
+    - source: "serialNumber"
+      target: "device.uid_alt"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Alternate device identifier"
+
+    - source: "type, subscription.productVariant, os.name"
+      target: "device.type_id"
+      type: "integer"
+      logic: "mobile → 5 (Mobile); connector → 1 (Server); computer → 1 (Server) when productVariant is a server subscription (serversecurity, serverprotection_premium, serverprotection_premium_rdr, rdr_server) or os.name contains 'Server', otherwise 2 (Desktop); anything else → 0 (Unknown)"
+      description: "Device type ID"
+
+    - source: "type, subscription.productVariant, os.name"
+      target: "device.type"
+      type: "string"
+      logic: "Caption of device.type_id"
+      description: "Device type"
+
+    - source: "computerModel"
+      target: "device.model"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Device model"
+
+    # OPERATING SYSTEM
+    - source: "os.name + os.version"
+      target: "device.os.name"
+      type: "string"
+      logic: "OS name followed by its version when present"
+      description: "Operating system name"
+
+    - source: "os.name"
+      target: "device.os.type_id"
+      type: "integer"
+      logic: "Keyword match on the lowercased name: windows → 100, ipados → 302, ios → 301, android → 201, mac → 300, linux distributions → 200, otherwise 0"
+      description: "Operating system type ID"
+
+    - source: "os.name"
+      target: "device.os.type"
+      type: "string"
+      logic: "Caption of device.os.type_id"
+      description: "Operating system type"
+
+    # NETWORK
+    - source: "ipAddresses, ipv6Addresses"
+      target: "device.ip"
+      type: "string"
+      logic: "First IPv4 address of the comma-separated list without its prefix length; first IPv6 address otherwise"
+      description: "Primary IP address"
+
+    - source: "ipAddresses"
+      target: "device.subnet"
+      type: "string"
+      logic: "Network of the first IPv4 address given in CIDR notation"
+      description: "Device subnet"
+
+    - source: "ipAddresses, ipv6Addresses, macAddresses"
+      target: "device.network_interfaces"
+      type: "array"
+      logic: "One interface per IP address (IPv4 then IPv6), paired by position with the MAC addresses (normalized to AA:BB:CC:DD:EE:FF); remaining MAC addresses become interfaces without IP. The first interface carries the device name as hostname"
+      description: "Network interfaces"
+
+    - source: "publicIpAddress"
+      target: "device.network_interfaces.ip"
+      type: "string"
+      logic: "Extra interface holding the public IP address"
+      description: "Public IP address"
+
+    # TIMESTAMPS
+    - source: "registrationTimestamp"
+      target: "device.created_time"
+      type: "timestamp"
+      logic: "ISO 8601 to Unix epoch"
+      description: "Registration time of the device"
+
+    - source: "registrationTimestamp"
+      target: "device.first_seen_time"
+      type: "timestamp"
+      logic: "ISO 8601 to Unix epoch"
+      description: "First time the device was seen"
+
+    - source: "statusUpdateTimestamp"
+      target: "device.last_seen_time"
+      type: "timestamp"
+      logic: "ISO 8601 to Unix epoch"
+      description: "Last status update of the device"
+
+    - source: "lastRestartTime"
+      target: "device.boot_time"
+      type: "timestamp"
+      logic: "ISO 8601 to Unix epoch"
+      description: "Last boot time"
+
+    # ORGANIZATION AND GROUPS
+    - source: "company.id"
+      target: "device.org.uid"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Organization identifier"
+
+    - source: "company.name"
+      target: "device.org.name"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Organization name"
+
+    - source: "assetGroups[].id, assetGroups[].name"
+      target: "device.groups"
+      type: "array"
+      logic: "One group per asset group with a name"
+      description: "Device groups"
+
+    # SECURITY POSTURE
+    - source: "static: true"
+      target: "device.is_managed"
+      type: "boolean"
+      description: "Devices listed by WithSecure Elements are managed"
+
+    - source: "protectionStatusOverview"
+      target: "device.is_compliant"
+      type: "boolean"
+      logic: "allOk → true; warning, critical → false; otherwise not set"
+      description: "Device compliance"
+
+    - source: "vmRiskScore"
+      target: "device.risk_score"
+      type: "integer"
+      logic: "Direct mapping"
+      description: "Vulnerability management risk score"
+
+    # ENRICHMENTS
+    - source: "static: compliance"
+      target: "enrichments.name"
+      type: "string"
+      description: "Enrichment name"
+
+    - source: "static: hygiene"
+      target: "enrichments.value"
+      type: "string"
+      description: "Enrichment value"
+
+    - source: "firewallState"
+      target: "enrichments.data.Firewall_status"
+      type: "string"
+      logic: "enabled → Enabled; disabled, disabledByGpo → Disabled; other states not set"
+      description: "Firewall status"
+
+    - source: "encryptedDrives[].drive, encryptedDrives[].protectionStatus, discEncryptionEnabled"
+      target: "enrichments.data.Storage_encryption.partitions"
+      type: "object"
+      logic: "One partition per encrypted drive, Enabled when protected; otherwise a single 'system' partition from discEncryptionEnabled"
+      description: "Storage encryption"
+
+    - source: "lastUser, userPrincipalName, email"
+      target: "enrichments.data.Users"
+      type: "array"
+      logic: "Distinct non-empty values"
+      description: "Users of the device"
+
+    - source: "dnsAddress"
+      target: "enrichments.data.Full_qualified_domain_name"
+      type: "string"
+      logic: "Set only when the DNS name contains a dot"
+      description: "Fully qualified domain name"
+
+  not_mapped:
+    - field: "vendor_name"
+      reason: "WithSecure does not expose the hardware manufacturer"
+    - field: "domain"
+      reason: "WithSecure does not expose the device domain"
+    - field: "hypervisor"
+      reason: "Not exposed by the WithSecure devices API"
+    - field: "os_machine_uuid"
+      reason: "Not exposed by the WithSecure devices API"
+    - field: "is_trusted"
+      reason: "No trust signal in the WithSecure devices API"
+    - field: "location"
+      reason: "Not exposed by the WithSecure devices API"
+
+  ocsf_samples:
+    - name: "Device Inventory Info – WithSecure Elements"
+      description: "Transformed WithSecure device to OCSF Device Inventory Info"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "Device Inventory Info",
+          "class_uid": 5001,
+          "type_name": "Device Inventory Info: Collect",
+          "type_uid": 500102,
+          "severity": "Informational",
+          "severity_id": 1,
+          "time": 1684588516.55,
+          "metadata": {
+            "product": {
+              "name": "WithSecure Elements",
+              "vendor_name": "WithSecure"
+            },
+            "version": "1.6.0"
+          },
+          "device": {
+            "type_id": 1,
+            "type": "Server",
+            "uid": "e297cbf5-ba53-4e66-909c-000000000000",
+            "os": {
+              "name": "Windows Server 2022 21H2",
+              "type": "windows",
+              "type_id": 100
+            },
+            "hostname": "EC2AMAZ-BOG9C6F",
+            "boot_time": 1684483200.0,
+            "created_time": 1684305723.062,
+            "first_seen_time": 1684305723.062,
+            "groups": [
+              {
+                "name": "Servers",
+                "uid": "11111111-1111-1111-1111-111111111111"
+              }
+            ],
+            "ip": "172.31.40.211",
+            "is_compliant": true,
+            "is_managed": true,
+            "last_seen_time": 1684588516.55,
+            "model": "t3.large",
+            "name": "EC2AMAZ-BOG9C6F",
+            "network_interfaces": [
+              {
+                "hostname": "EC2AMAZ-BOG9C6F",
+                "ip": "172.31.40.211",
+                "mac": "0E:E3:1C:E3:00:00"
+              },
+              {
+                "ip": "203.0.113.73"
+              }
+            ],
+            "org": {
+              "name": "Example company",
+              "uid": "00000000-0000-0000-0000-000000000000"
+            },
+            "risk_score": 42,
+            "subnet": "172.31.32.0/20",
+            "uid_alt": "ec298270-651b-f728-d6be-000000000000"
+          },
+          "enrichments": [
+            {
+              "name": "compliance",
+              "value": "hygiene",
+              "data": {
+                "Firewall_status": "Enabled",
+                "Storage_encryption": {
+                  "partitions": {
+                    "system": "Disabled"
+                  }
+                },
+                "Users": [
+                  "EC2AMAZ-BOG9C6F\\Administrator"
+                ]
+              }
+            }
+          ]
+        }
