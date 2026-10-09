@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-10-09
+
+### Fixed
+
+- Carry the vulnerability description and references once per finding instead of once per CVE, and cap the CVEs per finding, so a finding listing hundreds of CVEs no longer exceeds the asset management push item size limit
+
 ## [1.3.3] - 2026-09-09
 
 ### Fixed
