@@ -5,6 +5,7 @@ from typing import Any
 from ldap3 import ALL_ATTRIBUTES, ALL_OPERATIONAL_ATTRIBUTES
 from ldap3.core.exceptions import LDAPException
 from sekoia_automation.asset_connector import AssetConnector
+from sekoia_automation.asset_connector.models.connector import AssetList
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.asset_connector.models.ocsf.user import Account, AccountTypeId, AccountTypeStr
@@ -49,6 +50,9 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         self.context = PersistentJSON("context.json", self._data_path)
         self._latest_time: str | None = None
         self._seen_sids: set[str] = set()
+        self._cycle_latest_time: str | None = None
+        self._cycle_seen_sids: set[str] = set()
+        self._push_failed = False
 
     @property
     def most_recent_datetime(self) -> str | None:
@@ -351,11 +355,11 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             if user_created_at:
                 user_created_str = user_created_at.strftime("%Y%m%d%H%M%S.0Z")
                 sid = user_attributes.get("objectSid")
-                if not self._latest_time or user_created_str > self._latest_time:
-                    self._latest_time = user_created_str
-                    self._seen_sids = {sid} if sid else set()
-                elif user_created_str == self._latest_time and sid:
-                    self._seen_sids.add(sid)
+                if not self._cycle_latest_time or user_created_str > self._cycle_latest_time:
+                    self._cycle_latest_time = user_created_str
+                    self._cycle_seen_sids = {sid} if sid else set()
+                elif user_created_str == self._cycle_latest_time and sid:
+                    self._cycle_seen_sids.add(sid)
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
         """
@@ -375,3 +379,28 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
                 user_dn = user.get("dn", "Unknown DN")
                 self.log(f"Failed to map user {user_dn}: {e}", level="error")
                 continue
+
+    def post_assets_to_api(self, assets: AssetList, asset_connector_api_url: str) -> dict[str, str] | None:
+        """Push a batch and remember whether it made it through."""
+        response = super().post_assets_to_api(assets, asset_connector_api_url)
+        if response is None:
+            # The users of this batch were not ingested: hold the checkpoint back so the next cycle collects them again.
+            self._push_failed = True
+        return response
+
+    def asset_fetch_cycle(self) -> None:
+        """Run a fetch cycle, then commit the checkpoint only if every batch was pushed."""
+        # LDAP paged results are not ordered by whenCreated, so the newest date seen mid-cycle can be ahead of users
+        # not read yet. The SDK commits after each push: committing it there would make an interrupted cycle skip
+        # those users forever. An interrupted cycle raises and never reaches the commit.
+        self._cycle_latest_time = None
+        self._cycle_seen_sids = set()
+        self._push_failed = False
+
+        super().asset_fetch_cycle()
+
+        if self._push_failed or self._cycle_latest_time is None:
+            return
+        self._latest_time = self._cycle_latest_time
+        self._seen_sids = self._cycle_seen_sids
+        self.update_checkpoint()
