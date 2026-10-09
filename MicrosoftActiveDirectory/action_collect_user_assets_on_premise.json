@@ -1,0 +1,78 @@
+{
+  "name": "Collect Microsoft AD user assets (on-premise)",
+  "description": "Run one collection cycle of the Microsoft Active Directory Users asset connector. Started by on-premise asset connectors, not meant for playbooks.",
+  "uuid": "8109d625-424c-4edb-bafc-81261932c898",
+  "docker_parameters": "microsoft_ad_user_assets_on_premise",
+  "internal": true,
+  "arguments": {
+    "title": "MicrosoftADUserAssetsOnPremiseArguments",
+    "type": "object",
+    "properties": {
+      "asset_connector_uuid": {
+        "title": "Asset connector UUID",
+        "description": "The asset connector configuration receiving the assets",
+        "type": "string"
+      },
+      "connector_configuration_token": {
+        "title": "Connector configuration token",
+        "description": "The token sending the logs of the asset connector configuration",
+        "type": "string"
+      },
+      "sekoia_base_url": {
+        "title": "Sekoia.io Base URL",
+        "description": "The base URL of the Sekoia.io API",
+        "type": "string",
+        "default": "https://api.sekoia.io"
+      },
+      "sekoia_api_key": {
+        "title": "Sekoia.io API Key",
+        "description": "The API key to authenticate to Sekoia.io",
+        "type": "string"
+      },
+      "batch_size": {
+        "title": "Chunk Size",
+        "description": "Number of assets to send in each batch to Sekoia.io",
+        "type": "integer",
+        "minimum": 1,
+        "default": 1000
+      },
+      "basedn": {
+        "title": "Base DN",
+        "description": "The base distinguished name (DN) to use for LDAP queries",
+        "type": "string"
+      }
+    },
+    "required": [
+      "asset_connector_uuid",
+      "connector_configuration_token",
+      "sekoia_api_key"
+    ],
+    "secrets": [
+      "connector_configuration_token",
+      "sekoia_api_key"
+    ]
+  },
+  "results": {
+    "title": "Results",
+    "type": "object",
+    "properties": {
+      "fetched": {
+        "description": "Number of users collected",
+        "type": "integer"
+      },
+      "pushed_batches": {
+        "description": "Number of batches pushed to Sekoia.io",
+        "type": "integer"
+      },
+      "failed_batches": {
+        "description": "Number of batches Sekoia.io did not accept",
+        "type": "integer"
+      },
+      "has_more": {
+        "description": "Whether the collection cycle stopped before its end and must run again",
+        "type": "boolean"
+      }
+    }
+  },
+  "slug": "collect_user_assets_on_premise"
+}
