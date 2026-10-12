@@ -239,7 +239,7 @@ def test_patch_alert_status_accepts_short_id(requests_mock):
     assert results == {}
 
 
-@pytest.mark.parametrize("alert_id", ["AL", "AL   ", "ALgarbage", "AL1234567890A", "AL123456789-"])
+@pytest.mark.parametrize("alert_id", ["AL", "AL   ", "ALgarbage", "AL123456789", "AL1234567890A", "AL123456789-"])
 def test_patch_alert_status_rejects_malformed_short_id(requests_mock, alert_id):
     action = UpdateAlertStatus()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
