@@ -52,7 +52,7 @@ def test_update_asset_by_uuid_returns_none_if_http_error(requests_mock):
     assert results is None
 
 
-def test_update_asset_by_uuid_returns_none_if_uuid_empty(requests_mock):
+def test_update_asset_rejects_uuid_empty(requests_mock):
     action = UpdateAsset()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
     arguments = {"uuid": ""}
@@ -62,7 +62,7 @@ def test_update_asset_by_uuid_returns_none_if_uuid_empty(requests_mock):
     assert requests_mock.call_count == 0
 
 
-def test_update_asset_by_uuid_returns_none_if_uuid_invalid(requests_mock):
+def test_update_asset_rejects_uuid_invalid(requests_mock):
     action = UpdateAsset()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
     arguments = {"uuid": "not-a-uuid"}
