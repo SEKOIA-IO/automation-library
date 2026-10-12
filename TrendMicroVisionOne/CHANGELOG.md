@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Added Pydantic-based validation to the actions so `alert_id`, `note`, `file_path`, `agent_guid` and `agent_guids` (and each of its items) reject missing or empty values, and `process_id` must be greater than zero before any API call
+- Declared the same constraints (`minLength`, `minimum`) in the action manifests
 
 ### Changed
 

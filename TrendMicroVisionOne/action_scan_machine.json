@@ -6,14 +6,17 @@
   "slug": "scan",
   "arguments": {
     "type": "object",
-    "required": ["agent_guids"],
+    "required": [
+      "agent_guids"
+    ],
     "properties": {
       "agent_guids": {
         "description": "The identifiers of the endpoints to scan",
         "type": "array",
         "minItems": 1,
         "items": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         }
       },
       "description": {

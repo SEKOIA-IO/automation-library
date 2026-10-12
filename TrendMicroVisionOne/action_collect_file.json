@@ -6,14 +6,18 @@
   "slug": "collect_file",
   "arguments": {
     "type": "object",
-    "required": ["agent_guids", "file_path"],
+    "required": [
+      "agent_guids",
+      "file_path"
+    ],
     "properties": {
       "agent_guids": {
         "description": "The identifiers of the endpoints",
         "type": "array",
         "minItems": 1,
         "items": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         }
       },
       "description": {
@@ -22,7 +26,8 @@
       },
       "file_path": {
         "description": "The filepath of the file to collect",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       }
     }
   },

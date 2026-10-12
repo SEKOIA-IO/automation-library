@@ -6,15 +6,20 @@
   "slug": "comment_alert",
   "arguments": {
     "type": "object",
-    "required": ["alert_id", "note"],
+    "required": [
+      "alert_id",
+      "note"
+    ],
     "properties": {
       "alert_id": {
         "description": "The identifier of the alert",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "note": {
         "description": "The content of the note",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       }
     }
   },
