@@ -7,7 +7,6 @@ from pydantic import (
     BeforeValidator,
     Field,
     IPvAnyAddress,
-    StringConstraints,
     model_validator,
 )
 from sekoia_automation.action import Action
@@ -23,13 +22,12 @@ def prepare_ip(value: str | ipaddress.IPv4Address | ipaddress.IPv6Address | None
     raise ValueError("Input should be a string IP address")
 
 
-NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 StrippedIPvAnyAddress = Annotated[IPvAnyAddress, BeforeValidator(prepare_ip)]
 
 
 class OnypheDatascanArguments(BaseModel):
     ip: StrippedIPvAnyAddress | None = Field(default=None, description="IP address to scan")
-    string: NonEmptyStr | None = Field(default=None, description="String to scan")
+    string: str | None = Field(default=None, min_length=1, description="String to scan")
     budget: int = Field(default=1, description="Maximum number of pages to fetch, or 0 for all pages")
     first_page: int = Field(default=1, description="First page number to fetch")
 

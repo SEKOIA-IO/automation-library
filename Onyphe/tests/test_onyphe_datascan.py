@@ -171,7 +171,6 @@ def result_page_1():
     [
         {},
         {"string": ""},
-        {"string": "   "},
         {"string": None},
     ],
 )
