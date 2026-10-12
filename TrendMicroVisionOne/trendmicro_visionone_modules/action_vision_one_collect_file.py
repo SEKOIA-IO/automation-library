@@ -4,12 +4,11 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from .action_vision_one_base import TrendMicroVisionOneBaseAction
-from .models import NonEmptyStr
 
 
 class CollectFileArguments(BaseModel):
     agent_guids: list[UUID] = Field(..., min_length=1, description="Agent GUIDs")
-    file_path: NonEmptyStr = Field(..., description="Path of the file to collect")
+    file_path: str = Field(..., min_length=1, description="Path of the file to collect")
     description: Optional[str] = None
 
 

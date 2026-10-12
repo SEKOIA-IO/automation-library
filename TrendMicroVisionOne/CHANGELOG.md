@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Added Pydantic-based validation to six actions so `alert_id`, `note`, and `file_path` reject blanks, `agent_guids`/`agent_guid` are parsed as UUID values (with non-empty list enforcement for `agent_guids`), and `process_id` must be greater than zero before any API call
+- Added Pydantic-based validation to six actions so `alert_id`, `note`, and `file_path` reject missing or empty values, `agent_guids`/`agent_guid` are parsed as UUID values (with non-empty list enforcement for `agent_guids`), and `process_id` must be greater than zero before any API call
 
 ### Changed
 

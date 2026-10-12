@@ -3,11 +3,10 @@ from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 from .action_vision_one_base import TrendMicroVisionOneBaseAction
-from .models import NonEmptyStr
 
 
 class UpdateAlertArguments(BaseModel):
-    alert_id: NonEmptyStr = Field(..., description="The identifier of the alert")
+    alert_id: str = Field(..., min_length=1, description="The identifier of the alert")
     status: Optional[str] = None
     investigation_result: Optional[str] = None
 

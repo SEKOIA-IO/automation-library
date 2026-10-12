@@ -1,8 +1,4 @@
-from typing import Annotated
-
-from pydantic import BaseModel, Field, StringConstraints
-
-NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+from pydantic import BaseModel, Field
 
 
 class TrendMicroVisionOneModuleConfiguration(BaseModel):

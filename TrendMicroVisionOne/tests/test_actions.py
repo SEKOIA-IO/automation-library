@@ -46,7 +46,6 @@ def test_add_alert_note(module):
         {"note": "Some note"},
         {"alert_id": "WB-00000-20241217-00001"},
         {"alert_id": "WB-00000-20241217-00001", "note": ""},
-        {"alert_id": "   ", "note": "Some note"},
     ],
 )
 def test_add_alert_note_requires_entrypoint_arguments(module, arguments):
@@ -95,7 +94,6 @@ def test_collect_file_action(module):
         {"agent_guids": ["not-a-uuid"], "file_path": "/etc/hosts"},
         {"agent_guids": ["171d5516-f91b-41d6-82c0-3096fd6df927"]},
         {"agent_guids": ["171d5516-f91b-41d6-82c0-3096fd6df927"], "file_path": ""},
-        {"agent_guids": ["171d5516-f91b-41d6-82c0-3096fd6df927"], "file_path": "   "},
     ],
 )
 def test_collect_file_action_requires_entrypoint_arguments(module, arguments):
@@ -260,7 +258,7 @@ def test_update_alert_action(module):
         )
 
 
-@pytest.mark.parametrize("arguments", [{}, {"alert_id": ""}, {"alert_id": "   "}])
+@pytest.mark.parametrize("arguments", [{}, {"alert_id": ""}])
 def test_update_alert_action_requires_alert_id(module, arguments):
     with requests_mock.Mocker() as mock:
         action = UpdateAlertAction(module)

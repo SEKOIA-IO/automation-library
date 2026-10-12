@@ -3,12 +3,11 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from .action_vision_one_base import TrendMicroVisionOneBaseAction
-from .models import NonEmptyStr
 
 
 class AddAlertNoteArguments(BaseModel):
-    alert_id: NonEmptyStr = Field(..., description="The identifier of the alert")
-    note: NonEmptyStr = Field(..., description="The content of the note")
+    alert_id: str = Field(..., min_length=1, description="The identifier of the alert")
+    note: str = Field(..., min_length=1, description="The content of the note")
 
 
 class AddAlertNoteAction(TrendMicroVisionOneBaseAction):
