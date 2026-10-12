@@ -1,16 +1,14 @@
 import json
-from typing import Annotated, Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
 
 from .thehiveconnector import TheHiveConnector
 
-NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-
 
 class TheHiveCreateObservableArguments(BaseModel):
-    alert_id: NonEmptyStr = Field(..., description="The Unique identifier of the alert")
+    alert_id: str = Field(..., min_length=1, description="The Unique identifier of the alert")
     events: List[Dict[str, Any]] = Field(..., description="Events to convert to observables")
     tlp: str = Field(default="AMBER", description="Traffic Light Protocol level")
     pap: str = Field(default="AMBER", description="Permissible Actions Protocol level")

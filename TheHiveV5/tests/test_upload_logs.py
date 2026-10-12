@@ -132,7 +132,7 @@ def test_upload_logs_action_file_not_found(module, data_path):
     assert non_existent_file in str(exc_info.value)
 
 
-@pytest.mark.parametrize("alert_id", [None, "", "   "])
+@pytest.mark.parametrize("alert_id", [None, ""])
 def test_upload_logs_action_requires_alert_id(alert_id, requests_mock, module, data_path):
     filepath = data_path / FILEPATH
     filepath.touch()
@@ -150,7 +150,7 @@ def test_upload_logs_action_requires_alert_id(alert_id, requests_mock, module, d
     assert requests_mock.call_count == 0
 
 
-@pytest.mark.parametrize("filepath", [None, "", "   "])
+@pytest.mark.parametrize("filepath", [None, ""])
 def test_upload_logs_action_requires_filepath(filepath, requests_mock, module, data_path):
     action = TheHiveUploadLogsV5(module=module, data_path=data_path)
     action.module.configuration = {

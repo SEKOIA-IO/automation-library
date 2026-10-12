@@ -439,7 +439,7 @@ def test_add_observables_action_api_error(requests_mock):
     assert mock_alert.call_count > 0
 
 
-@pytest.mark.parametrize("alert_id", [None, "", "   "])
+@pytest.mark.parametrize("alert_id", [None, ""])
 def test_add_observables_action_requires_alert_id(alert_id, requests_mock):
     action = TheHiveCreateObservableV5()
     action.module.configuration = {

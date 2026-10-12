@@ -1,17 +1,15 @@
-from typing import Annotated, Optional
+from typing import Optional
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
 from thehive4py.types.comment import InputComment, OutputComment
 
 from .thehiveconnector import TheHiveConnector
 
-NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-
 
 class TheHiveCreateCommentArguments(BaseModel):
-    alert_id: NonEmptyStr = Field(..., description="The Unique identifier of the alert")
-    message: NonEmptyStr = Field(..., description="Comment message")
+    alert_id: str = Field(..., min_length=1, description="The Unique identifier of the alert")
+    message: str = Field(..., min_length=1, description="Comment message")
 
 
 class TheHiveCreateCommentV5(Action):

@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Validate TheHive v5 add observable, upload logs, and add comment action arguments with a shared `NonEmptyStr` alias built on Pydantic v2 `StringConstraints`, replacing custom blank-check validators while still rejecting empty or whitespace-only alert IDs, comment messages, and upload file paths before any API call.
+- Validate TheHive v5 add observable, upload logs, and add comment action arguments with Pydantic v2, rejecting missing or empty alert IDs, comment messages, and upload file paths before any API call.
 - Bump `sekoia-automation-sdk` to 1.23.1.
 
 ## 2026-03-20 - 1.1.3

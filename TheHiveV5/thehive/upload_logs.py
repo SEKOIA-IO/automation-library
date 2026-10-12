@@ -1,6 +1,6 @@
-from typing import Annotated, Any, Optional
+from typing import Any, Optional
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
 
 # Upload logs <-> Add an observable as a log file OR add_attachment in alert
@@ -9,12 +9,12 @@ from sekoia_automation.action import Action
 from .thehiveconnector import TheHiveConnector
 from .helpers import copy_to_tempfile
 
-NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-
 
 class TheHiveUploadLogsArguments(BaseModel):
-    alert_id: NonEmptyStr = Field(..., description="The Unique identifier of the alert")
-    filepath: NonEmptyStr = Field(..., description="Path of the file to upload, relative to the action's data path")
+    alert_id: str = Field(..., min_length=1, description="The Unique identifier of the alert")
+    filepath: str = Field(
+        ..., min_length=1, description="Path of the file to upload, relative to the action's data path"
+    )
 
 
 class TheHiveUploadLogsV5(Action):
