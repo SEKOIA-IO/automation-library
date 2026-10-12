@@ -1,3 +1,4 @@
+import re
 from posixpath import join as urljoin
 from uuid import UUID
 
@@ -20,6 +21,8 @@ ACTION_UUIDS = [
     "1390be4e-ced8-4dd6-9bed-573471b235ab",
 ]
 
+ALERT_SHORT_ID_PATTERN = re.compile(r"AL[A-Za-z0-9]{10}")
+
 
 class UpdateAlertStatusArguments(BaseModel):
     uuid: str = Field(..., description="The identifier (UUID or short id) of the alert")
@@ -32,9 +35,8 @@ class UpdateAlertStatusArguments(BaseModel):
         if not self.uuid.strip():
             raise ValueError("The alert identifier must not be empty")
 
-        # short id validation
-        if self.uuid.startswith("AL"):
-            # If the identifier starts with "AL", we assume it's a short ID
+        # short id validation: "AL" followed by 10 alphanumeric characters
+        if ALERT_SHORT_ID_PATTERN.fullmatch(self.uuid):
             return self
 
         # UUID validation
