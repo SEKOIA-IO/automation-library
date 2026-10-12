@@ -91,6 +91,7 @@ def test_collect_file_action(module):
     [
         {"file_path": "/etc/hosts"},
         {"agent_guids": [], "file_path": "/etc/hosts"},
+        {"agent_guids": [""], "file_path": "/etc/hosts"},
         {"agent_guids": ["171d5516-f91b-41d6-82c0-3096fd6df927"]},
         {"agent_guids": ["171d5516-f91b-41d6-82c0-3096fd6df927"], "file_path": ""},
     ],
@@ -132,7 +133,7 @@ def test_deisolate_machine_action(module):
         )
 
 
-@pytest.mark.parametrize("arguments", [{}, {"agent_guids": []}, {"agent_guids": ""}])
+@pytest.mark.parametrize("arguments", [{}, {"agent_guids": []}, {"agent_guids": ""}, {"agent_guids": [""]}])
 def test_deisolate_machine_action_requires_agent_guids(module, arguments):
     with requests_mock.Mocker() as mock:
         action = DeIsolateMachineAction(module)
@@ -170,7 +171,7 @@ def test_isolate_machine_action(module):
         )
 
 
-@pytest.mark.parametrize("arguments", [{}, {"agent_guids": []}, {"agent_guids": ""}])
+@pytest.mark.parametrize("arguments", [{}, {"agent_guids": []}, {"agent_guids": ""}, {"agent_guids": [""]}])
 def test_isolate_machine_action_requires_agent_guids(module, arguments):
     with requests_mock.Mocker() as mock:
         action = IsolateMachineAction(module)
@@ -197,6 +198,17 @@ def test_scan_machine_action(module):
                 "description": "Some Description",
             }
         )
+
+
+@pytest.mark.parametrize("arguments", [{}, {"agent_guids": []}, {"agent_guids": ""}, {"agent_guids": [""]}])
+def test_scan_machine_action_requires_agent_guids(module, arguments):
+    with requests_mock.Mocker() as mock:
+        action = ScanMachineAction(module)
+
+        with pytest.raises(ValidationError):
+            action.run(arguments=arguments)
+
+        assert len(mock.request_history) == 0
 
 
 def test_terminate_process_action(module):
@@ -264,4 +276,12 @@ def test_update_alert_action_requires_alert_id(module, arguments):
         with pytest.raises(ValidationError):
             action.run(arguments=arguments)
 
+        assert len(mock.request_history) == 0
+
+
+def test_terminate_process_action_requires_file_name_or_sha1(module):
+    with requests_mock.Mocker() as mock:
+        action = TerminateProcessAction(module)
+
+        assert action.run(arguments={"agent_guid": "171d5516-f91b-41d6-82c0-3096fd6df927", "process_id": 123}) is None
         assert len(mock.request_history) == 0

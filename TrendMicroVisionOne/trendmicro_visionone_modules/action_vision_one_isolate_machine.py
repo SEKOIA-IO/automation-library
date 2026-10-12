@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -6,7 +6,7 @@ from .action_vision_one_base import TrendMicroVisionOneBaseAction
 
 
 class IsolateMachineArguments(BaseModel):
-    agent_guids: list[str] = Field(..., min_length=1, description="Agent GUIDs")
+    agent_guids: list[Annotated[str, Field(min_length=1)]] = Field(..., min_length=1, description="Agent GUIDs")
     description: Optional[str] = None
 
 

@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -6,7 +6,7 @@ from .action_vision_one_base import TrendMicroVisionOneBaseAction
 
 
 class CollectFileArguments(BaseModel):
-    agent_guids: list[str] = Field(..., min_length=1, description="Agent GUIDs")
+    agent_guids: list[Annotated[str, Field(min_length=1)]] = Field(..., min_length=1, description="Agent GUIDs")
     file_path: str = Field(..., min_length=1, description="Path of the file to collect")
     description: Optional[str] = None
 
