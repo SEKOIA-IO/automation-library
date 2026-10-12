@@ -489,3 +489,33 @@ def test_add_observables_action_json_decode_error():
 
         with pytest.raises(json.JSONDecodeError):
             action.run({"alert_id": ALERT_ID, "events": EVENTS})
+
+
+def test_add_observables_action_partial_failure(requests_mock):
+    """When some observables fail, the action returns both lists and logs a warning"""
+    url = f"https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable"
+    mock_alert = requests_mock.post(
+        url=url,
+        response_list=[
+            {"status_code": 500, "json": {"type": "CreateError", "message": "boom"}},
+            {"status_code": 201, "json": [HIVE_OUTPUT[1]]},
+        ],
+    )
+
+    action = TheHiveCreateObservableV5()
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+    logs = []
+    action.log = lambda message, level="info", **kwargs: logs.append((message, level))
+
+    result = action.run({"alert_id": ALERT_ID, "events": EVENTS})
+
+    assert mock_alert.call_count == 2
+    assert result is not None
+    assert result["success"] == [[HIVE_OUTPUT[1]]]
+    assert len(result["failure"]) == 1
+    assert result["failure"][0]["observable"]["data"] == "192.168.0.1"
+    assert ("Added 1 observables successfully, 1 failed", "warning") in logs

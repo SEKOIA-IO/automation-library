@@ -254,3 +254,183 @@ class TestPrepareVerifyParamEdgeCases:
 
         # Restore the flag
         connector_module._atexit_registered = True
+
+
+def test_typed_inputs_fall_back_to_dict_without_thehive4py_types(monkeypatch):
+    """When thehive4py typed inputs are unavailable, plain dicts are used instead"""
+    import importlib.util
+    import thehive.thehiveconnector as connector_module
+
+    monkeypatch.setitem(sys.modules, "thehive4py.types.alert", None)
+    spec = importlib.util.spec_from_file_location("thehive_connector_fallback", connector_module.__file__)
+    fallback_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fallback_module)
+
+    assert fallback_module.InputAlert is dict
+    assert fallback_module.InputUpdateAlert is dict
+    assert fallback_module.InputPromoteAlert is dict
+    assert fallback_module.InputObservable is dict
+    assert fallback_module.InputProcedure is dict
+
+
+def test_cleanup_logs_and_clears_cache_when_unlink_fails(monkeypatch, caplog, tmp_path):
+    """A CA file that cannot be removed is logged and the cache is still cleared"""
+    import thehive.thehiveconnector as connector_module
+
+    ca_file = tmp_path / "ca.pem"
+    ca_file.write_text("cert")
+    monkeypatch.setitem(connector_module._ca_file_cache, "cleanup-failure", str(ca_file))
+
+    def failing_unlink(path):
+        raise OSError("permission denied")
+
+    monkeypatch.setattr(connector_module.os, "unlink", failing_unlink)
+
+    with caplog.at_level("WARNING", logger="hive.alert.connector"):
+        _cleanup_ca_files()
+
+    assert "Failed to clean up temporary CA file" in caplog.text
+    assert connector_module._ca_file_cache == {}
+    assert ca_file.exists()
+
+
+class TestPrepareVerifyParamWriteFailure:
+    """prepare_verify_param must clean up the temp file and re-raise when writing fails"""
+
+    @staticmethod
+    def _record_mkstemp(monkeypatch, connector_module):
+        created = []
+        original_mkstemp = connector_module.tempfile.mkstemp
+
+        def recording_mkstemp(*args, **kwargs):
+            fd, path = original_mkstemp(*args, **kwargs)
+            created.append(path)
+            return fd, path
+
+        monkeypatch.setattr(connector_module.tempfile, "mkstemp", recording_mkstemp)
+        return created
+
+    def test_chmod_failure_removes_temp_file(self, monkeypatch):
+        import thehive.thehiveconnector as connector_module
+
+        created = self._record_mkstemp(monkeypatch, connector_module)
+        logs = []
+
+        def failing_chmod(path, mode):
+            raise PermissionError("chmod denied")
+
+        monkeypatch.setattr(connector_module.os, "chmod", failing_chmod)
+
+        ca_cert = "-----BEGIN CERTIFICATE-----\nTEST_CHMOD_FAILURE\n-----END CERTIFICATE-----"
+        with pytest.raises(PermissionError):
+            prepare_verify_param(verify=True, ca_certificate=ca_cert, log_fn=lambda msg, lvl: logs.append((msg, lvl)))
+
+        assert len(created) == 1
+        assert not os.path.exists(created[0])
+        assert created[0] not in connector_module._ca_file_cache.values()
+        assert any(lvl == "error" and "Failed to write CA cert" in msg for msg, lvl in logs)
+
+    def test_write_failure_tolerates_close_and_unlink_errors(self, monkeypatch):
+        import thehive.thehiveconnector as connector_module
+
+        created = self._record_mkstemp(monkeypatch, connector_module)
+        unlink_calls = []
+
+        def failing_fsync(fd):
+            raise OSError("disk full")
+
+        def failing_unlink(path):
+            unlink_calls.append(path)
+            raise OSError("cannot remove")
+
+        monkeypatch.setattr(connector_module.os, "fsync", failing_fsync)
+        monkeypatch.setattr(connector_module.os, "unlink", failing_unlink)
+
+        ca_cert = "-----BEGIN CERTIFICATE-----\nTEST_FSYNC_FAILURE\n-----END CERTIFICATE-----"
+        with pytest.raises(OSError, match="disk full"):
+            prepare_verify_param(verify=True, ca_certificate=ca_cert)
+
+        monkeypatch.undo()
+        assert unlink_calls == created
+        assert created[0] not in connector_module._ca_file_cache.values()
+        os.unlink(created[0])
+
+
+def test_connector_init_logs_and_reraises_api_creation_error(monkeypatch):
+    """A failure while building the TheHive client is logged as an error and re-raised"""
+    import thehive.thehiveconnector as connector_module
+
+    def failing_api(**kwargs):
+        raise RuntimeError("bad url")
+
+    monkeypatch.setattr(connector_module, "TheHiveApi", failing_api)
+    logs = []
+
+    with pytest.raises(RuntimeError, match="bad url"):
+        TheHiveConnector("http://localhost:9000", "APIKEY123", "TESTORG", log_fn=lambda m, lvl: logs.append((m, lvl)))
+
+    assert ("[TheHiveConnector.__init__] Failed to create TheHiveApi (RuntimeError): bad url", "error") in logs
+
+
+class TestSekoiaToTheHiveLevels:
+    """TLP/PAP conversion in sekoia_to_thehive"""
+
+    def test_integer_levels_are_kept(self):
+        observables = TheHiveConnector.sekoia_to_thehive([{"source.ip": "10.0.0.1"}], 4, 3, False)
+
+        assert observables == [{"dataType": "ip", "data": "10.0.0.1", "tlp": 4, "pap": 3, "ioc": False}]
+
+    def test_string_levels_are_case_insensitive(self):
+        observables = TheHiveConnector.sekoia_to_thehive([{"source.ip": "10.0.0.1"}], "red", "green", True)
+
+        assert observables[0]["tlp"] == 4
+        assert observables[0]["pap"] == 1
+
+    def test_unknown_levels_default_to_amber(self, caplog):
+        with caplog.at_level("WARNING"):
+            observables = TheHiveConnector.sekoia_to_thehive([{"source.ip": "10.0.0.1"}], "PURPLE", "BLUE", True)
+
+        assert observables[0]["tlp"] == 2
+        assert observables[0]["pap"] == 2
+        assert "Unknown TLP level 'PURPLE'" in caplog.text
+        assert "Unknown PAP level 'BLUE'" in caplog.text
+
+
+def test_sekoia_to_thehive_converts_non_string_values():
+    observables = TheHiveConnector.sekoia_to_thehive([{"user.name": 42}], "AMBER", "AMBER", True)
+
+    assert observables == [{"dataType": "hostname", "data": "42", "tlp": 2, "pap": 2, "ioc": True}]
+
+
+def test_sekoia_to_thehive_skips_fields_without_mapping(monkeypatch, caplog):
+    import thehive.thehiveconnector as connector_module
+
+    monkeypatch.setattr(connector_module, "SEKOIA_FIELDS", [*connector_module.SEKOIA_FIELDS, "custom.field"])
+
+    with caplog.at_level("WARNING"):
+        observables = TheHiveConnector.sekoia_to_thehive(
+            [{"custom.field": "value", "source.ip": "10.0.0.1"}], "AMBER", "AMBER", True
+        )
+
+    assert observables == [{"dataType": "ip", "data": "10.0.0.1", "tlp": 2, "pap": 2, "ioc": True}]
+    assert "unknown data type for field 'custom.field'" in caplog.text
+
+
+def test_sekoia_to_thehive_deduplicates_observables():
+    events = [{"source.ip": "10.0.0.1"}, {"source.ip": "10.0.0.1", "host.ip": "10.0.0.1"}]
+
+    observables = TheHiveConnector.sekoia_to_thehive(events, "AMBER", "AMBER", True)
+
+    assert observables == [{"dataType": "ip", "data": "10.0.0.1", "tlp": 2, "pap": 2, "ioc": True}]
+
+
+def test_cleanup_skips_files_already_removed(monkeypatch, tmp_path):
+    """Cached CA files that no longer exist are ignored by the cleanup"""
+    import thehive.thehiveconnector as connector_module
+
+    missing_file = tmp_path / "missing.pem"
+    monkeypatch.setitem(connector_module._ca_file_cache, "already-removed", str(missing_file))
+
+    _cleanup_ca_files()
+
+    assert connector_module._ca_file_cache == {}

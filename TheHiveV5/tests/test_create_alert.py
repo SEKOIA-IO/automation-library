@@ -134,3 +134,23 @@ def test_create_alert_action_http_error(monkeypatch):
     }
 
     assert action.run({"sekoia_base_url": SEKOIA_BASE_URL, "alert": ALERT}) is None
+
+
+def test_create_alert_action_http_error_without_response(monkeypatch):
+    def raise_http_error(self, alert):
+        raise HTTPError("connection reset")
+
+    monkeypatch.setattr(AlertEndpoint, "create", raise_http_error)
+
+    action = TheHiveCreateAlertV5()
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+    logs = []
+    action.log = lambda message, level="info", **kwargs: logs.append((message, level))
+
+    assert action.run({"sekoia_base_url": SEKOIA_BASE_URL, "alert": ALERT}) is None
+    assert ("[CreateAlert] HTTPError (HTTPError): connection reset", "error") in logs
+    assert not any("Status code" in message for message, _ in logs)
