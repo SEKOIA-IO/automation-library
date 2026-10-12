@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -29,7 +30,12 @@ class TheHiveUploadLogsV5(Action):
         )
 
         arg_alert_id = arguments.alert_id
-        arg_filepath = self.data_path.joinpath(arguments.filepath)
+        # Lexical check: data_path may be a remote (S3) path, which cannot be resolved on the local filesystem
+        base_path = os.path.normpath(str(self.data_path))
+        candidate_path = os.path.normpath(str(self.data_path.joinpath(arguments.filepath)))
+        if os.path.commonpath([base_path, candidate_path]) != base_path:
+            raise ValueError(f"File path must be inside the action data directory: {arguments.filepath}")
+        arg_filepath = self.data_path.joinpath(os.path.relpath(candidate_path, base_path))
 
         # Verify file exists before attempting upload
         if not arg_filepath.exists():
