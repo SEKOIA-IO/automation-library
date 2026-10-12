@@ -9,7 +9,7 @@ from .thehiveconnector import TheHiveConnector
 
 class TheHiveCreateObservableArguments(BaseModel):
     alert_id: str = Field(..., min_length=1, description="The Unique identifier of the alert")
-    events: List[Dict[str, Any]] = Field(..., description="Events to convert to observables")
+    events: List[Any] = Field(..., description="Events to convert to observables; non-dict entries are skipped")
     tlp: str = Field(default="AMBER", description="Traffic Light Protocol level")
     pap: str = Field(default="AMBER", description="Permissible Actions Protocol level")
     areioc: bool = Field(default=True, description="Whether the observables are IOCs")

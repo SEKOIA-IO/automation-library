@@ -454,6 +454,24 @@ def test_add_observables_action_requires_alert_id(alert_id, requests_mock):
     assert requests_mock.call_count == 0
 
 
+def test_add_observables_action_skips_non_dict_events(requests_mock):
+    url = f"https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable"
+    mock_alert = requests_mock.post(url=url, status_code=200, json=HIVE_OUTPUT)
+
+    action = TheHiveCreateObservableV5()
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+
+    result = action.run({"alert_id": ALERT_ID, "events": ["not-an-event", *EVENTS]})
+
+    assert result is not None
+    assert len(result["success"]) > 0
+    assert mock_alert.call_count > 0
+
+
 def test_add_observables_action_json_decode_error():
     """Test that JSONDecodeError is properly caught and re-raised"""
     action = TheHiveCreateObservableV5()

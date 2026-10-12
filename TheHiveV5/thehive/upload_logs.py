@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
@@ -18,7 +18,7 @@ class TheHiveUploadLogsArguments(BaseModel):
 
 
 class TheHiveUploadLogsV5(Action):
-    def run(self, arguments: TheHiveUploadLogsArguments) -> Optional[dict[str, list[dict[str, Any]]]]:
+    def run(self, arguments: TheHiveUploadLogsArguments) -> dict[str, list[dict[str, Any]]]:
         api = TheHiveConnector(
             self.module.configuration["base_url"],
             self.module.configuration["apikey"],
