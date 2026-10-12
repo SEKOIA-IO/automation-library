@@ -8,11 +8,13 @@
     "properties": {
       "alert_id": {
         "description": "The id of the alert you want to upload logs to. For instance: ~12345",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "filepath": {
         "description": "The file to be added to the alert as attachment",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       }
     },
     "required": [

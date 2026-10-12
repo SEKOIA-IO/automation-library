@@ -8,11 +8,13 @@
     "properties": {
       "alert_id": {
         "description": "The id of the alert you want to add a comment to. For instance: ~12345",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "message": {
         "description": "A message to be added as an alert's comment",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       }
     },
     "required": [
