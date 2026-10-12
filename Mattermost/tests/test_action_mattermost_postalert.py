@@ -103,6 +103,8 @@ def test_mattermost_postalert_requires_alert_uuid(arguments):
         ("alert_uuid", "AL"),
         ("alert_uuid", "AL   "),
         ("alert_uuid", "ALx-y"),
+        ("alert_uuid", "ALgarbage"),
+        ("alert_uuid", "AL13426AYUU"),
         ("base_url", "not a url"),
         ("api_key", ""),
     ],
@@ -132,7 +134,7 @@ def test_mattermost_postalert_accepts_short_id():
     mt: MattermostPostAlertAction = MattermostPostAlertAction()
     mt.module.configuration = {"hook_url": hook_url}
 
-    alert_short_id = "AL13426AYUU"
+    alert_short_id = "AL13426AYUU7"
     base_url = "https://api.sekoia.io/"
     api_key = "AZERTYUI987654345678"
 
