@@ -1,5 +1,6 @@
 # third parties
 import pytest
+import requests
 import requests_mock
 from pydantic import ValidationError
 
@@ -90,3 +91,30 @@ def test_fortigate_disable_local_user_requires_name(arguments):
             mt.run(arguments)
 
     assert mock.call_count == 0
+
+
+def test_fortigate_disable_local_user_logs_error_and_continues(monkeypatch):
+    mt: FortigateDisableLocalUserAction = FortigateDisableLocalUserAction()
+    mt.module.configuration = {
+        "firewalls": [
+            {"api_key": "key", "base_ip": "31.70.249.199", "base_port": "4443"},
+            {"api_key": "key", "base_ip": "31.70.249.200", "base_port": "4443"},
+        ]
+    }
+    exceptions: list = []
+    monkeypatch.setattr(mt, "log_exception", lambda exception, **kwargs: exceptions.append((exception, kwargs)))
+
+    with requests_mock.Mocker() as mock:
+        mock.put("https://31.70.249.199:4443/api/v2/cmdb/user/local/john", status_code=404)
+        mock.put("https://31.70.249.200:4443/api/v2/cmdb/user/local/john", json={})
+
+        mt.run({"name": "john"})
+
+    assert mock.call_count == 2
+    assert len(exceptions) == 1
+    error, kwargs = exceptions[0]
+    assert isinstance(error, requests.exceptions.HTTPError)
+    assert kwargs == {"message": "Impossible to disable the local user account on the firewall"}
+    assert [log["message"] for log in mt.logs] == [
+        "Successfully disabled the local user account john on the firewall 31.70.249.200"
+    ]

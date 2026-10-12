@@ -1,5 +1,6 @@
 # third parties
 import pytest
+import requests
 import requests_mock
 from pydantic import ValidationError
 
@@ -105,3 +106,31 @@ def test_fortigate_set_fqdn_reads_manifest_interface_argument():
         mt.run({"name": "test4", "fqdn": "example.com", "associated-interface": "port1"})
 
     assert mock.request_history[0].json()["json"]["associated-interface"] == "port1"
+
+
+@pytest.mark.parametrize(
+    "mock_kwargs,message",
+    [
+        ({"exc": requests.exceptions.ConnectTimeout}, "Timeout session on a firewall"),
+        ({"status_code": 500}, "Impossible to add IP to the firewall"),
+    ],
+)
+def test_fortigate_set_fqdn_logs_failure_and_continues(mock_kwargs, message):
+    mt: FortigateAddFQDNAction = FortigateAddFQDNAction()
+    mt.module.configuration = {
+        "firewalls": [
+            {"api_key": "key", "base_ip": "31.70.249.199", "base_port": "4443", "vdom": "custom"},
+            {"api_key": "key", "base_ip": "31.70.249.200", "base_port": "4443"},
+        ]
+    }
+
+    with requests_mock.Mocker() as mock:
+        mock.post("https://31.70.249.199:4443/api/v2/cmdb/firewall/address/", **mock_kwargs)
+        mock.post("https://31.70.249.200:4443/api/v2/cmdb/firewall/address/", json={})
+
+        payload = mt.run({"name": "test4", "fqdn": "example.com"})
+
+    assert payload["json"]["fqdn"] == "example.com"
+    assert mock.call_count == 2
+    assert mock.request_history[0].qs == {"vdom": ["custom"]}
+    assert [(log["level"], log["message"], log["fw_ip"]) for log in mt.logs] == [("error", message, "31.70.249.199")]
