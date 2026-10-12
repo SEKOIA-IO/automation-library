@@ -1,6 +1,6 @@
 import ipaddress
 from posixpath import join as urljoin
-from typing import Annotated
+from typing import Annotated, Any
 
 from pydantic import (
     BaseModel,
@@ -14,22 +14,21 @@ from sekoia_automation.action import Action
 from onyphe.utils import get_with_paging
 
 
-def prepare_ip(value: str | ipaddress.IPv4Address | ipaddress.IPv6Address | None):
-    if isinstance(value, str):
-        return value.strip()
-    if value is None or isinstance(value, (ipaddress.IPv4Address, ipaddress.IPv6Address)):
+def reject_non_string(value: Any) -> Any:
+    # IPvAnyAddress would otherwise turn an integer into an address (8 -> 0.0.0.8)
+    if value is None or isinstance(value, (str, ipaddress.IPv4Address, ipaddress.IPv6Address)):
         return value
     raise ValueError("Input should be a string IP address")
 
 
-StrippedIPvAnyAddress = Annotated[IPvAnyAddress, BeforeValidator(prepare_ip)]
+IPAddressArgument = Annotated[IPvAnyAddress, BeforeValidator(reject_non_string)]
 
 
 class OnypheDatascanArguments(BaseModel):
-    ip: StrippedIPvAnyAddress | None = Field(default=None, description="IP address to scan")
+    ip: IPAddressArgument | None = Field(default=None, description="IP address to scan")
     string: str | None = Field(default=None, min_length=1, description="String to scan")
-    budget: int = Field(default=1, description="Maximum number of pages to fetch, or 0 for all pages")
-    first_page: int = Field(default=1, description="First page number to fetch")
+    budget: int = Field(default=1, ge=0, description="Maximum number of pages to fetch, or 0 for all pages")
+    first_page: int = Field(default=1, ge=1, description="First page number to fetch")
 
     @model_validator(mode="after")
     def validate_entrypoint(self) -> "OnypheDatascanArguments":
@@ -56,10 +55,14 @@ class OnypheDatascanAction(Action):
     > Thus, we are able to identify multiple virtual hosts on a unique IP address.
     """
 
-    def run(self, arguments: OnypheDatascanArguments) -> dict | None:
+    def run(self, arguments: OnypheDatascanArguments) -> dict:
         url: str = "https://www.onyphe.io/api/v2/simple/"
-        resource = str(arguments.ip) if arguments.ip is not None else arguments.string
-        assert resource is not None
+        if arguments.ip is not None:
+            resource = str(arguments.ip)
+        elif arguments.string is not None:
+            resource = arguments.string
+        else:
+            raise ValueError("Please specify exactly one of 'ip' or 'string'")
 
         get_url: str = urljoin(url, "datascan/" + resource)
 

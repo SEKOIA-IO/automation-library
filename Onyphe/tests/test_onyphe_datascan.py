@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 from generic_onyphe_tests import *  # noqa: F401, F403
 
-from onyphe.action_onyphe_datascan import OnypheDatascanAction
+from onyphe.action_onyphe_datascan import OnypheDatascanAction, OnypheDatascanArguments
 
 
 @pytest.fixture
@@ -172,6 +172,10 @@ def result_page_1():
         {},
         {"string": ""},
         {"string": None},
+        {"ip": 8},
+        {"ip": " 93.184.216.34 "},
+        {"string": "example", "budget": -1},
+        {"string": "example", "first_page": 0},
     ],
 )
 def test_missing_string_argument_does_not_call_api(arguments):
@@ -199,3 +203,11 @@ def test_ip_argument_uses_validated_ip_in_request_url():
 
     assert result == datascan_result
     assert mock.call_count == 1
+
+
+def test_run_requires_ip_or_string():
+    action = OnypheDatascanAction()
+    action.module.configuration = {"apikey": apikey}
+
+    with pytest.raises(ValueError):
+        OnypheDatascanAction.run(action, OnypheDatascanArguments.model_construct(ip=None, string=None))

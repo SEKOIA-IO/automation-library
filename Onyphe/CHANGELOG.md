@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Validate the datascan action's required argument via a Pydantic v2 model while preserving the existing XOR validator unchanged and upgrading the optional `ip` field to `IPvAnyAddress`
+- Reject a negative `budget` and a `first_page` lower than 1 in the datascan action
 
 ### Changed
 
