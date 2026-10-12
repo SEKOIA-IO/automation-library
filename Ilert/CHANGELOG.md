@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Trigger Alert: validate the `alert_uuid`, `api_key` and `base_url` arguments with Pydantic, rejecting missing, empty or malformed values before fetching and forwarding the alert. `alert_uuid` accepts a UUID or an alert short id (`AL` followed by 10 alphanumeric characters)
+- Reject `base_url` values containing a query or a fragment
 
 ## 2026-07-30 - 1.1.1
 

@@ -3,7 +3,7 @@ import re
 from uuid import UUID
 
 # third parties
-from pydantic import BaseModel, Field, HttpUrl, model_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 from requests import Response
 from sekoia_automation.action import Action
 
@@ -18,6 +18,14 @@ class IlertTriggerAlertArguments(BaseModel):
     alert_uuid: str = Field(..., description="The identifier (UUID or short id) of the alert")
     api_key: str = Field(..., min_length=1, description="The Sekoia.io API-Key to read the alert content.")
     base_url: HttpUrl = Field(..., description="Base URL of Sekoia.io api (e.g. https://api.sekoia.io/).")
+
+    @field_validator("base_url")
+    @classmethod
+    def validate_base_url(cls, value: HttpUrl) -> HttpUrl:
+        # the alert path is appended to the base URL, so it must not carry a query or a fragment
+        if value.query is not None or value.fragment is not None:
+            raise ValueError("The base URL must not contain a query or a fragment")
+        return value
 
     @model_validator(mode="after")
     def validate_alert_uuid(self) -> IlertTriggerAlertArguments:

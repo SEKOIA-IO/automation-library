@@ -106,8 +106,18 @@ def test_ilert_postalert_rejects_missing_or_blank_alert_uuid(arguments):
             "api_key": "XKDF84729HNQP16",
             "base_url": "not a url",
         },
+        {
+            "alert_uuid": "d41f8c20-7a9b-4e15-b6d3-92cc4a7f18e5",
+            "api_key": "XKDF84729HNQP16",
+            "base_url": "https://api.sekoia.io/?tenant=x",
+        },
+        {
+            "alert_uuid": "d41f8c20-7a9b-4e15-b6d3-92cc4a7f18e5",
+            "api_key": "XKDF84729HNQP16",
+            "base_url": "https://api.sekoia.io/#section",
+        },
     ],
-    ids=["invalid-alert-uuid", "invalid-base-url"],
+    ids=["invalid-alert-uuid", "invalid-base-url", "base-url-with-query", "base-url-with-fragment"],
 )
 def test_ilert_postalert_rejects_invalid_argument_shapes(arguments):
     action: IlertTriggerAlertAction = IlertTriggerAlertAction()
