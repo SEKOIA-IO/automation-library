@@ -4,7 +4,8 @@
     "properties": {
       "resource": {
         "description": "The hash or url to get comments from",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       }
     },
     "required": [

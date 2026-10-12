@@ -4,7 +4,8 @@
     "properties": {
       "file": {
         "description": "The file to scan",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "detect_treshold": {
         "description": "The number of positives from VirusTotal that will be used as a treshold of detection",

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Validate action arguments with Pydantic v2 models: missing or empty values are rejected before any HTTP request or file I/O, `ip` must be an IP address and `url` an HTTP(S) URL
+- Declare `minLength: 1` on required string arguments in the action manifests
 - Bump `sekoia-automation-sdk` to 1.23.1
 
 ### Fixed
