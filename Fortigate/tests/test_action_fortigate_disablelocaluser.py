@@ -1,6 +1,4 @@
 # third parties
-from unittest.mock import MagicMock
-
 import pytest
 import requests_mock
 from pydantic import ValidationError

@@ -1,6 +1,4 @@
 # third parties
-from unittest.mock import MagicMock
-
 import pytest
 import requests_mock
 from pydantic import ValidationError
@@ -199,9 +197,7 @@ def test_fortigate_with_current_group():
             assert history[cpt_mock].json()["json"]["member"] == new_member_list
 
 
-@pytest.mark.parametrize(
-    "arguments", [{"member": ["test4"]}, {"name": "", "member": ["test4"]}]
-)
+@pytest.mark.parametrize("arguments", [{"member": ["test4"]}, {"name": "", "member": ["test4"]}])
 def test_fortigate_group_requires_name(arguments):
     mt: FortigateAddGroupAddress = FortigateAddGroupAddress()
     mt.module.configuration = {"firewalls": [{"api_key": "key", "base_ip": "31.70.249.199", "base_port": "4443"}]}

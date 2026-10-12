@@ -1,6 +1,4 @@
 # third parties
-from unittest.mock import MagicMock
-
 import pytest
 import requests_mock
 from pydantic import ValidationError
@@ -97,12 +95,25 @@ def test_fortigate_set_ip_address_requires_ip(arguments):
     assert mock.call_count == 0
 
 
-def test_fortigate_set_ip_address_rejects_invalid_ip_shape():
+@pytest.mark.parametrize("ip", ["not-an-ip", "2001:db8::1", 8])
+def test_fortigate_set_ip_address_rejects_invalid_ip(ip):
     mt: FortigateAddIPAction = FortigateAddIPAction()
     mt.module.configuration = {"firewalls": [{"api_key": "key", "base_ip": "31.70.249.199", "base_port": "4443"}]}
 
     with requests_mock.Mocker() as mock:
         with pytest.raises(ValidationError):
-            mt.run({"name": "test3", "ip": "not-an-ip"})
+            mt.run({"name": "test3", "ip": ip})
 
     assert mock.call_count == 0
+
+
+def test_fortigate_set_ip_address_reads_manifest_interface_argument():
+    mt: FortigateAddIPAction = FortigateAddIPAction()
+    mt.module.configuration = {"firewalls": [{"api_key": "key", "base_ip": "31.70.249.199", "base_port": "4443"}]}
+
+    with requests_mock.Mocker() as mock:
+        mock.post("https://31.70.249.199:4443/api/v2/cmdb/firewall/address/", json={})
+
+        mt.run({"name": "test3", "ip": "192.168.1.13", "associated-interface": "port1"})
+
+    assert mock.request_history[0].json()["json"]["associated-interface"] == "port1"

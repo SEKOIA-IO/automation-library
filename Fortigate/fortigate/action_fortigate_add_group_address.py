@@ -14,7 +14,7 @@ class FortigateAddGroupAddress(Action):
     Action to Add a Group Address on a remote fortigate
     """
 
-    def run(self, arguments: FortigateAddGroupAddressArguments) -> dict | None:
+    def run(self, arguments: FortigateAddGroupAddressArguments) -> dict:
         """
         Modify the members of the address group on the firewall.
         Parameters

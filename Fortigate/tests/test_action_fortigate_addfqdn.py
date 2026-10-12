@@ -1,6 +1,4 @@
 # third parties
-from unittest.mock import MagicMock
-
 import pytest
 import requests_mock
 from pydantic import ValidationError
@@ -85,9 +83,7 @@ def test_fortigate_set_fqdn():
                 assert history[cpt_mock].json()["json"]["comment"] == comment
 
 
-@pytest.mark.parametrize(
-    "arguments", [{"name": "test4"}, {"name": "test4", "fqdn": ""}]
-)
+@pytest.mark.parametrize("arguments", [{"name": "test4"}, {"name": "test4", "fqdn": ""}])
 def test_fortigate_set_fqdn_requires_fqdn(arguments):
     mt: FortigateAddFQDNAction = FortigateAddFQDNAction()
     mt.module.configuration = {"firewalls": [{"api_key": "key", "base_ip": "31.70.249.199", "base_port": "4443"}]}
@@ -97,3 +93,15 @@ def test_fortigate_set_fqdn_requires_fqdn(arguments):
             mt.run(arguments)
 
     assert mock.call_count == 0
+
+
+def test_fortigate_set_fqdn_reads_manifest_interface_argument():
+    mt: FortigateAddFQDNAction = FortigateAddFQDNAction()
+    mt.module.configuration = {"firewalls": [{"api_key": "key", "base_ip": "31.70.249.199", "base_port": "4443"}]}
+
+    with requests_mock.Mocker() as mock:
+        mock.post("https://31.70.249.199:4443/api/v2/cmdb/firewall/address/", json={})
+
+        mt.run({"name": "test4", "fqdn": "example.com", "associated-interface": "port1"})
+
+    assert mock.request_history[0].json()["json"]["associated-interface"] == "port1"

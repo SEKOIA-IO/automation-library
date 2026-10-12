@@ -11,11 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Upgraded sekoia-automation-sdk to 1.23.1, aligned the module with Python 3.11, and migrated Pydantic argument models from the `pydantic.v1` shim to native Pydantic v2 to avoid v1/v2 model-mixing errors
+- Upgrade sekoia-automation-sdk to 1.23.1 and validate action arguments with native Pydantic v2 models
 
 ### Fixed
 
-- Validate the FQDN, IP address, local user name, and address group name entrypoint arguments via Pydantic models, using `IPvAnyAddress` for `add_ip_address.ip` and non-empty strings for FQDN/name fields where no stricter built-in Fortigate-safe type is available
+- Reject a missing or empty `name`, `fqdn` or `ip` before calling the firewalls
+- Reject an `ip` that is not an IPv4 address in the add IP address action
+- Read the `associated-interface` argument declared in the add IP address and add FQDN manifests
 
 ## 2026-07-15 - 1.31.0
 
