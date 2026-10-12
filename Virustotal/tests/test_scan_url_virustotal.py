@@ -1,6 +1,7 @@
 import urllib.parse
 
 import pytest
+import requests
 import requests_mock
 from pydantic import ValidationError
 
@@ -189,3 +190,76 @@ def test_virustotal_scan_url_raises_if_url_missing(requests_mock):
 def test_virustotal_scan_url_arguments_accept_threshold_spellings(key):
     arguments = VirusTotalScanURLArguments.model_validate({"url": "https://example.com", key: 5})
     assert arguments.detect_threshold == 5
+
+
+REPORT_URL = "https://www.virustotal.com/vtapi/v2/url/report"
+SCANNED_URL = "https://www.virustotal.com/gui/home/upload"
+
+
+@pytest.fixture
+def sleeps(monkeypatch):
+    calls: list[float] = []
+    monkeypatch.setattr("virustotal.action_virustotal_scanurl.time.sleep", calls.append)
+    return calls
+
+
+@pytest.fixture
+def action(sleeps):
+    vt = VirusTotalScanURLAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+    return vt
+
+
+def test_virustotal_scan_url_sets_not_detected_output(action, requests_mock):
+    requests_mock.get(REPORT_URL, json=url_results)
+
+    action.run({"url": SCANNED_URL})
+
+    assert action.outputs == {"not detected": True}
+
+
+def test_virustotal_scan_url_sets_detected_output_with_zero_threshold(action, requests_mock):
+    requests_mock.get(REPORT_URL, json=url_results)
+
+    action.run({"url": SCANNED_URL, "detect_threshold": 0})
+
+    assert action.outputs == {"detected": True}
+
+
+def test_virustotal_scan_url_polls_until_scan_is_ready(action, sleeps, requests_mock):
+    requests_mock.get(
+        REPORT_URL,
+        [
+            {"status_code": 200, "json": {"response_code": 1, "scan_id": "pending"}},
+            {"status_code": 204},
+            {"status_code": 200, "json": {"response_code": -2}},
+            {"status_code": 200, "json": url_results},
+        ],
+    )
+
+    results = action.run({"url": SCANNED_URL})
+
+    assert results == url_results
+    assert sleeps == [30, 60, 30]
+    history = requests_mock.request_history
+    assert len(history) == 4
+    assert history[0].qs["scan"] == ["1"]
+    assert all("scan" not in request.qs for request in history[1:])
+
+
+def test_virustotal_scan_url_raises_if_report_request_fails(action, requests_mock):
+    requests_mock.get(REPORT_URL, status_code=500)
+
+    with pytest.raises(requests.HTTPError):
+        action.run({"url": SCANNED_URL})
+
+    assert requests_mock.call_count == 1
+
+
+def test_virustotal_scan_url_raises_if_polling_request_fails(action, requests_mock):
+    requests_mock.get(REPORT_URL, [{"status_code": 204}, {"status_code": 500}])
+
+    with pytest.raises(requests.HTTPError):
+        action.run({"url": SCANNED_URL})
+
+    assert requests_mock.call_count == 2

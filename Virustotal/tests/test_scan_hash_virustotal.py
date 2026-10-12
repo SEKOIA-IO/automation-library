@@ -1,4 +1,5 @@
 import pytest
+import requests
 import requests_mock
 from pydantic import ValidationError
 
@@ -431,3 +432,59 @@ def test_virustotal_check_hash_raises_if_hash_missing(requests_mock):
     with pytest.raises(ValidationError):
         vt.run({})
     assert requests_mock.call_count == 0
+
+
+HASH_REPORT_URL = "https://www.virustotal.com/vtapi/v2/file/report"
+
+
+@pytest.fixture
+def action():
+    vt = VirusTotalScanHashAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+    return vt
+
+
+def test_virustotal_check_hash_sets_detected_output(action, requests_mock):
+    requests_mock.get(HASH_REPORT_URL, json=hash_results)
+
+    action.run({"hash": "36437528c1e97d21ae198407b788f32eeed29e49"})
+
+    assert action.outputs == {"detected": True}
+
+
+def test_virustotal_check_hash_sets_not_detected_output_below_threshold(action, requests_mock):
+    requests_mock.get(HASH_REPORT_URL, json=hash_results)
+
+    action.run({"hash": "36437528c1e97d21ae198407b788f32eeed29e49", "detect_threshold": hash_results["positives"] + 1})
+
+    assert action.outputs == {"not detected": True}
+
+
+def test_virustotal_check_hash_sets_unknown_output(action, requests_mock):
+    unknown = {
+        "response_code": 0,
+        "verbose_msg": "The requested resource is not among the finished, queued or pending scans",
+    }
+    requests_mock.get(HASH_REPORT_URL, json=unknown)
+
+    results = action.run({"hash": "36437528c1e97d21ae198407b788f32eeed29e49"})
+
+    assert results == unknown
+    assert action.outputs == {"unknown": True}
+
+
+def test_virustotal_check_hash_sets_no_output_for_queued_resource(action, requests_mock):
+    queued = {"response_code": -2, "verbose_msg": "Your resource is queued for analysis"}
+    requests_mock.get(HASH_REPORT_URL, json=queued)
+
+    results = action.run({"hash": "36437528c1e97d21ae198407b788f32eeed29e49"})
+
+    assert results == queued
+    assert action.outputs == {}
+
+
+def test_virustotal_check_hash_raises_on_http_error(action, requests_mock):
+    requests_mock.get(HASH_REPORT_URL, status_code=403)
+
+    with pytest.raises(requests.HTTPError):
+        action.run({"hash": "36437528c1e97d21ae198407b788f32eeed29e49"})
