@@ -75,7 +75,8 @@
       },
       "user": {
         "description": "The user identifier or user principal name (UPN)",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       }
     }
   },

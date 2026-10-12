@@ -18,7 +18,8 @@
       },
       "message_id": {
         "description": "The Microsoft Graph message item ID",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "recipients": {
         "description": "The list of recipient email addresses",
@@ -30,7 +31,8 @@
       },
       "user": {
         "description": "The user identifier or user principal name (UPN)",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       }
     }
   },
