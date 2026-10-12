@@ -26,7 +26,7 @@ class PushEventToIntake(Action):
     def _delete_file(self, arguments: dict):
         event_path = arguments.get("event_path") or arguments.get("events_path")
         if event_path:
-            filepath = self._data_path.joinpath(event_path)
+            filepath = self.data_path.joinpath(event_path)
             if filepath.is_file():
                 filepath.unlink()
 

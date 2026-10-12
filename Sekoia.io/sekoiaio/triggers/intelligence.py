@@ -1,10 +1,12 @@
 import time
 from posixpath import join as urljoin
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 import requests
 from sekoia_automation.storage import PersistentJSON, write
 from sekoia_automation.trigger import Trigger
+
+from sekoiaio.utils import config_dict
 
 
 class FeedConsumptionTrigger(Trigger):
@@ -27,25 +29,25 @@ class FeedConsumptionTrigger(Trigger):
 
     @property
     def feed_id(self) -> str:
-        return self.configuration.get("feed_id", "d6092c37-d8d7-45c3-8aff-c4dc26030608")
+        return config_dict(self.configuration).get("feed_id", "d6092c37-d8d7-45c3-8aff-c4dc26030608")
 
     @property
     def batch_size_limit(self) -> int:
-        return self.configuration.get("batch_size_limit", 200)
+        return config_dict(self.configuration).get("batch_size_limit", 200)
 
     @property
     def modified_after(self) -> str | None:
-        return self.configuration.get("modified_after")
+        return config_dict(self.configuration).get("modified_after")
 
     @property
     def with_resolve_sources(self) -> bool:
-        return self.configuration.get("resolve_sources", False)
+        return config_dict(self.configuration).get("resolve_sources", False)
 
     @property
     def url(self):
         url = (
             urljoin(
-                self.module.configuration["base_url"],
+                config_dict(self.module.configuration)["base_url"],
                 f"api/v2/inthreat/collections/{self.feed_id}/objects",
             )
             + f"?limit={self.batch_size_limit}"
@@ -72,7 +74,7 @@ class FeedConsumptionTrigger(Trigger):
                 f"URL: {self.url}"
             )
             # Critical error will stop the trigger
-            level = "error" if self.resume_on_errors else "critical"
+            level: Literal["error", "critical"] = "error" if self.resume_on_errors else "critical"
             self.log(message=message, level=level)
             if not self.resume_on_errors:
                 # Critical log should stop the trigger
@@ -82,7 +84,7 @@ class FeedConsumptionTrigger(Trigger):
 
     def fetch_feed_objects(self):
         # Request the next batch of objects from the API
-        api_key = self.module.configuration["api_key"]
+        api_key = config_dict(self.module.configuration)["api_key"]
         response = requests.get(self.url, headers={"Authorization": f"Bearer {api_key}"})
 
         # manage the response
@@ -101,9 +103,9 @@ class FeedConsumptionTrigger(Trigger):
         Fetch objects from the Sekoia.io feed API.
         This method can be overridden in subclasses to apply specific filters.
         """
-        api_key = self.module.configuration["api_key"]
+        api_key = config_dict(self.module.configuration)["api_key"]
         url = urljoin(
-            self.module.configuration["base_url"],
+            config_dict(self.module.configuration)["base_url"],
             f"api/v2/inthreat/objects?match[id]={','.join(objects_id)}",
         )
         response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
@@ -129,8 +131,8 @@ class FeedConsumptionTrigger(Trigger):
         sources_to_fetch: list[str] = []
 
         # Iterate over objects to collect source references
-        for object in objects:
-            refs = object.get("x_inthreat_sources_refs", [])
+        for obj in objects:
+            refs = obj.get("x_inthreat_sources_refs", [])
             # Check if already in cache
             for ref in refs:
                 if ref not in self.sources_caches:
@@ -148,10 +150,8 @@ class FeedConsumptionTrigger(Trigger):
             }
 
         # Getting sources from the cache
-        for object in objects:
-            object["x_inthreat_sources"] = [
-                self.sources_caches.get(ref, ref) for ref in object["x_inthreat_sources_refs"]
-            ]
+        for obj in objects:
+            obj["x_inthreat_sources"] = [self.sources_caches.get(ref, ref) for ref in obj["x_inthreat_sources_refs"]]
 
         return objects
 

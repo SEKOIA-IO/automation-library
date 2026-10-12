@@ -4,6 +4,8 @@ from typing import Any, ClassVar
 import requests
 from sekoia_automation.action import Action
 
+from sekoiaio.utils import config_dict
+
 
 class UpdateAsset(Action):
     ALLOWED_FIELDS: ClassVar[list[str]] = [
@@ -19,11 +21,11 @@ class UpdateAsset(Action):
     ]
 
     def url(self, path: str) -> str:
-        return urljoin(self.module.configuration["base_url"], "api/v2/asset-management/assets/", path)
+        return urljoin(config_dict(self.module.configuration)["base_url"], "api/v2/asset-management/assets/", path)
 
     @property
     def headers(self) -> dict:
-        api_key = self.module.configuration["api_key"]
+        api_key = config_dict(self.module.configuration)["api_key"]
         return {"Authorization": f"Bearer {api_key}"}
 
     def perform_request(self, asset_uuid: str, payload: dict) -> Any:

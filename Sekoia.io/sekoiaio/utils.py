@@ -2,7 +2,9 @@ import json
 import sys
 from datetime import datetime
 from functools import cache
+from typing import Any, cast
 
+from pydantic import BaseModel
 from sekoia_automation.action import GenericAPIAction
 from sekoia_automation.settings import Settings
 
@@ -19,6 +21,15 @@ def user_agent() -> str:
         pass
 
     return f"symphony-module-sekoia.io/{version}"
+
+
+def config_dict(configuration: dict | BaseModel | None) -> dict[str, Any]:
+    """Return a module or trigger configuration as a dict, whatever form the SDK stored it in."""
+    if configuration is None:
+        return {}
+    if isinstance(configuration, BaseModel):
+        return configuration.model_dump()
+    return cast(dict[str, Any], configuration)
 
 
 def should_patch() -> bool:

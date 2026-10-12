@@ -12,6 +12,8 @@ from tenacity import (
 )
 from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
 
+from sekoiaio.utils import config_dict
+
 from .base_sol import BaseSolAction
 
 
@@ -48,7 +50,7 @@ class ListQueries(BaseSolAction):
 
     def configure_urls(self) -> None:
         """Set up the query API base path."""
-        self.query_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/queries")
+        self.query_api_path = urljoin(config_dict(self.module.configuration)["base_url"], "api/v1/notebooks/queries")
 
     @retry(
         reraise=True,

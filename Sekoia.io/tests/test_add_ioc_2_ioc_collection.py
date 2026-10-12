@@ -211,12 +211,12 @@ def test_flatten_and_validate_flattens_nested_lists_and_values():
 def test_add_ip_action_raises_on_blank_values_with_examples_in_message():
     action: AddIOCtoIOCCollectionAction = AddIOCtoIOCCollectionAction()
 
-    with pytest.raises(ValueError, match="Examples: 198.51.100.10, 203.0.113.7, 2001:db8::1"):
-        action.add_IP_action(["   "], IOC_COLLECTION_ID, 0)
+    with pytest.raises(ValueError, match=r"Examples: 198\.51\.100\.10, 203\.0\.113\.7, 2001:db8::1"):
+        action.add_ip_action(["   "], IOC_COLLECTION_ID, 0)
 
 
 def test_add_ip_action_raises_when_no_valid_ip_is_provided():
     action: AddIOCtoIOCCollectionAction = AddIOCtoIOCCollectionAction()
 
     with pytest.raises(ValueError, match="No valid IP indicators were provided"):
-        action.add_IP_action([], IOC_COLLECTION_ID, 0)
+        action.add_ip_action([], IOC_COLLECTION_ID, 0)

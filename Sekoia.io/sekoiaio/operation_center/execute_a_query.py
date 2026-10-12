@@ -15,6 +15,8 @@ from tenacity import (
 )
 from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
 
+from sekoiaio.utils import config_dict
+
 from .base_sol import BaseSolAction
 
 
@@ -58,8 +60,10 @@ class ExecuteAQuery(BaseSolAction):
 
     def configure_urls(self) -> None:
         """Set up API base paths and configure the HTTP session with retry and auth headers."""
-        self.query_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/queries")
-        self.query_runs_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/queries/runs")
+        self.query_api_path = urljoin(config_dict(self.module.configuration)["base_url"], "api/v1/notebooks/queries")
+        self.query_runs_api_path = urljoin(
+            config_dict(self.module.configuration)["base_url"], "api/v1/notebooks/queries/runs"
+        )
 
     @retry(
         reraise=True,
@@ -346,7 +350,7 @@ class ExecuteAQuery(BaseSolAction):
 
     def save_to_file(self, result: str, file_format: str) -> str:
         filename = f"query_output-{uuid4()}.{file_format}"
-        with self._data_path.joinpath(filename).open("w", encoding="utf-8") as f:
+        with self.data_path.joinpath(filename).open("w", encoding="utf-8") as f:
             if isinstance(result, str):
                 f.write(result)
         return filename

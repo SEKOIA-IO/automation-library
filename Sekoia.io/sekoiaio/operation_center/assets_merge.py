@@ -5,6 +5,8 @@ import requests
 from pydantic import BaseModel
 from sekoia_automation.action import Action
 
+from sekoiaio.utils import config_dict
+
 
 class Arguments(BaseModel):
     destination: str
@@ -33,10 +35,10 @@ class MergeAssets(Action):
             message=f"Merge assets module started. Mergings Asset UUID(s) {sources} into Asset UUID: {destination}",
             level="info",
         )
-        api_path = urljoin(self.module.configuration["base_url"], "v2/asset-management/assets/merge")
+        api_path = urljoin(config_dict(self.module.configuration)["base_url"], "v2/asset-management/assets/merge")
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.module.configuration['api_key']}",
+            "Authorization": f"Bearer {config_dict(self.module.configuration)['api_key']}",
         }
 
         payload = {"destination": destination, "sources": sources}

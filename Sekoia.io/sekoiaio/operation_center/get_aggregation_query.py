@@ -5,14 +5,16 @@ from posixpath import join as urljoin
 from sekoia_automation.action import Action
 from websocket._core import create_connection
 
+from sekoiaio.utils import config_dict
+
 
 class GetAggregationQuery(Action):
     max_attempts = 3
     backoff = 2  # seconds
 
     def run(self, arguments: dict):
-        api_key = self.module.configuration["api_key"]
-        base_url = self.module.configuration["base_url"]
+        api_key = config_dict(self.module.configuration)["api_key"]
+        base_url = config_dict(self.module.configuration)["base_url"]
         ws_base_url = "wss://" + base_url.split("//")[1]
 
         query = {

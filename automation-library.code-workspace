@@ -107,6 +107,14 @@
 		{
 			"name": "Okta",
 			"path": "Okta"
+		},
+		{
+			"name": "WithSecure",
+			"path": "WithSecure"
+		},
+		{
+			"name": "Sekoia.io",
+			"path": "Sekoia.io"
 		}
 	],
 	"settings": {

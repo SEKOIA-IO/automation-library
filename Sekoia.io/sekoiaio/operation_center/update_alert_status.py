@@ -5,6 +5,8 @@ import requests
 from sekoia_automation.action import Action
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
+from sekoiaio.utils import config_dict
+
 STATUS_UUIDS = {
     "PENDING": "2efc4930-1442-4abb-acf2-58ba219a4fd0",
     "ACKNOWLEDGED": "8f206505-af6d-433e-93f4-775d46dc7d0f",
@@ -34,17 +36,17 @@ def _is_retryable_request_exception(exc: BaseException) -> bool:
 
 class UpdateAlertStatus(Action):
     def workflow_url(self, alert_uuid: str) -> str:
-        return urljoin(self.module.configuration["base_url"], f"api/v1/sic/alerts/{alert_uuid}/workflow")
+        return urljoin(config_dict(self.module.configuration)["base_url"], f"api/v1/sic/alerts/{alert_uuid}/workflow")
 
     def alert_url(self, alert_uuid: str) -> str:
-        return urljoin(self.module.configuration["base_url"], f"api/v1/sic/alerts/{alert_uuid}")
+        return urljoin(config_dict(self.module.configuration)["base_url"], f"api/v1/sic/alerts/{alert_uuid}")
 
     def custom_statuses_url(self) -> str:
-        return urljoin(self.module.configuration["base_url"], "api/v1/sic/custom_statuses")
+        return urljoin(config_dict(self.module.configuration)["base_url"], "api/v1/sic/custom_statuses")
 
     @property
     def headers(self) -> dict:
-        api_key = self.module.configuration["api_key"]
+        api_key = config_dict(self.module.configuration)["api_key"]
         return {"Authorization": f"Bearer {api_key}"}
 
     @staticmethod

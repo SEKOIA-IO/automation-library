@@ -5,6 +5,8 @@ import requests
 from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
 
+from sekoiaio.utils import config_dict
+
 ASSETV2_TYPE_TO_V1_TYPE = {
     "host": {"uuid": "65f8ebba-e400-4ef7-844d-2881e2cf175c", "name": "computer"},
     "network": {"uuid": "4aac4b72-14cf-4159-a4e5-32fa8c1f3da6", "name": "network"},
@@ -36,11 +38,11 @@ class GetAssetArguments(BaseModel):
 
 class GetAsset(Action):
     def url(self, path: str) -> str:
-        return urljoin(self.module.configuration["base_url"], "api/v2/asset-management/assets/", path)
+        return urljoin(config_dict(self.module.configuration)["base_url"], "api/v2/asset-management/assets/", path)
 
     @property
     def headers(self) -> dict:
-        api_key = self.module.configuration["api_key"]
+        api_key = config_dict(self.module.configuration)["api_key"]
         return {"Authorization": f"Bearer {api_key}"}
 
     def perform_request(self, asset_uuid):

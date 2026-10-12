@@ -4,7 +4,7 @@ from requests.structures import CaseInsensitiveDict
 from sekoia_automation.action import Action
 from urllib3.util.retry import Retry
 
-from sekoiaio.utils import user_agent
+from sekoiaio.utils import config_dict, user_agent
 
 
 class BaseSolAction(Action):
@@ -31,7 +31,7 @@ class BaseSolAction(Action):
         self.http_session.headers = CaseInsensitiveDict(
             data={
                 "Accept": "application/json",
-                "Authorization": f"Bearer {self.module.configuration['api_key']}",
+                "Authorization": f"Bearer {config_dict(self.module.configuration)['api_key']}",
                 "User-Agent": user_agent(),
             }
         )

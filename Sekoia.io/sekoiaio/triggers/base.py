@@ -18,14 +18,14 @@ from tenacity import Retrying, stop_after_attempt, wait_exponential
 from websocket import WebSocketApp, WebSocketTimeoutException, setdefaulttimeout
 
 from sekoiaio.triggers.messages_processor import MessagesProcessor
-from sekoiaio.utils import user_agent
+from sekoiaio.utils import config_dict, user_agent
 
 
 class _SEKOIANotificationBaseTrigger(Trigger):
     """Base code for all LiveAPI based triggers. This basically reads all
     notifications from LiveAPI through a WebSocket.
 
-    This base class isn’t meant to be instanciated as directly, a
+    This base class isn't meant to be instanciated as directly, a
     subclass needs to be created with the proper handler
     defined. Subclass should define an `handle_xxx` method where `xxx`
     is the kind of event for which they want to trigger an event (for
@@ -49,13 +49,13 @@ class _SEKOIANotificationBaseTrigger(Trigger):
 
     @property
     def liveapi_url(self):
-        liveapi_url = self.module.configuration.get("liveapi_url")
+        liveapi_url = config_dict(self.module.configuration).get("liveapi_url")
 
         # LiveAPI URL might not be filled in existing playbooks. To
         # avoid having to edit all playbooks, infer the LiveAPI URL
         # from the base URL (which is mandatory).
         if liveapi_url is None:
-            base_url = self.module.configuration["base_url"]
+            base_url = config_dict(self.module.configuration)["base_url"]
             domain = urlparse(base_url).netloc
             if domain in ["api.sekoia.io", "api.test.sekoia.io"]:
                 domain = domain.replace("api", "app")
@@ -78,8 +78,8 @@ class _SEKOIANotificationBaseTrigger(Trigger):
     def run(self) -> None:
         self.log(f"Starting LiveAPI consumer on URL {self.liveapi_url}", level="info")
 
-        api_key = self.module.configuration["api_key"]
-        base_url = self.module.configuration["base_url"]
+        api_key = config_dict(self.module.configuration)["api_key"]
+        base_url = config_dict(self.module.configuration)["base_url"]
 
         self.log(f"Base URL provided is {base_url}", level="info")
 
@@ -118,7 +118,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         self._last_error = now
         self.log_exception(
             exception=error,
-            message="An exception occurred in the main WebSocket client’s loop",
+            message="An exception occurred in the main WebSocket client's loop",
         )
 
     def on_ping(self, _, __):
@@ -128,7 +128,11 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         self.log("Received pong from server", level="debug")
         self.heartbeat()
 
-    def on_close(self, *args, **kwargs):  # pragma: no cover
+    def handle_event(self, message: dict) -> None:
+        """Handle a v2 notification; implemented by each concrete trigger."""
+        raise NotImplementedError
+
+    def on_close(self, *args, **kwargs):  # noqa: ARG002  # pragma: no cover
         # Reset teardown so we can run again the app from the start
         with self._websocket.has_done_teardown_lock:
             self._websocket.has_done_teardown = False
@@ -167,12 +171,21 @@ class _SEKOIANotificationBaseTrigger(Trigger):
 
         event_type = message.get("type")
 
-        # We don’t know how to handle such messages.
+        # We don't know how to handle such messages.
         if event_type is None:
             self.log("Empty event type", level="error", event=message)
             return
 
-        self.handle_event(message)
+        # Handlers run in a gevent pool: an uncaught exception would only be printed
+        # on stderr and the notification silently dropped, so report it instead.
+        try:
+            self.handle_event(message)
+        except Exception as exp:
+            self.log_exception(
+                exp,
+                message=f"Failed to handle {event_type}:{message.get('action')} notification",
+                uuid=message.get("attributes", {}).get("uuid"),
+            )
 
     def stop(self, *args, **kwargs):
         super().stop(*args, **kwargs)

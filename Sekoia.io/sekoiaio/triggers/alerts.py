@@ -12,7 +12,7 @@ import urllib3
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from sekoiaio.utils import user_agent
+from sekoiaio.utils import config_dict, user_agent
 
 from .base import _SEKOIANotificationBaseTrigger
 from .helpers.state_manager import AlertStateManager
@@ -41,7 +41,7 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
 
-        # Ignore alert “sub event” types that we can’t (yet) handle.
+        # Ignore alert “sub event” types that we can't (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
             return
 
@@ -60,25 +60,25 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
             return
 
         if (
-            (rule_filter := self.configuration.get("rule_filter"))
+            (rule_filter := config_dict(self.configuration).get("rule_filter"))
             and alert["rule"]["name"] != rule_filter
             and alert["rule"]["uuid"] != rule_filter
         ):
             return
 
-        if (rule_names_filter := self.configuration.get("rule_names_filter")) and alert["rule"][
+        if (rule_names_filter := config_dict(self.configuration).get("rule_names_filter")) and alert["rule"][
             "name"
         ] not in rule_names_filter:
             return
 
-        work_dir = self._data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
+        work_dir = self.data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
         alert_path = work_dir.joinpath("alert.json")
         work_dir.mkdir(parents=True, exist_ok=True)
 
         with alert_path.open("w") as fp:
             fp.write(orjson.dumps(alert).decode("utf-8"))
 
-        directory = str(work_dir.relative_to(self._data_path))
+        directory = str(work_dir.relative_to(self.data_path))
         file_path = str(alert_path.relative_to(work_dir))
 
         alert_short_id = alert.get("short_id")
@@ -119,7 +119,7 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
             remove_directory=True,
         )
 
-    def _filter_notifications(self, message) -> bool:
+    def _filter_notifications(self, message) -> bool:  # noqa: ARG002
         return True
 
     @retry(
@@ -128,10 +128,10 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
         stop=stop_after_attempt(10),
     )
     def _retrieve_alert_from_alertapi(self, alert_uuid):
-        api_url = urljoin(self.module.configuration["base_url"], f"api/v1/sic/alerts/{alert_uuid}")
+        api_url = urljoin(config_dict(self.module.configuration)["base_url"], f"api/v1/sic/alerts/{alert_uuid}")
         api_url = api_url.replace("/api/api", "/api")  # In case base_url ends with /api
 
-        api_key = self.module.configuration["api_key"]
+        api_key = config_dict(self.module.configuration)["api_key"]
         headers = {"Authorization": f"Bearer {api_key}", "User-Agent": user_agent()}
 
         response = requests.get(
@@ -203,7 +203,7 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
 
-        # Ignore alert “sub event” types that we can’t (yet) handle.
+        # Ignore alert “sub event” types that we can't (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
             return
 
@@ -227,25 +227,25 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
             return
 
         if (
-            (rule_filter := self.configuration.get("rule_filter"))
+            (rule_filter := config_dict(self.configuration).get("rule_filter"))
             and alert["rule"]["name"] != rule_filter
             and alert["rule"]["uuid"] != rule_filter
         ):
             return
 
-        if (rule_names_filter := self.configuration.get("rule_names_filter")) and alert["rule"][
+        if (rule_names_filter := config_dict(self.configuration).get("rule_names_filter")) and alert["rule"][
             "name"
         ] not in rule_names_filter:
             return
 
-        work_dir = self._data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
+        work_dir = self.data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
         alert_path = work_dir.joinpath("alert.json")
         work_dir.mkdir(parents=True, exist_ok=True)
 
         with alert_path.open("w") as fp:
             fp.write(orjson.dumps(alert).decode("utf-8"))
 
-        directory = str(work_dir.relative_to(self._data_path))
+        directory = str(work_dir.relative_to(self.data_path))
         file_path = str(alert_path.relative_to(work_dir))
 
         alert_short_id = alert.get("short_id")
@@ -287,12 +287,13 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
     )
     def _retrieve_comment_from_alertapi(self, alert_uuid: str, comment_uuid: str):
         api_url = urljoin(
-            self.module.configuration["base_url"], f"api/v1/sic/alerts/{alert_uuid}/comments/{comment_uuid}"
+            config_dict(self.module.configuration)["base_url"],
+            f"api/v1/sic/alerts/{alert_uuid}/comments/{comment_uuid}",
         )
 
         api_url = api_url.replace("/api/api", "/api")  # In case base_url ends with /api
 
-        api_key = self.module.configuration["api_key"]
+        api_key = config_dict(self.module.configuration)["api_key"]
         headers = {"Authorization": f"Bearer {api_key}", "User-Agent": user_agent()}
 
         response = requests.get(api_url, headers=headers)
@@ -638,7 +639,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
     def validated_config(self) -> AlertEventsThresholdConfiguration:
         """Get validated configuration, lazily initialized and cached."""
         if self._validated_config is None:
-            self._validated_config = AlertEventsThresholdConfiguration(**self.configuration)
+            self._validated_config = AlertEventsThresholdConfiguration(**config_dict(self.configuration))
         return self._validated_config
 
     def _ensure_initialized(self) -> None:
@@ -646,10 +647,10 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         if self._initialized:
             return
 
-        state_path = self._data_path / "alert_thresholds_state.json"
+        state_path = self.data_path / "alert_thresholds_state.json"
         self.state_manager = AlertStateManager(state_path, logger=self.log)
 
-        base_url = self.module.configuration["base_url"].rstrip("/")
+        base_url = config_dict(self.module.configuration)["base_url"].rstrip("/")
         base_url = base_url.removesuffix("/api")
         self._events_api_path = f"{base_url}/api/v1/sic/conf/events"
 
@@ -657,7 +658,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         self._http_session.headers.update(
             {
                 "Accept": "application/json",
-                "Authorization": f"Bearer {self.module.configuration['api_key']}",
+                "Authorization": f"Bearer {config_dict(self.module.configuration)['api_key']}",
                 "User-Agent": user_agent(),
             }
         )
@@ -932,7 +933,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         alert_short_id = alert.get("short_id")
 
         # Write alert data to temp directory
-        work_dir = self._data_path.joinpath("sekoiaio_alert_threshold").joinpath(str(uuid.uuid4()))
+        work_dir = self.data_path.joinpath("sekoiaio_alert_threshold").joinpath(str(uuid.uuid4()))
         alert_path = work_dir.joinpath("alert.json")
         work_dir.mkdir(parents=True, exist_ok=True)
 
@@ -947,7 +948,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 fp.write(orjson.dumps(events).decode("utf-8"))
             events_file_path = str(events_path.relative_to(work_dir))
 
-        directory = str(work_dir.relative_to(self._data_path))
+        directory = str(work_dir.relative_to(self.data_path))
         file_path = str(alert_path.relative_to(work_dir))
 
         # Build event payload — consistent with SecurityAlertsTrigger + threshold context
@@ -1003,7 +1004,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
     def _evaluate_thresholds(
         self,
-        alert: dict[str, Any],
+        alert: dict[str, Any],  # noqa: ARG002
         previous_state: dict[str, Any] | None,
         event_count_from_notification: int | None = None,
     ) -> tuple[bool, dict[str, Any]]:

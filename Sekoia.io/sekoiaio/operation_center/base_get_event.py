@@ -11,7 +11,7 @@ from sekoia_automation.action import Action
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from urllib3.util.retry import Retry
 
-from sekoiaio.utils import user_agent
+from sekoiaio.utils import config_dict, user_agent
 
 
 class BaseGetEvents(Action):
@@ -25,7 +25,7 @@ class BaseGetEvents(Action):
         super().__init__(*args, **kwargs)
 
     def configure_http_session(self):
-        self.events_api_path = urljoin(self.module.configuration["base_url"], "api/v1/sic/conf/events")
+        self.events_api_path = urljoin(config_dict(self.module.configuration)["base_url"], "api/v1/sic/conf/events")
 
         # Configure http with retry strategy
         retry_strategy = Retry(
@@ -43,7 +43,7 @@ class BaseGetEvents(Action):
         self.http_session.headers = CaseInsensitiveDict(
             data={
                 "Accept": "application/json",
-                "Authorization": f"Bearer {self.module.configuration['api_key']}",
+                "Authorization": f"Bearer {config_dict(self.module.configuration)['api_key']}",
                 "User-Agent": user_agent(),
             }
         )

@@ -7,6 +7,8 @@ import requests
 from pydantic import BaseModel
 from sekoia_automation.action import Action
 
+from sekoiaio.utils import config_dict
+
 
 class UnexpectedJSONResponseError(Exception):
     def __init__(self, request_name: str, url: str, status_code: int, content_type: str, body: str):
@@ -38,11 +40,11 @@ class SynchronizeAssetsWithAD(Action):
 
     @cached_property
     def base_url(self) -> str:
-        return self.module.configuration.get("base_url", "").rstrip("/")
+        return config_dict(self.module.configuration).get("base_url", "").rstrip("/")
 
     @cached_property
     def api_key(self) -> str:
-        return self.module.configuration.get("api_key", "")
+        return config_dict(self.module.configuration).get("api_key", "")
 
     @cached_property
     def session(self) -> requests.Session:

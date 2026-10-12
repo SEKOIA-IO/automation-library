@@ -11,6 +11,8 @@ from tenacity import (
 )
 from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
 
+from sekoiaio.utils import config_dict
+
 from .base_sol import BaseSolAction
 
 
@@ -35,7 +37,9 @@ class CreateDataset(BaseSolAction):
 
     def configure_urls(self) -> None:
         """Set up the dataset API base path."""
-        self.dataset_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/datasets")
+        self.dataset_api_path = urljoin(
+            config_dict(self.module.configuration)["base_url"], "api/v1/notebooks/datasets"
+        )
 
     @retry(
         reraise=True,
