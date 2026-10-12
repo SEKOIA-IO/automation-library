@@ -80,7 +80,7 @@ def test_ilert_postalert_base_url_without_trailing_slash():
     ],
     ids=["missing", "empty", "blank", "none"],
 )
-def test_ilert_postalert_returns_none_if_alert_uuid_missing(arguments):
+def test_ilert_postalert_rejects_missing_or_blank_alert_uuid(arguments):
     integration_key: str = "my-fake-integration-key"
 
     action: IlertTriggerAlertAction = IlertTriggerAlertAction()
