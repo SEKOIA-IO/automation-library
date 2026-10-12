@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reject a missing or empty `name`, `fqdn` or `ip` before calling the firewalls
 - Reject an `ip` that is not an IPv4 address in the add IP address action
 - Read the `associated-interface` argument declared in the add IP address and add FQDN manifests
+- Disable local user: log a firewall timeout and continue with the next firewall instead of failing
 
 ## 2026-07-15 - 1.31.0
 

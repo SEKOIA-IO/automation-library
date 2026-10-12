@@ -54,8 +54,8 @@ class FortigateDisableLocalUserAction(Action):
                 )
                 response.raise_for_status()
 
-            except requests.exceptions.Timeout:
-                self.log_exception(message=f"Time out session on firewall {base_ip}")
+            except requests.exceptions.Timeout as error:
+                self.log_exception(error, message=f"Time out session on firewall {base_ip}")
                 pass
 
             except Exception as error:
