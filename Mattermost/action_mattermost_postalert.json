@@ -31,6 +31,9 @@
       "api_key",
       "base_url"
     ],
+    "secrets": [
+      "api_key"
+    ],
     "title": "Arguments",
     "type": "object"
   },
