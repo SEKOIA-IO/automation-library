@@ -5,6 +5,7 @@ import json
 
 # third parties
 import pytest
+import requests
 import requests_mock
 from pydantic import ValidationError
 
@@ -66,3 +67,38 @@ def test_mattermost_postmessage_requires_message(arguments):
             mt.run(arguments)
 
     assert mock.call_count == 0
+
+
+def test_mattermost_postmessage_returns_posted_params():
+    hook_url: str = "https://my.chat.mattermost/hooks/123456"
+
+    mt: MattermostPostMessageAction = MattermostPostMessageAction()
+    mt.module.configuration = {"hook_url": hook_url}
+
+    with requests_mock.Mocker() as mock:
+        mock.post(hook_url, text="ok")
+
+        result = mt.run({"message": "hello"})
+
+        assert result == {
+            "text": "hello",
+            "channel": None,
+            "username": None,
+            "icon_url": "https://app.sekoia.io/user/favicon.ico",
+        }
+        assert json.loads(mock.request_history[0].text) == result
+
+
+def test_mattermost_postmessage_hook_error():
+    hook_url: str = "https://my.chat.mattermost/hooks/123456"
+
+    mt: MattermostPostMessageAction = MattermostPostMessageAction()
+    mt.module.configuration = {"hook_url": hook_url}
+
+    with requests_mock.Mocker() as mock:
+        mock.post(hook_url, status_code=403, text="forbidden")
+
+        with pytest.raises(requests.HTTPError):
+            mt.run({"message": "hello"})
+
+        assert mock.call_count == 1

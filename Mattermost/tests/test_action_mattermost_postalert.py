@@ -5,6 +5,7 @@ import json
 
 # third parties
 import pytest
+import requests
 import requests_mock
 from pydantic import ValidationError
 
@@ -190,3 +191,91 @@ def test_mattermost_postalert_accepts_base_url_with_path_prefix(base_url):
 
         assert mock.call_count == 2
         assert mock.request_history[0].url == expected_url
+
+
+ALERT_INFO = {
+    "urgency": {"current_value": 100, "display": "high"},
+    "short_id": "AL13426AYUU7",
+    "entity": {"name": "Blue boat"},
+    "title": "Super test alert",
+    "alert_type": {"category": "malicious-code", "value": "malware"},
+    "target": "test.com.fake",
+    "details": "no detail provided",
+}
+
+
+def test_mattermost_postalert_with_pretext_and_channel():
+    hook_url: str = "https://my.chat.mattermost/hooks/123456"
+
+    mt: MattermostPostAlertAction = MattermostPostAlertAction()
+    mt.module.configuration = {"hook_url": hook_url}
+
+    alert_uuid = "bec203a3-bc70-4430-80ad-f72fe11f3ad8"
+    base_url = "https://api.sekoia.io"
+    api_key = "AZERTYUI987654345678"
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{base_url}/v1/sic/alerts/{alert_uuid}", json=ALERT_INFO)
+        mock.post(hook_url, text="ok")
+
+        result = mt.run(
+            {
+                "alert_uuid": alert_uuid,
+                "api_key": api_key,
+                "base_url": base_url,
+                "channel": "sekoiaio---operation-center",
+                "pretext": "New alert",
+            }
+        )
+
+        assert mock.call_count == 2
+        assert mock.request_history[0].headers["Authorization"] == f"Bearer {api_key}"
+        posted = json.loads(mock.request_history[1].text)
+
+    assert result == posted
+    assert posted["channel"] == "sekoiaio---operation-center"
+    attachment = posted["attachments"][0]
+    assert attachment["pretext"] == "New alert"
+    assert attachment["fallback"] == "New alert - Super test alert"
+    assert attachment["color"] == "#f00"
+    assert {"short": True, "title": "Source", "value": None} in attachment["fields"]
+    assert {"short": True, "title": "Urgency", "value": "high - 100"} in attachment["fields"]
+
+
+def test_mattermost_postalert_alert_fetch_error():
+    hook_url: str = "https://my.chat.mattermost/hooks/123456"
+
+    mt: MattermostPostAlertAction = MattermostPostAlertAction()
+    mt.module.configuration = {"hook_url": hook_url}
+
+    alert_uuid = "bec203a3-bc70-4430-80ad-f72fe11f3ad8"
+    base_url = "https://api.sekoia.io/"
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{base_url}v1/sic/alerts/{alert_uuid}", status_code=404, json={"message": "not found"})
+        mock.post(hook_url, text="ok")
+
+        with pytest.raises(requests.HTTPError):
+            mt.run({"alert_uuid": alert_uuid, "api_key": "AZERTYUI987654345678", "base_url": base_url})
+
+        assert mock.call_count == 1
+        assert mock.request_history[0].method == "GET"
+
+
+def test_mattermost_postalert_hook_error():
+    hook_url: str = "https://my.chat.mattermost/hooks/123456"
+
+    mt: MattermostPostAlertAction = MattermostPostAlertAction()
+    mt.module.configuration = {"hook_url": hook_url}
+
+    alert_uuid = "bec203a3-bc70-4430-80ad-f72fe11f3ad8"
+    base_url = "https://api.sekoia.io/"
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{base_url}v1/sic/alerts/{alert_uuid}", json=ALERT_INFO)
+        mock.post(hook_url, status_code=500, text="error")
+
+        with pytest.raises(requests.HTTPError):
+            mt.run({"alert_uuid": alert_uuid, "api_key": "AZERTYUI987654345678", "base_url": base_url})
+
+        assert mock.call_count == 2
