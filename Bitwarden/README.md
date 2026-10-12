@@ -2,7 +2,7 @@
 
 ## Description
 
-Bitwarden provides open-source, zero-knowledge password and secrets management solutions for individuals, teams, and enterprise organizations.
+Bitwarden module scaffold for Sekoia.io integration metadata.
 
 ## Intakes
 
