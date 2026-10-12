@@ -235,3 +235,20 @@ def test_call_endpoint_raises_on_http_error(module):
 
         with pytest.raises(requests.exceptions.HTTPError):
             ActionSophosEDRScan(module).run({"endpoint_id": endpoint_id})
+
+
+@pytest.mark.parametrize("action_class", [ActionSophosEDRIsolateEndpoint, ActionSophosEDRDeIsolateEndpoint])
+def test_isolation_change_raises_on_other_http_errors(module, action_class):
+    endpoint_id = "0b44b37f-2299-47c8-bf5d-589995f8de96"
+    enabled = action_class is ActionSophosEDRDeIsolateEndpoint
+
+    with requests_mock.Mocker() as mock:
+        host = "https://api-eu01.central.sophos.com"
+        add_auth_mock(mock, host, module)
+
+        url = f"{host}/endpoint/v1/endpoints/{endpoint_id}/isolation"
+        mock.get(url, json={"enabled": enabled})
+        mock.patch(url, json={"error": "forbidden", "message": "Access denied"}, status_code=403)
+
+        with pytest.raises(requests.exceptions.HTTPError):
+            action_class(module).run({"endpoint_id": endpoint_id})

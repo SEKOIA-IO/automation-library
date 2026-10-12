@@ -59,6 +59,8 @@ class ActionSophosEDRIsolateEndpoint(SophosEDRAction):
                 result.update(current_status)
                 return result
 
+            raise
+
     def run(self, arguments: SophosEndpointIsolationArguments) -> Any:
         return self.set_isolation_status(
             endpoint_id=str(arguments.endpoint_id), enabled=True, comment=arguments.comment
