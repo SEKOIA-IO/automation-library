@@ -1,4 +1,5 @@
 # standard library
+import re
 from uuid import UUID
 
 # third parties
@@ -9,6 +10,8 @@ from sekoia_automation.action import Action
 # internals
 from ilert.constants import DEFAULT_EVENTS_URL
 from ilert.helpers import requests_retry_session
+
+ALERT_SHORT_ID_PATTERN = re.compile(r"AL[A-Za-z0-9]{10}")
 
 
 class IlertTriggerAlertArguments(BaseModel):
@@ -22,9 +25,8 @@ class IlertTriggerAlertArguments(BaseModel):
         if not self.alert_uuid.strip():
             raise ValueError("The alert identifier must not be empty")
 
-        # short id validation
-        if self.alert_uuid.startswith("AL"):
-            # If the identifier starts with "AL", we assume it's a short ID
+        # short id validation: "AL" followed by 10 alphanumeric characters
+        if ALERT_SHORT_ID_PATTERN.fullmatch(self.alert_uuid):
             return self
 
         # UUID validation

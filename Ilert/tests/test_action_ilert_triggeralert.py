@@ -126,7 +126,7 @@ def test_ilert_postalert_accepts_short_id():
     action: IlertTriggerAlertAction = IlertTriggerAlertAction()
     action.module.configuration = {"integration_key": integration_key}
 
-    alert_short_id = "AL98312BKWZ"
+    alert_short_id = "ALx7Kp2Qm9Zb"
     base_url = "https://api.sekoia.io/"
     api_key = "XKDF84729HNQP16"
 
@@ -152,3 +152,15 @@ def test_ilert_postalert_accepts_short_id():
         action.run({"alert_uuid": alert_short_id, "api_key": api_key, "base_url": base_url})
 
         assert mock.call_count == 2
+
+
+@pytest.mark.parametrize("alert_id", ["AL", "AL   ", "ALgarbage", "AL1234567890A", "AL123456789-"])
+def test_ilert_postalert_rejects_malformed_short_id(alert_id):
+    action: IlertTriggerAlertAction = IlertTriggerAlertAction()
+    action.module.configuration = {"integration_key": "my-fake-integration-key"}
+
+    with requests_mock.Mocker() as mock:
+        with pytest.raises(ValidationError):
+            action.run({"alert_uuid": alert_id, "api_key": "XKDF84729HNQP16", "base_url": "https://api.sekoia.io/"})
+
+    assert mock.call_count == 0
