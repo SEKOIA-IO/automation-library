@@ -1,4 +1,5 @@
 # natives
+import json
 import os
 from typing import Any
 from unittest.mock import patch
@@ -109,6 +110,38 @@ def test_with_one_target_group(symphony_storage, response_job_status_done):
         )
 
         assert res == {"results": []}
+
+
+def test_get_process_list_saved_to_file(symphony_storage, response_job_status_done):
+    instance_url = "https://test.hurukau.io"
+    job_id = "11111111-1111-1111-1111-111111111111"
+
+    action = GetProcessListActionV2(data_path=symphony_storage)
+    action.module.configuration = {"url": instance_url, "api_token": "11111111111111111111111111111111"}
+
+    with requests_mock.Mocker() as requests_mocker, patch("harfanglab.get_process_list_action_v2.sleep"):
+        requests_mocker.post(
+            f"{instance_url}/api/data/job/batch/",
+            json={"id": job_id, "creationtime": "2026-01-23T11:56:58.733422Z", "agent_count": 1},
+        )
+        requests_mocker.get(f"{instance_url}/api/data/job/batch/{job_id}/", json=response_job_status_done)
+        requests_mocker.get(
+            f"{instance_url}/api/data/investigation/hunting/Process/?job_id={job_id}&limit=50",
+            json={"next": None, "results": [{"process_name": "explorer.exe"}]},
+        )
+
+        result = action.run(
+            {"target_groups": "group-1", "get_connections_list": True, "save_to_file": True},
+        )
+
+        assert requests_mocker.request_history[0].json() == {
+            "targets": {"groups": ["group-1"]},
+            "jobs": [
+                {"getProcessList": {"getHandlesList": False, "getConnectionsList": True, "getSignaturesInfo": False}}
+            ],
+        }
+
+    assert json.loads((symphony_storage / result["file_path"]).read_text()) == [{"process_name": "explorer.exe"}]
 
 
 @pytest.mark.skipif(

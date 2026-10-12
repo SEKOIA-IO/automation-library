@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Any
 from unittest.mock import patch
@@ -100,6 +101,34 @@ def test_trigger_job(symphony_storage, response_job_batched, response_job_status
                 "target_groups": "default_policy_group_id",
             }
         )
+
+
+def test_get_pipe_list_paginated_and_saved_to_file(symphony_storage, response_job_batched, response_job_status_done):
+    instance_url = "https://test.hurukau.io"
+    job_id = "11111111-1111-1111-1111-111111111111"
+    pipes_endpoint = "/api/data/investigation/hunting/Pipe/"
+
+    action = GetPipeListActionV2(data_path=symphony_storage)
+    action.module.configuration = {"url": instance_url, "api_token": "11111111111111111111111111111111"}
+
+    with requests_mock.Mocker() as requests_mocker, patch("harfanglab.get_pipe_list_action_v2.sleep"):
+        requests_mocker.post(f"{instance_url}/api/data/job/batch/", status_code=201, json=response_job_batched)
+        requests_mocker.get(f"{instance_url}/api/data/job/batch/{job_id}/", json=response_job_status_done)
+        requests_mocker.get(
+            f"{instance_url}{pipes_endpoint}?job_id={job_id}&limit=50",
+            json={"next": f"{pipes_endpoint}?job_id={job_id}&limit=50&offset=50", "results": [{"name": "pipe1"}]},
+        )
+        requests_mocker.get(
+            f"{instance_url}{pipes_endpoint}?job_id={job_id}&limit=50&offset=50",
+            json={"next": None, "results": [{"name": "pipe2"}]},
+        )
+
+        result = action.run({"target_agents": "agent-1, agent-2", "save_to_file": True})
+
+        assert requests_mocker.request_history[0].json()["targets"] == {"agents": ["agent-1", "agent-2"]}
+
+    assert set(result) == {"file_path"}
+    assert json.loads((symphony_storage / result["file_path"]).read_text()) == [{"name": "pipe1"}, {"name": "pipe2"}]
 
 
 @pytest.mark.skipif(
