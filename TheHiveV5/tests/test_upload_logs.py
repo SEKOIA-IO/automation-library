@@ -1,4 +1,5 @@
 import os
+from pathlib import PurePosixPath
 from typing import List
 import pytest
 import requests_mock
@@ -201,3 +202,41 @@ def test_upload_logs_action_accepts_nested_path_inside_data_path(relative, reque
 
     assert result == {"outputAttachment": HIVE_OUTPUT}
     assert mock_upload.call_count == 1
+
+
+def test_upload_logs_action_rejects_symlink_outside_data_path(requests_mock, module, tmp_path):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    outside_file = tmp_path / "outside.txt"
+    outside_file.write_text("secret")
+    (data_dir / "link.txt").symlink_to(outside_file)
+
+    action = TheHiveUploadLogsV5(module=module, data_path=data_dir)
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+
+    with pytest.raises(ValueError, match="inside the action data directory"):
+        action.run({"alert_id": ALERT_ID, "filepath": "link.txt"})
+
+    assert requests_mock.call_count == 0
+
+
+@pytest.mark.parametrize(
+    "filepath,expected",
+    [("logs/file.txt", "/bucket/logs/file.txt"), ("logs/../file.txt", "/bucket/file.txt")],
+)
+def test_upload_logs_filepath_in_remote_data_path(filepath, expected, module):
+    action = TheHiveUploadLogsV5(module=module, data_path=PurePosixPath("/bucket"))  # type: ignore[arg-type]
+
+    assert str(action._get_filepath_in_data_path(filepath)) == expected
+
+
+@pytest.mark.parametrize("filepath", ["../other-bucket/file.txt", "/etc/passwd"])
+def test_upload_logs_filepath_outside_remote_data_path(filepath, module):
+    action = TheHiveUploadLogsV5(module=module, data_path=PurePosixPath("/bucket"))  # type: ignore[arg-type]
+
+    with pytest.raises(ValueError, match="inside the action data directory"):
+        action._get_filepath_in_data_path(filepath)

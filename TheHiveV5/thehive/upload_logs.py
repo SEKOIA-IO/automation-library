@@ -1,4 +1,5 @@
 import os
+from pathlib import Path, PosixPath, WindowsPath
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -19,6 +20,23 @@ class TheHiveUploadLogsArguments(BaseModel):
 
 
 class TheHiveUploadLogsV5(Action):
+    def _get_filepath_in_data_path(self, filepath: str) -> Path:
+        error_msg = f"File path must be inside the action data directory: {filepath}"
+
+        if isinstance(self.data_path, (PosixPath, WindowsPath)):
+            # local storage: resolve symlinks and `..` before checking containment
+            resolved_path = self.data_path.joinpath(filepath).resolve()
+            if not resolved_path.is_relative_to(self.data_path.resolve()):
+                raise ValueError(error_msg)
+            return resolved_path
+
+        # remote storage (e.g. S3) cannot be resolved locally: lexical check
+        base_path = os.path.normpath(str(self.data_path))
+        candidate_path = os.path.normpath(str(self.data_path.joinpath(filepath)))
+        if os.path.commonpath([base_path, candidate_path]) != base_path:
+            raise ValueError(error_msg)
+        return self.data_path.joinpath(os.path.relpath(candidate_path, base_path))
+
     def run(self, arguments: TheHiveUploadLogsArguments) -> dict[str, list[dict[str, Any]]]:
         api = TheHiveConnector(
             self.module.configuration["base_url"],
@@ -30,12 +48,7 @@ class TheHiveUploadLogsV5(Action):
         )
 
         arg_alert_id = arguments.alert_id
-        # Lexical check: data_path may be a remote (S3) path, which cannot be resolved on the local filesystem
-        base_path = os.path.normpath(str(self.data_path))
-        candidate_path = os.path.normpath(str(self.data_path.joinpath(arguments.filepath)))
-        if os.path.commonpath([base_path, candidate_path]) != base_path:
-            raise ValueError(f"File path must be inside the action data directory: {arguments.filepath}")
-        arg_filepath = self.data_path.joinpath(os.path.relpath(candidate_path, base_path))
+        arg_filepath = self._get_filepath_in_data_path(arguments.filepath)
 
         # Verify file exists before attempting upload
         if not arg_filepath.exists():
