@@ -63,7 +63,8 @@ class UpdateAsset(Action):
         payload = {}
         for field in self.ALLOWED_FIELDS:
             value = getattr(arguments, field)
-            if not value:
+            # skip unset and empty values, but keep a criticality of 0
+            if value is None or (not value and not isinstance(value, int)):
                 continue
             if field == "entity_uuid":
                 value = str(value)

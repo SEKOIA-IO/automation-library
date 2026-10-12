@@ -154,3 +154,16 @@ def test_update_asset_accepts_valid_optional_fields(requests_mock):
     assert sent["atoms"] == {"cidrv4": ["10.0.0.0/24"], "hostname": "example"}
     assert sent["revoked"] is False
     assert sent["reviewed"] is True
+
+
+def test_update_asset_sends_zero_criticality(requests_mock):
+    action = UpdateAsset()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    asset_uuid = uuid.uuid4()
+    requests_mock.put(base_url + str(asset_uuid), json={"uuid": str(asset_uuid)})
+
+    action.run({"uuid": str(asset_uuid), "criticality": 0, "description": ""})
+
+    sent = requests_mock.last_request.json()
+    assert sent["criticality"] == 0
+    assert "description" not in sent
