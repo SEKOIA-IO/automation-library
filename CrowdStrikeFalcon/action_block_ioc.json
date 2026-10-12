@@ -4,7 +4,8 @@
     "properties": {
       "value": {
         "description": "The value of the IOC to block",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "type": {
         "description": "Type of the IOC to block: md5, sha256",

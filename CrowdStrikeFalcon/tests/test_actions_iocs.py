@@ -794,8 +794,8 @@ def test_run_monitor_ioc_pushes_indicator(monkeypatch):
     assert pushed[0]["action"] == "detect"
 
 
-@pytest.mark.parametrize("arguments", [{"type": "ipv4"}, {"value": "", "type": "ipv4"}])
-def test_run_monitor_ioc_value_required(requests_mock, arguments):
+@pytest.mark.parametrize("arguments", [{"type": "ipv4"}, {"value": "", "type": "ipv4"}, {"value": "77.91.78.118"}])
+def test_run_monitor_ioc_arguments_required(requests_mock, arguments):
     action = configured_action(CrowdstrikeActionMonitorIOC)
 
     with pytest.raises(ValidationError):

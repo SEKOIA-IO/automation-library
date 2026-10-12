@@ -186,7 +186,7 @@ class CrowdstrikeActionPushIOCsDetect(CrowdstrikeActionPushIOCs):
 
 class CrowdstrikeActionAddIOCArguments(BaseModel):
     value: str = Field(..., min_length=1, description="IOC value")
-    type: str = Field(default="", description="IOC type")
+    type: str = Field(..., description="IOC type")
 
 
 class CrowdstrikeActionAddIOC(CrowdstrikeActionIOC):
