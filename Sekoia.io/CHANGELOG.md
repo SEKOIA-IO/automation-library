@@ -12,7 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Align module tooling with uv conventions (ruff rules, mypy, pytest config, mise)
-- Upgrade sekoia-automation-sdk to 1.27.0 and fix the type errors it surfaced
 
 ### Fixed
 

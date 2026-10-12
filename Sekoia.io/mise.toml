@@ -15,14 +15,14 @@ run = "uv run pytest tests/"
 [tasks.lint]
 description = "Check code style and types"
 run = [
-    "uv run ruff check --no-fix .",
-    "uv run ruff format --check .",
-    "uv run mypy .",
+    "uv run --group lint ruff check --no-fix .",
+    "uv run --group lint ruff format --check .",
+    "uv run --group lint mypy .",
 ]
 
 [tasks.format]
 description = "Format and auto-fix code"
 run = [
-    "uv run ruff check --fix .",
-    "uv run ruff format .",
+    "uv run --group lint ruff check --fix .",
+    "uv run --group lint ruff format .",
 ]

@@ -4,7 +4,7 @@ from typing import ClassVar
 import requests
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from sekoiaio.utils import config_dict, user_agent
+from sekoiaio.utils import user_agent
 
 from .base import _SEKOIANotificationBaseTrigger
 
@@ -21,22 +21,22 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
     ]
 
     def _filter_by_mode(self, case) -> bool:
-        mode_filter = config_dict(self.configuration).get("mode_filter")
+        mode_filter = self.configuration.get("mode_filter")
         return not (mode_filter and case.get("manual") != (mode_filter == "manual"))
 
     def _filter_by_priority(self, case) -> bool:
-        priority_uuids_filter = config_dict(self.configuration).get("priority_uuids_filter")
+        priority_uuids_filter = self.configuration.get("priority_uuids_filter")
         return not (priority_uuids_filter and case.get("custom_priority_uuid") not in priority_uuids_filter)
 
     def _filter_by_assignees(self, case) -> bool:
-        assignees_filter = config_dict(self.configuration).get("assignees_filter")
+        assignees_filter = self.configuration.get("assignees_filter")
         return not (
             assignees_filter
             and not any(assignee.get("avatar_uuid") in assignees_filter for assignee in case.get("subscribers", []))
         )
 
     def _filter_by_uuids(self, case) -> bool:
-        case_uuids_filter = config_dict(self.configuration).get("case_uuids_filter")
+        case_uuids_filter = self.configuration.get("case_uuids_filter")
         return not (
             case_uuids_filter
             and case.get("uuid") not in case_uuids_filter
@@ -49,10 +49,10 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
         stop=stop_after_attempt(10),
     )
     def _retrieve_case_from_caseapi(self, case_uuid):
-        api_url = urljoin(config_dict(self.module.configuration)["base_url"], f"api/v1/sic/cases/{case_uuid}")
+        api_url = urljoin(self.module.configuration["base_url"], f"api/v1/sic/cases/{case_uuid}")
         api_url = api_url.replace("/api/api", "/api")  # In case base_url ends with /api
 
-        api_key = config_dict(self.module.configuration)["api_key"]
+        api_key = self.module.configuration["api_key"]
         headers = {"Authorization": f"Bearer {api_key}", "User-Agent": user_agent()}
 
         response = requests.get(
@@ -97,11 +97,11 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
     )
     def _retrieve_comment_from_caseapi(self, case_uuid: str, comment_uuid: str):
         api_url = urljoin(
-            config_dict(self.module.configuration)["base_url"], f"api/v1/sic/cases/{case_uuid}/comments/{comment_uuid}"
+            self.module.configuration["base_url"], f"api/v1/sic/cases/{case_uuid}/comments/{comment_uuid}"
         )
         api_url = api_url.replace("/api/api", "/api")  # In case base_url ends with /api
 
-        api_key = config_dict(self.module.configuration)["api_key"]
+        api_key = self.module.configuration["api_key"]
         headers = {"Authorization": f"Bearer {api_key}", "User-Agent": user_agent()}
 
         response = requests.get(

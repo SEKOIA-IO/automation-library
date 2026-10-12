@@ -265,7 +265,7 @@ requires-dist = [
     { name = "gevent" },
     { name = "orjson" },
     { name = "requests" },
-    { name = "sekoia-automation-sdk", specifier = ">=1.27.0,<2" },
+    { name = "sekoia-automation-sdk", specifier = ">=1.26.0,<2" },
     { name = "structlog", specifier = ">=25.5.0,<26" },
     { name = "tenacity" },
     { name = "websocket-client" },
@@ -1607,7 +1607,7 @@ wheels = [
 
 [[package]]
 name = "sekoia-automation-sdk"
-version = "1.27.0"
+version = "1.26.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiocsv" },
@@ -1637,9 +1637,9 @@ dependencies = [
     { name = "typer" },
     { name = "uv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/82/5a/02f77e44a12db0cd2d9babcd321cc628a684c85cdb0638e50c036341b763/sekoia_automation_sdk-1.27.0.tar.gz", hash = "sha256:79ec7c114322305a84196b9d6aabad07779aca2b2ef19fb40fc001d1161ff686", size = 66075, upload-time = "2026-10-06T16:12:47.511Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/d2/7a184ea6931dd282d73854d187592abe63974ed68ea366a0bf9a2bb7ae59/sekoia_automation_sdk-1.26.0.tar.gz", hash = "sha256:c1788209d102d70d691cdee9eb015cce80f791282237534f5cfa9f4f2e1914bc", size = 65692, upload-time = "2026-09-11T14:30:57.354Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cd/8b/89c988b52297ad2919972ffe178ae1f0e2e8c2fc3df9da975187c562c654/sekoia_automation_sdk-1.27.0-py3-none-any.whl", hash = "sha256:4c48b4dd2347b550fa6b3d40aa8e3035841b8837656c2f0b0d90e61d1990b8be", size = 99628, upload-time = "2026-10-06T16:12:46.49Z" },
+    { url = "https://files.pythonhosted.org/packages/88/60/0e509edb90dc4607f611c1375afe7455b6bfa2c5a67a1cd05510ddbe04bb/sekoia_automation_sdk-1.26.0-py3-none-any.whl", hash = "sha256:a0a09ede150089a467b78b42215d1136de2b200aeb9a465de2ee5e3239104cc8", size = 99101, upload-time = "2026-09-11T14:30:55.99Z" },
 ]
 
 [[package]]

@@ -10,7 +10,7 @@ classifiers = [
 ]
 dependencies = [
     "requests",
-    "sekoia-automation-sdk>=1.27.0,<2",
+    "sekoia-automation-sdk>=1.26.0,<2",
     "tenacity",
     "websocket-client",
     "gevent",
@@ -32,7 +32,6 @@ lint = [
 
 [tool.uv]
 package = false
-default-groups = ["dev", "lint"]
 
 [tool.ruff]
 line-length = 119

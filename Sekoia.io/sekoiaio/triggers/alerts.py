@@ -12,7 +12,7 @@ import urllib3
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from sekoiaio.utils import config_dict, user_agent
+from sekoiaio.utils import user_agent
 
 from .base import _SEKOIANotificationBaseTrigger
 from .helpers.state_manager import AlertStateManager
@@ -60,13 +60,13 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
             return
 
         if (
-            (rule_filter := config_dict(self.configuration).get("rule_filter"))
+            (rule_filter := self.configuration.get("rule_filter"))
             and alert["rule"]["name"] != rule_filter
             and alert["rule"]["uuid"] != rule_filter
         ):
             return
 
-        if (rule_names_filter := config_dict(self.configuration).get("rule_names_filter")) and alert["rule"][
+        if (rule_names_filter := self.configuration.get("rule_names_filter")) and alert["rule"][
             "name"
         ] not in rule_names_filter:
             return
@@ -128,10 +128,10 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
         stop=stop_after_attempt(10),
     )
     def _retrieve_alert_from_alertapi(self, alert_uuid):
-        api_url = urljoin(config_dict(self.module.configuration)["base_url"], f"api/v1/sic/alerts/{alert_uuid}")
+        api_url = urljoin(self.module.configuration["base_url"], f"api/v1/sic/alerts/{alert_uuid}")
         api_url = api_url.replace("/api/api", "/api")  # In case base_url ends with /api
 
-        api_key = config_dict(self.module.configuration)["api_key"]
+        api_key = self.module.configuration["api_key"]
         headers = {"Authorization": f"Bearer {api_key}", "User-Agent": user_agent()}
 
         response = requests.get(
@@ -227,13 +227,13 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
             return
 
         if (
-            (rule_filter := config_dict(self.configuration).get("rule_filter"))
+            (rule_filter := self.configuration.get("rule_filter"))
             and alert["rule"]["name"] != rule_filter
             and alert["rule"]["uuid"] != rule_filter
         ):
             return
 
-        if (rule_names_filter := config_dict(self.configuration).get("rule_names_filter")) and alert["rule"][
+        if (rule_names_filter := self.configuration.get("rule_names_filter")) and alert["rule"][
             "name"
         ] not in rule_names_filter:
             return
@@ -287,13 +287,13 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
     )
     def _retrieve_comment_from_alertapi(self, alert_uuid: str, comment_uuid: str):
         api_url = urljoin(
-            config_dict(self.module.configuration)["base_url"],
+            self.module.configuration["base_url"],
             f"api/v1/sic/alerts/{alert_uuid}/comments/{comment_uuid}",
         )
 
         api_url = api_url.replace("/api/api", "/api")  # In case base_url ends with /api
 
-        api_key = config_dict(self.module.configuration)["api_key"]
+        api_key = self.module.configuration["api_key"]
         headers = {"Authorization": f"Bearer {api_key}", "User-Agent": user_agent()}
 
         response = requests.get(api_url, headers=headers)
@@ -639,7 +639,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
     def validated_config(self) -> AlertEventsThresholdConfiguration:
         """Get validated configuration, lazily initialized and cached."""
         if self._validated_config is None:
-            self._validated_config = AlertEventsThresholdConfiguration(**config_dict(self.configuration))
+            self._validated_config = AlertEventsThresholdConfiguration(**self.configuration)
         return self._validated_config
 
     def _ensure_initialized(self) -> None:
@@ -650,7 +650,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         state_path = self.data_path / "alert_thresholds_state.json"
         self.state_manager = AlertStateManager(state_path, logger=self.log)
 
-        base_url = config_dict(self.module.configuration)["base_url"].rstrip("/")
+        base_url = self.module.configuration["base_url"].rstrip("/")
         base_url = base_url.removesuffix("/api")
         self._events_api_path = f"{base_url}/api/v1/sic/conf/events"
 
@@ -658,7 +658,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         self._http_session.headers.update(
             {
                 "Accept": "application/json",
-                "Authorization": f"Bearer {config_dict(self.module.configuration)['api_key']}",
+                "Authorization": f"Bearer {self.module.configuration['api_key']}",
                 "User-Agent": user_agent(),
             }
         )

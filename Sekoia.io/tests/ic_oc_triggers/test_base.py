@@ -53,6 +53,28 @@ def test_sekoianotificationbasetrigger_handler_dispatch_logs_handler_exception(b
     )
 
 
+def test_sekoianotificationbasetrigger_handler_dispatch_logs_handler_exception_without_attributes(base_trigger):
+    error = ValueError("boom")
+    base_trigger.handle_event = Mock(side_effect=error)
+    message = {"metadata": {"version": 2}, "type": "alert", "action": "created", "attributes": None}
+
+    base_trigger.handler_dispatcher(json.dumps(message))
+
+    base_trigger.log_exception.assert_called_once_with(
+        error,
+        message="Failed to handle alert:created notification",
+        uuid=None,
+    )
+
+
+def test_sekoianotificationbasetrigger_handler_dispatch_ignores_unhandled_notification(base_trigger):
+    message = {"metadata": {"version": 2}, "type": "rule", "action": "updated", "attributes": {}}
+
+    base_trigger.handler_dispatcher(json.dumps(message))
+
+    base_trigger.log_exception.assert_not_called()
+
+
 def test_sekoianotificationbasetrigger_liveapi_url(base_trigger):
     base_trigger.module.configuration["base_url"] = "https://app.sekoia.io"
     assert base_trigger.liveapi_url == "wss://app.sekoia.io/live/"

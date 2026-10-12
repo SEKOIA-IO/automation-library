@@ -18,7 +18,7 @@ from tenacity import Retrying, stop_after_attempt, wait_exponential
 from websocket import WebSocketApp, WebSocketTimeoutException, setdefaulttimeout
 
 from sekoiaio.triggers.messages_processor import MessagesProcessor
-from sekoiaio.utils import config_dict, user_agent
+from sekoiaio.utils import user_agent
 
 
 class _SEKOIANotificationBaseTrigger(Trigger):
@@ -49,13 +49,13 @@ class _SEKOIANotificationBaseTrigger(Trigger):
 
     @property
     def liveapi_url(self):
-        liveapi_url = config_dict(self.module.configuration).get("liveapi_url")
+        liveapi_url = self.module.configuration.get("liveapi_url")
 
         # LiveAPI URL might not be filled in existing playbooks. To
         # avoid having to edit all playbooks, infer the LiveAPI URL
         # from the base URL (which is mandatory).
         if liveapi_url is None:
-            base_url = config_dict(self.module.configuration)["base_url"]
+            base_url = self.module.configuration["base_url"]
             domain = urlparse(base_url).netloc
             if domain in ["api.sekoia.io", "api.test.sekoia.io"]:
                 domain = domain.replace("api", "app")
@@ -78,8 +78,8 @@ class _SEKOIANotificationBaseTrigger(Trigger):
     def run(self) -> None:
         self.log(f"Starting LiveAPI consumer on URL {self.liveapi_url}", level="info")
 
-        api_key = config_dict(self.module.configuration)["api_key"]
-        base_url = config_dict(self.module.configuration)["base_url"]
+        api_key = self.module.configuration["api_key"]
+        base_url = self.module.configuration["base_url"]
 
         self.log(f"Base URL provided is {base_url}", level="info")
 
@@ -129,8 +129,8 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         self.heartbeat()
 
     def handle_event(self, message: dict) -> None:
-        """Handle a v2 notification; implemented by each concrete trigger."""
-        raise NotImplementedError
+        """Handle a v2 notification; overridden by each concrete trigger.
+        """
 
     def on_close(self, *args, **kwargs):  # noqa: ARG002  # pragma: no cover
         # Reset teardown so we can run again the app from the start
@@ -181,10 +181,11 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         try:
             self.handle_event(message)
         except Exception as exp:
+            attributes = message.get("attributes")
             self.log_exception(
                 exp,
                 message=f"Failed to handle {event_type}:{message.get('action')} notification",
-                uuid=message.get("attributes", {}).get("uuid"),
+                uuid=attributes.get("uuid") if isinstance(attributes, dict) else None,
             )
 
     def stop(self, *args, **kwargs):

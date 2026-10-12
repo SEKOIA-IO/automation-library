@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from sekoia_automation.action import GenericAPIAction
 
 from sekoiaio.operation_center.constants import base_url
@@ -60,7 +62,7 @@ ListIncidents = type(
 class ListAlerts(FilteredQueryParametersAction):
     verb = "get"
     endpoint = base_url + "alerts"
-    query_parameters = [  # noqa: RUF012
+    query_parameters: ClassVar[list[str]] = [
         "limit",
         "offset",
         "stix",
