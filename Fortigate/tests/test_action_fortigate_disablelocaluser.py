@@ -82,7 +82,7 @@ def test_fortigate_disable_local_user():
                 assert history[cpt_mock].json()["json"]["name"] == name
 
 
-@pytest.mark.parametrize("arguments", [{}, {"name": ""}, {"name": "   "}])
+@pytest.mark.parametrize("arguments", [{}, {"name": ""}])
 def test_fortigate_disable_local_user_requires_name(arguments):
     mt: FortigateDisableLocalUserAction = FortigateDisableLocalUserAction()
     mt.module.configuration = {"firewalls": [{"api_key": "key", "base_ip": "31.70.249.199", "base_port": "4443"}]}

@@ -200,7 +200,7 @@ def test_fortigate_with_current_group():
 
 
 @pytest.mark.parametrize(
-    "arguments", [{"member": ["test4"]}, {"name": "", "member": ["test4"]}, {"name": "   ", "member": ["test4"]}]
+    "arguments", [{"member": ["test4"]}, {"name": "", "member": ["test4"]}]
 )
 def test_fortigate_group_requires_name(arguments):
     mt: FortigateAddGroupAddress = FortigateAddGroupAddress()

@@ -1,16 +1,13 @@
 import json
-from typing import Annotated
 
 import requests
-from pydantic import BaseModel, Field, IPvAnyAddress, StringConstraints
+from pydantic import BaseModel, Field, IPvAnyAddress
 from requests import Response
 from sekoia_automation.action import Action
 
-NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-
 
 class FortigateAddIPArguments(BaseModel):
-    name: NonEmptyStr = Field(..., description="the fw address object name")
+    name: str = Field(..., min_length=1, description="the fw address object name")
     ip: IPvAnyAddress = Field(..., description="the ip address to be blocked, (for ex: '1.1.1.1')")
     associated_interface: str = Field(default="", description="interface of the object, leave blank for 'Any'")
     comment: str = Field(default="", description="comment")

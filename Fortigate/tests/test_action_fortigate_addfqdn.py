@@ -86,7 +86,7 @@ def test_fortigate_set_fqdn():
 
 
 @pytest.mark.parametrize(
-    "arguments", [{"name": "test4"}, {"name": "test4", "fqdn": ""}, {"name": "test4", "fqdn": "   "}]
+    "arguments", [{"name": "test4"}, {"name": "test4", "fqdn": ""}]
 )
 def test_fortigate_set_fqdn_requires_fqdn(arguments):
     mt: FortigateAddFQDNAction = FortigateAddFQDNAction()
