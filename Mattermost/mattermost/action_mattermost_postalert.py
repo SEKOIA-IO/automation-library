@@ -1,4 +1,5 @@
 # natives
+import re
 from uuid import UUID
 
 import requests
@@ -8,6 +9,8 @@ from colour import Color
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 from requests import Response
 from sekoia_automation.action import Action
+
+SHORT_ID_PATTERN = re.compile(r"AL[A-Za-z0-9]+")
 
 
 class MattermostPostAlertArguments(BaseModel):
@@ -20,8 +23,8 @@ class MattermostPostAlertArguments(BaseModel):
     @field_validator("alert_uuid")
     @classmethod
     def validate_alert_uuid(cls, value: str) -> str:
-        # short ids start with "AL"; anything else must be a UUID
-        if not value.startswith("AL"):
+        # either a short id ("AL" followed by alphanumerics) or a UUID
+        if not SHORT_ID_PATTERN.fullmatch(value):
             UUID(value)
         return value
 

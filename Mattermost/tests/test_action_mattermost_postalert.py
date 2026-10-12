@@ -100,6 +100,9 @@ def test_mattermost_postalert_requires_alert_uuid(arguments):
     ("field", "value"),
     [
         ("alert_uuid", "not-a-uuid"),
+        ("alert_uuid", "AL"),
+        ("alert_uuid", "AL   "),
+        ("alert_uuid", "ALx-y"),
         ("base_url", "not a url"),
         ("api_key", ""),
     ],
