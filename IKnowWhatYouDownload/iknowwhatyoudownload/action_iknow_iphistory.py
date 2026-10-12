@@ -15,7 +15,7 @@ class IKnowIPHistoryAction(Action):
     Action to fetch the Torrent history of a specified IP
     """
 
-    def run(self, arguments: IKnowIPHistoryArguments) -> dict | None:
+    def run(self, arguments: IKnowIPHistoryArguments) -> dict:
         url: str = self.module.configuration["host"]
 
         get_url: str = urljoin(url, "history/peer/")

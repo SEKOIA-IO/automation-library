@@ -15,7 +15,7 @@ class IKnowIPExistAction(Action):
     Action to fast check if IP adress can be found in IKnowChatYouDownload database
     """
 
-    def run(self, arguments: IKnowIPExistArguments) -> dict | None:
+    def run(self, arguments: IKnowIPExistArguments) -> dict:
         url: str = self.module.configuration["host"]
 
         get_url: str = urljoin(url, "history/exist")

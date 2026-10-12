@@ -27,6 +27,25 @@ def test_query_ip():
         assert query.method == "GET"
 
 
+def test_query_ip_known():
+    action = IKnowIPExistAction()
+
+    key = "my-fake-api-key"
+    host = "https://my-fake-host"
+
+    action.module.configuration = {"key": key, "host": host}
+
+    with requests_mock.Mocker() as mock:
+        ip = "185.122.161.248"
+
+        send_result = {"ip": ip, "exists": True}
+        mock.get(f"{host}/history/exist?key={key}&ip={ip}", json=send_result)
+
+        results = action.run({"ip": ip})
+        assert results == send_result
+        assert mock.call_count == 1
+
+
 @pytest.mark.parametrize("arguments", [{}, {"ip": ""}, {"ip": "   "}])
 def test_query_ip_missing_ip(arguments):
     action = IKnowIPExistAction()
