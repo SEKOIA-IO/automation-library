@@ -198,7 +198,7 @@ def test_whois_action(whois_results, raw_google_whois):
         assert whois_data["Registrant"]["Email"] == "whoisrequest@markmonitor.com"
 
 
-@pytest.mark.parametrize("arguments", [{}, {"query": ""}, {"query": "   "}, {"query": None}])
+@pytest.mark.parametrize("arguments", [{}, {"query": ""}, {"query": None}])
 def test_whois_action_requires_query(arguments):
     action = WhoisAction()
 

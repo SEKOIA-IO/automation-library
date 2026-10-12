@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Validate the `query` argument via a native Pydantic v2 model using a `NonEmptyStr` alias backed by `StringConstraints`, rejecting missing/empty/blank values before performing the WHOIS lookup without narrowing the field beyond a plain string
+- Validate the `query` argument via a native Pydantic v2 model, rejecting missing or empty values before performing the WHOIS lookup
 
 ## 2026-07-30 - 1.26.1
 
