@@ -1155,3 +1155,47 @@ class TestResetCheckpoint:
 
         called_params = connector.client.list_endpoints.call_args[0][0]
         assert "lastSeenAfter" not in called_params
+
+
+class TestCoverageEdgeCases:
+    def test_fingerprint_raises_on_non_serializable_value(self):
+        endpoint = SophosEndpoint.model_construct(id="bad-endpoint", hostname={"not", "serializable"})
+
+        with pytest.raises(TypeError, match="Failed to serialize fingerprint for endpoint 'bad-endpoint'"):
+            SophosDeviceAssetConnector._compute_fingerprint(endpoint)
+
+    def test_load_sent_ids_ignores_invalid_cache(self, connector):
+        with connector.context as cache:
+            cache["sent_ids"] = ["not", "a", "dict"]
+
+        connector._load_sent_ids()
+
+        assert connector._sent_ids == {}
+
+    def test_save_sent_ids_keeps_most_recent_entries(self, connector):
+        connector.MAX_CACHE_SIZE = 2
+        now = datetime.now(tz=timezone.utc)
+        connector._sent_ids = {
+            f"id-{i}": {"fingerprint": f"fp-{i}", "cached_at": (now - timedelta(minutes=i)).isoformat()}
+            for i in range(4)
+        }
+
+        connector._save_sent_ids()
+
+        with connector.context as cache:
+            saved = cache["sent_ids"]
+        assert set(saved) == {"id-0", "id-1"}
+        assert set(connector._sent_ids) == {"id-0", "id-1"}
+        connector.log.assert_any_call("Dedup cache trimmed to 2 entries before save", level="debug")
+
+    def test_get_assets_skips_endpoint_with_unserializable_fingerprint(self, connector):
+        bad_endpoint = SophosEndpoint.model_construct(id="bad-endpoint", hostname={"not", "serializable"})
+        connector._iter_endpoints = MagicMock(return_value=iter([bad_endpoint, COMPUTER_ENDPOINT]))
+
+        assets = list(connector.get_assets())
+
+        assert len(assets) == 1
+        assert assets[0].device.hostname == COMPUTER_ENDPOINT.hostname
+        assert "bad-endpoint" not in connector._sent_ids
+        warnings = [call.args[0] for call in connector.log.call_args_list if call.kwargs.get("level") == "warning"]
+        assert any("Skipping endpoint 'bad-endpoint': fingerprint serialization failed" in w for w in warnings)

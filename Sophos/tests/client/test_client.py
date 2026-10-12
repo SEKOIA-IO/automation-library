@@ -2,10 +2,12 @@ import os
 import time
 
 import pytest
+import requests
 import requests_mock
 
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.client.helpers import retry
 
 
 def test_list_siem_events():
@@ -95,3 +97,32 @@ def test_authentication_integration(symphony_storage):
 
     response = client.list_siem_events(parameters={"from_date": int(time.time()) - 300})
     assert response.status_code < 300
+
+
+def test_get_query_results_requires_run_id():
+    auth = SophosApiAuthentication(
+        "https://api-eu.central.sophos.com", "https://id.sophos.com/api/v2/oauth2/token", "foo", "bar"
+    )
+    client = SophosApiClient(auth=auth)
+
+    with requests_mock.Mocker() as mock:
+        with pytest.raises(ValueError, match="run_id is required"):
+            client.get_query_results(None, page_size=10)
+
+        assert mock.call_count == 0
+
+
+def test_retry_does_not_retry_on_client_errors():
+    calls = []
+
+    @retry(max_retries=3)
+    def failing_call():
+        calls.append(1)
+        response = requests.Response()
+        response.status_code = 404
+        raise requests.exceptions.HTTPError("404 Client Error", response=response)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        failing_call()
+
+    assert len(calls) == 1
