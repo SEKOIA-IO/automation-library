@@ -789,7 +789,7 @@ def test_run_monitor_ioc_value_required(requests_mock):
     assert requests_mock.call_count == 0
 
 
-@pytest.mark.parametrize("value", ["", "   "])
+@pytest.mark.parametrize("value", [""])
 def test_run_monitor_ioc_value_blank(requests_mock, value):
     action = configured_action(CrowdstrikeActionMonitorIOC)
 

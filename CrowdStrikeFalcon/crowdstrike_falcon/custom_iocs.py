@@ -7,7 +7,6 @@ from pydantic import BaseModel, Field
 
 from crowdstrike_falcon.action import CrowdstrikeAction
 from crowdstrike_falcon.helpers import stix_to_indicators
-from crowdstrike_falcon.models import NonEmptyStr
 
 
 class CrowdstrikeActionIOC(CrowdstrikeAction):
@@ -186,7 +185,7 @@ class CrowdstrikeActionPushIOCsDetect(CrowdstrikeActionPushIOCs):
 
 
 class CrowdstrikeActionAddIOCArguments(BaseModel):
-    value: NonEmptyStr = Field(..., description="IOC value")
+    value: str = Field(..., min_length=1, description="IOC value")
     type: str = Field(default="", description="IOC type")
 
 
