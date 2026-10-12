@@ -154,7 +154,7 @@ def test_ilert_postalert_accepts_short_id():
         assert mock.call_count == 2
 
 
-@pytest.mark.parametrize("alert_id", ["AL", "AL   ", "ALgarbage", "AL1234567890A", "AL123456789-"])
+@pytest.mark.parametrize("alert_id", ["AL", "AL   ", "ALgarbage", "AL123456789", "AL1234567890A", "AL123456789-"])
 def test_ilert_postalert_rejects_malformed_short_id(alert_id):
     action: IlertTriggerAlertAction = IlertTriggerAlertAction()
     action.module.configuration = {"integration_key": "my-fake-integration-key"}
