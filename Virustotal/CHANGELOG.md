@@ -7,16 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-12 - 1.28.1
+
 ### Changed
 
-- Validate VirusTotal entrypoint arguments with native Pydantic v2 types: `ip` now uses `IPvAnyAddress`, `url` now uses `HttpUrl`, and polymorphic `resource`, free-text `comment`, path-like `file`, and hash `hash` remain non-empty strings
+- Validate action arguments with Pydantic v2 models: missing or empty values are rejected before any HTTP request or file I/O, `ip` must be an IP address and `url` an HTTP(S) URL
 - Bump `sekoia-automation-sdk` to 1.23.1
-
-## 2026-07-09 - 1.28.1
 
 ### Fixed
 
-- Validate the `hash`, `url`, `ip`, `resource`, `comment`, and `file` VirusTotal action arguments with Pydantic, rejecting empty or missing values before any HTTP request or file I/O
+- Honour the `detect_treshold` argument declared in the scan file and scan URL action manifests
 
 ## 2024-05-28 - 1.28.0
 

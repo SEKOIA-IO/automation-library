@@ -5,7 +5,7 @@ import pytest
 import requests_mock
 from pydantic import ValidationError
 
-from virustotal.action_virustotal_scanfile import VirusTotalScanFileAction
+from virustotal.action_virustotal_scanfile import VirusTotalScanFileAction, VirusTotalScanFileArguments
 
 file_result: dict = {
     "scans": {
@@ -410,7 +410,7 @@ def test_virustotal_scan_file(mock_sleep):
 
 @patch("virustotal.action_virustotal_scanfile.open", create=True)
 @patch("virustotal.action_virustotal_scanfile.os.path.getsize")
-def test_virustotal_scan_file_returns_none_if_file_empty(mock_getsize, mock_open, requests_mock):
+def test_virustotal_scan_file_raises_if_file_empty(mock_getsize, mock_open, requests_mock):
     vt: VirusTotalScanFileAction = VirusTotalScanFileAction()
     vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
 
@@ -423,7 +423,7 @@ def test_virustotal_scan_file_returns_none_if_file_empty(mock_getsize, mock_open
 
 @patch("virustotal.action_virustotal_scanfile.open", create=True)
 @patch("virustotal.action_virustotal_scanfile.os.path.getsize")
-def test_virustotal_scan_file_returns_none_if_file_missing(mock_getsize, mock_open, requests_mock):
+def test_virustotal_scan_file_raises_if_file_missing(mock_getsize, mock_open, requests_mock):
     vt: VirusTotalScanFileAction = VirusTotalScanFileAction()
     vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
 
@@ -432,3 +432,9 @@ def test_virustotal_scan_file_returns_none_if_file_missing(mock_getsize, mock_op
     assert requests_mock.call_count == 0
     mock_getsize.assert_not_called()
     mock_open.assert_not_called()
+
+
+@pytest.mark.parametrize("key", ["detect_threshold", "detect_treshold"])
+def test_virustotal_scan_file_arguments_accept_threshold_spellings(key):
+    arguments = VirusTotalScanFileArguments.model_validate({"file": "sample.bin", key: 5})
+    assert arguments.detect_threshold == 5

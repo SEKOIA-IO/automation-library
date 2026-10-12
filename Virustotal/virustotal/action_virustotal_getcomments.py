@@ -18,7 +18,7 @@ class VirusTotalGetCommentsAction(Action):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def run(self, arguments: VirusTotalGetCommentsArguments) -> dict | None:
+    def run(self, arguments: VirusTotalGetCommentsArguments) -> dict:
         resource = arguments.resource
 
         url: str = "https://www.virustotal.com/vtapi/v2/"

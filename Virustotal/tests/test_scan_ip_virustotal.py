@@ -307,7 +307,7 @@ def test_virustotal_scan_ip():
         )
 
 
-def test_virustotal_scan_ip_returns_none_if_ip_empty(requests_mock):
+def test_virustotal_scan_ip_raises_if_ip_empty(requests_mock):
     vt: VirusTotalScanIPAction = VirusTotalScanIPAction()
     vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
 
@@ -316,7 +316,7 @@ def test_virustotal_scan_ip_returns_none_if_ip_empty(requests_mock):
     assert requests_mock.call_count == 0
 
 
-def test_virustotal_scan_ip_returns_none_if_ip_invalid(requests_mock):
+def test_virustotal_scan_ip_raises_if_ip_invalid(requests_mock):
     vt: VirusTotalScanIPAction = VirusTotalScanIPAction()
     vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
 
@@ -325,7 +325,7 @@ def test_virustotal_scan_ip_returns_none_if_ip_invalid(requests_mock):
     assert requests_mock.call_count == 0
 
 
-def test_virustotal_scan_ip_returns_none_if_ip_missing(requests_mock):
+def test_virustotal_scan_ip_raises_if_ip_missing(requests_mock):
     vt: VirusTotalScanIPAction = VirusTotalScanIPAction()
     vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
 

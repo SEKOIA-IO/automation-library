@@ -415,7 +415,7 @@ def test_virustotal_check_hash():
         )
 
 
-def test_virustotal_check_hash_returns_none_if_hash_empty(requests_mock):
+def test_virustotal_check_hash_raises_if_hash_empty(requests_mock):
     vt: VirusTotalScanHashAction = VirusTotalScanHashAction()
     vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
 
@@ -424,7 +424,7 @@ def test_virustotal_check_hash_returns_none_if_hash_empty(requests_mock):
     assert requests_mock.call_count == 0
 
 
-def test_virustotal_check_hash_returns_none_if_hash_missing(requests_mock):
+def test_virustotal_check_hash_raises_if_hash_missing(requests_mock):
     vt: VirusTotalScanHashAction = VirusTotalScanHashAction()
     vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
 

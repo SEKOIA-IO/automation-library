@@ -18,7 +18,7 @@ class VirusTotalScanIPAction(Action):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def run(self, arguments: VirusTotalScanIPArguments) -> dict | None:
+    def run(self, arguments: VirusTotalScanIPArguments) -> dict:
         ip_value = str(arguments.ip)
 
         url: str = "https://www.virustotal.com/vtapi/v2/"

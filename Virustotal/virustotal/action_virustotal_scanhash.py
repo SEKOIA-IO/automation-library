@@ -20,7 +20,7 @@ class VirusTotalScanHashAction(Action):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def run(self, arguments: VirusTotalScanHashArguments) -> dict | None:
+    def run(self, arguments: VirusTotalScanHashArguments) -> dict:
         hash_value = arguments.hash
 
         url: str = "https://www.virustotal.com/vtapi/v2/"

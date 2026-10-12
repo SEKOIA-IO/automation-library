@@ -21,7 +21,7 @@ class VirusTotalPostCommentAction(Action):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def run(self, arguments: VirusTotalPostCommentArguments) -> dict | None:
+    def run(self, arguments: VirusTotalPostCommentArguments) -> dict:
         resource = arguments.resource
         comment = arguments.comment
 

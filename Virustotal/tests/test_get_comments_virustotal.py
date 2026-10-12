@@ -60,7 +60,7 @@ def test_virustotal_get_comments():
         )
 
 
-def test_virustotal_get_comments_returns_none_if_resource_empty(requests_mock):
+def test_virustotal_get_comments_raises_if_resource_empty(requests_mock):
     vt: VirusTotalGetCommentsAction = VirusTotalGetCommentsAction()
     vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
 
@@ -69,7 +69,7 @@ def test_virustotal_get_comments_returns_none_if_resource_empty(requests_mock):
     assert requests_mock.call_count == 0
 
 
-def test_virustotal_get_comments_returns_none_if_resource_missing(requests_mock):
+def test_virustotal_get_comments_raises_if_resource_missing(requests_mock):
     vt: VirusTotalGetCommentsAction = VirusTotalGetCommentsAction()
     vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
 

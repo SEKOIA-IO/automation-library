@@ -3,7 +3,7 @@ import time
 from posixpath import join as urljoin
 
 import requests
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 from requests import Response
 from sekoia_automation.action import Action
 
@@ -13,7 +13,11 @@ from virustotal.utils import virustotal_detection_outputs
 
 class VirusTotalScanFileArguments(BaseModel):
     file: str = Field(..., min_length=1, description="Path of the file to scan")
-    detect_threshold: int = Field(default=1, description="Number of positives to consider the file detected")
+    detect_threshold: int = Field(
+        default=1,
+        validation_alias=AliasChoices("detect_threshold", "detect_treshold"),
+        description="Number of positives to consider the file detected",
+    )
 
 
 class VirusTotalScanFileAction(Action):
@@ -24,7 +28,7 @@ class VirusTotalScanFileAction(Action):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def run(self, arguments: VirusTotalScanFileArguments) -> dict | None:
+    def run(self, arguments: VirusTotalScanFileArguments) -> dict:
         file_path = arguments.file
 
         url: str = "https://www.virustotal.com/vtapi/v2/"
