@@ -129,8 +129,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         self.heartbeat()
 
     def handle_event(self, message: dict) -> None:
-        """Handle a v2 notification; overridden by each concrete trigger.
-        """
+        """Handle a v2 notification; overridden by each concrete trigger."""
 
     def on_close(self, *args, **kwargs):  # noqa: ARG002  # pragma: no cover
         # Reset teardown so we can run again the app from the start
