@@ -20,7 +20,7 @@ class MattermostPostMessageAction(Action):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def run(self, arguments: MattermostPostMessageArguments) -> dict | None:
+    def run(self, arguments: MattermostPostMessageArguments) -> dict:
         hook_url: str = self.module.configuration.get("hook_url")
 
         text: str = arguments.message

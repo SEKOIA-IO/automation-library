@@ -1,38 +1,29 @@
-import requests
+# natives
 from uuid import UUID
+
+import requests
 
 # third parties
 from colour import Color
-from pydantic import BaseModel, Field, HttpUrl, model_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 from requests import Response
 from sekoia_automation.action import Action
 
 
 class MattermostPostAlertArguments(BaseModel):
-    alert_uuid: str = Field(..., description="The identifier (UUID or short id) of the alert")
+    alert_uuid: str = Field(..., min_length=1, description="The identifier (UUID or short id) of the alert")
     api_key: str = Field(..., min_length=1, description="The Sekoia.io API-Key to read the alert content.")
     base_url: HttpUrl = Field(..., description="Base URL of Sekoia.io api (e.g. https://api.sekoia.io/).")
     channel: str | None = None
     pretext: str | None = None
 
-    @model_validator(mode="after")
-    def validate_alert_uuid(self) -> "MattermostPostAlertArguments":
-        # emptiness check
-        if self.alert_uuid is None or not self.alert_uuid.strip():
-            raise ValueError("The alert identifier must not be empty")
-
-        # short id validation
-        if self.alert_uuid.startswith("AL"):
-            # If the identifier starts with "AL", we assume it's a short ID
-            return self
-
-        # UUID validation
-        try:
-            UUID(self.alert_uuid)
-        except ValueError:
-            raise ValueError(f"Invalid alert identifier: {self.alert_uuid}")
-
-        return self
+    @field_validator("alert_uuid")
+    @classmethod
+    def validate_alert_uuid(cls, value: str) -> str:
+        # short ids start with "AL"; anything else must be a UUID
+        if not value.startswith("AL"):
+            UUID(value)
+        return value
 
 
 class MattermostPostAlertAction(Action):
@@ -48,13 +39,13 @@ class MattermostPostAlertAction(Action):
         Returns the definition of an alert
         """
 
-        url = f"{str(base_url)}v1/sic/alerts/{alert_uuid}"
+        url = f"{base_url}v1/sic/alerts/{alert_uuid}"
 
         response: Response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
         response.raise_for_status()
         return response.json()
 
-    def run(self, arguments: MattermostPostAlertArguments) -> dict | None:
+    def run(self, arguments: MattermostPostAlertArguments) -> dict:
         alert_info = self._get_alert(
             alert_uuid=arguments.alert_uuid,
             api_key=arguments.api_key,
