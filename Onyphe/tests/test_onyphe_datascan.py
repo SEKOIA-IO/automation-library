@@ -178,7 +178,7 @@ def result_page_1():
         {"string": "example", "first_page": 0},
     ],
 )
-def test_missing_string_argument_does_not_call_api(arguments):
+def test_invalid_arguments_do_not_call_api(arguments):
     action = OnypheDatascanAction()
     action.module.configuration = {"apikey": apikey}
 

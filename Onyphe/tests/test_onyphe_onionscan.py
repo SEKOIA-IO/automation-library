@@ -1,8 +1,8 @@
 import pytest
+from pydantic import ValidationError
 from generic_onyphe_tests import *  # noqa: F401, F403
 
 from onyphe.action_onyphe_onionscan import OnypheOnionscanAction
-from onyphe.errors import InvalidArgument
 
 
 @pytest.fixture
@@ -28,9 +28,11 @@ def arguments():
 @pytest.fixture
 def bad_arguments():
     return [
-        (InvalidArgument, {"onion": 33}),
-        (InvalidArgument, {"onion": "examplecom.onion"}),
-        (TypeError, {}),
+        (ValidationError, {"onion": 33}),
+        (ValidationError, {"onion": "examplecom.onion"}),
+        (ValidationError, {}),
+        (ValidationError, {"onion": "MH7MKFVEZTS5J6YU.ONION", "budget": -1}),
+        (ValidationError, {"onion": "MH7MKFVEZTS5J6YU.ONION", "first_page": 0}),
     ]
 
 

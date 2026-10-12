@@ -4,7 +4,7 @@ import requests
 from requests import Response
 from sekoia_automation.action import Action
 
-from onyphe.utils import get_arg_ip
+from onyphe.models import OnypheIPArguments
 
 
 class OnypheGeolocAction(Action):
@@ -12,10 +12,9 @@ class OnypheGeolocAction(Action):
     Action to geolocalize an IP with Onyphe
     """
 
-    def run(self, arguments) -> dict:
+    def run(self, arguments: OnypheIPArguments) -> dict:
         url: str = "https://www.onyphe.io/api/v2/simple/"
-        ip = get_arg_ip(arguments)
-        get_url: str = urljoin(url, "geoloc/" + ip)
+        get_url: str = urljoin(url, "geoloc/" + str(arguments.ip))
 
         response: Response = requests.get(get_url)
         response.raise_for_status()

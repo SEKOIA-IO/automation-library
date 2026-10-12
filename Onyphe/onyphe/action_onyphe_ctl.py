@@ -2,7 +2,8 @@ from posixpath import join as urljoin
 
 from sekoia_automation.action import Action
 
-from onyphe.utils import get_arg_domain, get_with_paging
+from onyphe.models import OnypheDomainArguments
+from onyphe.utils import get_with_paging
 
 
 class OnypheCtlAction(Action):
@@ -16,12 +17,10 @@ class OnypheCtlAction(Action):
     > information and also feed our passive DNS (resolver information category).
     """
 
-    def run(self, arguments) -> dict:
+    def run(self, arguments: OnypheDomainArguments) -> dict:
         url: str = "https://www.onyphe.io/api/v2/simple/"
-        domain = get_arg_domain(arguments)
-        get_url: str = urljoin(url, "ctl/" + domain)
+        get_url: str = urljoin(url, "ctl/" + arguments.domain)
 
-        budget = arguments.get("budget", 1)
-        params = {"page": arguments.get("first_page", 1)}
+        params = {"page": arguments.first_page}
 
-        return get_with_paging(get_url, self.module.configuration, budget, params)
+        return get_with_paging(get_url, self.module.configuration, arguments.budget, params)

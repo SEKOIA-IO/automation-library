@@ -2,7 +2,8 @@ from posixpath import join as urljoin
 
 from sekoia_automation.action import Action
 
-from onyphe.utils import get_arg_ip, get_with_paging
+from onyphe.models import OnyphePagedIPArguments
+from onyphe.utils import get_with_paging
 
 
 class OnypheSynscanAction(Action):
@@ -15,12 +16,10 @@ class OnypheSynscanAction(Action):
     > once a month, but other ports may be scanned according to press releases.
     """
 
-    def run(self, arguments) -> dict:
+    def run(self, arguments: OnyphePagedIPArguments) -> dict:
         url: str = "https://www.onyphe.io/api/v2/simple/"
-        ip = get_arg_ip(arguments)
-        get_url: str = urljoin(url, "synscan/" + ip)
+        get_url: str = urljoin(url, "synscan/" + str(arguments.ip))
 
-        budget = arguments.get("budget", 1)
-        params = {"page": arguments.get("first_page", 1)}
+        params = {"page": arguments.first_page}
 
-        return get_with_paging(get_url, self.module.configuration, budget, params)
+        return get_with_paging(get_url, self.module.configuration, arguments.budget, params)

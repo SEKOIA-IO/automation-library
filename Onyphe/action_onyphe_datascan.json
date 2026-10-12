@@ -22,6 +22,18 @@
       }
     },
     "required": [],
+    "oneOf": [
+      {
+        "required": [
+          "ip"
+        ]
+      },
+      {
+        "required": [
+          "string"
+        ]
+      }
+    ],
     "title": "Arguments",
     "type": "object"
   },

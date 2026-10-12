@@ -1,34 +1,15 @@
-import ipaddress
 from posixpath import join as urljoin
-from typing import Annotated, Any
 
-from pydantic import (
-    BaseModel,
-    BeforeValidator,
-    Field,
-    IPvAnyAddress,
-    model_validator,
-)
+from pydantic import Field, model_validator
 from sekoia_automation.action import Action
 
+from onyphe.models import IPAddressArgument, OnyphePagingArguments
 from onyphe.utils import get_with_paging
 
 
-def reject_non_string(value: Any) -> Any:
-    # IPvAnyAddress would otherwise turn an integer into an address (8 -> 0.0.0.8)
-    if value is None or isinstance(value, (str, ipaddress.IPv4Address, ipaddress.IPv6Address)):
-        return value
-    raise ValueError("Input should be a string IP address")
-
-
-IPAddressArgument = Annotated[IPvAnyAddress, BeforeValidator(reject_non_string)]
-
-
-class OnypheDatascanArguments(BaseModel):
+class OnypheDatascanArguments(OnyphePagingArguments):
     ip: IPAddressArgument | None = Field(default=None, description="IP address to scan")
     string: str | None = Field(default=None, min_length=1, description="String to scan")
-    budget: int = Field(default=1, ge=0, description="Maximum number of pages to fetch, or 0 for all pages")
-    first_page: int = Field(default=1, ge=1, description="First page number to fetch")
 
     @model_validator(mode="after")
     def validate_entrypoint(self) -> "OnypheDatascanArguments":
