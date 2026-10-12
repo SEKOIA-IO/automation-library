@@ -118,3 +118,14 @@ def test_encode_dataset_handles_unicode(requests_mock):
 
     assert isinstance(result, bytes)
     assert result.decode("utf-8") == dataset_str
+
+
+def test_encode_dataset_logs_and_raises_on_unencodable_content(requests_mock):
+    action = make_action()
+
+    with pytest.raises(UnicodeEncodeError):
+        action.encode_dataset("name\n\ud800")
+
+    assert len(action._logs) == 1
+    assert action._logs[0]["level"] == "error"
+    assert "Error encoding dataset" in action._logs[0]["message"]

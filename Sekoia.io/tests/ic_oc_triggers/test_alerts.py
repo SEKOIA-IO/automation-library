@@ -3189,3 +3189,359 @@ class TestAlertEventsThresholdTrigger_RaceConditionFix:
         # Second trigger: 5 new events (10 - 5)
         assert calls[1][1]["event"]["trigger_context"]["new_events"] == 5
         assert "volume_threshold" in calls[1][1]["event"]["trigger_context"]["reason"]
+
+
+def test_alert_trigger_filter_by_rule_names_no_match(
+    alert_trigger, samplenotif_alert_created, sample_sicalertapi_mock
+):
+    alert_trigger.send_event = MagicMock()
+    alert_trigger.configuration = {"rule_names_filter": ["another rule"]}
+
+    with sample_sicalertapi_mock:
+        alert_trigger.handle_event(samplenotif_alert_created)
+
+    alert_trigger.send_event.assert_not_called()
+
+
+def test_comment_trigger_filter_by_rule_names_no_match(
+    module_configuration, symphony_storage, sample_sicalertapi, samplenotif_alert_comment_created
+):
+    trigger = AlertCommentCreatedTrigger()
+    trigger.configuration = {"rule_names_filter": ["another rule"]}
+    trigger._data_path = symphony_storage
+    trigger.module.configuration = module_configuration
+    trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+    trigger.send_event = MagicMock()
+
+    alert_uuid = samplenotif_alert_comment_created["attributes"]["alert_uuid"]
+    comment_uuid = samplenotif_alert_comment_created["attributes"]["uuid"]
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"http://fake.url/api/v1/sic/alerts/{alert_uuid}", json=sample_sicalertapi)
+        mock.get(
+            f"http://fake.url/api/v1/sic/alerts/{alert_uuid}/comments/{comment_uuid}",
+            json={"uuid": comment_uuid, "content": "string"},
+        )
+        trigger.handle_event(samplenotif_alert_comment_created)
+
+    trigger.send_event.assert_not_called()
+
+
+def _threshold_message(alert_uuid: str = "alert-uuid-threshold-1234", action: str = "updated", **attributes):
+    return {"type": "alert", "action": action, "attributes": {"uuid": alert_uuid, **attributes}}
+
+
+class TestAlertEventsThresholdTrigger_Coverage:
+    def test_get_alert_lock_evicts_oldest_unlocked_lock(self, threshold_trigger):
+        threshold_trigger._max_alert_locks = 2
+        busy_lock = threshold_trigger._get_alert_lock("alert-1")
+        threshold_trigger._get_alert_lock("alert-2")
+
+        with busy_lock:
+            threshold_trigger._get_alert_lock("alert-3")
+
+        # alert-1 is held, so the oldest *unlocked* lock (alert-2) is evicted
+        assert list(threshold_trigger._alert_locks) == ["alert-1", "alert-3"]
+
+    def test_evict_oldest_unlocked_keeps_held_locks(self, threshold_trigger):
+        lock = threshold_trigger._get_alert_lock("alert-1")
+
+        with lock:
+            threshold_trigger._evict_oldest_unlocked()
+
+        assert list(threshold_trigger._alert_locks) == ["alert-1"]
+
+    def test_handle_event_aborts_when_initialization_fails(self, threshold_trigger, monkeypatch):
+        error = RuntimeError("boom")
+        monkeypatch.setattr(threshold_trigger, "_ensure_initialized", Mock(side_effect=error))
+        monkeypatch.setattr(threshold_trigger, "_handle_event_locked", Mock())
+
+        threshold_trigger.handle_event(_threshold_message())
+
+        threshold_trigger.log_exception.assert_called_once_with(error, message="Failed to initialize, aborting")
+        threshold_trigger._handle_event_locked.assert_not_called()
+
+    @pytest.mark.parametrize("raw_count", ["not-a-number", [1, 2]])
+    def test_extract_event_count_invalid(self, threshold_trigger, raw_count):
+        assert threshold_trigger._extract_event_count({"updated": {"similar": raw_count}}) is None
+        threshold_trigger.log.assert_called_once_with(
+            message=f"Invalid event count in notification: {raw_count!r}", level="warning"
+        )
+
+    def test_handle_event_locked_returns_without_state_manager(
+        self, threshold_trigger, sample_threshold_alert, monkeypatch
+    ):
+        threshold_trigger.state_manager = None
+        monkeypatch.setattr(threshold_trigger, "_get_alert_info_optimized", Mock(return_value=sample_threshold_alert))
+        monkeypatch.setattr(threshold_trigger, "_evaluate_thresholds", Mock())
+
+        threshold_trigger._handle_event_locked(sample_threshold_alert["uuid"], "alert", _threshold_message(), 10)
+
+        threshold_trigger._evaluate_thresholds.assert_not_called()
+        threshold_trigger.send_event.assert_not_called()
+
+    def test_handle_event_locked_state_load_failure_uses_no_previous_state(
+        self, threshold_trigger, sample_threshold_alert, monkeypatch
+    ):
+        threshold_trigger._ensure_initialized()
+        error = OSError("S3 unavailable")
+        monkeypatch.setattr(threshold_trigger.state_manager, "reload_state", Mock(side_effect=error))
+        monkeypatch.setattr(threshold_trigger, "_get_alert_info_optimized", Mock(return_value=sample_threshold_alert))
+        monkeypatch.setattr(threshold_trigger, "_evaluate_thresholds", Mock(return_value=(False, {})))
+
+        threshold_trigger._handle_event_locked(sample_threshold_alert["uuid"], "alert", _threshold_message(), 10)
+
+        threshold_trigger.log_exception.assert_any_call(
+            error, message="Failed to load previous state", alert_uuid=sample_threshold_alert["uuid"]
+        )
+        threshold_trigger._evaluate_thresholds.assert_called_once_with(sample_threshold_alert, None, 10)
+
+    def test_handle_event_locked_threshold_evaluation_failure(
+        self, threshold_trigger, sample_threshold_alert, monkeypatch
+    ):
+        threshold_trigger._ensure_initialized()
+        error = ValueError("bad thresholds")
+        monkeypatch.setattr(threshold_trigger, "_get_alert_info_optimized", Mock(return_value=sample_threshold_alert))
+        monkeypatch.setattr(threshold_trigger, "_evaluate_thresholds", Mock(side_effect=error))
+
+        threshold_trigger._handle_event_locked(sample_threshold_alert["uuid"], "alert", _threshold_message(), 10)
+
+        threshold_trigger.log_exception.assert_called_once_with(
+            error, message="Failed to evaluate thresholds", alert_uuid=sample_threshold_alert["uuid"]
+        )
+        threshold_trigger.send_event.assert_not_called()
+
+    def test_handle_event_locked_alert_info_update_failure(
+        self, threshold_trigger, sample_threshold_alert, monkeypatch
+    ):
+        threshold_trigger._ensure_initialized()
+        error = OSError("cannot save")
+        monkeypatch.setattr(threshold_trigger.state_manager, "update_alert_info", Mock(side_effect=error))
+        monkeypatch.setattr(threshold_trigger, "_get_alert_info_optimized", Mock(return_value=sample_threshold_alert))
+        monkeypatch.setattr(threshold_trigger, "_evaluate_thresholds", Mock(return_value=(False, {})))
+
+        threshold_trigger._handle_event_locked(sample_threshold_alert["uuid"], "alert", _threshold_message(), 10)
+
+        threshold_trigger.log_exception.assert_called_once_with(
+            error, message="Failed to update alert info", alert_uuid=sample_threshold_alert["uuid"]
+        )
+        threshold_trigger.send_event.assert_not_called()
+
+    def test_handle_event_locked_send_failure_skips_metrics_and_log(
+        self, threshold_trigger, sample_threshold_alert, monkeypatch
+    ):
+        threshold_trigger._ensure_initialized()
+        error = RuntimeError("send failed")
+        context = {"reason": "volume_threshold", "new_events": 150, "current_count": 150}
+        monkeypatch.setattr(threshold_trigger, "_get_alert_info_optimized", Mock(return_value=sample_threshold_alert))
+        monkeypatch.setattr(threshold_trigger, "_evaluate_thresholds", Mock(return_value=(True, context)))
+        monkeypatch.setattr(threshold_trigger, "_send_threshold_event", Mock(side_effect=error))
+
+        threshold_trigger._handle_event_locked(sample_threshold_alert["uuid"], "alert", _threshold_message(), 150)
+
+        threshold_trigger.log_exception.assert_called_once_with(
+            error, message="Failed to send threshold event", alert_uuid=sample_threshold_alert["uuid"]
+        )
+        # State is still updated before sending
+        assert threshold_trigger.state_manager.get_alert_state(sample_threshold_alert["uuid"]) is not None
+        assert not any(
+            str(c.kwargs.get("message", "")).startswith("Triggered for alert")
+            for c in threshold_trigger.log.mock_calls
+        )
+
+    def test_get_alert_info_optimized_created_uses_notification(self, threshold_trigger, monkeypatch):
+        monkeypatch.setattr(threshold_trigger, "_retrieve_alert_from_alertapi", Mock())
+        attrs = {"uuid": "alert-1", "short_id": "ALabc", "rule": {"uuid": "r", "name": "n"}}
+
+        alert = threshold_trigger._get_alert_info_optimized("alert-1", "created", attrs)
+
+        assert alert["uuid"] == "alert-1"
+        assert alert["short_id"] == "ALabc"
+        threshold_trigger._retrieve_alert_from_alertapi.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "method,args",
+        [
+            ("_trigger_event_search_job", ("ALabc", "2025-01-01", "2025-01-02", 10)),
+            ("_wait_for_search_job", ("job-uuid",)),
+            ("_get_search_job_events_page", ("job-uuid", 10, 0)),
+        ],
+    )
+    def test_search_helpers_require_http_session(self, threshold_trigger, method, args):
+        assert threshold_trigger._http_session is None
+        with pytest.raises(RuntimeError, match="HTTP session not initialized"):
+            getattr(threshold_trigger, method)(*args)
+
+    def test_wait_for_search_job_retries_on_timeout(self, threshold_trigger, requests_mock, monkeypatch):
+        threshold_trigger._ensure_initialized()
+        monkeypatch.setattr("sekoiaio.triggers.alerts.time.sleep", Mock())
+        url = "http://fake.url/api/v1/sic/conf/events/search/jobs/job-uuid"
+        requests_mock.get(url, [{"exc": requests.exceptions.ConnectTimeout}, {"json": {"status": 2}}])
+
+        assert threshold_trigger._wait_for_search_job("job-uuid", timeout=10) is True
+        assert requests_mock.call_count == 2
+        assert threshold_trigger.log.call_args_list[-1].kwargs["message"] == (
+            "Transient timeout polling search job job-uuid, retrying"
+        )
+
+    def test_wait_for_search_job_retries_on_server_error(self, threshold_trigger, requests_mock, monkeypatch):
+        threshold_trigger._ensure_initialized()
+        monkeypatch.setattr("sekoiaio.triggers.alerts.time.sleep", Mock())
+        url = "http://fake.url/api/v1/sic/conf/events/search/jobs/job-uuid"
+        requests_mock.get(url, [{"status_code": 503}, {"json": {"status": 2}}])
+
+        assert threshold_trigger._wait_for_search_job("job-uuid", timeout=10) is True
+        assert requests_mock.call_count == 2
+        assert threshold_trigger.log.call_args_list[-1].kwargs["message"] == (
+            "Transient HTTP error polling search job job-uuid, retrying"
+        )
+
+    def test_wait_for_search_job_raises_on_client_error(self, threshold_trigger, requests_mock, monkeypatch):
+        threshold_trigger._ensure_initialized()
+        monkeypatch.setattr("sekoiaio.triggers.alerts.time.sleep", Mock())
+        url = "http://fake.url/api/v1/sic/conf/events/search/jobs/job-uuid"
+        requests_mock.get(url, status_code=404)
+
+        with pytest.raises(requests.exceptions.HTTPError):
+            threshold_trigger._wait_for_search_job("job-uuid", timeout=10)
+        assert requests_mock.call_count == 1
+
+    def test_get_search_job_results_warns_on_missing_results(self, threshold_trigger, monkeypatch):
+        pages = [{"items": [{"id": 1}], "total": 3}, {"items": [], "total": 3}]
+        monkeypatch.setattr(threshold_trigger, "_get_search_job_events_page", Mock(side_effect=pages))
+
+        results = threshold_trigger._get_search_job_results("job-uuid", page_size=1)
+
+        assert results == [{"id": 1}]
+        threshold_trigger.log.assert_called_once_with(
+            "Fetched fewer results than expected", level="warning", fetched=1, total=3, job_uuid="job-uuid"
+        )
+
+    @pytest.mark.parametrize("missing", ["short_id", "first_seen_at", "last_seen_at"])
+    def test_fetch_alert_events_missing_fields(self, threshold_trigger, sample_threshold_alert, missing, monkeypatch):
+        monkeypatch.setattr(threshold_trigger, "_trigger_event_search_job", Mock())
+        alert = {**sample_threshold_alert, missing: None}
+
+        assert threshold_trigger._fetch_alert_events(alert, True, None, 10) is None
+        threshold_trigger._trigger_event_search_job.assert_not_called()
+        threshold_trigger.log.assert_called_once_with(
+            message="Alert missing required fields for event fetching", level="error", alert_uuid=alert["uuid"]
+        )
+
+    def test_fetch_alert_events_search_job_failed(self, threshold_trigger, sample_threshold_alert, monkeypatch):
+        monkeypatch.setattr(threshold_trigger, "_trigger_event_search_job", Mock(return_value="job-uuid"))
+        monkeypatch.setattr(threshold_trigger, "_wait_for_search_job", Mock(return_value=False))
+        monkeypatch.setattr(threshold_trigger, "_get_search_job_results", Mock())
+
+        assert threshold_trigger._fetch_alert_events(sample_threshold_alert, True, None, 10) is None
+        threshold_trigger._get_search_job_results.assert_not_called()
+
+    def test_get_total_event_count_success(self, threshold_trigger, sample_threshold_alert, monkeypatch):
+        monkeypatch.setattr(threshold_trigger, "_trigger_event_search_job", Mock(return_value="job-uuid"))
+        monkeypatch.setattr(threshold_trigger, "_wait_for_search_job", Mock(return_value=True))
+        monkeypatch.setattr(threshold_trigger, "_get_search_job_events_page", Mock(return_value={"total": 42}))
+
+        assert threshold_trigger._get_total_event_count(sample_threshold_alert) == 42
+        threshold_trigger._trigger_event_search_job.assert_called_once_with(
+            "ALT-12345", sample_threshold_alert["first_seen_at"], sample_threshold_alert["last_seen_at"], limit=1
+        )
+        threshold_trigger._get_search_job_events_page.assert_called_once_with("job-uuid", limit=1, offset=0)
+
+    def test_get_total_event_count_missing_fields(self, threshold_trigger, sample_threshold_alert, monkeypatch):
+        monkeypatch.setattr(threshold_trigger, "_trigger_event_search_job", Mock())
+
+        assert threshold_trigger._get_total_event_count({**sample_threshold_alert, "short_id": None}) is None
+        threshold_trigger._trigger_event_search_job.assert_not_called()
+
+    def test_get_total_event_count_search_job_failed(self, threshold_trigger, sample_threshold_alert, monkeypatch):
+        monkeypatch.setattr(threshold_trigger, "_trigger_event_search_job", Mock(return_value="job-uuid"))
+        monkeypatch.setattr(threshold_trigger, "_wait_for_search_job", Mock(return_value=False))
+
+        assert threshold_trigger._get_total_event_count(sample_threshold_alert) is None
+        threshold_trigger.log.assert_called_once_with(
+            message="Search job did not succeed for event counting",
+            level="error",
+            alert_uuid=sample_threshold_alert["uuid"],
+        )
+
+    def test_get_total_event_count_api_error(self, threshold_trigger, sample_threshold_alert, monkeypatch):
+        error = requests.exceptions.HTTPError("500")
+        monkeypatch.setattr(threshold_trigger, "_trigger_event_search_job", Mock(side_effect=error))
+
+        assert threshold_trigger._get_total_event_count(sample_threshold_alert) is None
+        threshold_trigger.log_exception.assert_called_once_with(
+            error, message="Failed to get event count", alert_uuid=sample_threshold_alert["uuid"]
+        )
+
+    def test_cleanup_purges_stale_unlocked_locks(self, threshold_trigger):
+        threshold_trigger._ensure_initialized()
+        threshold_trigger.state_manager.update_alert_state(
+            alert_uuid="kept", alert_short_id="ALkept", rule_uuid="r", rule_name="n", event_count=1
+        )
+        threshold_trigger._get_alert_lock("kept")
+        threshold_trigger._get_alert_lock("stale")
+        held = threshold_trigger._get_alert_lock("stale-held")
+
+        with held:
+            threshold_trigger._cleanup_old_states()
+
+        assert set(threshold_trigger._alert_locks) == {"kept", "stale-held"}
+        threshold_trigger.log.assert_called_with(
+            message="State cleanup: removed 0 entries, purged 1 locks",
+            level="info",
+            removed_count=0,
+            purged_locks=1,
+        )
+
+
+class TestAlertStateManager_Coverage:
+    def test_load_state_migrates_older_version(self, state_file_path, mock_logger):
+        state_file_path.write_text(
+            json.dumps(
+                {
+                    "alerts": {"alert-1": {"alert_uuid": "alert-1", "last_triggered_event_count": 7}},
+                    "metadata": {"version": "1.0", "last_cleanup": "2025-01-01T00:00:00+00:00"},
+                }
+            )
+        )
+
+        manager = AlertStateManager(state_file_path, logger=mock_logger)
+
+        alert_state = manager.get_alert_state("alert-1")
+        assert alert_state["alert_info"] is None
+        assert alert_state["current_event_count"] == 7
+        assert alert_state["last_event_at"] is None
+        mock_logger.assert_any_call(
+            message="Migrating state from version 1.0 to 1.1", level="info", old_version="1.0", new_version="1.1"
+        )
+
+    def test_load_state_falls_back_to_fresh_state_on_unexpected_error(self, mock_logger):
+        state_file_path = MagicMock()
+        state_file_path.open.side_effect = RuntimeError("unexpected")
+        state_file_path.__str__.return_value = "s3://bucket/state.json"
+
+        manager = AlertStateManager(state_file_path, logger=mock_logger)
+
+        assert manager.get_all_alerts() == {}
+        assert manager._state["metadata"]["version"] == AlertStateManager.VERSION
+        mock_logger.assert_any_call(
+            message="Failed to load state from S3, starting with fresh state",
+            level="error",
+            error="unexpected",
+            error_type="RuntimeError",
+            file_path="s3://bucket/state.json",
+        )
+
+    def test_pending_time_check_handles_naive_timestamps(self, state_manager):
+        naive_reference = (datetime.now(UTC) - timedelta(hours=2)).replace(tzinfo=None).isoformat()
+        state_manager._state["alerts"]["alert-1"] = {
+            "alert_uuid": "alert-1",
+            "last_event_at": naive_reference,
+            "created_at": naive_reference,
+            "current_event_count": 5,
+            "last_triggered_event_count": 0,
+        }
+
+        pending = state_manager.get_alerts_pending_time_check(time_window_hours=1)
+
+        assert [state["alert_uuid"] for state in pending] == ["alert-1"]

@@ -223,3 +223,20 @@ def test_delete_dataset_not_found(requests_mock):
 
     assert action._logs[0]["level"] == "error"
     assert "Response status: 404" in action._logs[0]["message"]
+
+
+def test_delete_dataset_by_name_success(requests_mock):
+    action = make_action()
+
+    requests_mock.get(
+        DATASETS_URL,
+        json={"items": [{"uuid": DATASET_UUID, "name": "my_dataset"}], "total": 1},
+    )
+    requests_mock.delete(f"{DATASETS_URL}/{DATASET_UUID}", status_code=204)
+
+    action.run(DeleteDatasetArguments(name="my_dataset"))
+
+    assert [request.method for request in requests_mock.request_history] == ["GET", "DELETE"]
+    assert requests_mock.request_history[0].qs["name"] == ["my_dataset"]
+    assert requests_mock.last_request.url == f"{DATASETS_URL}/{DATASET_UUID}"
+    assert len(action._logs) == 0
