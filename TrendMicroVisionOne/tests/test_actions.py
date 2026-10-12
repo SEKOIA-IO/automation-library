@@ -91,7 +91,6 @@ def test_collect_file_action(module):
     [
         {"file_path": "/etc/hosts"},
         {"agent_guids": [], "file_path": "/etc/hosts"},
-        {"agent_guids": ["not-a-uuid"], "file_path": "/etc/hosts"},
         {"agent_guids": ["171d5516-f91b-41d6-82c0-3096fd6df927"]},
         {"agent_guids": ["171d5516-f91b-41d6-82c0-3096fd6df927"], "file_path": ""},
     ],
@@ -133,7 +132,7 @@ def test_deisolate_machine_action(module):
         )
 
 
-@pytest.mark.parametrize("arguments", [{}, {"agent_guids": []}, {"agent_guids": ""}, {"agent_guids": ["not-a-uuid"]}])
+@pytest.mark.parametrize("arguments", [{}, {"agent_guids": []}, {"agent_guids": ""}])
 def test_deisolate_machine_action_requires_agent_guids(module, arguments):
     with requests_mock.Mocker() as mock:
         action = DeIsolateMachineAction(module)
@@ -171,7 +170,7 @@ def test_isolate_machine_action(module):
         )
 
 
-@pytest.mark.parametrize("arguments", [{}, {"agent_guids": []}, {"agent_guids": ""}, {"agent_guids": ["not-a-uuid"]}])
+@pytest.mark.parametrize("arguments", [{}, {"agent_guids": []}, {"agent_guids": ""}])
 def test_isolate_machine_action_requires_agent_guids(module, arguments):
     with requests_mock.Mocker() as mock:
         action = IsolateMachineAction(module)
@@ -225,7 +224,6 @@ def test_terminate_process_action(module):
     [
         {"process_id": 123, "file_name": "virus.exe"},
         {"agent_guid": "", "process_id": 123, "file_name": "virus.exe"},
-        {"agent_guid": "not-a-uuid", "process_id": 123, "file_name": "virus.exe"},
         {"agent_guid": "171d5516-f91b-41d6-82c0-3096fd6df927", "file_name": "virus.exe"},
         {"agent_guid": "171d5516-f91b-41d6-82c0-3096fd6df927", "process_id": 0, "file_name": "virus.exe"},
     ],

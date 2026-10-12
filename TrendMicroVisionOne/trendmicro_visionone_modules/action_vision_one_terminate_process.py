@@ -1,5 +1,4 @@
 from typing import Any, Optional
-from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -7,7 +6,7 @@ from .action_vision_one_base import TrendMicroVisionOneBaseAction
 
 
 class TerminateProcessArguments(BaseModel):
-    agent_guid: UUID = Field(..., description="The identifiers of the endpoints to isolate")
+    agent_guid: str = Field(..., min_length=1, description="The identifiers of the endpoints to isolate")
     process_id: int = Field(..., gt=0, description="Process ID to terminate")
     file_sha1: Optional[str] = None
     file_name: Optional[str] = None
@@ -30,7 +29,7 @@ class TerminateProcessAction(TrendMicroVisionOneBaseAction):
         url = f"{base_url}/v3.0/response/endpoints/terminateProcess"
 
         payload: list[dict[str, Any]] = []
-        item = {"agentGuid": str(agent_guid), "processId": process_id}
+        item = {"agentGuid": agent_guid, "processId": process_id}
         if description:
             item["description"] = description
 

@@ -1,5 +1,4 @@
 from typing import Any, Optional
-from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -7,7 +6,7 @@ from .action_vision_one_base import TrendMicroVisionOneBaseAction
 
 
 class CollectFileArguments(BaseModel):
-    agent_guids: list[UUID] = Field(..., min_length=1, description="Agent GUIDs")
+    agent_guids: list[str] = Field(..., min_length=1, description="Agent GUIDs")
     file_path: str = Field(..., min_length=1, description="Path of the file to collect")
     description: Optional[str] = None
 
@@ -23,7 +22,7 @@ class CollectFileAction(TrendMicroVisionOneBaseAction):
 
         payload: list[dict[str, Any]] = []
         for agent_guid in agent_guids:
-            item = {"agentGuid": str(agent_guid), "filePath": file_path}
+            item = {"agentGuid": agent_guid, "filePath": file_path}
 
             if description:
                 item["description"] = description
