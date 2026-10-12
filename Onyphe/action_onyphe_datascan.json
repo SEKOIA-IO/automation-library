@@ -8,7 +8,8 @@
       },
       "string": {
         "description": "The string to scan. Exactly one of 'ip' or 'string' must be specified",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "budget": {
         "description": "Maximum number of pages to retrieve",
