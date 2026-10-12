@@ -162,14 +162,15 @@ def test_mattermost_postalert_accepts_short_id():
         assert mock.call_count == 2
 
 
-def test_mattermost_postalert_accepts_base_url_with_path_prefix():
+@pytest.mark.parametrize("base_url", ["https://example.com/api/", "https://example.com/api"])
+def test_mattermost_postalert_accepts_base_url_with_path_prefix(base_url):
     hook_url: str = "https://my.chat.mattermost/hooks/123456"
 
     mt: MattermostPostAlertAction = MattermostPostAlertAction()
     mt.module.configuration = {"hook_url": hook_url}
 
     alert_uuid = "bec203a3-bc70-4430-80ad-f72fe11f3ad8"
-    base_url = "https://example.com/api/"
+    expected_url = f"https://example.com/api/v1/sic/alerts/{alert_uuid}"
 
     alert_info = {
         "urgency": {"current_value": 10, "display": "low"},
@@ -182,10 +183,10 @@ def test_mattermost_postalert_accepts_base_url_with_path_prefix():
         "details": "no detail provided",
     }
     with requests_mock.Mocker() as mock:
-        mock.get(f"{base_url}v1/sic/alerts/{alert_uuid}", json=alert_info)
+        mock.get(expected_url, json=alert_info)
         mock.post(hook_url, text="ok")
 
         mt.run({"alert_uuid": alert_uuid, "api_key": "AZERTYUI987654345678", "base_url": base_url})
 
         assert mock.call_count == 2
-        assert mock.request_history[0].url == f"{base_url}v1/sic/alerts/{alert_uuid}"
+        assert mock.request_history[0].url == expected_url

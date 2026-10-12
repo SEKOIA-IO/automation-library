@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Validate entrypoint arguments via native Pydantic v2 models instead of the `pydantic.v1` compatibility shim, rejecting missing or empty values before sending HTTP requests (`base_url` as `HttpUrl`, `api_key`, `message`, and `alert_uuid` kept as non-empty strings)
 - Validate `alert_uuid` as a UUID or an alert short id
 - Reject `base_url` values containing a query or a fragment
+- Build the alert URL correctly when `base_url` has a path prefix without a trailing slash
 
 ### Changed
 
