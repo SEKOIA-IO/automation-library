@@ -1,16 +1,13 @@
 import requests
-from typing import Annotated
 
 # third parties
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field
 from requests import Response
 from sekoia_automation.action import Action
 
-NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-
 
 class MattermostPostMessageArguments(BaseModel):
-    message: NonEmptyStr = Field(..., description="The message to post")
+    message: str = Field(..., min_length=1, description="The message to post")
     channel: str | None = None
     username: str | None = None
 

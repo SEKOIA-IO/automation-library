@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Validate entrypoint arguments via native Pydantic v2 models instead of the `pydantic.v1` compatibility shim, rejecting missing/empty/blank values before sending HTTP requests (`base_url` as `HttpUrl`, `api_key`, `message`, and `alert_uuid` kept as non-empty strings)
+- Validate entrypoint arguments via native Pydantic v2 models instead of the `pydantic.v1` compatibility shim, rejecting missing or empty values before sending HTTP requests (`base_url` as `HttpUrl`, `api_key`, `message`, and `alert_uuid` kept as non-empty strings)
 - Broadened `alert_uuid` argument validation
 - Bump `sekoia-automation-sdk` to 1.23.1
 

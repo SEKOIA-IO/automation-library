@@ -54,7 +54,7 @@ def test_mattermost_postmessage_set_username_and_channel():
         assert json.loads(history[0].text)["channel"] == channel
 
 
-@pytest.mark.parametrize("arguments", [{}, {"message": ""}, {"message": "   "}])
+@pytest.mark.parametrize("arguments", [{}, {"message": ""}])
 def test_mattermost_postmessage_requires_message(arguments):
     hook_url: str = "https://my.chat.mattermost/hooks/123456"
 

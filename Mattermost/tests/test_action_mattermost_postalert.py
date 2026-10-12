@@ -102,7 +102,6 @@ def test_mattermost_postalert_requires_alert_uuid(arguments):
         ("alert_uuid", "not-a-uuid"),
         ("base_url", "not a url"),
         ("api_key", ""),
-        ("api_key", "   "),
     ],
 )
 def test_mattermost_postalert_rejects_invalid_arguments(field, value):

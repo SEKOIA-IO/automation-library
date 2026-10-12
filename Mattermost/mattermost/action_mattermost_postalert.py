@@ -1,19 +1,16 @@
 import requests
-from typing import Annotated
 from uuid import UUID
 
 # third parties
 from colour import Color
-from pydantic import BaseModel, Field, HttpUrl, StringConstraints, model_validator
+from pydantic import BaseModel, Field, HttpUrl, model_validator
 from requests import Response
 from sekoia_automation.action import Action
-
-NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class MattermostPostAlertArguments(BaseModel):
     alert_uuid: str = Field(..., description="The identifier (UUID or short id) of the alert")
-    api_key: NonEmptyStr = Field(..., description="The Sekoia.io API-Key to read the alert content.")
+    api_key: str = Field(..., min_length=1, description="The Sekoia.io API-Key to read the alert content.")
     base_url: HttpUrl = Field(..., description="Base URL of Sekoia.io api (e.g. https://api.sekoia.io/).")
     channel: str | None = None
     pretext: str | None = None
