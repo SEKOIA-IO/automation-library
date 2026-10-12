@@ -780,20 +780,25 @@ def test_run_block_ioc_type_not_supported():
     assert action._error is not None
 
 
-def test_run_monitor_ioc_value_required(requests_mock):
+def test_run_monitor_ioc_pushes_indicator(monkeypatch):
+    action = configured_action(CrowdstrikeActionMonitorIOC)
+    pushed: list = []
+    monkeypatch.setattr(action, "create_indicators", lambda indicators: pushed.extend(indicators))
+
+    action.run({"value": "77.91.78.118", "type": "IPv4"})
+
+    assert action._error is None
+    assert len(pushed) == 1
+    assert pushed[0]["type"] == "ipv4"
+    assert pushed[0]["value"] == "77.91.78.118"
+    assert pushed[0]["action"] == "detect"
+
+
+@pytest.mark.parametrize("arguments", [{"type": "ipv4"}, {"value": "", "type": "ipv4"}])
+def test_run_monitor_ioc_value_required(requests_mock, arguments):
     action = configured_action(CrowdstrikeActionMonitorIOC)
 
     with pytest.raises(ValidationError):
-        action.run({"type": "ipv4"})
-
-    assert requests_mock.call_count == 0
-
-
-@pytest.mark.parametrize("value", [""])
-def test_run_monitor_ioc_value_blank(requests_mock, value):
-    action = configured_action(CrowdstrikeActionMonitorIOC)
-
-    with pytest.raises(ValidationError):
-        action.run({"value": value, "type": "ipv4"})
+        action.run(arguments)
 
     assert requests_mock.call_count == 0
