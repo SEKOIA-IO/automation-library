@@ -5,11 +5,9 @@ from pydantic import BaseModel, Field
 from requests import Response
 from sekoia_automation.action import Action
 
-from virustotal.types import NonEmptyStr
-
 
 class VirusTotalGetCommentsArguments(BaseModel):
-    resource: NonEmptyStr = Field(..., description="Resource to get comments for")
+    resource: str = Field(..., min_length=1, description="Resource to get comments for")
 
 
 class VirusTotalGetCommentsAction(Action):

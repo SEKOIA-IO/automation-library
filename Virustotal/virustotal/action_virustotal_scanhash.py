@@ -4,12 +4,11 @@ import requests
 from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
 
-from virustotal.types import NonEmptyStr
 from virustotal.utils import virustotal_detection_outputs
 
 
 class VirusTotalScanHashArguments(BaseModel):
-    hash: NonEmptyStr = Field(..., description="Hash to scan")
+    hash: str = Field(..., min_length=1, description="Hash to scan")
     detect_threshold: int = Field(default=1, description="Number of positives to consider the hash detected")
 
 

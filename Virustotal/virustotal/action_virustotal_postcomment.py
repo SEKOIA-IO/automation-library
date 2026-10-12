@@ -6,12 +6,11 @@ from requests import Response
 from sekoia_automation.action import Action
 
 from virustotal.errors import DuplicateCommentError
-from virustotal.types import NonEmptyStr
 
 
 class VirusTotalPostCommentArguments(BaseModel):
-    resource: NonEmptyStr = Field(..., description="Resource to post the comment on")
-    comment: NonEmptyStr = Field(..., description="Comment to post")
+    resource: str = Field(..., min_length=1, description="Resource to post the comment on")
+    comment: str = Field(..., min_length=1, description="Comment to post")
 
 
 class VirusTotalPostCommentAction(Action):

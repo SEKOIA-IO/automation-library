@@ -8,12 +8,11 @@ from requests import Response
 from sekoia_automation.action import Action
 
 from virustotal.errors import MaxFileSizeExceedError, RequestLimitError
-from virustotal.types import NonEmptyStr
 from virustotal.utils import virustotal_detection_outputs
 
 
 class VirusTotalScanFileArguments(BaseModel):
-    file: NonEmptyStr = Field(..., description="Path of the file to scan")
+    file: str = Field(..., min_length=1, description="Path of the file to scan")
     detect_threshold: int = Field(default=1, description="Number of positives to consider the file detected")
 
 
