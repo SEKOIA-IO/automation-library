@@ -150,7 +150,7 @@ class CaseCreatedTrigger(SecurityCasesTrigger):
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
 
-        # Ignore cases “sub event” types that we can’t (yet) handle.
+        # Ignore cases “sub event” types that we can't (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
             return
 
@@ -172,7 +172,7 @@ class CaseCreatedTrigger(SecurityCasesTrigger):
             self._filter_by_assignees(case),
         ]
 
-        if not all(filter for filter in filter_case):
+        if not all(filter_case):
             return
 
         case_short_id = case_attrs.get("short_id")
@@ -205,7 +205,7 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
         case_attrs = message.get("attributes", {})
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
-        # Ignore cases “sub event” types that we can’t (yet) handle.
+        # Ignore cases “sub event” types that we can't (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
             return
 
@@ -266,7 +266,7 @@ class CaseAlertsUpdatedTrigger(SecurityCasesTrigger):
         case_attrs = message.get("attributes", {})
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
-        # Ignore cases “sub event” types that we can’t (yet) handle.
+        # Ignore cases “sub event” types that we can't (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
             return
 
@@ -288,7 +288,7 @@ class CaseAlertsUpdatedTrigger(SecurityCasesTrigger):
             self._filter_by_uuids(case),
         ]
 
-        if not all(filter for filter in filter_case):
+        if not all(filter_case):
             return
 
         case_short_id = case.get("short_id")

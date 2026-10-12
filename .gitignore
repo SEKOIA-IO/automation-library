@@ -91,3 +91,5 @@ dmypy.json
 
 # Temporary directories
 **/.tmp/
+.mcp.json
+.claude/*

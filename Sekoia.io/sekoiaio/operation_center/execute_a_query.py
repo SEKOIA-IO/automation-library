@@ -346,7 +346,7 @@ class ExecuteAQuery(BaseSolAction):
 
     def save_to_file(self, result: str, file_format: str) -> str:
         filename = f"query_output-{uuid4()}.{file_format}"
-        with self._data_path.joinpath(filename).open("w", encoding="utf-8") as f:
+        with self.data_path.joinpath(filename).open("w", encoding="utf-8") as f:
             if isinstance(result, str):
                 f.write(result)
         return filename

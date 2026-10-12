@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-12 - 2.80.0
+
+### Changed
+
+- Align module tooling with uv conventions (ruff rules, mypy, pytest config, mise)
+
+### Fixed
+
+- LiveAPI triggers: log exceptions raised while handling a notification instead of silently dropping it (SekoiaLab/integration#2050)
+
 ## 2026-10-02 - 2.79.0
 
 ### Added

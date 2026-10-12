@@ -25,7 +25,7 @@ class GetEvents(BaseGetEvents):
         """
         results: list[dict[str, Any]] = []
         offset: int = 0
-        total: None | int = None
+        total: int | None = None
 
         while total is None or total > offset:
             response_events = self.http_session.get(

@@ -40,8 +40,8 @@ class GetContextAction(GenericAPIAction):
     query_parameters: ClassVar[list[str]] = ["term", "sort"]
 
     def run(self, arguments) -> dict:
-        results = super().run(arguments)
-        items = results.get("items")
+        results = super().run(arguments) or {}
+        items = results.get("items") or []
 
         for item in items:
             if item.get("external_references"):

@@ -1,6 +1,6 @@
 import time
 from posixpath import join as urljoin
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 import requests
 from sekoia_automation.storage import PersistentJSON, write
@@ -72,7 +72,7 @@ class FeedConsumptionTrigger(Trigger):
                 f"URL: {self.url}"
             )
             # Critical error will stop the trigger
-            level = "error" if self.resume_on_errors else "critical"
+            level: Literal["error", "critical"] = "error" if self.resume_on_errors else "critical"
             self.log(message=message, level=level)
             if not self.resume_on_errors:
                 # Critical log should stop the trigger
@@ -129,8 +129,8 @@ class FeedConsumptionTrigger(Trigger):
         sources_to_fetch: list[str] = []
 
         # Iterate over objects to collect source references
-        for object in objects:
-            refs = object.get("x_inthreat_sources_refs", [])
+        for obj in objects:
+            refs = obj.get("x_inthreat_sources_refs", [])
             # Check if already in cache
             for ref in refs:
                 if ref not in self.sources_caches:
@@ -148,10 +148,8 @@ class FeedConsumptionTrigger(Trigger):
             }
 
         # Getting sources from the cache
-        for object in objects:
-            object["x_inthreat_sources"] = [
-                self.sources_caches.get(ref, ref) for ref in object["x_inthreat_sources_refs"]
-            ]
+        for obj in objects:
+            obj["x_inthreat_sources"] = [self.sources_caches.get(ref, ref) for ref in obj["x_inthreat_sources_refs"]]
 
         return objects
 

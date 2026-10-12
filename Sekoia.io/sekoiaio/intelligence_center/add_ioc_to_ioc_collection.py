@@ -39,7 +39,7 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
 
         return [str(indicators)]
 
-    def add_IP_action(self, indicators, ioc_collection_id, valid_for):
+    def add_ip_action(self, indicators, ioc_collection_id, valid_for):
         """Split IP indicators by version and submit them in dedicated requests.
 
         Valid anonymized examples: 198.51.100.10, 203.0.113.7, 2001:db8::1
@@ -108,7 +108,7 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
             if not isinstance(indicators, list) and not single_indicator:
                 raise ValueError("Indicators should be list type, or you should provide a single indicator value")
 
-            self.add_IP_action(result_indicators, ioc_collection_id, valid_for)
+            self.add_ip_action(result_indicators, ioc_collection_id, valid_for)
         else:
             if _type := indicator_type_mapping.get(str(indicator_type)):
                 self.perform_request(result_indicators, ioc_collection_id, _type, valid_for)

@@ -41,7 +41,7 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
 
-        # Ignore alert “sub event” types that we can’t (yet) handle.
+        # Ignore alert “sub event” types that we can't (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
             return
 
@@ -71,14 +71,14 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
         ] not in rule_names_filter:
             return
 
-        work_dir = self._data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
+        work_dir = self.data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
         alert_path = work_dir.joinpath("alert.json")
         work_dir.mkdir(parents=True, exist_ok=True)
 
         with alert_path.open("w") as fp:
             fp.write(orjson.dumps(alert).decode("utf-8"))
 
-        directory = str(work_dir.relative_to(self._data_path))
+        directory = str(work_dir.relative_to(self.data_path))
         file_path = str(alert_path.relative_to(work_dir))
 
         alert_short_id = alert.get("short_id")
@@ -119,7 +119,7 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
             remove_directory=True,
         )
 
-    def _filter_notifications(self, message) -> bool:
+    def _filter_notifications(self, message) -> bool:  # noqa: ARG002
         return True
 
     @retry(
@@ -203,7 +203,7 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
 
-        # Ignore alert “sub event” types that we can’t (yet) handle.
+        # Ignore alert “sub event” types that we can't (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
             return
 
@@ -238,14 +238,14 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
         ] not in rule_names_filter:
             return
 
-        work_dir = self._data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
+        work_dir = self.data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
         alert_path = work_dir.joinpath("alert.json")
         work_dir.mkdir(parents=True, exist_ok=True)
 
         with alert_path.open("w") as fp:
             fp.write(orjson.dumps(alert).decode("utf-8"))
 
-        directory = str(work_dir.relative_to(self._data_path))
+        directory = str(work_dir.relative_to(self.data_path))
         file_path = str(alert_path.relative_to(work_dir))
 
         alert_short_id = alert.get("short_id")
@@ -287,7 +287,8 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
     )
     def _retrieve_comment_from_alertapi(self, alert_uuid: str, comment_uuid: str):
         api_url = urljoin(
-            self.module.configuration["base_url"], f"api/v1/sic/alerts/{alert_uuid}/comments/{comment_uuid}"
+            self.module.configuration["base_url"],
+            f"api/v1/sic/alerts/{alert_uuid}/comments/{comment_uuid}",
         )
 
         api_url = api_url.replace("/api/api", "/api")  # In case base_url ends with /api
@@ -646,7 +647,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         if self._initialized:
             return
 
-        state_path = self._data_path / "alert_thresholds_state.json"
+        state_path = self.data_path / "alert_thresholds_state.json"
         self.state_manager = AlertStateManager(state_path, logger=self.log)
 
         base_url = self.module.configuration["base_url"].rstrip("/")
@@ -932,7 +933,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         alert_short_id = alert.get("short_id")
 
         # Write alert data to temp directory
-        work_dir = self._data_path.joinpath("sekoiaio_alert_threshold").joinpath(str(uuid.uuid4()))
+        work_dir = self.data_path.joinpath("sekoiaio_alert_threshold").joinpath(str(uuid.uuid4()))
         alert_path = work_dir.joinpath("alert.json")
         work_dir.mkdir(parents=True, exist_ok=True)
 
@@ -947,7 +948,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 fp.write(orjson.dumps(events).decode("utf-8"))
             events_file_path = str(events_path.relative_to(work_dir))
 
-        directory = str(work_dir.relative_to(self._data_path))
+        directory = str(work_dir.relative_to(self.data_path))
         file_path = str(alert_path.relative_to(work_dir))
 
         # Build event payload — consistent with SecurityAlertsTrigger + threshold context
@@ -1003,7 +1004,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
     def _evaluate_thresholds(
         self,
-        alert: dict[str, Any],
+        alert: dict[str, Any],  # noqa: ARG002
         previous_state: dict[str, Any] | None,
         event_count_from_notification: int | None = None,
     ) -> tuple[bool, dict[str, Any]]:

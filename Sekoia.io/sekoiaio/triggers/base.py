@@ -25,7 +25,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
     """Base code for all LiveAPI based triggers. This basically reads all
     notifications from LiveAPI through a WebSocket.
 
-    This base class isn’t meant to be instanciated as directly, a
+    This base class isn't meant to be instanciated as directly, a
     subclass needs to be created with the proper handler
     defined. Subclass should define an `handle_xxx` method where `xxx`
     is the kind of event for which they want to trigger an event (for
@@ -118,7 +118,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         self._last_error = now
         self.log_exception(
             exception=error,
-            message="An exception occurred in the main WebSocket client’s loop",
+            message="An exception occurred in the main WebSocket client's loop",
         )
 
     def on_ping(self, _, __):
@@ -128,7 +128,10 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         self.log("Received pong from server", level="debug")
         self.heartbeat()
 
-    def on_close(self, *args, **kwargs):  # pragma: no cover
+    def handle_event(self, message: dict) -> None:
+        """Handle a v2 notification; overridden by each concrete trigger."""
+
+    def on_close(self, *args, **kwargs):  # noqa: ARG002  # pragma: no cover
         # Reset teardown so we can run again the app from the start
         with self._websocket.has_done_teardown_lock:
             self._websocket.has_done_teardown = False
@@ -167,12 +170,22 @@ class _SEKOIANotificationBaseTrigger(Trigger):
 
         event_type = message.get("type")
 
-        # We don’t know how to handle such messages.
+        # We don't know how to handle such messages.
         if event_type is None:
             self.log("Empty event type", level="error", event=message)
             return
 
-        self.handle_event(message)
+        # Handlers run in a gevent pool: an uncaught exception would only be printed
+        # on stderr and the notification silently dropped, so report it instead.
+        try:
+            self.handle_event(message)
+        except Exception as exp:
+            attributes = message.get("attributes")
+            self.log_exception(
+                exp,
+                message=f"Failed to handle {event_type}:{message.get('action')} notification",
+                uuid=attributes.get("uuid") if isinstance(attributes, dict) else None,
+            )
 
     def stop(self, *args, **kwargs):
         super().stop(*args, **kwargs)
