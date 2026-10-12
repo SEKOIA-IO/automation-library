@@ -908,10 +908,6 @@ def test_run_push_iocs_without_supported_indicators(falcon_api):
     assert requests_to(falcon_api, "POST", INDICATORS_URL) == []
 
 
-@pytest.mark.skip(
-    reason="Bug: remove_indicators() calls next() on find_indicators(); an unknown IOC yields no resource "
-    "and raises StopIteration instead of logging 'not found, skipping delete'"
-)
 def test_remove_indicators_skips_unknown_indicators(falcon_api):
     action = configured_action(CrowdstrikeActionPushIOCsBlock)
     falcon_api.get(INDICATORS_QUERY_URL, json={"resources": []})
@@ -919,6 +915,9 @@ def test_remove_indicators_skips_unknown_indicators(falcon_api):
     action.remove_indicators([action.get_payload(type="md5", value="ab03a48a29967e738583140e6eb84f0b")])
 
     assert requests_to(falcon_api, "DELETE", INDICATORS_URL) == []
+    assert [log["message"] for log in action.logs] == [
+        "IOC with value ab03a48a29967e738583140e6eb84f0b not found, skipping delete"
+    ]
 
 
 def test_run_monitor_ioc_mocked(falcon_api):

@@ -33,7 +33,7 @@ class CrowdstrikeActionIOC(CrowdstrikeAction):
         # Get the indicator IDs in Crowdstrike
         for indicator in indicators:
             fql_filter = f"value:\"{indicator['value']}\""
-            result = next(self.client.find_indicators(fql_filter=fql_filter))
+            result = next(self.client.find_indicators(fql_filter=fql_filter), None)
             if result:
                 ids_to_remove.append(result)
             else:
@@ -42,7 +42,7 @@ class CrowdstrikeActionIOC(CrowdstrikeAction):
         # Delete the IOCs in Crowdstrike
         if len(ids_to_remove) > 0:
             self.log(f"Removing {len(ids_to_remove)} existing indicators from Crowdstrike Falcon")
-            next(self.client.delete_indicators(ids_to_remove))
+            next(self.client.delete_indicators(ids_to_remove), None)
 
     def remove_expired_indicators(self):
         ids_to_remove = []
@@ -53,13 +53,13 @@ class CrowdstrikeActionIOC(CrowdstrikeAction):
             # Delete the IOCs in Crowdstrike
             if len(ids_to_remove) > 1000:
                 self.log(f"Removing {len(ids_to_remove)} existing indicators from Crowdstrike Falcon")
-                next(self.client.delete_indicators(ids_to_remove))
+                next(self.client.delete_indicators(ids_to_remove), None)
                 ids_to_remove = []
 
         # Delete the IOCs in Crowdstrike
         if len(ids_to_remove) > 0:
             self.log(f"Removing {len(ids_to_remove)} existing indicators from Crowdstrike Falcon")
-            next(self.client.delete_indicators(ids_to_remove))
+            next(self.client.delete_indicators(ids_to_remove), None)
 
     def remove_old_indicators(self, valid_for):
         ids_to_remove = []
@@ -72,18 +72,18 @@ class CrowdstrikeActionIOC(CrowdstrikeAction):
             # Delete the IOCs in Crowdstrike
             if len(ids_to_remove) > 1000:
                 self.log(f"Removing {len(ids_to_remove)} existing indicators from Crowdstrike Falcon")
-                next(self.client.delete_indicators(ids_to_remove))
+                next(self.client.delete_indicators(ids_to_remove), None)
                 ids_to_remove = []
 
         # Delete the IOCs in Crowdstrike
         if len(ids_to_remove) > 0:
             self.log(f"Removing {len(ids_to_remove)} existing indicators from Crowdstrike Falcon")
-            next(self.client.delete_indicators(ids_to_remove))
+            next(self.client.delete_indicators(ids_to_remove), None)
 
     def create_indicators(self, indicators: list):
         if len(indicators) > 0:
             self.log(f"Pushing {len(indicators)} new indicators to Crowdstrike Falcon")
-            next(self.client.upload_indicators(indicators=indicators))
+            next(self.client.upload_indicators(indicators=indicators), None)
 
 
 class CrowdstrikeActionPushIOCs(CrowdstrikeActionIOC):
