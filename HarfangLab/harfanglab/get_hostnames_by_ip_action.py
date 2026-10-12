@@ -15,7 +15,7 @@ class GetHostnamesByIP(Action):
     Action to analyze a HarfangLab job that lists the process
     """
 
-    def run(self, arguments: GetHostnamesByIPArguments) -> dict | None:
+    def run(self, arguments: GetHostnamesByIPArguments) -> dict:
         target_ip = arguments.target_ip
         get_only_last_seen = arguments.get_only_last_seen
 

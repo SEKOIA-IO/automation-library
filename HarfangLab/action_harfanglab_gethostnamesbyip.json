@@ -11,7 +11,9 @@
         "type": "boolean"
       }
     },
-    "required": [],
+    "required": [
+      "target_ip"
+    ],
     "title": "Arguments",
     "type": "object"
   },
