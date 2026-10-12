@@ -1,5 +1,6 @@
 # third parties
 import pytest
+import requests
 import requests_mock
 from pydantic import ValidationError
 
@@ -174,3 +175,76 @@ def test_ilert_postalert_rejects_malformed_short_id(alert_id):
             action.run({"alert_uuid": alert_id, "api_key": "XKDF84729HNQP16", "base_url": "https://api.sekoia.io/"})
 
     assert mock.call_count == 0
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        ({"name": "Closed"}, "closed"),
+        ({"name": "Rejected"}, "closed"),
+        ({"name": "Resolved"}, "resolved"),
+        ({"name": "Ongoing"}, "ongoing"),
+        ({}, "open"),
+        ("Acknowledged", "acknowledged"),
+        ("Pending", "pending"),
+        (None, "open"),
+        (42, "open"),
+        ({"name": None}, "open"),
+    ],
+)
+def test_ilert_postalert_maps_alert_status(status, expected):
+    integration_key = "my-fake-integration-key"
+    integration_url = "https://events.ilert.fake/api/v1/events/sekoia"
+
+    action: IlertTriggerAlertAction = IlertTriggerAlertAction()
+    action.module.configuration = {"integration_key": integration_key, "integration_url": integration_url}
+
+    alert_uuid = "d41f8c20-7a9b-4e15-b6d3-92cc4a7f18e5"
+    base_url = "https://api.sekoia.io/"
+    alert_info = {"short_id": "AL98312BKWZ", "title": "Test alert for ilert", "status": status}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{base_url}v1/sic/alerts/{alert_uuid}", json=alert_info)
+        hook_url = f"{integration_url}/{integration_key}"
+        mock.post(hook_url, status_code=202)
+
+        result = action.run({"alert_uuid": alert_uuid, "api_key": "XKDF84729HNQP16", "base_url": base_url})
+
+        assert result["status"] == expected
+        assert mock.request_history[1].url == hook_url
+        assert mock.request_history[1].json()["status"] == expected
+
+
+def test_ilert_postalert_fails_when_alert_cannot_be_read():
+    action: IlertTriggerAlertAction = IlertTriggerAlertAction()
+    action.module.configuration = {"integration_key": "my-fake-integration-key"}
+
+    alert_uuid = "d41f8c20-7a9b-4e15-b6d3-92cc4a7f18e5"
+    base_url = "https://api.sekoia.io/"
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{base_url}v1/sic/alerts/{alert_uuid}", status_code=404)
+
+        with pytest.raises(requests.HTTPError):
+            action.run({"alert_uuid": alert_uuid, "api_key": "XKDF84729HNQP16", "base_url": base_url})
+
+        assert mock.call_count == 1
+
+
+def test_ilert_postalert_fails_when_ilert_rejects_the_event():
+    integration_key = "my-fake-integration-key"
+
+    action: IlertTriggerAlertAction = IlertTriggerAlertAction()
+    action.module.configuration = {"integration_key": integration_key}
+
+    alert_uuid = "d41f8c20-7a9b-4e15-b6d3-92cc4a7f18e5"
+    base_url = "https://api.sekoia.io/"
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{base_url}v1/sic/alerts/{alert_uuid}", json={"status": {"name": "Pending"}})
+        mock.post(f"{DEFAULT_EVENTS_URL}/{integration_key}", status_code=400)
+
+        with pytest.raises(requests.HTTPError):
+            action.run({"alert_uuid": alert_uuid, "api_key": "XKDF84729HNQP16", "base_url": base_url})
+
+        assert mock.call_count == 2
