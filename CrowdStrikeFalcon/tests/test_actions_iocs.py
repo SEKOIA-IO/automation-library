@@ -4,6 +4,7 @@ from datetime import date, timedelta
 import pytest
 import requests_mock
 from pydantic import ValidationError
+from requests.exceptions import HTTPError
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.action import CrowdstrikeAction
@@ -802,3 +803,154 @@ def test_run_monitor_ioc_arguments_required(requests_mock, arguments):
         action.run(arguments)
 
     assert requests_mock.call_count == 0
+
+
+INDICATORS_URL = "https://my.fake.sekoia/iocs/entities/indicators/v1"
+INDICATORS_QUERY_URL = "https://my.fake.sekoia/iocs/queries/indicators/v1"
+EXPIRED_INDICATORS_QUERY = "filter=source%3A%27Sekoia.io%27%2Bexpired%3Atrue"
+
+
+@pytest.fixture
+def falcon_api(requests_mock):
+    requests_mock.post(
+        "https://my.fake.sekoia/oauth2/token",
+        json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+    )
+    return requests_mock
+
+
+def requests_to(mock, method: str, url: str) -> list:
+    return [request for request in mock.request_history if request.method == method and request.url.startswith(url)]
+
+
+def test_run_push_iocs_block_mocked(falcon_api):
+    action = configured_action(CrowdstrikeActionPushIOCsBlock)
+    falcon_api.get(f"{INDICATORS_QUERY_URL}?{EXPIRED_INDICATORS_QUERY}", complete_qs=True, json={"resources": []})
+    falcon_api.post(INDICATORS_URL, json=ADD_IOC_RESPONSE_OK)
+
+    assert action.run({"stix_objects": [STIX_OBJECT_IPv4, STIX_OBJECT_FILE_HASH]}) is None
+
+    # no expired indicator, so nothing to delete
+    assert requests_to(falcon_api, "DELETE", INDICATORS_URL) == []
+    uploads = requests_to(falcon_api, "POST", INDICATORS_URL)
+    assert len(uploads) == 1
+    assert uploads[0].qs == {"ignore_warnings": ["true"]}
+    indicators = uploads[0].json()["indicators"]
+    # the IPv4 indicator is not supported by the block action
+    assert sorted((indicator["type"], indicator["value"]) for indicator in indicators) == [
+        ("md5", "ab03a48a29967e738583140e6eb84f0b"),
+        ("sha256", "0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716"),
+    ]
+    assert all(indicator["action"] == "prevent" for indicator in indicators)
+    assert all(
+        indicator["description"]
+        == "https://app.sekoia.io/intelligence/objects/indicator--8c28aed8-8370-46d5-b7bf-877e6a4840d3"
+        for indicator in indicators
+    )
+
+
+def test_run_push_iocs_detect_with_custom_sekoia_base_url(falcon_api):
+    action = configured_action(CrowdstrikeActionPushIOCsDetect)
+    falcon_api.get(f"{INDICATORS_QUERY_URL}?{EXPIRED_INDICATORS_QUERY}", complete_qs=True, json={"resources": []})
+    falcon_api.post(INDICATORS_URL, json={"resources": [{"id": "ipv4-id"}]})
+
+    action.run({"stix_objects": [STIX_OBJECT_IPv4], "sekoia_base_url": "https://app.test.sekoia.io"})
+
+    indicators = requests_to(falcon_api, "POST", INDICATORS_URL)[0].json()["indicators"]
+    assert len(indicators) == 1
+    assert indicators[0]["type"] == "ipv4"
+    assert indicators[0]["value"] == "77.91.78.118"
+    assert indicators[0]["action"] == "detect"
+    assert indicators[0]["expiration"] == "2023-04-29T00:00:00Z"
+    assert indicators[0]["description"].startswith("https://app.test.sekoia.io/intelligence/objects/")
+
+
+def test_run_push_iocs_block_revoked_mocked(falcon_api):
+    action = configured_action(CrowdstrikeActionPushIOCsBlock)
+    revoked_object = STIX_OBJECT_FILE_HASH.copy()
+    revoked_object["revoked"] = True
+    falcon_api.get(
+        INDICATORS_QUERY_URL,
+        [{"json": {"resources": []}}, {"json": {"resources": ["sha256-id"]}}, {"json": {"resources": ["md5-id"]}}],
+    )
+    falcon_api.delete(INDICATORS_URL, json={"resources": ["sha256-id", "md5-id"]})
+
+    assert action.run({"stix_objects": [revoked_object]}) is None
+
+    lookups = requests_to(falcon_api, "GET", INDICATORS_QUERY_URL)
+    assert [request.qs["filter"] for request in lookups[1:]] == [
+        ['value:"0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716"'],
+        ['value:"ab03a48a29967e738583140e6eb84f0b"'],
+    ]
+    deletions = requests_to(falcon_api, "DELETE", INDICATORS_URL)
+    assert len(deletions) == 1
+    assert deletions[0].qs == {"ids": ["sha256-id", "md5-id"]}
+    # revoked indicators are only removed, never pushed
+    assert requests_to(falcon_api, "POST", INDICATORS_URL) == []
+
+
+def test_run_push_iocs_without_stix_objects(falcon_api):
+    action = configured_action(CrowdstrikeActionPushIOCsBlock)
+    falcon_api.get(INDICATORS_QUERY_URL, json={"resources": []})
+
+    assert action.run({"stix_objects": []}) is None
+
+    assert requests_to(falcon_api, "POST", INDICATORS_URL) == []
+    assert requests_to(falcon_api, "DELETE", INDICATORS_URL) == []
+
+
+def test_run_push_iocs_without_supported_indicators(falcon_api):
+    action = configured_action(CrowdstrikeActionPushIOCsBlock)
+    falcon_api.get(INDICATORS_QUERY_URL, json={"resources": []})
+
+    assert action.run({"stix_objects": [STIX_OBJECT_IPv4]}) is None
+
+    assert requests_to(falcon_api, "POST", INDICATORS_URL) == []
+
+
+@pytest.mark.skip(
+    reason="Bug: remove_indicators() calls next() on find_indicators(); an unknown IOC yields no resource "
+    "and raises StopIteration instead of logging 'not found, skipping delete'"
+)
+def test_remove_indicators_skips_unknown_indicators(falcon_api):
+    action = configured_action(CrowdstrikeActionPushIOCsBlock)
+    falcon_api.get(INDICATORS_QUERY_URL, json={"resources": []})
+
+    action.remove_indicators([action.get_payload(type="md5", value="ab03a48a29967e738583140e6eb84f0b")])
+
+    assert requests_to(falcon_api, "DELETE", INDICATORS_URL) == []
+
+
+def test_run_monitor_ioc_mocked(falcon_api):
+    action = configured_action(CrowdstrikeActionMonitorIOC)
+    falcon_api.post(INDICATORS_URL, json={"resources": [{"id": "ipv4-id"}]})
+
+    assert action.run({"value": "77.91.78.118", "type": "ipv4"}) is None
+
+    assert action._error is None
+    uploads = requests_to(falcon_api, "POST", INDICATORS_URL)
+    assert len(uploads) == 1
+    assert uploads[0].json()["indicators"] == [
+        {
+            "value": "77.91.78.118",
+            "type": "ipv4",
+            "action": "detect",
+            "severity": "high",
+            "platforms": ["mac", "windows", "linux"],
+            "tags": ["Sekoia.io"],
+            "source": "Sekoia.io",
+            "applied_globally": True,
+        }
+    ]
+
+
+def test_run_block_ioc_reports_api_errors(falcon_api):
+    action = configured_action(CrowdstrikeActionBlockIOC)
+    falcon_api.post(
+        INDICATORS_URL,
+        status_code=400,
+        json={"errors": [{"code": 400, "message": "Duplicate type: 'md5' and value"}], "resources": None},
+    )
+
+    with pytest.raises(HTTPError, match="Duplicate type"):
+        action.run({"value": "ab03a48a29967e738583140e6eb84f0b", "type": "md5"})

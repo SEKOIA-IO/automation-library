@@ -445,3 +445,15 @@ class TestListIdentityEntities:
             query="query { test }",
             data_path=["entities", "nodes"],
         )
+
+
+class TestClient:
+    def test_client_is_configured_from_the_module_configuration(self, connector):
+        client = connector.client
+
+        assert isinstance(client, CrowdstrikeFalconClient)
+        assert client.get_url("/identity-protection/combined/graphql/v1") == (
+            "https://api.crowdstrike.com/identity-protection/combined/graphql/v1"
+        )
+        assert client.headers["User-Agent"] == "sekoiaio-connector/crowdstrike-falcon-1.0.0"
+        assert connector.client is client
