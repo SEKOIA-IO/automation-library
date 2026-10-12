@@ -28,6 +28,14 @@ class MattermostPostAlertArguments(BaseModel):
             UUID(value)
         return value
 
+    @field_validator("base_url")
+    @classmethod
+    def validate_base_url(cls, value: HttpUrl) -> HttpUrl:
+        # the alert path is appended to the base URL, so it must not carry a query or a fragment
+        if value.query is not None or value.fragment is not None:
+            raise ValueError("The base URL must not contain a query or a fragment")
+        return value
+
 
 class MattermostPostAlertAction(Action):
     """
