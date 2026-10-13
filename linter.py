@@ -56,6 +56,9 @@ def format_json_file(file_path: str, check_only: bool = True) -> bool:
         file_content = file.read()
 
     expected_content = json.dumps(json.loads(file_content), indent=2)
+    # a single trailing newline, as added by most editors, is accepted
+    if file_content == expected_content + "\n":
+        return True
 
     if file_content != expected_content and check_only:
         print("File {0} is not formatted correctly".format(file_path))
