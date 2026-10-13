@@ -482,7 +482,7 @@ def test_next_batch_keeps_start_timestamp_when_seek_fails(trigger):
 def test_start_timestamp_applies_to_new_consumer_group(trigger):
     trigger.configuration.start_timestamp = 1760000000
     trigger.configuration.consumer_group = "old-group"
-    trigger.mark_index_as_initialized(trigger.get_index_name(NetskopeEventType.PAGE, None))
+    trigger.mark_index_as_initialized(trigger.get_index_name(NetskopeEventType.PAGE, None), 1760000000)
 
     assert (
         trigger.create_consumer("page", trigger.create_iterator(NetskopeEventType.PAGE, None)).start_timestamp is None
@@ -492,6 +492,39 @@ def test_start_timestamp_applies_to_new_consumer_group(trigger):
     consumer = trigger.create_consumer("page", trigger.create_iterator(NetskopeEventType.PAGE, None))
 
     assert consumer.start_timestamp == 1760000000
+
+
+def test_start_timestamp_change_repositions_initialized_index(trigger):
+    trigger.configuration.consumer_group = "my-group"
+    trigger.configuration.start_timestamp = 1760000000
+    index_name = trigger.get_index_name(NetskopeEventType.PAGE, None)
+    trigger.mark_index_as_initialized(index_name, 1760000000)
+
+    assert trigger.get_start_timestamp(index_name) is None
+
+    # a new starting timestamp must reposition the index
+    trigger.configuration.start_timestamp = 1770000000
+    assert trigger.get_start_timestamp(index_name) == 1770000000
+
+    trigger.mark_index_as_initialized(index_name, 1770000000)
+    assert trigger.get_start_timestamp(index_name) is None
+
+    # removing the starting timestamp continues from the current position
+    trigger.configuration.start_timestamp = None
+    assert trigger.get_start_timestamp(index_name) is None
+
+
+def test_start_timestamp_with_legacy_context(trigger):
+    trigger.configuration.consumer_group = "my-group"
+    trigger.configuration.start_timestamp = 1760000000
+    index_name = trigger.get_index_name(NetskopeEventType.PAGE, None)
+    with trigger.context as cache:
+        cache["initialized_indexes"] = [index_name]
+
+    assert trigger.get_start_timestamp(index_name) == 1760000000
+
+    trigger.mark_index_as_initialized(index_name, 1760000000)
+    assert trigger.get_start_timestamp(index_name) is None
 
 
 def test_create_iterator_alert_requires_alert_type(trigger):

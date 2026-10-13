@@ -32,7 +32,7 @@ class NetskopeEventConnectorConfiguration(DefaultConnectorConfiguration):
     )
     start_timestamp: int | None = Field(
         None,
-        description="Epoch timestamp (in seconds) from which to start the collection for new consumer groups",
+        description="Epoch timestamp (in seconds) from which to start the collection, applied once per value",
     )
     security_check_only: bool = Field(False, description="Collect only security-check alerts (malware, malsite, DLP)")
 
@@ -134,7 +134,7 @@ class NetskopeEventConsumer(Thread):
         # The iterator is positioned: the next calls must continue from it
         if self.start_timestamp is not None and response.status_code in (200, 204):
             if self.index_name is not None:
-                self.connector.mark_index_as_initialized(self.index_name)
+                self.connector.mark_index_as_initialized(self.index_name, self.start_timestamp)
             self.start_timestamp = None
 
         content = response.json() if response.status_code == 200 else {}
@@ -306,29 +306,35 @@ class NetskopeEventConnector(Connector):
 
     def get_start_timestamp(self, index_name: str) -> int | None:
         """
-        Return the timestamp from which the index must be consumed, or None if the index was already initialized
+        Return the timestamp from which the index must be consumed,
+        or None if the index was already positioned at the configured timestamp
 
         :param str index_name: The name of the index
         """
-        if self.configuration.start_timestamp is None:
+        start_timestamp = self.configuration.start_timestamp
+        if start_timestamp is None:
             return None
 
         with self._context_lock, self.context as cache:
-            if index_name in cache.get("initialized_indexes", []):
+            initialized_indexes = cache.get("initialized_indexes")
+            # a changed starting timestamp repositions the index
+            if isinstance(initialized_indexes, dict) and initialized_indexes.get(index_name) == start_timestamp:
                 return None
 
-        return self.configuration.start_timestamp
+        return start_timestamp
 
-    def mark_index_as_initialized(self, index_name: str) -> None:
+    def mark_index_as_initialized(self, index_name: str, start_timestamp: int) -> None:
         """
-        Remember that the index was positioned at the starting timestamp
+        Remember the starting timestamp at which the index was positioned
 
         :param str index_name: The name of the index
+        :param int start_timestamp: The timestamp at which the index was positioned
         """
         with self._context_lock, self.context as cache:
-            initialized_indexes = cache.get("initialized_indexes", [])
-            if index_name not in initialized_indexes:
-                cache["initialized_indexes"] = initialized_indexes + [index_name]
+            initialized_indexes = cache.get("initialized_indexes")
+            if not isinstance(initialized_indexes, dict):
+                initialized_indexes = {}
+            cache["initialized_indexes"] = {**initialized_indexes, index_name: start_timestamp}
 
     def create_consumer(self, name: str, iterator: NetskopeIterator) -> NetskopeEventConsumer:
         index_name = iterator.client.configs.get("iterator_name")
