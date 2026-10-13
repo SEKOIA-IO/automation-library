@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-13 - 1.28.2
+
+### Fixed
+
+- Scan file: report a failed upload or an unavailable scan report with a clear error instead of crashing or returning "not detected"
+
 ## 2026-10-12 - 1.28.1
 
 ### Changed
