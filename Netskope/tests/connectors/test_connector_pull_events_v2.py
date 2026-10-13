@@ -322,6 +322,36 @@ def test_next_batch_403_service_with_json_error_message(trigger):
         )
 
 
+def test_next_batch_concurrency_conflict(trigger):
+    trigger.configuration.consumer_group = "shared-group"
+
+    with (
+        patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_requests.get(
+            "https://my.fake.sekoia/api/v2/events/dataexport/alerts/dlp",
+            status_code=409,
+            json={"message": "Concurrency conflict"},
+        )
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+        consumer = trigger.create_consumer("alert-dlp", iterator)
+        mock_time.time.return_value = 1666711174.0
+
+        consumer.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 0
+        assert consumer.running
+        trigger.log.assert_any_call(
+            message=(
+                "Concurrency conflict for alert-dlp on the index shared-group-alert-dlp: "
+                "another consumer is using the same consumer group. "
+                "Each connector must use its own consumer group."
+            ),
+            level="warning",
+        )
+
+
 def test_create_iterators(trigger):
     iterators = trigger.create_iterators(trigger.dataexports)
 

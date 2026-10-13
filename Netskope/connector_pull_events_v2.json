@@ -19,7 +19,7 @@
         "type": "string"
       },
       "consumer_group": {
-        "description": "A unique name to track event consumption. A dedicated index is derived from it for each event type (default empty for auto-generated one)",
+        "description": "A unique name to track event consumption. It must not be shared with another connector. A dedicated index is derived from it for each event type (default empty for auto-generated one)",
         "type": "string",
         "default": ""
       },

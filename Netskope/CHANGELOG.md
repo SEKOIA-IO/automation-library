@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add an optional `start_timestamp` parameter to start the collection of a new consumer group from a given date
+- Log an explicit warning when Netskope reports a concurrency conflict (409) on an index
 
 ## 2026-10-13 - 1.16.0
 

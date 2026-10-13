@@ -27,7 +27,9 @@ SECURITY_CHECK_DATAEXPORTS: list[tuple[NetskopeEventType, NetskopeAlertType | No
 
 class NetskopeEventConnectorConfiguration(DefaultConnectorConfiguration):
     api_token: str = Field(..., description="The API token")
-    consumer_group: str | None = Field(None, description="A unique name to track events consumption")
+    consumer_group: str | None = Field(
+        None, description="A unique name to track events consumption. Must not be shared with another connector"
+    )
     start_timestamp: int | None = Field(
         None,
         description="Epoch timestamp (in seconds) from which to start the collection for new consumer groups",
@@ -114,6 +116,15 @@ class NetskopeEventConsumer(Thread):
                     message=f"Cannot consume the service {self.name}. Error={response.text}",
                     level="error",
                 )
+        elif response.status_code == 409:
+            self.connector.log(
+                message=(
+                    f"Concurrency conflict for {self.name} on the index {self.index_name}: "
+                    "another consumer is using the same consumer group. "
+                    "Each connector must use its own consumer group."
+                ),
+                level="warning",
+            )
         elif response.status_code > 299:
             self.connector.log(
                 message=f"Failed to fetch events for {self.name}: {response.status_code} {response.text}",
