@@ -7,8 +7,8 @@ import requests_mock
 from sekoia_automation.storage import PersistentJSON
 
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
-from microsoft_ad.asset_connectors.user_assets_action import MicrosoftADUserAssetsOnPremiseAction
 from microsoft_ad.models.common_models import MicrosoftADModule
+from microsoft_ad.sync_assets_actions import SynchronizeAssetsAction
 
 MODULE_PATH = Path(__file__).parents[2]
 UUID = "04716e25-c97f-4a22-925e-8b636ad9c8a4"
@@ -18,7 +18,7 @@ LOGS_URL = f"https://api.example.com/api/v1/symphony/connector-configurations/{U
 
 def test_connector_manifest_declares_the_on_premise_action():
     connector = json.loads((MODULE_PATH / "connector_microsoftad_user_assets.json").read_text())
-    action = json.loads((MODULE_PATH / "action_collect_user_assets_on_premise.json").read_text())
+    action = json.loads((MODULE_PATH / "action_synchronize_assets.json").read_text())
 
     assert connector["execution_modes"] == ["cloud", "on_premise"]
     assert connector["on_premise_action"] == action["uuid"]
@@ -29,7 +29,7 @@ def test_connector_manifest_declares_the_on_premise_action():
 def test_run_pushes_ad_users_to_the_asset_connector(tmp_path):
     module = MicrosoftADModule()
     module.configuration = {"servername": "ad.example.com", "admin_username": "admin", "admin_password": "password"}
-    action = MicrosoftADUserAssetsOnPremiseAction(module=module, data_path=tmp_path)
+    action = SynchronizeAssetsAction(module=module, data_path=tmp_path)
     entries = [
         {
             "dn": "CN=Jane Doe,DC=example,DC=com",
