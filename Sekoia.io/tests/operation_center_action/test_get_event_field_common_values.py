@@ -151,9 +151,6 @@ def test_get_event_field_common_values(requests_mock):
     }
 
 
-@pytest.mark.skip(
-    reason="Bug: pagination continues only once every requested field was found, so fields on later pages are lost"
-)
 def test_get_event_field_common_values_fetches_next_page_for_missing_fields(requests_mock):
     action = GetEventFieldCommonValues()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
@@ -184,3 +181,53 @@ def test_get_event_field_common_values_fetches_next_page_for_missing_fields(requ
             {"name": "event.dialect", "common_values": [{"value": 100.0, "name": "openssh"}]},
         ]
     }
+
+
+@pytest.mark.parametrize(
+    "fields,first_page_items,second_page_items,expected_fields_requests",
+    [
+        # every requested field is on the first page: no second request
+        (
+            "action.id,event.dialect",
+            [{"name": "action.id", "most_common_values": []}, {"name": "event.dialect", "most_common_values": []}],
+            [],
+            1,
+        ),
+        # empty names (trailing comma) are ignored: no second request
+        (
+            "action.id, ,event.dialect,",
+            [{"name": "action.id", "most_common_values": []}, {"name": "event.dialect", "most_common_values": []}],
+            [],
+            1,
+        ),
+        # a field is missing but the next page is empty: stop instead of looping
+        ("action.id,event.dialect", [{"name": "action.id", "most_common_values": []}], [], 2),
+    ],
+)
+def test_get_event_field_common_values_stops_paginating(
+    requests_mock, fields, first_page_items, second_page_items, expected_fields_requests
+):
+    action = GetEventFieldCommonValues()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    job_uuid = "483d36a5-8538-49c4-be19-49b669f90bf8"
+    jobs_url = "https://fake.url/api/v1/sic/conf/events/search/jobs"
+    requests_mock.post(jobs_url, json={"uuid": job_uuid, "status": 0})
+    requests_mock.get(f"{jobs_url}/{job_uuid}", json={"uuid": job_uuid, "status": 2})
+    fields_url = f"{jobs_url}/{job_uuid}/fields"
+    requests_mock.get(
+        f"{fields_url}?limit=1000&offset=0",
+        json={"items": first_page_items, "total": 10},
+    )
+    requests_mock.get(
+        f"{fields_url}?limit=1000&offset={len(first_page_items)}",
+        json={"items": second_page_items, "total": 10},
+    )
+
+    results = action.run({"query": "", "earliest_time": "-1d", "latest_time": "now", "fields": fields})
+
+    assert results == {
+        "fields": [{"name": item["name"], "common_values": item["most_common_values"]} for item in first_page_items]
+    }
+    fields_requests = [request for request in requests_mock.request_history if request.path.endswith("/fields")]
+    assert len(fields_requests) == expected_fields_requests

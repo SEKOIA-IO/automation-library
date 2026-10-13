@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-13 - 2.79.2
+
+### Fixed
+
+- `Get Event Field Common Values`: return requested fields found on later pages
+
 ## 2026-10-12 - 2.79.1
 
 ### Fixed
