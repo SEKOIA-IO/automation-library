@@ -47,7 +47,8 @@
       "from": {
         "description": "The mailbox owner email address (From header). Usually the same as sender",
         "type": "string",
-        "format": "email"
+        "format": "email",
+        "minLength": 1
       },
       "importance": {
         "description": "The importance level of the message",
@@ -74,7 +75,8 @@
       "sender": {
         "description": "The sender email address. Usually the same as mailbox owner",
         "type": "string",
-        "format": "email"
+        "format": "email",
+        "minLength": 1
       },
       "subject": {
         "description": "The subject of the message",

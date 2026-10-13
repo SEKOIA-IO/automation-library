@@ -63,3 +63,32 @@ def test_message_actions_require_message_id(configured_action, action_class, arg
         action.run(arguments=_without_or_empty(arguments, "message_id", missing_value))
 
     assert mock.call_count == 0
+
+
+@pytest.mark.parametrize("key", ["sender", "from"])
+def test_send_message_rejects_empty_addresses(configured_action, key):
+    action = configured_action(SendMessageAction)
+
+    with requests_mock.Mocker() as mock, pytest.raises(ValidationError):
+        action.run(arguments={**SEND_ARGUMENTS, key: ""})
+
+    assert mock.call_count == 0
+
+
+@pytest.mark.parametrize(("key", "sent_field"), [("content", ("body", "content")), ("subject", ("subject",))])
+def test_send_message_accepts_empty_content_and_subject(configured_action, key, sent_field):
+    action = configured_action(SendMessageAction)
+
+    with requests_mock.Mocker() as mock:
+        mock.get(
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.post("https://graph.microsoft.com/v1.0/users/1111/sendMail", status_code=202)
+        result = action.run(arguments={**SEND_ARGUMENTS, key: ""})
+
+    assert result["status"] == "sent"
+    sent_value = mock.last_request.json()["message"]
+    for field in sent_field:
+        sent_value = sent_value[field]
+    assert sent_value == ""
