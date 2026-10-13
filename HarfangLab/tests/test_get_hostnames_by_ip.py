@@ -112,3 +112,20 @@ def test_get_hostnames_by_ip_rejects_invalid_target_ip_shape():
             action.run({"target_ip": "not-an-ip", "get_only_last_seen": False})
 
     assert len(mock.request_history) == 0
+
+
+@pytest.mark.parametrize("mocked_response", [[], {"results": []}])
+@pytest.mark.parametrize("get_only_last_seen", [True, False])
+def test_get_hostnames_by_ip_no_agent_found(mocked_response, get_only_last_seen):
+    instance_url = "https://test.hurukau.io"
+    api_token = "11111111111111111111111111111111"
+
+    action = GetHostnamesByIP()
+    action.module.configuration = {"url": instance_url, "api_token": api_token}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{instance_url}/api/data/endpoint/Agent/", json=mocked_response)
+
+        res = action.run({"target_ip": "192.168.1.1", "get_only_last_seen": get_only_last_seen})
+
+    assert res == {"hostnames": []}
