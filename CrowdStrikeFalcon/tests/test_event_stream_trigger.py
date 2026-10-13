@@ -296,7 +296,7 @@ def test_read_stream_fails_on_stream_error(trigger):
     with pytest.raises(Exception):  # noqa: B017
         reader.run()
 
-    reader.stop_refresh()
+    assert not reader.refresh_timer.is_running
     assert trigger.events_queue.qsize() == 0
 
 
@@ -1563,7 +1563,7 @@ def test_read_stream_fails_on_invalid_line(trigger):
     with pytest.raises(ValueError):
         reader.run()
 
-    reader.stop_refresh()
+    assert not reader.refresh_timer.is_running
     assert trigger.events_queue.qsize() == 0
     # logged once by the line handler, once by the stream handler
     assert trigger.log_exception.call_count == 2

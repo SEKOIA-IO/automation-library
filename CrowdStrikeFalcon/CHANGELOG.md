@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Validate the `value` argument via a Pydantic model, rejecting missing or empty IOC values before uploading indicators; `value` is kept as a plain string because its valid shape depends on the sibling IOC `type`
 - Reject a missing IOC `type` at validation time and declare `minLength: 1` for `value` in the Block/Monitor IOC action manifests
 - Push IOCs: skip a revoked IOC that does not exist in CrowdStrike instead of failing
+- Event stream: stop the session refresh of a stream reader when it exits
 
 ### Changed
 
