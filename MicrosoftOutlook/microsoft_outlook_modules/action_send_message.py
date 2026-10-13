@@ -13,8 +13,8 @@ class SendMessageArguments(BaseModel):
     content_type: Literal["text", "html"] = "text"
     bcc: list[str] | None = None
     cc: list[str] | None = None
-    sender: str
-    from_: str = Field(alias="from")
+    sender: str = Field(..., min_length=1)
+    from_: str = Field(..., alias="from", min_length=1)
     subject: str
     recipients: list[str]
     importance: Literal["Low", "Normal", "High"] | None = None
