@@ -1,7 +1,7 @@
 import os
 import time
 from threading import Thread
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import requests_mock
@@ -166,17 +166,19 @@ def test_next_batch_with_data(trigger):
         assert len(trigger.send_event.mock_calls) == 1
 
 
-@patch("time.sleep", return_value=None)
-def test_next_batch_is_empty(trigger):
-    with requests_mock.Mocker() as mock_requests:
-        mock_requests.get(
-            trigger.url,
-            status_code=200,
-            json={"items": [], "next_cursor": "abcd"},
-        )
+def test_next_batch_is_empty(trigger, monkeypatch):
+    monkeypatch.setattr("sekoiaio.triggers.intelligence.time.sleep", MagicMock())
+    with trigger.context as cache:
+        cache["cursors"] = {trigger.feed_id: "current-cursor"}
 
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(trigger.url, status_code=200, json={"items": [], "next_cursor": "abcd"})
         trigger.next_batch()
-        assert len(trigger.send_event.mock_calls) == 0
+        assert mock_requests.call_count == 1
+
+    trigger.send_event.assert_not_called()
+    with trigger.context as cache:
+        assert cache["cursors"] == {trigger.feed_id: "current-cursor"}
 
 
 def test_handle_response_error(trigger):
