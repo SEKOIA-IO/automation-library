@@ -7,7 +7,7 @@ from pydantic import AliasChoices, BaseModel, Field
 from requests import Response
 from sekoia_automation.action import Action
 
-from virustotal.errors import MaxFileSizeExceedError, RequestLimitError
+from virustotal.errors import FileScanError, MaxFileSizeExceedError, RequestLimitError
 from virustotal.utils import virustotal_detection_outputs
 
 
@@ -53,14 +53,16 @@ class VirusTotalScanFileAction(Action):
         response.raise_for_status()
 
         vt_response = response.json()
-        return_code: int = -2
+        scan_id = vt_response.get("scan_id")
+        if not scan_id:
+            raise FileScanError(msg=f"The file upload failed: {vt_response.get('verbose_msg', 'no scan id returned')}")
+
+        return_code: int | None = -2
         count_error: int = 0
 
         while return_code == -2:
             time.sleep((2**count_error) * 30)
-            response = requests.get(
-                urljoin(url, "file/report") + f"?apikey={params['apikey']}&resource={vt_response['scan_id']}"
-            )
+            response = requests.get(urljoin(url, "file/report") + f"?apikey={params['apikey']}&resource={scan_id}")
             if response.status_code == 200:
                 count_error = 0
 
@@ -74,7 +76,12 @@ class VirusTotalScanFileAction(Action):
 
             response.raise_for_status()
             vt_response = response.json()
-            return_code = vt_response["response_code"]
+            return_code = vt_response.get("response_code")
+
+        if return_code != 1:
+            raise FileScanError(
+                msg=f"The scan report is not available: {vt_response.get('verbose_msg', 'unexpected response')}"
+            )
 
         virustotal_detection_outputs(
             action=self,

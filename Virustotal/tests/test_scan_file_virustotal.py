@@ -7,7 +7,7 @@ import requests_mock
 from pydantic import ValidationError
 
 from virustotal.action_virustotal_scanfile import VirusTotalScanFileAction, VirusTotalScanFileArguments
-from virustotal.errors import MaxFileSizeExceedError, RequestLimitError
+from virustotal.errors import FileScanError, MaxFileSizeExceedError, RequestLimitError
 
 file_result: dict = {
     "scans": {
@@ -566,3 +566,35 @@ def test_virustotal_scan_file_raises_if_report_request_fails(action, sleeps, req
 
     with pytest.raises(requests.HTTPError):
         action.run({"file": "tests/eicar.txt"})
+
+
+def test_virustotal_scan_file_raises_if_upload_returns_no_scan_id(action, sleeps, requests_mock):
+    requests_mock.post(SCAN_URL, json={"response_code": 0, "verbose_msg": "Invalid file"})
+
+    with pytest.raises(FileScanError) as excinfo:
+        action.run({"file": "tests/eicar.txt"})
+
+    assert "Invalid file" in str(excinfo.value)
+    assert requests_mock.call_count == 1
+    assert sleeps == []
+
+
+@pytest.mark.parametrize(
+    "report",
+    [
+        {
+            "response_code": 0,
+            "verbose_msg": "The requested resource is not among the finished, queued or pending scans",
+        },
+        {"verbose_msg": "Unexpected report"},
+    ],
+)
+def test_virustotal_scan_file_raises_if_report_is_not_available(action, sleeps, requests_mock, report):
+    requests_mock.post(SCAN_URL, json={"scan_id": SCAN_ID})
+    requests_mock.get(REPORT_URL, json=report)
+
+    with pytest.raises(FileScanError) as excinfo:
+        action.run({"file": "tests/eicar.txt"})
+
+    assert report["verbose_msg"] in str(excinfo.value)
+    assert action.outputs == {}

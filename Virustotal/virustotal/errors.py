@@ -32,3 +32,11 @@ class DuplicateCommentError(Error):
 
     def __str__(self):
         return f"{self.__class__.__name__} {self.message}"
+
+
+class FileScanError(Error):
+    def __init__(self, msg=None):
+        self.message = msg if msg else "The file scan failed"
+
+    def __str__(self):
+        return f"{self.__class__.__name__} {self.message}"
