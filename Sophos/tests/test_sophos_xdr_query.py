@@ -416,3 +416,41 @@ def test_getting_results_without_items(trigger):
     trigger.log.assert_called_with(message="No messages to forward", level="info")
     assert trigger.cursor.offset == previous_offset
     assert trigger.events_sum == 0
+
+
+def _bounded(response, limit=100):
+    calls = {"count": 0}
+
+    def get_query_status(_query_id):
+        calls["count"] += 1
+        if calls["count"] > limit:
+            raise RuntimeError("polled forever")
+        return response
+
+    return get_query_status
+
+
+def test_post_query_stops_after_consecutive_status_errors(trigger, monkeypatch):
+    monkeypatch.setattr("sophos_module.trigger_sophos_xdr_query.time.sleep", lambda _: None)
+    query_id = "7d00cf17-a987-4d07-ac88-93d4df89fa73"
+    trigger.client = Mock()
+    trigger.client.run_query.return_value = _response(payload={"id": query_id})
+    trigger.client.get_query_status.side_effect = _bounded(
+        _response(status_code=500, payload={"error": "internal"}, text="Internal error")
+    )
+
+    assert trigger.post_query({"adHocQuery": {}}) == ("failed", query_id)
+    assert trigger.client.get_query_status.call_count == 5
+
+
+def test_post_query_stops_when_query_never_finishes(trigger, monkeypatch, queryRun_message):
+    monkeypatch.setattr("sophos_module.trigger_sophos_xdr_query.time.sleep", lambda _: None)
+    monkeypatch.setattr("sophos_module.trigger_sophos_xdr_query.MAX_QUERY_STATUS_POLLS", 3)
+    query_id = "7d00cf17-a987-4d07-ac88-93d4df89fa73"
+    trigger.client = Mock()
+    trigger.client.run_query.return_value = _response(payload={"id": query_id})
+    trigger.client.get_query_status.side_effect = _bounded(_response(payload=queryRun_message))
+
+    assert trigger.post_query({"adHocQuery": {}}) == ("failed", query_id)
+    assert trigger.client.get_query_status.call_count == 3
+    trigger.log.assert_called_with(message=f"The query {query_id} did not finish in time", level="error")

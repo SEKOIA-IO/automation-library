@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-13 - 1.20.2
+
+### Fixed
+
+- Sophos XDR query triggers: stop waiting for a query after repeated status errors or 30 minutes without completion
+
 ## 2026-10-12 - 1.20.1
 
 ### Fixed
