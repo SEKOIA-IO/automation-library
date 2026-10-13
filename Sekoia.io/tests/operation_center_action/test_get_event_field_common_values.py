@@ -184,20 +184,28 @@ def test_get_event_field_common_values_fetches_next_page_for_missing_fields(requ
 
 
 @pytest.mark.parametrize(
-    "first_page_items,second_page_items,expected_fields_requests",
+    "fields,first_page_items,second_page_items,expected_fields_requests",
     [
         # every requested field is on the first page: no second request
         (
+            "action.id,event.dialect",
+            [{"name": "action.id", "most_common_values": []}, {"name": "event.dialect", "most_common_values": []}],
+            [],
+            1,
+        ),
+        # empty names (trailing comma) are ignored: no second request
+        (
+            "action.id, ,event.dialect,",
             [{"name": "action.id", "most_common_values": []}, {"name": "event.dialect", "most_common_values": []}],
             [],
             1,
         ),
         # a field is missing but the next page is empty: stop instead of looping
-        ([{"name": "action.id", "most_common_values": []}], [], 2),
+        ("action.id,event.dialect", [{"name": "action.id", "most_common_values": []}], [], 2),
     ],
 )
 def test_get_event_field_common_values_stops_paginating(
-    requests_mock, first_page_items, second_page_items, expected_fields_requests
+    requests_mock, fields, first_page_items, second_page_items, expected_fields_requests
 ):
     action = GetEventFieldCommonValues()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
@@ -216,9 +224,7 @@ def test_get_event_field_common_values_stops_paginating(
         json={"items": second_page_items, "total": 10},
     )
 
-    results = action.run(
-        {"query": "", "earliest_time": "-1d", "latest_time": "now", "fields": "action.id,event.dialect"}
-    )
+    results = action.run({"query": "", "earliest_time": "-1d", "latest_time": "now", "fields": fields})
 
     assert results == {
         "fields": [{"name": item["name"], "common_values": item["most_common_values"]} for item in first_page_items]

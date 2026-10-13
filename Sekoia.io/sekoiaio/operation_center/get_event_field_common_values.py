@@ -20,7 +20,7 @@ class GetEventFieldCommonValues(BaseGetEvents):
         limit = 1000
         offset = 0
 
-        requested_fields = {field.strip() for field in arguments["fields"].split(",")}
+        requested_fields = {field.strip() for field in arguments["fields"].split(",") if field.strip()}
 
         while must_continue_in_pages:
             must_continue_in_pages = False
