@@ -1,6 +1,5 @@
 from sekoia_automation.exceptions import AutomationSDKError
 
-
 # TODO: drop this module and import these exceptions from
 # sekoia_automation.exceptions once
 # https://github.com/SEKOIA-IO/sekoia-automation-sdk/pull/291 is released.

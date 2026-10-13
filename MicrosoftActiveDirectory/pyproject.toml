@@ -41,5 +41,5 @@ flake8 = "^4.0.1"
 pytest-clarity = "*"
 
 [tool.poetry.group.dev.dependencies.black]
-version = "^25.11.0"
+version = "^26.5.1"
 allow-prereleases = true
