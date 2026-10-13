@@ -46,15 +46,11 @@ def find_modules(root_path: Path) -> list[Path]:
 
 def find_changed_modules(root_path: Path) -> list[Path]:
     result = subprocess.run(
-        ["git", "diff", "--name-only", "origin/develop...HEAD"],
-        capture_output=True,
-        text=True,
+        ["git", "diff", "--name-only", "origin/main"], capture_output=True
     )
-    if result.returncode != 0:
-        raise SystemExit(f"git diff against origin/develop failed: {result.stderr.strip()}")
-
     changed_modules = set()
     for changed_file in result.stdout.splitlines():
+        changed_file = changed_file.decode()
         module_folder = changed_file.split("/")[0]
         module_path = root_path / module_folder
         if "_utils" in str(module_path):
