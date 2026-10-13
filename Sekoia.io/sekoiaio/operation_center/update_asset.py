@@ -30,7 +30,7 @@ class UpdateAssetArguments(BaseModel):
     def reject_boolean_criticality(cls, value: Any) -> Any:
         # pydantic would otherwise turn true/false into 1/0
         if isinstance(value, bool):
-            raise ValueError("Input should be a valid integer")
+            raise ValueError("Input should be a valid integer")  # noqa: TRY004 - pydantic only converts ValueError
         return value
 
 
