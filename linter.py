@@ -20,7 +20,8 @@ def load_all_json_files(base_path: str) -> list[str]:
 
 def find_changed_json_files(base: str) -> list[str]:
     """
-    Find the json files changed since the merge base with `base`, deleted files excluded.
+    Find the json files changed since the merge base with `base`, uncommitted edits included
+    and deleted files excluded.
 
     Args:
         base: str
@@ -29,7 +30,7 @@ def find_changed_json_files(base: str) -> list[str]:
         list[str]:
     """
     diff = subprocess.run(
-        ["git", "diff", "--name-only", "--diff-filter=d", "{0}...HEAD".format(base)],
+        ["git", "diff", "--name-only", "--diff-filter=d", "--merge-base", base],
         capture_output=True,
         text=True,
     )
@@ -109,13 +110,13 @@ def main():
         "--changes", action="store_true", help="Check/Fix only changed files"
     )
     parser.add_argument(
-        "--base", default="origin/develop", help="Branch to compare with when using --changes"
+        "--base", default="origin/develop", help="Branch or commit to compare with when using --changes"
     )
     args = parser.parse_args()
 
     if args.changes:
         files = find_changed_json_files(args.base)
-        print("{0} changed json file(s) to check:".format(len(files)))
+        print("{0} changed json file(s) to {1}:".format(len(files), args.action))
         for file_path in files:
             print("  {0}".format(file_path))
     else:
