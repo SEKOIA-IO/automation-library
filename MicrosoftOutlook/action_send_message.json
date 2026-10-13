@@ -39,7 +39,10 @@
         "description": "The message body content type",
         "type": "string",
         "default": "text",
-        "enum": ["text", "html"]
+        "enum": [
+          "text",
+          "html"
+        ]
       },
       "from": {
         "description": "The mailbox owner email address (From header). Usually the same as sender",
@@ -49,7 +52,11 @@
       "importance": {
         "description": "The importance level of the message",
         "type": "string",
-        "enum": ["Low", "Normal", "High"]
+        "enum": [
+          "Low",
+          "Normal",
+          "High"
+        ]
       },
       "recipients": {
         "description": "The list of recipients",
