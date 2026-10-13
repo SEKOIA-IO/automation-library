@@ -1,4 +1,5 @@
 import importlib
+import sys
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
@@ -268,6 +269,8 @@ def test_whois_action_queries_ip_address_as_is(whois_results):
 
 
 def test_whois_lookup_error_falls_back_to_exception(monkeypatch):
+    # a None entry in sys.modules makes `from whois.parser import ...` raise ImportError
+    monkeypatch.setitem(sys.modules, "whois.parser", None)
     monkeypatch.delattr(whois, "WhoisError", raising=False)
     try:
         reloaded = importlib.reload(whois_action)
