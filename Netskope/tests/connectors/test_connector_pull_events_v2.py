@@ -1,6 +1,6 @@
 import time
 from threading import Thread
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 import pytest
 import requests_mock
@@ -352,6 +352,19 @@ def test_configuration_uuid_prefers_connector_configuration_uuid(trigger):
     assert trigger.configuration_uuid == "connector-uuid"
 
 
+def test_configuration_uuid_raises_when_no_uuid_is_defined(trigger):
+    trigger.__dict__.pop("configuration_uuid", None)
+
+    with (
+        patch.object(
+            type(trigger.module), "connector_configuration_uuid", new_callable=PropertyMock, return_value=None
+        ),
+        patch.object(type(trigger.module), "trigger_configuration_uuid", new_callable=PropertyMock, return_value=None),
+        pytest.raises(ValueError, match="Neither connector nor trigger configuration UUID is defined"),
+    ):
+        _ = trigger.configuration_uuid
+
+
 def test_get_index_name_uses_consumer_group_when_set(trigger):
     trigger.configuration.consumer_group = "shared-group"
 
@@ -470,7 +483,7 @@ def test_run_logs_exception_when_consumer_start_fails(trigger):
     trigger.log_exception.assert_called_once()
 
 
-@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}" ".issubset(os.environ.keys()) == False")
+@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}.issubset(os.environ.keys()) == False")
 def test_fetch_next_batch_integration(integration_trigger):
     trigger = integration_trigger
     iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
@@ -484,7 +497,7 @@ def test_fetch_next_batch_integration(integration_trigger):
     assert len(calls) > 0
 
 
-@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}" ".issubset(os.environ.keys()) == False")
+@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}.issubset(os.environ.keys()) == False")
 def test_run_integration(integration_trigger):
     trigger = integration_trigger
     main_thread = Thread(target=trigger.run)

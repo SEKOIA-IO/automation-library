@@ -31,7 +31,7 @@ class NetskopeEventConnectorConfiguration(DefaultConnectorConfiguration):
 
 
 class NetskopeEventConsumer(Thread):
-    def __init__(self, connector: "NetskopeEventConnector", name: str, iterator: NetskopeIterator):
+    def __init__(self, connector: NetskopeEventConnector, name: str, iterator: NetskopeIterator):
         super().__init__()
         self.connector = connector
         self.name = name
@@ -57,7 +57,7 @@ class NetskopeEventConsumer(Thread):
             if "connection aborted" in str(error).lower():
                 return
 
-            raise error
+            raise
 
         except ValueError as error:
             if "invalid api token" in str(error).lower():
@@ -204,7 +204,10 @@ class NetskopeEventConnector(Connector):
         if self.module.connector_configuration_uuid is not None:
             return self.module.connector_configuration_uuid
 
-        return self.module.trigger_configuration_uuid
+        if self.module.trigger_configuration_uuid is not None:
+            return self.module.trigger_configuration_uuid
+
+        raise ValueError("Neither connector nor trigger configuration UUID is defined")
 
     def get_index_name(self, event_type: NetskopeEventType, alert_type: NetskopeAlertType | None) -> str:
         """
@@ -266,7 +269,7 @@ class NetskopeEventConnector(Connector):
         :rtype: dict[str, NetskopeDataConsumer]
         :return: The list of consumers as dict
         """
-        consumers: dict[str, NetskopeEventConsumer] = dict()
+        consumers: dict[str, NetskopeEventConsumer] = {}
 
         # for each iterator
         for name, iterator in iterators.items():
@@ -315,7 +318,7 @@ class NetskopeEventConnector(Connector):
         :param dict iterators: The list of iterators
         """
         # for each iterator
-        for name in iterators.keys():
+        for name in iterators:
             # get the consumer
             consumer = consumers.get(name)
 
