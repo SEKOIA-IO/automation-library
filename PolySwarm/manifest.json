@@ -20,7 +20,7 @@
       "apikey"
     ]
   },
-  "description": "Enrich threat indicators with crowdsourced malware analysis verdicts from PolySwarm's detection engine marketplace. Submit file hashes, URLs, and domains to PolySwarm and retrieve multi-engine scan results, threat scores, and detection metadata directly within Sekoia workflows.",
+  "description": "Look up, scan and detonate indicators against PolySwarm's marketplace of detection engines. Search reads what PolySwarm already holds and spends no scanning quota. Scan submits to the engines and returns a fresh multi-engine verdict. Sandbox detonates and returns where the report can be fetched. Accepts SHA256, SHA1 and MD5 hashes, files, URLs, domains and IP addresses, and searches by malware family, tag and other metadata. A trigger starts a playbook when a detonation finishes, and a connector ingests new PolySwarm results into a Sekoia intake on a schedule. Verdicts come from the engine detection counts, and an engine that abstained is never counted as benign.",
   "name": "PolySwarm",
   "slug": "polyswarm",
   "categories": [

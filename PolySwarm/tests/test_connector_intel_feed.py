@@ -876,3 +876,39 @@ def test_the_heartbeat_threshold_is_off_before_the_configuration_is_attached() -
     bare = IntelFeed.__new__(IntelFeed)
 
     assert bare.last_heartbeat_threshold == 0
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_a_feed_that_matches_nothing_says_so_with_its_filters(mock_api_class: MagicMock, connector: IntelFeed) -> None:
+    """A correct but empty feed must not be silent.
+
+    A filter narrow enough to match nothing for days is the normal case for this
+    connector, and silence reads to an operator exactly like a broken one. The
+    line has to name the filters, because the filters are almost always the
+    reason and the only thing the operator can change.
+    """
+    connector.configuration.families = ["emotet"]
+    connector.configuration.tags = ["banker"]
+    install_api(mock_api_class, lambda query: iter([]))
+
+    connector.next_run()
+
+    said = [m for m in logged_messages(connector) if "matched" in m]
+
+    assert said, f"the connector logged nothing about an empty window: {logged_messages(connector)}"
+    assert "emotet" in said[0]
+    assert "banker" in said[0]
+    assert str(connector.configuration.min_polyscore) in said[0]
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_catching_up_does_not_log_a_line_for_every_empty_slice(
+    mock_api_class: MagicMock, connector: IntelFeed
+) -> None:
+    """Only once the connector has reached the frontier, or a backlog floods the log."""
+    connector.configuration.lookback_minutes = 1000
+    install_api(mock_api_class, lambda query: iter([]))
+
+    connector.next_run()
+
+    assert not [m for m in logged_messages(connector) if "matched" in m]

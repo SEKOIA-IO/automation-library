@@ -712,8 +712,37 @@ class IntelFeed(Connector):
         # querying again straight away for a few seconds of new time.
         frontier = now - timedelta(seconds=self.configuration.lag_seconds)
         behind = window_end < frontier - timedelta(seconds=MIN_WINDOW_SECONDS)
+
+        if not events and not behind:
+            # A feed filtered to one malware family can legitimately match
+            # nothing for days, and a connector that says nothing at all while
+            # doing that is indistinguishable from one that is broken. Said only
+            # once the connector has reached the frontier, so catching up over a
+            # long backlog does not write a line per slice.
+            self.log(
+                message=(
+                    f"No PolySwarm artifacts matched {self.filter_summary()} in the window ending "
+                    f"{format_window_bound(window_end)}. The connector is up to date and will look again "
+                    f"in {self.frequency} seconds."
+                ),
+                level="info",
+            )
+
         self.sleep(0 if behind else self.frequency)
         return len(events)
+
+    def filter_summary(self) -> str:
+        """The operator's filters in one phrase, for a log line they can act on.
+
+        An empty feed is nearly always the filters rather than a fault, so the
+        message that reports it has to show what was asked for.
+        """
+        parts = [f"a PolyScore of at least {self.configuration.min_polyscore}"]
+        if self.configuration.families:
+            parts.append("families " + ", ".join(self.configuration.families))
+        if self.configuration.tags:
+            parts.append("tags " + ", ".join(self.configuration.tags))
+        return " and ".join(parts)
 
     def run(self) -> None:  # pragma: no cover
         self.log(message="Starting the PolySwarm intel feed", level="info")

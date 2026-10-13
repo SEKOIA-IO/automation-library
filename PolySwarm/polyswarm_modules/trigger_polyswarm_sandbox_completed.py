@@ -264,6 +264,18 @@ class SandboxCompleted(Trigger):
 
         if first_run:
             self._mark_initialised()
+            # Say this out loud. A first run deliberately emits nothing, and an
+            # operator who has just deployed the trigger and sees silence has no
+            # way to tell that apart from a trigger that does not work. One line
+            # naming what was skipped and what happens next is the difference
+            # between a working deployment and a support ticket.
+            waiting = len(self._in_flight())
+            self.log(
+                f"First poll: recorded {len(already_emitted)} detonations that had already finished, "
+                f"without starting a playbook run for any of them, and is now following {waiting} still "
+                "running. From here, one event is sent for each detonation as it finishes.",
+                level="info",
+            )
 
         return emitted + self._check_in_flight(already_emitted, on_page)
 

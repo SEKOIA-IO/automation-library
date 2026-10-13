@@ -61,7 +61,7 @@
       },
       "polyscore": {
         "type": "number",
-        "description": "PolySwarm threat score (0.0 - 1.0)"
+        "description": "PolySwarm threat score (0.0 - 1.0). The score is built around file artifacts. For a URL, a domain or an address, branch on the detection counts rather than on this score."
       },
       "extended_type": {
         "type": "string",

@@ -610,3 +610,31 @@ def test_one_task_is_always_looked_up_even_when_the_budget_is_tiny(trigger: Sand
         assert trigger.poll_once() == 1
 
     assert api.sandbox_task_status.call_count == 1
+
+
+def test_the_first_poll_says_why_it_emitted_nothing(data_storage: str, module: PolyswarmModule) -> None:
+    """A silent first poll is indistinguishable from a trigger that does not work.
+
+    The first poll deliberately emits nothing, so it has to say so. An operator
+    who has just deployed this and sees only "started" has no way to tell a
+    working trigger from a broken one, and will open a ticket rather than wait.
+    """
+    fresh = SandboxCompleted(module=module, data_path=Path(data_storage))
+    fresh.configuration = {"frequency": 10}
+    fresh.log = MagicMock()
+    fresh.log_exception = MagicMock()
+    fresh.send_event = MagicMock()
+    fresh._wait = MagicMock()
+    _with_tasks(
+        fresh,
+        _make_sandbox_task(task_id="done", status="SUCCEEDED"),
+        _make_sandbox_task(task_id="running", status="RUNNING", report=None),
+    )
+
+    assert fresh.poll_once() == 0
+    fresh.send_event.assert_not_called()
+
+    said = [str(call.args[0]) for call in fresh.log.call_args_list if call.args]
+
+    assert any("First poll" in message for message in said), said
+    assert any("without starting a playbook run" in message for message in said), said
