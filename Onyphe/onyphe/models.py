@@ -15,7 +15,7 @@ def reject_non_string(value: Any) -> Any:
 def validate_domain(value: str) -> str:
     value = value.lower()  # Onyphe returns 404 on GOOGLE.COM
     # up to 253 chars, up to 127 sublevels of length up to 63
-    if len(value) <= 253 and re.fullmatch(r"(?:[^.]{0,63}\.){1,127}[^.]{1,63}", value):
+    if len(value) <= 253 and re.fullmatch(r"(?:[^.]{1,63}\.){1,127}[^.]{1,63}", value):
         return value
     raise ValueError("Input should be a valid domain")
 

@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Reject a negative `budget` and a `first_page` lower than 1
+- Reject a domain with an empty label, such as `.com` or `example..com`
 - Declare in the datascan manifest that exactly one of `ip` or `string` is required
 
 ## 2024-05-28 - 1.23.0

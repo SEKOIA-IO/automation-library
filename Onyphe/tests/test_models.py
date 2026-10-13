@@ -52,6 +52,8 @@ def test_onion_is_lowercased():
     [
         (OnypheDomainArguments, {"domain": "a" * 250 + ".com"}),
         (OnypheDomainArguments, {"domain": ""}),
+        (OnypheDomainArguments, {"domain": ".com"}),
+        (OnypheDomainArguments, {"domain": "example..com"}),
         (OnypheMD5Arguments, {"md5": "z" * 32}),
         (OnypheOnionArguments, {"onion": "example.onion"}),
     ],
