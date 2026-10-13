@@ -1,8 +1,23 @@
+import hashlib
 from pathlib import Path
+from typing import Any
 
 from sekoia_automation.action import Action
 
 from polyswarm_modules import PolyswarmModule
+
+
+def sha256_handle(handle: Any) -> str:
+    """SHA256 of an open file handle, leaving the handle rewound for the client.
+
+    Read in chunks so a large sample is never held in memory whole.
+    """
+    h = hashlib.sha256()
+    for chunk in iter(lambda: handle.read(65536), b""):
+        h.update(chunk)
+    # The same handle is handed to the client next, which expects to read it from the start.
+    handle.seek(0)
+    return h.hexdigest()
 
 
 class PolyswarmAction(Action):

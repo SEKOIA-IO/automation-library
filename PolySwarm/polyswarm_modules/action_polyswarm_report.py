@@ -1,30 +1,21 @@
-import time
 from typing import Any
 
-from polyswarm_api import exceptions as ps_exceptions
 from pydantic import BaseModel, Field
-from requests import RequestException
 
 from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import build_client
+from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.sandbox import MAX_WAIT_SECONDS_CEILING, TERMINAL_STATUSES, poll_until_terminal
+from polyswarm_modules.validators import invalid_hash_reason
 
-MISSING_RESULT: tuple[type[Exception], ...] = (
-    ps_exceptions.NoResultsException,
-    ps_exceptions.NotFoundException,
-)
-CLIENT_ERRORS: tuple[type[Exception], ...] = (ps_exceptions.PolyswarmException, RequestException)
-
-TERMINAL_STATUSES: frozenset[str] = frozenset({"SUCCEEDED", "FAILED"})
 # Synthetic status for a hash and provider that has never had a sandbox task
 # created for it at all, distinct from every real provider status.
 NOT_FOUND_STATUS: str = "NOT_FOUND"
 
-# A fast provider should not wait behind a slow one's interval, and a slow
-# provider should not be hammered every few seconds for the whole wait, so
-# the interval grows from a short first check up to an explicit ceiling.
-INITIAL_POLL_INTERVAL: float = 5.0
-POLL_BACKOFF_FACTOR: float = 2.0
+# A slow provider should not be hammered every few seconds for the whole wait.
+# This action polls a task it did not start, so it backs off further than the
+# Sandbox actions do after submitting one.
 POLL_INTERVAL_CEILING: float = 60.0
+SHA256_LENGTH: int = 64
 
 
 class ReportArguments(BaseModel):
@@ -33,8 +24,10 @@ class ReportArguments(BaseModel):
     max_wait_seconds: int = Field(
         default=0,
         ge=0,
+        le=MAX_WAIT_SECONDS_CEILING,
         description=(
-            "How long to wait for a detonation that is already running elsewhere to finish, in seconds. "
+            "How long to wait for a detonation that is already running elsewhere to finish, in seconds, "
+            f"capped at {MAX_WAIT_SECONDS_CEILING}. "
             "0, the default, does not wait: this reads the task's current status and returns immediately, "
             "which is why the SandboxCompleted trigger exists, so nobody has to sit here waiting. Polling "
             "backs off from a short first check up to a 60 second ceiling. This action never starts a "
@@ -294,23 +287,34 @@ class Report(PolyswarmAction):
 
     def run(self, arguments: dict[str, Any]) -> dict[str, Any] | None:
         args = ReportArguments(**arguments)
+
+        # Refused before a request is spent: the platform would reject a
+        # malformed hash anyway, and a shorter MD5 or SHA1 would pass the
+        # general hash rule but is not what this action looks a report up by.
+        reason = invalid_hash_reason(args.sha256)
+        if reason is None and len(args.sha256.strip()) != SHA256_LENGTH:
+            reason = f"'{args.sha256}' is not a SHA256 hash: expected 64 hexadecimal characters"
+        if reason is not None:
+            self.error(f"Refusing to look up a sandbox report: {reason}.")
+            return None
+
         api = build_client(self.module.configuration)
 
         try:
-            task = api.sandbox_task_latest(args.sha256, sandbox=args.sandbox)
+            task = api.sandbox_task_latest(args.sha256.strip(), sandbox=args.sandbox)
         except MISSING_RESULT:
             task = None
         except CLIENT_ERRORS as exc:
             # Never quote the client's own message: it renders the request,
             # which carries the key.
-            self.error(f"PolySwarm could not be reached to look up the sandbox report ({type(exc).__name__}).")
+            self.error(f"PolySwarm could not be reached to look up the sandbox report ({failure_kind(exc)}).")
             return None
 
         if not task:
             return self._not_found_response(args)
 
         if args.max_wait_seconds > 0 and task.status not in TERMINAL_STATUSES:
-            task = self._wait_for_running(api, task, args.max_wait_seconds)
+            task = poll_until_terminal(api, task, args.max_wait_seconds, POLL_INTERVAL_CEILING, self.log)
 
         return self._respond(task)
 
@@ -331,34 +335,6 @@ class Report(PolyswarmAction):
             report=None,
             sandbox_artifacts=[],
         ).model_dump()
-
-    def _wait_for_running(self, api: Any, task: Any, max_wait_seconds: int) -> Any:
-        """Wait for a detonation that is already running elsewhere to reach a terminal status.
-
-        This action never starts the detonation it waits on here: a
-        playbook submits one with SandboxFile, SandboxUrl or SandboxIp, and
-        this only polls the task that action created. The interval starts
-        at INITIAL_POLL_INTERVAL and doubles each round, capped at
-        POLL_INTERVAL_CEILING, so a fast provider gets an answer in seconds
-        and a slow one is not polled every few seconds for the whole wait.
-        The still-processing signal is the provider's own task status:
-        anything outside TERMINAL_STATUSES is in progress.
-        """
-        deadline = time.monotonic() + max_wait_seconds
-        interval = INITIAL_POLL_INTERVAL
-
-        while task.status not in TERMINAL_STATUSES:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                break
-            time.sleep(min(interval, remaining))
-            interval = min(interval * POLL_BACKOFF_FACTOR, POLL_INTERVAL_CEILING)
-            try:
-                task = api.sandbox_task_status(task.id)
-            except CLIENT_ERRORS as exc:
-                self.log(f"Sandbox status check failed ({type(exc).__name__}), retrying", level="warning")
-
-        return task
 
     def _respond(self, task: Any) -> dict[str, Any] | None:
         provider = (getattr(task, "sandbox", "") or "").lower()

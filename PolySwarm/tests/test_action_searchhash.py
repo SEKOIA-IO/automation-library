@@ -5,6 +5,7 @@ from polyswarm_api import exceptions as ps_exceptions
 
 from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.action_polyswarm_searchhash import SearchHash
+from tests.helpers import autospec_build_client
 
 
 @pytest.fixture
@@ -49,7 +50,7 @@ def _make_mock_result(
     return result
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_search_hash_returns_result(mock_build_client: MagicMock, action: SearchHash) -> None:
     mock_result = _make_mock_result()
     mock_build_client.return_value.search.return_value = iter([mock_result])
@@ -67,7 +68,7 @@ def test_search_hash_returns_result(mock_build_client: MagicMock, action: Search
     assert response["first_seen"] == "2024-01-15T00:00:00Z"
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_search_hash_no_family(mock_build_client: MagicMock, action: SearchHash) -> None:
     result = _make_mock_result()
     metadata = MagicMock()
@@ -81,7 +82,7 @@ def test_search_hash_no_family(mock_build_client: MagicMock, action: SearchHash)
     assert response["family"] == ""
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_abstaining_engines_are_not_benign(mock_build_client: MagicMock, action: SearchHash) -> None:
     """The client counts an abstention as benign. A detection rule must not."""
     mock_build_client.return_value.search.return_value = [
@@ -94,7 +95,7 @@ def test_abstaining_engines_are_not_benign(mock_build_client: MagicMock, action:
     assert response["benign_detections"] == 0
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_unseen_hash_takes_the_unknown_branch_not_a_traceback(
     mock_build_client: MagicMock, action: SearchHash
 ) -> None:
@@ -108,7 +109,7 @@ def test_unseen_hash_takes_the_unknown_branch_not_a_traceback(
     assert action._outputs == {"unknown": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_a_detected_hash_activates_the_detected_branch(mock_build_client: MagicMock, action: SearchHash) -> None:
     api = mock_build_client.return_value
     api.search.return_value = iter([_make_mock_result(malicious_count=5, benign_count=2)])
@@ -121,7 +122,7 @@ def test_a_detected_hash_activates_the_detected_branch(mock_build_client: MagicM
     assert response["total_detections"] == 7
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_a_clean_hash_activates_the_not_detected_branch(mock_build_client: MagicMock, action: SearchHash) -> None:
     api = mock_build_client.return_value
     api.search.return_value = iter([_make_mock_result(malicious_count=0, benign_count=9)])
@@ -132,7 +133,7 @@ def test_a_clean_hash_activates_the_not_detected_branch(mock_build_client: Magic
     assert action._outputs == {"not detected": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_the_detection_threshold_moves_the_branch(mock_build_client: MagicMock, action: SearchHash) -> None:
     """One lone engine calling it malicious is a judgement call, so the threshold is the operator's."""
     api = mock_build_client.return_value
@@ -151,7 +152,7 @@ def _make_tag_link(*, tags: list[str] | None = None, families: list[str] | None 
     return link
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_attribution_is_reported(mock_build_client: MagicMock, action: SearchHash) -> None:
     api = mock_build_client.return_value
     api.search.return_value = iter([_make_mock_result()])
@@ -172,7 +173,7 @@ def test_attribution_is_reported(mock_build_client: MagicMock, action: SearchHas
     assert response["family"] == "GenericTrojan"
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_attribution_empty_still_returns_the_verdict(mock_build_client: MagicMock, action: SearchHash) -> None:
     api = mock_build_client.return_value
     api.search.return_value = iter([_make_mock_result()])
@@ -188,7 +189,7 @@ def test_attribution_empty_still_returns_the_verdict(mock_build_client: MagicMoc
     assert action.error_message is None
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_attribution_without_an_actor_tag_leaves_the_actor_empty(
     mock_build_client: MagicMock, action: SearchHash
 ) -> None:
@@ -203,7 +204,7 @@ def test_attribution_without_an_actor_tag_leaves_the_actor_empty(
     assert response["threat_actor"] == ""
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_tag_lookup_failure_does_not_fail_the_action(mock_build_client: MagicMock, action: SearchHash) -> None:
     """Attribution is additive. A tag surface the plan cannot reach is not an error."""
     api = mock_build_client.return_value
@@ -222,7 +223,7 @@ def test_tag_lookup_failure_does_not_fail_the_action(mock_build_client: MagicMoc
     assert response["polyscore"] == 0.85
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_tag_lookup_returning_objects_is_normalised(mock_build_client: MagicMock, action: SearchHash) -> None:
     """Older deployments return objects carrying a name rather than bare strings."""
     api = mock_build_client.return_value
@@ -239,7 +240,7 @@ def test_tag_lookup_returning_objects_is_normalised(mock_build_client: MagicMock
     assert response["threat_actor"] == "Lazarus"
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_existing_field_names_are_unchanged(mock_build_client: MagicMock, action: SearchHash) -> None:
     """Customer playbooks read these names. Attribution is additive, never a rename."""
     api = mock_build_client.return_value
@@ -266,7 +267,7 @@ def test_existing_field_names_are_unchanged(mock_build_client: MagicMock, action
 # --- input validation ---
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_malformed_hash_is_rejected_without_an_api_call(mock_build_client: MagicMock, action: SearchHash) -> None:
     response = action.run({"query_hash": "not-a-hash"})
 
@@ -275,7 +276,7 @@ def test_malformed_hash_is_rejected_without_an_api_call(mock_build_client: Magic
     assert "not a plausible" in action.error_message.lower()
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhash.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
 def test_wrong_length_hex_is_rejected_without_an_api_call(mock_build_client: MagicMock, action: SearchHash) -> None:
     """33 hex characters is not a valid MD5, SHA1 or SHA256 length."""
     response = action.run({"query_hash": "a" * 33})
@@ -286,7 +287,9 @@ def test_wrong_length_hex_is_rejected_without_an_api_call(mock_build_client: Mag
 
 @pytest.mark.parametrize("query_hash", ["a" * 32, "a" * 40, "a" * 64])
 def test_valid_length_hashes_are_accepted(query_hash: str, action: SearchHash) -> None:
-    with patch("polyswarm_modules.action_polyswarm_searchhash.build_client") as mock_build_client:
+    with patch(
+        "polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client
+    ) as mock_build_client:
         mock_build_client.return_value.search.return_value = iter([_make_mock_result()])
         mock_build_client.return_value.tag_link_get.return_value = _make_tag_link()
 

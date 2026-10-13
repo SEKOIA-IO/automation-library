@@ -9,7 +9,9 @@ sample twice and bill for it twice, so POST is deliberately excluded.
 
 from typing import Any
 
+from polyswarm_api import exceptions as ps_exceptions
 from polyswarm_api.api import PolyswarmAPI
+from requests import RequestException
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -18,6 +20,17 @@ RETRY_TOTAL: int = 3
 RETRY_BACKOFF: float = 1.0
 RETRY_ON: tuple[int, ...] = (429, 500, 502, 503, 504)
 IDEMPOTENT_METHODS: frozenset[str] = frozenset({"GET", "HEAD", "OPTIONS"})
+
+# The client raises on 204 and 404 rather than returning an empty result, so
+# "PolySwarm has nothing on this" arrives as an exception and is not an error.
+MISSING_RESULT: tuple[type[Exception], ...] = (
+    ps_exceptions.NoResultsException,
+    ps_exceptions.NotFoundException,
+)
+# Everything the client or its transport can raise for a call that went wrong.
+# A module level tuple rather than an inline one in each handler, so the
+# formatter has no parenthesised exception list to rewrite.
+CLIENT_ERRORS: tuple[type[Exception], ...] = (ps_exceptions.PolyswarmException, RequestException)
 
 
 def build_client(configuration: Any, timeout: int = DEFAULT_TIMEOUT) -> PolyswarmAPI:
@@ -85,3 +98,22 @@ def choose_vm_slug(api: Any, provider_slug: str, artifact_type: str) -> str | No
             if wanted in (vm.get("supported_artifact_types") or []):
                 return str(vm.get("slug") or name)
     return None
+
+
+def failure_kind(exc: Exception) -> str:
+    """The exception class and, when there is one, the HTTP status, for an error message.
+
+    The status is what separates a bad key (401) from a spent quota (429) for
+    an analyst reading the run. The exception text is deliberately left out:
+    it can render the request back, and the request carries the query and the
+    key. The polyswarm client keeps the status on the request it attaches to
+    its own exceptions, and requests keeps it on the response, so both are
+    read. Compared with None rather than tested for truth, because a requests
+    Response is falsy for any 4xx or 5xx status.
+    """
+    carrier = getattr(exc, "response", None)
+    if carrier is None:
+        carrier = getattr(exc, "request", None)
+    status = getattr(carrier, "status_code", None)
+    kind = type(exc).__name__
+    return f"{kind}, HTTP {status}" if isinstance(status, int) else kind

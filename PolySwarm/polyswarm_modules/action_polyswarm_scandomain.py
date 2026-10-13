@@ -5,20 +5,19 @@ from polyswarm_api import exceptions as ps_exceptions
 from polyswarm_api.api import PolyswarmAPI
 from polyswarm_api.resources import ArtifactType
 from pydantic import BaseModel, Field
-from requests import RequestException
 
 from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import build_client
+from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
 from polyswarm_modules.validators import invalid_domain_reason
+from polyswarm_modules.verdict import AssertionResult, tally_assertions
 
-MISSING_RESULT: tuple[type[Exception], ...] = (
-    ps_exceptions.NoResultsException,
-    ps_exceptions.NotFoundException,
-)
-SCAN_FAILURES: tuple[type[Exception], ...] = (
-    ps_exceptions.PolyswarmException,
-    RequestException,
-)
+# A scan waits on engines that can answer slowly, but the SDK's own default of
+# fifteen minutes is the kind of blocked playbook run the sandbox actions were
+# written to avoid, so the wait is bounded here and exposed to the analyst
+# instead. The ceiling matches the longest scan window PolySwarm offers.
+DEFAULT_MAX_WAIT_SECONDS: int = 300
+MAX_WAIT_SECONDS_CEILING: int = 600
+MIN_WAIT_SECONDS: int = 30
 
 # A label is one to 63 characters of letters, digits and hyphens, and cannot
 # start or end with a hyphen. A hostname is one or more labels joined by dots.
@@ -58,12 +57,17 @@ class ScanDomainArguments(BaseModel):
             "off unless you need a fresh verdict."
         ),
     )
-
-
-class AssertionResult(BaseModel):
-    engine_name: str
-    author_name: str
-    verdict: bool | None
+    max_wait_seconds: int = Field(
+        default=DEFAULT_MAX_WAIT_SECONDS,
+        ge=MIN_WAIT_SECONDS,
+        le=MAX_WAIT_SECONDS_CEILING,
+        description=(
+            "How long to wait for the engines to finish a new scan, in seconds, capped at "
+            f"{MAX_WAIT_SECONDS_CEILING}. Only applies when a new scan is submitted. If the engines have "
+            "not finished by then the action stops with an error and the scan keeps running at "
+            "PolySwarm, so look the result up again later."
+        ),
+    )
 
 
 class ScanDomainResponse(BaseModel):
@@ -107,9 +111,9 @@ class ScanDomain(PolyswarmAction):
         if not args.force_rescan:
             try:
                 result = self._lookup_existing(api, args.domain)
-            except SCAN_FAILURES as exc:
+            except CLIENT_ERRORS as exc:
                 # Never quote the client's own message: it renders the request, which carries the key.
-                self.error(f"PolySwarm did not look up an existing scan for the domain ({type(exc).__name__}).")
+                self.error(f"PolySwarm did not look up an existing scan for the domain ({failure_kind(exc)}).")
                 return None
             if result is not None:
                 cached = True
@@ -122,10 +126,17 @@ class ScanDomain(PolyswarmAction):
                     artifact_type=ArtifactType.URL,
                     scan_config=args.scan_config,
                 )
-                result = api.wait_for(instance)
-            except SCAN_FAILURES as exc:
+                result = api.wait_for(instance, timeout=args.max_wait_seconds)
+            except ps_exceptions.TimeoutException:
+                # The scan itself is not cancelled, only the wait for it, so it can still be read later.
+                self.error(
+                    f"PolySwarm had not finished the domain scan after {args.max_wait_seconds} seconds. "
+                    "The scan is still running, look the result up again later."
+                )
+                return None
+            except CLIENT_ERRORS as exc:
                 # Never quote the client's own message: it renders the request, which carries the key.
-                self.error(f"PolySwarm did not scan the domain ({type(exc).__name__}).")
+                self.error(f"PolySwarm did not scan the domain ({failure_kind(exc)}).")
                 return None
             if result.failed:
                 self.error("PolySwarm reported the scan as failed, so there is no verdict")
@@ -149,20 +160,7 @@ class ScanDomain(PolyswarmAction):
         return None
 
     def _build_response(self, result: Any, domain: str, cached: bool) -> ScanDomainResponse:
-        # Only assertions inside the bloom mask are real answers from an engine.
-        # An engine that abstained answers None, and it is neither malicious nor
-        # benign: counting abstentions as benign inflates the clean side of any
-        # ratio a customer writes a detection rule against.
-        scored = [a for a in result.assertions if a.mask]
-
-        assertions = [
-            AssertionResult(
-                engine_name=a.engine_name,
-                author_name=a.author_name,
-                verdict=a.verdict,
-            )
-            for a in scored
-        ]
+        tally = tally_assertions(result)
 
         return ScanDomainResponse(
             domain=domain,
@@ -170,10 +168,10 @@ class ScanDomain(PolyswarmAction):
             permalink=result.permalink,
             polyscore=result.polyscore,
             extended_type=result.extended_type,
-            malicious_count=sum(1 for a in scored if a.verdict is True),
-            benign_count=sum(1 for a in scored if a.verdict is False),
-            total_count=len(scored),
+            malicious_count=tally.malicious_count,
+            benign_count=tally.benign_count,
+            total_count=tally.total_count,
             failed=result.failed,
             cached=cached,
-            assertions=assertions,
+            assertions=tally.assertions,
         )

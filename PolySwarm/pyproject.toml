@@ -1,9 +1,9 @@
 [project]
 name = "polyswarm-automation-module"
-version = "1.1.1"
+version = "1.0.0"
 description = ""
 authors = []
-requires-python = ">=3.11,<4"
+requires-python = ">=3.14,<4"
 
 dependencies = [
     "sekoia-automation-sdk>=1.23.0,<2",
@@ -46,11 +46,6 @@ non_interactive = true
 ignore_missing_imports = true
 show_column_numbers = true
 exclude = ["tests/"]
-
-[tool.black]
-line-length = 119
-target-version = ['py311']
-include = '\.pyi?$'
 
 [tool.coverage.run]
 omit = [

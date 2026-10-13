@@ -38,9 +38,8 @@ polyswarm-api client, and are therefore NOT implemented rather than faked:
      machinery is not ported. Instead this connector bounds the amount of work
      per run by bounding the WINDOW rather than the result count, so catch up
      always moves forward and never skips. The per run event ceiling is a safety
-     guard only: when it trips the connector pushes nothing, holds its
-     checkpoint and logs an error asking the operator to shorten the window or
-     tighten the filters. See MAX EVENTS PER RUN below.
+     guard that shrinks the window, and is waived at the smallest window. See
+     MAX EVENTS PER RUN below.
 
 A third difference worth stating: the detection counts on an event are the
 platform's own aggregate from scan.detections, passed through under the
@@ -51,11 +50,39 @@ it, which is not necessarily the way a scan result action would count it.
 
 MAX EVENTS PER RUN
 
-A run that would exceed max_events_per_run is refused whole: no events are
-pushed and the checkpoint does not move. Pushing the partial result and then
+A window that would exceed max_events_per_run is not pushed. It is halved and
+asked for again, down to MIN_WINDOW_SECONDS. Pushing a partial result and then
 re throwing the same window at the intake on the next run would duplicate
-events, and advancing the checkpoint past unread artifacts would lose them.
-Refusing is the only option that neither duplicates nor drops.
+events, and advancing the checkpoint past unread artifacts would lose them, so
+narrowing the window is the only way to honour the ceiling without either.
+
+At MIN_WINDOW_SECONDS the ceiling is waived and the whole window is pushed. The
+alternative, refusing it, cannot be recovered from without an operator: the
+window cannot be made smaller, so every later run would ask for the same one
+and the feed would stop for good. Pushing it loses nothing, because the
+connector consumes the whole result and the checkpoint moves past it, and the
+cost is one oversized batch, which the SDK already splits into chunks. The
+connector logs a warning when it does so, so an operator can tighten the
+filters.
+
+PUSH FAILURES
+
+The SDK's push_events_to_intakes never raises. It retries each chunk, and when a
+chunk still fails it logs the failure and leaves that chunk out of the returned
+event ids. The connector therefore compares the number of ids with the number
+of events and, on a shortfall, leaves the checkpoint and the remembered digests
+where they were and backs off. The next attempt asks for the same window again.
+Chunks the intake did accept the first time are sent a second time, so delivery
+is at least once, which is the safe side of the trade: the alternative is a
+window marked done with artifacts in it that never arrived.
+
+CATCH UP PACING
+
+A run that reaches the frontier (now minus lag_seconds) sleeps for the
+configured frequency. A run that stops short of it, because the window was
+capped at MAX_WINDOW_MINUTES or halved, does not sleep, so a connector that was
+down for a day or a month walks forward as fast as the API answers instead of
+one slice per frequency.
 
 CHECKPOINTING
 
@@ -78,6 +105,20 @@ exception class name only. The client's own exception text can embed the request
 parameters that produced it, so formatting an exception into a log line is how a
 query, and on some code paths a credential, escapes.
 
+ARTIFACTS THAT QUALIFY LATE
+
+The window is cut on artifact.created, the moment PolySwarm first accepted the
+artifact. The metadata document carries one other timestamp in the index,
+scan.latest_scan.created, and the client exposes it as last_scanned. It was
+considered as the window field and rejected. It moves on a rescan only, not when
+a sandbox report attributes a family or when a polyscore is recomputed, so it
+would still miss the case that matters, and it would hand back the same artifact
+every time it is rescanned, which the one run digest list cannot suppress. No
+field in the response records when the document last changed, so none is used.
+The limitation is documented in the connector description instead: an artifact
+whose score or family only qualifies after its window closed is not pulled, and
+the way to cover it is a scheduled search action over a longer period.
+
 TIMEZONES
 
 The metadata index is UTC: artifact.created has no offset of its own, and the
@@ -92,12 +133,12 @@ than read as the process's local zone, which is what Python's astimezone
 would otherwise do to it. See format_window_bound and _as_text.
 """
 
+import time
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 
-from polyswarm_api import exceptions as ps_exceptions
 from polyswarm_api import settings as ps_settings
 from polyswarm_api.api import PolyswarmAPI
 from pydantic import BaseModel, Field
@@ -106,14 +147,9 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from polyswarm_modules import PolyswarmModule
-from polyswarm_modules.client import build_client
-
-MISSING_RESULT: tuple[type[Exception], ...] = (
-    ps_exceptions.NoResultsException,
-    ps_exceptions.NotFoundException,
-)
-
-NUMERIC_ERRORS: tuple[type[Exception], ...] = (TypeError, ValueError)
+from polyswarm_modules.client import MISSING_RESULT, build_client
+from polyswarm_modules.coerce import NUMERIC_ERRORS, as_names, as_score
+from polyswarm_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 # The Splunk input applies these ceilings and refuses a larger value at save time
 # rather than silently correcting it. They are repeated here so the two products
@@ -309,44 +345,10 @@ def _as_text(value: Any) -> str:
     return str(value)
 
 
-def _as_names(value: Any) -> list[str]:
-    """Normalise a families or tags payload into a deduplicated list of names."""
-    if isinstance(value, str):
-        candidates: list[Any] = [value]
-    elif isinstance(value, (list, tuple, set)):
-        candidates = list(value)
-    else:
-        return []
-
-    seen: set[str] = set()
-    names: list[str] = []
-    for candidate in candidates:
-        if isinstance(candidate, dict):
-            raw = candidate.get("name") or candidate.get("tag") or candidate.get("family") or ""
-        elif isinstance(candidate, str):
-            raw = candidate
-        else:
-            continue
-        name = raw.strip()
-        key = name.casefold()
-        if name and key not in seen:
-            seen.add(key)
-            names.append(name)
-    return names
-
-
 def _as_number(value: Any) -> int | None:
     """Read an integer counter, treating anything unreadable as absent."""
     try:
         return int(value)
-    except NUMERIC_ERRORS:
-        return None
-
-
-def _as_score(value: Any) -> float | None:
-    """Read a polyscore, treating anything unreadable as absent."""
-    try:
-        return float(value)
     except NUMERIC_ERRORS:
         return None
 
@@ -356,6 +358,20 @@ class IntelFeed(Connector):
 
     name = "PolySwarm Intel Feed"
 
+    # The inherited six hours would flag a healthy connector as dead. This one
+    # pushes only artifacts that match an operator's family, tag and score
+    # filters, and a narrow filter can legitimately match nothing for days. The
+    # check is switched off (the SDK treats zero as no limit) because no fixed
+    # figure separates a quiet feed from a stuck one.
+    #
+    # Liveness is answered by the heartbeat instead, which asks the question
+    # that actually matters here: is the poll loop still going round. That is
+    # true of a healthy feed that happens to be matching nothing, and false of
+    # one wedged in a request that never returns, which is the case a restart
+    # repairs. The SDK disables the heartbeat check too unless a threshold is
+    # set, so last_heartbeat_threshold below turns it back on.
+    seconds_without_events = 0
+
     module: PolyswarmModule
     configuration: IntelFeedConfiguration
 
@@ -364,10 +380,25 @@ class IntelFeed(Connector):
         self._checkpoint: CheckpointDatetime | None = None
         self._digests: PersistentJSON | None = None
         self._consecutive_failures = 0
+        self._api: PolyswarmAPI | None = None
 
     @property
     def frequency(self) -> int:
         return self.configuration.frequency
+
+    @property
+    def last_heartbeat_threshold(self) -> int:  # type: ignore[override]
+        """How long without a completed cycle before the platform restarts this.
+
+        Generous on purpose. A cycle ends with a sleep of up to the configured
+        frequency, and an hour of back off on top when PolySwarm is unreachable,
+        so anything tighter would restart a connector that is merely waiting.
+        Read before the configuration is attached, it answers zero, which the
+        SDK reads as no check.
+        """
+        if not getattr(self, "configuration", None):
+            return 0
+        return max(3 * self.frequency, 2 * MAX_BACKOFF_SECONDS)
 
     @property
     def checkpoint(self) -> CheckpointDatetime:
@@ -388,9 +419,16 @@ class IntelFeed(Connector):
         return self._digests
 
     def client(self) -> PolyswarmAPI:
-        """Build a client through the shared factory. The key is read here and never leaves this call."""
-        community = self.configuration.community or self.module.configuration.community
-        return build_client(SimpleNamespace(apikey=self.module.configuration.apikey, community=community))
+        """Return the client, building it through the shared factory on first use.
+
+        One client serves every run, so the retrying session and its connection
+        pool are reused instead of rebuilt each poll. The key is read when the
+        client is built and never leaves this call.
+        """
+        if self._api is None:
+            community = self.configuration.community or self.module.configuration.community
+            self._api = build_client(SimpleNamespace(apikey=self.module.configuration.apikey, community=community))
+        return self._api
 
     def build_query(self, window_start: datetime, window_end: datetime) -> str:
         """Build the Lucene query for one window.
@@ -455,9 +493,9 @@ class IntelFeed(Connector):
         if not sha256:
             return None
 
-        polyscore = _as_score(getattr(item, "polyscore", None) or latest_scan.get("polyscore"))
+        polyscore = as_score(getattr(item, "polyscore", None) or latest_scan.get("polyscore"))
 
-        families = _as_names(polyunite.get("malware_family")) + _as_names(document.get("families"))
+        families = as_names(polyunite.get("malware_family")) + as_names(document.get("families"))
         created = _as_text(getattr(item, "created", None))
 
         return IntelFeedEvent(
@@ -470,13 +508,13 @@ class IntelFeed(Connector):
             malicious_detections=_as_number(getattr(item, "malicious", None)),
             benign_detections=_as_number(getattr(item, "benign", None)),
             total_detections=_as_number(getattr(item, "total_detections", None)),
-            families=_as_names(families),
-            tags=_as_names(document.get("tags")),
+            families=as_names(families),
+            tags=as_names(document.get("tags")),
             first_seen=_as_text(getattr(item, "first_seen", "")),
             last_scanned=_as_text(getattr(item, "last_scanned", "")),
             mimetype=_as_text(getattr(item, "mimetype", "")),
             extended_mimetype=_as_text(getattr(item, "extended_mimetype", "")),
-            filenames=_as_names(getattr(item, "filenames", None)),
+            filenames=as_names(getattr(item, "filenames", None)),
             permalink=f"{ps_settings.DEFAULT_PERMALINK_BASE}/{sha256.lower()}",
             community=_as_text(document.get("community") or document.get("meta_community") or ""),
         )
@@ -505,8 +543,14 @@ class IntelFeed(Connector):
         except MISSING_RESULT:
             return
 
-    def collect(self, window_start: datetime, window_end: datetime) -> tuple[list[dict[str, Any]], list[str], bool]:
-        """Collect one window. Returns the events, their digests, and whether the run was capped."""
+    def collect(
+        self, window_start: datetime, window_end: datetime, enforce_ceiling: bool = True
+    ) -> tuple[list[dict[str, Any]], list[str], bool]:
+        """Collect one window. Returns the events, their digests, and whether the run was capped.
+
+        With enforce_ceiling off, the whole window is read however many
+        artifacts it holds. See MAX EVENTS PER RUN at the top of this file.
+        """
         api = self.client()
         query = self.build_query(window_start, window_end)
         already_seen = self.remembered_digests()
@@ -523,7 +567,7 @@ class IntelFeed(Connector):
                 continue
             if event.sha256 in seen or event.sha256 in already_seen:
                 continue
-            if len(events) >= self.configuration.max_events_per_run:
+            if enforce_ceiling and len(events) >= self.configuration.max_events_per_run:
                 return [], [], True
             seen.add(event.sha256)
             digests.append(event.sha256)
@@ -551,19 +595,28 @@ class IntelFeed(Connector):
         live service and the feed made no progress at all, with only a log line
         to say so.
 
+        Halving stops at MIN_WINDOW_SECONDS, and there the ceiling is waived
+        rather than enforced. Refusing the smallest window would be permanent:
+        it cannot shrink further and the checkpoint would never move past it, so
+        every later run would refuse the same window until an operator stepped
+        in. Pushing it whole cannot drop anything, since the result is read to
+        the end, and the price is one large batch. The ceiling exists to guard
+        against a runaway request, and a one minute window is not one.
+
         Returns the events, their digests, the window end actually covered, and
-        whether even the smallest window was still too full.
+        whether the ceiling was waived to get there.
         """
         attempt_end = window_end
 
         while True:
+            span = (attempt_end - window_start).total_seconds()
+            if span <= MIN_WINDOW_SECONDS:
+                events, digests, _ = self.collect(window_start, attempt_end, enforce_ceiling=False)
+                return events, digests, attempt_end, len(events) > self.configuration.max_events_per_run
+
             events, digests, capped = self.collect(window_start, attempt_end)
             if not capped:
                 return events, digests, attempt_end, False
-
-            span = (attempt_end - window_start).total_seconds()
-            if span <= MIN_WINDOW_SECONDS:
-                return [], [], window_end, True
 
             attempt_end = window_start + timedelta(seconds=max(span / 2, MIN_WINDOW_SECONDS))
             self.log(
@@ -591,6 +644,17 @@ class IntelFeed(Connector):
         exponent = min(self._consecutive_failures, 10)
         return float(min(self.frequency * (2 ** max(exponent - 1, 0)), MAX_BACKOFF_SECONDS))
 
+    def fail_cycle(self, message: str) -> int:
+        """Record a failed cycle, back off, and report that nothing was pushed."""
+        self._consecutive_failures += 1
+        delay = self.backoff_seconds()
+        self.log(
+            message=f"{message}. The checkpoint is unchanged and the next attempt is in {delay:.0f} seconds",
+            level="error",
+        )
+        self.sleep(delay)
+        return 0
+
     def next_run(self) -> int:
         """Run one poll cycle. Returns the number of events pushed."""
         window_start = self.checkpoint.offset
@@ -599,47 +663,56 @@ class IntelFeed(Connector):
             self.sleep(self.frequency)
             return 0
 
+        intake_key = self.configuration.intake_key
+        started = time.monotonic()
+
         try:
-            events, digests, window_end, capped = self.collect_fitting_window(window_start, window_end)
+            events, digests, window_end, oversized = self.collect_fitting_window(window_start, window_end)
         except Exception as exception:
             # Only the class name. The client's exception text can carry the
             # request that produced it, and the request carries the query.
-            self._consecutive_failures += 1
-            delay = self.backoff_seconds()
+            return self.fail_cycle(f"PolySwarm rejected the intel pull ({type(exception).__name__})")
+
+        if oversized:
             self.log(
                 message=(
-                    f"PolySwarm rejected the intel pull ({type(exception).__name__}). "
-                    f"The checkpoint is unchanged and the next attempt is in {delay:.0f} seconds"
+                    f"A {MIN_WINDOW_SECONDS} second window held {len(events)} artifacts, more than "
+                    f"max_events_per_run ({self.configuration.max_events_per_run}). It was pushed whole "
+                    "because it cannot be made smaller. Tighten the family, tag or polyscore filter, "
+                    "or raise max_events_per_run"
                 ),
-                level="error",
+                level="warning",
             )
-            self.sleep(delay)
-            return 0
-
-        if capped:
-            self.log(
-                message=(
-                    f"Even a {MIN_WINDOW_SECONDS} second window holds more than "
-                    f"{self.configuration.max_events_per_run} artifacts. Nothing was pushed and the "
-                    "checkpoint is unchanged, because the platform answers newest first and a partial "
-                    "window cannot be resumed. Tighten the family, tag or polyscore filter, or raise "
-                    "max_events_per_run"
-                ),
-                level="error",
-            )
-            self.sleep(self.frequency)
-            return 0
-
-        self._consecutive_failures = 0
 
         if events:
-            self.push_events_to_intakes(events)
+            # The SDK never raises from a push. A chunk that still fails after
+            # its retries is logged and left out of the returned ids, so the
+            # shortfall is the only sign that events did not arrive.
+            event_ids = self.push_events_to_intakes(events)
+            if len(event_ids) < len(events):
+                return self.fail_cycle(
+                    f"The intake accepted {len(event_ids)} of {len(events)} events, so the window was not "
+                    "marked done and will be sent again"
+                )
+            OUTCOMING_EVENTS.labels(intake_key=intake_key).inc(len(event_ids))
             self.log(message=f"Pushed {len(events)} PolySwarm artifacts", level="info")
 
+        self._consecutive_failures = 0
         self.checkpoint.offset = window_end
         self.remember_digests(digests)
 
-        self.sleep(0 if events else self.frequency)
+        now = datetime.now(UTC)
+        FORWARD_EVENTS_DURATION.labels(intake_key=intake_key).observe(time.monotonic() - started)
+        EVENTS_LAG.labels(intake_key=intake_key).set(max((now - window_end).total_seconds(), 0.0))
+
+        # Wait only once the window has reached the frontier. Anything further
+        # behind than one minimum window is catch up, and sleeping a full
+        # frequency between slices would stretch a day of backlog over hours.
+        # The tolerance also stops a connector that is already current from
+        # querying again straight away for a few seconds of new time.
+        frontier = now - timedelta(seconds=self.configuration.lag_seconds)
+        behind = window_end < frontier - timedelta(seconds=MIN_WINDOW_SECONDS)
+        self.sleep(0 if behind else self.frequency)
         return len(events)
 
     def run(self) -> None:  # pragma: no cover
@@ -653,4 +726,9 @@ class IntelFeed(Connector):
                     level="error",
                 )
                 self.sleep(self.frequency)
+            # After the cycle rather than before it, including the failed ones:
+            # a handled error still means the loop is turning, while a request
+            # that never returns never reaches here, which is the state that
+            # needs a restart.
+            self.heartbeat()
         self.log(message="Stopping the PolySwarm intel feed", level="info")

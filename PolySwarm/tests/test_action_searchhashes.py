@@ -5,6 +5,7 @@ from polyswarm_api import exceptions as ps_exceptions
 
 from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.action_polyswarm_searchhashes import SearchHashes
+from tests.helpers import autospec_build_client
 
 
 @pytest.fixture
@@ -57,7 +58,7 @@ def _search_returning(mapping: dict[str, list[MagicMock]]):
     return _search
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_returns_one_row_per_hash(mock_build_client: MagicMock, action: SearchHashes) -> None:
     hashes = ["aa" * 32, "bb" * 32, "cc" * 32]
     mock_build_client.return_value.search.side_effect = _search_returning(
@@ -88,7 +89,7 @@ def test_returns_one_row_per_hash(mock_build_client: MagicMock, action: SearchHa
     assert first["assertions"] == []
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_include_assertions_adds_engine_rows(mock_build_client: MagicMock, action: SearchHashes) -> None:
     query_hash = "aa" * 32
     mock_build_client.return_value.search.side_effect = _search_returning(
@@ -101,7 +102,7 @@ def test_include_assertions_adds_engine_rows(mock_build_client: MagicMock, actio
     assert response["results"][0]["assertions"][0]["engine_name"] == "Mal0"
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_unseen_hashes_go_to_not_found(mock_build_client: MagicMock, action: SearchHashes) -> None:
     known = "aa" * 32
     unseen_204 = "bb" * 32
@@ -127,7 +128,7 @@ def test_unseen_hashes_go_to_not_found(mock_build_client: MagicMock, action: Sea
     assert action.error_message is None
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_per_hash_error_does_not_fail_the_call(mock_build_client: MagicMock, action: SearchHashes) -> None:
     good = "aa" * 32
     bad = "not-a-hash"
@@ -155,7 +156,7 @@ def test_per_hash_error_does_not_fail_the_call(mock_build_client: MagicMock, act
     assert response["queried_count"] == 2
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_incomplete_and_failed_scans_are_reported_not_scored(
     mock_build_client: MagicMock, action: SearchHashes
 ) -> None:
@@ -177,7 +178,7 @@ def test_incomplete_and_failed_scans_are_reported_not_scored(
     assert "failed" in reasons["bb" * 32]
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_refuses_more_than_one_hundred_hashes(mock_build_client: MagicMock, action: SearchHashes) -> None:
     hashes = [f"{i:064x}" for i in range(101)]
 
@@ -189,7 +190,7 @@ def test_refuses_more_than_one_hundred_hashes(mock_build_client: MagicMock, acti
     mock_build_client.return_value.search.assert_not_called()
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_exactly_one_hundred_hashes_is_allowed(mock_build_client: MagicMock, action: SearchHashes) -> None:
     hashes = [f"{i:064x}" for i in range(100)]
     mock_build_client.return_value.search.side_effect = lambda h: iter([_make_result(sha256=h)])
@@ -200,7 +201,7 @@ def test_exactly_one_hundred_hashes_is_allowed(mock_build_client: MagicMock, act
     assert mock_build_client.return_value.search.call_count == 100
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_duplicates_are_only_paid_for_once(mock_build_client: MagicMock, action: SearchHashes) -> None:
     """Every lookup costs a request, so a repeated hash must not be billed twice."""
     first = "aa" * 32
@@ -217,7 +218,7 @@ def test_duplicates_are_only_paid_for_once(mock_build_client: MagicMock, action:
     assert [row["hash"] for row in response["results"]] == [first, second]
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_abstaining_engines_are_not_counted_as_benign(mock_build_client: MagicMock, action: SearchHashes) -> None:
     """The client counts an abstention as benign. A detection rule must not."""
     query_hash = "aa" * 32
@@ -234,7 +235,7 @@ def test_abstaining_engines_are_not_counted_as_benign(mock_build_client: MagicMo
     assert row["total_count"] == 15
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_rate_limit_stops_early_and_keeps_what_was_gathered(
     mock_build_client: MagicMock, action: SearchHashes
 ) -> None:
@@ -262,7 +263,7 @@ def test_rate_limit_stops_early_and_keeps_what_was_gathered(
     assert action._outputs == {"partial": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_fails_only_when_nothing_could_be_looked_up(mock_build_client: MagicMock, action: SearchHashes) -> None:
     mock_build_client.return_value.search.side_effect = ps_exceptions.InvalidValueException("bad hash")
 
@@ -272,7 +273,7 @@ def test_fails_only_when_nothing_could_be_looked_up(mock_build_client: MagicMock
     assert "could be looked up" in action.error_message
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_empty_list_is_refused(mock_build_client: MagicMock, action: SearchHashes) -> None:
     response = action.run({"hashes": ["", "   "]})
 
@@ -281,7 +282,7 @@ def test_empty_list_is_refused(mock_build_client: MagicMock, action: SearchHashe
     mock_build_client.return_value.search.assert_not_called()
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_missing_family_is_an_empty_string(mock_build_client: MagicMock, action: SearchHashes) -> None:
     query_hash = "aa" * 32
     mock_build_client.return_value.search.side_effect = _search_returning(
@@ -293,7 +294,7 @@ def test_missing_family_is_an_empty_string(mock_build_client: MagicMock, action:
     assert response["results"][0]["family"] == ""
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_api_key_never_reaches_an_error_reason(mock_build_client: MagicMock, action: SearchHashes) -> None:
     """The client can render the whole request, key included, into an exception's text.
 
@@ -323,7 +324,7 @@ def test_api_key_never_reaches_an_error_reason(mock_build_client: MagicMock, act
 # --- branch outputs ---
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_at_least_one_detection_activates_the_detected_branch(
     mock_build_client: MagicMock, action: SearchHashes
 ) -> None:
@@ -341,7 +342,7 @@ def test_at_least_one_detection_activates_the_detected_branch(
     assert action._outputs == {"detected": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_no_detections_activates_the_not_detected_branch(mock_build_client: MagicMock, action: SearchHashes) -> None:
     clean_one = "aa" * 32
     clean_two = "bb" * 32
@@ -357,7 +358,7 @@ def test_no_detections_activates_the_not_detected_branch(mock_build_client: Magi
     assert action._outputs == {"not detected": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_not_found_hashes_alone_activate_the_not_detected_branch(
     mock_build_client: MagicMock, action: SearchHashes
 ) -> None:
@@ -374,7 +375,7 @@ def test_not_found_hashes_alone_activate_the_not_detected_branch(
 # --- input validation ---
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_malformed_hash_is_rejected_without_an_api_call(mock_build_client: MagicMock, action: SearchHashes) -> None:
     response = action.run({"hashes": ["not-a-hash"]})
 
@@ -383,7 +384,7 @@ def test_malformed_hash_is_rejected_without_an_api_call(mock_build_client: Magic
     assert "could be looked up" in action.error_message
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_wrong_length_hex_is_rejected_without_an_api_call(mock_build_client: MagicMock, action: SearchHashes) -> None:
     """33 hex characters is not a valid MD5, SHA1 or SHA256 length."""
     response = action.run({"hashes": ["a" * 33]})
@@ -392,7 +393,7 @@ def test_wrong_length_hex_is_rejected_without_an_api_call(mock_build_client: Mag
     mock_build_client.return_value.search.assert_not_called()
 
 
-@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
 def test_valid_and_malformed_hashes_mix_without_failing_the_call(
     mock_build_client: MagicMock, action: SearchHashes
 ) -> None:

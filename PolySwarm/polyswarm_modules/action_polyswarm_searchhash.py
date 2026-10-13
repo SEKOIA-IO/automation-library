@@ -4,19 +4,9 @@ from typing import Any
 from polyswarm_api import exceptions as ps_exceptions
 from polyswarm_api.api import PolyswarmAPI
 from pydantic import BaseModel, Field
-from requests import RequestException
 
 from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import build_client
-
-SCAN_FAILURES: tuple[type[Exception], ...] = (
-    ps_exceptions.PolyswarmException,
-    RequestException,
-)
-MISSING_RESULT: tuple[type[Exception], ...] = (
-    ps_exceptions.NoResultsException,
-    ps_exceptions.NotFoundException,
-)
+from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
 
 # PolySwarm has no dedicated threat actor field on any client surface: neither
 # the artifact instance, its metadata nor the tag link resource carries one.
@@ -157,11 +147,11 @@ class SearchHash(PolyswarmAction):
         except ps_exceptions.InvalidValueException:
             self.error(f"{args.query_hash} is not a valid hash")
             return None
-        except SCAN_FAILURES as exc:
+        except CLIENT_ERRORS as exc:
             # Anything else, an authentication failure, a usage limit, a gateway
             # error, would otherwise escape and the SDK would hand the playbook a
             # Python traceback carrying container paths and the request URL.
-            self.error(f"PolySwarm did not answer the hash lookup ({type(exc).__name__}).")
+            self.error(f"PolySwarm did not answer the hash lookup ({failure_kind(exc)}).")
             return None
 
         if not results:
@@ -220,7 +210,7 @@ class SearchHash(PolyswarmAction):
             tags = _as_names(getattr(tag_link, "tags", None))
         except Exception as exc:
             self.log(
-                f"PolySwarm returned no attribution for the hash ({type(exc).__name__}), "
+                f"PolySwarm returned no attribution for the hash ({failure_kind(exc)}), "
                 "reporting the verdict without it",
                 level="info",
             )

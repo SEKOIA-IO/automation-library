@@ -1,37 +1,19 @@
-import time
 from typing import Any
 
-from polyswarm_api import exceptions as ps_exceptions
 from polyswarm_api.api import PolyswarmAPI
 from pydantic import BaseModel, Field
-from requests import RequestException
 
 from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import build_client, choose_vm_slug
-from polyswarm_modules.validators import invalid_ip_reason
-
-MISSING_RESULT: tuple[type[Exception], ...] = (
-    ps_exceptions.NoResultsException,
-    ps_exceptions.NotFoundException,
+from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, choose_vm_slug, failure_kind
+from polyswarm_modules.sandbox import (
+    DEFAULT_MAX_WAIT_SECONDS,
+    MAX_WAIT_SECONDS_CEILING,
+    SUBMIT_POLL_INTERVAL_CEILING,
+    poll_until_terminal,
+    report_url,
+    validate_provider,
 )
-CLIENT_ERRORS: tuple[type[Exception], ...] = (ps_exceptions.PolyswarmException, RequestException)
-
-TERMINAL_STATUSES: frozenset[str] = frozenset({"SUCCEEDED", "FAILED"})
-
-# Short first check, doubling up to a low ceiling: this wait is for an
-# analyst watching the run, not the batch style poll a scheduled playbook
-# would tolerate.
-INITIAL_POLL_INTERVAL: float = 5.0
-POLL_BACKOFF_FACTOR: float = 2.0
-POLL_INTERVAL_CEILING: float = 30.0
-DEFAULT_MAX_WAIT_SECONDS: int = 60
-# Hard ceiling. Blocking a playbook run for fifteen minutes is the behaviour
-# this action family replaces, so even an analyst who asks to wait cannot
-# push it past five minutes; the SandboxCompleted trigger is the way to
-# learn about anything slower than that.
-MAX_WAIT_SECONDS_CEILING: int = 300
-
-SANDBOX_TASK_ENDPOINT: str = "/sandbox/sandboxtask"
+from polyswarm_modules.validators import invalid_ip_reason
 
 # The scheme used to turn an IP into the URL that actually gets detonated.
 # https would just as often fail a handshake against a bare address with no
@@ -48,14 +30,6 @@ def _ip_to_target(ip: str) -> str:
     """
     host = f"[{ip}]" if ":" in ip else ip
     return f"{DETONATION_SCHEME}://{host}/"
-
-
-def _report_url(api: PolyswarmAPI, task_id: str, community: str | None) -> str:
-    """The API URL the PolySwarm client itself calls to read this task, matching the trigger's vocabulary."""
-    base = f"{api.uri}{SANDBOX_TASK_ENDPOINT}?sandbox_task_id={task_id}"
-    if community:
-        return f"{base}&community={community}"
-    return base
 
 
 class SandboxIpArguments(BaseModel):
@@ -139,7 +113,7 @@ class SandboxIp(PolyswarmAction):
 
         api = build_client(self.module.configuration)
 
-        if not self._validate_provider(api, args.sandbox):
+        if not validate_provider(api, args.sandbox, self.log, self.error):
             return None
 
         resolved_vm = args.vm_slug or choose_vm_slug(api, args.sandbox, "URL")
@@ -166,31 +140,10 @@ class SandboxIp(PolyswarmAction):
             return None
 
         if args.wait:
-            task = self._poll_until_wait_ceiling(api, task, args.max_wait_seconds)
+            task = poll_until_terminal(api, task, args.max_wait_seconds, SUBMIT_POLL_INTERVAL_CEILING, self.log)
 
         self.set_output("submitted", True)
         return self._respond(api, task, args, target, already_analysed=False).model_dump()
-
-    def _validate_provider(self, api: PolyswarmAPI, sandbox: str) -> bool:
-        """True when the provider checks out, or the check could not be made and the value is trusted instead."""
-        try:
-            providers = list(api.sandbox_providers())
-        except CLIENT_ERRORS as exc:
-            self.log(
-                f"Could not validate the sandbox provider against PolySwarm's provider list "
-                f"({type(exc).__name__}), trusting the configured value",
-                level="warning",
-            )
-            return True
-
-        slugs = {getattr(p, "slug", "") for p in providers if getattr(p, "slug", "")}
-        if slugs and sandbox not in slugs:
-            self.error(
-                f"'{sandbox}' is not a sandbox provider PolySwarm currently offers. "
-                f"Known providers: {', '.join(sorted(slugs))}."
-            )
-            return False
-        return True
 
     def _lookup_existing(self, api: PolyswarmAPI, target: str, sandbox: str) -> Any:
         """Resolve the detonated target to the hash PolySwarm already assigned it, then check for a sandbox report.
@@ -207,7 +160,7 @@ class SandboxIp(PolyswarmAction):
             return None
         except CLIENT_ERRORS as exc:
             self.log(
-                f"Could not look up an existing artifact for the target ({type(exc).__name__}), "
+                f"Could not look up an existing artifact for the target ({failure_kind(exc)}), "
                 "submitting a new detonation instead",
                 level="warning",
             )
@@ -227,7 +180,7 @@ class SandboxIp(PolyswarmAction):
             pass
         except CLIENT_ERRORS as exc:
             self.log(
-                f"Could not check for an existing report ({type(exc).__name__}), submitting a new one instead",
+                f"Could not check for an existing report ({failure_kind(exc)}), submitting a new one instead",
                 level="warning",
             )
         return None
@@ -241,26 +194,8 @@ class SandboxIp(PolyswarmAction):
                 vm_slug=args.vm_slug,
             )
         except CLIENT_ERRORS as exc:
-            self.error(f"PolySwarm could not submit {target} to sandbox {args.sandbox} ({type(exc).__name__}).")
+            self.error(f"PolySwarm could not submit {target} to sandbox {args.sandbox} ({failure_kind(exc)}).")
             return None
-
-    def _poll_until_wait_ceiling(self, api: PolyswarmAPI, task: Any, max_wait_seconds: int) -> Any:
-        """Poll a sandbox task until it reaches a terminal status or the wait ceiling, whichever comes first."""
-        deadline = time.monotonic() + max_wait_seconds
-        interval = INITIAL_POLL_INTERVAL
-
-        while task.status not in TERMINAL_STATUSES:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                break
-            time.sleep(min(interval, remaining))
-            interval = min(interval * POLL_BACKOFF_FACTOR, POLL_INTERVAL_CEILING)
-            try:
-                task = api.sandbox_task_status(task.id)
-            except CLIENT_ERRORS as exc:
-                self.log(f"Sandbox status check failed ({type(exc).__name__}), retrying", level="warning")
-
-        return task
 
     def _respond(
         self,
@@ -282,7 +217,7 @@ class SandboxIp(PolyswarmAction):
             vm_slug=args.vm_slug,
             status=str(getattr(task, "status", "") or ""),
             already_analysed=already_analysed,
-            report_url=_report_url(api, str(task.id), community),
+            report_url=report_url(api, str(task.id), community),
         )
 
     @staticmethod

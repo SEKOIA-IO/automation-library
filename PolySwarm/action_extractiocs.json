@@ -9,11 +9,11 @@
     "properties": {
       "text": {
         "type": "string",
-        "description": "Text to extract indicators from. Supply this or a file, not both. Nothing is sent to PolySwarm: this runs locally and spends no quota."
+        "description": "Text to extract indicators from, up to 5 MB. Supply this or a file, not both. Nothing is sent to PolySwarm: this runs locally and spends no quota."
       },
       "file": {
         "type": "string",
-        "description": "Name of a text file to extract indicators from, relative to the run data directory where Sekoia delivers it. Supply this or text, not both. Nothing is sent to PolySwarm: this runs locally and spends no quota."
+        "description": "Name of a text file to extract indicators from, relative to the run data directory where Sekoia delivers it, up to 5 MB. Supply this or text, not both. Nothing is sent to PolySwarm: this runs locally and spends no quota."
       }
     }
   },

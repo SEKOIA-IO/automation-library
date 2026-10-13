@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -251,3 +252,21 @@ def test_missing_file_is_refused(action: ExtractIocs) -> None:
 
     assert response is None
     assert "not found" in action.error_message
+
+
+def test_text_over_the_size_limit_is_refused(action: ExtractIocs) -> None:
+    response = action.run({"text": "x" * (MAX_INPUT_BYTES + 1)})
+
+    assert response is None
+    assert "limit" in action.error_message
+
+
+def test_an_oversized_file_is_refused_without_being_read(action: ExtractIocs, data_storage: str) -> None:
+    path = Path(data_storage) / "capture.txt"
+    path.write_bytes(b"x" * (MAX_INPUT_BYTES + 1))
+
+    with patch.object(Path, "read_bytes", side_effect=AssertionError("read before the size check"), autospec=True):
+        response = action.run({"file": path.name})
+
+    assert response is None
+    assert "limit" in action.error_message

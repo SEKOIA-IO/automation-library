@@ -17,22 +17,12 @@ unchanged.
 
 from typing import Any
 
-from polyswarm_api import exceptions as ps_exceptions
 from pydantic import BaseModel, Field
-from requests import RequestException
 
 from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import build_client
+from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
 from polyswarm_modules.validators import invalid_ip_reason
-
-MISSING_RESULT: tuple[type[Exception], ...] = (
-    ps_exceptions.NoResultsException,
-    ps_exceptions.NotFoundException,
-)
-SEARCH_FAILURES: tuple[type[Exception], ...] = (
-    ps_exceptions.PolyswarmException,
-    RequestException,
-)
+from polyswarm_modules.verdict import AssertionResult, tally_assertions
 
 
 class SearchIpArguments(BaseModel):
@@ -42,12 +32,6 @@ class SearchIpArguments(BaseModel):
         ge=1,
         description="How many malicious engine detections activate the detected branch",
     )
-
-
-class AssertionResult(BaseModel):
-    engine_name: str
-    author_name: str
-    verdict: bool | None
 
 
 class SearchIpResponse(BaseModel):
@@ -96,9 +80,9 @@ class SearchIp(PolyswarmAction):
             # list, and an unseen IP is the most common thing an analyst asks
             # about. Without this the playbook gets a Python traceback.
             results = []
-        except SEARCH_FAILURES as exc:
+        except CLIENT_ERRORS as exc:
             # Never quote the client's own message: it renders the request, which carries the key.
-            self.error(f"PolySwarm did not search for the IP ({type(exc).__name__}).")
+            self.error(f"PolySwarm did not search for the IP ({failure_kind(exc)}).")
             return None
 
         # A result exists but has no verdict yet when its assertion window is
@@ -116,20 +100,7 @@ class SearchIp(PolyswarmAction):
         return response.model_dump()
 
     def _build_response(self, result: Any, ip: str) -> SearchIpResponse:
-        # Only assertions inside the bloom mask are real answers from an
-        # engine. An engine that abstained answers None, and it is neither
-        # malicious nor benign: counting abstentions as benign inflates the
-        # clean side of any ratio a customer writes a detection rule against.
-        scored = [a for a in result.assertions if a.mask]
-
-        assertions = [
-            AssertionResult(
-                engine_name=a.engine_name,
-                author_name=a.author_name,
-                verdict=a.verdict,
-            )
-            for a in scored
-        ]
+        tally = tally_assertions(result)
 
         return SearchIpResponse(
             found=True,
@@ -137,9 +108,9 @@ class SearchIp(PolyswarmAction):
             sha256=result.sha256,
             permalink=result.permalink,
             polyscore=result.polyscore,
-            malicious_count=sum(1 for a in scored if a.verdict is True),
-            benign_count=sum(1 for a in scored if a.verdict is False),
-            total_count=len(scored),
+            malicious_count=tally.malicious_count,
+            benign_count=tally.benign_count,
+            total_count=tally.total_count,
             last_scanned=str(result.last_scanned),
-            assertions=assertions,
+            assertions=tally.assertions,
         )

@@ -5,6 +5,7 @@ from polyswarm_api import exceptions as ps_exceptions
 
 from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.action_polyswarm_accountusage import AccountUsage
+from tests.helpers import autospec_build_client, autospec_request
 
 
 @pytest.fixture
@@ -83,12 +84,11 @@ def _make_features(
 
 
 def _request_exception(status_code: int) -> ps_exceptions.RequestException:
-    request = MagicMock()
-    request.status_code = status_code
+    request = autospec_request(status_code)
     return ps_exceptions.RequestException(request, "rejected")
 
 
-@patch("polyswarm_modules.action_polyswarm_accountusage.build_client")
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
 def test_account_usage_reports_plan_and_quota(mock_build_client: MagicMock, action: AccountUsage) -> None:
     api = mock_build_client.return_value
     api.account_whois.return_value = _make_whois()
@@ -121,7 +121,7 @@ def test_account_usage_reports_plan_and_quota(mock_build_client: MagicMock, acti
     assert response["exhausted_features"] == ["Sandbox Detonations"]
 
 
-@patch("polyswarm_modules.action_polyswarm_accountusage.build_client")
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
 def test_account_usage_never_returns_the_api_key(mock_build_client: MagicMock, action: AccountUsage) -> None:
     api = mock_build_client.return_value
     api.account_whois.return_value = _make_whois()
@@ -133,7 +133,7 @@ def test_account_usage_never_returns_the_api_key(mock_build_client: MagicMock, a
     assert "apikey" not in response
 
 
-@patch("polyswarm_modules.action_polyswarm_accountusage.build_client")
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
 def test_auth_failure_returns_an_actionable_error(mock_build_client: MagicMock, action: AccountUsage) -> None:
     api = mock_build_client.return_value
     api.account_whois.side_effect = _request_exception(401)
@@ -148,7 +148,7 @@ def test_auth_failure_returns_an_actionable_error(mock_build_client: MagicMock, 
     api.account_features.assert_not_called()
 
 
-@patch("polyswarm_modules.action_polyswarm_accountusage.build_client")
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
 def test_usage_limit_failure_says_so(mock_build_client: MagicMock, action: AccountUsage) -> None:
     api = mock_build_client.return_value
     api.account_whois.side_effect = ps_exceptions.UsageLimitsExceededException(MagicMock(), "429")
@@ -159,7 +159,7 @@ def test_usage_limit_failure_says_so(mock_build_client: MagicMock, action: Accou
     assert "over its usage limit" in action.error_message
 
 
-@patch("polyswarm_modules.action_polyswarm_accountusage.build_client")
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
 def test_missing_plan_still_reports_the_identity(mock_build_client: MagicMock, action: AccountUsage) -> None:
     """Knowing which account the key belongs to is worth returning on its own."""
     api = mock_build_client.return_value
@@ -176,7 +176,7 @@ def test_missing_plan_still_reports_the_identity(mock_build_client: MagicMock, a
     assert response["exhausted_features"] == []
 
 
-@patch("polyswarm_modules.action_polyswarm_accountusage.build_client")
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
 def test_community_objects_are_normalised(mock_build_client: MagicMock, action: AccountUsage) -> None:
     api = mock_build_client.return_value
     api.account_whois.return_value = _make_whois(communities=[{"name": "default"}, {"slug": "gamma"}])
@@ -187,7 +187,7 @@ def test_community_objects_are_normalised(mock_build_client: MagicMock, action: 
     assert response["communities"] == ["default", "gamma"]
 
 
-@patch("polyswarm_modules.action_polyswarm_accountusage.build_client")
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
 def test_trial_account_is_flagged(mock_build_client: MagicMock, action: AccountUsage) -> None:
     api = mock_build_client.return_value
     api.account_whois.return_value = _make_whois(account_type="user", tenant=None)
@@ -216,7 +216,7 @@ def test_trial_account_is_flagged(mock_build_client: MagicMock, action: AccountU
 # data. These tests exercise that branch directly.
 
 
-@patch("polyswarm_modules.action_polyswarm_accountusage.build_client")
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
 def test_metered_feature_with_uses_left_is_not_exhausted(mock_build_client: MagicMock, action: AccountUsage) -> None:
     api = mock_build_client.return_value
     api.account_whois.return_value = _make_whois()
@@ -243,7 +243,7 @@ def test_metered_feature_with_uses_left_is_not_exhausted(mock_build_client: Magi
     assert response["exhausted_features"] == []
 
 
-@patch("polyswarm_modules.action_polyswarm_accountusage.build_client")
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
 def test_metered_feature_at_zero_is_genuinely_exhausted(mock_build_client: MagicMock, action: AccountUsage) -> None:
     api = mock_build_client.return_value
     api.account_whois.return_value = _make_whois()
@@ -269,7 +269,7 @@ def test_metered_feature_at_zero_is_genuinely_exhausted(mock_build_client: Magic
     assert response["exhausted_features"] == ["Hunts"]
 
 
-@patch("polyswarm_modules.action_polyswarm_accountusage.build_client")
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
 def test_unlimited_metered_feature_is_never_exhausted(mock_build_client: MagicMock, action: AccountUsage) -> None:
     """The platform reports an unmetered allowance as -1 on remaining_uses."""
     api = mock_build_client.return_value
@@ -297,7 +297,7 @@ def test_unlimited_metered_feature_is_never_exhausted(mock_build_client: MagicMo
     assert response["exhausted_features"] == []
 
 
-@patch("polyswarm_modules.action_polyswarm_accountusage.build_client")
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
 def test_boolean_entitlement_never_counts_as_exhausted_even_at_zero_counters(
     mock_build_client: MagicMock, action: AccountUsage
 ) -> None:
@@ -325,7 +325,7 @@ def test_boolean_entitlement_never_counts_as_exhausted_even_at_zero_counters(
     assert response["exhausted_features"] == []
 
 
-@patch("polyswarm_modules.action_polyswarm_accountusage.build_client")
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
 def test_mixed_boolean_and_metered_features_are_reported_independently(
     mock_build_client: MagicMock, action: AccountUsage
 ) -> None:

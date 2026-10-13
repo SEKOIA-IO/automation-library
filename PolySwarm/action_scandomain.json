@@ -30,6 +30,13 @@
         "type": "boolean",
         "default": false,
         "description": "Skip the check for an existing result and submit a new scan. This spends a scan even when PolySwarm already has a result for this domain, so leave it off unless you need a fresh verdict."
+      },
+      "max_wait_seconds": {
+        "type": "integer",
+        "default": 300,
+        "minimum": 30,
+        "maximum": 600,
+        "description": "How long to wait for the engines to finish a new scan, in seconds, capped at 600. Only applies when a new scan is submitted. If the engines have not finished by then the action stops with an error and the scan keeps running at PolySwarm, so look the result up again later."
       }
     },
     "required": [

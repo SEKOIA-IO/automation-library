@@ -6,6 +6,7 @@ from requests import RequestException
 
 from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.action_polyswarm_sandboxurl import SandboxUrl
+from tests.helpers import autospec_build_client
 
 
 @pytest.fixture
@@ -57,7 +58,7 @@ def _make_sandbox_task(
 # --- Submission --------------------------------------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
 def test_submits_when_no_existing_report(mock_build_client: MagicMock, action: SandboxUrl) -> None:
     mock_api = mock_build_client.return_value
     mock_api.sandbox_providers.return_value = [_make_provider("cape")]
@@ -80,7 +81,7 @@ def test_submits_when_no_existing_report(mock_build_client: MagicMock, action: S
     assert action._outputs == {"submitted": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
 def test_does_not_block_by_default(mock_build_client: MagicMock, action: SandboxUrl) -> None:
     mock_api = mock_build_client.return_value
     mock_api.sandbox_providers.return_value = [_make_provider("cape")]
@@ -95,7 +96,7 @@ def test_does_not_block_by_default(mock_build_client: MagicMock, action: Sandbox
 # --- Already analysed branch --------------------------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
 def test_already_analysed_when_existing_report_found(mock_build_client: MagicMock, action: SandboxUrl) -> None:
     mock_api = mock_build_client.return_value
     mock_api.sandbox_providers.return_value = [_make_provider("cape")]
@@ -113,7 +114,7 @@ def test_already_analysed_when_existing_report_found(mock_build_client: MagicMoc
     assert action._outputs == {"already analysed": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
 def test_no_existing_artifact_falls_through_to_submitting(mock_build_client: MagicMock, action: SandboxUrl) -> None:
     mock_api = mock_build_client.return_value
     mock_api.sandbox_providers.return_value = [_make_provider("cape")]
@@ -128,7 +129,7 @@ def test_no_existing_artifact_falls_through_to_submitting(mock_build_client: Mag
     assert response["already_analysed"] is False
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
 def test_force_skips_lookup(mock_build_client: MagicMock, action: SandboxUrl) -> None:
     mock_api = mock_build_client.return_value
     mock_api.sandbox_providers.return_value = [_make_provider("cape")]
@@ -146,7 +147,7 @@ def test_force_skips_lookup(mock_build_client: MagicMock, action: SandboxUrl) ->
 
 
 @pytest.mark.parametrize("url", ["ftp://example.com/file", "example.com/no-scheme", "javascript:alert(1)"])
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
 def test_refuses_a_non_http_scheme(mock_build_client: MagicMock, action: SandboxUrl, url: str) -> None:
     response = action.run({"url": url})
 
@@ -159,7 +160,7 @@ def test_refuses_a_non_http_scheme(mock_build_client: MagicMock, action: Sandbox
 # --- Provider validation --------------------------------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
 def test_refuses_unknown_provider(mock_build_client: MagicMock, action: SandboxUrl) -> None:
     mock_api = mock_build_client.return_value
     mock_api.sandbox_providers.return_value = [_make_provider("cape"), _make_provider("triage")]
@@ -172,7 +173,7 @@ def test_refuses_unknown_provider(mock_build_client: MagicMock, action: SandboxU
     mock_api.sandbox_url.assert_not_called()
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
 def test_an_image_named_by_the_author_is_used_without_asking_the_platform(
     mock_build_client: MagicMock, action: SandboxUrl
 ) -> None:
@@ -190,7 +191,7 @@ def test_an_image_named_by_the_author_is_used_without_asking_the_platform(
     assert response["vm_slug"] == "chosen-by-hand"
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
 def test_no_image_and_no_provider_list_refuses_rather_than_guessing(
     mock_build_client: MagicMock, action: SandboxUrl
 ) -> None:
@@ -211,7 +212,7 @@ def test_no_image_and_no_provider_list_refuses_rather_than_guessing(
 # --- Failures never quote the client -----------------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
 def test_submit_failure_returns_none_without_quoting_the_client(
     mock_build_client: MagicMock, action: SandboxUrl
 ) -> None:
@@ -228,7 +229,7 @@ def test_submit_failure_returns_none_without_quoting_the_client(
     assert secret_message not in action.error_message
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
 def test_search_url_failure_falls_through_to_submitting(mock_build_client: MagicMock, action: SandboxUrl) -> None:
     mock_api = mock_build_client.return_value
     mock_api.sandbox_providers.return_value = [_make_provider("cape")]
@@ -246,8 +247,8 @@ def test_search_url_failure_falls_through_to_submitting(mock_build_client: Magic
 # --- Optional wait --------------------------------------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.time")
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client")
+@patch("polyswarm_modules.sandbox.time", autospec=True)
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
 def test_wait_reaches_a_verdict(mock_build_client: MagicMock, mock_time: MagicMock, action: SandboxUrl) -> None:
     mock_time.monotonic.return_value = 0.0
     mock_api = mock_build_client.return_value
@@ -263,8 +264,8 @@ def test_wait_reaches_a_verdict(mock_build_client: MagicMock, mock_time: MagicMo
     mock_api.sandbox_task_status.assert_called_once()
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.time")
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client")
+@patch("polyswarm_modules.sandbox.time", autospec=True)
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
 def test_wait_hits_its_ceiling_still_processing(
     mock_build_client: MagicMock, mock_time: MagicMock, action: SandboxUrl
 ) -> None:
@@ -294,7 +295,7 @@ def test_max_wait_seconds_is_capped_at_the_hard_ceiling() -> None:
 # --- Client construction ---------------------------------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
 def test_uses_the_shared_retrying_client(
     mock_build_client: MagicMock, action: SandboxUrl, module: PolyswarmModule
 ) -> None:

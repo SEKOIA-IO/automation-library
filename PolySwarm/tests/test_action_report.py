@@ -7,6 +7,7 @@ from requests import RequestException
 
 from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.action_polyswarm_report import Report
+from tests.helpers import autospec_build_client
 
 # Real report bodies, trimmed for size, captured live from PolySwarm for a
 # current malicious artifact (a cryptominer dropped by a fake WinZip
@@ -235,7 +236,7 @@ def _make_sandbox_task(
 # --- Typed fields from real captured payloads -------------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_typed_fields_from_real_cape_payload(mock_build_client: MagicMock, action: Report) -> None:
     task = _make_sandbox_task(
         sandbox="cape",
@@ -278,7 +279,7 @@ def test_typed_fields_from_real_cape_payload(mock_build_client: MagicMock, actio
     ]
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_typed_fields_from_real_triage_payload(mock_build_client: MagicMock, action: Report) -> None:
     task = _make_sandbox_task(
         sandbox="triage",
@@ -334,7 +335,7 @@ def test_typed_fields_from_real_triage_payload(mock_build_client: MagicMock, act
 # --- Fetch-only: no file argument, no submission ----------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_returns_existing_report(mock_build_client: MagicMock, action: Report) -> None:
     existing_task = _make_sandbox_task(config={"cape_malscore": 6.0}, report=CAPE_REPORT)
     mock_build_client.return_value.sandbox_task_latest.return_value = existing_task
@@ -348,7 +349,7 @@ def test_returns_existing_report(mock_build_client: MagicMock, action: Report) -
     assert response["report"] == CAPE_REPORT
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_file_argument_is_ignored_and_never_triggers_submission(mock_build_client: MagicMock, action: Report) -> None:
     """The submission argument is gone entirely. A stray 'file' key from an old playbook call is silently
     dropped by the arguments model (it has no such field) and never causes a submission.
@@ -363,7 +364,7 @@ def test_file_argument_is_ignored_and_never_triggers_submission(mock_build_clien
     mock_api.sandbox_file.assert_not_called()
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_no_submission_method_ever_called(mock_build_client: MagicMock, action: Report) -> None:
     """There is no submission path left in this action at all: sandbox_file is never called, even when
     nothing has ever been detonated for this hash.
@@ -380,7 +381,7 @@ def test_no_submission_method_ever_called(mock_build_client: MagicMock, action: 
 # --- No report available: nothing has ever been detonated ------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_no_report_available_when_nothing_ever_detonated(mock_build_client: MagicMock, action: Report) -> None:
     mock_build_client.return_value.sandbox_task_latest.side_effect = ps_exceptions.NoResultsException("no results")
 
@@ -396,7 +397,7 @@ def test_no_report_available_when_nothing_ever_detonated(mock_build_client: Magi
     assert response["behavior"]["behavior_signatures"] == []
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_not_found_exception_also_yields_no_report_available(mock_build_client: MagicMock, action: Report) -> None:
     mock_build_client.return_value.sandbox_task_latest.side_effect = ps_exceptions.NotFoundException("not found")
 
@@ -406,7 +407,7 @@ def test_not_found_exception_also_yields_no_report_available(mock_build_client: 
     assert response["malicious"] is None
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_reports_sandbox_failure_as_no_report_branch(mock_build_client: MagicMock, action: Report) -> None:
     failed_task = _make_sandbox_task(status="FAILED", report=None)
     mock_build_client.return_value.sandbox_task_latest.return_value = failed_task
@@ -420,7 +421,7 @@ def test_reports_sandbox_failure_as_no_report_branch(mock_build_client: MagicMoc
     assert response["report"] is None
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_succeeded_with_empty_report_is_no_report_branch(mock_build_client: MagicMock, action: Report) -> None:
     task = _make_sandbox_task(status="SUCCEEDED", report=None)
     mock_build_client.return_value.sandbox_task_latest.return_value = task
@@ -431,7 +432,7 @@ def test_succeeded_with_empty_report_is_no_report_branch(mock_build_client: Magi
     assert response["status"] == "SUCCEEDED"
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_still_running_with_no_wait_requested_is_no_report_branch(
     mock_build_client: MagicMock, action: Report
 ) -> None:
@@ -453,7 +454,7 @@ def test_still_running_with_no_wait_requested_is_no_report_branch(
 # --- Not malicious branch --------------------------------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_not_malicious_when_provider_score_is_zero(mock_build_client: MagicMock, action: Report) -> None:
     clean_report = {
         "malware_family": [],
@@ -471,7 +472,7 @@ def test_not_malicious_when_provider_score_is_zero(mock_build_client: MagicMock,
     assert response["malicious"] is False
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_malicious_fallback_when_provider_score_absent(mock_build_client: MagicMock, action: Report) -> None:
     # Neither cape_malscore nor a triage score key is present on this task's
     # config; the malware family PolySwarm still identified stands in for a
@@ -492,7 +493,7 @@ def test_malicious_fallback_when_provider_score_absent(mock_build_client: MagicM
     assert response["malicious"] is True
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_network_urls_captured_when_provider_supplies_one(mock_build_client: MagicMock, action: Report) -> None:
     cape_with_http = {
         "malware_family": [],
@@ -543,8 +544,8 @@ def test_network_urls_captured_when_provider_supplies_one(mock_build_client: Mag
 # --- Waiting for a detonation already running elsewhere ---------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_report.time")
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.sandbox.time", autospec=True)
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_waits_for_already_running_detonation_with_exponential_backoff(
     mock_build_client: MagicMock, mock_time: MagicMock, action: Report
 ) -> None:
@@ -557,7 +558,7 @@ def test_waits_for_already_running_detonation_with_exponential_backoff(
     done = _make_sandbox_task(status="SUCCEEDED", report=CAPE_REPORT, config={"cape_malscore": 1.0})
     mock_api.sandbox_task_status.side_effect = [*running, done]
 
-    response = action.run({"sha256": "aa" * 32, "sandbox": "cape", "max_wait_seconds": 900})
+    response = action.run({"sha256": "aa" * 32, "sandbox": "cape", "max_wait_seconds": 300})
     assert response is not None
 
     assert mock_api.sandbox_task_status.call_count == 5
@@ -568,8 +569,8 @@ def test_waits_for_already_running_detonation_with_exponential_backoff(
     assert response["malicious"] is True
 
 
-@patch("polyswarm_modules.action_polyswarm_report.time")
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.sandbox.time", autospec=True)
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_wait_hits_ceiling_still_running_yields_no_report(
     mock_build_client: MagicMock, mock_time: MagicMock, action: Report
 ) -> None:
@@ -591,8 +592,8 @@ def test_wait_hits_ceiling_still_running_yields_no_report(
     assert response["behavior"]["behavior_signatures"] == []
 
 
-@patch("polyswarm_modules.action_polyswarm_report.time")
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.sandbox.time", autospec=True)
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_status_check_error_during_wait_retries(
     mock_build_client: MagicMock, mock_time: MagicMock, action: Report
 ) -> None:
@@ -609,14 +610,14 @@ def test_status_check_error_during_wait_retries(
         done,
     ]
 
-    response = action.run({"sha256": "aa" * 32, "sandbox": "cape", "max_wait_seconds": 900})
+    response = action.run({"sha256": "aa" * 32, "sandbox": "cape", "max_wait_seconds": 300})
 
     assert response is not None
     assert action._error is None
     assert mock_api.sandbox_task_status.call_count == 2
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_no_wait_never_calls_status_check(mock_build_client: MagicMock, action: Report) -> None:
     """max_wait_seconds=0 (the default) must never poll at all, even when the task is not terminal."""
     mock_api = mock_build_client.return_value
@@ -633,7 +634,7 @@ def test_no_wait_never_calls_status_check(mock_build_client: MagicMock, action: 
 # --- Usage errors: return None, message never quotes the client -----------
 
 
-@patch("polyswarm_modules.action_polyswarm_report.build_client")
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_client_error_looking_up_report_returns_none_with_safe_message(
     mock_build_client: MagicMock, action: Report
 ) -> None:
@@ -647,3 +648,24 @@ def test_client_error_looking_up_report_returns_none_with_safe_message(
     assert action._error is not None
     assert "SECRETVALUE" not in action._error
     assert "RequestException" in action._error
+
+
+# --- bounded wait and hash validation ---
+
+
+def test_a_wait_beyond_the_ceiling_is_rejected(action: Report) -> None:
+    with pytest.raises(ValueError):
+        action.run({"sha256": "aa" * 32, "max_wait_seconds": 301})
+
+
+@pytest.mark.parametrize("value", ["not-a-hash", "zz" * 32, "", "aa" * 16, "aa" * 20])
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_a_malformed_or_short_hash_is_refused_before_any_request(
+    mock_build_client: MagicMock, action: Report, value: str
+) -> None:
+    response = action.run({"sha256": value})
+
+    assert response is None
+    assert action._error is not None
+    assert "Refusing" in action._error
+    mock_build_client.assert_not_called()

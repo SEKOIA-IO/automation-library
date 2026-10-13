@@ -5,6 +5,7 @@ from polyswarm_api import exceptions as ps_exceptions
 
 from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.action_polyswarm_searchip import SearchIp
+from tests.helpers import autospec_build_client
 
 
 @pytest.fixture
@@ -48,7 +49,7 @@ def _make_search_result(
     return result
 
 
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_uses_the_shared_retrying_client(
     mock_build_client: MagicMock, action: SearchIp, module: PolyswarmModule
 ) -> None:
@@ -60,7 +61,7 @@ def test_uses_the_shared_retrying_client(
     mock_build_client.assert_called_once_with(module.configuration)
 
 
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_never_submits_or_waits(mock_build_client: MagicMock, action: SearchIp) -> None:
     """This action is strictly read only: it must never call submit, wait_for, or any sandbox method."""
     mock_api = mock_build_client.return_value
@@ -74,7 +75,7 @@ def test_never_submits_or_waits(mock_build_client: MagicMock, action: SearchIp) 
     assert called_methods == {"search_url"}
 
 
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_looks_up_the_ip_as_a_url_artifact(mock_build_client: MagicMock, action: SearchIp) -> None:
     mock_build_client.return_value.search_url.return_value = [_make_search_result()]
 
@@ -83,7 +84,7 @@ def test_looks_up_the_ip_as_a_url_artifact(mock_build_client: MagicMock, action:
     mock_build_client.return_value.search_url.assert_called_once_with("8.8.8.8")
 
 
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_a_detected_ip_activates_the_detected_branch(mock_build_client: MagicMock, action: SearchIp) -> None:
     mock_build_client.return_value.search_url.return_value = [_make_search_result()]
 
@@ -100,7 +101,7 @@ def test_a_detected_ip_activates_the_detected_branch(mock_build_client: MagicMoc
     assert response["last_scanned"] == "2024-02-01T00:00:00Z"
 
 
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_a_clean_ip_activates_the_not_detected_branch(mock_build_client: MagicMock, action: SearchIp) -> None:
     assertions = [
         _make_assertion(engine_name="EngineA", author_name="a", verdict=False),
@@ -113,7 +114,7 @@ def test_a_clean_ip_activates_the_not_detected_branch(mock_build_client: MagicMo
     assert action._outputs == {"not detected": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_the_threshold_moves_the_branch(mock_build_client: MagicMock, action: SearchIp) -> None:
     """A lone engine calling it malicious is the operator's judgement, not ours."""
     mock_build_client.return_value.search_url.return_value = [_make_search_result()]
@@ -123,7 +124,7 @@ def test_the_threshold_moves_the_branch(mock_build_client: MagicMock, action: Se
     assert action._outputs == {"not detected": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_no_results_takes_the_unknown_branch(mock_build_client: MagicMock, action: SearchIp) -> None:
     """An unseen IP is an ordinary outcome: the playbook routes it, it does not stop."""
     mock_build_client.return_value.search_url.return_value = []
@@ -136,7 +137,7 @@ def test_no_results_takes_the_unknown_branch(mock_build_client: MagicMock, actio
     assert action._outputs == {"unknown": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_missing_result_exception_takes_the_unknown_branch(mock_build_client: MagicMock, action: SearchIp) -> None:
     mock_build_client.return_value.search_url.side_effect = ps_exceptions.NoResultsException("404")
 
@@ -148,7 +149,7 @@ def test_missing_result_exception_takes_the_unknown_branch(mock_build_client: Ma
     assert action._outputs == {"unknown": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_open_assertion_window_is_not_served_as_a_verdict(mock_build_client: MagicMock, action: SearchIp) -> None:
     """A result whose window is still open has no verdict yet and must not be reported as one."""
     pending = _make_search_result(window_closed=False)
@@ -161,7 +162,7 @@ def test_open_assertion_window_is_not_served_as_a_verdict(mock_build_client: Mag
     assert action._outputs == {"unknown": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_a_failed_result_is_not_served_as_a_verdict(mock_build_client: MagicMock, action: SearchIp) -> None:
     failed = _make_search_result(failed=True)
     mock_build_client.return_value.search_url.return_value = [failed]
@@ -173,7 +174,7 @@ def test_a_failed_result_is_not_served_as_a_verdict(mock_build_client: MagicMock
     assert action._outputs == {"unknown": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_excludes_unmasked(mock_build_client: MagicMock, action: SearchIp) -> None:
     assertions = [
         _make_assertion(engine_name="Active", author_name="active", verdict=True, mask=True),
@@ -188,7 +189,7 @@ def test_excludes_unmasked(mock_build_client: MagicMock, action: SearchIp) -> No
     assert response["assertions"][0]["engine_name"] == "Active"
 
 
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_abstaining_engines_are_not_counted_as_benign(mock_build_client: MagicMock, action: SearchIp) -> None:
     assertions = [
         _make_assertion(engine_name="Malicious", author_name="m", verdict=True),
@@ -217,7 +218,7 @@ def test_abstaining_engines_are_not_counted_as_benign(mock_build_client: MagicMo
         "fc00::1",  # IPv6 unique local (private)
     ],
 )
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_refuses_non_public_addresses(mock_build_client: MagicMock, action: SearchIp, ip: str) -> None:
     response = action.run({"ip": ip})
 
@@ -227,7 +228,7 @@ def test_refuses_non_public_addresses(mock_build_client: MagicMock, action: Sear
     mock_build_client.assert_not_called()
 
 
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_refuses_a_value_that_is_not_an_ip(mock_build_client: MagicMock, action: SearchIp) -> None:
     response = action.run({"ip": "not-an-ip"})
 
@@ -237,7 +238,7 @@ def test_refuses_a_value_that_is_not_an_ip(mock_build_client: MagicMock, action:
     mock_build_client.assert_not_called()
 
 
-@patch("polyswarm_modules.action_polyswarm_searchip.build_client")
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
 def test_lookup_failure_returns_none_without_quoting_the_client(
     mock_build_client: MagicMock, action: SearchIp
 ) -> None:

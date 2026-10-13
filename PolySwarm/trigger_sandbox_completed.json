@@ -1,6 +1,6 @@
 {
   "name": "Sandbox detonation completed",
-  "description": "Start a playbook run whenever a PolySwarm sandbox detonation finishes. The trigger polls the sandbox tasks created by the configured PolySwarm account and emits one event per task that reaches a terminal status, carrying the hash, the sandbox provider, the status, the task identifier and where the report can be fetched. Identifiers already emitted are persisted, so a restart does not replay them. The report body itself is not embedded: call the Report action with the sha256 and sandbox from the event to retrieve it.",
+  "description": "Start a playbook run whenever a PolySwarm sandbox detonation finishes. The trigger polls the sandbox tasks created by the configured PolySwarm account and emits one event per task that reaches a terminal status, carrying the hash, the sandbox provider, the status, the task identifier and where the report can be fetched. A task that is still running when it leaves the newest page is followed by its own identifier until it finishes. Identifiers already emitted are persisted, so a restart does not replay them. The first poll after a fresh start records the tasks that have already finished without emitting events for them. The report body itself is not embedded: call the Report action with the sha256 and sandbox from the event to retrieve it.",
   "uuid": "d267419a-7330-4ba8-8d77-9e35473aebd9",
   "docker_parameters": "SandboxCompleted",
   "arguments": {
@@ -26,8 +26,8 @@
       },
       "max_tasks_per_cycle": {
         "type": "integer",
-        "description": "How many of the most recent sandbox tasks to examine on each poll. A completed task is only missed if the account creates more than this many tasks within one poll.",
-        "default": 200,
+        "description": "How many still running sandbox tasks to look up by identifier on each poll, in addition to the newest page of ten. A task that is running when it falls off the newest page is followed here until it finishes, so a completion is only delayed, not missed, when more tasks than this are running at once. The ones not checked this poll are checked on the next.",
+        "default": 50,
         "minimum": 1,
         "maximum": 500
       },
@@ -63,19 +63,19 @@
         "description": "Terminal status of the task, SUCCEEDED or FAILED"
       },
       "community": {
-        "type": "string",
+        "type": ["string", "null"],
         "description": "PolySwarm community the task ran in"
       },
       "instance_id": {
-        "type": "string",
+        "type": ["string", "null"],
         "description": "Artifact instance the detonation belongs to"
       },
       "created": {
-        "type": "string",
+        "type": ["string", "null"],
         "description": "When the task was created, as reported by PolySwarm"
       },
       "expiration": {
-        "type": "string",
+        "type": ["string", "null"],
         "description": "When PolySwarm expires the task, if it reports one"
       },
       "report_available": {
@@ -87,7 +87,7 @@
         "description": "PolySwarm API URL that returns this sandbox task and its report"
       },
       "portal_url": {
-        "type": "string",
+        "type": ["string", "null"],
         "description": "PolySwarm portal page for the artifact instance"
       },
       "sandbox_artifact_count": {

@@ -54,13 +54,8 @@ from polyswarm_api import settings as ps_settings
 from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import build_client
-
-MISSING_RESULT: tuple[type[Exception], ...] = (
-    ps_exceptions.NoResultsException,
-    ps_exceptions.NotFoundException,
-)
-NUMERIC_ERRORS: tuple[type[Exception], ...] = (TypeError, ValueError)
+from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.coerce import as_names, as_number, as_score
 
 # A sane default that returns enough to be useful without an operator asking
 # for it, and a hard ceiling a broad query cannot push past. The endpoint
@@ -93,48 +88,6 @@ def _as_text(value: Any) -> str:
         aware = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
         return aware.astimezone(UTC).isoformat()
     return str(value)
-
-
-def _as_names(value: Any) -> list[str]:
-    """Normalise a families or tags payload into a deduplicated list of names."""
-    if isinstance(value, str):
-        candidates: list[Any] = [value]
-    elif isinstance(value, (list, tuple, set)):
-        candidates = list(value)
-    else:
-        return []
-
-    seen: set[str] = set()
-    names: list[str] = []
-    for candidate in candidates:
-        if isinstance(candidate, dict):
-            raw = candidate.get("name") or candidate.get("tag") or candidate.get("family") or ""
-        elif isinstance(candidate, str):
-            raw = candidate
-        else:
-            continue
-        name = raw.strip()
-        key = name.casefold()
-        if name and key not in seen:
-            seen.add(key)
-            names.append(name)
-    return names
-
-
-def _as_number(value: Any) -> int:
-    """Read an integer counter, treating anything unreadable as zero."""
-    try:
-        return int(value)
-    except NUMERIC_ERRORS:
-        return 0
-
-
-def _as_score(value: Any) -> float | None:
-    """Read a polyscore, treating anything unreadable as absent."""
-    try:
-        return float(value)
-    except NUMERIC_ERRORS:
-        return None
 
 
 def _first_present(*values: Any) -> Any:
@@ -257,15 +210,15 @@ class SearchMetadata(PolyswarmAction):
             results, truncated = [], False
         except ps_exceptions.InvalidValueException as exc:
             self.error(
-                f"PolySwarm rejected the query as malformed ({type(exc).__name__}). "
+                f"PolySwarm rejected the query as malformed ({failure_kind(exc)}). "
                 "Check the field names and the Lucene syntax."
             )
             return None
-        except ps_exceptions.PolyswarmException as exc:
+        except CLIENT_ERRORS as exc:
             # Never quote the client's own message: it can render the whole
             # request back into the exception text, and the request carries
             # the key.
-            self.error(f"PolySwarm did not run the metadata search ({type(exc).__name__}).")
+            self.error(f"PolySwarm did not run the metadata search ({failure_kind(exc)}).")
             return None
 
         if not results:
@@ -322,7 +275,7 @@ class SearchMetadata(PolyswarmAction):
         polyunite: dict[str, Any] = document.get("polyunite") or {}
 
         family = polyunite.get("malware_family", "") if isinstance(polyunite, dict) else ""
-        families = _as_names(family) + _as_names(document.get("families"))
+        families = as_names(family) + as_names(document.get("families"))
 
         sha256 = _as_text(getattr(item, "sha256", "") or document.get("artifact", {}).get("sha256", "")).lower()
         permalink = f"{ps_settings.DEFAULT_PERMALINK_BASE}/{sha256}" if sha256 else ""
@@ -331,20 +284,20 @@ class SearchMetadata(PolyswarmAction):
             sha256=sha256,
             sha1=_as_text(getattr(item, "sha1", "")),
             md5=_as_text(getattr(item, "md5", "")),
-            malicious_detections=_as_number(
+            malicious_detections=as_number(
                 _first_present(getattr(item, "malicious", None), detections.get("malicious"))
             ),
-            benign_detections=_as_number(_first_present(getattr(item, "benign", None), detections.get("benign"))),
-            total_detections=_as_number(
+            benign_detections=as_number(_first_present(getattr(item, "benign", None), detections.get("benign"))),
+            total_detections=as_number(
                 _first_present(getattr(item, "total_detections", None), detections.get("total"))
             ),
-            polyscore=_as_score(latest_scan.get("polyscore")),
+            polyscore=as_score(latest_scan.get("polyscore")),
             permalink=permalink,
             family=family or "",
-            families=_as_names(families),
-            tags=_as_names(document.get("tags")),
+            families=as_names(families),
+            tags=as_names(document.get("tags")),
             first_seen=_as_text(getattr(item, "first_seen", "")),
             last_scanned=_as_text(getattr(item, "last_scanned", "")),
             mimetype=_as_text(getattr(item, "mimetype", "")),
-            filenames=_as_names(getattr(item, "filenames", None)),
+            filenames=as_names(getattr(item, "filenames", None)),
         )

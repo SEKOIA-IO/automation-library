@@ -2,11 +2,11 @@ from typing import Any
 
 from polyswarm_api import exceptions as ps_exceptions
 from pydantic import BaseModel, Field
+from requests import RequestException as RequestsException
 
 from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import build_client
-
-NUMERIC_ERRORS: tuple[type[Exception], ...] = (TypeError, ValueError)
+from polyswarm_modules.client import build_client, failure_kind
+from polyswarm_modules.coerce import NUMERIC_ERRORS
 
 # The account endpoints are the only place the platform states an entitlement,
 # so this action exists to answer one question: is the playbook failing because
@@ -18,6 +18,7 @@ CALL_FAILURES = (
     ps_exceptions.InvalidValueException,
     ps_exceptions.UsageLimitsExceededException,
     ps_exceptions.RequestException,
+    RequestsException,
 )
 
 
@@ -124,7 +125,7 @@ class AccountUsage(PolyswarmAction):
             # failing playbook needs to know which account the key belongs to
             # even when the plan endpoint is the thing refusing them.
             self.log(
-                f"PolySwarm did not return the plan and quota ({type(exc).__name__}), "
+                f"PolySwarm did not return the plan and quota ({failure_kind(exc)}), "
                 "reporting the account identity only",
                 level="info",
             )
@@ -200,7 +201,12 @@ class AccountUsage(PolyswarmAction):
     @staticmethod
     def _failure_message(exc: Exception, attempt: str) -> str:
         """Describe a failed account call without quoting the client, which echoes the request back."""
-        status = getattr(getattr(exc, "request", None), "status_code", None)
+        # The polyswarm client keeps the status on the request it attaches to its own
+        # exceptions; a connection level failure from requests keeps it on the response.
+        carrier = getattr(exc, "response", None)
+        if carrier is None:
+            carrier = getattr(exc, "request", None)
+        status = getattr(carrier, "status_code", None)
         if status in (401, 403):
             return (
                 f"PolySwarm rejected the configured API key, so it could not {attempt}. "
@@ -208,4 +214,4 @@ class AccountUsage(PolyswarmAction):
             )
         if status == 429 or isinstance(exc, ps_exceptions.UsageLimitsExceededException):
             return f"PolySwarm reported the account over its usage limit, so it could not {attempt}."
-        return f"PolySwarm did not {attempt} ({type(exc).__name__})."
+        return f"PolySwarm did not {attempt} ({failure_kind(exc)})."

@@ -3,9 +3,10 @@ import re
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
+from threading import Event
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, create_autospec, patch
 
 import pytest
 from polyswarm_api import exceptions as ps_exceptions
@@ -13,6 +14,7 @@ from polyswarm_api import exceptions as ps_exceptions
 from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.client import DEFAULT_TIMEOUT, RETRY_TOTAL
 from polyswarm_modules.connector_polyswarm_intel_feed import (
+    MAX_BACKOFF_SECONDS,
     IntelFeed,
     IntelFeedConfiguration,
     _as_text,
@@ -21,6 +23,7 @@ from polyswarm_modules.connector_polyswarm_intel_feed import (
     format_window_bound,
     polyscore_band,
 )
+from tests.helpers import autospec_request
 
 API_KEY = "test-api-key"
 
@@ -38,10 +41,13 @@ def make_connector(data_storage: str, module: PolyswarmModule, **overrides: Any)
         "max_events_per_run": 100,
         **overrides,
     }
-    connector.log = MagicMock()
-    connector.log_exception = MagicMock()
-    connector.push_events_to_intakes = MagicMock(return_value=[])
-    connector.sleep = MagicMock()
+    connector.log = create_autospec(connector.log)
+    connector.log_exception = create_autospec(connector.log_exception)
+    # Like the SDK, answer with one event id per event the intake accepted.
+    connector.push_events_to_intakes = create_autospec(
+        connector.push_events_to_intakes, side_effect=lambda events: [f"id-{n}" for n in range(len(events))]
+    )
+    connector.sleep = create_autospec(connector.sleep)
     return connector
 
 
@@ -92,7 +98,9 @@ def make_artifact(
 
 def install_api(mock_api_class: MagicMock, search: Any) -> MagicMock:
     api = mock_api_class.return_value
-    api.search_by_metadata = search
+    # A side effect rather than a replacement, so the call is still checked against
+    # the real method's signature before the fake runs.
+    api.search_by_metadata.side_effect = search
     return api
 
 
@@ -168,7 +176,7 @@ def test_polyscore_bands_are_not_engine_verdicts() -> None:
 # ---------------------------------------------------------------------------
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_first_run_with_no_checkpoint_pulls_the_lookback_window(
     mock_api_class: MagicMock, connector: IntelFeed
 ) -> None:
@@ -206,7 +214,7 @@ def test_first_run_with_no_checkpoint_pulls_the_lookback_window(
     assert connector.checkpoint.offset > window_start
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_the_api_key_reaches_no_event_and_no_log_line(mock_api_class: MagicMock, connector: IntelFeed) -> None:
     def search(query: str) -> Iterator[Any]:
         yield make_artifact("bb" * 32, datetime.now(UTC) - timedelta(minutes=5))
@@ -218,7 +226,7 @@ def test_the_api_key_reaches_no_event_and_no_log_line(mock_api_class: MagicMock,
     assert all(API_KEY not in message for message in logged_messages(connector))
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_an_artifact_with_no_readable_digest_is_dropped(mock_api_class: MagicMock, connector: IntelFeed) -> None:
     created = datetime.now(UTC) - timedelta(minutes=5)
     broken = make_artifact("", created)
@@ -238,7 +246,7 @@ def test_an_artifact_with_no_readable_digest_is_dropped(mock_api_class: MagicMoc
 # ---------------------------------------------------------------------------
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_second_run_resumes_from_the_checkpoint_and_does_not_re_emit(
     mock_api_class: MagicMock, connector: IntelFeed
 ) -> None:
@@ -268,7 +276,7 @@ def test_second_run_resumes_from_the_checkpoint_and_does_not_re_emit(
     assert connector.checkpoint.offset >= first_checkpoint
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_a_restart_reads_the_checkpoint_back_off_disk(
     mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
 ) -> None:
@@ -297,7 +305,7 @@ def test_a_restart_reads_the_checkpoint_back_off_disk(
 # ---------------------------------------------------------------------------
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_results_are_collected_across_more_than_one_page(mock_api_class: MagicMock, connector: IntelFeed) -> None:
     created = datetime.now(UTC) - timedelta(minutes=5)
     page_one = [make_artifact(f"{index:02x}" * 32, created) for index in range(1, 4)]
@@ -318,36 +326,54 @@ def test_results_are_collected_across_more_than_one_page(mock_api_class: MagicMo
     assert len(pushed_events(connector)) == 5
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
-def test_a_capped_run_pushes_nothing_holds_the_checkpoint_and_stops_paging(
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_an_overfull_minimum_window_is_pushed_whole_so_the_feed_cannot_stall(
     mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
 ) -> None:
     connector = make_connector(data_storage, module, max_events_per_run=2)
     created = datetime.now(UTC) - timedelta(minutes=5)
-    page_one = [make_artifact(f"{index:02x}" * 32, created) for index in range(1, 4)]
-    page_two = [make_artifact(f"{index:02x}" * 32, created) for index in range(4, 6)]
-    served: list[int] = []
+    artifacts = [make_artifact(f"{index:02x}" * 32, created) for index in range(1, 6)]
+    spans: list[float] = []
 
     def search(query: str) -> Iterator[Any]:
-        for page in (page_one, page_two):
-            served.append(len(page))
-            yield from page
+        found = re.search(r"artifact\.created:\[(\S+) TO (\S+)\]", query)
+        assert found is not None
+        start, end = (datetime.strptime(group, "%Y-%m-%dT%H:%M:%S") for group in found.groups())
+        spans.append((end - start).total_seconds())
+        yield from artifacts
 
     install_api(mock_api_class, search)
 
     before = connector.checkpoint.offset
-    assert connector.next_run() == 0
+    assert connector.next_run() == 5
 
-    connector.push_events_to_intakes.assert_not_called()
-    assert connector.checkpoint.offset == before
-    # Each attempt stops at the first page, because the generator is lazy, and
-    # the window is halved and retried until it hits the floor.
-    assert set(served) == {3}
-    assert len(served) > 1
-    assert any("Even a 60 second window" in message for message in logged_messages(connector))
+    # The window was halved down to the floor, and only there was the ceiling waived.
+    assert spans[-1] <= 60
+    assert len(spans) > 1
+    assert len(pushed_events(connector)) == 5
+    assert connector.checkpoint.offset > before
+    assert any("pushed whole" in message for message in logged_messages(connector))
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_a_window_already_at_the_minimum_is_pushed_whole_on_the_first_try(
+    mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
+) -> None:
+    connector = make_connector(data_storage, module, max_events_per_run=1, lookback_minutes=1, lag_seconds=5)
+    created = datetime.now(UTC) - timedelta(seconds=30)
+    calls: list[str] = []
+
+    def search(query: str) -> Iterator[Any]:
+        calls.append(query)
+        yield from [make_artifact(f"{index:02x}" * 32, created) for index in range(1, 4)]
+
+    install_api(mock_api_class, search)
+
+    assert connector.next_run() == 3
+    assert len(calls) == 1
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_an_overfull_window_is_narrowed_until_it_fits(
     mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
 ) -> None:
@@ -381,7 +407,7 @@ def test_an_overfull_window_is_narrowed_until_it_fits(
 # ---------------------------------------------------------------------------
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_the_polyscore_filter_excludes_a_result(
     mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
 ) -> None:
@@ -408,7 +434,7 @@ def test_the_polyscore_filter_excludes_a_result(
     assert digests == ["11" * 32]
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_a_repeated_digest_inside_one_run_is_emitted_once(mock_api_class: MagicMock, connector: IntelFeed) -> None:
     created = datetime.now(UTC) - timedelta(minutes=5)
 
@@ -426,12 +452,12 @@ def test_a_repeated_digest_inside_one_run_is_emitted_once(mock_api_class: MagicM
 # ---------------------------------------------------------------------------
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_an_api_error_leaves_the_checkpoint_untouched_and_backs_off(
     mock_api_class: MagicMock, connector: IntelFeed
 ) -> None:
     def search(query: str) -> Iterator[Any]:
-        raise ps_exceptions.RequestException(MagicMock(), "the request failed")
+        raise ps_exceptions.RequestException(autospec_request(), "the request failed")
         yield  # pragma: no cover
 
     install_api(mock_api_class, search)
@@ -450,7 +476,7 @@ def test_an_api_error_leaves_the_checkpoint_untouched_and_backs_off(
     connector.sleep.assert_called_once_with(float(connector.frequency))
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_repeated_failures_back_off_further_and_recover(mock_api_class: MagicMock, connector: IntelFeed) -> None:
     created = datetime.now(UTC) - timedelta(minutes=5)
     attempts = {"count": 0}
@@ -458,7 +484,7 @@ def test_repeated_failures_back_off_further_and_recover(mock_api_class: MagicMoc
     def search(query: str) -> Iterator[Any]:
         attempts["count"] += 1
         if attempts["count"] <= 3:
-            raise ps_exceptions.UsageLimitsExceededException(MagicMock(), "429")
+            raise ps_exceptions.UsageLimitsExceededException(autospec_request(), "429")
         yield make_artifact("55" * 32, created)
 
     install_api(mock_api_class, search)
@@ -476,12 +502,12 @@ def test_repeated_failures_back_off_further_and_recover(mock_api_class: MagicMoc
     assert connector.backoff_seconds() == 900.0
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_an_empty_window_is_not_an_error(mock_api_class: MagicMock, connector: IntelFeed) -> None:
     """The client raises on a 204 rather than returning an empty list."""
 
     def search(query: str) -> Iterator[Any]:
-        raise ps_exceptions.NoResultsException(MagicMock(), "204")
+        raise ps_exceptions.NoResultsException(autospec_request(), "204")
         yield  # pragma: no cover
 
     install_api(mock_api_class, search)
@@ -493,13 +519,13 @@ def test_an_empty_window_is_not_an_error(mock_api_class: MagicMock, connector: I
     assert connector.checkpoint.offset > before
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_a_window_that_has_not_opened_yet_makes_no_request(
     mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
 ) -> None:
     """With the whole lookback held back by the lag, there is nothing to ask for."""
     connector = make_connector(data_storage, module, lookback_minutes=1, lag_seconds=3600)
-    install_api(mock_api_class, MagicMock())
+    install_api(mock_api_class, lambda query: iter(()))
 
     assert connector.next_run() == 0
     mock_api_class.assert_not_called()
@@ -510,44 +536,191 @@ def test_a_window_that_has_not_opened_yet_makes_no_request(
 # ---------------------------------------------------------------------------
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
-def test_a_push_failure_partway_through_a_cycle_leaves_the_checkpoint_and_digests_untouched(
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_a_push_that_returns_fewer_ids_than_events_holds_the_window_and_retries_it(
     mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
 ) -> None:
-    """The single most repeated production bug in this library: advancing position on a partial push.
+    """The SDK never raises from a push: a failed chunk is logged and missing from the returned ids.
 
-    Events are collected, then pushed, then the checkpoint moves and the
-    digests are remembered, in that order. If the push raises, everything
-    after it must not run, so the same window is collected and pushed again
-    on the next cycle instead of the artifacts being silently skipped.
+    The connector has to notice the shortfall itself. Moving the checkpoint
+    anyway is the bug that silently skips a window for good.
     """
     connector = make_connector(data_storage, module)
     created = datetime.now(UTC) - timedelta(minutes=5)
-    artifact = make_artifact("66" * 32, created)
+    artifacts = [make_artifact(f"{index:02x}" * 32, created) for index in range(1, 4)]
 
     def search(query: str) -> Iterator[Any]:
-        yield artifact
+        yield from artifacts
 
     install_api(mock_api_class, search)
-    connector.push_events_to_intakes.side_effect = RuntimeError("intake unreachable")
+    connector.push_events_to_intakes.side_effect = lambda events: ["id-0"]
 
     before_checkpoint = connector.checkpoint.offset
     before_digests = connector.remembered_digests()
 
-    with pytest.raises(RuntimeError):
-        connector.next_run()
+    assert connector.next_run() == 0
 
     assert connector.checkpoint.offset == before_checkpoint
     assert connector.remembered_digests() == before_digests
+    assert any("accepted 1 of 3 events" in message for message in logged_messages(connector))
+    connector.sleep.assert_called_once_with(float(connector.frequency))
+    assert connector.backoff_seconds() == 900.0
 
-    # Retried on the next cycle rather than lost: the same artifact goes out again.
-    connector.push_events_to_intakes.side_effect = None
+    # Retried on the next cycle rather than lost: the same artifacts go out again.
+    connector.push_events_to_intakes.side_effect = lambda events: [f"id-{n}" for n in range(len(events))]
     connector.push_events_to_intakes.reset_mock()
+
+    assert connector.next_run() == 3
+    assert len(pushed_events(connector)) == 3
+    assert connector.checkpoint.offset > before_checkpoint
+    assert connector.remembered_digests() == {"01" * 32, "02" * 32, "03" * 32}
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_a_push_that_accepts_nothing_is_a_failure_too(
+    mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
+) -> None:
+    connector = make_connector(data_storage, module)
+    created = datetime.now(UTC) - timedelta(minutes=5)
+
+    def search(query: str) -> Iterator[Any]:
+        yield make_artifact("66" * 32, created)
+
+    install_api(mock_api_class, search)
+    connector.push_events_to_intakes.side_effect = lambda events: []
+
+    before = connector.checkpoint.offset
+    assert connector.next_run() == 0
+    assert connector.checkpoint.offset == before
+
+
+# ---------------------------------------------------------------------------
+# Catch up pacing
+# ---------------------------------------------------------------------------
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_catch_up_does_not_sleep_between_empty_windows_until_the_frontier_is_reached(
+    mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
+) -> None:
+    """A long backlog is walked at the speed of the API, not one slice per frequency."""
+    # 1000 minutes behind, six hour slices: 360, 360, then the last 280 reach the frontier.
+    connector = make_connector(data_storage, module, lookback_minutes=1000, lag_seconds=300)
+
+    def search(query: str) -> Iterator[Any]:
+        raise ps_exceptions.NoResultsException(autospec_request(), "204")
+        yield  # pragma: no cover
+
+    install_api(mock_api_class, search)
+
+    for _ in range(3):
+        assert connector.next_run() == 0
+
+    delays = [call.args[0] for call in connector.sleep.call_args_list]
+    assert delays == [0, 0, connector.frequency]
+    expected = datetime.now(UTC) - timedelta(seconds=300)
+    assert abs((connector.checkpoint.offset - expected).total_seconds()) < 30
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_a_run_that_pushed_events_still_waits_once_it_has_caught_up(
+    mock_api_class: MagicMock, connector: IntelFeed
+) -> None:
+    created = datetime.now(UTC) - timedelta(minutes=5)
+
+    def search(query: str) -> Iterator[Any]:
+        yield make_artifact("77" * 32, created)
+
     install_api(mock_api_class, search)
 
     assert connector.next_run() == 1
-    connector.push_events_to_intakes.assert_called_once()
-    assert connector.checkpoint.offset > before_checkpoint
+    connector.sleep.assert_called_once_with(connector.frequency)
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_a_run_that_pushed_events_does_not_wait_while_still_behind(
+    mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
+) -> None:
+    connector = make_connector(data_storage, module, lookback_minutes=1000)
+    created = datetime.now(UTC) - timedelta(minutes=900)
+
+    def search(query: str) -> Iterator[Any]:
+        yield make_artifact("78" * 32, created)
+
+    install_api(mock_api_class, search)
+
+    assert connector.next_run() == 1
+    connector.sleep.assert_called_once_with(0)
+
+
+# ---------------------------------------------------------------------------
+# Metrics, client reuse, liveness
+# ---------------------------------------------------------------------------
+
+
+@patch("polyswarm_modules.connector_polyswarm_intel_feed.EVENTS_LAG", autospec=True)
+@patch("polyswarm_modules.connector_polyswarm_intel_feed.FORWARD_EVENTS_DURATION", autospec=True)
+@patch("polyswarm_modules.connector_polyswarm_intel_feed.OUTCOMING_EVENTS", autospec=True)
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_metrics_are_labelled_by_intake_key(
+    mock_api_class: MagicMock,
+    outcoming: MagicMock,
+    duration: MagicMock,
+    lag: MagicMock,
+    connector: IntelFeed,
+) -> None:
+    created = datetime.now(UTC) - timedelta(minutes=5)
+
+    def search(query: str) -> Iterator[Any]:
+        yield from [make_artifact(f"{index:02x}" * 32, created) for index in range(1, 3)]
+
+    install_api(mock_api_class, search)
+    connector.next_run()
+
+    outcoming.labels.assert_called_once_with(intake_key="test-intake-key")
+    outcoming.labels.return_value.inc.assert_called_once_with(2)
+    duration.labels.assert_called_once_with(intake_key="test-intake-key")
+    duration.labels.return_value.observe.assert_called_once()
+    lag.labels.assert_called_once_with(intake_key="test-intake-key")
+    assert lag.labels.return_value.set.call_args.args[0] >= 0
+
+
+@patch("polyswarm_modules.connector_polyswarm_intel_feed.OUTCOMING_EVENTS", autospec=True)
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_a_failed_push_counts_no_forwarded_events(
+    mock_api_class: MagicMock, outcoming: MagicMock, connector: IntelFeed
+) -> None:
+    def search(query: str) -> Iterator[Any]:
+        yield make_artifact("79" * 32, datetime.now(UTC) - timedelta(minutes=5))
+
+    install_api(mock_api_class, search)
+    connector.push_events_to_intakes.side_effect = lambda events: []
+    connector.next_run()
+
+    outcoming.labels.assert_not_called()
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_one_client_serves_every_run(mock_api_class: MagicMock, connector: IntelFeed) -> None:
+    def search(query: str) -> Iterator[Any]:
+        raise ps_exceptions.NoResultsException(autospec_request(), "204")
+        yield  # pragma: no cover
+
+    install_api(mock_api_class, search)
+    connector.next_run()
+    connector.next_run()
+
+    mock_api_class.assert_called_once()
+
+
+def test_the_liveness_check_does_not_flag_a_quiet_narrow_feed() -> None:
+    assert IntelFeed.seconds_without_events == 0
+
+
+def test_the_descriptor_states_the_late_qualifying_limitation() -> None:
+    description = json.loads(Path("connector_intel_feed.json").read_text())["description"]
+    assert "never pulled" in description
+    assert "rescan" in description
 
 
 def test_sleep_uses_the_stop_event_not_a_bare_sleep(data_storage: str, module: PolyswarmModule) -> None:
@@ -559,7 +732,7 @@ def test_sleep_uses_the_stop_event_not_a_bare_sleep(data_storage: str, module: P
     """
     connector = IntelFeed(module=module, data_path=Path(data_storage))
     connector.configuration = {"intake_key": "test-intake-key"}
-    connector._stop_event = MagicMock()
+    connector._stop_event = create_autospec(Event, instance=True)
 
     connector.sleep(5)
 
@@ -569,7 +742,7 @@ def test_sleep_uses_the_stop_event_not_a_bare_sleep(data_storage: str, module: P
 def test_sleep_does_nothing_for_a_non_positive_duration(data_storage: str, module: PolyswarmModule) -> None:
     connector = IntelFeed(module=module, data_path=Path(data_storage))
     connector.configuration = {"intake_key": "test-intake-key"}
-    connector._stop_event = MagicMock()
+    connector._stop_event = create_autospec(Event, instance=True)
 
     connector.sleep(0)
 
@@ -603,7 +776,7 @@ def test_format_window_bound_normalises_a_non_utc_aware_datetime() -> None:
     assert format_window_bound(aware) == "2026-09-20T10:00:00"
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_a_naive_created_timestamp_from_the_api_is_not_shifted_by_local_time(
     mock_api_class: MagicMock, connector: IntelFeed
 ) -> None:
@@ -638,7 +811,7 @@ def test_the_client_has_retries_installed_for_safe_methods(data_storage: str, mo
         assert adapter.max_retries.total == RETRY_TOTAL
 
 
-@patch("polyswarm_modules.client.PolyswarmAPI")
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
 def test_the_client_uses_the_connector_level_community_override(
     mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
 ) -> None:
@@ -682,3 +855,24 @@ def test_the_descriptor_matches_the_model() -> None:
             assert declared["maximum"] == bounds["Le"], f"{name} maximum differs"
         if "minimum" in declared and "Ge" in bounds:
             assert declared["minimum"] == bounds["Ge"], f"{name} minimum differs"
+
+
+def test_liveness_rests_on_the_heartbeat_not_on_events(connector: IntelFeed) -> None:
+    """A narrow feed can legitimately match nothing for days.
+
+    The inherited six hour event based check would call that connector dead and
+    have the platform restart it in a loop, so it is off, and the heartbeat
+    answers instead. The threshold has to clear a cycle that slept its whole
+    frequency and then backed off, or a connector waiting on an outage would be
+    restarted for waiting.
+    """
+    assert connector.seconds_without_events == 0
+    assert connector.last_heartbeat_threshold >= 3 * connector.frequency
+    assert connector.last_heartbeat_threshold > MAX_BACKOFF_SECONDS
+
+
+def test_the_heartbeat_threshold_is_off_before_the_configuration_is_attached() -> None:
+    """is_alive can be asked before the connector is configured."""
+    bare = IntelFeed.__new__(IntelFeed)
+
+    assert bare.last_heartbeat_threshold == 0

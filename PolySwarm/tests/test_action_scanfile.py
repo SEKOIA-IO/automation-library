@@ -1,11 +1,14 @@
+import hashlib
+import io
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, create_autospec, patch
 
 import pytest
 from polyswarm_api import exceptions as ps_exceptions
 
 from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.action_polyswarm_scanfile import ScanFile
+from tests.helpers import autospec_build_client
 
 
 @pytest.fixture
@@ -65,8 +68,8 @@ def _make_scan_result(
     return result
 
 
-@patch("polyswarm_modules.action_polyswarm_scanfile._sha256_file", return_value="aa" * 32)
-@patch("polyswarm_modules.action_polyswarm_scanfile.build_client")
+@patch("polyswarm_modules.action_polyswarm_scanfile.sha256_handle", return_value="aa" * 32, autospec=True)
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
 def test_returns_cached_when_existing(
     mock_build_client: MagicMock, mock_hash: MagicMock, action: ScanFile, sample_file: str
 ) -> None:
@@ -81,8 +84,8 @@ def test_returns_cached_when_existing(
     assert response["sha256"] == "abc123" * 10 + "ab"
 
 
-@patch("polyswarm_modules.action_polyswarm_scanfile._sha256_file", return_value="aa" * 32)
-@patch("polyswarm_modules.action_polyswarm_scanfile.build_client")
+@patch("polyswarm_modules.action_polyswarm_scanfile.sha256_handle", return_value="aa" * 32, autospec=True)
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
 def test_submits_when_no_existing(
     mock_build_client: MagicMock, mock_hash: MagicMock, action: ScanFile, sample_file: str
 ) -> None:
@@ -94,17 +97,19 @@ def test_submits_when_no_existing(
 
     response = action.run({"file": sample_file})
 
+    # The client is handed an open handle, not a string path, so the file is
+    # read through the path object and not through the local filesystem alone.
     submitted = mock_api.submit.call_args.args[0]
-    assert submitted.endswith("/malware.exe")
-    assert mock_api.submit.call_args.kwargs == {"scan_config": "default"}
-    mock_api.wait_for.assert_called_once_with(mock_instance)
+    assert hasattr(submitted, "read")
+    assert mock_api.submit.call_args.kwargs == {"artifact_name": "malware.exe", "scan_config": "default"}
+    mock_api.wait_for.assert_called_once_with(mock_instance, timeout=300)
     assert response["cached"] is False
     assert response["malicious_count"] == 2
     assert response["benign_count"] == 1
 
 
-@patch("polyswarm_modules.action_polyswarm_scanfile._sha256_file", return_value="aa" * 32)
-@patch("polyswarm_modules.action_polyswarm_scanfile.build_client")
+@patch("polyswarm_modules.action_polyswarm_scanfile.sha256_handle", return_value="aa" * 32, autospec=True)
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
 def test_force_rescan_skips_lookup(
     mock_build_client: MagicMock, mock_hash: MagicMock, action: ScanFile, sample_file: str
 ) -> None:
@@ -119,8 +124,8 @@ def test_force_rescan_skips_lookup(
     assert response["cached"] is False
 
 
-@patch("polyswarm_modules.action_polyswarm_scanfile._sha256_file", return_value="aa" * 32)
-@patch("polyswarm_modules.action_polyswarm_scanfile.build_client")
+@patch("polyswarm_modules.action_polyswarm_scanfile.sha256_handle", return_value="aa" * 32, autospec=True)
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
 def test_submits_when_existing_failed(
     mock_build_client: MagicMock, mock_hash: MagicMock, action: ScanFile, sample_file: str
 ) -> None:
@@ -136,8 +141,8 @@ def test_submits_when_existing_failed(
     assert response["cached"] is False
 
 
-@patch("polyswarm_modules.action_polyswarm_scanfile._sha256_file", return_value="aa" * 32)
-@patch("polyswarm_modules.action_polyswarm_scanfile.build_client")
+@patch("polyswarm_modules.action_polyswarm_scanfile.sha256_handle", return_value="aa" * 32, autospec=True)
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
 def test_excludes_unmasked_assertions(
     mock_build_client: MagicMock, mock_hash: MagicMock, action: ScanFile, sample_file: str
 ) -> None:
@@ -155,7 +160,7 @@ def test_excludes_unmasked_assertions(
     assert response["assertions"][0]["engine_name"] == "ClamAV"
 
 
-@patch("polyswarm_modules.action_polyswarm_scanfile.build_client")
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
 def test_detections_activate_the_detected_branch(
     mock_build_client: MagicMock, action: ScanFile, sample_file: str
 ) -> None:
@@ -170,7 +175,7 @@ def test_detections_activate_the_detected_branch(
     assert action._outputs == {"detected": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_scanfile.build_client")
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
 def test_the_threshold_moves_the_branch(mock_build_client: MagicMock, action: ScanFile, sample_file: str) -> None:
     """A lone engine calling it malicious is the operator's judgement, not ours."""
     mock_api = mock_build_client.return_value
@@ -183,8 +188,8 @@ def test_the_threshold_moves_the_branch(mock_build_client: MagicMock, action: Sc
     assert action._outputs == {"not detected": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_scanfile._sha256_file", return_value="aa" * 32)
-@patch("polyswarm_modules.action_polyswarm_scanfile.build_client")
+@patch("polyswarm_modules.action_polyswarm_scanfile.sha256_handle", return_value="aa" * 32, autospec=True)
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
 def test_uses_the_shared_retrying_client(
     mock_build_client: MagicMock, mock_hash: MagicMock, action: ScanFile, sample_file: str, module: PolyswarmModule
 ) -> None:
@@ -199,8 +204,8 @@ def test_uses_the_shared_retrying_client(
     mock_build_client.assert_called_once_with(module.configuration)
 
 
-@patch("polyswarm_modules.action_polyswarm_scanfile._sha256_file", return_value="aa" * 32)
-@patch("polyswarm_modules.action_polyswarm_scanfile.build_client")
+@patch("polyswarm_modules.action_polyswarm_scanfile.sha256_handle", return_value="aa" * 32, autospec=True)
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
 def test_submit_failure_returns_none_without_quoting_the_client(
     mock_build_client: MagicMock, mock_hash: MagicMock, action: ScanFile, sample_file: str
 ) -> None:
@@ -217,8 +222,8 @@ def test_submit_failure_returns_none_without_quoting_the_client(
     assert secret_message not in action.error_message
 
 
-@patch("polyswarm_modules.action_polyswarm_scanfile._sha256_file", return_value="aa" * 32)
-@patch("polyswarm_modules.action_polyswarm_scanfile.build_client")
+@patch("polyswarm_modules.action_polyswarm_scanfile.sha256_handle", return_value="aa" * 32, autospec=True)
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
 def test_lookup_failure_returns_none_without_quoting_the_client(
     mock_build_client: MagicMock, mock_hash: MagicMock, action: ScanFile, sample_file: str
 ) -> None:
@@ -232,3 +237,72 @@ def test_lookup_failure_returns_none_without_quoting_the_client(
     assert action.error_message is not None
     assert secret_message not in action.error_message
     mock_api.submit.assert_not_called()
+
+
+# --- bounded wait, and reading through the path object ---
+
+
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
+def test_the_wait_is_bounded_by_the_argument(mock_build_client: MagicMock, action: ScanFile, sample_file: str) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.search.return_value = []
+    mock_api.wait_for.return_value = _make_scan_result()
+
+    action.run({"file": sample_file, "max_wait_seconds": 45})
+
+    assert mock_api.wait_for.call_args.kwargs == {"timeout": 45}
+
+
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
+def test_a_scan_that_outlasts_the_wait_is_reported_as_still_running(
+    mock_build_client: MagicMock, action: ScanFile, sample_file: str
+) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.search.return_value = []
+    mock_api.wait_for.side_effect = ps_exceptions.TimeoutException("scan abc timed out, key=SECRET")
+
+    response = action.run({"file": sample_file})
+
+    assert response is None
+    assert "still running" in action.error_message
+    assert "SECRET" not in action.error_message
+
+
+@pytest.mark.parametrize("seconds", [29, 601])
+def test_a_wait_outside_the_bounds_is_rejected(action: ScanFile, sample_file: str, seconds: int) -> None:
+    with pytest.raises(ValueError):
+        action.run({"file": sample_file, "max_wait_seconds": seconds})
+
+
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
+def test_a_file_that_is_not_on_the_local_disk_is_read_through_its_path_object(
+    mock_build_client: MagicMock, action: ScanFile
+) -> None:
+    """On the S3 file backend the path points into a bucket, which open() on a string cannot reach."""
+    remote = create_autospec(Path, instance=True)
+    remote.name = "remote.bin"
+    remote.open.return_value = io.BytesIO(b"bytes that only the path object can read")
+    mock_api = mock_build_client.return_value
+    mock_api.search.return_value = []
+    mock_api.wait_for.return_value = _make_scan_result()
+
+    with patch.object(ScanFile, "resolve_data_file", return_value=remote, autospec=True):
+        response = action.run({"file": "remote.bin"})
+
+    assert response is not None
+    remote.open.assert_called_once_with("rb")
+    assert mock_api.submit.call_args.kwargs["artifact_name"] == "remote.bin"
+    assert mock_api.search.call_args.args[0] == hashlib.sha256(b"bytes that only the path object can read").hexdigest()
+
+
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
+def test_an_unreadable_file_is_an_action_error_not_a_traceback(mock_build_client: MagicMock, action: ScanFile) -> None:
+    remote = create_autospec(Path, instance=True)
+    remote.open.side_effect = FileNotFoundError("s3://bucket/key")
+
+    with patch.object(ScanFile, "resolve_data_file", return_value=remote, autospec=True):
+        response = action.run({"file": "remote.bin"})
+
+    assert response is None
+    assert "could not be read" in action.error_message
+    mock_build_client.return_value.submit.assert_not_called()

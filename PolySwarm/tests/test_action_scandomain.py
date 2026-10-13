@@ -6,6 +6,7 @@ from polyswarm_api.resources import ArtifactType
 
 from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.action_polyswarm_scandomain import ScanDomain
+from tests.helpers import autospec_build_client, autospec_request
 
 
 @pytest.fixture
@@ -50,7 +51,7 @@ def _make_scan_result(
     return result
 
 
-@patch("polyswarm_modules.action_polyswarm_scandomain.build_client")
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
 def test_returns_cached_when_existing(mock_build_client: MagicMock, action: ScanDomain) -> None:
     existing = _make_scan_result()
     mock_build_client.return_value.search_url.return_value = [existing]
@@ -63,7 +64,7 @@ def test_returns_cached_when_existing(mock_build_client: MagicMock, action: Scan
     assert response["domain"] == "example.com"
 
 
-@patch("polyswarm_modules.action_polyswarm_scandomain.build_client")
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
 def test_submits_when_no_existing(mock_build_client: MagicMock, action: ScanDomain) -> None:
     mock_api = mock_build_client.return_value
     mock_api.search_url.return_value = []
@@ -78,11 +79,11 @@ def test_submits_when_no_existing(mock_build_client: MagicMock, action: ScanDoma
         artifact_type=ArtifactType.URL,
         scan_config="more-time",
     )
-    mock_api.wait_for.assert_called_once_with(mock_instance)
+    mock_api.wait_for.assert_called_once_with(mock_instance, timeout=300)
     assert response["cached"] is False
 
 
-@patch("polyswarm_modules.action_polyswarm_scandomain.build_client")
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
 def test_force_rescan_skips_lookup(mock_build_client: MagicMock, action: ScanDomain) -> None:
     mock_api = mock_build_client.return_value
     mock_api.submit.return_value = MagicMock()
@@ -95,7 +96,7 @@ def test_force_rescan_skips_lookup(mock_build_client: MagicMock, action: ScanDom
     assert response["cached"] is False
 
 
-@patch("polyswarm_modules.action_polyswarm_scandomain.build_client")
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
 def test_submits_when_existing_failed(mock_build_client: MagicMock, action: ScanDomain) -> None:
     failed = _make_scan_result(failed=True)
     mock_api = mock_build_client.return_value
@@ -109,7 +110,7 @@ def test_submits_when_existing_failed(mock_build_client: MagicMock, action: Scan
     assert response["cached"] is False
 
 
-@patch("polyswarm_modules.action_polyswarm_scandomain.build_client")
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
 def test_excludes_unmasked(mock_build_client: MagicMock, action: ScanDomain) -> None:
     assertions = [
         _make_assertion(engine_name="Active", author_name="active", verdict=True, mask=True),
@@ -125,7 +126,7 @@ def test_excludes_unmasked(mock_build_client: MagicMock, action: ScanDomain) -> 
     assert response["assertions"][0]["engine_name"] == "Active"
 
 
-@patch("polyswarm_modules.action_polyswarm_scandomain.build_client")
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
 def test_detections_activate_the_detected_branch(mock_build_client: MagicMock, action: ScanDomain) -> None:
     """The branch is what a playbook author wires on the canvas, so it follows the counts."""
     mock_api = mock_build_client.return_value
@@ -138,7 +139,7 @@ def test_detections_activate_the_detected_branch(mock_build_client: MagicMock, a
     assert action._outputs == {"detected": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_scandomain.build_client")
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
 def test_the_threshold_moves_the_branch(mock_build_client: MagicMock, action: ScanDomain) -> None:
     """A lone engine calling it malicious is the operator's judgement, not ours."""
     mock_api = mock_build_client.return_value
@@ -151,7 +152,7 @@ def test_the_threshold_moves_the_branch(mock_build_client: MagicMock, action: Sc
     assert action._outputs == {"not detected": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_scandomain.build_client")
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
 def test_uses_the_shared_retrying_client(
     mock_build_client: MagicMock, action: ScanDomain, module: PolyswarmModule
 ) -> None:
@@ -166,7 +167,7 @@ def test_uses_the_shared_retrying_client(
     mock_build_client.assert_called_once_with(module.configuration)
 
 
-@patch("polyswarm_modules.action_polyswarm_scandomain.build_client")
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
 def test_refuses_a_bare_ip_and_points_at_the_ip_action(mock_build_client: MagicMock, action: ScanDomain) -> None:
     response = action.run({"domain": "8.8.8.8"})
 
@@ -188,7 +189,7 @@ def test_refuses_a_bare_ip_and_points_at_the_ip_action(mock_build_client: MagicM
         "a" * 254,
     ],
 )
-@patch("polyswarm_modules.action_polyswarm_scandomain.build_client")
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
 def test_refuses_implausible_hostnames(mock_build_client: MagicMock, action: ScanDomain, domain: str) -> None:
     response = action.run({"domain": domain})
 
@@ -198,7 +199,7 @@ def test_refuses_implausible_hostnames(mock_build_client: MagicMock, action: Sca
     mock_build_client.assert_not_called()
 
 
-@patch("polyswarm_modules.action_polyswarm_scandomain.build_client")
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
 def test_submit_failure_returns_none_without_quoting_the_client(
     mock_build_client: MagicMock, action: ScanDomain
 ) -> None:
@@ -213,3 +214,57 @@ def test_submit_failure_returns_none_without_quoting_the_client(
     assert response is None
     assert action.error_message is not None
     assert secret_message not in action.error_message
+
+
+# --- bounded wait ---
+
+
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
+def test_the_wait_is_bounded_by_the_argument(mock_build_client: MagicMock, action: ScanDomain) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.search_url.return_value = []
+    mock_api.wait_for.return_value = _make_scan_result()
+
+    action.run({**{"domain": "example.com"}, "max_wait_seconds": 45})
+
+    assert mock_api.wait_for.call_args.kwargs == {"timeout": 45}
+
+
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
+def test_a_scan_that_outlasts_the_wait_is_reported_as_still_running(
+    mock_build_client: MagicMock, action: ScanDomain
+) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.search_url.return_value = []
+    mock_api.wait_for.side_effect = ps_exceptions.TimeoutException("scan abc timed out, key=SECRET")
+
+    response = action.run({"domain": "example.com"})
+
+    assert response is None
+    assert action.error_message is not None
+    assert "still running" in action.error_message
+    assert "300 seconds" in action.error_message
+    assert "SECRET" not in action.error_message
+
+
+@pytest.mark.parametrize("seconds", [29, 601])
+def test_a_wait_outside_the_bounds_is_rejected(action: ScanDomain, seconds: int) -> None:
+    with pytest.raises(ValueError):
+        action.run({**{"domain": "example.com"}, "max_wait_seconds": seconds})
+
+
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
+def test_the_http_status_is_reported_without_the_client_message(
+    mock_build_client: MagicMock, action: ScanDomain
+) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.search_url.return_value = []
+    mock_api.submit.side_effect = ps_exceptions.UsageLimitsExceededException(
+        autospec_request(429), "key=SECRET over limit"
+    )
+
+    response = action.run({"domain": "example.com"})
+
+    assert response is None
+    assert "HTTP 429" in action.error_message
+    assert "SECRET" not in action.error_message

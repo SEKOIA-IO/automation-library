@@ -9,7 +9,7 @@
     "properties": {
       "file": {
         "type": "string",
-        "description": "Name of the file to detonate, relative to the run data directory"
+        "description": "Name of the file to detonate, relative to the run data directory. The upload to PolySwarm has no time limit of its own (a limitation of the PolySwarm client library), so a stalled network connection can hold the run until Sekoia's own action timeout stops it."
       },
       "sandbox": {
         "type": "string",

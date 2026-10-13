@@ -455,7 +455,7 @@ class ExtractIocsArguments(BaseModel):
     text: str | None = Field(
         default=None,
         description=(
-            "Text to extract indicators from. Supply this or a file, not both. Nothing is "
+            "Text to extract indicators from, up to 5 MB. Supply this or a file, not both. Nothing is "
             "sent to PolySwarm: this runs locally and spends no quota."
         ),
     )
@@ -463,7 +463,7 @@ class ExtractIocsArguments(BaseModel):
         default=None,
         description=(
             "Name of a text file to extract indicators from, relative to the run data directory "
-            "where Sekoia delivers it. Supply this or text, not both. Nothing is sent to "
+            "where Sekoia delivers it, up to 5 MB. Supply this or text, not both. Nothing is sent to "
             "PolySwarm: this runs locally and spends no quota."
         ),
     )
@@ -514,6 +514,9 @@ class ExtractIocs(PolyswarmAction):
                 return None
         else:
             content = text or ""
+            if len(content.encode("utf-8", errors="replace")) > MAX_INPUT_BYTES:
+                self.error(f"The text is larger than the {MAX_INPUT_BYTES // (1024 * 1024)} MB extraction limit")
+                return None
 
         buckets = extract_indicators(content)
         total_count = sum(len(values) for values in buckets.values())
@@ -521,14 +524,21 @@ class ExtractIocs(PolyswarmAction):
         return ExtractIocsResponse(total_count=total_count, **buckets).model_dump()
 
     def _read_text(self, path: Path) -> str | None:
+        # Check the size on disk before reading anything: reading first would
+        # pull the whole file into memory just to refuse it.
+        try:
+            size = path.stat().st_size
+        except OSError:
+            self.error("The file could not be read from the run data directory")
+            return None
+        if size > MAX_INPUT_BYTES:
+            self.error(f"The file is larger than the {MAX_INPUT_BYTES // (1024 * 1024)} MB extraction limit")
+            return None
+
         try:
             raw = path.read_bytes()
         except OSError:
             self.error("The file could not be read from the run data directory")
-            return None
-
-        if len(raw) > MAX_INPUT_BYTES:
-            self.error(f"The file is larger than the {MAX_INPUT_BYTES // (1024 * 1024)} MB extraction limit")
             return None
 
         # Reports arrive with mixed encodings and the occasional binary blob.

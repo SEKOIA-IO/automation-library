@@ -31,14 +31,16 @@ from polyswarm_api import settings as ps_settings
 from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import build_client
+from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.coerce import as_names, as_number, as_score
 from polyswarm_modules.validators import invalid_ip_reason
 
-MISSING_RESULT: tuple[type[Exception], ...] = (
-    ps_exceptions.NoResultsException,
-    ps_exceptions.NotFoundException,
-)
-NUMERIC_ERRORS: tuple[type[Exception], ...] = (TypeError, ValueError)
+# A pivot on a busy indicator can match thousands of artifacts, and the client
+# pages through all of them for as long as the generator is consumed. The
+# endpoint has no page size argument to lean on, so both numbers are enforced
+# on this side, as SearchMetadata does for the same reason.
+DEFAULT_LIMIT = 20
+MAX_LIMIT = 200
 
 
 def _as_text(value: Any) -> str:
@@ -58,48 +60,6 @@ def _as_text(value: Any) -> str:
         aware = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
         return aware.astimezone(UTC).isoformat()
     return str(value)
-
-
-def _as_names(value: Any) -> list[str]:
-    """Normalise a families or tags payload into a deduplicated list of names."""
-    if isinstance(value, str):
-        candidates: list[Any] = [value]
-    elif isinstance(value, (list, tuple, set)):
-        candidates = list(value)
-    else:
-        return []
-
-    seen: set[str] = set()
-    names: list[str] = []
-    for candidate in candidates:
-        if isinstance(candidate, dict):
-            raw = candidate.get("name") or candidate.get("tag") or candidate.get("family") or ""
-        elif isinstance(candidate, str):
-            raw = candidate
-        else:
-            continue
-        name = raw.strip()
-        key = name.casefold()
-        if name and key not in seen:
-            seen.add(key)
-            names.append(name)
-    return names
-
-
-def _as_number(value: Any) -> int:
-    """Read an integer counter, treating anything unreadable as zero."""
-    try:
-        return int(value)
-    except NUMERIC_ERRORS:
-        return 0
-
-
-def _as_score(value: Any) -> float | None:
-    """Read a polyscore, treating anything unreadable as absent."""
-    try:
-        return float(value)
-    except NUMERIC_ERRORS:
-        return None
 
 
 class SearchIocArguments(BaseModel):
@@ -135,6 +95,15 @@ class SearchIocArguments(BaseModel):
             "ttp or imphash."
         ),
     )
+    limit: int = Field(
+        default=DEFAULT_LIMIT,
+        ge=1,
+        le=MAX_LIMIT,
+        description=(
+            f"Maximum number of artifacts to return, from {1} up to a hard ceiling of "
+            f"{MAX_LIMIT} so a pivot on a common indicator cannot run away. Defaults to {DEFAULT_LIMIT}."
+        ),
+    )
 
 
 class IocArtifact(BaseModel):
@@ -161,6 +130,8 @@ class SearchIocResponse(BaseModel):
     indicator: str = ""
     results: list[IocArtifact] = Field(default_factory=list)
     returned_count: int = 0
+    limit: int = DEFAULT_LIMIT
+    truncated: bool = False
 
 
 class SearchIoc(PolyswarmAction):
@@ -173,10 +144,13 @@ class SearchIoc(PolyswarmAction):
     caller meant would silently answer the wrong question. It only reads and
     spends no scanning quota.
 
-    Two branches: found (PolySwarm returned at least one artifact for the
-    indicator) and not found (PolySwarm has nothing on it). Not found is an
-    ordinary outcome, not an error: most indicators a playbook checks were
-    never seen by PolySwarm at all.
+    Three branches: found (PolySwarm returned at least one artifact for the
+    indicator, and every one of them is in the answer), truncated (at least
+    one artifact, but the limit cut the answer before the pivot was
+    exhausted) and not found (PolySwarm has nothing on it). Truncated is its
+    own branch so a capped answer can never be read by a playbook as a
+    complete one. Not found is an ordinary outcome, not an error: most
+    indicators a playbook checks were never seen by PolySwarm at all.
     """
 
     def run(self, arguments: dict[str, Any]) -> dict[str, Any] | None:
@@ -217,20 +191,20 @@ class SearchIoc(PolyswarmAction):
 
         try:
             iterator = api.search_by_ioc(**{indicator_type: indicator})
-            results = [self._build_artifact(item) for item in iterator]
+            results, truncated = self._collect(iterator, args.limit)
         except MISSING_RESULT:
             # A 204 or 404 is the client's way of saying nothing matched, and
             # an indicator PolySwarm has never seen is an ordinary outcome,
             # not an error.
-            results = []
+            results, truncated = [], False
         except ps_exceptions.InvalidValueException as exc:
-            self.error(f"PolySwarm rejected '{indicator}' as an invalid {indicator_type} ({type(exc).__name__}).")
+            self.error(f"PolySwarm rejected '{indicator}' as an invalid {indicator_type} ({failure_kind(exc)}).")
             return None
-        except ps_exceptions.PolyswarmException as exc:
+        except CLIENT_ERRORS as exc:
             # Never quote the client's own message: it can render the whole
             # request back into the exception text, and the request carries
             # the key.
-            self.error(f"PolySwarm did not run the {indicator_type} pivot ({type(exc).__name__}).")
+            self.error(f"PolySwarm did not run the {indicator_type} pivot ({failure_kind(exc)}).")
             return None
 
         if not results:
@@ -241,16 +215,37 @@ class SearchIoc(PolyswarmAction):
                 indicator=indicator,
                 results=[],
                 returned_count=0,
+                limit=args.limit,
+                truncated=False,
             ).model_dump()
 
-        self.set_output("found", True)
+        self.set_output("truncated" if truncated else "found", True)
         return SearchIocResponse(
             found=True,
             indicator_type=indicator_type,
             indicator=indicator,
             results=results,
             returned_count=len(results),
+            limit=args.limit,
+            truncated=truncated,
         ).model_dump()
+
+    @staticmethod
+    def _collect(iterator: Any, limit: int) -> tuple[list[IocArtifact], bool]:
+        """Consume the pivot generator up to limit, and detect whether more remained.
+
+        The client follows has_more across pages behind a lazily consumed
+        generator, so stopping consumption is the only way to cap the quota
+        and memory a broad indicator costs. The length check runs before an
+        item is appended so that the item which would have exceeded the limit
+        is what proves there was more, without being included in the answer.
+        """
+        items: list[IocArtifact] = []
+        for item in iterator:
+            if len(items) >= limit:
+                return items, True
+            items.append(SearchIoc._build_artifact(item))
+        return items, False
 
     @staticmethod
     def _build_artifact(item: Any) -> IocArtifact:
@@ -262,7 +257,7 @@ class SearchIoc(PolyswarmAction):
         polyunite: dict[str, Any] = document.get("polyunite") or {}
 
         family = polyunite.get("malware_family", "") if isinstance(polyunite, dict) else ""
-        families = _as_names(family) + _as_names(document.get("families"))
+        families = as_names(family) + as_names(document.get("families"))
 
         sha256 = _as_text(artifact.get("sha256") or document.get("sha256")).lower()
         permalink = f"{ps_settings.DEFAULT_PERMALINK_BASE}/{sha256}" if sha256 else ""
@@ -271,16 +266,16 @@ class SearchIoc(PolyswarmAction):
             sha256=sha256,
             sha1=_as_text(artifact.get("sha1") or document.get("sha1")),
             md5=_as_text(artifact.get("md5") or document.get("md5")),
-            malicious_detections=_as_number(detections.get("malicious")),
-            benign_detections=_as_number(detections.get("benign")),
-            total_detections=_as_number(detections.get("total")),
-            polyscore=_as_score(latest_scan.get("polyscore")),
+            malicious_detections=as_number(detections.get("malicious")),
+            benign_detections=as_number(detections.get("benign")),
+            total_detections=as_number(detections.get("total")),
+            polyscore=as_score(latest_scan.get("polyscore")),
             permalink=permalink,
             family=family or "",
-            families=_as_names(families),
-            tags=_as_names(document.get("tags")),
+            families=as_names(families),
+            tags=as_names(document.get("tags")),
             first_seen=_as_text(scan.get("first_scan", {}).get("created") if isinstance(scan, dict) else None),
             last_scanned=_as_text(latest_scan.get("created")),
             mimetype=_as_text((scan.get("mimetype") or {}).get("mime")),
-            filenames=_as_names(scan.get("filename")),
+            filenames=as_names(scan.get("filename")),
         )

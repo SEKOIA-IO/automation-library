@@ -14,7 +14,7 @@
     "required": [
       "apikey"
     ],
-    "title": "PolyswarmModuleConfiguration",
+    "title": "PolySwarm",
     "type": "object",
     "secrets": [
       "apikey"
@@ -27,6 +27,6 @@
     "Threat Intelligence"
   ],
   "uuid": "a268e99e-bf36-4015-af10-5050958f9080",
-  "version": "1.1.1",
+  "version": "1.0.0",
   "supports_validation": true
 }

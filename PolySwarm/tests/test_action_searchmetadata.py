@@ -12,6 +12,7 @@ from polyswarm_modules.action_polyswarm_searchmetadata import (
     MAX_QUERY_LENGTH,
     SearchMetadata,
 )
+from tests.helpers import autospec_build_client
 
 MODULE_PATH = "polyswarm_modules.action_polyswarm_searchmetadata"
 
@@ -65,7 +66,7 @@ def _make_item(
 
 
 def test_empty_query_is_refused_without_an_api_call(action: SearchMetadata) -> None:
-    with patch(f"{MODULE_PATH}.build_client") as mock_build_client:
+    with patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client) as mock_build_client:
         response = action.run({"query": ""})
 
     assert response is None
@@ -74,7 +75,7 @@ def test_empty_query_is_refused_without_an_api_call(action: SearchMetadata) -> N
 
 
 def test_whitespace_only_query_is_refused_without_an_api_call(action: SearchMetadata) -> None:
-    with patch(f"{MODULE_PATH}.build_client") as mock_build_client:
+    with patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client) as mock_build_client:
         response = action.run({"query": "   "})
 
     assert response is None
@@ -82,7 +83,7 @@ def test_whitespace_only_query_is_refused_without_an_api_call(action: SearchMeta
 
 
 def test_absurdly_long_query_is_refused_without_an_api_call(action: SearchMetadata) -> None:
-    with patch(f"{MODULE_PATH}.build_client") as mock_build_client:
+    with patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client) as mock_build_client:
         response = action.run({"query": "a" * (MAX_QUERY_LENGTH + 1)})
 
     assert response is None
@@ -91,7 +92,7 @@ def test_absurdly_long_query_is_refused_without_an_api_call(action: SearchMetada
 
 
 def test_query_at_the_length_ceiling_is_accepted(action: SearchMetadata) -> None:
-    with patch(f"{MODULE_PATH}.build_client") as mock_build_client:
+    with patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client) as mock_build_client:
         mock_build_client.return_value.search_by_metadata.return_value = iter([])
         response = action.run({"query": "a" * MAX_QUERY_LENGTH})
 
@@ -100,7 +101,7 @@ def test_query_at_the_length_ceiling_is_accepted(action: SearchMetadata) -> None
 
 
 def test_limit_above_the_hard_ceiling_is_rejected_by_the_argument_model(action: SearchMetadata) -> None:
-    with patch(f"{MODULE_PATH}.build_client") as mock_build_client:
+    with patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client) as mock_build_client:
         with pytest.raises(Exception):
             action.run({"query": "tags:ransomware", "limit": MAX_LIMIT + 1})
     mock_build_client.assert_not_called()
@@ -109,7 +110,7 @@ def test_limit_above_the_hard_ceiling_is_rejected_by_the_argument_model(action: 
 # --- found / not found / truncated branches ---
 
 
-@patch(f"{MODULE_PATH}.build_client")
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
 def test_a_matching_query_activates_the_found_branch(mock_build_client: MagicMock, action: SearchMetadata) -> None:
     mock_build_client.return_value.search_by_metadata.return_value = iter([_make_item()])
 
@@ -129,7 +130,7 @@ def test_a_matching_query_activates_the_found_branch(mock_build_client: MagicMoc
     assert result["permalink"].endswith("aa" * 32)
 
 
-@patch(f"{MODULE_PATH}.build_client")
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
 def test_default_limit_and_no_include_exclude_are_passed_through(
     mock_build_client: MagicMock, action: SearchMetadata
 ) -> None:
@@ -142,7 +143,7 @@ def test_default_limit_and_no_include_exclude_are_passed_through(
     )
 
 
-@patch(f"{MODULE_PATH}.build_client")
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
 def test_include_and_exclude_are_passed_through_when_supplied(
     mock_build_client: MagicMock, action: SearchMetadata
 ) -> None:
@@ -155,7 +156,7 @@ def test_include_and_exclude_are_passed_through_when_supplied(
     )
 
 
-@patch(f"{MODULE_PATH}.build_client")
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
 def test_no_matches_activates_the_not_found_branch(mock_build_client: MagicMock, action: SearchMetadata) -> None:
     mock_build_client.return_value.search_by_metadata.return_value = iter([])
 
@@ -169,7 +170,7 @@ def test_no_matches_activates_the_not_found_branch(mock_build_client: MagicMock,
     assert response["truncated"] is False
 
 
-@patch(f"{MODULE_PATH}.build_client")
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
 def test_a_204_style_exception_is_treated_as_not_found_not_an_error(
     mock_build_client: MagicMock, action: SearchMetadata
 ) -> None:
@@ -183,7 +184,7 @@ def test_a_204_style_exception_is_treated_as_not_found_not_an_error(
     assert action._outputs == {"not found": True}
 
 
-@patch(f"{MODULE_PATH}.build_client")
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
 def test_more_matches_than_limit_activates_the_truncated_branch(
     mock_build_client: MagicMock, action: SearchMetadata
 ) -> None:
@@ -201,7 +202,7 @@ def test_more_matches_than_limit_activates_the_truncated_branch(
     assert len(response["results"]) == 2
 
 
-@patch(f"{MODULE_PATH}.build_client")
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
 def test_exactly_the_limit_worth_of_matches_is_not_truncated(
     mock_build_client: MagicMock, action: SearchMetadata
 ) -> None:
@@ -223,7 +224,7 @@ def test_exactly_the_limit_worth_of_matches_is_not_truncated(
         (DEFAULT_LIMIT, DEFAULT_LIMIT + 1, True),
     ],
 )
-@patch(f"{MODULE_PATH}.build_client")
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
 def test_truncation_boundary_is_exact(
     mock_build_client: MagicMock, action: SearchMetadata, limit: int, item_count: int, expect_truncated: bool
 ) -> None:
@@ -240,7 +241,7 @@ def test_truncation_boundary_is_exact(
 # --- exception handling never leaks the client's own message ---
 
 
-@patch(f"{MODULE_PATH}.build_client")
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
 def test_invalid_query_error_does_not_quote_the_client_exception(
     mock_build_client: MagicMock, action: SearchMetadata
 ) -> None:
@@ -256,7 +257,7 @@ def test_invalid_query_error_does_not_quote_the_client_exception(
     assert secret_bearing_message not in action.error_message
 
 
-@patch(f"{MODULE_PATH}.build_client")
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
 def test_generic_polyswarm_failure_does_not_quote_the_client_exception(
     mock_build_client: MagicMock, action: SearchMetadata
 ) -> None:
@@ -275,7 +276,7 @@ def test_generic_polyswarm_failure_does_not_quote_the_client_exception(
 # --- field shape, missing data fails safe rather than raising ---
 
 
-@patch(f"{MODULE_PATH}.build_client")
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
 def test_a_document_missing_family_and_tags_still_returns_a_result(
     mock_build_client: MagicMock, action: SearchMetadata
 ) -> None:
@@ -289,3 +290,16 @@ def test_a_document_missing_family_and_tags_still_returns_a_result(
     assert result["family"] == ""
     assert result["tags"] == []
     assert result["families"] == []
+
+
+@patch("polyswarm_modules.action_polyswarm_searchmetadata.build_client", new_callable=autospec_build_client)
+def test_a_connection_error_is_an_action_error_not_a_traceback(mock_build_client: MagicMock, action: Any) -> None:
+    import requests
+
+    mock_build_client.return_value.search_by_metadata.side_effect = requests.ConnectionError("https://x/?key=SECRET")
+
+    response = action.run({"query": "tags:ransomware"})
+
+    assert response is None
+    assert "ConnectionError" in action.error_message
+    assert "SECRET" not in action.error_message

@@ -1,6 +1,6 @@
 {
   "name": "PolySwarm Intel Feed",
-  "description": "Pull new PolySwarm artifacts on a schedule and forward them to an intake. Each poll queries the PolySwarm metadata search for artifacts created since the last checkpoint, filtered server side by malware family, tag and minimum PolyScore, and pushes one event per artifact. The connector remembers its position between runs, so a restart neither repeats nor skips. Note that the PolySwarm API answers newest first and offers no page size or sort control, so a poll that would exceed max_events_per_run is refused whole rather than forwarded in part.",
+  "description": "Pull new PolySwarm artifacts on a schedule and forward them to an intake. Each poll queries the PolySwarm metadata search for artifacts created since the last checkpoint, filtered server side by malware family, tag and minimum PolyScore, and pushes one event per artifact. The connector remembers its position between runs, and a window is marked done only after the intake has accepted every event in it, so a restart or a failed push does not skip artifacts. A failed push is sent again, so an event can arrive twice. Read before deploying: windows are cut on the time PolySwarm first accepted the artifact, and the API reports no time of last change. An artifact that only meets your filters after its window has closed, because its PolyScore rose on a rescan or a sandbox report named its family later, is never pulled by this connector. To cover those, run the PolySwarm search metadata action on a schedule over a longer period. The PolySwarm API answers newest first and offers no page size or sort control, so a window that would exceed max_events_per_run is halved and asked for again; a window of 60 seconds that is still over the ceiling is pushed whole.",
   "uuid": "016f713b-c50e-4643-958e-bf472b4a5c29",
   "docker_parameters": "polyswarm_intel_feed",
   "arguments": {
@@ -63,7 +63,7 @@
       },
       "max_events_per_run": {
         "type": "integer",
-        "description": "Safety ceiling on the events one poll may push. A window holding more is refused whole: nothing is pushed and the checkpoint does not move, because PolySwarm answers newest first and a partial window cannot be resumed. Raise it, or narrow the filters, if the connector reports the ceiling.",
+        "description": "Safety ceiling on the events one poll may push. A window holding more is halved and asked for again, because PolySwarm answers newest first and a partial window cannot be resumed. A window of 60 seconds that still holds more is pushed whole, so the feed never stalls; the connector logs a warning when that happens. Raise it, or narrow the filters, if the connector reports it.",
         "minimum": 1,
         "maximum": 1000,
         "default": 200

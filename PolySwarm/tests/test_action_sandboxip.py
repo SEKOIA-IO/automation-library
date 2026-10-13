@@ -6,6 +6,7 @@ from requests import RequestException
 
 from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.action_polyswarm_sandboxip import SandboxIp
+from tests.helpers import autospec_build_client
 
 
 @pytest.fixture
@@ -57,7 +58,7 @@ def _make_sandbox_task(
 # --- Submission and the honest target field ------------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client", new_callable=autospec_build_client)
 def test_submits_the_converted_url_and_reports_the_detonated_target(
     mock_build_client: MagicMock, action: SandboxIp
 ) -> None:
@@ -82,7 +83,7 @@ def test_submits_the_converted_url_and_reports_the_detonated_target(
     assert action._outputs == {"submitted": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client", new_callable=autospec_build_client)
 def test_ipv6_target_is_bracketed(mock_build_client: MagicMock, action: SandboxIp) -> None:
     mock_api = mock_build_client.return_value
     mock_api.sandbox_providers.return_value = [_make_provider("cape")]
@@ -95,7 +96,7 @@ def test_ipv6_target_is_bracketed(mock_build_client: MagicMock, action: SandboxI
     assert response["target"] == "http://[2001:4860:4860::8888]/"
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client", new_callable=autospec_build_client)
 def test_does_not_block_by_default(mock_build_client: MagicMock, action: SandboxIp) -> None:
     mock_api = mock_build_client.return_value
     mock_api.sandbox_providers.return_value = [_make_provider("cape")]
@@ -110,7 +111,7 @@ def test_does_not_block_by_default(mock_build_client: MagicMock, action: Sandbox
 # --- Already analysed branch --------------------------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client", new_callable=autospec_build_client)
 def test_already_analysed_when_existing_report_found(mock_build_client: MagicMock, action: SandboxIp) -> None:
     mock_api = mock_build_client.return_value
     mock_api.sandbox_providers.return_value = [_make_provider("cape")]
@@ -129,7 +130,7 @@ def test_already_analysed_when_existing_report_found(mock_build_client: MagicMoc
     assert action._outputs == {"already analysed": True}
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client", new_callable=autospec_build_client)
 def test_force_skips_lookup(mock_build_client: MagicMock, action: SandboxIp) -> None:
     mock_api = mock_build_client.return_value
     mock_api.sandbox_providers.return_value = [_make_provider("cape")]
@@ -159,7 +160,7 @@ def test_force_skips_lookup(mock_build_client: MagicMock, action: SandboxIp) -> 
         "fc00::1",  # IPv6 unique local (private)
     ],
 )
-@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client", new_callable=autospec_build_client)
 def test_refuses_non_public_addresses(mock_build_client: MagicMock, action: SandboxIp, ip: str) -> None:
     response = action.run({"ip": ip})
 
@@ -169,7 +170,7 @@ def test_refuses_non_public_addresses(mock_build_client: MagicMock, action: Sand
     mock_build_client.assert_not_called()
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client", new_callable=autospec_build_client)
 def test_refuses_a_value_that_is_not_an_ip(mock_build_client: MagicMock, action: SandboxIp) -> None:
     response = action.run({"ip": "not-an-ip"})
 
@@ -182,7 +183,7 @@ def test_refuses_a_value_that_is_not_an_ip(mock_build_client: MagicMock, action:
 # --- Provider validation --------------------------------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client", new_callable=autospec_build_client)
 def test_refuses_unknown_provider(mock_build_client: MagicMock, action: SandboxIp) -> None:
     mock_api = mock_build_client.return_value
     mock_api.sandbox_providers.return_value = [_make_provider("cape"), _make_provider("triage")]
@@ -195,7 +196,7 @@ def test_refuses_unknown_provider(mock_build_client: MagicMock, action: SandboxI
     mock_api.sandbox_url.assert_not_called()
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client", new_callable=autospec_build_client)
 def test_an_image_named_by_the_author_is_used_without_asking_the_platform(
     mock_build_client: MagicMock, action: SandboxIp
 ) -> None:
@@ -213,7 +214,7 @@ def test_an_image_named_by_the_author_is_used_without_asking_the_platform(
     assert response["vm_slug"] == "chosen-by-hand"
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client", new_callable=autospec_build_client)
 def test_no_image_and_no_provider_list_refuses_rather_than_guessing(
     mock_build_client: MagicMock, action: SandboxIp
 ) -> None:
@@ -234,7 +235,7 @@ def test_no_image_and_no_provider_list_refuses_rather_than_guessing(
 # --- Failures never quote the client -----------------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client", new_callable=autospec_build_client)
 def test_submit_failure_returns_none_without_quoting_the_client(
     mock_build_client: MagicMock, action: SandboxIp
 ) -> None:
@@ -254,8 +255,8 @@ def test_submit_failure_returns_none_without_quoting_the_client(
 # --- Optional wait --------------------------------------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxip.time")
-@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client")
+@patch("polyswarm_modules.sandbox.time", autospec=True)
+@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client", new_callable=autospec_build_client)
 def test_wait_reaches_a_verdict(mock_build_client: MagicMock, mock_time: MagicMock, action: SandboxIp) -> None:
     mock_time.monotonic.return_value = 0.0
     mock_api = mock_build_client.return_value
@@ -271,8 +272,8 @@ def test_wait_reaches_a_verdict(mock_build_client: MagicMock, mock_time: MagicMo
     mock_api.sandbox_task_status.assert_called_once()
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxip.time")
-@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client")
+@patch("polyswarm_modules.sandbox.time", autospec=True)
+@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client", new_callable=autospec_build_client)
 def test_wait_hits_its_ceiling_still_processing(
     mock_build_client: MagicMock, mock_time: MagicMock, action: SandboxIp
 ) -> None:
@@ -302,7 +303,7 @@ def test_max_wait_seconds_is_capped_at_the_hard_ceiling() -> None:
 # --- Client construction ---------------------------------------------------
 
 
-@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client")
+@patch("polyswarm_modules.action_polyswarm_sandboxip.build_client", new_callable=autospec_build_client)
 def test_uses_the_shared_retrying_client(
     mock_build_client: MagicMock, action: SandboxIp, module: PolyswarmModule
 ) -> None:

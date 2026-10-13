@@ -18,9 +18,10 @@
       },
       "max_wait_seconds": {
         "type": "integer",
-        "description": "How long to wait for a detonation that is already running elsewhere to finish, in seconds. 0, the default, does not wait: this reads the task's current status and returns immediately. Polling backs off from a short first check up to a 60 second ceiling. This action never starts a detonation itself; submit one with SandboxFile, SandboxUrl or SandboxIp first.",
+        "description": "How long to wait for a detonation that is already running elsewhere to finish, in seconds, capped at 300. 0, the default, does not wait: this reads the task's current status and returns immediately. Polling backs off from a short first check up to a 60 second ceiling. This action never starts a detonation itself; submit one with SandboxFile, SandboxUrl or SandboxIp first.",
         "default": 0,
-        "minimum": 0
+        "minimum": 0,
+        "maximum": 300
       }
     },
     "required": [

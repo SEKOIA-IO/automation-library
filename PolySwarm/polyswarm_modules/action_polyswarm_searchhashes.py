@@ -15,19 +15,9 @@ from typing import Any
 
 from polyswarm_api import exceptions as ps_exceptions
 from pydantic import BaseModel, Field
-from requests import RequestException
 
 from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import build_client
-
-SCAN_FAILURES: tuple[type[Exception], ...] = (
-    ps_exceptions.PolyswarmException,
-    RequestException,
-)
-MISSING_RESULT: tuple[type[Exception], ...] = (
-    ps_exceptions.NoResultsException,
-    ps_exceptions.NotFoundException,
-)
+from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
 
 MAX_HASHES_PER_CALL = 100
 
@@ -162,7 +152,7 @@ class SearchHashes(PolyswarmAction):
             except ps_exceptions.InvalidValueException:
                 errors.append(HashLookupError(hash=query_hash, reason="Not a valid SHA256, SHA1 or MD5 hash"))
                 continue
-            except SCAN_FAILURES as exc:
+            except CLIENT_ERRORS as exc:
                 # Never quote the client's own message: on some failures it
                 # renders the whole request, headers included, back into the
                 # exception text, which carries the key. Only the exception
@@ -170,7 +160,7 @@ class SearchHashes(PolyswarmAction):
                 errors.append(
                     HashLookupError(
                         hash=query_hash,
-                        reason=f"PolySwarm did not return a result for this hash ({type(exc).__name__})",
+                        reason=f"PolySwarm did not return a result for this hash ({failure_kind(exc)})",
                     )
                 )
                 continue

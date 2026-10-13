@@ -1,57 +1,30 @@
-import hashlib
-import time
 from typing import Any
 
-from polyswarm_api import exceptions as ps_exceptions
 from polyswarm_api.api import PolyswarmAPI
 from pydantic import BaseModel, Field
-from requests import RequestException
 
-from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import build_client, choose_vm_slug
-
-MISSING_RESULT: tuple[type[Exception], ...] = (
-    ps_exceptions.NoResultsException,
-    ps_exceptions.NotFoundException,
+from polyswarm_modules.base import PolyswarmAction, sha256_handle
+from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, choose_vm_slug, failure_kind
+from polyswarm_modules.sandbox import (
+    DEFAULT_MAX_WAIT_SECONDS,
+    MAX_WAIT_SECONDS_CEILING,
+    SUBMIT_POLL_INTERVAL_CEILING,
+    poll_until_terminal,
+    report_url,
+    validate_provider,
 )
-CLIENT_ERRORS: tuple[type[Exception], ...] = (ps_exceptions.PolyswarmException, RequestException)
-
-TERMINAL_STATUSES: frozenset[str] = frozenset({"SUCCEEDED", "FAILED"})
-
-# Short first check, doubling up to a low ceiling: this wait is for an
-# analyst watching the run, not the batch style poll a scheduled playbook
-# would tolerate.
-INITIAL_POLL_INTERVAL: float = 5.0
-POLL_BACKOFF_FACTOR: float = 2.0
-POLL_INTERVAL_CEILING: float = 30.0
-DEFAULT_MAX_WAIT_SECONDS: int = 60
-# Hard ceiling. Blocking a playbook run for fifteen minutes is the behaviour
-# this action family replaces, so even an analyst who asks to wait cannot
-# push it past five minutes; the SandboxCompleted trigger is the way to
-# learn about anything slower than that.
-MAX_WAIT_SECONDS_CEILING: int = 300
-
-SANDBOX_TASK_ENDPOINT: str = "/sandbox/sandboxtask"
-
-
-def _sha256_file(path: str) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(65536), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def _report_url(api: PolyswarmAPI, task_id: str, community: str | None) -> str:
-    """The API URL the PolySwarm client itself calls to read this task, matching the trigger's vocabulary."""
-    base = f"{api.uri}{SANDBOX_TASK_ENDPOINT}?sandbox_task_id={task_id}"
-    if community:
-        return f"{base}&community={community}"
-    return base
 
 
 class SandboxFileArguments(BaseModel):
-    file: str = Field(..., description="Name of the file to detonate, relative to the run data directory")
+    file: str = Field(
+        ...,
+        description=(
+            "Name of the file to detonate, relative to the run data directory."
+            " The upload to PolySwarm has no time limit of its own (a limitation of the PolySwarm client "
+            "library), so a stalled network connection can hold the run until Sekoia's own action "
+            "timeout stops it."
+        ),
+    )
     sandbox: str = Field(default="cape", description="Sandbox provider slug (e.g. 'cape', 'triage')")
     vm_slug: str = Field(
         default="",
@@ -116,7 +89,7 @@ class SandboxFile(PolyswarmAction):
 
         api = build_client(self.module.configuration)
 
-        if not self._validate_provider(api, args.sandbox):
+        if not validate_provider(api, args.sandbox, self.log, self.error):
             return None
 
         resolved_vm = args.vm_slug or choose_vm_slug(api, args.sandbox, "FILE")
@@ -131,45 +104,34 @@ class SandboxFile(PolyswarmAction):
 
         args.vm_slug = resolved_vm
 
-        sha256 = _sha256_file(str(file_path))
-
-        if not args.force:
-            existing = self._lookup_existing(api, sha256, args.sandbox)
-            if existing is not None:
-                self.log(f"Found existing sandbox report for {sha256} on {args.sandbox}", level="info")
-                self.set_output("already analysed", True)
-                return self._respond(api, existing, args, already_analysed=True).model_dump()
-
-        task = self._submit(api, file_path, args)
-        if task is None:
+        # Open through the path object rather than the built in open(): on the S3
+        # file backend the path points into a bucket, which only the path object
+        # knows how to read. The client accepts the open handle directly.
+        try:
+            handle = file_path.open("rb")
+        except OSError:
+            self.error("The file could not be read from the run data directory")
             return None
 
+        with handle:
+            sha256 = sha256_handle(handle)
+
+            if not args.force:
+                existing = self._lookup_existing(api, sha256, args.sandbox)
+                if existing is not None:
+                    self.log(f"Found existing sandbox report for {sha256} on {args.sandbox}", level="info")
+                    self.set_output("already analysed", True)
+                    return self._respond(api, existing, args, already_analysed=True).model_dump()
+
+            task = self._submit(api, handle, file_path.name, args)
+            if task is None:
+                return None
+
         if args.wait:
-            task = self._poll_until_wait_ceiling(api, task, args.max_wait_seconds)
+            task = poll_until_terminal(api, task, args.max_wait_seconds, SUBMIT_POLL_INTERVAL_CEILING, self.log)
 
         self.set_output("submitted", True)
         return self._respond(api, task, args, already_analysed=False).model_dump()
-
-    def _validate_provider(self, api: PolyswarmAPI, sandbox: str) -> bool:
-        """True when the provider checks out, or the check could not be made and the value is trusted instead."""
-        try:
-            providers = list(api.sandbox_providers())
-        except CLIENT_ERRORS as exc:
-            self.log(
-                f"Could not validate the sandbox provider against PolySwarm's provider list "
-                f"({type(exc).__name__}), trusting the configured value",
-                level="warning",
-            )
-            return True
-
-        slugs = {getattr(p, "slug", "") for p in providers if getattr(p, "slug", "")}
-        if slugs and sandbox not in slugs:
-            self.error(
-                f"'{sandbox}' is not a sandbox provider PolySwarm currently offers. "
-                f"Known providers: {', '.join(sorted(slugs))}."
-            )
-            return False
-        return True
 
     def _lookup_existing(self, api: PolyswarmAPI, sha256: str, sandbox: str) -> Any:
         try:
@@ -183,41 +145,27 @@ class SandboxFile(PolyswarmAction):
             # Looking for an existing report is an optimisation, so a lookup failure falls through
             # to submitting a fresh detonation rather than failing the action.
             self.log(
-                f"Could not check for an existing report ({type(exc).__name__}), submitting a new one instead",
+                f"Could not check for an existing report ({failure_kind(exc)}), submitting a new one instead",
                 level="warning",
             )
         return None
 
-    def _submit(self, api: PolyswarmAPI, file_path: Any, args: SandboxFileArguments) -> Any:
+    def _submit(self, api: PolyswarmAPI, handle: Any, file_name: str, args: SandboxFileArguments) -> Any:
         self.log(f"No existing report found, submitting a file to sandbox {args.sandbox}", level="info")
         try:
+            # The client uploads the file with a plain request that carries no timeout and sits
+            # outside the retrying session, and this action cannot inject one without patching
+            # the library. The limitation is stated in the descriptor instead.
             return api.sandbox_file(
-                str(file_path),
+                handle,
+                artifact_name=file_name,
                 provider_slug=args.sandbox,
                 vm_slug=args.vm_slug,
                 network_enabled=args.network_enabled,
             )
         except CLIENT_ERRORS as exc:
-            self.error(f"PolySwarm could not submit the file to sandbox {args.sandbox} ({type(exc).__name__}).")
+            self.error(f"PolySwarm could not submit the file to sandbox {args.sandbox} ({failure_kind(exc)}).")
             return None
-
-    def _poll_until_wait_ceiling(self, api: PolyswarmAPI, task: Any, max_wait_seconds: int) -> Any:
-        """Poll a sandbox task until it reaches a terminal status or the wait ceiling, whichever comes first."""
-        deadline = time.monotonic() + max_wait_seconds
-        interval = INITIAL_POLL_INTERVAL
-
-        while task.status not in TERMINAL_STATUSES:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                break
-            time.sleep(min(interval, remaining))
-            interval = min(interval * POLL_BACKOFF_FACTOR, POLL_INTERVAL_CEILING)
-            try:
-                task = api.sandbox_task_status(task.id)
-            except CLIENT_ERRORS as exc:
-                self.log(f"Sandbox status check failed ({type(exc).__name__}), retrying", level="warning")
-
-        return task
 
     def _respond(
         self, api: PolyswarmAPI, task: Any, args: SandboxFileArguments, already_analysed: bool
@@ -232,7 +180,7 @@ class SandboxFile(PolyswarmAction):
             vm_slug=args.vm_slug,
             status=str(getattr(task, "status", "") or ""),
             already_analysed=already_analysed,
-            report_url=_report_url(api, str(task.id), community),
+            report_url=report_url(api, str(task.id), community),
         )
 
     @staticmethod

@@ -31,9 +31,22 @@ directly, since it is the only thing standing between this file and a push
 design.
 
 What this trigger does instead. Every poll it reads the newest sandbox tasks
-created by the configured account, emits one event for each task that has
-reached a terminal status and has not been emitted before, and remembers what
-it emitted in the SDK's PersistentJSON store so a restart does not replay.
+created by the configured account and emits one event for each task that has
+reached a terminal status and has not been emitted before. A detonation takes
+minutes, and the task listing can only be read one page of ten at a time, so a
+busy account can push a task off that page while it is still running. Each task
+seen running is therefore remembered, and is looked up by its own identifier on
+later polls until it finishes, whether or not it is still on the newest page.
+What it emitted, and what it is still waiting on, lives in the SDK's
+PersistentJSON store so a restart does not replay.
+
+The first poll against an empty store emits nothing. It records the tasks that
+are already finished as emitted and starts tracking the ones still running.
+Without that, every deploy, and every restart the platform performs after it
+has lost the store, would start a playbook run for each finished task on the
+newest page, however old. The price is that a task which finished while the
+store was missing is not reported.
+
 The event carries the identity of the detonation and where to fetch the
 report, not the report body: a sandbox report is routinely megabytes and
 belongs behind the Report action, which the receiving playbook calls with the
@@ -55,21 +68,34 @@ from sekoia_automation.trigger import Trigger
 
 from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.client import build_client
-
-# A sandbox task is done when it reaches one of these. Anything else is still in flight.
-TERMINAL_STATUSES: frozenset[str] = frozenset({"SUCCEEDED", "FAILED"})
-
-# Resource path the PolySwarm client itself uses to read a single sandbox task.
-SANDBOX_TASK_ENDPOINT: str = "/sandbox/sandboxtask"
+from polyswarm_modules.sandbox import TERMINAL_STATUSES, report_url
 
 # Base of the PolySwarm portal page for an artifact instance.
 PORTAL_BASE: str = "https://polyswarm.network/scan/results/file"
 
-# How many task identifiers we keep in the persistent store. This has to stay
-# comfortably larger than max_tasks_per_cycle, which is capped at 500, so an
-# identifier can only be evicted long after the task fell out of the scan
-# window. That is what makes eviction safe rather than a source of replays.
+# How many emitted task identifiers we keep in the persistent store. The
+# listing only ever shows the newest ten tasks, so an identifier can only be
+# evicted long after the task fell off that page, and it cannot come back to
+# be emitted a second time.
 MAX_TRACKED_TASKS: int = 5000
+
+# How many running tasks we follow by identifier at once. Past this the oldest
+# are dropped, so a burst of submissions cannot grow the store without bound.
+MAX_IN_FLIGHT_TASKS: int = 1000
+
+# What share of the poll interval the identifier lookups may spend. They run one
+# after another against an endpoint whose latency we have not measured, so a
+# large max_tasks_per_cycle could otherwise make a poll outlast its own
+# frequency and leave the trigger permanently behind. Stopping early is safe:
+# the least recently checked tasks go first, so whatever is skipped is first in
+# line next time.
+IN_FLIGHT_BUDGET_SHARE: float = 0.5
+
+# How long a task may stay in flight before we stop looking for it. A sandbox
+# detonation takes minutes, so a task still not terminal after this long is
+# stuck on the PolySwarm side, and polling it forever would only spend lookups
+# that finished tasks need. This is a chosen ceiling, not a measured one.
+IN_FLIGHT_MAX_AGE_SECONDS: int = 6 * 3600
 
 # Upper bound on the error back off, so a long outage does not push the next
 # attempt days into the future.
@@ -78,6 +104,8 @@ MAX_BACKOFF_SECONDS: int = 1800
 STORE_FILE_NAME: str = "sandbox_completed_trigger.json"
 TASK_LIST_TIMEOUT: int = 120
 STORE_KEY: str = "emitted_task_ids"
+IN_FLIGHT_KEY: str = "in_flight_tasks"
+INITIALISED_KEY: str = "initialised"
 
 
 class SandboxCompletedConfiguration(BaseModel):
@@ -99,12 +127,14 @@ class SandboxCompletedConfiguration(BaseModel):
         description="Emit an event for detonations that ended in FAILED as well as SUCCEEDED",
     )
     max_tasks_per_cycle: int = Field(
-        default=200,
+        default=50,
         ge=1,
         le=500,
-        description="How many of the most recent sandbox tasks to examine on each poll. "
-        "A completed task is only missed if the account creates more than this many tasks "
-        "within one poll.",
+        description="How many still running sandbox tasks to look up by identifier on each poll, "
+        "in addition to the newest page of ten. A task that is running when it falls off the newest "
+        "page is followed here until it finishes, so a completion is only delayed, not missed, "
+        "when more tasks than this are running at once. The ones not checked this poll are "
+        "checked on the next.",
     )
     page_size: int = Field(
         default=10,
@@ -154,7 +184,7 @@ class SandboxCompleted(Trigger):
 
     @cached_property
     def _store(self) -> PersistentJSON:
-        """Persistence for the identifiers already emitted, provided by the SDK."""
+        """Persistence for emitted identifiers and in flight tasks, provided by the SDK."""
         return PersistentJSON(STORE_FILE_NAME, self.data_path)
 
     @cached_property
@@ -207,21 +237,97 @@ class SandboxCompleted(Trigger):
         off. Keeping the cycle a separate method also keeps it testable without
         an infinite loop.
         """
+        first_run = not self._is_initialised()
         already_emitted = set(self._emitted_task_ids())
         emitted = 0
+        on_page: set[str] = set()
 
         for task in self._recent_tasks():
             task_id = self._task_id(task)
             if not task_id or task_id in already_emitted:
                 continue
-            if not self._is_reportable(task):
+            on_page.add(task_id)
+
+            if not self._is_terminal(task):
+                if self._matches_sandbox(task):
+                    self._track_in_flight(task_id)
                 continue
 
-            self.send_event(self._event_name(task, task_id), self._build_event(task, task_id).model_dump())
-            self._remember(task_id)
-            already_emitted.add(task_id)
-            emitted += 1
+            if first_run:
+                # Already finished before this trigger ever looked: record it so
+                # it is not replayed later, but do not start a playbook for it.
+                self._remember(task_id)
+                already_emitted.add(task_id)
+            elif self._emit(task, task_id):
+                already_emitted.add(task_id)
+                emitted += 1
 
+        if first_run:
+            self._mark_initialised()
+
+        return emitted + self._check_in_flight(already_emitted, on_page)
+
+    def _emit(self, task: Any, task_id: str) -> bool:
+        """Send the event for a terminal task if the configuration wants it.
+
+        The task leaves the in flight set whether or not it was sent, because a
+        terminal status is final: a filtered out task is not worth another lookup.
+        """
+        if not self._is_reportable(task):
+            self._untrack_in_flight(task_id)
+            return False
+        self.send_event(self._event_name(task, task_id), self._build_event(task, task_id).model_dump())
+        self._remember(task_id)
+        return True
+
+    def _check_in_flight(self, already_emitted: set[str], on_page: set[str]) -> int:
+        """Look up, by identifier, the running tasks that the newest page no longer shows.
+
+        Tasks still on the page were judged from the page itself, which is as
+        fresh as a lookup, so they are skipped. The least recently checked tasks
+        go first and an error is recorded against the task before it is
+        re-raised, so one task that always fails to load rotates to the back of
+        the queue instead of starving the others, while the caller still backs
+        off from a PolySwarm outage. The loop also stops once it has spent its
+        share of the poll interval, so a slow endpoint delays a completion
+        rather than stalling the whole trigger. At least one task is always
+        looked up, otherwise a frequency shorter than a single lookup would
+        make no progress at all.
+        """
+        self._drop_expired_in_flight()
+        in_flight = self._in_flight()
+        candidates = sorted(
+            (task_id for task_id in in_flight if task_id not in on_page),
+            key=lambda task_id: in_flight[task_id]["last_checked"],
+        )
+
+        emitted = 0
+        deadline = self._now() + self.configuration.frequency * IN_FLIGHT_BUDGET_SHARE
+        checked = 0
+        for task_id in candidates[: self.configuration.max_tasks_per_cycle]:
+            if checked and self._now() >= deadline:
+                self.log(
+                    f"Ran out of time looking up running sandbox tasks after {checked} of "
+                    f"{len(candidates)}. The rest are first in line on the next poll",
+                    level="info",
+                )
+                break
+            checked += 1
+            if task_id in already_emitted:
+                self._untrack_in_flight(task_id)
+                continue
+            self._touch_in_flight(task_id)
+            try:
+                task = self.client.sandbox_task_status(task_id)
+            except ps_exceptions.NotFoundException:
+                # PolySwarm no longer knows the task, so it can never finish for us.
+                self._untrack_in_flight(task_id)
+                continue
+            if not self._is_terminal(task):
+                continue
+            if self._emit(task, task_id):
+                already_emitted.add(task_id)
+                emitted += 1
         return emitted
 
     def _recent_tasks(self) -> list[Any]:
@@ -237,22 +343,30 @@ class SandboxCompleted(Trigger):
         inside two minutes, and neither does a first page of twenty or more. A
         second page would therefore hang this cycle rather than fetch anything,
         so the trigger reads the newest page and waits for the next poll.
-        At a page of ten every sixty seconds the newest completions are still
-        seen long before they age out. Revisit when that endpoint is fixed.
+
+        That page alone would miss a detonation that outlasts ten newer
+        submissions, since it would leave the page before finishing. Running
+        tasks are therefore followed by identifier, see _check_in_flight, which
+        reads one task and does not depend on the listing. Revisit the page
+        limit when that endpoint is fixed.
         """
-        window = min(self.configuration.max_tasks_per_cycle, self.configuration.page_size)
-        return list(islice(self.client.sandbox_my_tasks_list(limit=self.configuration.page_size), window))
+        page_size = self.configuration.page_size
+        return list(islice(self.client.sandbox_my_tasks_list(limit=page_size), page_size))
+
+    @staticmethod
+    def _is_terminal(task: Any) -> bool:
+        return str(getattr(task, "status", "") or "").upper() in TERMINAL_STATUSES
+
+    def _matches_sandbox(self, task: Any) -> bool:
+        wanted = self.configuration.sandbox
+        return not wanted or str(getattr(task, "sandbox", "") or "") == wanted
 
     def _is_reportable(self, task: Any) -> bool:
-        status = str(getattr(task, "status", "") or "").upper()
-        if status not in TERMINAL_STATUSES:
+        if not self._is_terminal(task):
             return False
-        if status == "FAILED" and not self.configuration.emit_failed:
+        if str(getattr(task, "status", "") or "").upper() == "FAILED" and not self.configuration.emit_failed:
             return False
-        wanted = self.configuration.sandbox
-        if wanted and str(getattr(task, "sandbox", "") or "") != wanted:
-            return False
-        return True
+        return self._matches_sandbox(task)
 
     def _build_event(self, task: Any, task_id: str) -> SandboxCompletedEvent:
         community = self._as_text(getattr(task, "community", None)) or self.module.configuration.community
@@ -278,22 +392,11 @@ class SandboxCompleted(Trigger):
             # is one whose report can be fetched, which is what a playbook
             # branching on this field actually wants to know.
             report_available=str(getattr(task, "status", "") or "").upper() == "SUCCEEDED",
-            report_url=self._report_url(task_id, community),
+            report_url=report_url(self.client, task_id, community),
             portal_url=portal_url,
             sandbox_artifact_count=len(getattr(task, "sandbox_artifacts", None) or []),
             detected_at=datetime.now(UTC).isoformat(),
         )
-
-    def _report_url(self, task_id: str, community: str | None) -> str:
-        """The API URL the PolySwarm client itself calls to read this task.
-
-        Built from the client's own base URI and resource path rather than a
-        hard coded host, so a non default deployment stays correct.
-        """
-        base = f"{self.client.uri}{SANDBOX_TASK_ENDPOINT}?sandbox_task_id={task_id}"
-        if community:
-            return f"{base}&community={community}"
-        return base
 
     @staticmethod
     def _event_name(task: Any, task_id: str) -> str:
@@ -317,12 +420,27 @@ class SandboxCompleted(Trigger):
         with self._store as cache:
             return list(cache.get(STORE_KEY, []))
 
+    def _is_initialised(self) -> bool:
+        """Whether an earlier poll has already seeded the store.
+
+        A store written before this flag existed holds emitted identifiers, and
+        counts as seeded, so an upgrade does not silently skip a poll's worth of
+        completions.
+        """
+        with self._store as cache:
+            return bool(cache.get(INITIALISED_KEY) or cache.get(STORE_KEY))
+
+    def _mark_initialised(self) -> None:
+        with self._store as cache:
+            cache[INITIALISED_KEY] = True
+
     def _remember(self, task_id: str) -> None:
         """Record an identifier as emitted, flushed to disk immediately.
 
         The write happens after the event was accepted, once per event rather
         than once per cycle, so a restart between two events in the same cycle
-        does not replay the ones that already went out.
+        does not replay the ones that already went out. The task leaves the in
+        flight set in the same write, so a restart cannot leave it in both.
         """
         with self._store as cache:
             known = list(cache.get(STORE_KEY, []))
@@ -330,6 +448,56 @@ class SandboxCompleted(Trigger):
             if len(known) > MAX_TRACKED_TASKS:
                 known = known[-MAX_TRACKED_TASKS:]
             cache[STORE_KEY] = known
+            in_flight = dict(cache.get(IN_FLIGHT_KEY, {}))
+            if in_flight.pop(task_id, None) is not None:
+                cache[IN_FLIGHT_KEY] = in_flight
+
+    def _in_flight(self) -> dict[str, dict[str, float]]:
+        with self._store as cache:
+            return dict(cache.get(IN_FLIGHT_KEY, {}))
+
+    def _track_in_flight(self, task_id: str) -> None:
+        """Start following a running task by identifier, unless it already is."""
+        with self._store as cache:
+            in_flight = dict(cache.get(IN_FLIGHT_KEY, {}))
+            if task_id in in_flight:
+                return
+            now = self._now()
+            in_flight[task_id] = {"first_seen": now, "last_checked": now}
+            if len(in_flight) > MAX_IN_FLIGHT_TASKS:
+                oldest = sorted(in_flight, key=lambda key: in_flight[key]["first_seen"])
+                for key in oldest[: len(in_flight) - MAX_IN_FLIGHT_TASKS]:
+                    del in_flight[key]
+            cache[IN_FLIGHT_KEY] = in_flight
+
+    def _touch_in_flight(self, task_id: str) -> None:
+        with self._store as cache:
+            in_flight = dict(cache.get(IN_FLIGHT_KEY, {}))
+            if task_id in in_flight:
+                in_flight[task_id] = {**in_flight[task_id], "last_checked": self._now()}
+                cache[IN_FLIGHT_KEY] = in_flight
+
+    def _untrack_in_flight(self, task_id: str) -> None:
+        with self._store as cache:
+            in_flight = dict(cache.get(IN_FLIGHT_KEY, {}))
+            if in_flight.pop(task_id, None) is not None:
+                cache[IN_FLIGHT_KEY] = in_flight
+
+    def _drop_expired_in_flight(self) -> None:
+        cutoff = self._now() - IN_FLIGHT_MAX_AGE_SECONDS
+        with self._store as cache:
+            in_flight = dict(cache.get(IN_FLIGHT_KEY, {}))
+            kept = {key: value for key, value in in_flight.items() if value["first_seen"] >= cutoff}
+            if len(kept) != len(in_flight):
+                self.log(
+                    f"Stopped following {len(in_flight) - len(kept)} sandbox tasks that never finished",
+                    level="warning",
+                )
+                cache[IN_FLIGHT_KEY] = kept
+
+    @staticmethod
+    def _now() -> float:
+        return datetime.now(UTC).timestamp()
 
     def _back_off(self, context: str, error: Exception) -> None:
         """Log a failure without leaking the API key, then wait longer each time."""

@@ -1,22 +1,20 @@
-import hashlib
 from typing import Any
 
 from polyswarm_api import exceptions as ps_exceptions
 from polyswarm_api.api import PolyswarmAPI
 from pydantic import BaseModel, Field
-from requests import RequestException
 
-from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import build_client
+from polyswarm_modules.base import PolyswarmAction, sha256_handle
+from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.verdict import AssertionResult, tally_assertions
 
-MISSING_RESULT: tuple[type[Exception], ...] = (
-    ps_exceptions.NoResultsException,
-    ps_exceptions.NotFoundException,
-)
-SCAN_FAILURES: tuple[type[Exception], ...] = (
-    ps_exceptions.PolyswarmException,
-    RequestException,
-)
+# A scan waits on engines that can answer slowly, but the SDK's own default of
+# fifteen minutes is the kind of blocked playbook run the sandbox actions were
+# written to avoid, so the wait is bounded here and exposed to the analyst
+# instead. The ceiling matches the longest scan window PolySwarm offers.
+DEFAULT_MAX_WAIT_SECONDS: int = 300
+MAX_WAIT_SECONDS_CEILING: int = 600
+MIN_WAIT_SECONDS: int = 30
 
 
 class ScanFileArguments(BaseModel):
@@ -34,6 +32,9 @@ class ScanFileArguments(BaseModel):
             "Name of the file to scan, relative to the run data directory where Sekoia "
             "delivers it. The file is uploaded to PolySwarm's engine marketplace, which "
             "spends a scan unless a matching result already exists."
+            " The upload to PolySwarm has no time limit of its own (a limitation of the PolySwarm client "
+            "library), so a stalled network connection can hold the run until Sekoia's own action "
+            "timeout stops it."
         ),
     )
     scan_config: str = Field(
@@ -53,12 +54,17 @@ class ScanFileArguments(BaseModel):
             "unless you need a fresh verdict."
         ),
     )
-
-
-class AssertionResult(BaseModel):
-    engine_name: str
-    author_name: str
-    verdict: bool | None
+    max_wait_seconds: int = Field(
+        default=DEFAULT_MAX_WAIT_SECONDS,
+        ge=MIN_WAIT_SECONDS,
+        le=MAX_WAIT_SECONDS_CEILING,
+        description=(
+            "How long to wait for the engines to finish a new scan, in seconds, capped at "
+            f"{MAX_WAIT_SECONDS_CEILING}. Only applies when a new scan is submitted. If the engines have "
+            "not finished by then the action stops with an error and the scan keeps running at "
+            "PolySwarm, so look the result up again later."
+        ),
+    )
 
 
 class ScanFileResponse(BaseModel):
@@ -74,14 +80,6 @@ class ScanFileResponse(BaseModel):
     failed: bool
     cached: bool
     assertions: list[AssertionResult]
-
-
-def _sha256_file(path: str) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(65536), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 class ScanFile(PolyswarmAction):
@@ -101,42 +99,63 @@ class ScanFile(PolyswarmAction):
 
         api = build_client(self.module.configuration)
 
-        cached: bool = False
-        result = None
+        # Open through the path object rather than the built in open(): on the S3
+        # file backend the path points into a bucket, which only the path object
+        # knows how to read. The client accepts the open handle directly.
+        try:
+            handle = file_path.open("rb")
+        except OSError:
+            self.error("The file could not be read from the run data directory")
+            return None
 
-        if not args.force_rescan:
-            try:
-                result = self._lookup_existing(api, str(file_path))
-            except SCAN_FAILURES as exc:
-                # Never quote the client's own message: it renders the request, which carries the key.
-                self.error(f"PolySwarm did not look up an existing scan for the file ({type(exc).__name__}).")
-                return None
-            if result is not None:
-                cached = True
-                self.log(f"Found existing scan for {result.sha256}", level="info")
+        with handle:
+            cached: bool = False
+            result = None
 
-        if result is None:
-            try:
-                instance = api.submit(str(file_path), scan_config=args.scan_config)
-                result = api.wait_for(instance)
-            except SCAN_FAILURES as exc:
-                # Never quote the client's own message: it renders the request, which carries the key.
-                self.error(f"PolySwarm did not scan the file ({type(exc).__name__}).")
-                return None
-            if result.failed:
-                self.error("PolySwarm reported the scan as failed, so there is no verdict")
-                return None
-            if not getattr(result, "window_closed", False):
-                self.error("The assertion window is still open, so there is no verdict yet")
-                return None
+            if not args.force_rescan:
+                try:
+                    result = self._lookup_existing(api, handle)
+                except CLIENT_ERRORS as exc:
+                    # Never quote the client's own message: it renders the request, which carries the key.
+                    self.error(f"PolySwarm did not look up an existing scan for the file ({failure_kind(exc)}).")
+                    return None
+                if result is not None:
+                    cached = True
+                    self.log(f"Found existing scan for {result.sha256}", level="info")
+
+            if result is None:
+                try:
+                    # The client uploads the file with a plain request that carries no timeout and
+                    # sits outside the retrying session, and this action cannot inject one without
+                    # patching the library. The limitation is stated in the descriptor instead, and
+                    # only the wait after the upload is bounded here.
+                    instance = api.submit(handle, artifact_name=file_path.name, scan_config=args.scan_config)
+                    result = api.wait_for(instance, timeout=args.max_wait_seconds)
+                except ps_exceptions.TimeoutException:
+                    # The scan itself is not cancelled, only the wait for it, so it can still be read later.
+                    self.error(
+                        f"PolySwarm had not finished the file scan after {args.max_wait_seconds} seconds. "
+                        "The scan is still running, look the result up again later."
+                    )
+                    return None
+                except CLIENT_ERRORS as exc:
+                    # Never quote the client's own message: it renders the request, which carries the key.
+                    self.error(f"PolySwarm did not scan the file ({failure_kind(exc)}).")
+                    return None
+                if result.failed:
+                    self.error("PolySwarm reported the scan as failed, so there is no verdict")
+                    return None
+                if not getattr(result, "window_closed", False):
+                    self.error("The assertion window is still open, so there is no verdict yet")
+                    return None
 
         response = self._build_response(result, cached)
         self.set_output("detected" if response.malicious_count >= args.detect_threshold else "not detected", True)
 
         return response.model_dump()
 
-    def _lookup_existing(self, api: PolyswarmAPI, file_path: str) -> Any:
-        file_hash: str = _sha256_file(file_path)
+    def _lookup_existing(self, api: PolyswarmAPI, handle: Any) -> Any:
+        file_hash: str = sha256_handle(handle)
         try:
             results = list(api.search(file_hash))
             if results and self.is_complete(results[0]):
@@ -146,20 +165,7 @@ class ScanFile(PolyswarmAction):
         return None
 
     def _build_response(self, result: Any, cached: bool) -> ScanFileResponse:
-        # Only assertions inside the bloom mask are real answers from an engine.
-        # An engine that abstained answers None, and it is neither malicious nor
-        # benign: counting abstentions as benign inflates the clean side of any
-        # ratio a customer writes a detection rule against.
-        scored = [a for a in result.assertions if a.mask]
-
-        assertions = [
-            AssertionResult(
-                engine_name=a.engine_name,
-                author_name=a.author_name,
-                verdict=a.verdict,
-            )
-            for a in scored
-        ]
+        tally = tally_assertions(result)
 
         return ScanFileResponse(
             sha256=result.sha256,
@@ -168,10 +174,10 @@ class ScanFile(PolyswarmAction):
             extended_type=result.extended_type,
             polyscore=result.polyscore,
             permalink=result.permalink,
-            malicious_count=sum(1 for a in scored if a.verdict is True),
-            benign_count=sum(1 for a in scored if a.verdict is False),
-            total_count=len(scored),
+            malicious_count=tally.malicious_count,
+            benign_count=tally.benign_count,
+            total_count=tally.total_count,
             failed=result.failed,
             cached=cached,
-            assertions=assertions,
+            assertions=tally.assertions,
         )
