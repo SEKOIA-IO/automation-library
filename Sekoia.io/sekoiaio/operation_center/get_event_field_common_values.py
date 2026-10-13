@@ -33,12 +33,14 @@ class GetEventFieldCommonValues(BaseGetEvents):
             response_fields.raise_for_status()
 
             response_content = response_fields.json()
-            for item in response_content.get("items", []):
+            items = response_content.get("items", [])
+            for item in items:
                 offset += 1
                 if item["name"] in requested_fields:
                     results[item["name"]] = item["most_common_values"]
 
-            if offset < response_content["total"] and len(results.keys()) == len(requested_fields):
+            # Fetch the next page while some requested fields are missing; stop on an empty page
+            if items and offset < response_content["total"] and len(results) < len(requested_fields):
                 must_continue_in_pages = True
 
         return {
