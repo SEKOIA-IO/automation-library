@@ -6,6 +6,8 @@
   "type": "asset",
   "capability": "account_detection",
   "uuid": "226573e7-3969-4e31-bb3a-0846760b35b9",
+  "execution_modes": ["cloud", "on_premise"],
+  "on_premise_action": "8109d625-424c-4edb-bafc-81261932c898",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",

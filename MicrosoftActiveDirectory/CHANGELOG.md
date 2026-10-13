@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add action to synchronize Active Directory users with Sekoia.io assets from an on-premise runner, with community-scoped searches, request throttling and retries on HTTP 429
+- Add an action that runs one fetch cycle of the Microsoft AD user asset connector, so it can run on an on-premise runner where only actions run. It pushes the users to the asset connector configuration, commits the checkpoint after each batch and returns `has_more` when the cycle was interrupted (time limit, SIGTERM) and should run again to resume. The action is internal, only run by the platform for on-premise asset connectors.
+- Declare the `cloud` and `on_premise` execution modes on the Microsoft AD user asset connector
 
 ## 2026-07-13 - 1.5.8
 
