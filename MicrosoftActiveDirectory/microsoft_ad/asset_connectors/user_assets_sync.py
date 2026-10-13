@@ -33,7 +33,6 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
         # (https://github.com/SEKOIA-IO/sekoia-automation-sdk/pull/291)
         assets: list[UserOCSFModel] = []
         for asset in self.get_assets():
-            
             # Check at each asset, not only before a push, to stop quickly once the
             # connector is stopped. The assets not pushed yet are dropped: the
             # checkpoint does not cover them, so the next run fetches them again.
