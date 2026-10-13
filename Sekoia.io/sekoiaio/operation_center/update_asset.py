@@ -3,7 +3,7 @@ from typing import Any, ClassVar, Literal
 from uuid import UUID
 
 import requests
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sekoia_automation.action import Action
 
 AssetType = Literal["host", "account", "network"]
@@ -24,6 +24,14 @@ class UpdateAssetArguments(BaseModel):
     tags: list[str] | None = None
     revoked: bool | None = None
     reviewed: bool | None = None
+
+    @field_validator("criticality", mode="before")
+    @classmethod
+    def reject_boolean_criticality(cls, value: Any) -> Any:
+        # pydantic would otherwise turn true/false into 1/0
+        if isinstance(value, bool):
+            raise ValueError("Input should be a valid integer")
+        return value
 
 
 class UpdateAsset(Action):

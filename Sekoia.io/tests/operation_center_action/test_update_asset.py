@@ -112,6 +112,8 @@ def test_update_asset_with_tags_as_list(requests_mock):
         ("type", "not-a-valid-type"),
         ("criticality", -1),
         ("criticality", 101),
+        ("criticality", True),
+        ("criticality", False),
         ("atoms", {"cidrv4": {"nested": "not-a-scalar"}}),
     ],
 )
