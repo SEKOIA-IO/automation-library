@@ -17,6 +17,10 @@ from sophos_module.client.auth import SophosApiAuthentication
 from sophos_module.client.exceptions import SophosApiAuthenticationError
 from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
 
+QUERY_STATUS_POLL_INTERVAL = 2  # seconds
+MAX_QUERY_STATUS_POLLS = 900  # 30 minutes
+MAX_QUERY_STATUS_ERRORS = 5
+
 
 class SophosXDRQueryConfiguration(DefaultConnectorConfiguration):
     chunk_size: int = 1000
@@ -137,10 +141,11 @@ class SophosXDRQueryTrigger(SophosConnector):
             return "failed", query_id
 
         status = ""
+        errors = 0
         self.log(message=f"Waiting the query {query_id} to complete", level="info")
-        while status != "finished":
+        for _ in range(MAX_QUERY_STATUS_POLLS):
             # Give time for query to finish.
-            time.sleep(2)
+            time.sleep(QUERY_STATUS_POLL_INTERVAL)
             # It's the Second step of our query treatment.
             # Checking the status of our query.
             response_query_status = self.client.get_query_status(query_id)
@@ -150,10 +155,20 @@ class SophosXDRQueryTrigger(SophosConnector):
                     f"response: {response_query_status.text}",
                     level="error",
                 )
+                errors += 1
+                if errors >= MAX_QUERY_STATUS_ERRORS:
+                    return "failed", query_id
+                continue
 
+            errors = 0
             result_query_status = response_query_status.json()
             status = result_query_status.get("status")
             result = result_query_status.get("result")
+            if status == "finished":
+                break
+        else:
+            self.log(message=f"The query {query_id} did not finish in time", level="error")
+            return "failed", query_id
 
         self.log(message=f"Finishing the loop with status {status} and result {result}", level="info")
 
