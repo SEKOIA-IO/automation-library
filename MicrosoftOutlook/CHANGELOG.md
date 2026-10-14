@@ -68,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix false-negative lookups for `email_local_id` by bounding and paginating client-side fallback scanning (`FALLBACK_PAGE_SIZE=50`, `FALLBACK_MAX_MESSAGES_SCANNED=1000`)
 - Ensure fallback scanning never processes messages beyond the 1,000-item cap by slicing each fetched page to the remaining scan budget
+- Normalize empty optional identifiers to null-equivalent values before fallback filtering to avoid false negatives when one identifier is empty
 
 ### Removed
 
