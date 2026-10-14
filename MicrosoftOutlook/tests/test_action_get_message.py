@@ -6,7 +6,15 @@ from microsoft_outlook_modules.action_base import GraphAPIException
 from microsoft_outlook_modules.action_get_message import GetMessageAction
 
 
-def test_get_message(configured_action, get_message_1):
+@pytest.mark.parametrize(
+    "message_id_input",
+    [
+        "2222",
+        {"message_id": "2222"},
+    ],
+    ids=["string_message_id", "foreach_message_object"],
+)
+def test_get_message(configured_action, get_message_1, message_id_input):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
@@ -16,11 +24,19 @@ def test_get_message(configured_action, get_message_1):
         mock.register_uri("GET", "https://graph.microsoft.com/v1.0/users/1111/messages/2222", json=get_message_1)
 
         action = configured_action(GetMessageAction)
-        result = action.run(arguments={"user": "1111", "message_id": "2222"})
+        result = action.run(arguments={"user": "1111", "message_id": message_id_input})
+        assert result["user"] == "1111"
         assert result["message_id"] == get_message_1["id"]
         assert result["internet_message_id"] == get_message_1["internetMessageId"]
         assert result["received_date_time"] == get_message_1["receivedDateTime"]
         assert result["to_recipients"][0]["email_address"]["address"] == "recipient@example.com"
+
+
+@pytest.mark.parametrize("invalid_message_id", [{"subject": "test"}, 123])
+def test_get_message_rejects_invalid_message_id_values(configured_action, invalid_message_id):
+    _ = configured_action(GetMessageAction)
+    with pytest.raises(ValueError, match="message_id must be a string or a message object"):
+        GetMessageAction._resolve_message_id(invalid_message_id)  # type: ignore[arg-type]
 
 
 def test_get_message_keeps_non_dict_payload_unchanged(configured_action):
@@ -53,6 +69,7 @@ def test_get_message_message_id_falls_back_to_input_message_id(configured_action
         action = configured_action(GetMessageAction)
         result = action.run(arguments={"user": "1111", "message_id": "2222"})
         assert result["message_id"] == "2222"
+        assert result["user"] == "1111"
 
 
 @pytest.mark.parametrize(
