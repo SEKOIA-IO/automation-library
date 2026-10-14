@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-08-26 - 1.6.0
+
+### Added
+
+- User asset connector now declares its LDAP -> OCSF field mapping and resets its
+  checkpoint automatically when that mapping changes, so all users are re-collected with
+  the new mapping
+
+### Changed
+
+- Upgrade `sekoia-automation-sdk` to 1.24.0
+- Migrate the configuration and action models from `pydantic.v1` to Pydantic v2, required
+  by the SDK
+
 ## 2026-07-13 - 1.5.8
 
 ### Fixed
