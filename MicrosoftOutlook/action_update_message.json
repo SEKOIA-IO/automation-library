@@ -1,6 +1,6 @@
 {
   "name": "Update a message",
-  "description": "Update a message in the user's mailbox",
+  "description": "The action that updates a message in the user's mailbox",
   "uuid": "52cd13b7-7fb3-5393-bc65-c988ef346fa3",
   "docker_parameters": "action_update_message",
   "arguments": {
@@ -66,7 +66,7 @@
     ],
     "properties": {
       "bcc": {
-        "description": "The new list of BCC recipient email addresses",
+        "description": "The updated list of BCC recipient email addresses",
         "type": "array",
         "items": {
           "type": "string",
@@ -74,7 +74,7 @@
         }
       },
       "cc": {
-        "description": "The new list of CC recipient email addresses",
+        "description": "The updated list of CC recipient email addresses",
         "type": "array",
         "items": {
           "type": "string",
@@ -82,11 +82,11 @@
         }
       },
       "content": {
-        "description": "The new plain-text content of the message",
+        "description": "The updated plain-text content of the message",
         "type": "string"
       },
       "from": {
-        "description": "The new mailbox owner email address (From header)",
+        "description": "The updated mailbox owner email address used in the From header",
         "type": "string",
         "format": "email"
       },
@@ -100,11 +100,14 @@
         ]
       },
       "message_id": {
-        "description": "The Microsoft Graph message item ID",
-        "type": "string"
+        "description": "The Microsoft Graph message item ID, or a message object containing message_id",
+        "type": [
+          "string",
+          "object"
+        ]
       },
       "recipients": {
-        "description": "The new list of recipient email addresses",
+        "description": "The updated list of recipient email addresses",
         "type": "array",
         "items": {
           "type": "string",
@@ -112,12 +115,12 @@
         }
       },
       "sender": {
-        "description": "The new sender email address of the message",
+        "description": "The updated sender email address",
         "type": "string",
         "format": "email"
       },
       "subject": {
-        "description": "The new subject of the message",
+        "description": "The updated subject of the message",
         "type": "string"
       },
       "user": {
@@ -130,32 +133,114 @@
     "title": "UpdateMessageResults",
     "type": "object",
     "properties": {
+      "action": {
+        "description": "The action technical identifier",
+        "type": "string"
+      },
+      "bcc": {
+        "description": "The updated list of BCC recipient email addresses used by the action",
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "cc": {
+        "description": "The updated list of CC recipient email addresses used by the action",
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      },
       "from": {
-        "description": "Sender information",
+        "description": "The sender information",
         "type": "object"
       },
-      "message_id": {
-        "description": "The Microsoft Graph message item ID",
-        "type": "string"
+      "importance": {
+        "description": "The importance level of the message used by the action",
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "Low",
+          "Normal",
+          "High",
+          null
+        ]
       },
       "internet_message_id": {
         "description": "The Internet Message-ID (RFC 5322)",
         "type": "string"
       },
+      "message_id": {
+        "description": "The Microsoft Graph message item ID",
+        "type": "string"
+      },
+      "original_from": {
+        "description": "The original mailbox owner email address provided in the input From header",
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "email"
+      },
+      "original_subject": {
+        "description": "The original subject provided in the input",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
       "received_date_time": {
-        "description": "Message reception timestamp",
+        "description": "The message reception timestamp",
+        "type": "string",
+        "format": "date-time"
+      },
+      "recipients": {
+        "description": "The updated list of recipient email addresses used by the action",
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "sender": {
+        "description": "The updated sender email address used by the action",
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "email"
+      },
+      "status": {
+        "description": "The execution status",
         "type": "string"
       },
       "subject": {
-        "description": "Message subject",
+        "description": "The message subject",
         "type": "string"
       },
       "to_recipients": {
-        "description": "List of recipients",
+        "description": "The list of recipients",
         "type": "array",
         "items": {
           "type": "object"
         }
+      },
+      "user": {
+        "description": "The echo of the user identifier used for this action",
+        "type": "string"
       }
     }
   },

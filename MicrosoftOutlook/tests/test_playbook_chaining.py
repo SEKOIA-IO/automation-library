@@ -2,11 +2,11 @@ import requests_mock
 
 from microsoft_outlook_modules.action_forward_message import ForwardMessageAction
 from microsoft_outlook_modules.action_get_message import GetMessageAction
-from microsoft_outlook_modules.action_resolve_message import ResolveMessageAction
+from microsoft_outlook_modules.action_search_messages import SearchMessagesAction
 from microsoft_outlook_modules.action_update_message import UpdateMessageAction
 
 
-def test_linear_chain_resolve_get_update_forward_uses_enriched_results(configured_action, get_message_1, message_2):
+def test_linear_chain_search_get_update_forward_uses_enriched_results(configured_action, get_message_1, message_2):
     message_id = "graph-item-id-chain"
 
     get_payload = dict(get_message_1)
@@ -44,23 +44,23 @@ def test_linear_chain_resolve_get_update_forward_uses_enriched_results(configure
             content=b"",
         )
 
-        resolve_action = configured_action(ResolveMessageAction)
+        search_action = configured_action(SearchMessagesAction)
         get_action = configured_action(GetMessageAction)
         update_action = configured_action(UpdateMessageAction)
         forward_action = configured_action(ForwardMessageAction)
 
-        resolve_result = resolve_action.run(
+        search_result = search_action.run(
             arguments={
                 "user": "1111",
                 "email_message_id": "<chain-sample-message-id@example.test>",
             }
         )
-        assert resolve_result["message_id"] == message_id
+        assert search_result["message_ids"] == [message_id]
 
         get_result = get_action.run(
             arguments={
                 "user": "1111",
-                "message_id": resolve_result["message_id"],
+                "message_id": search_result["message_ids"][0],
             }
         )
         assert get_result["message_id"] == message_id

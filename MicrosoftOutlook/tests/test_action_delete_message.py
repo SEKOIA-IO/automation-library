@@ -1,9 +1,18 @@
+import pytest
 import requests_mock
 
 from microsoft_outlook_modules.action_delete_message import DeleteMessageAction
 
 
-def test_delete_message(configured_action):
+@pytest.mark.parametrize(
+    "message_id_input",
+    [
+        "2222",
+        {"message_id": "2222"},
+    ],
+    ids=["string_message_id", "foreach_message_object"],
+)
+def test_delete_message(configured_action, message_id_input):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
@@ -15,9 +24,17 @@ def test_delete_message(configured_action):
         )
 
         action = configured_action(DeleteMessageAction)
-        result = action.run(arguments={"user": "1111", "message_id": "2222"})
+        result = action.run(arguments={"user": "1111", "message_id": message_id_input})
         assert result == {
             "status": "deleted",
             "action": "delete_a_message",
             "target_message_id": "2222",
+            "user": "1111",
         }
+
+
+@pytest.mark.parametrize("invalid_message_id", [{"subject": "test"}, 123])
+def test_delete_message_rejects_invalid_message_id_values(configured_action, invalid_message_id):
+    _ = configured_action(DeleteMessageAction)
+    with pytest.raises(ValueError, match="message_id must be a string or a message object"):
+        DeleteMessageAction._resolve_message_id(invalid_message_id)  # type: ignore[arg-type]
