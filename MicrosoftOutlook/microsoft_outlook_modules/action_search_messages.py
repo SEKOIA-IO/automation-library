@@ -66,6 +66,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
         params: dict[str, Any] | None = initial_params
         matched_messages: list[dict[str, Any]] = []
         scanned_messages = 0
+        scan_limit_reached = False
 
         while (
             next_url
@@ -79,6 +80,8 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
             messages: list[dict[str, Any]] = payload.get("value", [])
             remaining_budget = self.FALLBACK_MAX_MESSAGES_SCANNED - scanned_messages
             messages_to_scan = messages[:remaining_budget]
+            if len(messages_to_scan) < len(messages):
+                scan_limit_reached = True
             scanned_messages += len(messages_to_scan)
 
             matched_messages.extend(
@@ -91,13 +94,17 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
             next_url = payload.get("@odata.nextLink")
             params = None
 
+        if scanned_messages >= self.FALLBACK_MAX_MESSAGES_SCANNED and bool(next_url):
+            scan_limit_reached = True
+
         self.log(
             message=(
                 "Completed search fallback with client-side filtering "
                 f"user={user_id_or_principal_name!r} "
                 f"scanned_messages={scanned_messages!r} "
                 f"matched_messages={len(matched_messages)!r} "
-                f"has_more={bool(next_url)!r}"
+                f"has_more={bool(next_url)!r} "
+                f"scan_limit_reached={scan_limit_reached!r}"
             ),
             level="debug",
         )
@@ -105,6 +112,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
         return {
             "value": matched_messages[:max_messages_to_return],
             "@odata.nextLink": next_url,
+            "scan_limit_reached": scan_limit_reached,
         }
 
     def run(self, arguments: Any) -> Any:
@@ -112,8 +120,8 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
 
         validated_arguments = SearchMessagesArguments.model_validate(arguments)
         user_id_or_principal_name = validated_arguments.user
-        internet_message_id = validated_arguments.email_message_id
-        network_message_id = validated_arguments.email_local_id
+        internet_message_id = validated_arguments.email_message_id or None
+        network_message_id = validated_arguments.email_local_id or None
         max_messages_to_return = validated_arguments.max_messages_to_return
         return_most_recent_first = validated_arguments.return_most_recent_first
 
@@ -131,6 +139,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
             query_type = "email_message_id"
             query_value = internet_message_id
         else:
+            assert network_message_id is not None
             query_type = "email_local_id"
             query_value = network_message_id
 
@@ -146,6 +155,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
         )
 
         used_fallback = False
+        scan_limit_reached = False
 
         filters: list[str] = []
         if return_most_recent_first:
@@ -203,6 +213,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
                     network_message_id,
                     internet_message_id,
                 )
+                scan_limit_reached = bool(payload.get("scan_limit_reached"))
             else:
                 raise
 
@@ -223,6 +234,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
                 network_message_id,
                 internet_message_id,
             )
+            scan_limit_reached = bool(payload.get("scan_limit_reached"))
 
         messages = payload.get("value", [])
         normalized_messages = cast(list[dict[str, Any]], self._snake_case_keys(messages))
@@ -249,7 +261,8 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
                     f"total_results={0!r} "
                     f"returned_count={0!r} "
                     f"has_more={has_more!r} "
-                    f"used_fallback={used_fallback!r}"
+                    f"used_fallback={used_fallback!r} "
+                    f"scan_limit_reached={scan_limit_reached!r}"
                 ),
                 level="debug",
             )
@@ -262,6 +275,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
                 "total_results": 0,
                 "returned_count": 0,
                 "has_more": has_more,
+                "scan_limit_reached": scan_limit_reached,
             }
 
         self.log(
@@ -271,7 +285,8 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
                 f"total_results={total_results!r} "
                 f"returned_count={total_results!r} "
                 f"has_more={has_more!r} "
-                f"used_fallback={used_fallback!r}"
+                f"used_fallback={used_fallback!r} "
+                f"scan_limit_reached={scan_limit_reached!r}"
             ),
             level="debug",
         )
@@ -284,4 +299,5 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
             "total_results": total_results,
             "returned_count": total_results,
             "has_more": has_more,
+            "scan_limit_reached": scan_limit_reached,
         }

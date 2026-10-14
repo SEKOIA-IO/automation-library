@@ -58,11 +58,16 @@
       "messages",
       "total_results",
       "returned_count",
-      "has_more"
+      "has_more",
+      "scan_limit_reached"
     ],
     "properties": {
       "has_more": {
         "description": "The indicator that is true when Graph indicates additional pages may exist",
+        "type": "boolean"
+      },
+      "scan_limit_reached": {
+        "description": "The indicator that is true when fallback scanning stops at the max scanned-messages budget",
         "type": "boolean"
       },
       "message_ids": {
