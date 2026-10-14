@@ -7,6 +7,7 @@ from collections.abc import AsyncGenerator
 from typing import Any, Optional
 
 import orjson
+from loguru import logger
 from pydantic import BaseModel, Field
 from sekoia_automation.storage import PersistentJSON
 
@@ -99,78 +100,70 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         result = 0
         timestamps_to_log: list[int] = []
 
-        continue_receiving = True
+        messages: list[tuple[str, int]]
+        async with self.sqs_wrapper.receive_messages(
+            max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
+        ) as messages:
+            message_records = []
 
-        while continue_receiving:
-            messages: list[tuple[str, int]]
-            async with self.sqs_wrapper.receive_messages(
-                max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
-            ) as messages:
-                message_records = []
+            for message_data in messages:
+                message, message_timestamp = message_data
 
-                if not messages:
-                    continue_receiving = False
+                timestamps_to_log.append(message_timestamp)
+                try:
+                    # Records is a list of strings
+                    message_records.extend(self._get_notifs_from_sqs_message(message))
+                except ValueError as e:
+                    self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
-                for message_data in messages:
-                    message, message_timestamp = message_data
+            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_records))
+            for record in message_records:
+                try:
+                    s3_bucket, s3_key = self._get_object_from_notification(record)
 
-                    timestamps_to_log.append(message_timestamp)
-                    try:
-                        # Records is a list of strings
-                        message_records.extend(self._get_notifs_from_sqs_message(message))
-                    except ValueError as e:
-                        self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
+                    if s3_bucket is None:
+                        raise ValueError("Bucket is undefined", record)
 
-                if not message_records:
-                    continue_receiving = False
+                    if s3_key is None:
+                        raise ValueError("Key is undefined", record)
 
-                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_records))
-                for record in message_records:
-                    try:
-                        s3_bucket, s3_key = self._get_object_from_notification(record)
+                    normalized_key = normalize_s3_key(s3_key)
 
-                        if s3_bucket is None:
-                            raise ValueError("Bucket is undefined", record)
-
-                        if s3_key is None:
-                            raise ValueError("Key is undefined", record)
-
-                        normalized_key = normalize_s3_key(s3_key)
-
-                        if self.configuration.prefix_filter and not normalized_key.startswith(
-                            self.configuration.prefix_filter
-                        ):
-                            self.log(
-                                message=f"Skipping S3 object {normalized_key}: does not match prefix filter "
-                                f"'{self.configuration.prefix_filter}'",
-                                level="debug",
-                            )
-                            continue
-
-                        stream: AsyncReader
-                        async with (
-                            self.s3_fetch_concurrency_sem,
-                            self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as stream,
-                        ):
-                            async for event in self._parse_content(stream):
-                                records.append(event)
-
-                                if len(records) >= self.limit_of_events_to_push:
-                                    continue_receiving = False
-                                    result += len(await self.push_data_to_intakes(events=records))
-                                    records = []
-
-                    except Exception as e:
+                    if self.configuration.prefix_filter and not normalized_key.startswith(
+                        self.configuration.prefix_filter
+                    ):
                         self.log(
-                            message=f"Failed to fetch content of {record}: {str(e)}",
-                            level="warning",
+                            message=f"Skipping S3 object {normalized_key}: does not match prefix filter "
+                            f"'{self.configuration.prefix_filter}'",
+                            level="debug",
                         )
+                        continue
 
-            if not records:
-                continue_receiving = False
+                    stream: AsyncReader
+                    object_records = 0
+                    async with (
+                        self.s3_fetch_concurrency_sem,
+                        self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as stream,
+                    ):
+                        async for event in self._parse_content(stream):
+                            object_records += 1
+                            records.append(event)
 
-        if records:
-            result += len(await self.push_data_to_intakes(events=records))
+                            if len(records) >= self.limit_of_events_to_push:
+                                result += len(await self.push_data_to_intakes(events=records))
+                                records = []
+
+                    logger.info(f"Parsed {object_records} records from object {normalized_key}")
+
+                except Exception as e:
+                    self.log(
+                        message=f"Failed to fetch content of {record}: {str(e)}",
+                        level="warning",
+                    )
+
+            # push while still in the context: leaving it deletes the consumed messages
+            if records:
+                result += len(await self.push_data_to_intakes(events=records))
 
         return result, timestamps_to_log
 
@@ -237,6 +230,8 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
                     self.s3_wrapper.read_key(bucket=self.configuration.bucket, key=normalized_key) as stream,
                 ):
                     object_records = [event async for event in self._parse_content(stream)]
+
+                logger.info(f"Parsed {len(object_records)} records from object {key}")
 
             except Exception as e:
                 # do not advance the marker past a failing object to avoid losing data.
