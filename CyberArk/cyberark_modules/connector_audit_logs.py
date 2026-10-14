@@ -208,6 +208,10 @@ class CyberArkAuditLogsConnector(Connector):
             INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(filtered_events))
 
             if filtered_events:
+                yield filtered_events
+
+                # Only mark the events as seen once they have been forwarded: if the push fails,
+                # the page will be fetched again and its events must not be filtered out.
                 # CyberArk API ignores datetime differences less than a second (even though the format includes
                 # milliseconds). Thus, we have to make sure we don't get the same events multiple times.
                 for event in next_events:
@@ -216,8 +220,6 @@ class CyberArkAuditLogsConnector(Connector):
 
                 latest_event = max(filtered_events, key=lambda e: e["timestamp"])
                 most_recent_date_seen = max(most_recent_date_seen, latest_event["timestamp"])
-
-                yield filtered_events
 
             # Save the checkpoint after each page, once its events have been forwarded,
             # so that an error on a later page doesn't make us fetch them again

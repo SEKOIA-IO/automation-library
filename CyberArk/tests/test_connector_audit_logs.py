@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
+import orjson
 import pytest
 import requests
 import requests_mock
@@ -420,4 +421,31 @@ def test_migration_from_timestamp_only_checkpoint(data_storage, message2):
 
         date_from = create_query.last_request.json()["query"]["filterModel"]["date"]["dateFrom"]
         assert datetime.fromisoformat(date_from) == recent
+    assert trigger.cursor_checkpoint.offset == "secondPageCursor"
+
+
+def test_failed_push_does_not_lose_events(trigger, message1, message2, events1):
+    trigger.cursor_checkpoint.offset = "storedCursor"
+    trigger.push_events_to_intakes.side_effect = [Exception("intake unavailable"), None]
+
+    with patch("cyberark_modules.connector_audit_logs.time") as mock_time, requests_mock.Mocker() as mock_requests:
+        mock_time.time.return_value = 1666711174.0
+        mock_token(mock_requests)
+        mock_requests.post(RESULTS_URL, [{"json": message1}, {"json": message1}, {"json": message2}])
+
+        # the push fails: nothing must be marked as seen nor checkpointed
+        with pytest.raises(Exception, match="intake unavailable"):
+            trigger.next_batch()
+
+        assert events1[0]["uuid"] not in trigger.events_cache
+        assert trigger.cursor_checkpoint.offset == "storedCursor"
+
+        # the retry fetches the same page again and forwards its events
+        trigger.next_batch()
+
+    assert trigger.push_events_to_intakes.call_count == 2
+    assert trigger.push_events_to_intakes.call_args_list[1].kwargs["events"] == [
+        orjson.dumps(event).decode("utf-8") for event in events1
+    ]
+    assert events1[0]["uuid"] in trigger.events_cache
     assert trigger.cursor_checkpoint.offset == "secondPageCursor"
