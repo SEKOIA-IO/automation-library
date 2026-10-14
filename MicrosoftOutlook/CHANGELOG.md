@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `query_type`: The identifier type used for the search
     - `query_value`: The search identifier value, or concatenated values when both identifiers are provided
     - `returned_count`: The alias of total_results for explicit count-based playbook conditions
+    - `scan_limit_reached`: The indicator that is true when fallback scanning stops at the max scanned-messages budget
     - `total_results`: The number of messages returned in this response
     - `user`: The echo of the user identifier used for this action, reusable in downstream playbook nodes
   - action `Send a message`:

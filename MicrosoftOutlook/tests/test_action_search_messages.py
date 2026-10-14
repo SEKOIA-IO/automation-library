@@ -38,6 +38,7 @@ def test_search_messages_by_internet_message_id(configured_action, get_message_1
         assert result["total_results"] == 1
         assert result["returned_count"] == 1
         assert result["has_more"] is False
+        assert result["scan_limit_reached"] is False
 
         request = mock.request_history[1]
         decoded_query = unquote_plus(request.url.split("?", maxsplit=1)[1])
@@ -296,6 +297,55 @@ def test_search_messages_by_network_message_id_fallback(configured_action, initi
         assert result["query_type"] == "email_local_id"
         assert result["query_value"] == "00000000-0000-4000-8000-000000000001"
         assert len(mock.request_history) == 3
+        assert result["scan_limit_reached"] is False
+
+
+def test_search_messages_fallback_ignores_empty_optional_identifier(configured_action):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages",
+            [
+                {"status_code": 200, "json": {"value": []}},
+                {
+                    "status_code": 200,
+                    "json": {
+                        "value": [
+                            {
+                                "id": "graph-item-id-2",
+                                "internetMessageId": "<sample-message-id@example.com>",
+                                "singleValueExtendedProperties": [
+                                    {
+                                        "id": "String {41F28F13-83F4-4114-A584-EEDB5A6B0BFF} Name NetworkMessageId",
+                                        "value": "00000000-0000-4000-8000-000000000001",
+                                    }
+                                ],
+                            }
+                        ]
+                    },
+                },
+            ],
+        )
+
+        action = configured_action(SearchMessagesAction)
+        result = action.run(
+            arguments={
+                "user": "1111",
+                "email_message_id": "",
+                "email_local_id": "00000000-0000-4000-8000-000000000001",
+            }
+        )
+
+        assert result["message_ids"] == ["graph-item-id-2"]
+        assert result["messages"][0]["message_id"] == "graph-item-id-2"
+        assert result["query_type"] == "email_local_id"
+        assert result["query_value"] == "00000000-0000-4000-8000-000000000001"
+        assert len(mock.request_history) == 3
 
 
 def test_search_messages_by_network_message_id_fallback_paginates_until_match(configured_action):
@@ -372,9 +422,30 @@ def test_search_messages_by_network_message_id_fallback_paginates_until_match(co
         assert "$orderby=" not in decoded_continuation_query
 
 
-def test_search_messages_fallback_respects_scan_budget_within_page(configured_action):
-    next_link = "https://graph.microsoft.com/v1.0/users/1111/messages?$skiptoken=budget-overflow"
-
+@pytest.mark.parametrize(
+    "scenario,next_link,expected_has_more,expected_request_count",
+    [
+        (
+            "intra_page_overflow",
+            "https://graph.microsoft.com/v1.0/users/1111/messages?$skiptoken=budget-overflow",
+            False,
+            4,
+        ),
+        (
+            "cap_hit_with_next_link",
+            "https://graph.microsoft.com/v1.0/users/1111/messages?$skiptoken=cap-reached",
+            True,
+            3,
+        ),
+    ],
+)
+def test_search_messages_fallback_scan_limit_signals(
+    configured_action,
+    scenario,
+    next_link,
+    expected_has_more,
+    expected_request_count,
+):
     def _network_message(value: str, message_id: str) -> dict[str, object]:
         return {
             "id": message_id,
@@ -386,14 +457,14 @@ def test_search_messages_fallback_respects_scan_budget_within_page(configured_ac
             ],
         }
 
-    first_page = [_network_message("00000000-0000-4000-8000-000000000099", f"unmatched-{i}") for i in range(995)]
-    second_page_unmatched = [
-        _network_message("00000000-0000-4000-8000-000000000099", f"overflow-unmatched-{i}") for i in range(5)
-    ]
-    second_page_match_beyond_budget = _network_message(
-        "00000000-0000-4000-8000-000000000001",
-        "overflow-match",
-    )
+    if scenario == "intra_page_overflow":
+        first_page = [_network_message("00000000-0000-4000-8000-000000000099", f"unmatched-{i}") for i in range(995)]
+        continuation_page = [
+            _network_message("00000000-0000-4000-8000-000000000099", f"overflow-unmatched-{i}") for i in range(5)
+        ] + [_network_message("00000000-0000-4000-8000-000000000001", "overflow-match")]
+    else:
+        first_page = [_network_message("00000000-0000-4000-8000-000000000099", f"unmatched-{i}") for i in range(1000)]
+        continuation_page = None
 
     with requests_mock.Mocker() as mock:
         mock.register_uri(
@@ -415,68 +486,61 @@ def test_search_messages_fallback_respects_scan_budget_within_page(configured_ac
                 },
             ],
         )
-        mock.register_uri(
-            "GET",
-            next_link,
-            status_code=200,
-            json={
-                "value": second_page_unmatched + [second_page_match_beyond_budget],
-            },
-        )
+        if continuation_page is not None:
+            mock.register_uri(
+                "GET",
+                next_link,
+                status_code=200,
+                json={"value": continuation_page},
+            )
 
         action = configured_action(SearchMessagesAction)
         result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
 
         assert result["message_ids"] == []
         assert result["messages"] == []
-        assert result["has_more"] is False
-        assert len(mock.request_history) == 4
+        assert result["has_more"] is expected_has_more
+        assert result["scan_limit_reached"] is True
+        assert len(mock.request_history) == expected_request_count
 
 
-def test_search_messages_by_internet_message_id_fallback_on_inefficient_filter(configured_action):
-    with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            "GET",
-            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
-        )
-        mock.register_uri(
-            "GET",
-            "https://graph.microsoft.com/v1.0/users/1111/messages",
-            [
-                {
-                    "status_code": 400,
-                    "text": '{"error":{"code":"InefficientFilter","message":"The restriction or sort order is too complex for this operation."}}',
-                },
-                {
-                    "status_code": 200,
-                    "json": {
-                        "value": [
-                            {
-                                "id": "graph-item-id-3",
-                                "internetMessageId": "<sample-message-id@example.com>",
-                            }
-                        ]
-                    },
-                },
-            ],
-        )
-
-        action = configured_action(SearchMessagesAction)
-        result = action.run(
-            arguments={
+@pytest.mark.parametrize(
+    "arguments,fallback_value,expected_message_ids,expected_query_type",
+    [
+        (
+            {
                 "user": "1111",
                 "email_message_id": "<sample-message-id@example.com>",
                 "return_most_recent_first": True,
-            }
-        )
-
-        assert result["message_ids"] == ["graph-item-id-3"]
-        assert result["query_type"] == "email_message_id"
-        assert len(mock.request_history) == 3
-
-
-def test_search_messages_fallback_on_inefficient_filter_runs_only_once_when_no_match(configured_action):
+            },
+            [
+                {
+                    "id": "graph-item-id-3",
+                    "internetMessageId": "<sample-message-id@example.com>",
+                }
+            ],
+            ["graph-item-id-3"],
+            "email_message_id",
+        ),
+        (
+            {
+                "user": "1111",
+                "email_local_id": "00000000-0000-4000-8000-000000000001",
+            },
+            [],
+            [],
+            "email_local_id",
+        ),
+    ],
+    ids=["match_found", "no_match"],
+)
+def test_search_messages_fallback_on_inefficient_filter(
+    configured_action,
+    arguments,
+    fallback_value,
+    expected_message_ids,
+    expected_query_type,
+):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
@@ -493,16 +557,17 @@ def test_search_messages_fallback_on_inefficient_filter_runs_only_once_when_no_m
                 },
                 {
                     "status_code": 200,
-                    "json": {"value": []},
+                    "json": {"value": fallback_value},
                 },
             ],
         )
 
         action = configured_action(SearchMessagesAction)
-        result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
+        result = action.run(arguments=arguments)
 
-        assert result["messages"] == []
-        assert result["message_ids"] == []
+        assert result["message_ids"] == expected_message_ids
+        assert result["query_type"] == expected_query_type
+        assert len(result["messages"]) == len(expected_message_ids)
         assert len(mock.request_history) == 3
 
 
@@ -676,6 +741,7 @@ def test_search_messages_returns_empty_selection_when_no_results(configured_acti
             "total_results": 0,
             "returned_count": 0,
             "has_more": False,
+            "scan_limit_reached": False,
         }
 
 
