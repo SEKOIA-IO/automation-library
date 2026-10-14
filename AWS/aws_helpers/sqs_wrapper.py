@@ -85,7 +85,8 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
         """
         Receive SQS messages.
 
-        After processing messages they will be deleted from queue if delete_consumed_messages is True.
+        After processing messages they will be deleted from queue if delete_consumed_messages is True
+        and the context exits without raising an exception.
 
         Example of usage:
         with sqs.receive_messages() as messages:
@@ -129,16 +130,15 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
 
             result = []
 
-            try:
+            for message in response.get("Messages", []):
+                result.append((message["Body"], int(message["Attributes"]["SentTimestamp"])))
+
+            logger.info(f"Received {len(result)} messages from sqs queue {self._configuration.queue_name}")
+
+            yield result
+
+            # Only reached when the caller's block exits without raising: on failure, messages are redelivered
+            if delete_consumed_messages and response.get("Messages", []):
+                logger.info("Deleting consumed messages from sqs")
                 for message in response.get("Messages", []):
-                    result.append((message["Body"], int(message["Attributes"]["SentTimestamp"])))
-
-                logger.info(f"Received {len(result)} messages from sqs queue {self._configuration.queue_name}")
-
-                yield result
-            finally:
-                # We should delete messages from queue after releasing context manager if it is configured
-                if delete_consumed_messages and response.get("Messages", []):
-                    logger.info("Deleting consumed messages from sqs")
-                    for message in response.get("Messages", []):
-                        await sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=message["ReceiptHandle"])
+                    await sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=message["ReceiptHandle"])
