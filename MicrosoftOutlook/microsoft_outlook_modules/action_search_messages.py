@@ -77,11 +77,13 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
 
             payload = response.json()
             messages: list[dict[str, Any]] = payload.get("value", [])
-            scanned_messages += len(messages)
+            remaining_budget = self.FALLBACK_MAX_MESSAGES_SCANNED - scanned_messages
+            messages_to_scan = messages[:remaining_budget]
+            scanned_messages += len(messages_to_scan)
 
             matched_messages.extend(
                 message
-                for message in messages
+                for message in messages_to_scan
                 if (network_message_id is None or self._extract_network_message_id(message) == network_message_id)
                 and (internet_message_id is None or message.get("internetMessageId") == internet_message_id)
             )
