@@ -372,6 +372,67 @@ def test_search_messages_by_network_message_id_fallback_paginates_until_match(co
         assert "$orderby=" not in decoded_continuation_query
 
 
+def test_search_messages_fallback_respects_scan_budget_within_page(configured_action):
+    next_link = "https://graph.microsoft.com/v1.0/users/1111/messages?$skiptoken=budget-overflow"
+
+    def _network_message(value: str, message_id: str) -> dict[str, object]:
+        return {
+            "id": message_id,
+            "singleValueExtendedProperties": [
+                {
+                    "id": SearchMessagesAction.NETWORK_MESSAGE_ID_EXTENDED_PROPERTY,
+                    "value": value,
+                }
+            ],
+        }
+
+    first_page = [_network_message("00000000-0000-4000-8000-000000000099", f"unmatched-{i}") for i in range(995)]
+    second_page_unmatched = [
+        _network_message("00000000-0000-4000-8000-000000000099", f"overflow-unmatched-{i}") for i in range(5)
+    ]
+    second_page_match_beyond_budget = _network_message(
+        "00000000-0000-4000-8000-000000000001",
+        "overflow-match",
+    )
+
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages",
+            [
+                {"status_code": 200, "json": {"value": []}},
+                {
+                    "status_code": 200,
+                    "json": {
+                        "value": first_page,
+                        "@odata.nextLink": next_link,
+                    },
+                },
+            ],
+        )
+        mock.register_uri(
+            "GET",
+            next_link,
+            status_code=200,
+            json={
+                "value": second_page_unmatched + [second_page_match_beyond_budget],
+            },
+        )
+
+        action = configured_action(SearchMessagesAction)
+        result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
+
+        assert result["message_ids"] == []
+        assert result["messages"] == []
+        assert result["has_more"] is False
+        assert len(mock.request_history) == 4
+
+
 def test_search_messages_by_internet_message_id_fallback_on_inefficient_filter(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
