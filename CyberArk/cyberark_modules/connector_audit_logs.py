@@ -7,7 +7,7 @@ import orjson
 import requests
 from cachetools import Cache, LRUCache
 from pydantic.v1 import Field
-from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
+from sekoia_automation.checkpoint import CheckpointCursor, CheckpointTimestamp, TimeUnit
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from . import CyberArkModule
@@ -25,27 +25,41 @@ class CyberArkAuditLogsConnectorConfiguration(DefaultConnectorConfiguration):
     frequency: int = Field(60, description="Batch frequency in seconds")
 
 
+class CursorExpiredError(Exception):
+    """The SIEM integration API rejected the cursor (403)"""
+
+
 class CyberArkAuditLogsConnector(Connector):
     module: CyberArkModule
     configuration: CyberArkAuditLogsConnectorConfiguration
 
+    # The SIEM integration API can only be called once a minute
+    API_RATELIMIT_PER_MINUTE = 1
+    # Maximum page size allowed by the SIEM integration API
+    PAGE_SIZE = 500
+    # Delay before retrying a batch after an error
+    ERROR_BACKOFF_SECONDS = 60
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        self.cursor = CheckpointTimestamp(
+        # The stream cursor is used to resume the events retrieval from one batch to another.
+        # The timestamp is used to create a new query when there is no cursor or when it was rejected.
+        self.cursor_checkpoint = CheckpointCursor(path=self._data_path)
+        self.timestamp_checkpoint = CheckpointTimestamp(
             time_unit=TimeUnit.MILLISECOND,
             path=self._data_path,
             start_at=timedelta(hours=1),
             ignore_older_than=timedelta(days=7),
         )
 
-        self.from_date: int = self.cursor.offset
+        self.from_date: int = self.timestamp_checkpoint.offset
         self.events_cache: Cache = self.load_events_cache()
 
     def load_events_cache(self) -> Cache:
         result: LRUCache = LRUCache(maxsize=1000)
 
-        with self.cursor._context as cache:
+        with self.timestamp_checkpoint._context as cache:
             events_ids = cache.get("events_cache", [])
 
         for event_id in events_ids:
@@ -54,7 +68,7 @@ class CyberArkAuditLogsConnector(Connector):
         return result
 
     def save_events_cache(self, events_cache: Cache) -> None:
-        with self.cursor._context as cache:
+        with self.timestamp_checkpoint._context as cache:
             cache["events_cache"] = list(events_cache.keys())
 
     @cached_property
@@ -67,6 +81,7 @@ class CyberArkAuditLogsConnector(Connector):
                 client_secret=self.module.configuration.password,
                 api_key=self.configuration.api_key,
             ),
+            ratelimit_per_minute=self.API_RATELIMIT_PER_MINUTE,
         )
 
     def _handle_response_error(self, response: requests.Response) -> None:
@@ -80,8 +95,8 @@ class CyberArkAuditLogsConnector(Connector):
 
                 if code := error.get("code"):
                     message += f" error_code={code}"
-                if message := error.get("message"):
-                    message += f" error_message={message}"
+                if error_message := error.get("message"):
+                    message += f" error_message={error_message}"
                 if description := error.get("description"):
                     message += f" error_description={description}"
 
@@ -91,8 +106,10 @@ class CyberArkAuditLogsConnector(Connector):
             self.log(message=message, level=level)
             response.raise_for_status()
 
-    def __fetch_next_events(self, from_timestamp: int) -> Generator[list, None, None]:
-        # 1. Create query
+    def _create_query(self, from_timestamp: int) -> str | None:
+        """
+        Create a query starting at `from_timestamp` and return its stream cursor
+        """
         from_date = datetime.fromtimestamp(from_timestamp / 1000.0).astimezone(timezone.utc)
 
         url = f"{self.configuration.api_base_url}/api/audits/stream/createQuery"
@@ -102,7 +119,7 @@ class CyberArkAuditLogsConnector(Connector):
                 url,
                 json={
                     "query": {
-                        "pageSize": 100,
+                        "pageSize": self.PAGE_SIZE,
                         "filterModel": {"date": {"dateFrom": from_date.isoformat()}},
                         "sortModel": [{"field_name": "date", "direction": "asc"}],
                     }
@@ -114,7 +131,6 @@ class CyberArkAuditLogsConnector(Connector):
             self.log_exception(error, level="critical")
             raise
 
-        # Iterate through pages
         cursor_ref = response.json().get("cursorRef")
         if cursor_ref is None:
             logger.error(
@@ -123,62 +139,103 @@ class CyberArkAuditLogsConnector(Connector):
                 response_content=response.text,
                 response_status=response.status_code,
             )
-            return
+
+        return cursor_ref
+
+    def _fetch_page(self, cursor_ref: str) -> dict:
+        """
+        Fetch the next page of the stream
+        """
+        url = f"{self.configuration.api_base_url}/api/audits/stream/results"
+        response = self.client.post(url, json={"cursorRef": cursor_ref})
+
+        # The API answers with a 403 when the cursor is no longer valid
+        if response.status_code == 403:
+            raise CursorExpiredError(f"Cursor rejected by CyberArk API with status 403 - {response.reason}")
+
+        self._handle_response_error(response)
+        return response.json()
+
+    def __fetch_next_events(self) -> Generator[tuple[list, str], None, None]:
+        """
+        Iterate over the pages of the stream and yield their events along with the cursor of the next page
+        """
+        stored_cursor_ref: str | None = self.cursor_checkpoint.offset
+        # A stored cursor can be recreated once if rejected, a fresh one can't
+        can_recreate_cursor = stored_cursor_ref is not None
+
+        if stored_cursor_ref is None:
+            stored_cursor_ref = self._create_query(self.from_date)
+            if stored_cursor_ref is None:
+                return
+
+        cursor_ref: str = stored_cursor_ref
 
         while self.running:
-            # 2. Get results by cursor ref
-            url = f"{self.configuration.api_base_url}/api/audits/stream/results"
-            response = self.client.post(url, json={"cursorRef": cursor_ref})
-            self._handle_response_error(response)
+            try:
+                raw = self._fetch_page(cursor_ref)
 
-            raw = response.json()
+            except CursorExpiredError as error:
+                if not can_recreate_cursor:
+                    self.log(message=f"{error} on a new cursor", level="critical")
+                    raise
+
+                self.log(message=f"{error}, creating a new query", level="warning")
+                can_recreate_cursor = False
+                self.cursor_checkpoint.offset = None
+                new_cursor_ref = self._create_query(self.from_date)
+                if new_cursor_ref is None:
+                    return
+
+                cursor_ref = new_cursor_ref
+                continue
 
             items = raw["data"]
             cursor_ref = raw["paging"]["cursor"]["cursorRef"]
 
-            if len(items) > 0:
-                yield items
+            yield items, cursor_ref
 
-            else:
+            # The stream is up to date: keep the cursor for the next batch
+            if len(items) == 0:
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
                 return
 
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_date_seen = self.from_date
 
-        for next_events in self.__fetch_next_events(most_recent_date_seen):
-            if not next_events:
-                continue
-
+        for next_events, next_cursor_ref in self.__fetch_next_events():
             filtered_events = [event for event in next_events if event["uuid"] not in self.events_cache]
             INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(filtered_events))
 
-            if not filtered_events:
-                continue
+            if filtered_events:
+                # CyberArk API ignores datetime differences less than a second (even though the format includes
+                # milliseconds). Thus, we have to make sure we don't get the same events multiple times.
+                for event in next_events:
+                    event_uuid = event["uuid"]
+                    self.events_cache[event_uuid] = 1
 
-            # CyberArk API ignores datetime differences less than a second (even though the format includes
-            # milliseconds). Thus, we have to make sure we don't get the same events multiple times.
-            for event in next_events:
-                event_uuid = event["uuid"]
-                self.events_cache[event_uuid] = 1
+                latest_event = max(filtered_events, key=lambda e: e["timestamp"])
+                most_recent_date_seen = max(most_recent_date_seen, latest_event["timestamp"])
 
-            latest_event = max(filtered_events, key=lambda e: e["timestamp"])
-            latest_event_timestamp = latest_event["timestamp"]
+                yield filtered_events
 
-            yield filtered_events
+            # Save the checkpoint after each page, once its events have been forwarded,
+            # so that an error on a later page doesn't make us fetch them again
+            self.save_checkpoint(most_recent_date_seen, next_cursor_ref)
 
-            if latest_event_timestamp > most_recent_date_seen:
-                most_recent_date_seen = latest_event_timestamp
-
+    def save_checkpoint(self, most_recent_date_seen: int, cursor_ref: str) -> None:
+        # The cursor is saved last: if we stop before, the page will be fetched again and deduplicated
         self.save_events_cache(self.events_cache)
 
         if most_recent_date_seen > self.from_date:
-            self.cursor.offset = most_recent_date_seen
+            self.timestamp_checkpoint.offset = most_recent_date_seen
             self.from_date = most_recent_date_seen
 
             now = int(time.time())
             current_lag = now - most_recent_date_seen // 1000
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+
+        self.cursor_checkpoint.offset = cursor_ref
 
     def next_batch(self) -> None:
         # save the starting time
@@ -223,3 +280,5 @@ class CyberArkAuditLogsConnector(Connector):
 
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
+                # Wait before retrying so we don't hammer the API (e.g. after a 429 Too Many Requests)
+                time.sleep(self.ERROR_BACKOFF_SECONDS)
