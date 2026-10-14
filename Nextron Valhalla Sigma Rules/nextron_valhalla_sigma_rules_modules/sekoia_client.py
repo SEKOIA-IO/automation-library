@@ -14,11 +14,12 @@ class SekoiaAPIError(RuntimeError):
 
 
 class SekoiaRuleNotFoundError(SekoiaAPIError):
-    """Raised on PUT to a rule UUID that Sekoia doesn't own for this API
-    key. Sekoia returns HTTP 403 (code AU202) for UUIDs that were
-    previously created by this key but have since been deleted, so we
-    treat 403 and 404 on ``update_rule`` interchangeably as "stale
-    identifier — POST it as new instead"."""
+    """Raised when Sekoia reports the target rule UUID as missing from its
+    catalog. Triggered by HTTP 404, or by HTTP 403 where the response body
+    carries Sekoia's ``code: "AU202"`` — the documented marker for "rule
+    existed but is gone". Any other 403 (plain permission problem, scope
+    mismatch, key rotated across workspaces) now surfaces as a generic
+    ``SekoiaAPIError`` instead of being mistaken for a deleted rule."""
 
 
 class SekoiaClient:
@@ -37,17 +38,20 @@ class SekoiaClient:
             "Content-Type": "application/json",
         })
         # Retry only transient transport-layer errors (connect/read
-        # timeouts, dropped connections). HTTP 4xx/5xx responses are
-        # deliberately NOT retried — the caller interprets 403/404 as
-        # "stale UUID, POST as new" and any other status should surface
-        # immediately to the sync trigger's per-rule failure counter.
+        # timeouts, dropped connections) on idempotent methods. POST is
+        # deliberately excluded: a read timeout after Sekoia already
+        # created the rule would otherwise cause urllib3 to re-POST and
+        # create a duplicate whose uuid we never see. HTTP 4xx/5xx
+        # responses are also NOT retried — the caller interprets
+        # 404/403-AU202 as "stale UUID, POST as new" and any other
+        # status should surface immediately.
         retry = Retry(
             total=2,
             connect=2,
             read=2,
             status=0,
             backoff_factor=1.0,  # 1s, 2s between retries
-            allowed_methods=frozenset(["GET", "POST", "PUT"]),
+            allowed_methods=frozenset(["GET", "PUT"]),
             raise_on_status=False,
         )
         adapter = HTTPAdapter(max_retries=retry)
@@ -63,6 +67,35 @@ class SekoiaClient:
             f"{method} {url} returned HTTP {resp.status_code}: {body}",
             status_code=resp.status_code,
         )
+
+    @staticmethod
+    def _maybe_raise_not_found(
+        resp: requests.Response, method: str, url: str
+    ) -> None:
+        """Raise ``SekoiaRuleNotFoundError`` when the response unambiguously
+        means "the rule UUID is not in Sekoia's catalog".
+
+        That is HTTP 404, or HTTP 403 with Sekoia error code ``AU202``.
+        Other 403 responses (permission problem, workspace mismatch) are
+        left for ``_ensure_ok`` to raise as a generic ``SekoiaAPIError`` —
+        the trigger must not misread them as "stale uuid, re-POST".
+        """
+        if resp.status_code == 404:
+            raise SekoiaRuleNotFoundError(
+                f"{method} {url} returned HTTP 404: {resp.text[:500]}",
+                status_code=404,
+            )
+        if resp.status_code == 403:
+            try:
+                payload = resp.json()
+            except ValueError:
+                payload = None
+            code = payload.get("code") if isinstance(payload, dict) else None
+            if code == "AU202":
+                raise SekoiaRuleNotFoundError(
+                    f"{method} {url} returned HTTP 403 AU202: {resp.text[:500]}",
+                    status_code=403,
+                )
 
     def create_rule(self, body: dict) -> str:
         url = f"{self._base_url}/v1/sic/conf/rules-catalog/rules"
@@ -82,12 +115,26 @@ class SekoiaClient:
             )
         return sekoia_uuid
 
+    def get_rule(self, sekoia_uuid: str) -> dict:
+        """Fetch a rule's current server-side state.
+
+        Used by the sync trigger to read back the rule's current
+        ``enabled`` flag before PUTting an update, so a user who flipped
+        a rule off in the catalog isn't re-enabled on the next sync.
+        """
+        url = f"{self._base_url}/v1/sic/conf/rules-catalog/rules/{sekoia_uuid}"
+        resp = self._session.get(url, timeout=self._timeout)
+        self._maybe_raise_not_found(resp, "GET", url)
+        self._ensure_ok(resp, "GET", url)
+        try:
+            return resp.json()
+        except ValueError as exc:
+            raise SekoiaAPIError(
+                f"GET {url} returned non-JSON body: {resp.text[:500]}"
+            ) from exc
+
     def update_rule(self, sekoia_uuid: str, body: dict) -> None:
         url = f"{self._base_url}/v1/sic/conf/rules-catalog/rules/{sekoia_uuid}"
         resp = self._session.put(url, json=body, timeout=self._timeout)
-        if resp.status_code in (403, 404):
-            raise SekoiaRuleNotFoundError(
-                f"PUT {url} returned HTTP {resp.status_code}: {resp.text[:500]}",
-                status_code=resp.status_code,
-            )
+        self._maybe_raise_not_found(resp, "PUT", url)
         self._ensure_ok(resp, "PUT", url)

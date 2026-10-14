@@ -36,6 +36,13 @@ Fetches the Valhalla Sigma feed on a fixed interval, converts each rule's `detec
 }
 ```
 
+## Known limitations
+
+- **Rules with multiple `Hashes` keys in one selection block.** The sync trigger rewrites the first `Hashes` / `Hashes|<mod>` key it finds inside a selection and preserves other keys verbatim. Valhalla's current feed never emits this shape; a rule that does will land under `skipped_unmapped`.
+- **Multi-algo `Hashes` lists (`[MD5=…, SHA256=…]`) become AND-across-algo keys rather than OR-over-files.** This matches the semantic for IOC rules that enumerate a fingerprint per file (one hash per algo per event), which is how Valhalla ships them. See the `_apply_hashes_transform` docstring for the exact approximation.
+- **Rules dropped from the Valhalla feed are not disabled automatically.** Set the sync trigger's `disable_removed=true` to disable them (dry-run by default).
+- **Hand edits in Sekoia are overwritten by the next sync by default.** To protect a rule you've tuned, copy its exact name from the Sekoia Rules Catalog UI into the sync trigger's `preserve_rule_names` list (empty by default). Subsequent syncs skip the PUT for every rule whose current name matches an entry in that list and count it under `preserved` on the summary event. Match is case-sensitive; surrounding whitespace is tolerated. `disable_removed` still fires on preserved rules — content stays intact, only `enabled` can flip. Caveat: if Nextron ever renames a rule upstream, the stale entry stops matching and the rule gets overwritten on the next sync.
+
 ## How it works
 
 1. **Fetch** — `POST https://valhalla.nextron-systems.com/api/v1/getsigma` with the Valhalla API key returns the Sigma feed as JSON.
@@ -49,12 +56,6 @@ Fetches the Valhalla Sigma feed on a fixed interval, converts each rule's `detec
 From this directory:
 
 ```bash
-poetry install
-poetry run pytest tests/ -v
-```
-
-From the `automation-library/` repo root, to run the Sekoia compliance / homologation check:
-
-```bash
-poetry -C _utils run python compliance check --module "Nextron Valhalla Sigma Rules"
+uv sync
+uv run pytest tests/ -v
 ```
