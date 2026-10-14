@@ -45,13 +45,18 @@ class CyberArkAuditLogsConnector(Connector):
 
         # The stream cursor is used to resume the events retrieval from one batch to another.
         # The timestamp is used to create a new query when there is no cursor or when it was rejected.
-        self.cursor_checkpoint = CheckpointCursor(path=self._data_path)
         self.timestamp_checkpoint = CheckpointTimestamp(
             time_unit=TimeUnit.MILLISECOND,
             path=self._data_path,
             start_at=timedelta(hours=1),
             ignore_older_than=timedelta(days=7),
         )
+        self.cursor_checkpoint = CheckpointCursor(path=self._data_path)
+
+        # Both checkpoints must share the same context: each PersistentJSON instance keeps its own copy
+        # of context.json in memory and would overwrite the fields saved by the other one
+        self.context = self.timestamp_checkpoint._context
+        self.cursor_checkpoint._context = self.context
 
         self.from_date: int = self.timestamp_checkpoint.offset
         self.events_cache: Cache = self.load_events_cache()
@@ -59,17 +64,13 @@ class CyberArkAuditLogsConnector(Connector):
     def load_events_cache(self) -> Cache:
         result: LRUCache = LRUCache(maxsize=1000)
 
-        with self.timestamp_checkpoint._context as cache:
+        with self.context as cache:
             events_ids = cache.get("events_cache", [])
 
         for event_id in events_ids:
             result[event_id] = 1
 
         return result
-
-    def save_events_cache(self, events_cache: Cache) -> None:
-        with self.timestamp_checkpoint._context as cache:
-            cache["events_cache"] = list(events_cache.keys())
 
     @cached_property
     def client(self) -> ApiClient:
@@ -226,18 +227,21 @@ class CyberArkAuditLogsConnector(Connector):
             self.save_checkpoint(most_recent_date_seen, next_cursor_ref)
 
     def save_checkpoint(self, most_recent_date_seen: int, cursor_ref: str) -> None:
-        # The cursor is saved last: if we stop before, the page will be fetched again and deduplicated
-        self.save_events_cache(self.events_cache)
+        # Save the events cache, the timestamp and the cursor at once so that they are always consistent
+        with self.context as cache:
+            cache["events_cache"] = list(self.events_cache.keys())
 
-        if most_recent_date_seen > self.from_date:
-            self.timestamp_checkpoint.offset = most_recent_date_seen
-            self.from_date = most_recent_date_seen
+            if most_recent_date_seen > self.from_date:
+                cache["most_recent_date_seen"] = self.timestamp_checkpoint.datetime_to_file(
+                    self.timestamp_checkpoint.to_datetime(most_recent_date_seen)
+                )
+                self.from_date = most_recent_date_seen
 
-            now = int(time.time())
-            current_lag = now - most_recent_date_seen // 1000
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+                now = int(time.time())
+                current_lag = now - most_recent_date_seen // 1000
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
-        self.cursor_checkpoint.offset = cursor_ref
+            cache["cursor"] = cursor_ref
 
     def next_batch(self) -> None:
         # save the starting time

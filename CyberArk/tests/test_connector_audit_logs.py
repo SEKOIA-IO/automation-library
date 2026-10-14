@@ -449,3 +449,41 @@ def test_failed_push_does_not_lose_events(trigger, message1, message2, events1):
     ]
     assert events1[0]["uuid"] in trigger.events_cache
     assert trigger.cursor_checkpoint.offset == "secondPageCursor"
+
+
+def test_checkpoint_consistent_across_pages_and_restart(trigger, data_storage, events1):
+    trigger.from_date = 1739921924000
+
+    def page(index: int, cursor_ref: str) -> dict:
+        event = {**events1[0], "uuid": f"uuid-{index}", "timestamp": 1739921924000 + index * 1000}
+        return {"data": [event], "paging": {"cursor": {"cursorRef": cursor_ref}}}
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_token(mock_requests)
+        mock_requests.post(CREATE_QUERY_URL, json={"cursorRef": "cursor0"})
+        mock_requests.post(
+            RESULTS_URL,
+            [
+                {"json": page(1, "cursor1")},
+                {"json": page(2, "cursor2")},
+                {"json": page(3, "cursor3")},
+                {"json": {"data": [], "paging": {"cursor": {"cursorRef": "cursor4"}}}},
+            ],
+        )
+
+        assert len(list(trigger.fetch_events())) == 3
+
+    # the context on disk must hold the cursor, the timestamp and the events cache of the last page
+    with open(Path(data_storage) / "context.json") as f:
+        context = json.load(f)
+
+    assert context["cursor"] == "cursor4"
+    assert datetime.fromisoformat(context["most_recent_date_seen"]) == datetime.fromtimestamp(
+        1739921927, tz=timezone.utc
+    )
+    assert set(context["events_cache"]) == {"uuid-1", "uuid-2", "uuid-3"}
+
+    # a restarted connector resumes from the same state
+    restarted = CyberArkAuditLogsConnector(module=trigger.module, data_path=Path(data_storage))
+    assert restarted.cursor_checkpoint.offset == "cursor4"
+    assert set(restarted.events_cache.keys()) == {"uuid-1", "uuid-2", "uuid-3"}
