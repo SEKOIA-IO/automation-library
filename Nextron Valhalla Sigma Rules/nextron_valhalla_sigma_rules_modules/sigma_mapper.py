@@ -46,6 +46,13 @@ _TRUNCATION_MARKER = "…"
 # does not).
 MARKER_TAG = "nextron-valhalla"
 
+# Per-rule tag prefix carrying the Valhalla rule UUID. Lets the sync trigger
+# recover the valhalla_id → sekoia_uuid mapping from the catalog itself when
+# the local id-map is empty (fresh playbook, recreated trigger instance,
+# wiped data volume). Prefix uses ``-`` instead of ``:`` to stay inside the
+# character set Sekoia accepts on tag names.
+UUID_TAG_PREFIX = "uuid-"
+
 # Sekoia alert-type UUIDs are stable across tenants (Ecsirt-standard
 # taxonomy). We derive an ``alert_type_uuid`` per rule from its Sigma
 # MITRE tactic tags rather than requiring a user-supplied config value.
@@ -201,6 +208,10 @@ def _apply_hashes_transform(selection_dict: dict) -> Optional[dict]:
     for k in selection_dict.keys():
         if isinstance(k, str) and (k == "Hashes" or k.startswith("Hashes|")):
             hashes_key = k
+            # Known limitation: only the first ``Hashes*`` key is rewritten.
+            # Valhalla's current feed never emits multiple distinct
+            # ``Hashes|<mod>`` keys in the same selection; see README
+            # "Known limitations".
             break
     if hashes_key is None:
         return selection_dict
@@ -369,6 +380,12 @@ def sigma_rule_to_catalog_payload(
     Optional Sekoia fields (``tags``, ``false_positives``) are included
     only when the source Sigma rule actually carries the corresponding
     data.
+
+    The ``enabled`` argument is authoritative only on the POST path (rule
+    creation). Callers routing the body through PUT (rule update) MUST
+    overwrite ``body["enabled"]`` with the server's current value first,
+    otherwise a user who flipped a rule off in the catalog will be
+    silently re-enabled on the next sync.
     """
     title = parsed.get("title") or rule.get("name") or rule.get("filename") or "unnamed"
     if len(title) > MAX_NAME_LENGTH:
@@ -401,6 +418,11 @@ def sigma_rule_to_catalog_payload(
     tags = list(parsed.get("tags") or [])
     if MARKER_TAG not in tags:
         tags.append(MARKER_TAG)
+    valhalla_id = rule.get("id")
+    if valhalla_id:
+        uuid_tag = f"{UUID_TAG_PREFIX}{valhalla_id}"
+        if uuid_tag not in tags:
+            tags.append(uuid_tag)
 
     body: dict = {
         "name": title,

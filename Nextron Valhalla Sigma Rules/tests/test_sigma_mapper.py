@@ -231,13 +231,46 @@ def test_tags_pass_through_and_marker_is_appended():
         "attack.credential-access",
         "cve.2023-1389",
         MARKER_TAG,
+        "uuid-abc-123",
     ]
 
 
 def test_marker_tag_is_added_when_source_has_no_tags():
     rule, parsed = _rule_and_parsed("title: t\ndetection: {}\n")
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
+    assert body["tags"] == [MARKER_TAG, "uuid-abc-123"]
+
+
+def test_uuid_tag_carries_valhalla_id():
+    """Every rule we POST/PUT carries a ``uuid-<valhalla_id>`` tag so the
+    sync trigger can rebuild the id-map from the Sekoia catalog when its
+    local file is empty (fresh playbook, recreated trigger)."""
+    rule, parsed = _rule_and_parsed(
+        "title: t\ndetection: {}\n", rule_id="feed-uuid-xyz"
+    )
+    body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
+    assert "uuid-feed-uuid-xyz" in body["tags"]
+
+
+def test_uuid_tag_omitted_when_rule_has_no_id():
+    """A feed entry missing ``id`` can still be partially rendered (name
+    falls back to filename) but no uuid tag is added — we have nothing
+    to key it on."""
+    rule = {"content": "title: t\ndetection: {}\n", "filename": "x.yml"}
+    parsed = {"title": "t", "detection": {}}
+    body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
     assert body["tags"] == [MARKER_TAG]
+
+
+def test_uuid_tag_is_not_duplicated():
+    yaml_body = (
+        "title: t\n"
+        f"tags:\n  - uuid-abc-123\n"
+        "detection: {}\n"
+    )
+    rule, parsed = _rule_and_parsed(yaml_body)
+    body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
+    assert body["tags"].count("uuid-abc-123") == 1
 
 
 def test_marker_tag_is_not_duplicated():

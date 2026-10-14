@@ -1,6 +1,6 @@
 [project]
 name = "nextron-valhalla-sigma-rules"
-version = "1.0.0"
+version = "1.1.0"
 description = "Syncs the Nextron Valhalla Sigma feed into the Sekoia Rules Catalog"
 authors = []
 requires-python = ">=3.11,<3.13"
@@ -8,7 +8,6 @@ requires-python = ">=3.11,<3.13"
 dependencies = [
     "sekoia-automation-sdk>=1.23.1,<2",
     "requests>=2.34.2,<3",
-    "APScheduler>=3.10,<4",
     "PyYAML>=6.0,<7",
 ]
 
@@ -17,31 +16,20 @@ dev = [
     "pytest",
     "pytest-cov",
     "requests-mock",
+    "ruff",
+    "mypy",
 ]
-
-[tool.poetry.group.dev.dependencies]
-pytest = "*"
-pytest-cov = "*"
-requests-mock = "*"
-
-[build-system]
-requires = ["poetry-core>=2.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
-package-mode = false
 
 [tool.uv]
 package = false
 
-[tool.black]
+[tool.ruff]
 line-length = 119
-target-version = ["py311"]
-include = "\\.pyi?$"
+target-version = "py311"
 
-[tool.isort]
-profile = "black"
-line_length = 119
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]
@@ -57,6 +45,6 @@ addopts = '''
   --cache-clear
   --cov-report=html
   --cov-report=term-missing:skip-covered
-  --cov-fail-under=5
+  --cov-fail-under=85
   --capture=sys
 '''
