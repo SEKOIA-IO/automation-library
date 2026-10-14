@@ -2,6 +2,7 @@
 
 import csv
 import datetime
+from posixpath import join as urljoin
 from unittest.mock import MagicMock
 
 import aiocsv
@@ -146,9 +147,7 @@ async def test_salesforce_http_client_request_url_with_query(session_faker):
 
     url = client._request_url_with_query(query)
 
-    expected_url = "{0}/services/data/v58.0/query?q=SELECT+Id+,+Name+FROM+Account+WHERE+IsActive+=+True".format(
-        base_url
-    )
+    expected_url = urljoin(base_url, "services/data/v58.0/query?q=SELECT+Id+,+Name+FROM+Account+WHERE+IsActive+=+True")
 
     assert str(url) == expected_url
 
@@ -325,11 +324,11 @@ async def test_salesforce_http_client_get_log_file_content(session_faker, http_t
         token_data["id"] = token_data["tid"]
 
         mocked_responses.post(
-            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url), status=200, payload=token_data
+            urljoin(base_url, "services/oauth2/token?grant_type=client_credentials"), status=200, payload=token_data
         )
 
         mocked_responses.get(
-            url="{0}{1}".format(base_url, log_file.LogFile),
+            url=urljoin(base_url, log_file.LogFile.lstrip("/")),
             status=200,
             body=csv_content.encode("utf-8"),
             headers={"Content-Length": "1"},
@@ -371,11 +370,11 @@ async def test_salesforce_http_client_get_log_file_content_2(session_faker, http
         token_data["id"] = token_data["tid"]
 
         mocked_responses.post(
-            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url), status=200, payload=token_data
+            urljoin(base_url, "services/oauth2/token?grant_type=client_credentials"), status=200, payload=token_data
         )
 
         mocked_responses.get(
-            url="{0}{1}".format(base_url, log_file.LogFile),
+            url=urljoin(base_url, log_file.LogFile.lstrip("/")),
             status=200,
             body=csv_content.encode("utf-8"),
             headers={"Content-Length": "1"},
@@ -426,21 +425,21 @@ async def test_salesforce_http_client_get_log_file_content_3(session_faker, http
         token_data["id"] = token_data["tid"]
 
         mocked_responses.post(
-            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url), status=200, payload=token_data
+            urljoin(base_url, "services/oauth2/token?grant_type=client_credentials"), status=200, payload=token_data
         )
 
         mocked_responses.get(
-            url="{0}{1}".format(base_url, log_file.LogFile),
+            url=urljoin(base_url, log_file.LogFile.lstrip("/")),
             status=401,
             payload=[{"errorCode": "INVALID_SESSION_ID", "message": "Session expired or invalid"}],
         )
 
         mocked_responses.post(
-            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url), status=200, payload=token_data
+            urljoin(base_url, "services/oauth2/token?grant_type=client_credentials"), status=200, payload=token_data
         )
 
         mocked_responses.get(
-            url="{0}{1}".format(base_url, log_file.LogFile),
+            url=urljoin(base_url, log_file.LogFile.lstrip("/")),
             status=200,
             body=csv_content.encode("utf-8"),
             headers={"Content-Length": "1"},

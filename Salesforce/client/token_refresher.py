@@ -4,6 +4,7 @@ import asyncio
 import time
 from asyncio import Lock, Task
 from contextlib import asynccontextmanager
+from posixpath import join as urljoin
 from typing import AsyncGenerator, Optional
 from urllib.parse import urlencode
 
@@ -112,7 +113,7 @@ class SalesforceTokenRefresher(object):
             "grant_type": "client_credentials",
         }
 
-        url = URL("{0}/services/oauth2/token".format(self.auth_url)).with_query(urlencode(params, encoding="utf-8"))
+        url = URL(urljoin(str(self.auth_url), "services/oauth2/token")).with_query(urlencode(params, encoding="utf-8"))
 
         async with self.session().post(url, auth=BasicAuth(self.client_id, self.client_secret), json={}) as response:
             response_data = await response.json()
