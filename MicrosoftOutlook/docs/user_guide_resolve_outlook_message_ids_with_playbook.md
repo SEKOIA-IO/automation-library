@@ -12,21 +12,31 @@ This document shows how to set up that playbook flow step by step: search, itera
 
 The playbook below is based on this example email, which has already been created and sent, to build and validate the workflow end to end.
 
-- Subject: <YOUR_TEST_SUBJECT>
-- Internet Message-ID: <YOUR_INTERNET_MESSAGE_ID>
-- Network Message ID (email.local_id): <YOUR_NETWORK_MESSAGE_ID>
-- Graph Message Item ID (fallback): <YOUR_GRAPH_MESSAGE_ITEM_ID>
-- Created by (sender address): <YOUR_SENDER_EMAIL>
-- Stored in tested mailbox: <YOUR_TEST_MAILBOX_USER>
+- Subject: `<YOUR_TEST_SUBJECT>`
+- Internet Message-ID: `<YOUR_INTERNET_MESSAGE_ID>`
+- Network Message ID (email.local_id): `<YOUR_NETWORK_MESSAGE_ID>`
+- Graph Message Item ID (fallback): `<YOUR_GRAPH_MESSAGE_ITEM_ID>`
+- Created by (sender address): `<YOUR_SENDER_EMAIL>`
+- Stored in tested mailbox: `<YOUR_TEST_MAILBOX_USER>`
 
-**Placeholder examples:**
+### Placeholder Reference
 
-- <YOUR_TEST_SUBJECT> = `E2E-OUTLOOK-2026-10-13-01`
-- <YOUR_INTERNET_MESSAGE_ID> = `<CAFakeMsgId-7f3a2b4c9d8e1f2a@example.mail>`
-- <YOUR_NETWORK_MESSAGE_ID> = `3f1c2a9d-4b8e-4f6a-b1d3-2a7e9c4d5f10`
-- <YOUR_GRAPH_MESSAGE_ITEM_ID> = `AAMkAGI2ZmFrZS1iM2Q0LTQ1NjctODkwYS1hYmNkZWYxMjM0NQBGAAAAAAC0FakeBase64SegmentAAAAAAEMAAB0FakeBase64SegmentAAABcDEfAAA=`
-- <YOUR_SENDER_EMAIL> = `analyst@customer-example.com`
-- <YOUR_TEST_MAILBOX_USER> = `soc-automation@customer-example.onmicrosoft.com`
+Use the placeholders below in your playbook values.
+
+| Placeholder | Example value | Purpose |
+| --- | --- | --- |
+| `<YOUR_TEST_SUBJECT>` | `E2E-OUTLOOK-2026-10-13-01` | Subject of the test message |
+| `<YOUR_INTERNET_MESSAGE_ID>` | `<CAFakeMsgId-7f3a2b4c9d8e1f2a@example.mail>` | Defender `email.message_id` (Internet Message-ID) |
+| `<YOUR_NETWORK_MESSAGE_ID>` | `3f1c2a9d-4b8e-4f6a-b1d3-2a7e9c4d5f10` | Defender `email.local_id` (NetworkMessageId) |
+| `<YOUR_GRAPH_MESSAGE_ITEM_ID>` | `AAMkAGI2ZmFrZS1iM2Q0LTQ1NjctODkwYS1hYmNkZWYxMjM0NQBGAAAAAAC0FakeBase64SegmentAAAAAAEMAAB0FakeBase64SegmentAAABcDEfAAA=` | Graph message item ID (resolved ID used by remediation actions) |
+| `<YOUR_SENDER_EMAIL>` | `analyst@customer-example.com` | Sender address used in tests |
+| `<YOUR_TEST_MAILBOX_USER>` | `soc-automation@customer-example.onmicrosoft.com` | Mailbox user/UPN used by actions |
+| `<UPDATED_SUBJECT>` | `E2E-OUTLOOK-UPDATED-SUBJECT` | Updated subject used by `update_message` |
+| `<UPDATED_BODY_CONTENT>` | `Message updated by playbook test` | Updated message content |
+| `<TARGET_RECIPIENT_EMAIL>` | `soc-review@customer-example.com` | Recipient used by `forward_message` and `send_message` |
+| `<FORWARD_COMMENT>` | `Forwarded for analyst review` | Comment attached to forwarded message |
+| `<OUTBOUND_SUBJECT>` | `E2E-OUTLOOK-OUTBOUND-SUBJECT` | Subject used by `send_message` |
+| `<OUTBOUND_BODY_CONTENT>` | `Outbound validation message from playbook` | Body content used by `send_message` |
 
 ## Playbook - Message Processing Flow (Search -> Get -> Update -> Forward -> Send)
 
@@ -63,10 +73,10 @@ flowchart LR
 
 **Inputs:**
 
-- user: <YOUR_TEST_MAILBOX_USER>
-- email_message_id: <YOUR_INTERNET_MESSAGE_ID>
-- max_messages_to_return: 10
-- return_most_recent_first: false
+- user: `<YOUR_TEST_MAILBOX_USER>`
+- email_message_id: `<YOUR_INTERNET_MESSAGE_ID>`
+- max_messages_to_return: `10`
+- return_most_recent_first: `false`
 
 **Notes:**
 
@@ -81,7 +91,7 @@ flowchart LR
 
 **Inputs:**
 
-- Items: {{ node.1.messages }}
+- Items: `{{ node.1.messages }}`
 
 **Connection:**
 
@@ -90,7 +100,7 @@ flowchart LR
 
 **Notes:**
 
-- With this setup, {{ node.2.default.value }} is a full message object containing message_id.
+- With this setup, `{{ node.2.default.value }}` is a full message object containing `message_id`.
 
 ### Node 3 - Get a message
 
@@ -100,8 +110,8 @@ flowchart LR
 
 **Inputs:**
 
-- user: {{ node.1.user }}
-- message_id: {{ node.2.default.value }}
+- user: `{{ node.1.user }}`
+- message_id: `{{ node.2.default.value }}`
 
 **Notes:**
 
@@ -115,10 +125,10 @@ flowchart LR
 
 **Inputs:**
 
-- user: {{ node.1.user }}
-- message_id: {{ node.3.message_id }}
-- subject: <UPDATED_SUBJECT>
-- content: <UPDATED_BODY_CONTENT>
+- user: `{{ node.1.user }}`
+- message_id: `{{ node.3.message_id }}`
+- subject: `<UPDATED_SUBJECT>`
+- content: `<UPDATED_BODY_CONTENT>`
 
 ### Node 5 - Forward a message
 
@@ -128,10 +138,10 @@ flowchart LR
 
 **Inputs:**
 
-- user: {{ node.1.user }}
-- message_id: {{ node.4.message_id }}
-- recipients: [<TARGET_RECIPIENT_EMAIL>]
-- comment: <FORWARD_COMMENT>
+- user: `{{ node.1.user }}`
+- message_id: `{{ node.4.message_id }}`
+- recipients: [`<TARGET_RECIPIENT_EMAIL>`]
+- comment: `<FORWARD_COMMENT>`
 
 ### Node 6 - Send a message
 
@@ -141,11 +151,11 @@ flowchart LR
 
 **Inputs:**
 
-- user: {{ node.1.user }}
-- subject: <OUTBOUND_SUBJECT>
-- content: <OUTBOUND_BODY_CONTENT>
-- sender: {{ node.1.user }}
-- from: {{ node.1.user }}
-- recipients: [<TARGET_RECIPIENT_EMAIL>]
-- content_type: text
-- save_to_sent_items: true
+- user: `{{ node.1.user }}`
+- subject: `<OUTBOUND_SUBJECT>`
+- content: `<OUTBOUND_BODY_CONTENT>`
+- sender: `{{ node.1.user }}`
+- from: `{{ node.1.user }}`
+- recipients: [`<TARGET_RECIPIENT_EMAIL>`]
+- content_type: `text`
+- save_to_sent_items: `true`
