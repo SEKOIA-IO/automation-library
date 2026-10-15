@@ -73,6 +73,31 @@ def test_reset_cursor_offset_supports_subkey_and_lock(symphony_storage, prepare_
     assert connector.cursor.offset == target
 
 
+@pytest.mark.parametrize("subkey", [None, "vision_one"])
+def test_reset_cursor_offset_persists_after_restart(symphony_storage, prepare_connector_mocks, subkey):
+    connector = make_connector(symphony_storage, prepare_connector_mocks)
+    connector.cursor = CheckpointDatetime(
+        path=connector._data_path,
+        start_at=timedelta(minutes=1),
+        ignore_older_than=None,
+        lock=threading.Lock(),
+        subkey=subkey,
+    )
+    future_target = datetime(2099, 1, 1, tzinfo=timezone.utc)
+    rollback_target = datetime(2098, 12, 31, 23, 59, 0, tzinfo=timezone.utc)
+
+    connector.cursor.offset = future_target
+    connector.reset_cursor_offset(rollback_target)
+
+    restarted_cursor = CheckpointDatetime(
+        path=connector._data_path,
+        start_at=timedelta(minutes=1),
+        ignore_older_than=None,
+        subkey=subkey,
+    )
+    assert restarted_cursor.offset == rollback_target
+
+
 def test_next_batch_logs_no_events_when_generator_yields_empty_batch(
     symphony_storage,
     prepare_connector_mocks,
