@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 import requests_mock
@@ -407,6 +407,34 @@ def test_fetch_events_should_reset_future_checkpoint(trigger):
     )
 
 
+def test_fetch_events_retries_future_checkpoint_recovery_after_persistence_error(trigger):
+    future_date = datetime.now(timezone.utc) + timedelta(days=1)
+    trigger.from_date = future_date
+    trigger.cursor.offset = future_date
+
+    fetch_mock = Mock(return_value=iter([[]]))
+    setattr(trigger, "_TrendMicroVisionOneWorkbenchConnector__fetch_events", fetch_mock)
+
+    with patch.object(
+        trigger,
+        "reset_cursor_offset",
+        side_effect=[RuntimeError("persistence failed"), None],
+    ) as reset_mock:
+        with pytest.raises(RuntimeError, match="persistence failed"):
+            list(trigger.fetch_events())
+
+        assert trigger.from_date == future_date
+
+        second_cycle_batches = list(trigger.fetch_events())
+
+    assert second_cycle_batches == []
+    assert reset_mock.call_count == 2
+    assert fetch_mock.call_count == 1
+    recovered_from_date = fetch_mock.call_args.args[0]
+    assert recovered_from_date <= datetime.now(timezone.utc)
+    assert trigger.from_date == recovered_from_date
+
+
 def test_fetch_events_updates_checkpoint_when_newer_events_are_seen(trigger):
     trigger.from_date = datetime(2024, 11, 1, tzinfo=timezone.utc)
     trigger.cursor.offset = trigger.from_date
@@ -432,6 +460,27 @@ def test_fetch_events_skips_empty_batches(trigger):
 
     assert batches == []
     assert trigger.from_date == initial_from_date
+
+
+def test_configuration_dict_assignment_keeps_workbench_model_and_api_settings(trigger):
+    trigger.configuration = {
+        "base_url": "https://api.xdr.trendmicro.com",
+        "api_key": "01234556789abcdef",
+        "intake_key": "intake_key",
+        "frequency": 60,
+    }
+    mocked_response = Mock()
+    mocked_response.ok = True
+    mocked_response.json.return_value = {"items": []}
+
+    with patch.object(trigger.client, "get", return_value=mocked_response) as mock_get:
+        batches = list(trigger._TrendMicroVisionOneWorkbenchConnector__fetch_events(trigger.from_date))
+
+    assert isinstance(trigger.configuration, TrendMicroVisionOneWorkbenchConnectorConfiguration)
+    assert trigger.configuration.base_url == "https://api.xdr.trendmicro.com"
+    assert trigger.configuration.api_key == "01234556789abcdef"
+    assert batches == []
+    assert mock_get.call_args.kwargs["params"]["startDateTime"].endswith("Z")
 
 
 def test_typed_configuration_reads_model_values(trigger):

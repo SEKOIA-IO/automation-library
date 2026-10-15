@@ -11,16 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Standardize Vision One connector logs with `self.log` and key=value context fields
-- Reorganize tests to mirror `trendmicro_modules/` layout and enforce 100% coverage on that package
-- Migrate module models and connector configurations to Pydantic v2 imports and APIs
 - Upgrade `sekoia-automation-sdk` dependency to `1.27.0`
+- Migrate module models and connector configurations to Pydantic v2 imports and APIs
+- Standardize Vision One connector logs with `self.log` and key=value context fields, and remove the obsolete local logging helper
+- Reorganize and extend tests to mirror `trendmicro_modules/` and enforce 100% branch coverage
 
 ### Fixed
 
-- Reset Vision One Workbench and OAT checkpoints when persisted offset is in the future
-- Parameterize repetitive tests across triggers, helpers, models, and client auth while mocking batch timing to reduce test execution time
-- Ensure Vision One checkpoint lock is always released when reset persistence fails
+- Harden Vision One checkpoint recovery for Workbench and OAT: sanitize future checkpoints, persist rollback offsets safely (lock release on failure), and retry persistence on subsequent empty cycles
+- Restore typed SDK dictionary configuration loading for Workbench and OAT so required API settings and OAT filter persist before polling
 
 ## [1.6.4] - 2026-03-24
 
