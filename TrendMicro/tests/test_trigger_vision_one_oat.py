@@ -180,6 +180,34 @@ def test_fetch_events_should_reset_future_checkpoint(trigger):
     )
 
 
+def test_fetch_events_retries_future_checkpoint_recovery_after_persistence_error(trigger):
+    future_date = datetime.now(timezone.utc) + timedelta(days=1)
+    trigger.from_date = future_date
+    trigger.cursor.offset = future_date
+
+    fetch_mock = Mock(return_value=iter([[]]))
+    setattr(trigger, "_TrendMicroVisionOneOATConnector__fetch_events", fetch_mock)
+
+    with patch.object(
+        trigger,
+        "reset_cursor_offset",
+        side_effect=[RuntimeError("persistence failed"), None],
+    ) as reset_mock:
+        with pytest.raises(RuntimeError, match="persistence failed"):
+            list(trigger.fetch_events())
+
+        assert trigger.from_date == future_date
+
+        second_cycle_batches = list(trigger.fetch_events())
+
+    assert second_cycle_batches == []
+    assert reset_mock.call_count == 2
+    assert fetch_mock.call_count == 1
+    recovered_from_date = fetch_mock.call_args.args[0]
+    assert recovered_from_date <= datetime.now(timezone.utc)
+    assert trigger.from_date == recovered_from_date
+
+
 def test_fetch_events_updates_checkpoint_when_newer_events_are_seen(trigger):
     trigger.from_date = datetime(2024, 11, 1, tzinfo=timezone.utc)
     trigger.cursor.offset = trigger.from_date
@@ -216,6 +244,27 @@ def test_fetch_events_uses_filter_header_when_configured(trigger):
     with patch.object(trigger.client, "get", return_value=mocked_response) as mock_get:
         batches = list(trigger._TrendMicroVisionOneOATConnector__fetch_events(trigger.from_date))
 
+    assert batches == []
+    assert mock_get.call_args.kwargs["headers"] == {"TMV1-Filter": "riskLevel eq 'high'"}
+
+
+def test_configuration_dict_assignment_keeps_oat_model_and_filter(trigger):
+    trigger.configuration = {
+        "base_url": "https://api.xdr.trendmicro.com",
+        "api_key": "01234556789abcdef",
+        "intake_key": "intake_key",
+        "frequency": 60,
+        "filter": "riskLevel eq 'high'",
+    }
+    mocked_response = Mock()
+    mocked_response.ok = True
+    mocked_response.json.return_value = {"items": []}
+
+    with patch.object(trigger.client, "get", return_value=mocked_response) as mock_get:
+        batches = list(trigger._TrendMicroVisionOneOATConnector__fetch_events(trigger.from_date))
+
+    assert isinstance(trigger.configuration, TrendMicroVisionOneOATConnectorConfiguration)
+    assert trigger.configuration.filter == "riskLevel eq 'high'"
     assert batches == []
     assert mock_get.call_args.kwargs["headers"] == {"TMV1-Filter": "riskLevel eq 'high'"}
 

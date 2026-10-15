@@ -19,6 +19,7 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
     CONNECTOR_METRICS_LABEL = "vision_one_workbench"
 
     module: TrendMicroModule
+    configuration: TrendMicroVisionOneWorkbenchConnectorConfiguration  # type: ignore[override]
 
     @property
     def typed_configuration(self) -> TrendMicroVisionOneWorkbenchConnectorConfiguration:
@@ -75,8 +76,8 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
         initial_from_date = self.from_date
         most_recent_date_seen = self.sanitize_from_date(self.from_date)
         if most_recent_date_seen != self.from_date:
+            self.reset_cursor_offset(most_recent_date_seen)
             self.from_date = most_recent_date_seen
-            self.reset_cursor_offset(self.from_date)
 
         total_events_fetched = 0
         for next_events in self.__fetch_events(most_recent_date_seen):
