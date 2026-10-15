@@ -1,0 +1,218 @@
+import pytest
+import requests_mock
+
+from nextron_valhalla_sigma_rules_modules.sekoia_client import (
+    SekoiaAPIError,
+    SekoiaClient,
+    SekoiaRuleNotFoundError,
+)
+
+BASE_URL = "https://api.sekoia.io"
+RULES_URL = f"{BASE_URL}/v1/sic/conf/rules-catalog/rules"
+
+
+def test_create_rule_posts_with_bearer_and_returns_uuid():
+    client = SekoiaClient(BASE_URL, "secret-token")
+
+    with requests_mock.Mocker() as m:
+        m.post(RULES_URL, json={"uuid": "rule-uuid-1"},)
+        body = {"name": "X", "type": "sigma"}
+        uuid = client.create_rule(body)
+
+        assert uuid == "rule-uuid-1"
+        req = m.last_request
+        assert req.headers["Authorization"] == "Bearer secret-token"
+        assert req.headers["Content-Type"] == "application/json"
+        assert req.json() == body
+
+
+def test_create_rule_strips_trailing_slash_from_base_url():
+    client = SekoiaClient(BASE_URL, "k")
+
+    with requests_mock.Mocker() as m:
+        m.post(RULES_URL, json={"uuid": "u"},)
+        client.create_rule({})
+        assert (m.last_request.url == RULES_URL)
+
+
+def test_update_rule_puts_with_uuid_in_path():
+    client = SekoiaClient(BASE_URL, "k")
+
+    with requests_mock.Mocker() as m:
+        m.put(f"{RULES_URL}/the-uuid", status_code=200,)
+        body = {"name": "X"}
+        client.update_rule("the-uuid", body)
+
+        assert m.last_request.method == "PUT"
+        assert m.last_request.json() == body
+        assert m.last_request.headers["Authorization"] == "Bearer k"
+
+
+def test_create_rule_raises_on_http_error():
+    client = SekoiaClient(BASE_URL, "k")
+
+    with requests_mock.Mocker() as m:
+        m.post(RULES_URL, status_code=403,)
+        with pytest.raises(Exception):
+            client.create_rule({})
+
+
+def test_update_rule_raises_rule_not_found_on_404():
+    client = SekoiaClient(BASE_URL, "k")
+
+    with requests_mock.Mocker() as m:
+        m.put(f"{RULES_URL}/u", status_code=404,)
+        with pytest.raises(SekoiaRuleNotFoundError) as excinfo:
+            client.update_rule("u", {})
+        assert excinfo.value.status_code == 404
+
+
+def test_update_rule_raises_rule_not_found_on_403_au202():
+    """Sekoia returns 403 (AU202) for PUT to a rule UUID that this API key
+    doesn't own anymore (e.g. deleted rule). We treat it the same as 404."""
+    client = SekoiaClient(BASE_URL, "k")
+
+    with requests_mock.Mocker() as m:
+        m.put(
+            f"{RULES_URL}/u",
+            status_code=403,
+            text='{"message":"Insufficient permissions","code":"AU202"}',
+        )
+        with pytest.raises(SekoiaRuleNotFoundError) as excinfo:
+            client.update_rule("u", {})
+        assert excinfo.value.status_code == 403
+
+
+def test_update_rule_raises_generic_error_on_400():
+    client = SekoiaClient(BASE_URL, "k")
+
+    with requests_mock.Mocker() as m:
+        m.put(f"{RULES_URL}/u", status_code=400,)
+        with pytest.raises(Exception) as excinfo:
+            client.update_rule("u", {})
+        assert not isinstance(excinfo.value, SekoiaRuleNotFoundError)
+
+
+def test_supports_path_mounted_regional_base_url():
+    client = SekoiaClient("https://app.fra2.sekoia.io/api", "k")
+
+    with requests_mock.Mocker() as m:
+        m.post(
+            "https://app.fra2.sekoia.io/api/v1/sic/conf/rules-catalog/rules",
+            json={"uuid": "x"},
+        )
+        client.create_rule({})
+
+
+# ---------------------------------------------------------------------------
+# get_rule — new for the "preserve user ``enabled`` on PUT" fix
+# ---------------------------------------------------------------------------
+
+
+def test_get_rule_returns_json():
+    client = SekoiaClient(BASE_URL, "k")
+    with requests_mock.Mocker() as m:
+        m.get(
+            f"{RULES_URL}/sk-1",
+            json={"uuid": "sk-1", "enabled": True, "name": "n"},
+        )
+        rule = client.get_rule("sk-1")
+        assert rule == {"uuid": "sk-1", "enabled": True, "name": "n"}
+        assert m.last_request.method == "GET"
+        assert m.last_request.headers["Authorization"] == "Bearer k"
+
+
+def test_get_rule_raises_not_found_on_404():
+    client = SekoiaClient(BASE_URL, "k")
+    with requests_mock.Mocker() as m:
+        m.get(f"{RULES_URL}/gone", status_code=404)
+        with pytest.raises(SekoiaRuleNotFoundError) as excinfo:
+            client.get_rule("gone")
+        assert excinfo.value.status_code == 404
+
+
+def test_get_rule_raises_not_found_on_403_au202():
+    client = SekoiaClient(BASE_URL, "k")
+    with requests_mock.Mocker() as m:
+        m.get(
+            f"{RULES_URL}/u",
+            status_code=403,
+            text='{"message":"Insufficient permissions","code":"AU202"}',
+        )
+        with pytest.raises(SekoiaRuleNotFoundError) as excinfo:
+            client.get_rule("u")
+        assert excinfo.value.status_code == 403
+
+
+def test_get_rule_raises_generic_on_403_without_au202():
+    """Plain permission problem — the trigger must NOT misread this as
+    ``stale uuid, re-POST`` or every workspace-scope mistake would
+    silently duplicate the entire catalog."""
+    client = SekoiaClient(BASE_URL, "k")
+    with requests_mock.Mocker() as m:
+        m.get(
+            f"{RULES_URL}/u",
+            status_code=403,
+            text='{"message":"Insufficient permissions","code":"AU101"}',
+        )
+        with pytest.raises(Exception) as excinfo:
+            client.get_rule("u")
+        assert not isinstance(excinfo.value, SekoiaRuleNotFoundError)
+
+
+def test_get_rule_raises_generic_on_403_with_non_json_body():
+    client = SekoiaClient(BASE_URL, "k")
+    with requests_mock.Mocker() as m:
+        m.get(f"{RULES_URL}/u", status_code=403, text="forbidden (plain text)")
+        with pytest.raises(Exception) as excinfo:
+            client.get_rule("u")
+        assert not isinstance(excinfo.value, SekoiaRuleNotFoundError)
+
+
+def test_get_rule_raises_on_non_json_200_body():
+    client = SekoiaClient(BASE_URL, "k")
+    with requests_mock.Mocker() as m:
+        m.get(f"{RULES_URL}/u", text="not json")
+        with pytest.raises(SekoiaAPIError):
+            client.get_rule("u")
+
+
+# ---------------------------------------------------------------------------
+# PUT behaviour — new "403-must-be-AU202" assertion
+# ---------------------------------------------------------------------------
+
+
+def test_update_rule_raises_generic_on_403_without_au202():
+    client = SekoiaClient(BASE_URL, "k")
+    with requests_mock.Mocker() as m:
+        m.put(
+            f"{RULES_URL}/u",
+            status_code=403,
+            text='{"message":"Insufficient permissions","code":"AU101"}',
+        )
+        with pytest.raises(Exception) as excinfo:
+            client.update_rule("u", {})
+        assert not isinstance(excinfo.value, SekoiaRuleNotFoundError)
+
+
+def test_update_rule_raises_generic_on_403_with_non_json_body():
+    client = SekoiaClient(BASE_URL, "k")
+    with requests_mock.Mocker() as m:
+        m.put(f"{RULES_URL}/u", status_code=403, text="forbidden (plain text)")
+        with pytest.raises(Exception) as excinfo:
+            client.update_rule("u", {})
+        assert not isinstance(excinfo.value, SekoiaRuleNotFoundError)
+
+
+# ---------------------------------------------------------------------------
+# Retry adapter — POST must not be retried (duplicates on read-timeout)
+# ---------------------------------------------------------------------------
+
+
+def test_retry_adapter_excludes_post():
+    """A read-timeout on POST would otherwise cause urllib3 to re-POST,
+    creating a duplicate rule whose uuid we never see. Keep GET and PUT
+    (idempotent on this API) in the retry set; drop POST."""
+    client = SekoiaClient(BASE_URL, "k")
+    adapter = client._session.get_adapter("https://x")
+    assert adapter.max_retries.allowed_methods == frozenset({"GET", "PUT"})
