@@ -218,3 +218,15 @@ def test_fetch_events_uses_filter_header_when_configured(trigger):
 
     assert batches == []
     assert mock_get.call_args.kwargs["headers"] == {"TMV1-Filter": "riskLevel eq 'high'"}
+
+
+def test_typed_configuration_reads_model_values(trigger):
+    typed_configuration = trigger.typed_configuration
+
+    assert typed_configuration.base_url == "https://api.xdr.trendmicro.com"
+    assert typed_configuration.frequency == 60
+
+
+def test_connector_init_requires_data_path():
+    with pytest.raises(ValueError, match="data_path is required"):
+        TrendMicroVisionOneOATConnector(module=TrendMicroModule(), data_path=None)

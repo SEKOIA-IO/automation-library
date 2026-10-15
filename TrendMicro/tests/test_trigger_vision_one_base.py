@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from sekoia_automation.checkpoint import CheckpointDatetime
+from sekoia_automation.exceptions import TriggerConfigurationError
 
 from trendmicro_modules import TrendMicroModule
 from trendmicro_modules.trigger_vision_one_base import (
@@ -14,6 +15,7 @@ from trendmicro_modules.trigger_vision_one_base import (
 class DummyVisionOneConnector(TrendMicroVisionOneBaseConnector):
     CONNECTOR_TITLE = "Dummy Vision One"
     CONNECTOR_METRICS_LABEL = "dummy_vision_one"
+    _events_to_fetch: list[list[dict[str, str]]]
 
     def fetch_events(self):
         yield from self._events_to_fetch
@@ -143,3 +145,19 @@ def test_reset_cursor_offset_releases_lock_when_persistence_fails(symphony_stora
 
     assert lock.acquire(blocking=False)
     lock.release()
+
+
+def test_typed_configuration_reads_model_values(symphony_storage, prepare_connector_mocks):
+    connector = make_connector(symphony_storage, prepare_connector_mocks)
+
+    typed_configuration = connector.typed_configuration
+
+    assert typed_configuration.base_url == "https://api.xdr.trendmicro.com"
+    assert typed_configuration.frequency == 60
+
+
+def test_configuration_setter_rejects_unsupported_type(symphony_storage, prepare_connector_mocks):
+    connector = make_connector(symphony_storage, prepare_connector_mocks)
+
+    with pytest.raises(TriggerConfigurationError):
+        connector.configuration = object()
