@@ -7,11 +7,8 @@ from pydantic.v1 import Field
 from sekoia_automation.checkpoint import CheckpointDatetime
 
 from . import TrendMicroModule
-from .logging import get_logger
 from .metrics import EVENTS_LAG, INCOMING_MESSAGES
 from .trigger_vision_one_base import TrendMicroVisionOneBaseConfiguration, TrendMicroVisionOneBaseConnector
-
-logger = get_logger()
 
 
 class TrendMicroVisionOneOATConnectorConfiguration(TrendMicroVisionOneBaseConfiguration):
@@ -73,10 +70,16 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
             response = self.client.get(url, timeout=60)
 
     def fetch_events(self) -> Generator[list, None, None]:
-        most_recent_date_seen = self.from_date
+        initial_from_date = self.from_date
+        most_recent_date_seen = self.sanitize_from_date(self.from_date)
+        if most_recent_date_seen != self.from_date:
+            self.from_date = most_recent_date_seen
+            self.reset_cursor_offset(self.from_date)
 
+        total_events_fetched = 0
         for next_events in self.__fetch_events(most_recent_date_seen):
             if next_events:
+                total_events_fetched += len(next_events)
                 last_event = max(next_events, key=lambda x: x["detectedDateTime"])
                 last_event_datetime = isoparse(last_event["detectedDateTime"])
 
@@ -88,10 +91,22 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
         # save the most recent date
         if most_recent_date_seen > self.from_date:  # pragma: no cover
             self.from_date = most_recent_date_seen
-            self.cursor.offset = self.from_date
+            self.reset_cursor_offset(self.from_date)
 
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
+        current_lag_seconds = int(current_lag.total_seconds())
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL).set(
-            int(current_lag.total_seconds())
+            current_lag_seconds
+        )
+        self.log(
+            (
+                "Fetch cycle completed "
+                f"connector={self.CONNECTOR_METRICS_LABEL} "
+                f"events_fetched_total={total_events_fetched} "
+                f"initial_checkpoint={initial_from_date.isoformat()} "
+                f"updated_checkpoint={most_recent_date_seen.isoformat()} "
+                f"lag_seconds={current_lag_seconds}"
+            ),
+            level="debug",
         )
