@@ -1,0 +1,43 @@
+{
+  "description": "Remove one or more items from an existing Netskope blocklist",
+  "docker_parameters": "remove_from_blocklist",
+  "name": "Remove From Blocklist",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_token": {
+        "type": "string",
+        "description": "API token for authentication"
+      },
+      "blocklist_id": {
+        "type": "string",
+        "description": "The ID of the blocklist"
+      },
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of items in the blocklist (IPs, domains, or URLs)"
+      },
+      "sort_items": {
+        "type": "boolean",
+        "default": true,
+        "description": "Sort items alphabetically"
+      }
+    },
+    "required": [
+      "api_token",
+      "blocklist_id",
+      "items"
+    ],
+    "title": "Remove items from blocklist",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "bcb04714-e6b9-4a52-b200-705edc5531fa"
+}
