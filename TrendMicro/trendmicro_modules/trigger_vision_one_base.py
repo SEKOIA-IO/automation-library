@@ -104,21 +104,23 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
         We use this path when recovering from an invalid future checkpoint.
         """
         self.cursor._most_recent_date_seen = offset
-        if getattr(self.cursor, "_lock", None):
-            self.cursor._lock.acquire()
+        lock = getattr(self.cursor, "_lock", None)
+        if lock:
+            lock.acquire()
 
-        with self.cursor._context as cache:
-            subkey = getattr(self.cursor, "_subkey", None)
-            serialized_offset = self.cursor.datetime_to_file(offset)
-            if subkey:
-                if subkey not in cache:
-                    cache[subkey] = {}
-                cache[subkey]["most_recent_date_seen"] = serialized_offset
-            else:
-                cache["most_recent_date_seen"] = serialized_offset
-
-        if getattr(self.cursor, "_lock", None):
-            self.cursor._lock.release()
+        try:
+            with self.cursor._context as cache:
+                subkey = getattr(self.cursor, "_subkey", None)
+                serialized_offset = self.cursor.datetime_to_file(offset)
+                if subkey:
+                    if subkey not in cache:
+                        cache[subkey] = {}
+                    cache[subkey]["most_recent_date_seen"] = serialized_offset
+                else:
+                    cache["most_recent_date_seen"] = serialized_offset
+        finally:
+            if lock:
+                lock.release()
 
     def next_batch(self):
         # save the starting time

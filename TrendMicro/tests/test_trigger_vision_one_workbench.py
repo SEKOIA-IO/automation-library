@@ -21,6 +21,7 @@ def trigger(symphony_storage, prepare_connector_mocks):
         base_url="https://api.xdr.trendmicro.com",
         api_key="01234556789abcdef",
         intake_key="intake_key",
+        frequency=60,
     )
 
     return trigger

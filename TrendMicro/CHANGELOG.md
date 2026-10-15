@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reset Vision One Workbench and OAT checkpoints when persisted offset is in the future
 - Parameterize repetitive tests across triggers, helpers, models, and client auth while mocking batch timing to reduce test execution time
+- Ensure Vision One checkpoint lock is always released when reset persistence fails
 
 ## [1.6.4] - 2026-03-24
 
