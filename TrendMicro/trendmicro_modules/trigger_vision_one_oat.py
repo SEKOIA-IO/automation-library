@@ -3,7 +3,7 @@ from typing import Generator
 from urllib.parse import urljoin
 
 from dateutil.parser import isoparse
-from pydantic.v1 import Field
+from pydantic import Field
 from sekoia_automation.checkpoint import CheckpointDatetime
 
 from . import TrendMicroModule
@@ -20,10 +20,15 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
     CONNECTOR_METRICS_LABEL = "vision_one_oat"
 
     module: TrendMicroModule
-    configuration: TrendMicroVisionOneOATConnectorConfiguration
+
+    @property
+    def typed_configuration(self) -> TrendMicroVisionOneOATConnectorConfiguration:
+        return TrendMicroVisionOneOATConnectorConfiguration.model_validate(self.configuration)
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        if self._data_path is None:
+            raise ValueError("data_path is required for checkpoint initialization")
 
         self.cursor = CheckpointDatetime(
             path=self._data_path, start_at=timedelta(hours=1), ignore_older_than=timedelta(days=14)
@@ -38,13 +43,13 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
             "detectedEndDateTime": to_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "top": 200,  # items per page - could be 50, 100, 200
         }
-        if self.configuration.filter is not None:
-            headers = {"TMV1-Filter": self.configuration.filter}
+        if self.typed_configuration.filter is not None:
+            headers = {"TMV1-Filter": self.typed_configuration.filter}
 
         else:
             headers = {}
 
-        url = urljoin(self.configuration.base_url, "v3.0/oat/detections")
+        url = urljoin(self.typed_configuration.base_url, "v3.0/oat/detections")
         response = self.client.get(url, params=query_params, headers=headers, timeout=60)
 
         while self.running:  # pragma: no cover
@@ -55,12 +60,14 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
 
             if events:
                 INCOMING_MESSAGES.labels(
-                    intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL
+                    intake_key=self.typed_configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL
                 ).inc(len(events))
                 yield events
 
             else:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL).set(0)
+                EVENTS_LAG.labels(
+                    intake_key=self.typed_configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL
+                ).set(0)
                 return
 
             url = message.get("nextLink")
@@ -96,7 +103,7 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
         current_lag_seconds = int(current_lag.total_seconds())
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL).set(
+        EVENTS_LAG.labels(intake_key=self.typed_configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL).set(
             current_lag_seconds
         )
         self.log(

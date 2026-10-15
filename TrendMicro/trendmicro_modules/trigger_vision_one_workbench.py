@@ -19,10 +19,15 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
     CONNECTOR_METRICS_LABEL = "vision_one_workbench"
 
     module: TrendMicroModule
-    configuration: TrendMicroVisionOneWorkbenchConnectorConfiguration
+
+    @property
+    def typed_configuration(self) -> TrendMicroVisionOneWorkbenchConnectorConfiguration:
+        return TrendMicroVisionOneWorkbenchConnectorConfiguration.model_validate(self.configuration)
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        if self._data_path is None:
+            raise ValueError("data_path is required for checkpoint initialization")
 
         self.cursor = CheckpointDatetime(
             path=self._data_path, start_at=timedelta(minutes=1), ignore_older_than=timedelta(hours=1)
@@ -39,7 +44,7 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
             "orderBy": "createdDateTime asc",
         }
 
-        url = urljoin(self.configuration.base_url, "v3.0/workbench/alerts")
+        url = urljoin(self.typed_configuration.base_url, "v3.0/workbench/alerts")
         response = self.client.get(url, params=query_params, timeout=60)
 
         while self.running:  # pragma: no cover
@@ -50,12 +55,14 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
 
             if events:
                 INCOMING_MESSAGES.labels(
-                    intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL
+                    intake_key=self.typed_configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL
                 ).inc(len(events))
                 yield events
 
             else:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL).set(0)
+                EVENTS_LAG.labels(
+                    intake_key=self.typed_configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL
+                ).set(0)
                 return
 
             url = message.get("nextLink")
@@ -91,7 +98,7 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
         current_lag_seconds = int(current_lag.total_seconds())
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL).set(
+        EVENTS_LAG.labels(intake_key=self.typed_configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL).set(
             current_lag_seconds
         )
         self.log(

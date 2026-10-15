@@ -7,12 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.6.5] - 2026-10-15
+## [1.6.5] - 2026-10-16
 
 ### Changed
 
 - Standardize Vision One connector logs with `self.log` and key=value context fields
 - Reorganize tests to mirror `trendmicro_modules/` layout and enforce 100% coverage on that package
+- Migrate module models and connector configurations to Pydantic v2 imports and APIs
+- Upgrade `sekoia-automation-sdk` dependency to `1.27.0`
 
 ### Fixed
 

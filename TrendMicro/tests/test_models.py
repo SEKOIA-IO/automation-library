@@ -12,4 +12,4 @@ from trendmicro_modules.models import TrendMicroModuleConfiguration
 )
 def test_trendmicro_module_configuration_instantiation(config_kwargs):
     config = TrendMicroModuleConfiguration(**config_kwargs)
-    assert config.dict() == {}
+    assert config.model_dump() == {}

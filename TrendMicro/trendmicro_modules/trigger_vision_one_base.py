@@ -2,11 +2,12 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
-from typing import Generator
+from typing import Any, Generator, Literal
 
 import orjson
 import requests
-from pydantic.v1 import Field
+from pydantic import Field
+from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from .client import TrendMicroVisionApiClient
@@ -15,23 +16,27 @@ from .metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 class TrendMicroVisionOneBaseConfiguration(DefaultConnectorConfiguration):
     base_url: str = Field(..., description="Base URL")
-    api_key: str = Field(..., description="API key", secret=True)
+    api_key: str = Field(..., description="API key", json_schema_extra={"secret": True})
     frequency: int = Field(60, description="Batch frequency in seconds", ge=1)
 
 
 class TrendMicroVisionOneBaseConnector(Connector, ABC):
-    configuration: TrendMicroVisionOneBaseConfiguration
+    cursor: CheckpointDatetime
 
     CONNECTOR_METRICS_LABEL: str
     CONNECTOR_TITLE: str
 
+    @property
+    def typed_configuration(self) -> TrendMicroVisionOneBaseConfiguration:
+        return TrendMicroVisionOneBaseConfiguration.model_validate(self.configuration)
+
     @cached_property
     def client(self) -> TrendMicroVisionApiClient:
-        return TrendMicroVisionApiClient(api_key=self.configuration.api_key)
+        return TrendMicroVisionApiClient(api_key=self.typed_configuration.api_key)
 
     def handle_response_error(self, response: requests.Response) -> None:  # pragma: no cover
         if not response.ok:
-            level = "critical" if response.status_code in [401, 403] else "error"
+            level: Literal["critical", "error"] = "critical" if response.status_code in [401, 403] else "error"
             error_code = None
             error_message = None
             error_number = None
@@ -129,7 +134,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
 
         # Fetch next batch
         for events in self.fetch_events():
-            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
+            batch_of_events: list[Any] = [orjson.dumps(event).decode("utf-8") for event in events]
             events_count = len(batch_of_events)
 
             # if the batch is full, push it
@@ -143,7 +148,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
                     level="info",
                 )
                 OUTCOMING_EVENTS.labels(
-                    intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL
+                    intake_key=self.typed_configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL
                 ).inc(events_count)
                 self.push_events_to_intakes(events=batch_of_events)
                 total_events_forwarded += events_count
@@ -168,11 +173,11 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
             level="debug",
         )
         FORWARD_EVENTS_DURATION.labels(
-            intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL
+            intake_key=self.typed_configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL
         ).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
-        delta_sleep = self.configuration.frequency - batch_duration
+        delta_sleep = self.typed_configuration.frequency - batch_duration
         if delta_sleep > 0:
             self.log(
                 (
@@ -190,7 +195,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
                 "Starting connector polling "
                 f'connector_title="{self.CONNECTOR_TITLE}" '
                 f"connector={self.CONNECTOR_METRICS_LABEL} "
-                f"frequency_seconds={self.configuration.frequency}"
+                f"frequency_seconds={self.typed_configuration.frequency}"
             ),
             level="info",
         )
