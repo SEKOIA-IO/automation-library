@@ -116,3 +116,30 @@ def test_reset_cursor_offset_supports_existing_subkey_cache_entry(symphony_stora
     connector.reset_cursor_offset(second_target)
 
     assert connector.cursor.offset == second_target
+
+
+def test_reset_cursor_offset_releases_lock_when_persistence_fails(symphony_storage, prepare_connector_mocks):
+    class FailingContext:
+        def __enter__(self):
+            raise RuntimeError("persistence failed")
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    connector = make_connector(symphony_storage, prepare_connector_mocks)
+    lock = threading.Lock()
+    connector.cursor = CheckpointDatetime(
+        path=connector._data_path,
+        start_at=timedelta(minutes=1),
+        ignore_older_than=None,
+        lock=lock,
+        subkey="vision_one",
+    )
+    connector.cursor._context = FailingContext()
+    target = datetime.now(timezone.utc) - timedelta(minutes=2)
+
+    with pytest.raises(RuntimeError, match="persistence failed"):
+        connector.reset_cursor_offset(target)
+
+    assert lock.acquire(blocking=False)
+    lock.release()
