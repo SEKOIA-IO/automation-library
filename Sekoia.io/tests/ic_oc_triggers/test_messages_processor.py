@@ -45,3 +45,13 @@ def test_run(callback):
     processor.stop()
     sleep(0.2)  # Give time to the thread to join the pool
     callback.assert_called_once_with("foo")
+
+
+def test_handle_message_returns_when_queue_is_empty(callback):
+    processor = MessagesProcessor(callback=callback)
+    processor.QUEUE_TIMEOUT = 0.01
+
+    processor._handle_message()
+    processor._pool.join()
+
+    callback.assert_not_called()

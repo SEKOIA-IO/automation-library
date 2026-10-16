@@ -1,7 +1,9 @@
+import re
 from posixpath import join as urljoin
 from uuid import UUID
 
 import requests
+from pydantic import BaseModel, Field, model_validator
 from sekoia_automation.action import Action
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
@@ -18,6 +20,32 @@ ACTION_UUIDS = [
     "ade85d7b-7507-4026-bfc6-cc006d10ddac",
     "1390be4e-ced8-4dd6-9bed-573471b235ab",
 ]
+
+ALERT_SHORT_ID_PATTERN = re.compile(r"AL[A-Za-z0-9]{10}")
+
+
+class UpdateAlertStatusArguments(BaseModel):
+    uuid: str = Field(..., description="The identifier (UUID or short id) of the alert")
+    status: str = Field(..., min_length=1, description="The status/action to apply to the alert")
+    comment: str | None = None
+
+    @model_validator(mode="after")
+    def validate_uuid(self) -> UpdateAlertStatusArguments:
+        # emptiness check
+        if not self.uuid.strip():
+            raise ValueError("The alert identifier must not be empty")
+
+        # short id validation: "AL" followed by 10 alphanumeric characters
+        if ALERT_SHORT_ID_PATTERN.fullmatch(self.uuid):
+            return self
+
+        # UUID validation
+        try:
+            UUID(self.uuid)
+        except ValueError:
+            raise ValueError(f"Invalid alert identifier: {self.uuid}")
+
+        return self
 
 
 class NonRetryableAlertStatusError(Exception):
@@ -136,8 +164,8 @@ class UpdateAlertStatus(Action):
             result.raise_for_status()
         return result.json()
 
-    def run(self, arguments: dict):
-        status = arguments["status"]
-        alert_uuid = arguments["uuid"]
-        comment = arguments.get("comment")
+    def run(self, arguments: UpdateAlertStatusArguments):
+        alert_uuid = arguments.uuid
+        status = arguments.status
+        comment = arguments.comment
         return self.perform_request(alert_uuid, status, comment)

@@ -1,9 +1,11 @@
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
 import requests
 import urllib3
 
+from sekoiaio.operation_center.base_get_event import BaseGetEvents
 from sekoiaio.operation_center.get_events import GetEvents
 
 module_base_url = "https://fake.url/"
@@ -760,3 +762,29 @@ def test_get_events_search_job_not_successful(requests_mock):
 
     assert not events_mock.called
     assert action._logs[-1]["level"] == "error"
+
+
+def test_wait_for_search_job_step_timeout(requests_mock):
+    """Polling stops with a TimeoutError once the step exceeds its timeout"""
+    action = GetEvents()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    action.configure_http_session()
+
+    job_uuid = "483d36a5-8538-49c4-be19-49b669f90bf8"
+    requests_mock.get(f"https://fake.url/api/v1/sic/conf/events/search/jobs/{job_uuid}", json={"status": 0})
+
+    clock = iter([0, 100, 301])
+    fake_time = SimpleNamespace(time=lambda: next(clock), sleep=lambda seconds: None)
+    with (
+        patch("sekoiaio.operation_center.base_get_event.time", fake_time),
+        pytest.raises(TimeoutError, match=f"Event search job {job_uuid} took more than 300s to start"),
+    ):
+        action._wait_for_search_job_step(job_uuid, lambda status: status == 0, "start", 300)
+
+    # initial check + one poll under the timeout + one poll over it
+    assert requests_mock.call_count == 3
+
+
+def test_base_get_events_run_is_not_implemented():
+    with pytest.raises(NotImplementedError):
+        BaseGetEvents().run({})

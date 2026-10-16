@@ -213,3 +213,55 @@ def test_run(trigger):
 
     calls = [call.kwargs["event"] for call in trigger.send_event.call_args_list]
     assert len(calls) > 0
+
+
+def test_url_generation_with_stored_cursor(trigger):
+    with trigger.context as cache:
+        cache["cursors"] = {trigger.feed_id: "my-cursor"}
+    trigger.configuration["modified_after"] = "2021-09-01T00:00:00Z"
+
+    assert trigger.url.endswith("&skip_expired=true&cursor=my-cursor")
+
+
+def test_next_batch_resolves_sources(trigger, monkeypatch):
+    objects = [object_factory(1, sources=["identity--1"])]
+    trigger.configuration["resolve_sources"] = True
+    monkeypatch.setattr(trigger, "fetch_feed_objects", MagicMock(return_value=objects))
+    monkeypatch.setattr(trigger, "resolve_sources", MagicMock(return_value=objects))
+    monkeypatch.setattr("sekoiaio.triggers.intelligence.time.sleep", MagicMock())
+
+    trigger.next_batch()
+
+    trigger.resolve_sources.assert_called_once_with(objects)
+    trigger.send_event.assert_called_once()
+
+
+def test_next_batch_empty_waits_and_disables_first_run(trigger, monkeypatch):
+    sleep = MagicMock()
+    monkeypatch.setattr("sekoiaio.triggers.intelligence.time.sleep", sleep)
+    trigger.log = MagicMock()
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(trigger.url, status_code=200, json={"items": [], "next_cursor": "abcd"})
+        trigger.next_batch()
+
+    trigger.send_event.assert_not_called()
+    trigger.log.assert_any_call(message="No objects fetched from the feed", level="info")
+    assert trigger.first_run is False
+    sleep.assert_called_once_with(trigger.frequency)
+
+
+def test_run_logs_errors_and_stops(trigger, monkeypatch):
+    error = RuntimeError("boom")
+
+    def next_batch():
+        trigger._stop_event.set()
+        raise error
+
+    trigger.log = MagicMock()
+    monkeypatch.setattr(trigger, "next_batch", next_batch)
+
+    trigger.run()
+
+    trigger.log.assert_any_call(message="Failed to get data from feed", level="error")
+    trigger.log_exception.assert_called_once_with(error, message="Failed to get data from feed")

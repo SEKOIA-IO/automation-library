@@ -530,3 +530,87 @@ def test_execute_query_omits_community_uuids(requests_mock):
     action.trigger_query_execution.assert_called_with(
         query_uuid=UUID(SAMPLE_QUERY["uuid"]), query_definition=expected_definition, query_parameters=None
     )
+
+
+def test_get_query_by_name_empty_page_with_nonzero_total_raises(requests_mock):
+    """An empty page while the API reports matching queries means the listing is inconsistent."""
+    action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
+
+    requests_mock.get(QUERIES_URL, json={"items": [], "total": 3})
+
+    with pytest.raises(QueryListingError):
+        action.get_query_by_name("sample query")
+
+    assert len(action._logs) == 1
+    assert action._logs[0]["level"] == "error"
+    assert action._logs[0]["message"] == "Number of fetched results doesn't match total"
+
+
+def test_download_query_result_404_without_json_body_raises(requests_mock):
+    """A 404 whose body is not JSON cannot be a NO_RESULTS answer and must raise."""
+    action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
+
+    requests_mock.get(
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
+        status_code=404,
+        text="<html>Not Found</html>",
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        action.download_query_result(SAMPLE_QUERY_RUN["uuid"], "jsonl")
+
+    assert len(action._logs) == 1
+    assert action._logs[0]["level"] == "error"
+    assert "HTTP error when downloading query result" in action._logs[0]["message"]
+
+
+def test_wait_for_query_completion_polling_http_error_raises(requests_mock):
+    """An HTTP error while polling (after the initial status check) is logged and raised."""
+    action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
+
+    requests_mock.get(
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}",
+        [
+            {"json": {"status": "pending"}},
+            {"status_code": 403, "text": "Forbidden"},
+        ],
+    )
+
+    with patch("sekoiaio.operation_center.execute_a_query.sleep"), pytest.raises(HTTPError):
+        action._wait_for_query_completion_step(
+            SAMPLE_QUERY_RUN["uuid"], lambda status: status == "pending", timeout=60
+        )
+
+    assert requests_mock.call_count == 2
+    assert len(action._logs) == 1
+    assert action._logs[0]["level"] == "error"
+    assert "HTTP error when retrieving query run status" in action._logs[0]["message"]
+    assert "Response status: 403" in action._logs[0]["message"]
+
+
+def test_wait_for_query_completion_timeout(requests_mock):
+    """Polling stops with a TimeoutError once the timeout has elapsed."""
+    action = make_action()
+    action.configure_http_session()
+    action.configure_urls()
+
+    requests_mock.get(f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "pending"})
+
+    clock = iter([0, 30, 61])
+    with (
+        patch("sekoiaio.operation_center.execute_a_query.sleep"),
+        patch("sekoiaio.operation_center.execute_a_query.time", side_effect=lambda: next(clock)),
+        pytest.raises(TimeoutError, match=SAMPLE_QUERY_RUN["uuid"]),
+    ):
+        action._wait_for_query_completion_step(
+            SAMPLE_QUERY_RUN["uuid"], lambda status: status == "pending", timeout=60
+        )
+
+    # initial check + one poll under the timeout + one poll over it
+    assert requests_mock.call_count == 3

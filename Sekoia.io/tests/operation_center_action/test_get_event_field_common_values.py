@@ -1,3 +1,5 @@
+import pytest
+
 from sekoiaio.operation_center.get_event_field_common_values import GetEventFieldCommonValues
 
 module_base_url = "https://fake.url/"
@@ -145,5 +147,40 @@ def test_get_event_field_common_values(requests_mock):
                     {"value": 50.0, "name": "True"},
                 ],
             },
+        ]
+    }
+
+
+@pytest.mark.skip(
+    reason="Bug: pagination continues only once every requested field was found, so fields on later pages are lost"
+)
+def test_get_event_field_common_values_fetches_next_page_for_missing_fields(requests_mock):
+    action = GetEventFieldCommonValues()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    job_uuid = "483d36a5-8538-49c4-be19-49b669f90bf8"
+    jobs_url = "https://fake.url/api/v1/sic/conf/events/search/jobs"
+    requests_mock.post(jobs_url, json={"uuid": job_uuid, "status": 0})
+    requests_mock.get(f"{jobs_url}/{job_uuid}", json={"uuid": job_uuid, "status": 2})
+    requests_mock.get(
+        f"{jobs_url}/{job_uuid}/fields?limit=1000&offset=0",
+        json={"items": [{"name": "action.id", "most_common_values": []}], "total": 2},
+    )
+    requests_mock.get(
+        f"{jobs_url}/{job_uuid}/fields?limit=1000&offset=1",
+        json={
+            "items": [{"name": "event.dialect", "most_common_values": [{"value": 100.0, "name": "openssh"}]}],
+            "total": 2,
+        },
+    )
+
+    results = action.run(
+        {"query": "", "earliest_time": "-1d", "latest_time": "now", "fields": "action.id,event.dialect"}
+    )
+
+    assert results == {
+        "fields": [
+            {"name": "action.id", "common_values": []},
+            {"name": "event.dialect", "common_values": [{"value": 100.0, "name": "openssh"}]},
         ]
     }
