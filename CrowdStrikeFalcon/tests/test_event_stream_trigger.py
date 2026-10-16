@@ -8,6 +8,7 @@ import orjson
 import pytest
 import requests_mock
 from requests.exceptions import HTTPError
+from sekoia_automation.storage import PersistentJSON
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
@@ -17,6 +18,7 @@ from crowdstrike_falcon.event_stream_trigger import (
     EventStreamTrigger,
     VerticlesCollector,
 )
+from crowdstrike_falcon.metrics import EVENTS_LAG
 
 
 @pytest.fixture
@@ -294,7 +296,7 @@ def test_read_stream_fails_on_stream_error(trigger):
     with pytest.raises(Exception):  # noqa: B017
         reader.run()
 
-    reader.stop_refresh()
+    assert not reader.refresh_timer.is_running
     assert trigger.events_queue.qsize() == 0
 
 
@@ -1437,3 +1439,326 @@ def test_read_stream_with_verticles_with_alert(trigger):
             pass
 
         assert actual_events == expected_events
+
+
+FAKE_STREAM_ROOT_URL = "https://firehose.eu-1.crowdstrike.com/sensors/entities/datafeed/v1/0"
+FAKE_STREAM_INFO = {
+    "dataFeedURL": f"{FAKE_STREAM_ROOT_URL}?appId=sio-00000",
+    "sessionToken": {"token": "my_token==", "expiration": "2022-07-06T12:39:24.017018689Z"},
+    "refreshActiveSessionURL": (
+        "https://my.fake.sekoia/sensors/entities/datafeed-actions"
+        "/v1/0?appId=sio-00000&action_name=refresh_active_stream_session"
+    ),
+    "refreshActiveSessionInterval": 1800,
+}
+
+
+def make_http_error(status_code: int) -> HTTPError:
+    response = Mock(status_code=status_code, reason="Error")
+    return HTTPError(f"{status_code} Error", response=response)
+
+
+@pytest.fixture
+def falcon_client_mock():
+    client = Mock()
+    client.get_edge_types.return_value = ["child_process", "device", "hunting_lead"]
+    return client
+
+
+@pytest.fixture
+def mocked_verticles_collector(trigger, falcon_client_mock):
+    trigger.log_exception = MagicMock()
+    return VerticlesCollector(trigger, falcon_client_mock)
+
+
+def test_verticles_collector_ignores_device_and_hunting_lead_edges(mocked_verticles_collector):
+    assert mocked_verticles_collector.edge_types == {"child_process"}
+
+
+def test_verticles_collector_logs_edges_http_errors(trigger, mocked_verticles_collector, falcon_client_mock):
+    falcon_client_mock.list_edges.side_effect = make_http_error(500)
+
+    assert list(mocked_verticles_collector.collect_verticles_from_graph_ids({"pid:aaaa:1"})) == []
+
+    trigger.log_exception.assert_called_once()
+    assert trigger.log_exception.call_args.kwargs["level"] == "warning"
+    assert "child_process" in trigger.log_exception.call_args.kwargs["message"]
+
+
+def test_collect_verticles_from_detection(mocked_verticles_collector, falcon_client_mock):
+    falcon_client_mock.get_detection_details.return_value = iter(
+        [{"behaviors": [{"triggering_process_graph_id": "pid:aaaa:1"}]}]
+    )
+    falcon_client_mock.list_edges.return_value = iter([{"id": "pid:aaaa:2", "source_vertex_id": "pid:aaaa:1"}])
+    falcon_client_mock.get_verticles_details.return_value = iter([{"id": "pid:aaaa:2", "name": "child"}])
+
+    verticles = list(mocked_verticles_collector.collect_verticles_from_detection("ldt:aaaa:1"))
+
+    assert verticles == [("pid:aaaa:1", "child_process", {"id": "pid:aaaa:2", "name": "child"})]
+    falcon_client_mock.get_detection_details.assert_called_once_with(detection_ids=["ldt:aaaa:1"])
+    falcon_client_mock.get_verticles_details.assert_called_once_with(["pid:aaaa:2"], "processes")
+
+
+def test_collect_verticles_from_detection_http_error(trigger, mocked_verticles_collector, falcon_client_mock):
+    falcon_client_mock.get_detection_details.side_effect = make_http_error(404)
+
+    assert list(mocked_verticles_collector.collect_verticles_from_detection("ldt:aaaa:1")) == []
+
+    assert trigger.log_exception.call_args.kwargs["message"] == (
+        "Failed to collect verticles for detection ldt:aaaa:1: 404 Error"
+    )
+
+
+def test_collect_verticles_from_detection_unknown_detection(trigger, mocked_verticles_collector, falcon_client_mock):
+    falcon_client_mock.get_detection_details.return_value = iter([])
+
+    assert list(mocked_verticles_collector.collect_verticles_from_detection("ldt:aaaa:1")) == []
+
+    assert trigger.log_exception.call_args.kwargs["message"] == "Failed to collect verticles for detection ldt:aaaa:1"
+
+
+def test_collect_verticles_from_alert_http_error_keeps_alert_api(
+    trigger, mocked_verticles_collector, falcon_client_mock
+):
+    trigger.use_alert_api = True
+    falcon_client_mock.get_alert_details.side_effect = make_http_error(500)
+
+    assert list(mocked_verticles_collector.collect_verticles_from_alert("alert-1")) == []
+
+    assert trigger.use_alert_api is True
+    assert (
+        trigger.log_exception.call_args.kwargs["message"] == "Failed to collect verticles for alert alert-1: 500 Error"
+    )
+
+
+def test_collect_verticles_from_alert_unknown_alert(trigger, mocked_verticles_collector, falcon_client_mock):
+    falcon_client_mock.get_alert_details.return_value = iter([])
+
+    assert list(mocked_verticles_collector.collect_verticles_from_alert("alert-1")) == []
+
+    assert trigger.log_exception.call_args.kwargs["message"] == "Failed to collect verticles for alert alert-1"
+
+
+def test_refresh_stream_timer_refreshes_the_session_url(trigger):
+    client_mock = MagicMock()
+    client_mock.post.return_value.ok = True
+    reader = EventStreamReader(trigger, FAKE_STREAM_ROOT_URL, FAKE_STREAM_INFO, "sio-00000", 0, client_mock)
+
+    reader.refresh_stream_timer()
+
+    client_mock.post.assert_called_once_with(
+        url=FAKE_STREAM_INFO["refreshActiveSessionURL"],
+        json={"action_name": "refresh_active_stream_session", "appId": "sio-00000"},
+    )
+    trigger.log.assert_not_called()
+
+
+def test_read_stream_fails_on_invalid_line(trigger):
+    trigger.log_exception = MagicMock()
+    client_mock = MagicMock()
+    client_mock.get.return_value.__enter__.return_value.status_code = 200
+    client_mock.get.return_value.__enter__.return_value.iter_lines.return_value = [b"not a json line"]
+    reader = EventStreamReader(trigger, FAKE_STREAM_ROOT_URL, FAKE_STREAM_INFO, "sio-00000", 0, client_mock)
+
+    with pytest.raises(ValueError):
+        reader.run()
+
+    assert not reader.refresh_timer.is_running
+    assert trigger.events_queue.qsize() == 0
+    # logged once by the line handler, once by the stream handler
+    assert trigger.log_exception.call_count == 2
+
+
+def test_read_stream_mocked_integration(trigger):
+    """Mocked equivalent of test_read_stream_integration: discover the streams then read one of them."""
+    events = [
+        {"metadata": {"offset": 1, "eventType": "AuthActivityAuditEvent"}, "event": {}},
+        {"metadata": {"offset": 2, "eventType": "UserActivityAuditEvent"}, "event": {}},
+    ]
+
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/sensors/entities/datafeed/v2?appId=sio-00000",
+            json={"errors": [], "meta": {}, "resources": [FAKE_STREAM_INFO]},
+        )
+        mock.register_uri(
+            "GET",
+            FAKE_STREAM_INFO["dataFeedURL"],
+            content=b"\n".join(orjson.dumps(event) for event in events) + b"\n\n",
+        )
+
+        streams = trigger.get_streams("sio-00000")
+        stream_root_url, stream_info = list(streams.items())[0]
+        reader = EventStreamReader(trigger, stream_root_url, stream_info, "sio-00000", client=trigger.client)
+        try:
+            reader.run()
+        finally:
+            reader.stop_refresh()
+
+        assert mock.last_request.headers["Authorization"] == "Token my_token=="
+
+    assert stream_root_url == FAKE_STREAM_ROOT_URL
+    assert [trigger.events_queue.get_nowait() for _ in range(trigger.events_queue.qsize())] == [
+        (FAKE_STREAM_ROOT_URL, orjson.dumps(event).decode()) for event in events
+    ]
+
+
+def test_collect_verticles_without_collector(trigger):
+    reader = EventStreamReader(trigger, FAKE_STREAM_ROOT_URL, FAKE_STREAM_INFO, "sio-00000", 0, MagicMock())
+
+    reader.collect_verticles("ldt:aaaa:1", {})
+    reader.collect_verticles_for_epp_detection("alert-1", {})
+
+    assert trigger.events_queue.qsize() == 0
+
+
+def test_collect_verticles_for_epp_detection_ignores_other_events(trigger):
+    collector = MagicMock()
+    reader = EventStreamReader(trigger, FAKE_STREAM_ROOT_URL, FAKE_STREAM_INFO, "sio-00000", 0, MagicMock(), collector)
+
+    reader.collect_verticles_for_epp_detection(None, {})
+
+    collector.collect_verticles_from_alert.assert_not_called()
+    assert trigger.events_queue.qsize() == 0
+
+
+def test_event_forwarder_batches_events_and_stores_offsets(trigger, symphony_storage):
+    stream_root_url = "fake-stream-url"
+    other_stream_root_url = "other-stream-url"
+    creation_time_ms = int((time.time() - 10) * 1000)
+    trigger.events_queue.put((stream_root_url, '{"metadata": {"offset": 10}}'))
+    trigger.events_queue.put(
+        (stream_root_url, orjson.dumps({"metadata": {"offset": 12, "eventCreationTime": creation_time_ms}}).decode())
+    )
+    trigger.events_queue.put((other_stream_root_url, '{"metadata": {"offset": 3}}'))
+    forwarder = EventForwarder(trigger, {stream_root_url, other_stream_root_url})
+    trigger.push_events_to_intakes = MagicMock(side_effect=lambda events: forwarder.stop())
+
+    forwarder.run()
+
+    trigger.push_events_to_intakes.assert_called_once()
+    assert len(trigger.push_events_to_intakes.call_args.kwargs["events"]) == 3
+    with PersistentJSON("cache.json", symphony_storage) as cache:
+        assert cache == {stream_root_url: 12, other_stream_root_url: 3}
+    assert EVENTS_LAG.labels(intake_key="intake_key", stream=stream_root_url)._value.get() >= 10
+
+
+def test_event_forwarder_keeps_the_highest_offset(trigger, symphony_storage):
+    stream_root_url = "fake-stream-url"
+    with PersistentJSON("cache.json", symphony_storage) as cache:
+        cache[stream_root_url] = 100
+    trigger.events_queue.put((stream_root_url, '{"metadata": {"offset": 50}}'))
+    forwarder = EventForwarder(trigger, {stream_root_url})
+    trigger.push_events_to_intakes = MagicMock(side_effect=lambda events: forwarder.stop())
+
+    forwarder.run()
+
+    with PersistentJSON("cache.json", symphony_storage) as cache:
+        assert cache == {stream_root_url: 100}
+
+
+def test_event_forwarder_logs_forwarding_failures(trigger):
+    trigger.log_exception = MagicMock()
+    trigger.events_queue.put(("fake-stream-url", '{"metadata": {"offset": 10}}'))
+    forwarder = EventForwarder(trigger, {"fake-stream-url"})
+
+    def fail_and_stop(events):
+        forwarder.stop()
+        raise RuntimeError("intake unavailable")
+
+    trigger.push_events_to_intakes = MagicMock(side_effect=fail_and_stop)
+
+    forwarder.run()
+
+    trigger.log_exception.assert_called_once()
+    assert trigger.log_exception.call_args.kwargs["message"] == "Failed to forward events"
+
+
+def test_supervise_streams_does_nothing_when_readers_are_alive(trigger):
+    trigger.get_streams = MagicMock()
+    stream_thread = Mock()
+    stream_thread.is_alive.return_value = True
+
+    trigger.supervise_streams({FAKE_STREAM_ROOT_URL: FAKE_STREAM_INFO}, {FAKE_STREAM_ROOT_URL: stream_thread})
+
+    trigger.get_streams.assert_not_called()
+
+
+def test_supervise_streams_restarts_dead_readers(trigger, symphony_storage):
+    new_stream_root_url = "https://firehose.eu-1.crowdstrike.com/sensors/entities/datafeed/v1/1"
+    new_stream_info = {**FAKE_STREAM_INFO, "dataFeedURL": f"{new_stream_root_url}?appId=sio-11111"}
+    with PersistentJSON("cache.json", symphony_storage) as cache:
+        cache[FAKE_STREAM_ROOT_URL] = 42
+    trigger.generate_app_id = MagicMock(return_value="sio-11111")
+    trigger.get_streams = MagicMock(
+        return_value={FAKE_STREAM_ROOT_URL: FAKE_STREAM_INFO, new_stream_root_url: new_stream_info}
+    )
+    dead_thread = Mock()
+    dead_thread.is_alive.return_value = False
+    stream_threads = {FAKE_STREAM_ROOT_URL: dead_thread}
+
+    with patch("crowdstrike_falcon.event_stream_trigger.EventStreamReader") as reader_class:
+        trigger.supervise_streams({FAKE_STREAM_ROOT_URL: FAKE_STREAM_INFO}, stream_threads)
+
+    trigger.get_streams.assert_called_once_with("sio-11111")
+    assert reader_class.call_count == 2
+    assert reader_class.call_args_list[0].args[1:5] == (FAKE_STREAM_ROOT_URL, FAKE_STREAM_INFO, "sio-11111", 42)
+    assert reader_class.call_args_list[1].args[1:5] == (new_stream_root_url, new_stream_info, "sio-11111", 0)
+    assert stream_threads[FAKE_STREAM_ROOT_URL] is reader_class.return_value
+    assert stream_threads[new_stream_root_url] is reader_class.return_value
+    assert reader_class.return_value.start.call_count == 2
+
+
+def test_stop_streams_stops_alive_readers(trigger):
+    alive_thread, dead_thread = Mock(), Mock()
+    alive_thread.is_alive.return_value = True
+    dead_thread.is_alive.return_value = False
+
+    trigger.stop_streams({"alive": alive_thread, "dead": dead_thread})
+
+    alive_thread.stop.assert_called_once()
+    dead_thread.stop.assert_not_called()
+
+
+def test_run_restarts_the_event_forwarder(trigger):
+    trigger.get_streams = MagicMock(return_value={FAKE_STREAM_ROOT_URL: FAKE_STREAM_INFO})
+    trigger.supervise_streams = MagicMock()
+
+    with (
+        patch("crowdstrike_falcon.event_stream_trigger.EventStreamReader") as reader_class,
+        patch("crowdstrike_falcon.event_stream_trigger.EventForwarder") as forwarder_class,
+        patch("crowdstrike_falcon.event_stream_trigger.time.sleep", side_effect=lambda _: trigger.stop()) as sleep,
+    ):
+        forwarder_class.return_value.is_alive.return_value = False
+        reader_class.return_value.is_alive.return_value = True
+
+        trigger.run()
+
+    # the initial forwarder and the one restarted after the first is found down
+    assert forwarder_class.call_count == 2
+    trigger.log.assert_any_call(message="Event forwarder failed", level="error")
+    trigger.supervise_streams.assert_called_once()
+    sleep.assert_called_once_with(5)
+    reader_class.return_value.stop.assert_called_once()
+    forwarder_class.return_value.stop.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "error",
+    [make_http_error(500), HTTPError("no response"), RuntimeError("unexpected")],
+)
+def test_run_logs_errors(trigger, error):
+    trigger.log_exception = MagicMock()
+    trigger.get_streams = MagicMock(side_effect=error)
+
+    with patch("crowdstrike_falcon.event_stream_trigger.time.sleep") as sleep:
+        trigger.run()
+
+    sleep.assert_not_called()
+    trigger.log_exception.assert_called_once_with(error, message="Failed to fetch and forward events")

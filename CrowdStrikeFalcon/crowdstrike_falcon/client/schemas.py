@@ -1,6 +1,6 @@
 import enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class HostAction(enum.Enum):
@@ -29,5 +29,4 @@ class UpdateAlertParameter(BaseModel):
     name: AlertAction
     value: str
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)

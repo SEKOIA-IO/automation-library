@@ -356,6 +356,8 @@ class EventStreamReader(threading.Thread):
             self.log_exception(any_exception)
             raise
         finally:
+            # a dead reader must not keep refreshing its session
+            self.stop_refresh()
             self.log(
                 message=f"Stream reader on event stream {self.stream_root_url} stopped",
                 level="info",
