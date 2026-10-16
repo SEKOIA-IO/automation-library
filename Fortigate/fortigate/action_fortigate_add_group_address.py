@@ -1,6 +1,12 @@
 import requests
+from pydantic import BaseModel, Field
 from requests import Response
 from sekoia_automation.action import Action
+
+
+class FortigateAddGroupAddressArguments(BaseModel):
+    name: str = Field(..., min_length=1, description="the group name")
+    member: list[str] = Field(..., description="the modified list of objects for the group")
 
 
 class FortigateAddGroupAddress(Action):
@@ -8,7 +14,7 @@ class FortigateAddGroupAddress(Action):
     Action to Add a Group Address on a remote fortigate
     """
 
-    def run(self, arguments: dict) -> dict:
+    def run(self, arguments: FortigateAddGroupAddressArguments) -> dict:
         """
         Modify the members of the address group on the firewall.
         Parameters
@@ -20,8 +26,8 @@ class FortigateAddGroupAddress(Action):
         -------
         Http status code: 200 if ok, 4xx if an error occurs
         """
-        name = arguments["name"]
-        new_member_list = arguments["member"]
+        name = arguments.name
+        new_member_list = arguments.member
 
         for firewall in self.module.configuration["firewalls"]:
             self.base_ip: str = firewall.get("base_ip")

@@ -1,8 +1,31 @@
+import ipaddress
 import json
+from typing import Annotated, Any
 
 import requests
+from pydantic import AliasChoices, BaseModel, BeforeValidator, Field
 from requests import Response
 from sekoia_automation.action import Action
+
+
+def reject_non_string(value: Any) -> Any:
+    # IPv4Address would otherwise turn an integer into an address (8 -> 0.0.0.8)
+    if isinstance(value, (str, ipaddress.IPv4Address)):
+        return value
+    raise ValueError("Input should be a string IPv4 address")
+
+
+class FortigateAddIPArguments(BaseModel):
+    name: str = Field(..., min_length=1, description="the fw address object name")
+    ip: Annotated[ipaddress.IPv4Address, BeforeValidator(reject_non_string)] = Field(
+        ..., description="the IPv4 address to be blocked, (for ex: '1.1.1.1')"
+    )
+    associated_interface: str = Field(
+        default="",
+        validation_alias=AliasChoices("associated-interface", "associated_interface"),
+        description="interface of the object, leave blank for 'Any'",
+    )
+    comment: str = Field(default="", description="comment")
 
 
 class FortigateAddIPAction(Action):
@@ -10,7 +33,7 @@ class FortigateAddIPAction(Action):
     Action to Add an IP Address on a remote fortigate
     """
 
-    def run(self, arguments: dict) -> dict:
+    def run(self, arguments: FortigateAddIPArguments) -> dict:
         """
         Parameters
         ----------
@@ -24,10 +47,10 @@ class FortigateAddIPAction(Action):
         Http status code: 200 if ok, 4xx if an error occurs
         """
 
-        name = arguments["name"]
-        ip = arguments["ip"]
-        associated_interface = arguments.get("associated_interface", "")
-        comment = arguments.get("comment", "")
+        ip = str(arguments.ip)
+        name = arguments.name
+        associated_interface = arguments.associated_interface
+        comment = arguments.comment
 
         payload: dict = {
             "json": {
