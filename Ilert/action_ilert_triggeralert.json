@@ -8,7 +8,8 @@
       },
       "api_key": {
         "description": "The Sekoia.io API-Key to read the alert content.",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "base_url": {
         "description": "Base URL of Sekoia.io api (e.g. https://api.sekoia.io/).",
