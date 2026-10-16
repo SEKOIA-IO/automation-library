@@ -1,3 +1,4 @@
+import inspect
 import os
 import time
 import uuid
@@ -5,12 +6,16 @@ from datetime import datetime, timedelta, timezone
 from threading import Thread
 from unittest.mock import MagicMock, patch
 
+import orjson
 import pytest
 import requests_mock
 from requests import Response
+from sekoia_automation.connector import Connector
+from sekoia_automation.exceptions import SendEventError
 
 from okta_modules import OktaModule
 from okta_modules.helpers import get_upper_second
+from okta_modules.metrics import OUTCOMING_EVENTS
 from okta_modules.system_log_trigger import FetchEventsError, SystemLogConnector
 
 
@@ -386,6 +391,73 @@ def test_long_next_batch_should_not_sleep(trigger, message1, message2):
         assert events_cache == loaded_cache
         assert events_cache[message1["uuid"]] == True
         assert events_cache[message2["uuid"]] == True
+
+
+def test_sdk_can_report_a_failed_push():
+    # next_batch() relies on it to keep the checkpoint when the intake refuses the events
+    assert "raise_on_error" in inspect.signature(Connector.push_events_to_intakes).parameters
+
+
+def test_next_batch_does_not_move_forward_when_the_push_fails(trigger, data_storage, message1, message2):
+    now = datetime.now(timezone.utc)
+    checkpoint = (now - timedelta(seconds=50)).replace(microsecond=0)
+    trigger.cursor.offset = checkpoint
+    uuids = [message1["uuid"], message2["uuid"]]
+    messages = [
+        {**message1, "published": (now - timedelta(seconds=30)).isoformat()},
+        {**message2, "published": (now - timedelta(seconds=20)).isoformat()},
+    ]
+
+    forwarded_before = OUTCOMING_EVENTS.labels(intake_key="intake_key")._value.get()
+    trigger.push_events_to_intakes.side_effect = SendEventError("Failed to forward 2 events")
+
+    with patch("okta_modules.system_log_trigger.time"), requests_mock.Mocker() as mock_requests:
+        mock_requests.get("https://tenant_id.okta.com/api/v1/logs", status_code=200, json=messages)
+
+        with pytest.raises(SendEventError):
+            trigger.next_batch()
+
+        # the SDK is asked to raise instead of dropping the refused events
+        assert trigger.push_events_to_intakes.call_args.kwargs.get("raise_on_error") is True
+
+        # nothing moved forward: neither the checkpoint nor the events cache, in memory or on disk
+        restarted = SystemLogConnector(module=trigger.module, data_path=data_storage)
+        for connector in (trigger, restarted):
+            assert connector.cursor.offset == checkpoint
+            assert not any(uuid in connector.events_cache for uuid in uuids)
+
+        # and the events are not reported as forwarded
+        assert not any("Forwarded" in call.kwargs.get("message", "") for call in trigger.log.call_args_list)
+        assert OUTCOMING_EVENTS.labels(intake_key="intake_key")._value.get() == forwarded_before
+
+        # once the intake accepts them, the next batch forwards the same events and moves forward
+        trigger.push_events_to_intakes.side_effect = None
+        trigger.next_batch()
+
+    retried_events = trigger.push_events_to_intakes.call_args.kwargs["events"]
+    assert [orjson.loads(event)["uuid"] for event in retried_events] == uuids
+    assert trigger.cursor.offset == get_upper_second(now - timedelta(seconds=20))
+    assert all(uuid in trigger.events_cache for uuid in uuids)
+    assert OUTCOMING_EVENTS.labels(intake_key="intake_key")._value.get() == forwarded_before + 2
+
+
+def test_next_batch_keeps_forwarded_events_cached_when_logging_fails(trigger, message1):
+    # e.g. the logs API is down: the events already forwarded must not be forwarded again
+    trigger.log.side_effect = ConnectionError("logs API unavailable")
+
+    with patch("okta_modules.system_log_trigger.time"), requests_mock.Mocker() as mock_requests:
+        mock_requests.get("https://tenant_id.okta.com/api/v1/logs", status_code=200, json=[message1])
+
+        with pytest.raises(ConnectionError):
+            trigger.next_batch()
+
+        assert message1["uuid"] in trigger.load_events_cache()
+
+        # the next batch reads the same page again, but does not forward it again
+        trigger.log.side_effect = None
+        trigger.next_batch()
+
+    assert trigger.push_events_to_intakes.call_count == 1
 
 
 @pytest.mark.skipif("{'OKTA_BASE_URL', 'OKTA_API_TOKEN'}.issubset(os.environ.keys()) == False")

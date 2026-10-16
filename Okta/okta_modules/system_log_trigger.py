@@ -215,18 +215,21 @@ class SystemLogConnector(Connector):
 
             # if the batch is full, push it
             if len(batch_of_events) > 0:
-                self.log(
-                    message=f"Forwarded {len(batch_of_events)} events to the intake",
-                    level="info",
-                )
+                # Raises if some events were not forwarded, before the cache and the checkpoint move forward:
+                # the page is then read again by the next batch
+                self.push_events_to_intakes(events=batch_of_events, raise_on_error=True)
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
-                self.push_events_to_intakes(events=batch_of_events)
 
                 # Persist cache of event UUIDs after pushing to intake
                 for event in events:
                     self.events_cache[event["uuid"]] = True
 
                 self.save_events_cache()
+
+                self.log(
+                    message=f"Forwarded {len(batch_of_events)} events to the intake",
+                    level="info",
+                )
             else:
                 self.log(
                     message="No events to forward",
