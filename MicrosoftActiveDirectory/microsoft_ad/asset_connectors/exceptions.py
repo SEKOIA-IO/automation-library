@@ -1,5 +1,5 @@
-import requests
 from sekoia_automation.exceptions import AutomationSDKError
+import requests
 
 # TODO: drop this module and import these exceptions from
 # sekoia_automation.exceptions once
