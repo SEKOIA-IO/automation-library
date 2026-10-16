@@ -1,8 +1,9 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
+from ldap3.core.exceptions import LDAPException
 
-from microsoft_ad.actions_base import MicrosoftADAction
+from microsoft_ad.actions_base import MicrosoftADAction, MicrosoftADModule
 
 
 class ConcreteMicrosoftADAction(MicrosoftADAction):
@@ -141,10 +142,10 @@ class TestSearchUserdnQuery:
 
         action.search_userdn_query("test.test", "DC=test,DC=com")
 
-        mock_client.search.assert_called_once()
-        call_kwargs = mock_client.search.call_args
-        assert call_kwargs[1]["search_base"] == "DC=test,DC=com"
-        assert "samaccountname=test.test" in call_kwargs[1]["search_filter"]
+        assert mock_client.search.call_count >= 1
+        first_call_kwargs = mock_client.search.call_args_list[0]
+        assert first_call_kwargs[1]["search_base"] == "DC=test,DC=com"
+        assert "samaccountname=test.test" in first_call_kwargs[1]["search_filter"]
 
     def test_search_builds_filter_with_email(self):
         action = object.__new__(ConcreteMicrosoftADAction)
@@ -156,9 +157,9 @@ class TestSearchUserdnQuery:
 
         action.search_userdn_query("test.test", "DC=test,DC=com", email="test@example.com")
 
-        mock_client.search.assert_called_once()
-        call_kwargs = mock_client.search.call_args
-        search_filter = call_kwargs[1]["search_filter"]
+        assert mock_client.search.call_count >= 1
+        first_call_kwargs = mock_client.search.call_args_list[0]
+        search_filter = first_call_kwargs[1]["search_filter"]
         assert search_filter.startswith("(&")
         assert "(mail=test@example.com)" in search_filter
         assert "(|(samaccountname=test.test)" in search_filter
@@ -173,9 +174,9 @@ class TestSearchUserdnQuery:
 
         action.search_userdn_query(None, "DC=test,DC=com", email="test.integration@integration.local")
 
-        mock_client.search.assert_called_once()
-        call_kwargs = mock_client.search.call_args
-        search_filter = call_kwargs[1]["search_filter"]
+        assert mock_client.search.call_count >= 1
+        first_call_kwargs = mock_client.search.call_args_list[0]
+        search_filter = first_call_kwargs[1]["search_filter"]
         assert search_filter == "(mail=test.integration@integration.local)"
 
     def test_search_raises_when_no_username_and_no_email(self):
@@ -195,9 +196,9 @@ class TestSearchUserdnQuery:
 
         action.search_userdn_query("test.test", "DC=test,DC=com", email=None)
 
-        mock_client.search.assert_called_once()
-        call_kwargs = mock_client.search.call_args
-        search_filter = call_kwargs[1]["search_filter"]
+        assert mock_client.search.call_count >= 1
+        first_call_kwargs = mock_client.search.call_args_list[0]
+        search_filter = first_call_kwargs[1]["search_filter"]
         assert search_filter.startswith("(|")
         assert not search_filter.startswith("(&")
 
@@ -223,3 +224,115 @@ class TestSearchUserdnQuery:
         result = action.search_userdn_query("user", "DC=example,DC=com")
 
         assert len(result) == 2
+
+    def test_search_uses_shared_client(self):
+        action = object.__new__(ConcreteMicrosoftADAction)
+        action.log = Mock()
+
+        mock_client = Mock()
+        mock_client.response = []
+        action.client = mock_client
+
+        action.search_userdn_query("testuser", "DC=example,DC=com")
+
+        assert mock_client.search.call_count >= 1
+
+    def test_client_property_uses_default_and_override(self):
+        action = object.__new__(ConcreteMicrosoftADAction)
+        action.module = MicrosoftADModule()
+        action.module.configuration = {
+            "servername": "test_servername",
+            "admin_username": "test_admin_username",
+            "admin_password": "test_admin_password",
+        }
+
+        default_client = Mock()
+        with (
+            patch("microsoft_ad.client.ldap_client.Server") as mock_server,
+            patch(
+                "microsoft_ad.client.ldap_client.Connection",
+                return_value=default_client,
+            ),
+        ):
+            assert action.client is default_client
+            assert action.client is default_client
+            mock_server.assert_called_once_with(host="test_servername", port=636, use_ssl=True)
+
+        override_client = Mock()
+        action.client = override_client
+        assert action.client is override_client
+        assert action.client_for(None) is override_client
+
+    def test_client_for_specific_host(self):
+        action = object.__new__(ConcreteMicrosoftADAction)
+        action.module = MicrosoftADModule()
+        action.module.configuration = {
+            "servername": "test_servername",
+            "admin_username": "test_admin_username",
+            "admin_password": "test_admin_password",
+        }
+
+        created_client = Mock()
+        with (
+            patch("microsoft_ad.client.ldap_client.Server") as mock_server,
+            patch(
+                "microsoft_ad.client.ldap_client.Connection",
+                return_value=created_client,
+            ) as mock_connection,
+        ):
+            result = action.client_for("child.lab.test.com")
+
+        assert result is created_client
+        mock_server.assert_called_once_with(host="child.lab.test.com", port=636, use_ssl=True)
+        mock_connection.assert_called_once_with(
+            mock_server.return_value,
+            auto_bind=True,
+            user="test_admin_username",
+            password="test_admin_password",
+        )
+
+    def test_get_forest_root_dn_and_child_domains(self):
+        action = object.__new__(ConcreteMicrosoftADAction)
+        action.log = Mock()
+
+        root_client = Mock()
+        root_client.response = [
+            {
+                "type": "searchResEntry",
+                "attributes": {"rootDomainNamingContext": ["DC=lab,DC=test,DC=com"]},
+            }
+        ]
+        assert action._get_forest_root_dn(client=root_client) == "DC=lab,DC=test,DC=com"
+
+        root_client.response = [
+            {
+                "type": "searchResEntry",
+                "attributes": {"rootDomainNamingContext": "DC=lab,DC=test,DC=com"},
+            }
+        ]
+        assert action._get_forest_root_dn(client=root_client) == "DC=lab,DC=test,DC=com"
+
+        child_client = Mock()
+        child_client.response = [
+            {
+                "type": "searchResEntry",
+                "attributes": {"nCName": ["DC=child,DC=lab,DC=test,DC=com"]},
+            },
+            {
+                "type": "searchResEntry",
+                "attributes": {"nCName": "DC=lab,DC=test,DC=com"},
+            },
+        ]
+        assert action._get_child_domains("DC=lab,DC=test,DC=com", client=child_client) == [
+            "DC=child,DC=lab,DC=test,DC=com"
+        ]
+
+    def test_get_forest_root_dn_and_child_domains_handle_ldap_errors(self):
+        action = object.__new__(ConcreteMicrosoftADAction)
+        action.log = Mock()
+
+        failing_client = Mock()
+        failing_client.search.side_effect = LDAPException("boom")
+
+        assert action._get_forest_root_dn(client=failing_client) is None
+        assert action._get_child_domains("DC=lab,DC=test,DC=com", client=failing_client) == []
