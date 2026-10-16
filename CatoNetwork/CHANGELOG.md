@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Report API errors to the platform with exponential backoff
 - Log one platform message per forwarded batch and nothing for empty polls
 - Raise `critical` only after 3 consecutive authentication failures matching known messages
+- Reset the authentication failure counter as soon as the events feed is fetched, even if the intake push then fails
 - Raise a single `critical` when the intake keeps rejecting the same batch; the marker is never skipped
 - Measure the `EVENTS_LAG` metric from the newest event
 

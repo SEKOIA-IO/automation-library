@@ -370,6 +370,43 @@ async def test_run_cycle_success_resets_auth_failure_counter(connector: CatoSase
 
 
 @pytest.mark.asyncio
+async def test_run_cycle_successful_fetch_with_incomplete_push_resets_auth_failure_counter(
+    connector: CatoSaseConnector,
+):
+    auth = TransportServerError("unauthorized", 401)
+    mock_feed(connector, auth, make_feed("marker-1", 2), auth, auth)
+    connector.push_events_to_intakes = MagicMock(return_value=[])
+
+    await run_cycles(connector, 4)
+
+    assert levels(connector) == ["error"] * 4
+    assert connector.latest_events_feed_id is None
+
+
+@pytest.mark.asyncio
+async def test_next_batch_resets_auth_failure_counter_before_push(connector: CatoSaseConnector):
+    connector._consecutive_auth_failures = 2
+    mock_feed(connector, make_feed("marker-1", 1))
+    connector.push_events_to_intakes = MagicMock(side_effect=RuntimeError("intake down"))
+
+    with pytest.raises(RuntimeError):
+        await connector.next_batch()
+
+    assert connector._consecutive_auth_failures == 0
+
+
+@pytest.mark.asyncio
+async def test_run_cycle_server_and_network_errors_do_not_reset_auth_failure_counter(connector: CatoSaseConnector):
+    auth = TransportServerError("unauthorized", 401)
+    mock_feed(connector, auth, TransportServerError("unavailable", 503), auth, TimeoutError(), auth)
+
+    await run_cycles(connector, 5)
+
+    assert levels(connector) == ["error"] * 4 + ["critical"]
+    assert "HTTP 401" in connector.log.call_args.args[0]
+
+
+@pytest.mark.asyncio
 async def test_run_cycle_incomplete_push_critical_once_after_five_on_same_marker(connector: CatoSaseConnector):
     set_marker(connector, "marker-0")
     mock_feed(connector, *[make_feed("marker-1", 2) for _ in range(7)])

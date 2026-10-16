@@ -191,7 +191,11 @@ class CatoSaseConnector(Connector):
             for record in account.records:
                 event = orjson.dumps({"event_time": record.time, **record.fieldsMap}).decode("utf-8")
 
-                # The SDK silently drops oversized events: drop them here so the push can be fully acknowledged
+                # The SDK silently drops oversized events: drop them here so the push can be fully acknowledged.
+                # Characters, not bytes, on purpose: this mirrors the SDK's own check in `_chunk_events`
+                # (`len(result_event) > EVENT_BYTES_MAX_SIZE` on the serialized string). Counting bytes would drop
+                # multi-byte events the SDK and the intake accept; a persistent intake rejection is already
+                # reported by the incomplete-push critical.
                 if len(event) > EVENT_BYTES_MAX_SIZE:
                     discarded += 1
                     continue
@@ -209,6 +213,7 @@ class CatoSaseConnector(Connector):
         Run one collection cycle: fetch from the saved marker, push, then save the new marker.
 
         The marker is only saved when the intake acknowledged every event, so a failed push is refetched.
+        The authentication failure counter is reset as soon as the fetch succeeds.
 
         Returns:
             int: the number of events Cato returned (`fetchedCount`)
@@ -217,6 +222,9 @@ class CatoSaseConnector(Connector):
 
         marker = self.latest_events_feed_id
         feed = await self.cato_client.load_events_feed(marker)
+        # A successful fetch proves the credentials work, even if the push below fails.
+        # Network and server errors deliberately do not reset this counter: they prove nothing about the credentials.
+        self._consecutive_auth_failures = 0
         events = self._serialize_events(feed)
 
         event_ids = await self._push_events(events) if events else []
