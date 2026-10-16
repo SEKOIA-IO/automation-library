@@ -1,6 +1,7 @@
 import argparse
 import json
 import subprocess
+import sys
 import glob
 
 
@@ -17,22 +18,29 @@ def load_all_json_files(base_path: str) -> list[str]:
     return list(glob.glob(base_path + '/**/*.json', recursive=True))
 
 
-def find_changed_json_files() -> list[str]:
+def find_changed_json_files(base: str) -> list[str]:
     """
-    Find all changed json files in the repository.
+    Find the json files changed since the merge base with `base`, uncommitted edits included
+    and deleted files excluded.
+
+    Args:
+        base: str
 
     Returns:
         list[str]:
     """
     diff = subprocess.run(
-        ["git", "diff", "--name-only", "origin/main"],
-        capture_output=True
+        ["git", "diff", "--name-only", "--diff-filter=d", "--merge-base", base],
+        capture_output=True,
+        text=True,
     )
+    if diff.returncode != 0:
+        sys.exit("git diff against {0} failed: {1}".format(base, diff.stderr.strip()))
 
     return [
-        changed_file.decode()
+        changed_file
         for changed_file in diff.stdout.splitlines()
-        if changed_file.decode().endswith(".json")
+        if changed_file.endswith(".json")
     ]
 
 
@@ -48,6 +56,9 @@ def format_json_file(file_path: str, check_only: bool = True) -> bool:
         file_content = file.read()
 
     expected_content = json.dumps(json.loads(file_content), indent=2)
+    # a single trailing newline, as added by most editors, is accepted
+    if file_content == expected_content + "\n":
+        return True
 
     if file_content != expected_content and check_only:
         print("File {0} is not formatted correctly".format(file_path))
@@ -94,15 +105,25 @@ def main():
     2. Fix all json files in the repository: python linter.py fix
     3. Check only changed json files: python linter.py check --changes
     4. Fix only changed json files: python linter.py fix --changes
+    5. Compare with another branch: python linter.py check --changes --base origin/main
     """
     parser = argparse.ArgumentParser(description="Linter")
     parser.add_argument("action", choices=["check", "fix"])
     parser.add_argument(
         "--changes", action="store_true", help="Check/Fix only changed files"
     )
+    parser.add_argument(
+        "--base", default="origin/develop", help="Branch or commit to compare with when using --changes"
+    )
     args = parser.parse_args()
 
-    files = find_changed_json_files() if args.changes else load_all_json_files(".")
+    if args.changes:
+        files = find_changed_json_files(args.base)
+        print("{0} changed json file(s) to {1}:".format(len(files), args.action))
+        for file_path in files:
+            print("  {0}".format(file_path))
+    else:
+        files = load_all_json_files(".")
 
     format_json_files(files, check_only=args.action == "check")
 
