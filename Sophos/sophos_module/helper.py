@@ -9,6 +9,7 @@ MAPPING = {
     "when": "end",
     "user_id": "duid",
     "created_at": "rt",
+    "createdAt": "rt",
     "full_file_path": "filePath",
     "location": "dhost",
 }
