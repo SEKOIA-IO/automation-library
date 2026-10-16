@@ -1,8 +1,21 @@
 from posixpath import join as urljoin
 
+from pydantic import Field, model_validator
 from sekoia_automation.action import Action
 
-from onyphe.utils import get_arg_ip, get_with_paging
+from onyphe.models import IPAddressArgument, OnyphePagingArguments
+from onyphe.utils import get_with_paging
+
+
+class OnypheDatascanArguments(OnyphePagingArguments):
+    ip: IPAddressArgument | None = Field(default=None, description="IP address to scan")
+    string: str | None = Field(default=None, min_length=1, description="String to scan")
+
+    @model_validator(mode="after")
+    def validate_entrypoint(self) -> "OnypheDatascanArguments":
+        if (self.ip is None) == (self.string is None):
+            raise ValueError("Please specify exactly one of 'ip' or 'string'")
+        return self
 
 
 class OnypheDatascanAction(Action):
@@ -23,19 +36,17 @@ class OnypheDatascanAction(Action):
     > Thus, we are able to identify multiple virtual hosts on a unique IP address.
     """
 
-    def run(self, arguments) -> dict:
+    def run(self, arguments: OnypheDatascanArguments) -> dict:
         url: str = "https://www.onyphe.io/api/v2/simple/"
-        if ("ip" in arguments) == ("string" in arguments):
-            raise TypeError("Invalid number of arguments. Please specify exactly one of 'ip' or 'string'")
-
-        if "ip" in arguments:
-            resource = get_arg_ip(arguments)
+        if arguments.ip is not None:
+            resource = str(arguments.ip)
+        elif arguments.string is not None:
+            resource = arguments.string
         else:
-            resource = arguments["string"]
+            raise ValueError("Please specify exactly one of 'ip' or 'string'")
 
         get_url: str = urljoin(url, "datascan/" + resource)
 
-        budget = arguments.get("budget", 1)
-        params = {"page": arguments.get("first_page", 1)}
+        params = {"page": arguments.first_page}
 
-        return get_with_paging(get_url, self.module.configuration, budget, params)
+        return get_with_paging(get_url, self.module.configuration, arguments.budget, params)

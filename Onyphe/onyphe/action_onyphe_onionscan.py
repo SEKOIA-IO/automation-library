@@ -2,7 +2,8 @@ from posixpath import join as urljoin
 
 from sekoia_automation.action import Action
 
-from onyphe.utils import get_arg_onion, get_with_paging
+from onyphe.models import OnypheOnionArguments
+from onyphe.utils import get_with_paging
 
 
 class OnypheOnionscanAction(Action):
@@ -12,12 +13,10 @@ class OnypheOnionscanAction(Action):
     It seems that it is not part of the _free_ tier
     """
 
-    def run(self, arguments) -> dict:
+    def run(self, arguments: OnypheOnionArguments) -> dict:
         url: str = "https://www.onyphe.io/api/v2/simple/"
-        onion = get_arg_onion(arguments)
-        get_url: str = urljoin(url, "onionscan/" + onion)
+        get_url: str = urljoin(url, "onionscan/" + arguments.onion)
 
-        budget = arguments.get("budget", 1)
-        params = {"page": arguments.get("first_page", 1)}
+        params = {"page": arguments.first_page}
 
-        return get_with_paging(get_url, self.module.configuration, budget, params)
+        return get_with_paging(get_url, self.module.configuration, arguments.budget, params)

@@ -1,8 +1,8 @@
 import pytest
+from pydantic import ValidationError
 from generic_onyphe_tests import *  # noqa: F401, F403
 
 from onyphe.action_onyphe_md5 import OnypheMD5Action
-from onyphe.errors import InvalidArgument
 
 
 @pytest.fixture
@@ -28,9 +28,11 @@ def arguments():
 @pytest.fixture
 def bad_arguments():
     return [
-        (InvalidArgument, {"md5": 1234}),
-        (InvalidArgument, {"md5": "1234"}),
-        (TypeError, {}),
+        (ValidationError, {"md5": 1234}),
+        (ValidationError, {"md5": "1234"}),
+        (ValidationError, {}),
+        (ValidationError, {"md5": "7A1F20CAE067B75A52BC024B83EE4667", "budget": -1}),
+        (ValidationError, {"md5": "7A1F20CAE067B75A52BC024B83EE4667", "first_page": 0}),
     ]
 
 

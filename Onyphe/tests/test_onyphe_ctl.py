@@ -1,8 +1,8 @@
 import pytest
+from pydantic import ValidationError
 from generic_onyphe_tests import *  # noqa: F401, F403
 
 from onyphe.action_onyphe_ctl import OnypheCtlAction
-from onyphe.errors import InvalidArgument
 
 
 @pytest.fixture
@@ -28,9 +28,11 @@ def arguments():
 @pytest.fixture
 def bad_arguments():
     return [
-        (InvalidArgument, {"domain": 33}),
-        (InvalidArgument, {"domain": "examplecom"}),
-        (TypeError, {}),
+        (ValidationError, {"domain": 33}),
+        (ValidationError, {"domain": "examplecom"}),
+        (ValidationError, {}),
+        (ValidationError, {"domain": "gOOgle.com", "budget": -1}),
+        (ValidationError, {"domain": "gOOgle.com", "first_page": 0}),
     ]
 
 
