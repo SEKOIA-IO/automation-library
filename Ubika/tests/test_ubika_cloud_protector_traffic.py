@@ -109,5 +109,5 @@ def test_old_checkpoint(trigger, data_storage, fake_time):
     with context as cache:
         cache["most_recent_date_seen"] = "2022-02-22T16:16:46+00:00"
 
-    datetime_expected = fake_time - timedelta(days=7)
+    datetime_expected = fake_time - timedelta(days=30)
     assert trigger.most_recent_date_seen.isoformat() == datetime_expected.isoformat()
