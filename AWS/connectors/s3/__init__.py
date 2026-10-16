@@ -99,7 +99,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         records = []
         result = 0
         timestamps_to_log: list[int] = []
-
+          
         messages: list[tuple[str, int]]
         async with self.sqs_wrapper.receive_messages(
             max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
@@ -240,7 +240,9 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
             last_processed = key
 
-            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(object_records))
+            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).inc(
+                len(object_records)
+            )
             records.extend(object_records)
 
             if len(records) >= self.limit_of_events_to_push:
