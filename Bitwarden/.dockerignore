@@ -1,0 +1,11 @@
+.git
+.gitignore
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+.coverage
+coverage.xml
+junit.xml
+__pycache__/
+*.pyc
