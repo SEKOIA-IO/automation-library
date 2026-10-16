@@ -1,9 +1,11 @@
 import signal
 from collections import Counter
+from collections.abc import Iterator
+from contextlib import contextmanager
 from threading import Event, Timer
 from typing import Any
 
-from pydantic.v1 import BaseModel
+from pydantic.v1 import BaseModel, Field
 
 from microsoft_ad.actions_base import MicrosoftADAction
 from microsoft_ad.asset_connectors.exceptions import AssetConnectorPushError, AssetConnectorStoppedError
@@ -23,7 +25,7 @@ class SynchronizeAssetsArguments(BaseModel):
     sekoia_base_url: str = "https://api.sekoia.io"
     sekoia_api_key: str
     basedn: str
-    batch_size: int = 1000
+    batch_size: int = Field(1000, ge=1)
 
 
 class SynchronizeAssetsAction(MicrosoftADAction):
@@ -47,6 +49,14 @@ class SynchronizeAssetsAction(MicrosoftADAction):
         time_limit_reached.set()
         connector.stop()
 
+    @contextmanager
+    def _warn_on_error(self, what: str) -> Iterator[None]:
+        """Run a best-effort step: log a warning instead of raising."""
+        try:
+            yield
+        except Exception as error:
+            self.log(f"Unable to {what}: {error}", "warning")
+
     def run(self, arguments: SynchronizeAssetsArguments) -> dict[str, Any]:
         # The connector registers its own SIGINT/SIGTERM handlers: restore the
         # previous ones once done, the process may run other actions
@@ -55,7 +65,8 @@ class SynchronizeAssetsAction(MicrosoftADAction):
             return self._run_cycle(arguments)
         finally:
             for signum, handler in previous_handlers.items():
-                signal.signal(signum, handler)
+                if handler is not None:
+                    signal.signal(signum, handler)
 
     def _run_cycle(self, arguments: SynchronizeAssetsArguments) -> dict[str, Any]:
         asset_connector_uuid = arguments.asset_connector_uuid
@@ -96,31 +107,30 @@ class SynchronizeAssetsAction(MicrosoftADAction):
             )
             has_more = True
         except AssetConnectorPushError:
-            # The push error is already logged: end the run without failing it, the next
-            # scheduled run retries from the previous checkpoint
+            # Fail the run without raising, so the counters are still returned
+            self.error("A batch of assets could not be pushed to Sekoia.io")
             connector.log(
                 message="A batch of assets could not be pushed to Sekoia.io: the checkpoint was not "
                 "advanced and the next scheduled run restarts from the previous checkpoint",
                 level="warning",
             )
         except Exception as error:
-            connector.log(
-                message=f"Error while running asset connector {connector.connector_name}: {error}",
-                level="error",
-            )
+            # An error log is sent at once and raises when the logs endpoint is down: keep the
+            # real error. TODO: drop this guard once `Trigger.log` no longer raises in the SDK
+            with self._warn_on_error("send the connector error log"):
+                connector.log(
+                    message=f"Error while running asset connector {connector.connector_name}: {error}",
+                    level="error",
+                )
             raise
         finally:
             stats.update(connector.cycle_stats)
             stop_timer.cancel()
             connector.stop()
-            try:
+            with self._warn_on_error("close the LDAP connection"):
                 connector._reset_ldap_connection()
-            except Exception as error:
-                self.log(f"Unable to close the LDAP connection: {error}", "warning")
-            try:
+            with self._warn_on_error("send the connector logs"):
                 connector._send_logs_to_api()
-            except Exception as error:
-                self.log(f"Unable to send the connector logs: {error}", "warning")
 
         return {
             "fetched": stats["fetched"],

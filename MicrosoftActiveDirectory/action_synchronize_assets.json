@@ -66,7 +66,7 @@
         "type": "integer"
       },
       "failed_batches": {
-        "description": "Number of asset batches that could not be pushed to Sekoia.io. The cycle stops at the first failure and the next scheduled run restarts from the previous checkpoint",
+        "description": "Number of asset batches that could not be pushed to Sekoia.io. The cycle stops at the first failure, the run ends in error and the next scheduled run restarts from the previous checkpoint",
         "type": "integer"
       },
       "has_more": {

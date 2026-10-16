@@ -14,6 +14,8 @@ from ldap3.core.exceptions import LDAPException
 from pydantic.v1 import ValidationError
 from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel
 from sekoia_automation.storage import PersistentJSON
+from sekoia_automation.trigger import Trigger
+from tenacity import wait_none
 
 from microsoft_ad.actions_base import MicrosoftADModule
 from microsoft_ad.asset_connectors.exceptions import AssetConnectorCriticalError
@@ -213,10 +215,12 @@ def test_run_returns_has_more_on_sigterm_and_restores_the_handler(build_action, 
 def test_run_reports_a_failed_push(build_action, api, tmp_path):
     api.post(PUSH_URL, [{"status_code": 200, "json": {}}, {"status_code": 500, "json": {}}])
 
-    results = build_action().run(ARGUMENTS)
+    action = build_action()
+    results = action.run(ARGUMENTS)
 
-    # The cycle stops at the first failed batch, without failing the run
+    # The cycle stops at the first failed batch: the run ends in error and still returns its counters
     assert results == {"fetched": 2, "pushed_batches": 1, "failed_batches": 1, "has_more": False}
+    assert action.error_message == "A batch of assets could not be pushed to Sekoia.io"
     assert len(requests_to(api, PUSH_URL)) == 2
     assert "most_recent_datetime" not in read_context(tmp_path)
     logs = sent_logs(api)
@@ -229,13 +233,33 @@ def test_run_reports_a_failed_push(build_action, api, tmp_path):
     )
 
 
+def test_failed_push_sends_the_counters_with_the_error(build_action, api):
+    api.post(PUSH_URL, status_code=500, json={})
+    action = build_action()
+
+    with (
+        patch.object(type(action), "arguments", ARGUMENTS),
+        patch.object(type(action), "set_task_as_running"),
+        patch.object(type(action), "_send_request") as send_request,
+    ):
+        action.execute()
+
+    # The SDK sends the results and the error in the same callback: the run fails and keeps its counters
+    data = send_request.call_args.args[0]
+    assert data["status"] == "finished"
+    assert data["error"] == "A batch of assets could not be pushed to Sekoia.io"
+    assert data["results"] == {"fetched": 1, "pushed_batches": 0, "failed_batches": 1, "has_more": False}
+
+
 def test_run_reports_a_push_that_keeps_failing_to_connect(build_action, api, tmp_path):
     api.post(PUSH_URL, exc=requests.ConnectionError("connection refused"))
 
     with patch.object(MicrosoftADUserAssetSyncConnector, "PUSH_RETRY_MAX_DELAY", 0):
-        results = build_action().run(ARGUMENTS)
+        action = build_action()
+        results = action.run(ARGUMENTS)
 
     assert results == {"fetched": 1, "pushed_batches": 0, "failed_batches": 1, "has_more": False}
+    assert action.error_message == "A batch of assets could not be pushed to Sekoia.io"
     assert "most_recent_datetime" not in read_context(tmp_path)
     assert any(log["level"] == "error" and "Unable to push a batch" in log["message"] for log in sent_logs(api))
 
@@ -246,9 +270,11 @@ def test_run_returns_has_more_when_stopped_during_a_push(build_action, api, tmp_
         raise requests.ConnectionError("connection reset")
 
     with patch.object(MicrosoftADUserAssetSyncConnector, "post_assets_to_api", stop_then_fail):
-        results = build_action().run(ARGUMENTS)
+        action = build_action()
+        results = action.run(ARGUMENTS)
 
     assert results == {"fetched": 1, "pushed_batches": 0, "failed_batches": 0, "has_more": True}
+    assert action.error_message is None
     assert "most_recent_datetime" not in read_context(tmp_path)
 
 
@@ -257,6 +283,22 @@ def test_run_logs_errors_to_the_connector_configuration(build_action, api):
         build_action(error=RuntimeError("LDAP is down")).run(ARGUMENTS)
 
     assert any(log["level"] == "error" and "LDAP is down" in log["message"] for log in sent_logs(api))
+
+
+def test_run_keeps_the_real_error_when_the_logs_endpoint_is_down(build_action, api):
+    api.post(LOGS_URL, status_code=503)
+    action = build_action(error=RuntimeError("LDAP is down"))
+
+    # Don't wait between the SDK's retries of the logs sending
+    with patch.object(Trigger._send_logs_to_api.retry, "wait", wait_none()):
+        with pytest.raises(RuntimeError, match="LDAP is down"):
+            action.run(ARGUMENTS)
+
+    assert requests_to(api, LOGS_URL)
+    assert any(
+        log["level"] == "warning" and "Unable to send the connector error log" in log["message"]
+        for log in action._logs
+    )
 
 
 def test_run_stops_on_a_critical_log(build_action, api, tmp_path):
@@ -281,6 +323,14 @@ def test_run_requires_the_connector_configuration(build_action, api):
     assert not api.request_history
 
 
+@pytest.mark.parametrize("batch_size", [0, -1])
+def test_run_rejects_a_batch_size_below_one(build_action, api, batch_size):
+    with pytest.raises(ValidationError):
+        build_action().run({**ARGUMENTS, "batch_size": batch_size})
+
+    assert not api.request_history
+
+
 def test_run_restores_the_signal_handlers(build_action, api):
     def handler(*_):
         pass
@@ -292,6 +342,27 @@ def test_run_restores_the_signal_handlers(build_action, api):
         assert signal.getsignal(signal.SIGTERM) is handler
     finally:
         signal.signal(signal.SIGTERM, previous)
+
+
+def test_run_skips_the_signal_handlers_not_installed_from_python(build_action, api):
+    def handler(*_):
+        pass
+
+    previous_sigint = signal.getsignal(signal.SIGINT)
+    previous_sigterm = signal.signal(signal.SIGTERM, handler)
+    real_getsignal = signal.getsignal
+    try:
+        # getsignal returns None for a handler installed outside Python (e.g. from C)
+        with patch.object(
+            signal, "getsignal", side_effect=lambda signum: None if signum == signal.SIGINT else real_getsignal(signum)
+        ):
+            results = build_action().run(ARGUMENTS)
+
+        assert results == {"fetched": 3, "pushed_batches": 3, "failed_batches": 0, "has_more": False}
+        assert signal.getsignal(signal.SIGTERM) is handler
+    finally:
+        signal.signal(signal.SIGINT, previous_sigint)
+        signal.signal(signal.SIGTERM, previous_sigterm)
 
 
 def test_run_closes_the_ldap_connection(build_action, api):
