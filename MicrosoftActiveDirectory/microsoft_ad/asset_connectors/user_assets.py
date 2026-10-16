@@ -299,6 +299,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         )
 
     def _entries(self) -> Generator[dict[str, Any], None, None]:
+
         seen_dn: set[str] = set()
 
         for attempt in range(2):
@@ -318,6 +319,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
                 self._reset_ldap_connection()
 
     def get_users_generator(self) -> Generator[dict[str, Any], None, None]:
+
         self.log("Starting LDAP paged search for users...", level="info")
 
         checkpoint_time = self.most_recent_datetime

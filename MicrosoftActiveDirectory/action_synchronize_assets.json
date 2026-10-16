@@ -35,11 +35,11 @@
         "type": "string"
       },
       "batch_size": {
-        "title": "Chunk size",
+        "title": "Chunk Size",
         "description": "Number of assets to send in each batch to Sekoia.io",
         "type": "integer",
         "minimum": 1,
-        "default": 100
+        "default": 1000
       }
     },
     "required": [
@@ -66,7 +66,7 @@
         "type": "integer"
       },
       "failed_batches": {
-        "description": "Number of asset batches that could not be pushed to Sekoia.io",
+        "description": "Number of asset batches that could not be pushed to Sekoia.io. The cycle stops at the first failure and the next scheduled run restarts from the previous checkpoint",
         "type": "integer"
       },
       "has_more": {

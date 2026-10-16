@@ -1,12 +1,12 @@
 import signal
 from collections import Counter
-from threading import Timer
+from threading import Event, Timer
 from typing import Any
 
 from pydantic.v1 import BaseModel
 
 from microsoft_ad.actions_base import MicrosoftADAction
-from microsoft_ad.asset_connectors.exceptions import AssetConnectorStoppedError
+from microsoft_ad.asset_connectors.exceptions import AssetConnectorPushError, AssetConnectorStoppedError
 from microsoft_ad.asset_connectors.user_assets_sync import MicrosoftADUserAssetSyncConnector
 
 
@@ -43,6 +43,10 @@ class SynchronizeAssetsAction(MicrosoftADAction):
     # The platform marks a run failed after 2 hours: keep time to stop cleanly.
     MAX_DURATION = 100 * 60
 
+    def stop_on_time_limit(self, time_limit_reached: Event, connector: MicrosoftADUserAssetSyncConnector) -> None:
+        time_limit_reached.set()
+        connector.stop()
+
     def run(self, arguments: SynchronizeAssetsArguments) -> dict[str, Any]:
         # The connector registers its own SIGINT/SIGTERM handlers: restore the
         # previous ones once done, the process may run other actions
@@ -69,7 +73,9 @@ class SynchronizeAssetsAction(MicrosoftADAction):
             f"{base_url}/api/v1/symphony/connector-configurations/{asset_connector_uuid}/logs"
         )
 
-        stop_timer = Timer(self.MAX_DURATION, connector.stop)
+        time_limit_reached = Event()
+
+        stop_timer = Timer(self.MAX_DURATION, self.stop_on_time_limit, args=(time_limit_reached, connector))
         stop_timer.daemon = True
         stop_timer.start()
         connector._logs_timer.start()
@@ -79,12 +85,24 @@ class SynchronizeAssetsAction(MicrosoftADAction):
         try:
             connector.asset_fetch_cycle()
         except AssetConnectorStoppedError:
+            if time_limit_reached.is_set():
+                reason = f"reached the time limit of {self.MAX_DURATION // 60} minutes"
+            else:
+                reason = "was stopped"
             connector.log(
-                message="Fetch cycle stopped before its end, the next run resumes "
-                "from the last committed checkpoint",
+                message=f"The fetch cycle {reason} before reading the whole directory: the checkpoint was "
+                "not advanced and the next run restarts from the previous checkpoint",
                 level="warning",
             )
             has_more = True
+        except AssetConnectorPushError:
+            # The push error is already logged: end the run without failing it, the next
+            # scheduled run retries from the previous checkpoint
+            connector.log(
+                message="A batch of assets could not be pushed to Sekoia.io: the checkpoint was not "
+                "advanced and the next scheduled run restarts from the previous checkpoint",
+                level="warning",
+            )
         except Exception as error:
             connector.log(
                 message=f"Error while running asset connector {connector.connector_name}: {error}",
@@ -95,6 +113,10 @@ class SynchronizeAssetsAction(MicrosoftADAction):
             stats.update(connector.cycle_stats)
             stop_timer.cancel()
             connector.stop()
+            try:
+                connector._reset_ldap_connection()
+            except Exception as error:
+                self.log(f"Unable to close the LDAP connection: {error}", "warning")
             try:
                 connector._send_logs_to_api()
             except Exception as error:

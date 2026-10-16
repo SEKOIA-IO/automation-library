@@ -72,6 +72,7 @@ def test_search_with_attributes():
 
 
 def test_search_in_base_exception():
+
     username = "Mick Lennon"
     search = f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
     basedn = "dc=example,dc=com"

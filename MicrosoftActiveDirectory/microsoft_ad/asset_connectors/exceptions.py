@@ -17,3 +17,10 @@ class AssetConnectorPushError(AutomationSDKError):
 
     def __init__(self) -> None:
         super().__init__("Unable to push a batch of assets to Sekoia.io")
+
+
+class AssetConnectorCriticalError(AutomationSDKError):
+    """Raised when an asset connector sent a critical log, a fatal error, in the middle of a fetch cycle."""
+
+    def __init__(self) -> None:
+        super().__init__("Asset connector stopped after a critical error")

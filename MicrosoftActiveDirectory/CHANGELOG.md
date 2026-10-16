@@ -7,12 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-10-07 - 1.6.0
+## 2026-10-16 - 1.6.0
 
 ### Added
 
-- Add an action that runs one fetch cycle of the Microsoft AD user asset connector, so it can run on an on-premise runner where only actions run. It pushes the users to the asset connector configuration, commits the checkpoint after each batch and returns `has_more` when the cycle was interrupted (time limit, SIGTERM) and should run again to resume. The action is internal, only run by the platform for on-premise asset connectors.
+- Add an action that runs one fetch cycle of the Microsoft AD user asset connector, so it can run on an on-premise runner where only actions run. It pushes the users to the asset connector configuration, commits the checkpoint once the whole directory has been read and returns `fetched`, `pushed_batches`, `failed_batches` and `has_more`. When the cycle is interrupted (time limit, SIGTERM), `has_more` is true and the next run restarts from the previous checkpoint. A failed push stops the cycle and is reported in `failed_batches` and the connector logs, and the next scheduled run restarts from the previous checkpoint. A critical error fails the action. In both cases the checkpoint is not advanced. The action is internal, only run by the platform for on-premise asset connectors.
 - Declare the `cloud` and `on_premise` execution modes on the Microsoft AD user asset connector
+
+### Changed
+
+- Make the base DN required in the Microsoft AD user asset connector configuration
+- Set a 120-second receive timeout on LDAP connections, so a hung Active Directory server cannot block an action or a connector forever
 
 ## 2026-07-13 - 1.5.8
 
