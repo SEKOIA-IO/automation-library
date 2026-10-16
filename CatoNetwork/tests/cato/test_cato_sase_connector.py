@@ -26,7 +26,7 @@ def symphony_storage() -> str:
     yield constants.DATA_STORAGE
 
     rmtree(constants.DATA_STORAGE)
-    constants.SYMPHONY_STORAGE = original_storage
+    constants.DATA_STORAGE = original_storage
 
 
 @pytest.fixture

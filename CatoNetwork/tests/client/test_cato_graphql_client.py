@@ -162,10 +162,11 @@ async def test_set_rate_limiter(session_faker: Faker):
     rate_limiter = AsyncLimiter(session_faker.random_int(min=1, max=100))
 
     # Set the rate limiter
-    CatoGraphQLClient.set_rate_limiter(request_type, rate_limiter)
+    client = CatoGraphQLClient(api_key=session_faker.uuid4(), account_id=session_faker.uuid4())
+    client.set_rate_limiter(request_type, rate_limiter)
 
     # Check if the rate limiter is correctly set
-    assert CatoGraphQLClient._rate_limiters[request_type] == rate_limiter
+    assert client._rate_limiters[request_type] == rate_limiter
 
 
 @pytest.mark.asyncio
@@ -181,10 +182,11 @@ async def test_get_rate_limiter(session_faker: Faker):
     rate_limiter = AsyncLimiter(session_faker.random_int(min=1, max=100))
 
     # Set the rate limiter
-    CatoGraphQLClient.set_rate_limiter(request_type, rate_limiter)
+    client = CatoGraphQLClient(api_key=session_faker.uuid4(), account_id=session_faker.uuid4())
+    client.set_rate_limiter(request_type, rate_limiter)
 
     # Get the rate limiter
-    retrieved_rate_limiter = CatoGraphQLClient.get_rate_limiter(request_type)
+    retrieved_rate_limiter = client.get_rate_limiter(request_type)
 
     # Check if the retrieved rate limiter is the same as the one set
     assert retrieved_rate_limiter == rate_limiter
@@ -198,8 +200,9 @@ async def test_get_rate_limiter_with_error(session_faker: Faker):
     Args:
         session_faker: Faker
     """
+    client = CatoGraphQLClient(api_key=session_faker.uuid4(), account_id=session_faker.uuid4())
     with pytest.raises(ValueError):
-        CatoGraphQLClient.get_rate_limiter(CatoRequestTypeFake.FAKE)
+        client.get_rate_limiter(CatoRequestTypeFake.FAKE)
 
 
 @pytest.mark.asyncio

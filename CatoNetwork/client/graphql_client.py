@@ -1,8 +1,9 @@
 """Cato graphql client."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from enum import Enum
-from typing import Any, AsyncGenerator
+from typing import Any
 
 from aiolimiter import AsyncLimiter
 from gql import Client
@@ -22,11 +23,8 @@ class CatoRequestType(Enum):
     EVENTS_FEED = "eventsFeed"
 
 
-class CatoGraphQLClient(object):
+class CatoGraphQLClient:
     """Class for Cato GraphQL client."""
-
-    _rate_limiters: dict[CatoRequestType, AsyncLimiter] | None = None
-    _cato_clients: dict[CatoRequestType, Client] | None = None
 
     def __init__(
         self,
@@ -67,14 +65,16 @@ class CatoGraphQLClient(object):
 
         self.base_url = "https://api.catonetworks.com/api/v1/graphql2" if not base_url else base_url
 
+        self._rate_limiters: dict[CatoRequestType, AsyncLimiter] = {}
+        self._cato_clients: dict[CatoRequestType, Client] | None = None
+
         self.set_rate_limiter(CatoRequestType.ACCOUNT_METRICS, account_metrics_rate_limiter)
         self.set_rate_limiter(CatoRequestType.ACCOUNT_SNAPSHOT, account_snapshot_rate_limiter)
         self.set_rate_limiter(CatoRequestType.AUDIT_FEED, audit_feed_rate_limiter)
         self.set_rate_limiter(CatoRequestType.ENTITY_LOOKUP, entity_lookup_rate_limiter)
         self.set_rate_limiter(CatoRequestType.EVENTS_FEED, events_feed_rate_limiter)
 
-    @classmethod
-    def set_rate_limiter(cls, request_type: CatoRequestType, rate_limiter: AsyncLimiter | None) -> None:
+    def set_rate_limiter(self, request_type: CatoRequestType, rate_limiter: AsyncLimiter | None) -> None:
         """
         Set rate limiter for specific request type.
 
@@ -82,11 +82,8 @@ class CatoGraphQLClient(object):
             request_type: CatoRequestType
             rate_limiter: AsyncLimiter | None
         """
-        if not cls._rate_limiters:
-            cls._rate_limiters = {}
-
         if rate_limiter:
-            cls._rate_limiters[request_type] = rate_limiter
+            self._rate_limiters[request_type] = rate_limiter
         else:
             match request_type:
                 case CatoRequestType.AUDIT_FEED:
@@ -102,10 +99,9 @@ class CatoGraphQLClient(object):
                     # Default is 120/minute for accountMetrics and accountSnapshot
                     _limiter = AsyncLimiter(120)
 
-            cls._rate_limiters[request_type] = _limiter
+            self._rate_limiters[request_type] = _limiter
 
-    @classmethod
-    def get_rate_limiter(cls, request_type: CatoRequestType) -> AsyncLimiter:
+    def get_rate_limiter(self, request_type: CatoRequestType) -> AsyncLimiter:
         """
         Get rate limiter for specific request type.
 
@@ -115,10 +111,7 @@ class CatoGraphQLClient(object):
         Returns:
             AsyncLimiter:
         """
-        if not cls._rate_limiters:
-            cls._rate_limiters = {}
-
-        _rate_limiter = cls._rate_limiters.get(request_type)
+        _rate_limiter = self._rate_limiters.get(request_type)
 
         if not _rate_limiter:
             raise ValueError(f"Rate limiter for {request_type} is not set")
@@ -149,7 +142,7 @@ class CatoGraphQLClient(object):
         return _cato_client
 
     @asynccontextmanager
-    async def _session(self, request_type: CatoRequestType) -> AsyncGenerator[Client, None]:
+    async def _session(self, request_type: CatoRequestType) -> AsyncGenerator[Client]:
         """
         Get configured GraphQL client with correct rate limiter.
 

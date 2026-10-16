@@ -2,12 +2,12 @@
 
 import asyncio
 import time
-from typing import Any, Optional
+from typing import Any
 
 import orjson
 from loguru import logger
 from pydantic import BaseModel, Field
-from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.connector import Connector, DefaultConnectorConfiguration, EventType
 from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
 
@@ -19,14 +19,14 @@ from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 class CatoModuleConfig(BaseModel):
     """Configuration for CatoModule."""
 
-    api_key: str = Field(secret=True)
+    api_key: str = Field(json_schema_extra={"secret": True})
     account_id: str
 
 
 class CatoModule(Module):
     """CatoModule."""
 
-    configuration: CatoModuleConfig
+    configuration: CatoModuleConfig  # type: ignore[override]
 
 
 class CatoSaseConnectorConfig(DefaultConnectorConfiguration):
@@ -43,7 +43,7 @@ class CatoSaseConnector(Connector):
 
     _cato_client: CatoGraphQLClient | None = None
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         """Init CatoSaseConnector."""
 
         super().__init__(*args, **kwargs)
@@ -83,7 +83,7 @@ class CatoSaseConnector(Connector):
 
         return self._cato_client
 
-    async def _push_events(self, events: list[str]) -> list[str]:
+    async def _push_events(self, events: list[EventType]) -> list[str]:
         """
         Push events to intakes.
 
@@ -117,7 +117,7 @@ class CatoSaseConnector(Connector):
             with self.context as cache:
                 cache["latest_events_feed_id"] = new_latest_events_id
 
-        result = []
+        result: list[EventType] = []
         for account in events.accounts:
             for event in account.records:
                 single_event = {"event_time": event.time, **event.fieldsMap}
@@ -130,10 +130,12 @@ class CatoSaseConnector(Connector):
         """Runs Cato Sase."""
         previous_processing_end = None
 
+        # Python 3.14: asyncio.get_event_loop() no longer creates a loop implicitly
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
         while self.running:
             try:
-                loop = asyncio.get_event_loop()
-
                 while self.running:
                     processing_start = time.time()
                     if previous_processing_end is not None:
@@ -147,7 +149,7 @@ class CatoSaseConnector(Connector):
 
                     log_message = "No records to forward"
                     if len(message_ids) > 0:
-                        log_message = "Pushed {0} records".format(len(message_ids))
+                        log_message = f"Pushed {len(message_ids)} records"
 
                     logger.info(log_message)
                     self.log(message=log_message, level="info")

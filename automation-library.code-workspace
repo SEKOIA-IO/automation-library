@@ -111,6 +111,10 @@
 		{
 			"name": "Netskope",
 			"path": "Netskope"
+		},
+		{
+			"name": "CatoNetwork",
+			"path": "CatoNetwork"
 		}
 	],
 	"settings": {
