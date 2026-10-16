@@ -1,6 +1,6 @@
 {
   "name": "Forward a message",
-  "description": "Forward a message from the user's mailbox",
+  "description": "The action that forwards a message from the user's mailbox",
   "uuid": "afb77f00-b727-5549-94e6-9f774af11fa2",
   "docker_parameters": "action_forward_message",
   "arguments": {
@@ -13,12 +13,15 @@
     ],
     "properties": {
       "comment": {
-        "description": "An optional comment included in the forward",
+        "description": "The optional comment included in the forwarded message",
         "type": "string"
       },
       "message_id": {
-        "description": "The Microsoft Graph message item ID",
-        "type": "string"
+        "description": "The Microsoft Graph message item ID, or a message object containing message_id",
+        "type": [
+          "string",
+          "object"
+        ]
       },
       "recipients": {
         "description": "The list of recipient email addresses",
@@ -39,20 +42,38 @@
     "type": "object",
     "required": [
       "action",
+      "recipients",
       "status",
-      "target_message_id"
+      "target_message_id",
+      "user"
     ],
     "properties": {
       "action": {
-        "description": "Action technical identifier",
+        "description": "The action technical identifier",
         "type": "string"
       },
+      "comment": {
+        "description": "The optional comment included in the forwarded message",
+        "type": "string"
+      },
+      "recipients": {
+        "description": "The recipient email addresses used by the action",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      },
       "status": {
-        "description": "Forward execution status",
+        "description": "The execution status",
         "type": "string"
       },
       "target_message_id": {
         "description": "The Microsoft Graph message item ID targeted by the action",
+        "type": "string"
+      },
+      "user": {
+        "description": "The echo of the user identifier used for this action",
         "type": "string"
       }
     }

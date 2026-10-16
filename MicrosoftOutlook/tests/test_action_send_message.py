@@ -1,3 +1,4 @@
+import pytest
 import requests_mock
 
 from microsoft_outlook_modules.action_send_message import SendMessageAction
@@ -24,9 +25,19 @@ def test_send_message(configured_action):
             }
         )
         assert result == {
-            "status": "sent",
             "action": "send_message",
+            "bcc": None,
+            "cc": None,
+            "content_type": "text",
+            "from": "john.doe@example.com",
+            "importance": None,
+            "recipients": ["jane.doe@example.com"],
+            "save_to_sent_items": True,
+            "sender": "john.doe@example.com",
+            "status": "sent",
+            "subject": "Subject",
             "target_message_id": None,
+            "user": "1111",
         }
 
 
@@ -66,7 +77,14 @@ def test_send_message_with_all_optional_fields(configured_action):
         assert payload["message"]["bccRecipients"][0]["emailAddress"]["address"] == "bcc@example.com"
 
 
-def test_send_message_returns_empty_dict_when_response_is_not_json(configured_action):
+@pytest.mark.parametrize(
+    "status_code,response_payload",
+    [
+        (202, {"content": b""}),
+        (200, {"json": ["ok"]}),
+    ],
+)
+def test_send_message_falls_back_when_response_payload_is_not_usable(configured_action, status_code, response_payload):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
@@ -76,8 +94,8 @@ def test_send_message_returns_empty_dict_when_response_is_not_json(configured_ac
         mock.register_uri(
             "POST",
             "https://graph.microsoft.com/v1.0/users/1111/sendMail",
-            status_code=202,
-            content=b"",
+            status_code=status_code,
+            **response_payload,
         )
 
         action = configured_action(SendMessageAction)
@@ -92,9 +110,19 @@ def test_send_message_returns_empty_dict_when_response_is_not_json(configured_ac
             }
         )
         assert result == {
-            "status": "sent",
             "action": "send_message",
+            "bcc": None,
+            "cc": None,
+            "content_type": "text",
+            "from": "john.doe@example.com",
+            "importance": None,
+            "recipients": ["jane.doe@example.com"],
+            "save_to_sent_items": True,
+            "sender": "john.doe@example.com",
+            "status": "sent",
+            "subject": "Subject",
             "target_message_id": None,
+            "user": "1111",
         }
 
 
@@ -126,39 +154,14 @@ def test_send_message_includes_target_message_id_when_api_returns_id(configured_
         assert result["status"] == "sent"
         assert result["action"] == "send_message"
         assert result["target_message_id"] == "AAMk-123"
+        assert result["content_type"] == "text"
+        assert result["from"] == "john.doe@example.com"
+        assert result["sender"] == "john.doe@example.com"
+        assert result["subject"] == "Subject"
+        assert result["save_to_sent_items"] is True
+        assert result["user"] == "1111"
+        assert result["recipients"] == ["jane.doe@example.com"]
         assert result["custom"] == "value"
-
-
-def test_send_message_ignores_non_dict_json_response(configured_action):
-    with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            "GET",
-            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
-        )
-        mock.register_uri(
-            "POST",
-            "https://graph.microsoft.com/v1.0/users/1111/sendMail",
-            status_code=200,
-            json=["ok"],
-        )
-
-        action = configured_action(SendMessageAction)
-        result = action.run(
-            arguments={
-                "user": "1111",
-                "subject": "Subject",
-                "content": "Hello there",
-                "sender": "john.doe@example.com",
-                "from": "john.doe@example.com",
-                "recipients": ["jane.doe@example.com"],
-            }
-        )
-        assert result == {
-            "status": "sent",
-            "action": "send_message",
-            "target_message_id": None,
-        }
 
 
 def test_send_message_handles_plain_value_error_from_json(configured_action):
@@ -184,7 +187,17 @@ def test_send_message_handles_plain_value_error_from_json(configured_action):
     )
 
     assert result == {
-        "status": "sent",
         "action": "send_message",
+        "bcc": None,
+        "cc": None,
+        "content_type": "text",
+        "from": "john.doe@example.com",
+        "importance": None,
+        "recipients": ["jane.doe@example.com"],
+        "save_to_sent_items": True,
+        "sender": "john.doe@example.com",
+        "status": "sent",
+        "subject": "Subject",
         "target_message_id": None,
+        "user": "1111",
     }
