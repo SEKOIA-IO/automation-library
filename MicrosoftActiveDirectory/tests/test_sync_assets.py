@@ -22,6 +22,7 @@ from microsoft_ad.asset_connectors.exceptions import AssetConnectorCriticalError
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
 from microsoft_ad.asset_connectors.user_assets_sync import MicrosoftADUserAssetSyncConnector
 from microsoft_ad.client.ldap_client import LDAPClient
+from microsoft_ad.helpers import SORT_REQUEST_CONTROL_OID, sort_control
 from microsoft_ad.sync_assets_actions import SynchronizeAssetsAction
 
 MODULE_PATH = Path(__file__).parents[1]
@@ -59,22 +60,27 @@ def build_user_model(sid: str) -> UserOCSFModel:
     return connector.map_user_fields(build_entry(sid, datetime(2024, 1, 1, 12, 0, 0)))
 
 
-def fake_directory(entries: list[dict[str, Any]]) -> Callable[[MicrosoftADUserAssetConnector], Any]:
+def fake_directory(entries: list[dict[str, Any]], sorts: bool = True) -> Callable[..., Any]:
     """
-    Fake `_run_paged_search`: return the entries in directory order (not sorted by
-    `whenCreated`), filtered by the stored checkpoint like the LDAP filter
-    `(whenCreated>=checkpoint)`.
+    Fake `_run_paged_search`: return the entries filtered by the stored checkpoint like
+    the LDAP filter `(whenCreated>=checkpoint)`, in directory order (not sorted by
+    `whenCreated`). With the sort control, sort them by `whenCreated`, or refuse it like
+    a directory that cannot sort (`sorts=False`).
     """
 
-    def run_paged_search(connector: MicrosoftADUserAssetConnector) -> Any:
+    def run_paged_search(connector: MicrosoftADUserAssetConnector, controls: Any = None) -> Any:
         checkpoint = connector.most_recent_datetime
-        return iter(
-            [
-                entry
-                for entry in entries
-                if checkpoint is None or entry["attributes"]["whenCreated"].strftime("%Y%m%d%H%M%S.0Z") >= checkpoint
-            ]
-        )
+        matching = [
+            entry
+            for entry in entries
+            if checkpoint is None or entry["attributes"]["whenCreated"].strftime("%Y%m%d%H%M%S.0Z") >= checkpoint
+        ]
+        if any(control[0] == SORT_REQUEST_CONTROL_OID for control in controls or []):
+            if not sorts:
+                connector._ldap_client = Mock(result={"result": 12, "description": "unavailableCriticalExtension"})
+                return iter([])
+            matching.sort(key=lambda entry: entry["attributes"]["whenCreated"])
+        return iter(matching)
 
     return run_paged_search
 
@@ -565,7 +571,16 @@ def test_run_logs_the_users_that_could_not_be_mapped(tmp_path, api):
     assert read_context(tmp_path)["most_recent_datetime"] == "20250601000000.0Z"
 
 
-def test_interrupted_cycle_resumes_without_missing_users(tmp_path, api):
+@pytest.mark.parametrize(
+    "sorts, first_run_sids, first_run_checkpoint",
+    [
+        # Sorted: the checkpoint is committed after each pushed batch (one entry behind)
+        (True, ["S-1-5-21-3", "S-1-5-21-1"], "20230301000000.0Z"),
+        # Sort refused, directory order: only committed at the end of a complete cycle
+        (False, ["S-1-5-21-1", "S-1-5-21-2"], None),
+    ],
+)
+def test_interrupted_cycle_resumes_without_missing_users(tmp_path, api, sorts, first_run_sids, first_run_checkpoint):
     # Directory order, not sorted by whenCreated: the most recent user comes second
     entries = [
         build_entry("S-1-5-21-1", datetime(2024, 1, 1)),
@@ -584,13 +599,13 @@ def test_interrupted_cycle_resumes_without_missing_users(tmp_path, api):
         return response
 
     with (
-        patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries)),
+        patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries, sorts=sorts)),
         patch.object(MicrosoftADUserAssetSyncConnector, "post_assets_to_api", post_then_stop),
     ):
         first = build_real_action(tmp_path).run(ARGUMENTS)
         assert first["has_more"] is True
-        assert pushed_sids(api) == ["S-1-5-21-1", "S-1-5-21-2"]
-        assert "most_recent_datetime" not in read_context(tmp_path)
+        assert pushed_sids(api) == first_run_sids
+        assert read_context(tmp_path).get("most_recent_datetime") == first_run_checkpoint
 
         second = build_real_action(tmp_path).run(ARGUMENTS)
 
@@ -621,15 +636,71 @@ def test_run_from_an_existing_checkpoint_skips_seen_users(tmp_path, api):
         return response
 
     with (
-        patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries)),
+        patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries, sorts=False)),
         patch.object(MicrosoftADUserAssetSyncConnector, "post_assets_to_api", post_and_record_checkpoint),
     ):
         results = build_real_action(tmp_path).run(ARGUMENTS)
 
     assert results == {"fetched": 2, "pushed_batches": 2, "failed_batches": 0, "has_more": False}
     assert pushed_sids(api) == ["S-1-5-21-2", "S-1-5-21-5"]
-    # The checkpoint is not committed after each batch, only once the whole directory has been read
+    # Sort refused: the checkpoint is not committed after each batch, only once the whole directory has been read
     assert checkpoints_at_push == ["20240201000000.0Z", "20240201000000.0Z"]
     context = read_context(tmp_path)
     assert context["most_recent_datetime"] == "20250601000000.0Z"
     assert context["seen_sids_at_checkpoint"] == ["S-1-5-21-2"]
+
+
+def test_sorted_cycle_commits_the_checkpoint_after_each_batch(tmp_path, api):
+    entries = [
+        build_entry("S-1-5-21-1", datetime(2024, 1, 1)),
+        build_entry("S-1-5-21-2", datetime(2025, 6, 1)),
+        build_entry("S-1-5-21-3", datetime(2023, 3, 1)),
+    ]
+    original_post = MicrosoftADUserAssetSyncConnector.post_assets_to_api
+    checkpoints_after_push: list[str | None] = []
+
+    def post_and_record_checkpoint(connector, assets, url):
+        response = original_post(connector, assets, url)
+        checkpoints_after_push.append(connector.most_recent_datetime)
+        return response
+
+    with (
+        patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries)),
+        patch.object(MicrosoftADUserAssetSyncConnector, "post_assets_to_api", post_and_record_checkpoint),
+    ):
+        results = build_real_action(tmp_path).run(ARGUMENTS)
+
+    assert results["has_more"] is False
+    assert pushed_sids(api) == ["S-1-5-21-3", "S-1-5-21-1", "S-1-5-21-2"]
+    # One entry behind the pushed batch: the cursor moves once the next entry is read
+    assert checkpoints_after_push == [None, "20230301000000.0Z", "20240101000000.0Z"]
+    assert read_context(tmp_path)["most_recent_datetime"] == "20250601000000.0Z"
+
+
+def test_run_warns_when_the_directory_refuses_to_sort(tmp_path, api):
+    entries = [build_entry("S-1-5-21-1", datetime(2024, 1, 1))]
+
+    with patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries, sorts=False)):
+        results = build_real_action(tmp_path).run(ARGUMENTS)
+
+    assert results == {"fetched": 1, "pushed_batches": 1, "failed_batches": 0, "has_more": False}
+    assert any(
+        log["level"] == "warning" and "refused to sort the users by creation date" in log["message"]
+        for log in sent_logs(api)
+    )
+    assert read_context(tmp_path)["most_recent_datetime"] == "20240101000000.0Z"
+
+
+def test_paged_search_passes_the_sort_control(tmp_path):
+    connector = object.__new__(MicrosoftADUserAssetSyncConnector)
+    connector._ldap_client = Mock()
+    connector._configuration = Mock(basedn="DC=example,DC=com")
+    connector.context = Mock()
+    connector.context.__enter__ = Mock(return_value={})
+    connector.context.__exit__ = Mock(return_value=False)
+    connector._ldap_client.extend.standard.paged_search.return_value = iter([{"dn": "CN=a"}])
+
+    assert list(connector._run_paged_search()) == [{"dn": "CN=a"}]
+    controls = connector._ldap_client.extend.standard.paged_search.call_args.kwargs["controls"]
+    assert controls == [sort_control("whenCreated")]
+    assert connector.sorted_search is True

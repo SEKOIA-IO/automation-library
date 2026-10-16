@@ -292,12 +292,15 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
 
         return user_ocsf_model
 
-    def _run_paged_search(self) -> Generator[dict[str, Any], None, None]:
+    def _run_paged_search(
+        self, controls: list[tuple[str, bool, bytes]] | None = None
+    ) -> Generator[dict[str, Any], None, None]:
         return self.ldap_client.extend.standard.paged_search(
             search_base=self.configuration.basedn,
             search_filter=self.user_ldap_query,
             attributes=self.QUERY_ATTRIBUTES,
             paged_size=self.LIMIT,
+            controls=controls,
             generator=True,
         )
 

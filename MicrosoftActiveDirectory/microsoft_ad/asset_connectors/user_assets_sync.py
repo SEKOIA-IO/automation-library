@@ -1,7 +1,13 @@
+from collections.abc import Generator
 from functools import cached_property
 from typing import Any
 
 import requests
+from ldap3.core.results import (
+    RESULT_ADMIN_LIMIT_EXCEEDED,
+    RESULT_UNAVAILABLE_CRITICAL_EXTENSION,
+    RESULT_UNWILLING_TO_PERFORM,
+)
 from sekoia_automation.asset_connector.models.connector import AssetList
 from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel
 from tenacity import Retrying, stop_after_delay, stop_when_event_set, wait_exponential
@@ -13,6 +19,7 @@ from microsoft_ad.asset_connectors.exceptions import (
     RetryableStatusError,
 )
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
+from microsoft_ad.helpers import sort_control
 
 
 RETRYABLE_STATUS = {408, 429}
@@ -28,11 +35,14 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
     Variant of the user asset connector that runs a single, interruptible fetch
     cycle, so it can be driven by an action (e.g. on an on-premise runner).
 
-    The checkpoint is committed only once the whole directory has been read and
-    pushed: LDAP returns the users in directory order, not sorted by `whenCreated`,
-    so a checkpoint committed in the middle of a cycle could skip older users that
-    were not read yet. An interrupted cycle restarts from the previous checkpoint
-    and pushes again the users already sent (the asset API upserts them by uid).
+    The users are read sorted by `whenCreated` (server-side sort control), so the
+    checkpoint, the most recent `whenCreated` read, can be committed after each pushed
+    batch like the cloud connector: no user left to read is older than it, and an
+    interrupted cycle resumes from the last pushed batch.
+
+    If the directory refuses to sort, the users come in directory order: a checkpoint
+    committed in the middle of the cycle could then skip older users not read yet, so
+    it is only committed once the whole directory has been read and pushed.
 
     TODO: drop this class and use
     `sekoia_automation.asset_connector.AssetConnectorAction` once
@@ -42,10 +52,19 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
     # Maximum time spent retrying a push to Sekoia.io
     PUSH_RETRY_MAX_DELAY = 300
 
+    # LDAP result codes of a directory that refuses the sort control
+    SORT_REFUSED_RESULTS = {
+        RESULT_ADMIN_LIMIT_EXCEEDED,
+        RESULT_UNAVAILABLE_CRITICAL_EXTENSION,
+        RESULT_UNWILLING_TO_PERFORM,
+    }
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.cycle_stats = {"fetched": 0, "pushed_batches": 0, "failed_batches": 0}
         self._cycle_complete = False
+        # Whether the users are read sorted by `whenCreated` in this cycle
+        self.sorted_search = False
 
     def _retry(self) -> Retrying:  # type: ignore[override]
         return Retrying(
@@ -64,8 +83,35 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
         session.hooks["response"].append(raise_on_retryable_status)
         return session
 
+    def _run_paged_search(
+        self, controls: list[tuple[str, bool, bytes]] | None = None
+    ) -> Generator[dict[str, Any], None, None]:
+        sorted_entries = super()._run_paged_search(controls=[*(controls or []), sort_control("whenCreated")])
+        # The first page runs the search: a refused sort returns no entry and an error result
+        first_entry = next(sorted_entries, None)
+        if first_entry is None and self._sort_refused():
+            self.sorted_search = False
+            self.log(
+                message="The directory refused to sort the users by creation date: the checkpoint is only "
+                "saved once the whole directory has been read, which may not fit in one run",
+                level="warning",
+            )
+            yield from super()._run_paged_search(controls=controls)
+            return
+
+        self.sorted_search = True
+        if first_entry is not None:
+            yield first_entry
+        yield from sorted_entries
+
+    def _sort_refused(self) -> bool:
+        result = getattr(self._ldap_client, "result", None) or {}
+        return result.get("result") in self.SORT_REFUSED_RESULTS
+
     def update_checkpoint(self) -> None:
-        if self._cycle_complete:
+        # `post_assets_to_api` calls this method after each pushed batch: safe when the
+        # users are read sorted, otherwise only at the end of a complete cycle
+        if self.sorted_search or self._cycle_complete:
             super().update_checkpoint()
 
     def _ensure_cycle_can_go_on(self) -> None:
@@ -82,6 +128,7 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
         )
         self.cycle_stats = {"fetched": 0, "pushed_batches": 0, "failed_batches": 0}
         self._cycle_complete = False
+        self.sorted_search = False
         self.skipped_users = 0
 
         # TODO: use the generic AssetItem type once this cycle moves to the SDK
@@ -89,8 +136,7 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
         assets: list[UserOCSFModel] = []
         for asset in self.get_assets():
             # Check at each asset, not only before a push, to stop quickly once the
-            # connector is stopped. The checkpoint is not committed, so the next
-            # run restarts from the previous checkpoint.
+            # connector is stopped. The next run resumes from the last committed checkpoint.
             self._ensure_cycle_can_go_on()
 
             assets.append(asset)

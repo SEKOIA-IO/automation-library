@@ -106,9 +106,12 @@ class SynchronizeAssetsAction(MicrosoftADAction):
                 reason = f"reached the time limit of {self.MAX_DURATION // 60} minutes"
             else:
                 reason = "was stopped"
+            if connector.sorted_search:
+                resume = "the next run resumes from the last pushed batch"
+            else:
+                resume = "the checkpoint was not advanced and the next run restarts from the previous checkpoint"
             connector.log(
-                message=f"The fetch cycle {reason} before reading the whole directory: the checkpoint was "
-                "not advanced and the next run restarts from the previous checkpoint",
+                message=f"The fetch cycle {reason} before reading the whole directory: {resume}",
                 level="warning",
             )
             has_more = True
