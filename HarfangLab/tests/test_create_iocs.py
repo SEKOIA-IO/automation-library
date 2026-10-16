@@ -1,4 +1,6 @@
+import pytest
 import requests_mock
+from requests import HTTPError
 
 from harfanglab.iocs import CreateIOCs
 
@@ -138,3 +140,135 @@ def test_creating_iocs():
                 "detect_on_agent": False,
             }
         )
+
+
+INSTANCE_URL = "https://test.hurukau.io"
+IOC_RULE_URL = f"{INSTANCE_URL}/api/data/threat_intelligence/IOCRule/"
+SOURCE_ID = "3cf6dc0e-3d81-4cae-9848-c5294655e2be"
+BASE_ARGUMENTS = {
+    "source_id": SOURCE_ID,
+    "block_on_agent": True,
+    "quarantine_on_agent": False,
+    "detect_on_agent": True,
+}
+
+
+def _make_action() -> CreateIOCs:
+    action = CreateIOCs()
+    action.module.configuration = {"url": INSTANCE_URL, "api_token": "11111111111111111111111111111111"}
+    return action
+
+
+def _indicator(pattern: str, **kwargs) -> dict:
+    return {
+        "type": "indicator",
+        "id": "indicator--f24eb993-4ece-47ff-90e1-fa3f87de85dc",
+        "pattern_type": "stix",
+        "pattern": pattern,
+        **kwargs,
+    }
+
+
+def test_create_iocs_pushes_valid_indicators():
+    stix_objects = [
+        _indicator(
+            "[ipv4-addr:value = '1.2.3.4']", x_ic_observable_types=["ipv4-addr"], valid_until="2999-01-01T00:00:00Z"
+        ),
+        # Duplicated value is pushed only once
+        _indicator("[ipv4-addr:value = '1.2.3.4']"),
+        _indicator("[domain-name:value = 'example.com']"),
+    ]
+
+    with requests_mock.Mocker() as mock:
+        mock.post(IOC_RULE_URL, status_code=201, json={})
+
+        _make_action().run(
+            {"stix_objects": stix_objects, "sekoia_base_url": "https://app.test.sekoia.io", **BASE_ARGUMENTS}
+        )
+
+        assert [request.json() for request in mock.request_history] == [
+            {
+                "source_id": SOURCE_ID,
+                "type": "ip_both",
+                "value": "1.2.3.4",
+                "block_on_agent": True,
+                "quarantine_on_agent": False,
+                "endpoint_detection": True,
+                "enabled": True,
+                "description": "https://app.test.sekoia.io/intelligence/objects/"
+                "indicator--f24eb993-4ece-47ff-90e1-fa3f87de85dc",
+            },
+            {
+                "source_id": SOURCE_ID,
+                "type": "domain_name",
+                "value": "example.com",
+                "block_on_agent": True,
+                "quarantine_on_agent": False,
+                "endpoint_detection": True,
+                "enabled": True,
+            },
+        ]
+
+
+def test_create_iocs_removes_revoked_indicators():
+    stix_objects = [_indicator("[url:value = 'https://example.com/']", revoked=True)]
+
+    with requests_mock.Mocker() as mock:
+        mock.get(IOC_RULE_URL, json={"count": 2, "results": [{"id": "rule-1"}, {"id": "rule-2"}]})
+        mock.delete(f"{IOC_RULE_URL}rule-1", status_code=204)
+        mock.delete(f"{IOC_RULE_URL}rule-2", status_code=204)
+
+        _make_action().run({"stix_objects": stix_objects, **BASE_ARGUMENTS})
+
+        assert mock.request_history[0].qs == {"search": ["https://example.com/"], "source_id": [SOURCE_ID]}
+        assert [(request.method, request.url) for request in mock.request_history[1:]] == [
+            ("DELETE", f"{IOC_RULE_URL}rule-1"),
+            ("DELETE", f"{IOC_RULE_URL}rule-2"),
+        ]
+
+
+def test_create_iocs_ignores_already_existing_indicator():
+    with requests_mock.Mocker() as mock:
+        mock.post(IOC_RULE_URL, status_code=400, text='{"non_field_errors": ["Rule already exists"]}')
+
+        _make_action().run({"stix_objects": [_indicator("[ipv4-addr:value = '1.2.3.4']")], **BASE_ARGUMENTS})
+
+        assert mock.call_count == 1
+
+
+def test_create_iocs_raises_on_creation_error():
+    action = _make_action()
+
+    with requests_mock.Mocker() as mock:
+        mock.post(IOC_RULE_URL, status_code=400, text='{"value": ["Invalid value"]}')
+
+        with pytest.raises(HTTPError):
+            action.run({"stix_objects": [_indicator("[ipv4-addr:value = '1.2.3.4']")], **BASE_ARGUMENTS})
+
+    assert any(log["level"] == "error" for log in action.logs)
+
+
+def test_create_iocs_raises_on_search_error():
+    stix_objects = [_indicator("[ipv4-addr:value = '1.2.3.4']", revoked=True)]
+
+    with requests_mock.Mocker() as mock:
+        mock.get(IOC_RULE_URL, status_code=500)
+
+        with pytest.raises(HTTPError):
+            _make_action().run({"stix_objects": stix_objects, **BASE_ARGUMENTS})
+
+
+def test_create_iocs_without_supported_indicators():
+    with requests_mock.Mocker() as mock:
+        result = _make_action().run(
+            {"stix_objects": [_indicator("[email-addr:value = 'a@b.c']"), {"type": "malware"}], **BASE_ARGUMENTS}
+        )
+
+        assert result is None
+        assert mock.call_count == 0
+
+
+def test_create_iocs_with_empty_stix_objects():
+    with requests_mock.Mocker() as mock:
+        assert _make_action().run({"stix_objects": [], **BASE_ARGUMENTS}) is None
+        assert mock.call_count == 0

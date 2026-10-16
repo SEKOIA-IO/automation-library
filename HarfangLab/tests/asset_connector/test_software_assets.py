@@ -2,6 +2,7 @@ import json
 from unittest.mock import Mock, patch
 
 import pytest
+import requests
 import requests_mock
 from sekoia_automation.asset_connector.models.ocsf.software import (
     PackageTypeId,
@@ -499,3 +500,200 @@ def test_get_assets_no_applications(test_software_connector):
             assets = list(test_software_connector.get_assets())
 
     assert len(assets) == 0
+
+
+AGENTS_URL = "https://example.com/api/data/endpoint/Agent"
+
+
+def _agent(agent_id: str, firstseen: str, **kwargs) -> dict:
+    return {"id": agent_id, "hostname": f"host-{agent_id}", "firstseen": firstseen, **kwargs}
+
+
+def _page(results: list, next_page: str | None = None) -> dict:
+    return {"count": len(results), "next": next_page, "previous": None, "results": results}
+
+
+@pytest.mark.parametrize(
+    ("os_type", "expected"),
+    [(None, "UNKNOWN"), ("", "UNKNOWN"), (" windows ", "WINDOWS"), ("plan9", "OTHER")],
+)
+def test_extract_os_type(os_type, expected):
+    assert HarfanglabSoftwareAssetConnector.extract_os_type(os_type) == expected
+
+
+def test_build_device_with_lastseen(test_software_connector):
+    agent = HarfanglabAgent(**_agent("a1", "", lastseen="2025-06-12T00:00:00Z"))
+
+    device = test_software_connector.build_device(agent)
+
+    assert device.first_seen_time is None
+    assert device.last_seen_time == 1749686400
+
+
+def test_build_device_invalid_timestamp(test_software_connector):
+    agent = HarfanglabAgent(**_agent("a1", "not-a-date"))
+
+    device = test_software_connector.build_device(agent)
+
+    assert device.first_seen_time is None
+    assert device.last_seen_time is None
+    assert any(
+        c.args[0].startswith("Error parsing timestamps for asset a1") and c.kwargs == {"level": "warning"}
+        for c in test_software_connector.log.call_args_list
+    )
+
+
+def test_most_recent_date_seen_and_update_checkpoint(test_software_connector):
+    assert test_software_connector.most_recent_date_seen is None
+
+    test_software_connector._latest_time = None
+    test_software_connector.update_checkpoint()
+    assert test_software_connector.most_recent_date_seen is None
+
+    test_software_connector._latest_time = "2025-06-12T00:15:06.454735+00:00"
+    test_software_connector.update_checkpoint()
+    assert test_software_connector.most_recent_date_seen == "2025-06-12T00:15:06.454735+00:00"
+
+
+def test_fetch_devices_paginated_with_from_date(test_software_connector):
+    with requests_mock.Mocker() as m:
+        m.get(
+            AGENTS_URL,
+            json=_page([_agent("a1", "2025-06-11T00:00:00Z")], next_page="/api/data/endpoint/Agent?offset=1"),
+        )
+        m.get(f"{AGENTS_URL}?offset=1", json=_page([_agent("a2", "2025-06-12T00:00:00Z"), {"hostname": "no-id"}]))
+
+        pages = list(test_software_connector._fetch_devices(from_date="2025-06-01T00:00:00+00:00"))
+
+        assert m.request_history[0].qs["firstseen"] == ["2025-06-01t00:00:00+00:00"]
+
+    assert [[agent.id for agent in page] for page in pages] == [["a1"], ["a2"]]
+
+
+def test_fetch_devices_no_devices(test_software_connector):
+    with requests_mock.Mocker() as m:
+        m.get(AGENTS_URL, json={"count": 0, "results": []})
+
+        assert list(test_software_connector._fetch_devices(from_date=None)) == []
+
+
+def test_fetch_devices_stopped(test_software_connector):
+    test_software_connector._stop_event.set()
+
+    with requests_mock.Mocker() as m:
+        m.get(AGENTS_URL, json=_page([_agent("a1", "2025-06-11T00:00:00Z")]))
+
+        assert list(test_software_connector._fetch_devices(from_date=None)) == []
+
+
+def test_fetch_devices_request_error(test_software_connector):
+    with requests_mock.Mocker() as m:
+        m.get(AGENTS_URL, status_code=500)
+
+        with pytest.raises(requests.HTTPError):
+            list(test_software_connector._fetch_devices(from_date=None))
+
+
+def test_fetch_applications_skips_invalid_items(test_software_connector):
+    with requests_mock.Mocker() as m:
+        m.get(
+            f"{AGENTS_URL}/a1/applications/",
+            json=_page([{"id": "app-1", "name": "App1"}, {"id": "app-2"}]),
+        )
+
+        pages = list(test_software_connector._fetch_applications("a1"))
+
+    assert [[app.id for app in page] for page in pages] == [["app-1"]]
+
+
+def test_fetch_applications_stopped(test_software_connector):
+    test_software_connector._stop_event.set()
+
+    with requests_mock.Mocker() as m:
+        m.get(f"{AGENTS_URL}/a1/applications/", json=_page([{"id": "app-1", "name": "App1"}]))
+
+        assert list(test_software_connector._fetch_applications("a1")) == []
+
+
+def test_iterate_devices_keeps_most_recent_date(test_software_connector):
+    test_software_connector._latest_time = None
+
+    with requests_mock.Mocker() as m:
+        m.get(
+            AGENTS_URL,
+            json=_page([_agent("a1", "2025-06-12T00:00:00Z")], next_page="/api/data/endpoint/Agent?offset=1"),
+        )
+        m.get(
+            f"{AGENTS_URL}?offset=1",
+            json=_page([{"hostname": "no-id"}], next_page="/api/data/endpoint/Agent?offset=2"),
+        )
+        m.get(f"{AGENTS_URL}?offset=2", json=_page([_agent("a0", "2025-06-11T00:00:00Z")]))
+
+        pages = list(test_software_connector.iterate_devices())
+
+    assert [[agent.id for agent in page] for page in pages] == [["a1"], ["a0"]]
+    assert test_software_connector._latest_time == "2025-06-12T00:00:00.000001+00:00"
+
+
+def test_iterate_devices_does_not_move_checkpoint_backward(test_software_connector):
+    test_software_connector._latest_time = None
+
+    with (
+        requests_mock.Mocker() as m,
+        patch.object(
+            type(test_software_connector),
+            "most_recent_date_seen",
+            new_callable=lambda: property(lambda self: "2030-01-01T00:00:00+00:00"),
+        ),
+    ):
+        m.get(AGENTS_URL, json=_page([_agent("a1", "2025-06-12T00:00:00Z")]))
+
+        pages = list(test_software_connector.iterate_devices())
+
+    assert len(pages) == 1
+    assert test_software_connector._latest_time is None
+
+
+def test_iterate_devices_error(test_software_connector):
+    with requests_mock.Mocker() as m:
+        m.get(AGENTS_URL, status_code=500)
+
+        with pytest.raises(requests.HTTPError):
+            list(test_software_connector.iterate_devices())
+
+    assert any(c.kwargs.get("level") == "error" for c in test_software_connector.log.call_args_list)
+
+
+def test_get_assets_skips_device_build_errors(test_software_connector, monkeypatch):
+    monkeypatch.setattr(test_software_connector, "build_device", Mock(side_effect=ValueError("bad device")))
+
+    with requests_mock.Mocker() as m:
+        m.get(AGENTS_URL, json=_page([_agent("a1", "2025-06-12T00:00:00Z")]))
+
+        assert list(test_software_connector.get_assets()) == []
+
+        # Applications are not fetched for a skipped device
+        assert m.call_count == 1
+
+
+def test_get_assets_skips_software_mapping_errors(test_software_connector, monkeypatch):
+    monkeypatch.setattr(test_software_connector, "map_software_fields", Mock(side_effect=KeyError("bad app")))
+
+    with requests_mock.Mocker() as m:
+        m.get(AGENTS_URL, json=_page([_agent("a1", "2025-06-12T00:00:00Z")]))
+        m.get(f"{AGENTS_URL}/a1/applications/", json=_page([{"id": "app-1", "name": "App1"}]))
+
+        assert list(test_software_connector.get_assets()) == []
+
+    test_software_connector.map_software_fields.assert_called_once()
+
+
+def test_get_assets_error(test_software_connector):
+    with requests_mock.Mocker() as m:
+        m.get(AGENTS_URL, status_code=500)
+
+        with pytest.raises(requests.HTTPError):
+            list(test_software_connector.get_assets())
+
+    assert test_software_connector.log.call_args_list[-1].kwargs == {"level": "error"}
+    assert "Software asset generation failed" in test_software_connector.log.call_args_list[-1].args[0]

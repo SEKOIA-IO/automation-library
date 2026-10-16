@@ -297,6 +297,30 @@ def test_fetch_artefact_data_digest_missmatch() -> None:
             _run_action()
 
 
+def _make_action() -> DownloadFileFromEndpointAction:
+    action = DownloadFileFromEndpointAction()
+    action.module.configuration = {"url": _fake_instance_url, "api_token": _fake_api_token}
+    return action
+
+
+@pytest.mark.parametrize("sha256", [None, 1337])
+def test_fetch_artefact_data_invalid_sha256(sha256) -> None:
+    with pytest.raises(RuntimeError, match="Missing or invalid 'sha256'"):
+        _make_action().fetch_artefact_data(artefact_info={"sha256": sha256})
+
+
+def test_fetch_artefact_data_without_digest_verification() -> None:
+    with requests_mock.Mocker() as requests_mocker:
+        requests_mocker.get(
+            f"{_fake_instance_url}/api/data/telemetry/Binary/download/{_fake_sha256_digest}/",
+            status_code=200,
+            content=_fake_artefact_content,
+        )
+
+        with _make_action().fetch_artefact_data(artefact_info={"sha256": _fake_sha256_digest}) as buffer:
+            assert buffer.read() == _fake_artefact_content
+
+
 @pytest.mark.skipif(
     """not all(map(os.environ.get, ("HARFANGLAB_URL", "HARFANGLAB_API_TOKEN", "HARFANGLAB_AGENT_ID")))""",
 )

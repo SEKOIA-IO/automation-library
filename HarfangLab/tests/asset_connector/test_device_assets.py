@@ -1203,3 +1203,79 @@ def test_get_assets_skips_on_map_error(test_harfanglab_asset_connector, agent_en
             with patch.object(test_harfanglab_asset_connector, "map_fields", side_effect=ValueError("mapping error")):
                 assets = list(test_harfanglab_asset_connector.get_assets())
                 assert len(assets) == 0
+
+
+AGENTS_URL = "https://example.com/api/data/endpoint/Agent"
+
+
+def _agent(agent_id: str, firstseen: str, **kwargs) -> dict:
+    return {"id": agent_id, "hostname": f"host-{agent_id}", "firstseen": firstseen, **kwargs}
+
+
+def _page(results: list, next_page: str | None = None) -> dict:
+    return {"count": len(results), "next": next_page, "previous": None, "results": results}
+
+
+def test_build_device_without_firstseen(test_harfanglab_asset_connector):
+    agent = HarfanglabAgent(id="test-id", hostname="test-host", firstseen="", lastseen="2025-06-12T00:00:00Z")
+
+    device = test_harfanglab_asset_connector.build_device(agent)
+
+    assert device.first_seen_time is None
+    assert device.last_seen_time == 1749686400
+
+
+def test_fetch_devices_stopped(test_harfanglab_asset_connector):
+    test_harfanglab_asset_connector._stop_event.set()
+
+    with requests_mock.Mocker() as m:
+        m.get(AGENTS_URL, json=_page([_agent("a1", "2025-06-11T00:00:00Z")]))
+
+        assert list(test_harfanglab_asset_connector._fetch_devices(from_date=None)) == []
+
+
+def test_iterate_devices_keeps_most_recent_date(test_harfanglab_asset_connector):
+    test_harfanglab_asset_connector._latest_time = None
+
+    with (
+        requests_mock.Mocker() as m,
+        patch.object(
+            type(test_harfanglab_asset_connector),
+            "most_recent_date_seen",
+            new_callable=lambda: property(lambda self: None),
+        ),
+    ):
+        m.get(
+            AGENTS_URL,
+            json=_page([_agent("a1", "2025-06-12T00:00:00Z")], next_page="/api/data/endpoint/Agent?offset=1"),
+        )
+        # A page whose items are all invalid is skipped
+        m.get(
+            f"{AGENTS_URL}?offset=1",
+            json=_page([{"hostname": "no-id"}], next_page="/api/data/endpoint/Agent?offset=2"),
+        )
+        m.get(f"{AGENTS_URL}?offset=2", json=_page([_agent("a0", "2025-06-11T00:00:00Z")]))
+
+        pages = list(test_harfanglab_asset_connector.iterate_devices())
+
+    assert [[agent.id for agent in page] for page in pages] == [["a1"], ["a0"]]
+    assert test_harfanglab_asset_connector._latest_time == "2025-06-12T00:00:00.000001+00:00"
+
+
+def test_get_assets_error(test_harfanglab_asset_connector):
+    with (
+        requests_mock.Mocker() as m,
+        patch.object(
+            type(test_harfanglab_asset_connector),
+            "most_recent_date_seen",
+            new_callable=lambda: property(lambda self: None),
+        ),
+    ):
+        m.get(AGENTS_URL, status_code=500)
+
+        with pytest.raises(requests.HTTPError):
+            list(test_harfanglab_asset_connector.get_assets())
+
+    last_call = test_harfanglab_asset_connector.log.call_args_list[-1]
+    assert last_call.kwargs == {"level": "error"}
+    assert last_call.args[0].startswith("Asset generation failed")
