@@ -1,13 +1,18 @@
 """Tests for Cato graphql client."""
 
+import logging
 from enum import Enum
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from aiohttp import web
+from aiohttp.test_utils import TestServer
 from aiolimiter import AsyncLimiter
 from faker import Faker
+from gql.transport.aiohttp import AIOHTTPTransport
+from gql.transport.exceptions import TransportQueryError, TransportServerError
 
-from client.graphql_client import CatoGraphQLClient, CatoRequestType
+from client.graphql_client import DEFAULT_TIMEOUT, CatoGraphQLClient, CatoRequestType
 
 
 def extend_enum(inherited_enum):
@@ -236,75 +241,10 @@ async def test_generate_cato_client(session_faker: Faker):
     assert client.cato_client(CatoRequestType.EVENTS_FEED) == result1
 
 
-@pytest.mark.asyncio
-async def test_session(session_faker: Faker):
-    """
-    Test CatoGraphQLClient _session method.
-
-    Args:
-        session_faker: Faker
-    """
-    client = CatoGraphQLClient(
-        api_key=session_faker.uuid4(),
-        account_id=session_faker.uuid4(),
-        events_feed_rate_limiter=AsyncLimiter(session_faker.random_int(min=1, max=100)),
-    )
-
-    events_feed_mock = MagicMock()
-    entity_lookup_mock = MagicMock()
-    audit_feed_mock = MagicMock()
-    account_metrics_mock = MagicMock()
-    account_snapshot_mock = MagicMock()
-
-    client._cato_clients = {
-        CatoRequestType.EVENTS_FEED: events_feed_mock,
-        CatoRequestType.ENTITY_LOOKUP: entity_lookup_mock,
-        CatoRequestType.AUDIT_FEED: audit_feed_mock,
-        CatoRequestType.ACCOUNT_METRICS: account_metrics_mock,
-        CatoRequestType.ACCOUNT_SNAPSHOT: account_snapshot_mock,
-    }
-
-    async with client._session(CatoRequestType.EVENTS_FEED) as session:
-        assert session == events_feed_mock
-
-    async with client._session(CatoRequestType.ENTITY_LOOKUP) as session:
-        assert session == entity_lookup_mock
-
-    async with client._session(CatoRequestType.AUDIT_FEED) as session:
-        assert session == audit_feed_mock
-
-    async with client._session(CatoRequestType.ACCOUNT_METRICS) as session:
-        assert session == account_metrics_mock
-
-    async with client._session(CatoRequestType.ACCOUNT_SNAPSHOT) as session:
-        assert session == account_snapshot_mock
-
-
-@pytest.mark.asyncio
-async def test_load_events_feed(session_faker: Faker):
-    """
-    Test CatoGraphQLClient load_events_feed method.
-
-    Args:
-        session_faker: Faker
-    """
-    # Generate fake data
-    api_key = session_faker.uuid4()
-    account_id = session_faker.uuid4()
-    last_event_id = session_faker.uuid4()
-    base_url = session_faker.url()
-
-    # Create the CatoGraphQLClient instance
-    client = CatoGraphQLClient(
-        api_key=api_key,
-        account_id=account_id,
-        base_url=base_url,
-        events_feed_rate_limiter=AsyncLimiter(session_faker.random_int(min=1, max=100)),
-    )
-
-    result_data = {
+def events_feed_result(session_faker: Faker, marker: str) -> dict:
+    return {
         "eventsFeed": {
-            "marker": last_event_id,
+            "marker": marker,
             "fetchedCount": 10,
             "accounts": [
                 {
@@ -323,16 +263,147 @@ async def test_load_events_feed(session_faker: Faker):
         }
     }
 
-    client._cato_clients = {
-        CatoRequestType.EVENTS_FEED: MagicMock(),
-    }
-    client._cato_clients[CatoRequestType.EVENTS_FEED].execute_async = AsyncMock(return_value=result_data)
 
-    # Call the load_events_feed method
+def mocked_client(session_faker: Faker) -> tuple[CatoGraphQLClient, MagicMock, MagicMock]:
+    """Client whose gql Client is a mock returning a mocked session on `connect_async`."""
+    client = CatoGraphQLClient(
+        api_key=session_faker.uuid4(),
+        account_id=session_faker.uuid4(),
+        base_url=session_faker.url(),
+        events_feed_rate_limiter=AsyncLimiter(100),
+    )
+
+    gql_client = MagicMock()
+    session = MagicMock()
+    session.client = gql_client
+    gql_client.connect_async = AsyncMock(return_value=session)
+    gql_client.close_async = AsyncMock()
+    client._cato_clients = {CatoRequestType.EVENTS_FEED: gql_client}
+
+    return client, gql_client, session
+
+
+def test_transport_verifies_ssl_and_has_timeouts(session_faker: Faker):
+    client = CatoGraphQLClient(api_key=session_faker.uuid4(), account_id=session_faker.uuid4())
+
+    gql_client = client.cato_client(CatoRequestType.EVENTS_FEED)
+
+    assert isinstance(gql_client.transport, AIOHTTPTransport)
+    assert gql_client.transport.ssl is True
+    assert gql_client.transport.timeout == DEFAULT_TIMEOUT == 60
+    assert gql_client.execute_timeout == DEFAULT_TIMEOUT
+
+
+def test_gql_transport_logger_is_not_verbose():
+    assert logging.getLogger("gql.transport.aiohttp").getEffectiveLevel() >= logging.WARNING
+
+
+@pytest.mark.asyncio
+async def test_session_is_reused(session_faker: Faker):
+    client, gql_client, session = mocked_client(session_faker)
+
+    async with client._session(CatoRequestType.EVENTS_FEED) as first:
+        assert first is session
+
+    async with client._session(CatoRequestType.EVENTS_FEED) as second:
+        assert second is session
+
+    gql_client.connect_async.assert_awaited_once()
+    gql_client.close_async.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_session_is_closed_on_transport_error(session_faker: Faker):
+    client, gql_client, _ = mocked_client(session_faker)
+
+    with pytest.raises(TransportServerError):
+        async with client._session(CatoRequestType.EVENTS_FEED):
+            raise TransportServerError("bad gateway", 502)
+
+    gql_client.close_async.assert_awaited_once()
+    assert client._sessions == {}
+
+    async with client._session(CatoRequestType.EVENTS_FEED):
+        pass
+
+    assert gql_client.connect_async.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_session_is_kept_on_query_error(session_faker: Faker):
+    client, gql_client, session = mocked_client(session_faker)
+
+    with pytest.raises(TransportQueryError):
+        async with client._session(CatoRequestType.EVENTS_FEED):
+            raise TransportQueryError("invalid marker")
+
+    gql_client.close_async.assert_not_awaited()
+    assert client._sessions == {CatoRequestType.EVENTS_FEED: session}
+
+
+@pytest.mark.asyncio
+async def test_close_closes_open_sessions(session_faker: Faker):
+    client, gql_client, _ = mocked_client(session_faker)
+
+    await client.close()  # nothing open yet
+    gql_client.close_async.assert_not_awaited()
+
+    async with client._session(CatoRequestType.EVENTS_FEED):
+        pass
+    await client.close()
+
+    gql_client.close_async.assert_awaited_once()
+    assert client._sessions == {}
+
+
+@pytest.mark.asyncio
+async def test_load_events_feed(session_faker: Faker):
+    """
+    Test CatoGraphQLClient load_events_feed method.
+
+    Args:
+        session_faker: Faker
+    """
+    last_event_id = session_faker.uuid4()
+    client, _, session = mocked_client(session_faker)
+    session.execute = AsyncMock(return_value=events_feed_result(session_faker, last_event_id))
+
     response = await client.load_events_feed(last_event_id=last_event_id)
 
-    # Check if the response is correctly parsed
     assert response.marker == last_event_id
     assert response.fetchedCount == 10
     assert len(response.accounts) == 1
     assert len(response.accounts[0].records) == 10
+    assert session.execute.call_args.kwargs["variable_values"] == {
+        "accountIds": [client.account_id],
+        "lastEventId": last_event_id,
+    }
+
+
+@pytest.mark.asyncio
+async def test_load_events_feed_over_real_transport(session_faker: Faker):
+    """End to end through gql and aiohttp against a local HTTP server."""
+    requests: list[dict] = []
+    result = events_feed_result(session_faker, "m1")
+
+    async def handler(request: web.Request) -> web.Response:
+        requests.append({"api_key": request.headers.get("x-api-key"), "body": await request.json()})
+        return web.json_response({"data": result})
+
+    app = web.Application()
+    app.router.add_post("/graphql2", handler)
+
+    async with TestServer(app) as server:
+        client = CatoGraphQLClient(api_key="key", account_id="account", base_url=str(server.make_url("/graphql2")))
+
+        assert (await client.load_events_feed()).marker == "m1"
+        assert (await client.load_events_feed("m1")).marker == "m1"
+
+        transport = client.cato_client(CatoRequestType.EVENTS_FEED).transport
+        assert transport.session is not None  # the aiohttp session is kept between calls
+
+        await client.close()
+        assert transport.session is None
+
+    assert [r["api_key"] for r in requests] == ["key", "key"]
+    assert [r["body"]["variables"]["lastEventId"] for r in requests] == [None, "m1"]

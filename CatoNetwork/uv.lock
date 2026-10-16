@@ -251,7 +251,6 @@ default-groups = ["dev", "lint"]
 dependencies = [
     { name = "aiolimiter" },
     { name = "gql", extra = ["aiohttp"] },
-    { name = "loguru" },
     { name = "orjson" },
     { name = "python-dateutil" },
     { name = "sekoia-automation-sdk" },
@@ -274,7 +273,6 @@ lint = [
 requires-dist = [
     { name = "aiolimiter", specifier = ">=1.1.0,<2" },
     { name = "gql", extras = ["aiohttp"], specifier = ">=3.5.0,<3.6" },
-    { name = "loguru", specifier = ">=0.7.0,<1" },
     { name = "orjson", specifier = ">=3.7.7,<4" },
     { name = "python-dateutil", specifier = ">=2.8.2,<3" },
     { name = "sekoia-automation-sdk", specifier = ">=1.26.0,<2" },
