@@ -26,6 +26,8 @@ def connector(tmp_path, mock_module):
     connector.error = Mock()
     connector._latest_time = None
     connector._seen_sids = set()
+    connector._cycle_latest_time = None
+    connector._cycle_seen_sids = set()
     connector.ldap_client = Mock()
     connector.context = MagicMock()
     return connector
@@ -254,7 +256,8 @@ def test_get_users_generator(connector):
 
     assert len(users) == 1
     assert users[0]["dn"] == "CN=Test User,DC=example,DC=com"
-    assert connector._latest_time == "20240101120000.0Z"
+    assert connector._cycle_latest_time == "20240101120000.0Z"
+    assert connector._latest_time is None
 
 
 def test_get_assets(connector):

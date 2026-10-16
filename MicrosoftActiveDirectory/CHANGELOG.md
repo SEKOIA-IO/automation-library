@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-07 - 1.6.1
+
+### Fixed
+
+- The user asset connector now commits its checkpoint only once a collection cycle has pushed every user. LDAP returns users in no particular order, so a cycle interrupted midway, or with a failed push, could move the checkpoint past users never sent to Sekoia.io, which were then skipped forever.
+
 ## 2026-07-13 - 1.5.8
 
 ### Fixed
