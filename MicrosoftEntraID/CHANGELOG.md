@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-08 - 2.10.30
+
+### Changed
+
+- Upgrade `msgraph-sdk` dependency to version 1.62.0
+- Upgrade `azure-identity` dependency to version 1.25.3
+
 ## 2026-08-25 - 2.10.29
 
 ### Changed
