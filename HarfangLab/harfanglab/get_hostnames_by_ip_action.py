@@ -28,8 +28,9 @@ class GetHostnamesByIP(Action):
         # Check if data is a dictionary with a key "results" or directly a list
         result = data.get("results") if isinstance(data, dict) else data
 
-        hostnames = [HostnameEntry(**entry) for entry in result]  # type: ignore
-        if get_only_last_seen:
+        hostnames = [HostnameEntry(**entry) for entry in result or []]
+        if get_only_last_seen and hostnames:
+            # No agent may match the target IP: return an empty list instead of failing
             most_recent_hostname = max(hostnames, key=lambda x: x.lastseen)
             hostnames_result = HostnamesResult(hostnames=[most_recent_hostname])
         else:
