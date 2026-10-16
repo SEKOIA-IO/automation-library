@@ -6,7 +6,7 @@ from threading import Event, Lock, Thread
 from typing import Any, Generator
 
 import orjson
-from pydantic.v1 import Field
+from pydantic import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
@@ -19,7 +19,7 @@ from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUT
 class TrendMicroConnectorConfiguration(DefaultConnectorConfiguration):
     service_url: str = Field(..., description="Service URL")
     username: str = Field(..., description="Username")
-    api_key: str = Field(..., description="API key", secret=True)
+    api_key: str = Field(..., description="API key", json_schema_extra={"secret": True})
     frequency: int = 60
     batch_size: int = 500
 
@@ -190,7 +190,7 @@ class TrendMicroWorker(Thread):
         try:
             events = next(self.fetch_events())
             events_len = len(events)
-            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
+            batch_of_events: list[Any] = [orjson.dumps(event).decode("utf-8") for event in events]
 
             # if the batch is full, push it
             if len(batch_of_events) > 0:

@@ -1,29 +1,31 @@
 import time
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 import requests_mock
 
 from trendmicro_modules import TrendMicroModule
-from trendmicro_modules.trigger_email_sec import TrendMicroEmailSecurityConnector, TrendMicroWorker
+from trendmicro_modules.trigger_email_sec import (
+    TrendMicroConnectorConfiguration,
+    TrendMicroEmailSecurityConnector,
+    TrendMicroWorker,
+)
 
 
 @pytest.fixture
-def trigger(symphony_storage):
+def trigger(symphony_storage, prepare_connector_mocks):
     module = TrendMicroModule()
     trigger = TrendMicroEmailSecurityConnector(module=module, data_path=symphony_storage)
 
-    trigger.push_events_to_intakes = MagicMock()
-    trigger.configuration = {
-        "service_url": "api.tmes.trendmicro.eu",
-        "username": "johndoe",
-        "api_key": "01234556789abcdef",
-        "intake_key": "intake_key",
-    }
+    trigger = prepare_connector_mocks(trigger)
+    trigger.configuration = TrendMicroConnectorConfiguration(
+        service_url="api.tmes.trendmicro.eu",
+        username="johndoe",
+        api_key="01234556789abcdef",
+        intake_key="intake_key",
+    )
 
-    trigger.send_event = MagicMock()
-    trigger.log = MagicMock()
-    trigger.log_exception = MagicMock()
+    trigger.send_event = Mock()
 
     return trigger
 
@@ -72,19 +74,16 @@ def response_message_empty():
     return b""
 
 
-def test_service_url_normalization(trigger):
-    # Without schema and with trailing slash
-    trigger.configuration.service_url = "api.tmes.trendmicro.eu/"
-    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
-    assert consumer.service_url == "https://api.tmes.trendmicro.eu"
-
-    # With incorrect schema and with trailing slash
-    trigger.configuration.service_url = "http://api.tmes.trendmicro.eu/"
-    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
-    assert consumer.service_url == "https://api.tmes.trendmicro.eu"
-
-    # With correct schema and with trailing slash
-    trigger.configuration.service_url = "https://api.tmes.trendmicro.eu/"
+@pytest.mark.parametrize(
+    "service_url",
+    [
+        "api.tmes.trendmicro.eu/",
+        "http://api.tmes.trendmicro.eu/",
+        "https://api.tmes.trendmicro.eu/",
+    ],
+)
+def test_service_url_normalization(trigger, service_url):
+    trigger.configuration.service_url = service_url
     consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
     assert consumer.service_url == "https://api.tmes.trendmicro.eu"
 
@@ -145,15 +144,137 @@ def test_saving_checkpoint(trigger):
     assert result > 0
 
 
-def test_fetch_event(trigger, response_message, response_message_empty):
-    with requests_mock.Mocker() as mock_requests, patch(
-        "trendmicro_modules.trigger_email_sec.TrendMicroWorker.get_last_timestamp",
-        return_value=0,
-    ) as mock_get_ts, patch(
-        "trendmicro_modules.trigger_email_sec.TrendMicroWorker.set_last_timestamp"
-    ) as mock_set_ts, patch(
+@pytest.mark.parametrize(
+    ("method_name", "expected_running"),
+    [
+        ("stop", False),
+    ],
+)
+def test_worker_runtime_controls(trigger, method_name, expected_running):
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+
+    getattr(consumer, method_name)()
+
+    assert consumer.running is expected_running
+
+
+def test_worker_log_exception_is_forwarded(trigger):
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+
+    consumer.log_exception("boom")
+
+    trigger.log_exception.assert_called_once_with("boom")
+
+
+def test_set_recent_pushed_events_uses_existing_cache_bucket(trigger):
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+
+    event = {"mailID": "m1", "messageID": "msg1", "action": "Delivered"}
+    consumer.set_recent_pushed_events([event])
+    trigger.context_lock.acquire()
+    with trigger.context as cache:
+        cache["accepted_traffic"]["marker"] = "existing"
+    trigger.context_lock.release()
+
+    consumer.set_recent_pushed_events([event])
+
+    trigger.context_lock.acquire()
+    with trigger.context as cache:
+        assert cache["accepted_traffic"]["marker"] == "existing"
+        assert cache["accepted_traffic"]["recent_pushed_events"] == [consumer.get_event_metadata(event)]
+    trigger.context_lock.release()
+
+
+def test_iterate_through_pages_handles_next_token_and_empty_page(trigger):
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    first_page_event = {"mailID": "m1", "messageID": "msg1", "action": "Delivered", "genTime": "2020-11-25T06:53:19Z"}
+
+    with patch.object(
+        consumer,
+        "request_logs_page",
+        side_effect=[
+            {"logs": [first_page_event], "nextToken": "abc%2Bdef"},
+            {"logs": [], "nextToken": None},
+        ],
+    ) as mock_request_page, patch("trendmicro_modules.trigger_email_sec.time") as mock_time:
+        mock_time.time.return_value = 1666711174
+
+        pages = list(consumer.iterate_through_pages(from_timestamp=0))
+
+    assert pages == [[first_page_event]]
+    assert mock_request_page.call_count == 2
+    second_call_params = mock_request_page.call_args_list[1].kwargs["params"]
+    assert second_call_params["token"] == "abc+def"
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        {"logs": [{"mailID": "m1", "messageID": "msg1", "action": "Delivered"}], "nextToken": None},
+    ],
+)
+def test_iterate_through_pages_stops_when_next_token_is_missing(trigger, content):
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+
+    with patch.object(consumer, "request_logs_page", return_value=content), patch(
         "trendmicro_modules.trigger_email_sec.time"
     ) as mock_time:
+        mock_time.time.return_value = 1666711174
+        pages = list(consumer.iterate_through_pages(from_timestamp=0))
+
+    assert pages == [content["logs"]]
+
+
+def test_iterate_through_pages_exits_immediately_when_worker_is_stopped(trigger):
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    consumer.stop()
+
+    with patch.object(consumer, "request_logs_page", return_value={"logs": [], "nextToken": None}), patch(
+        "trendmicro_modules.trigger_email_sec.time"
+    ) as mock_time:
+        mock_time.time.return_value = 1666711174
+        pages = list(consumer.iterate_through_pages(from_timestamp=0))
+
+    assert pages == []
+
+
+def test_fetch_events_skips_empty_batches(trigger):
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+
+    with patch.object(consumer, "iterate_through_pages", return_value=iter([[]])):
+        assert list(consumer.fetch_events()) == []
+
+
+def test_next_batch_does_not_update_timestamp_when_event_is_not_newer(trigger, mocked_email_worker_runtime):
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    event = {"mailID": "m1", "messageID": "msg1", "action": "Delivered", "genTime": "1970-01-01T00:00:00Z"}
+
+    mock_time = mocked_email_worker_runtime
+    mock_time.time.side_effect = [100, 101, 101]
+
+    with patch.object(consumer, "fetch_events", return_value=iter([[event]])), patch.object(
+        consumer, "get_last_timestamp", return_value=10
+    ), patch.object(consumer, "set_last_timestamp") as mock_set_last_timestamp:
+        consumer.next_batch()
+
+    assert trigger.push_events_to_intakes.call_count == 1
+    mock_set_last_timestamp.assert_not_called()
+
+
+def test_next_batch_sleeps_when_batch_is_empty(trigger, mocked_email_worker_runtime):
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    mock_time = mocked_email_worker_runtime
+    mock_time.time.side_effect = [100, 160]
+
+    with patch.object(consumer, "fetch_events", return_value=iter([[]])):
+        consumer.next_batch()
+
+    mock_time.sleep.assert_any_call(consumer.frequency)
+
+
+def test_fetch_event(trigger, response_message, response_message_empty, mocked_email_worker_runtime):
+    with requests_mock.Mocker() as mock_requests:
+        mock_time = mocked_email_worker_runtime
         mock_requests.get(
             "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog",
             [{"status_code": 200, "json": response_message}, {"status_code": 200, "content": response_message_empty}],
@@ -180,15 +301,9 @@ def test_fetch_event(trigger, response_message, response_message_empty):
         assert trigger.push_events_to_intakes.call_count == 1
 
 
-def test_fetch_empty_content(trigger, response_message_empty):
-    with requests_mock.Mocker() as mock_requests, patch(
-        "trendmicro_modules.trigger_email_sec.TrendMicroWorker.get_last_timestamp",
-        return_value=0,
-    ) as mock_get_ts, patch(
-        "trendmicro_modules.trigger_email_sec.TrendMicroWorker.set_last_timestamp"
-    ) as mock_set_ts, patch(
-        "trendmicro_modules.trigger_email_sec.time"
-    ) as mock_time:
+def test_fetch_empty_content(trigger, response_message_empty, mocked_email_worker_runtime):
+    with requests_mock.Mocker() as mock_requests:
+        mock_time = mocked_email_worker_runtime
         mock_requests.get(
             "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog",
             [{"status_code": 204, "content": response_message_empty}],
