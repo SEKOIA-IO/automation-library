@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-12
+
+### Fixed
+
+- Reject empty `user` and `message_id` arguments on message actions before calling Microsoft Graph, and declare `minLength: 1` for them in the action manifests
+
 ## [0.4.0] - 2026-08-28
 
 ### Changed
