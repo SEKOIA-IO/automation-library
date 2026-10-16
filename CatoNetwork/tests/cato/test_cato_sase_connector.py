@@ -9,8 +9,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import aiohttp
 import orjson
 import pytest
+from aiohttp import web
+from aiohttp.test_utils import TestServer
 from faker import Faker
 from gql.transport.exceptions import TransportProtocolError, TransportQueryError, TransportServerError
+from pydantic import ValidationError
 from sekoia_automation import constants
 
 from cato.cato_sase_connector import (
@@ -21,6 +24,7 @@ from cato.cato_sase_connector import (
     _query_error_message,
 )
 from cato.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION
+from client.graphql_client import CatoGraphQLClient
 from client.schemas.events_feed import EventsFeedResponseSchema
 
 
@@ -43,7 +47,7 @@ def connector(symphony_storage: str, session_faker: Faker) -> CatoSaseConnector:
 
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
-    trigger.push_events_to_intakes = MagicMock(side_effect=lambda events, sync=False: [f"id-{i}" for i in events])
+    trigger.push_events_to_intakes = MagicMock(side_effect=lambda events, **_kwargs: [f"id-{i}" for i in events])
 
     trigger.module.configuration = {"api_key": session_faker.word(), "account_id": session_faker.word()}
     trigger.configuration = CatoSaseConnectorConfig(intake_key=session_faker.uuid4())
@@ -85,6 +89,12 @@ def labelled_value(metric, name: str, intake_key: str) -> float | None:
 def test_frequency_default_and_override():
     assert CatoSaseConnectorConfig(intake_key="key").frequency == 60
     assert CatoSaseConnectorConfig(intake_key="key", frequency=5).frequency == 5
+
+
+@pytest.mark.parametrize("frequency", [0, -1])
+def test_frequency_must_be_positive(frequency: int):
+    with pytest.raises(ValidationError):
+        CatoSaseConnectorConfig(intake_key="key", frequency=frequency)
 
 
 # Properties
@@ -197,12 +207,14 @@ async def test_next_batch_drops_oversized_events(connector: CatoSaseConnector):
     feed.accounts[0].records[1].fieldsMap["big"] = "x" * (constants.EVENT_BYTES_MAX_SIZE + 1)
     mock_feed(connector, feed)
 
-    await connector.next_batch()
+    with patch.object(connector, "put_discarded_events") as put_discarded_events:
+        await connector.next_batch()
 
+    put_discarded_events.assert_called_once_with(intake_key=connector.configuration.intake_key, count=1)
     assert len(connector.push_events_to_intakes.call_args.kwargs["events"]) == 1
     assert connector.latest_events_feed_id == "marker-1"
     connector.log.assert_any_call(
-        f"Discarded 1 events larger than {constants.EVENT_BYTES_MAX_SIZE} bytes", level="warning"
+        f"Discarded 1 events longer than {constants.EVENT_BYTES_MAX_SIZE} characters", level="warning"
     )
 
 
@@ -298,27 +310,93 @@ async def test_run_cycle_query_error_logs_vendor_message_and_sleeps(connector: C
     sleep.assert_awaited_once()
 
 
-@pytest.mark.asyncio
-async def test_run_cycle_query_permission_error_is_critical(connector: CatoSaseConnector):
-    mock_feed(connector, TransportQueryError("raw", errors=[{"message": "Permission denied"}]))
+def levels(connector: CatoSaseConnector) -> list[str]:
+    return [c.kwargs["level"] for c in connector.log.call_args_list]
 
+
+async def run_cycles(connector: CatoSaseConnector, count: int) -> AsyncMock:
     with patch.object(connector, "_sleep", new_callable=AsyncMock) as sleep:
-        await connector.run_cycle()
-
-    assert connector.log.call_args.kwargs["level"] == "critical"
-    sleep.assert_awaited_once()
+        for _ in range(count):
+            await connector.run_cycle()
+    return sleep
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("code", [401, 403])
-async def test_run_cycle_http_auth_error_is_critical(connector: CatoSaseConnector, code: int):
-    mock_feed(connector, TransportServerError("unauthorized", code))
+@pytest.mark.parametrize(
+    "error",
+    [
+        TransportQueryError("raw", errors=[{"message": "Permission denied"}]),
+        TransportQueryError("raw", errors=[{"message": "UNAUTHORIZED: bad key"}]),
+        TransportQueryError("raw", errors=[{"message": "Invalid API key"}]),
+        TransportQueryError("raw", errors=[{"message": "nope", "extensions": {"code": "UNAUTHENTICATED"}}]),
+        TransportQueryError("raw", errors=[{"message": "nope", "extensions": {"code": "FORBIDDEN"}}]),
+        TransportServerError("unauthorized", 401),
+        TransportServerError("forbidden", 403),
+    ],
+)
+async def test_run_cycle_auth_error_is_critical_after_three_in_a_row(connector: CatoSaseConnector, error: Exception):
+    mock_feed(connector, error, error, error)
 
-    with patch.object(connector, "_sleep", new_callable=AsyncMock) as sleep:
-        await connector.run_cycle()
+    sleep = await run_cycles(connector, 3)
 
-    assert connector.log.call_args.kwargs["level"] == "critical"
-    sleep.assert_awaited_once()
+    assert levels(connector) == ["error", "error", "critical"]
+    assert sleep.await_count == 3
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "message",
+    ["The api key field is deprecated", "missing permission on marker field", "Authentication service slow"],
+)
+async def test_run_cycle_non_auth_message_mentioning_auth_words_stays_error(
+    connector: CatoSaseConnector, message: str
+):
+    error = TransportQueryError("raw", errors=[{"message": message}])
+    mock_feed(connector, error, error, error, error)
+
+    await run_cycles(connector, 4)
+
+    assert levels(connector) == ["error"] * 4
+
+
+@pytest.mark.asyncio
+async def test_run_cycle_success_resets_auth_failure_counter(connector: CatoSaseConnector):
+    auth = TransportServerError("unauthorized", 401)
+    mock_feed(connector, auth, auth, make_feed("m", 0), auth, auth)
+
+    await run_cycles(connector, 5)
+
+    assert levels(connector) == ["error"] * 4
+
+
+@pytest.mark.asyncio
+async def test_run_cycle_incomplete_push_critical_once_after_five_on_same_marker(connector: CatoSaseConnector):
+    set_marker(connector, "marker-0")
+    mock_feed(connector, *[make_feed("marker-1", 2) for _ in range(7)])
+    connector.push_events_to_intakes = MagicMock(return_value=[])
+
+    await run_cycles(connector, 7)
+
+    assert levels(connector) == ["error"] * 4 + ["critical"] + ["error"] * 2
+    assert "marker-0" in connector.log.call_args_list[4].args[0]
+    assert connector.latest_events_feed_id == "marker-0"
+
+
+@pytest.mark.asyncio
+async def test_run_cycle_incomplete_push_counter_resets_on_success_and_marker_change(connector: CatoSaseConnector):
+    set_marker(connector, "marker-0")
+    feeds = [make_feed("marker-1", 2) for _ in range(9)] + [make_feed("marker-2", 2) for _ in range(4)]
+    mock_feed(connector, *feeds)
+    # 4 rejected, 1 accepted (marker -> marker-1), 4 rejected on marker-1, then 4 rejected after a marker change
+    acks = [[]] * 4 + [["a", "b"]] + [[]] * 4
+    connector.push_events_to_intakes = MagicMock(side_effect=[*acks, *[[]] * 4])
+
+    await run_cycles(connector, 9)
+    assert connector.latest_events_feed_id == "marker-1"
+    set_marker(connector, "marker-x")  # marker changed outside (e.g. restored context)
+    await run_cycles(connector, 4)
+
+    assert "critical" not in levels(connector)
 
 
 @pytest.mark.asyncio
@@ -413,3 +491,21 @@ def test_run_does_nothing_when_already_stopped(connector: CatoSaseConnector):
     asyncio.run(connector.async_run())
 
     assert connector._cato_client is None
+
+
+@pytest.mark.asyncio
+async def test_run_cycle_401_json_body_over_real_transport_is_critical_on_third_failure(connector: CatoSaseConnector):
+    async def handler(_: web.Request) -> web.Response:
+        return web.json_response({"errors": [{"message": "Permission denied"}], "data": None}, status=401)
+
+    app = web.Application()
+    app.router.add_post("/graphql2", handler)
+
+    async with TestServer(app) as server:
+        connector._cato_client = CatoGraphQLClient(
+            api_key="bad", account_id="account", base_url=str(server.make_url("/graphql2"))
+        )
+        await run_cycles(connector, 3)
+        await connector._cato_client.close()
+
+    assert levels(connector) == ["error", "error", "critical"]

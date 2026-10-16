@@ -407,3 +407,78 @@ async def test_load_events_feed_over_real_transport(session_faker: Faker):
 
     assert [r["api_key"] for r in requests] == ["key", "key"]
     assert [r["body"]["variables"]["lastEventId"] for r in requests] == [None, "m1"]
+
+
+def graphql_server(responses: list[web.Response]) -> tuple[web.Application, list[web.Request]]:
+    """aiohttp app answering the given responses in order and recording the requests."""
+    received: list[web.Request] = []
+
+    async def handler(request: web.Request) -> web.Response:
+        received.append(request)
+        return responses[len(received) - 1]
+
+    app = web.Application()
+    app.router.add_post("/graphql2", handler)
+    return app, received
+
+
+@pytest.mark.asyncio
+async def test_401_with_json_errors_body_is_a_query_error():
+    app, _ = graphql_server(
+        [web.json_response({"errors": [{"message": "Permission denied"}], "data": None}, status=401)]
+    )
+
+    async with TestServer(app) as server:
+        client = CatoGraphQLClient(api_key="bad", account_id="account", base_url=str(server.make_url("/graphql2")))
+
+        with pytest.raises(TransportQueryError) as excinfo:
+            await client.load_events_feed()
+
+        await client.close()
+
+    assert excinfo.value.errors == [{"message": "Permission denied"}]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [401, 503])
+async def test_text_error_body_is_a_server_error_with_code(status: int):
+    app, _ = graphql_server([web.Response(status=status, text="nope")])
+
+    async with TestServer(app) as server:
+        client = CatoGraphQLClient(api_key="key", account_id="account", base_url=str(server.make_url("/graphql2")))
+
+        with pytest.raises(TransportServerError) as excinfo:
+            await client.load_events_feed()
+
+        await client.close()
+
+    assert excinfo.value.code == status
+
+
+@pytest.mark.asyncio
+async def test_session_is_reopened_after_a_server_error(session_faker: Faker):
+    app, received = graphql_server(
+        [
+            web.Response(status=503, text="unavailable"),
+            web.json_response({"data": events_feed_result(session_faker, "m")}),
+        ]
+    )
+
+    async with TestServer(app) as server:
+        client = CatoGraphQLClient(api_key="key", account_id="account", base_url=str(server.make_url("/graphql2")))
+        transport = client.cato_client(CatoRequestType.EVENTS_FEED).transport
+        connect = AsyncMock(wraps=transport.connect)
+        transport.connect = connect
+
+        with pytest.raises(TransportServerError):
+            await client.load_events_feed()
+        assert transport.session is None
+        assert client._sessions == {}
+
+        assert (await client.load_events_feed()).marker == "m"
+        assert transport.session is not None
+        assert connect.await_count == 2
+
+        await client.close()
+
+    assert len(received) == 2

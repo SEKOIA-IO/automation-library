@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 import time
 from datetime import UTC, datetime
 from typing import Any, Literal
@@ -24,11 +25,23 @@ from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 logger = logging.getLogger(__name__)
 
 AUTH_HTTP_CODES = {401, 403}
-AUTH_ERROR_KEYWORDS = ("permission", "unauthorized", "unauthenticated", "authentication", "forbidden", "api key")
+AUTH_ERROR_MESSAGE = re.compile(
+    r"^\s*(permission denied|unauthori[sz]ed|unauthenticated|invalid api key|authentication failed)\b",
+    re.IGNORECASE,
+)
+AUTH_ERROR_CODES = {"UNAUTHENTICATED", "FORBIDDEN"}
+
+# A critical log stops the connector until a user restarts it: only send one for persistent failures
+AUTH_FAILURES_BEFORE_CRITICAL = 3
+INCOMPLETE_PUSHES_BEFORE_CRITICAL = 5
 
 
 class IncompletePushError(Exception):
     """The intake did not acknowledge every pushed event."""
+
+    def __init__(self, message: str, marker: str | None) -> None:
+        super().__init__(message)
+        self.marker = marker
 
 
 class CatoModuleConfig(BaseModel):
@@ -47,12 +60,24 @@ class CatoModule(Module):
 class CatoSaseConnectorConfig(DefaultConnectorConfiguration):
     """CatoSaseConnector configuration."""
 
-    frequency: int = 60
+    frequency: int = Field(default=60, ge=1)
 
 
-def _is_auth_error_message(message: str) -> bool:
-    lowered = message.lower()
-    return any(keyword in lowered for keyword in AUTH_ERROR_KEYWORDS)
+def _is_auth_query_error(error: TransportQueryError) -> bool:
+    """Whether a GraphQL error is an authentication or permission failure (anchored allow-list, no substring)."""
+    items: list[Any] = error.errors or [{"message": str(error)}]
+    for item in items:
+        if not isinstance(item, dict):
+            item = {"message": str(item)}
+
+        if AUTH_ERROR_MESSAGE.match(str(item.get("message", ""))):
+            return True
+
+        extensions = item.get("extensions")
+        if isinstance(extensions, dict) and str(extensions.get("code", "")).upper() in AUTH_ERROR_CODES:
+            return True
+
+    return False
 
 
 def _query_error_message(error: TransportQueryError) -> str:
@@ -99,6 +124,9 @@ class CatoSaseConnector(Connector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._consecutive_errors = 0
+        self._consecutive_auth_failures = 0
+        self._incomplete_push_marker: str | None = None
+        self._consecutive_incomplete_pushes = 0
 
     @property
     def latest_events_feed_id(self) -> str | None:
@@ -171,7 +199,8 @@ class CatoSaseConnector(Connector):
                 events.append(event)
 
         if discarded > 0:
-            self.log(f"Discarded {discarded} events larger than {EVENT_BYTES_MAX_SIZE} bytes", level="warning")
+            self.put_discarded_events(intake_key=self.configuration.intake_key, count=discarded)
+            self.log(f"Discarded {discarded} events longer than {EVENT_BYTES_MAX_SIZE} characters", level="warning")
 
         return events
 
@@ -186,13 +215,15 @@ class CatoSaseConnector(Connector):
         """
         processing_start = time.monotonic()
 
-        feed = await self.cato_client.load_events_feed(self.latest_events_feed_id)
+        marker = self.latest_events_feed_id
+        feed = await self.cato_client.load_events_feed(marker)
         events = self._serialize_events(feed)
 
         event_ids = await self._push_events(events) if events else []
         if len(event_ids) != len(events):
             raise IncompletePushError(
-                f"The intake acknowledged {len(event_ids)} of {len(events)} events; they will be fetched again"
+                f"The intake acknowledged {len(event_ids)} of {len(events)} events; they will be fetched again",
+                marker,
             )
 
         if feed.marker:
@@ -227,36 +258,68 @@ class CatoSaseConnector(Connector):
         delay = max(1, min(self.configuration.frequency, 2**self._consecutive_errors))
         await self._sleep(delay)
 
+    def _report_auth_failure(self, message: str) -> None:
+        """Log an auth failure as `error`, and as `critical` once it has repeated enough times in a row."""
+        self._consecutive_auth_failures += 1
+        level: Literal["critical", "error"] = (
+            "critical" if self._consecutive_auth_failures >= AUTH_FAILURES_BEFORE_CRITICAL else "error"
+        )
+        self.log(message, level=level)
+
+    def _report_incomplete_push(self, error: IncompletePushError) -> None:
+        """Log an incomplete push; once it keeps failing from the same marker, send a single critical log."""
+        if error.marker != self._incomplete_push_marker:
+            self._incomplete_push_marker = error.marker
+            self._consecutive_incomplete_pushes = 0
+
+        self._consecutive_incomplete_pushes += 1
+        if self._consecutive_incomplete_pushes == INCOMPLETE_PUSHES_BEFORE_CRITICAL:
+            self.log(
+                f"The intake keeps rejecting events from marker {error.marker} "
+                f"({self._consecutive_incomplete_pushes} attempts in a row): the marker is not advanced, "
+                "so no event is lost, but the collection is blocked",
+                level="critical",
+            )
+        else:
+            self.log(str(error), level="error")
+
+    def _reset_failure_counters(self) -> None:
+        self._consecutive_errors = 0
+        self._consecutive_auth_failures = 0
+        self._incomplete_push_marker = None
+        self._consecutive_incomplete_pushes = 0
+
     async def run_cycle(self) -> None:
         """Run `next_batch`, report errors, and sleep when caught up or after an error."""
         try:
             fetched_count = await self.next_batch()
 
         except IncompletePushError as error:
-            self.log(str(error), level="error")
+            self._report_incomplete_push(error)
 
         except TransportServerError as error:
             if error.code in AUTH_HTTP_CODES:
-                self.log(
-                    f"Cato API rejected the credentials (HTTP {error.code}): check the API key and its permissions",
-                    level="critical",
+                self._report_auth_failure(
+                    f"Cato API rejected the credentials (HTTP {error.code}): check the API key and its permissions"
                 )
             else:
                 self.log(f"Cato API server error: {error}", level="error")
 
         except TransportQueryError as error:
-            message = _query_error_message(error)
-            level: Literal["critical", "error"] = "critical" if _is_auth_error_message(message) else "error"
-            self.log(f"Cato API returned an error: {message}", level=level)
+            message = f"Cato API returned an error: {_query_error_message(error)}"
+            if _is_auth_query_error(error):
+                self._report_auth_failure(message)
+            else:
+                self.log(message, level="error")
 
         except (TransportProtocolError, aiohttp.ClientError, TimeoutError) as error:
             self.log(f"Failed to query the Cato API: {error!r}", level="error")
 
-        except Exception as error:  # noqa: BLE001 - never let one cycle kill the collection loop
+        except Exception as error:
             self.log_exception(error, message="Unexpected error while collecting Cato SASE events")
 
         else:
-            self._consecutive_errors = 0
+            self._reset_failure_counters()
             if fetched_count == 0:
                 await self._sleep(self.configuration.frequency)
 

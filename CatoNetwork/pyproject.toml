@@ -37,7 +37,15 @@ default-groups = ["dev", "lint"]
 target-version = "py314"
 line-length = 119
 
+[tool.ruff.lint]
+select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"client/schemas/events_feed.py" = ["N815"]  # field names mirror the Cato GraphQL schema
+
 [tool.mypy]
+strict = true
+allow_untyped_calls = true  # gql and the SDK are partially untyped
 plugins = ["pydantic.mypy"]
 python_version = "3.14"
 install_types = true
