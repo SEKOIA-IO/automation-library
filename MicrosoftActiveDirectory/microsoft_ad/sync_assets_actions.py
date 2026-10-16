@@ -50,12 +50,12 @@ class SynchronizeAssetsAction(MicrosoftADAction):
         connector.stop()
 
     @contextmanager
-    def _warn_on_error(self, what: str) -> Iterator[None]:
+    def _warn_on_error(self, reason: str) -> Iterator[None]:
         """Run a best-effort step: log a warning instead of raising."""
         try:
             yield
         except Exception as error:
-            self.log(f"Unable to {what}: {error}", "warning")
+            self.log(f"Unable to {reason}: {error}", "warning")
 
     def run(self, arguments: SynchronizeAssetsArguments) -> dict[str, Any]:
         # The connector registers its own SIGINT/SIGTERM handlers: restore the

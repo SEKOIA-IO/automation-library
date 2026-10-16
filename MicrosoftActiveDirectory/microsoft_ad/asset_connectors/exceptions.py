@@ -1,3 +1,4 @@
+import requests
 from sekoia_automation.exceptions import AutomationSDKError
 
 # TODO: drop this module and import these exceptions from
@@ -24,3 +25,7 @@ class AssetConnectorCriticalError(AutomationSDKError):
 
     def __init__(self) -> None:
         super().__init__("Asset connector stopped after a critical error")
+
+
+class RetryableStatusError(requests.HTTPError):
+    """A transient error answer from Sekoia.io, retried like a connection error."""

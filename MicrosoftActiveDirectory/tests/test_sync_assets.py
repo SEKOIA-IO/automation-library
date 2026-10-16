@@ -213,7 +213,7 @@ def test_run_returns_has_more_on_sigterm_and_restores_the_handler(build_action, 
 
 
 def test_run_reports_a_failed_push(build_action, api, tmp_path):
-    api.post(PUSH_URL, [{"status_code": 200, "json": {}}, {"status_code": 500, "json": {}}])
+    api.post(PUSH_URL, [{"status_code": 200, "json": {}}, {"status_code": 400, "json": {}}])
 
     action = build_action()
     results = action.run(ARGUMENTS)
@@ -234,7 +234,7 @@ def test_run_reports_a_failed_push(build_action, api, tmp_path):
 
 
 def test_failed_push_sends_the_counters_with_the_error(build_action, api):
-    api.post(PUSH_URL, status_code=500, json={})
+    api.post(PUSH_URL, status_code=400, json={})
     action = build_action()
 
     with (
@@ -249,6 +249,52 @@ def test_failed_push_sends_the_counters_with_the_error(build_action, api):
     assert data["status"] == "finished"
     assert data["error"] == "A batch of assets could not be pushed to Sekoia.io"
     assert data["results"] == {"fetched": 1, "pushed_batches": 0, "failed_batches": 1, "has_more": False}
+
+
+@pytest.fixture
+def fast_retries():
+    """Retry the pushes without waiting, for at most half a second."""
+    with (
+        patch("microsoft_ad.asset_connectors.user_assets_sync.wait_exponential", return_value=wait_none()),
+        patch.object(MicrosoftADUserAssetSyncConnector, "PUSH_RETRY_MAX_DELAY", 0.5),
+    ):
+        yield
+
+
+@pytest.mark.parametrize("status_code", [408, 429, 500, 503])
+def test_run_retries_a_transient_error_answer(build_action, api, fast_retries, status_code):
+    api.post(PUSH_URL, [{"status_code": status_code, "json": {}}, {"status_code": 200, "json": {}}])
+    action = build_action()
+
+    results = action.run(ARGUMENTS)
+
+    assert results == {"fetched": 3, "pushed_batches": 3, "failed_batches": 0, "has_more": False}
+    assert len(requests_to(api, PUSH_URL)) == 4
+    assert action.error_message is None
+
+
+def test_run_fails_after_retrying_a_lasting_transient_error(build_action, api, fast_retries, tmp_path):
+    api.post(PUSH_URL, status_code=503, json={})
+    action = build_action()
+
+    results = action.run(ARGUMENTS)
+
+    assert results == {"fetched": 1, "pushed_batches": 0, "failed_batches": 1, "has_more": False}
+    assert len(requests_to(api, PUSH_URL)) > 1
+    assert action.error_message == "A batch of assets could not be pushed to Sekoia.io"
+    assert "most_recent_datetime" not in read_context(tmp_path)
+
+
+@pytest.mark.parametrize("status_code", [400, 401, 403, 404, 413])
+def test_run_does_not_retry_a_client_error_answer(build_action, api, fast_retries, status_code):
+    api.post(PUSH_URL, status_code=status_code, json={})
+    action = build_action()
+
+    results = action.run(ARGUMENTS)
+
+    assert results == {"fetched": 1, "pushed_batches": 0, "failed_batches": 1, "has_more": False}
+    assert len(requests_to(api, PUSH_URL)) == 1
+    assert action.error_message == "A batch of assets could not be pushed to Sekoia.io"
 
 
 def test_run_reports_a_push_that_keeps_failing_to_connect(build_action, api, tmp_path):

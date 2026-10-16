@@ -1,3 +1,4 @@
+from functools import cached_property
 from typing import Any
 
 import requests
@@ -9,8 +10,17 @@ from microsoft_ad.asset_connectors.exceptions import (
     AssetConnectorCriticalError,
     AssetConnectorPushError,
     AssetConnectorStoppedError,
+    RetryableStatusError,
 )
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
+
+
+RETRYABLE_STATUS = {408, 429}
+
+
+def raise_on_retryable_status(response: requests.Response, *args: Any, **kwargs: Any) -> None:
+    if response.status_code in RETRYABLE_STATUS or response.status_code >= 500:
+        raise RetryableStatusError(f"HTTP {response.status_code} from {response.url}", response=response)
 
 
 class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
@@ -43,6 +53,16 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
             wait=wait_exponential(multiplier=1, min=1, max=10),
             reraise=True,
         )
+
+    # TODO: drop this override once the SDK retries transient error answers in `post_assets_to_api`
+    @cached_property
+    def _http_session(self) -> requests.Session:
+        # The SDK only retries a push on exceptions: raise on transient error answers
+        # so they go through `_retry` too, instead of failing the batch at once
+        session = requests.Session()
+        session.headers.update(self._http_header)
+        session.hooks["response"].append(raise_on_retryable_status)
+        return session
 
     def update_checkpoint(self) -> None:
         if self._cycle_complete:
