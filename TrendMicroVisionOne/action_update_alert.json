@@ -6,17 +6,26 @@
   "slug": "update_alert",
   "arguments": {
     "type": "object",
-    "required": ["alert_id"],
-    "secrets": ["api_key"],
+    "required": [
+      "alert_id"
+    ],
+    "secrets": [
+      "api_key"
+    ],
     "properties": {
       "alert_id": {
         "description": "The identifier of the alert to update",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "status": {
         "description": "The new status of the alert",
         "type": "string",
-        "enum": ["Open", "In Progress", "Closed"]
+        "enum": [
+          "Open",
+          "In Progress",
+          "Closed"
+        ]
       },
       "investigation_result": {
         "description": "The result of the investigation",
