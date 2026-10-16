@@ -1,0 +1,44 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "base_url": {
+        "description": "Base URL of the InsightVM Security Console, including the port (e.g. https://insightvm.example.com:3780)",
+        "type": "string",
+        "format": "uri"
+      },
+      "username": {
+        "description": "Username of the Security Console account used to query the API (the account must not use two-factor authentication)",
+        "type": "string"
+      },
+      "password": {
+        "description": "Password of the Security Console account",
+        "type": "string"
+      },
+      "verify_certificate": {
+        "description": "Verify the TLS certificate of the Security Console. Disable it only for a console using a self-signed certificate",
+        "type": "boolean",
+        "default": true
+      }
+    },
+    "required": [
+      "base_url",
+      "username",
+      "password"
+    ],
+    "title": "Arguments",
+    "type": "object",
+    "secrets": [
+      "password"
+    ]
+  },
+  "description": "Rapid7 InsightVM is a vulnerability management platform that discovers assets, assesses them for vulnerabilities and prioritises remediation.",
+  "name": "Rapid7 InsightVM",
+  "uuid": "910366b3-7969-49d6-aa19-d1e3a620f864",
+  "slug": "rapid7-insightvm",
+  "version": "1.0.0",
+  "categories": [
+    "Network"
+  ],
+  "supports_validation": true
+}
