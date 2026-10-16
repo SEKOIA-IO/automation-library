@@ -8,6 +8,9 @@ from microsoft_ad.models.common_models import MicrosoftADModule
 class LDAPClient:
     module: MicrosoftADModule
 
+    # Seconds to wait for an LDAP response before failing
+    RECEIVE_TIMEOUT = 120
+
     _ldap_client: Connection | None = None
 
     @cached_property
@@ -24,6 +27,7 @@ class LDAPClient:
             auto_bind=True,
             user=self.module.configuration.admin_username,
             password=self.module.configuration.admin_password,
+            receive_timeout=self.RECEIVE_TIMEOUT,
         )
 
     @property

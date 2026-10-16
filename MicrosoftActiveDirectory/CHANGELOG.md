@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-16 - 1.6.0
+
+### Added
+
+- Add an internal action that runs one fetch cycle of the Microsoft AD user asset connector on an on-premise runner. It returns `has_more` when interrupted, so the platform runs it again.
+- Declare the `cloud` and `on_premise` execution modes on the Microsoft AD user asset connector
+
+### Changed
+
+- Set a 120-second receive timeout on LDAP connections, so a hung Active Directory server cannot block an action or a connector forever
+
 ## 2026-07-13 - 1.5.8
 
 ### Fixed
