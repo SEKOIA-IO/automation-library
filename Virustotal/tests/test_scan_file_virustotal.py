@@ -1,9 +1,13 @@
 import time
 from unittest.mock import patch
 
+import pytest
+import requests
 import requests_mock
+from pydantic import ValidationError
 
-from virustotal.action_virustotal_scanfile import VirusTotalScanFileAction
+from virustotal.action_virustotal_scanfile import VirusTotalScanFileAction, VirusTotalScanFileArguments
+from virustotal.errors import MaxFileSizeExceedError, RequestLimitError
 
 file_result: dict = {
     "scans": {
@@ -404,3 +408,161 @@ def test_virustotal_scan_file(mock_sleep):
             "&resource=131f95c51cc819465fa1797f6ccacf9d494aaaff46fa3eac73ae63ffbdfd8267"
             "-1565249201"
         )
+
+
+@patch("virustotal.action_virustotal_scanfile.open", create=True)
+@patch("virustotal.action_virustotal_scanfile.os.path.getsize")
+def test_virustotal_scan_file_raises_if_file_empty(mock_getsize, mock_open, requests_mock):
+    vt: VirusTotalScanFileAction = VirusTotalScanFileAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+
+    with pytest.raises(ValidationError):
+        vt.run({"file": ""})
+    assert requests_mock.call_count == 0
+    mock_getsize.assert_not_called()
+    mock_open.assert_not_called()
+
+
+@patch("virustotal.action_virustotal_scanfile.open", create=True)
+@patch("virustotal.action_virustotal_scanfile.os.path.getsize")
+def test_virustotal_scan_file_raises_if_file_missing(mock_getsize, mock_open, requests_mock):
+    vt: VirusTotalScanFileAction = VirusTotalScanFileAction()
+    vt.module.configuration = {"apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+
+    with pytest.raises(ValidationError):
+        vt.run({})
+    assert requests_mock.call_count == 0
+    mock_getsize.assert_not_called()
+    mock_open.assert_not_called()
+
+
+@pytest.mark.parametrize("key", ["detect_threshold", "detect_treshold"])
+def test_virustotal_scan_file_arguments_accept_threshold_spellings(key):
+    arguments = VirusTotalScanFileArguments.model_validate({"file": "sample.bin", key: 5})
+    assert arguments.detect_threshold == 5
+
+
+APIKEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+SCAN_ID = "131f95c51cc819465fa1797f6ccacf9d494aaaff46fa3eac73ae63ffbdfd8267-1565249201"
+REPORT_URL = "https://www.virustotal.com/vtapi/v2/file/report"
+SCAN_URL = "https://www.virustotal.com/vtapi/v2/file/scan"
+
+
+@pytest.fixture
+def sleeps(monkeypatch):
+    calls: list[float] = []
+    monkeypatch.setattr("virustotal.action_virustotal_scanfile.time.sleep", calls.append)
+    return calls
+
+
+@pytest.fixture
+def action():
+    vt = VirusTotalScanFileAction()
+    vt.module.configuration = {"apikey": APIKEY}
+    return vt
+
+
+def test_virustotal_scan_file_sets_detected_output(action, sleeps, requests_mock):
+    requests_mock.post(SCAN_URL, json={"scan_id": SCAN_ID})
+    requests_mock.get(REPORT_URL, json=file_result)
+
+    action.run({"file": "tests/eicar.txt"})
+
+    assert action.outputs == {"detected": True}
+
+
+def test_virustotal_scan_file_sets_not_detected_output_below_threshold(action, sleeps, requests_mock):
+    requests_mock.post(SCAN_URL, json={"scan_id": SCAN_ID})
+    requests_mock.get(REPORT_URL, json=file_result)
+
+    action.run({"file": "tests/eicar.txt", "detect_threshold": file_result["positives"] + 1})
+
+    assert action.outputs == {"not detected": True}
+
+
+def test_virustotal_scan_file_raises_if_file_too_large(action, sleeps, requests_mock, monkeypatch):
+    monkeypatch.setattr("virustotal.action_virustotal_scanfile.os.path.getsize", lambda _: 200000000)
+
+    with pytest.raises(MaxFileSizeExceedError) as excinfo:
+        action.run({"file": "tests/eicar.txt"})
+
+    assert "(200000000)" in str(excinfo.value)
+    assert requests_mock.call_count == 0
+
+
+def test_virustotal_scan_file_uses_upload_url_for_large_files(action, sleeps, requests_mock, monkeypatch):
+    monkeypatch.setattr("virustotal.action_virustotal_scanfile.os.path.getsize", lambda _: 32000000)
+    large_upload_url = "https://upload.virustotal.com/large/upload"
+    requests_mock.get(
+        "https://www.virustotal.com/vtapi/v2/file/scan/upload_url", json={"upload_url": large_upload_url}
+    )
+    requests_mock.post(large_upload_url, json={"scan_id": SCAN_ID})
+    requests_mock.get(REPORT_URL, json=file_result)
+
+    results = action.run({"file": "tests/eicar.txt"})
+
+    assert results == file_result
+    history = requests_mock.request_history
+    assert [(request.method, request.url.split("?")[0]) for request in history] == [
+        ("GET", "https://www.virustotal.com/vtapi/v2/file/scan/upload_url"),
+        ("POST", large_upload_url),
+        ("GET", REPORT_URL),
+    ]
+    assert history[0].qs == {"apikey": [APIKEY]}
+
+
+def test_virustotal_scan_file_raises_if_upload_url_request_fails(action, sleeps, requests_mock, monkeypatch):
+    monkeypatch.setattr("virustotal.action_virustotal_scanfile.os.path.getsize", lambda _: 32000000)
+    requests_mock.get("https://www.virustotal.com/vtapi/v2/file/scan/upload_url", status_code=403)
+
+    with pytest.raises(requests.HTTPError):
+        action.run({"file": "tests/eicar.txt"})
+
+    assert requests_mock.call_count == 1
+
+
+def test_virustotal_scan_file_raises_if_upload_fails(action, sleeps, requests_mock):
+    requests_mock.post(SCAN_URL, status_code=500)
+
+    with pytest.raises(requests.HTTPError):
+        action.run({"file": "tests/eicar.txt"})
+
+    assert requests_mock.call_count == 1
+    assert sleeps == []
+
+
+def test_virustotal_scan_file_polls_until_report_is_ready(action, sleeps, requests_mock):
+    requests_mock.post(SCAN_URL, json={"scan_id": SCAN_ID})
+    requests_mock.get(
+        REPORT_URL,
+        [
+            {"status_code": 204},
+            {"status_code": 200, "json": {"response_code": -2, "scan_id": SCAN_ID}},
+            {"status_code": 200, "json": file_result},
+        ],
+    )
+
+    results = action.run({"file": "tests/eicar.txt"})
+
+    assert results == file_result
+    assert sleeps == [30, 60, 30]
+    assert requests_mock.call_count == 4
+    assert all(request.qs["resource"] == [SCAN_ID] for request in requests_mock.request_history[1:])
+
+
+def test_virustotal_scan_file_raises_after_too_many_rate_limited_polls(action, sleeps, requests_mock):
+    requests_mock.post(SCAN_URL, json={"scan_id": SCAN_ID})
+    requests_mock.get(REPORT_URL, status_code=204)
+
+    with pytest.raises(RequestLimitError):
+        action.run({"file": "tests/eicar.txt"})
+
+    assert sleeps == [30, 60, 120, 240, 480]
+
+
+def test_virustotal_scan_file_raises_if_report_request_fails(action, sleeps, requests_mock):
+    requests_mock.post(SCAN_URL, json={"scan_id": SCAN_ID})
+    requests_mock.get(REPORT_URL, status_code=500)
+
+    with pytest.raises(requests.HTTPError):
+        action.run({"file": "tests/eicar.txt"})
