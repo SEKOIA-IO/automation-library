@@ -1,4 +1,3 @@
-import re
 from typing import Any
 
 from polyswarm_api import exceptions as ps_exceptions
@@ -7,6 +6,9 @@ from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction
 from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.coerce import as_text
+from polyswarm_modules.validators import hash_kind
+from polyswarm_modules.verdict import tally_assertions
 
 # PolySwarm has no dedicated threat actor field on any client surface: neither
 # the artifact instance, its metadata nor the tag link resource carries one.
@@ -65,23 +67,6 @@ def _actor_from_tags(tags: list[str]) -> str:
     return ""
 
 
-_HASH_LENGTHS: dict[int, str] = {32: "MD5", 40: "SHA1", 64: "SHA256"}
-_HEX_RE = re.compile(r"^[0-9a-fA-F]+$")
-
-
-def _hash_kind(value: str) -> str | None:
-    """Return the hash type a value plausibly is, or None when it is neither.
-
-    A wrong-length or non-hex string is rejected before it costs an API
-    request: the server would refuse it anyway, and finding that out over the
-    network is slower and burns quota for an answer that is knowable locally.
-    """
-    stripped = value.strip()
-    if not _HEX_RE.match(stripped):
-        return None
-    return _HASH_LENGTHS.get(len(stripped))
-
-
 class SearchHashArguments(BaseModel):
     query_hash: str = Field(
         ...,
@@ -127,8 +112,9 @@ class SearchHash(PolyswarmAction):
 
     def run(self, arguments: dict[str, Any]) -> dict[str, Any] | None:
         args = SearchHashArguments(**arguments)
+        query_hash = args.query_hash.strip()
 
-        if _hash_kind(args.query_hash) is None:
+        if hash_kind(query_hash) is None:
             self.error(
                 f"'{args.query_hash}' is not a plausible MD5, SHA1 or SHA256 hash: "
                 "expected 32, 40 or 64 hexadecimal characters"
@@ -138,12 +124,14 @@ class SearchHash(PolyswarmAction):
         api = build_client(self.module.configuration)
 
         try:
-            results = list(api.search(args.query_hash))
+            # Only the most recent result is read, so stop after the first
+            # rather than following every page the client would fetch.
+            result = next(iter(api.search(query_hash)), None)
         except MISSING_RESULT:
             # The client raises on 204 and 404 rather than returning an empty
             # list, and an unseen hash is the most common thing an analyst asks
             # about. Without this the playbook gets a Python traceback.
-            results = []
+            result = None
         except ps_exceptions.InvalidValueException:
             self.error(f"{args.query_hash} is not a valid hash")
             return None
@@ -154,34 +142,31 @@ class SearchHash(PolyswarmAction):
             self.error(f"PolySwarm did not answer the hash lookup ({failure_kind(exc)}).")
             return None
 
-        if not results:
+        # A result whose assertion window is still open has no verdict yet:
+        # the engines have not all answered, so its counts are zero. It is
+        # treated like a hash PolySwarm has never seen, the same as SearchIp,
+        # so a playbook cannot read a scan in progress as clean.
+        if result is None or not self.is_complete(result):
             self.set_output("unknown", True)
             return SearchHashResponse(found=False).model_dump()
 
-        result = results[0]
-
-        family: str = ""
-        polyunite: dict[str, Any] | None = getattr(result.metadata, "json", {}).get("polyunite")
-        if polyunite and isinstance(polyunite, dict):
-            family = polyunite.get("malware_family", "")
+        metadata_json = getattr(getattr(result, "metadata", None), "json", None)
+        polyunite = metadata_json.get("polyunite") if isinstance(metadata_json, dict) else None
+        family = (polyunite.get("malware_family") if isinstance(polyunite, dict) else None) or ""
 
         families, tags, threat_actor = self._attribution(api, result, family)
 
-        # An engine that abstained answered None, which is neither malicious nor
-        # benign. The client's benign_assertions counts those as benign.
-        scored = [a for a in result.assertions if a.mask]
-
-        malicious_detections = sum(1 for a in scored if a.verdict is True)
-        self.set_output("detected" if malicious_detections >= args.detect_threshold else "not detected", True)
+        tally = tally_assertions(result)
+        self.set_output("detected" if tally.malicious_count >= args.detect_threshold else "not detected", True)
 
         response = SearchHashResponse(
             found=True,
-            benign_detections=sum(1 for a in scored if a.verdict is False),
-            total_detections=len(scored),
+            benign_detections=tally.benign_count,
+            total_detections=tally.total_count,
             families=families,
-            first_seen=str(result.first_seen),
+            first_seen=as_text(result.first_seen),
             family=family,
-            malicious_detections=malicious_detections,
+            malicious_detections=tally.malicious_count,
             permalink=result.permalink,
             polyscore=result.polyscore,
             tags=tags,

@@ -139,7 +139,7 @@ def test_scan_still_in_flight_is_not_served_as_cached(
     mock_api = mock_api_class.return_value
     mock_api.search.return_value = [in_flight]
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _result()
+    mock_api.lookup.return_value = _result()
 
     response = scan_file.run({"file": sample_file})
 
@@ -155,7 +155,7 @@ def test_failed_scan_errors_instead_of_reporting_zero_detections(
     mock_api = mock_api_class.return_value
     mock_api.search.return_value = []
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _result(failed=True, assertions=[])
+    mock_api.lookup.return_value = _result(failed=True, assertions=[])
 
     response = scan_file.run({"file": sample_file})
 
@@ -163,12 +163,16 @@ def test_failed_scan_errors_instead_of_reporting_zero_detections(
     assert "failed" in scan_file.error_message
 
 
+@patch("polyswarm_modules.action_polyswarm_scanfile.wait_for_scan")
 @patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
-def test_open_window_after_waiting_errors(mock_api_class: MagicMock, scan_file: ScanFile, sample_file: str) -> None:
+def test_open_window_after_waiting_errors(
+    mock_api_class: MagicMock, mock_wait: MagicMock, scan_file: ScanFile, sample_file: str
+) -> None:
+    """The wait helper only returns on a closed window, so this guards a result that gets past it anyway."""
     mock_api = mock_api_class.return_value
     mock_api.search.return_value = []
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _result(window_closed=False, assertions=[])
+    mock_wait.return_value = _result(window_closed=False, assertions=[])
 
     response = scan_file.run({"file": sample_file})
 
@@ -184,7 +188,7 @@ def test_abstaining_engine_is_not_counted_as_benign(
     mock_api = mock_api_class.return_value
     mock_api.search.return_value = []
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _result(assertions=assertions)
+    mock_api.lookup.return_value = _result(assertions=assertions)
 
     response = scan_file.run({"file": sample_file})
 
@@ -201,7 +205,7 @@ def test_url_scan_in_flight_is_not_served_as_cached(
     mock_api = mock_api_class.return_value
     mock_api.search_url.return_value = [_result(window_closed=False, assertions=[])]
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _result()
+    mock_api.lookup.return_value = _result()
 
     response = action.run({"url": "https://example.com"})
 
@@ -215,7 +219,7 @@ def test_ip_scan_failed_result_errors(mock_api_class: MagicMock, data_storage: s
     mock_api = mock_api_class.return_value
     mock_api.search_url.return_value = []
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _result(failed=True, assertions=[])
+    mock_api.lookup.return_value = _result(failed=True, assertions=[])
 
     response = action.run({"ip": "8.8.8.8"})
 

@@ -18,7 +18,7 @@
       },
       "max_wait_seconds": {
         "type": "integer",
-        "description": "How long to wait for a detonation that is already running elsewhere to finish, in seconds, capped at 300. 0, the default, does not wait: this reads the task's current status and returns immediately. Polling backs off from a short first check up to a 60 second ceiling. This action never starts a detonation itself; submit one with SandboxFile, SandboxUrl or SandboxIp first.",
+        "description": "How long to wait for a detonation that is already running elsewhere to finish, in seconds, from 0 to 300. A larger value is rejected with a validation error. 0, the default, does not wait: this reads the task's current status and returns immediately. Polling backs off from a short first check up to a 60 second ceiling. This action never starts a detonation itself; submit one with SandboxFile, SandboxUrl or SandboxIp first.",
         "default": 0,
         "minimum": 0,
         "maximum": 300
@@ -53,7 +53,7 @@
           "boolean",
           "null"
         ],
-        "description": "Whether the sample behaved maliciously. Null when there is no verdict to report: nothing has been detonated yet, a detonation failed, or a task is still processing. Never inferred to be false, since that would tell a playbook a sample is clean when nobody has looked at it."
+        "description": "Whether the sample behaved maliciously in this sandbox. This is the sandbox's behavioural verdict and not the engine consensus, and the two can disagree: a file every engine flags can behave inertly under detonation and score low here. Use a hash lookup for the engine view. Null when there is no verdict to report: nothing has been detonated yet, a detonation failed, or a task is still processing. Never inferred to be false, since that would tell a playbook a sample is clean when nobody has looked at it."
       },
       "behavior": {
         "type": "object",
@@ -160,6 +160,7 @@
       }
     }
   },
+  "slug": "report",
   "outputs": {
     "malicious": "The sample behaved maliciously in the sandbox",
     "not malicious": "The sample was detonated and PolySwarm found nothing malicious in its behaviour",

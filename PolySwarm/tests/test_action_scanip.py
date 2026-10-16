@@ -70,7 +70,7 @@ def test_submits_when_no_existing(mock_build_client: MagicMock, action: ScanIp) 
     mock_api.search_url.return_value = []
     mock_instance = MagicMock()
     mock_api.submit.return_value = mock_instance
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     response = action.run({"ip": "5.6.7.8"})
 
@@ -79,7 +79,7 @@ def test_submits_when_no_existing(mock_build_client: MagicMock, action: ScanIp) 
         artifact_type=ArtifactType.URL,
         scan_config="more-time",
     )
-    mock_api.wait_for.assert_called_once_with(mock_instance, timeout=300)
+    mock_api.lookup.assert_called_once_with(mock_instance)
     assert response["cached"] is False
 
 
@@ -87,7 +87,7 @@ def test_submits_when_no_existing(mock_build_client: MagicMock, action: ScanIp) 
 def test_force_rescan_skips_lookup(mock_build_client: MagicMock, action: ScanIp) -> None:
     mock_api = mock_build_client.return_value
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     response = action.run({"ip": "1.2.3.4", "force_rescan": True})
 
@@ -102,7 +102,7 @@ def test_submits_when_existing_failed(mock_build_client: MagicMock, action: Scan
     mock_api = mock_build_client.return_value
     mock_api.search_url.return_value = [failed]
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     response = action.run({"ip": "1.2.3.4"})
 
@@ -118,7 +118,7 @@ def test_excludes_unmasked(mock_build_client: MagicMock, action: ScanIp) -> None
     ]
     mock_build_client.return_value.search_url.return_value = []
     mock_build_client.return_value.submit.return_value = MagicMock()
-    mock_build_client.return_value.wait_for.return_value = _make_scan_result(assertions=assertions)
+    mock_build_client.return_value.lookup.return_value = _make_scan_result(assertions=assertions)
 
     response = action.run({"ip": "1.2.3.4"})
 
@@ -132,7 +132,7 @@ def test_detections_activate_the_detected_branch(mock_build_client: MagicMock, a
     mock_api = mock_build_client.return_value
     mock_api.search_url.return_value = []
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     action.run({"ip": "8.8.8.8"})
 
@@ -145,7 +145,7 @@ def test_the_threshold_moves_the_branch(mock_build_client: MagicMock, action: Sc
     mock_api = mock_build_client.return_value
     mock_api.search_url.return_value = []
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     action.run({"ip": "8.8.8.8", "detect_threshold": 99})
 
@@ -160,7 +160,7 @@ def test_uses_the_shared_retrying_client(
     mock_api = mock_build_client.return_value
     mock_api.search_url.return_value = []
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     action.run({"ip": "8.8.8.8"})
 
@@ -232,24 +232,28 @@ def test_submit_failure_returns_none_without_quoting_the_client(mock_build_clien
 # --- bounded wait ---
 
 
+@patch("polyswarm_modules.action_polyswarm_scanip.wait_for_scan")
 @patch("polyswarm_modules.action_polyswarm_scanip.build_client", new_callable=autospec_build_client)
-def test_the_wait_is_bounded_by_the_argument(mock_build_client: MagicMock, action: ScanIp) -> None:
-    mock_api = mock_build_client.return_value
-    mock_api.search_url.return_value = []
-    mock_api.wait_for.return_value = _make_scan_result()
-
-    action.run({**{"ip": "8.8.8.8"}, "max_wait_seconds": 45})
-
-    assert mock_api.wait_for.call_args.kwargs == {"timeout": 45}
-
-
-@patch("polyswarm_modules.action_polyswarm_scanip.build_client", new_callable=autospec_build_client)
-def test_a_scan_that_outlasts_the_wait_is_reported_as_still_running(
-    mock_build_client: MagicMock, action: ScanIp
+def test_the_wait_is_bounded_by_the_argument(
+    mock_build_client: MagicMock, mock_wait: MagicMock, action: ScanIp
 ) -> None:
     mock_api = mock_build_client.return_value
     mock_api.search_url.return_value = []
-    mock_api.wait_for.side_effect = ps_exceptions.TimeoutException("scan abc timed out, key=SECRET")
+    mock_wait.return_value = _make_scan_result()
+
+    action.run({**{"ip": "8.8.8.8"}, "max_wait_seconds": 45})
+
+    assert mock_wait.call_args.args[2] == 45
+
+
+@patch("polyswarm_modules.action_polyswarm_scanip.wait_for_scan")
+@patch("polyswarm_modules.action_polyswarm_scanip.build_client", new_callable=autospec_build_client)
+def test_a_scan_that_outlasts_the_wait_is_reported_as_still_running(
+    mock_build_client: MagicMock, mock_wait: MagicMock, action: ScanIp
+) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.search_url.return_value = []
+    mock_wait.side_effect = ps_exceptions.TimeoutException("scan abc timed out, key=SECRET")
 
     response = action.run({"ip": "8.8.8.8"})
 

@@ -27,6 +27,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction
+from polyswarm_modules.validators import non_public
 
 # Every pattern is compiled with these flags. The ASCII flag keeps \w, \d and
 # \b at their ASCII meanings, so accented text cannot widen a word boundary or
@@ -217,7 +218,13 @@ _PATTERN_SHA256 = r"\b[a-f0-9]{64}\b"
 _PATTERN_SHA1 = r"\b[a-f0-9]{40}\b"
 _PATTERN_MD5 = r"\b[a-f0-9]{32}\b"
 _PATTERN_URL = r"(?<![\w@.])https?://[A-Za-z0-9\[]" + _URL_BODY + r"*"
-_PATTERN_EMAIL = r"(?<![\w.+-])[a-z0-9][a-z0-9._%+-]*@" + _HOST + r"(?![\w])"
+# The lookbehind must exclude every character the local part accepts, "%"
+# included. With "%" allowed behind, each position after one rescanned to the
+# end of the input, so a run of them cost quadratic time: 40 kB took 2.1 s and
+# a 5 MB document would not finish in any useful time. The cost is that an
+# address written straight after a percent sign is no longer extracted, which
+# is the same rule already applied to a dot, a plus and a hyphen.
+_PATTERN_EMAIL = r"(?<![\w.+%-])[a-z0-9][a-z0-9._%+-]*@" + _HOST + r"(?![\w])"
 _PATTERN_DOMAIN = r"(?<![\w@.-])" + _HOST + r"(?![\w-])"
 
 # The trailing guards reject a fifth octet and a glued letter, while leaving a
@@ -270,6 +277,9 @@ _PRIORITY = {
     "domain": 7,
 }
 
+# The byte that marks a character of the text as taken by a kept match.
+_COVERED = b"\x01"
+
 _HASH_TYPES = frozenset(("sha256", "sha1", "md5"))
 
 # Sentence punctuation trimmed from the tail of a URL match.
@@ -313,23 +323,29 @@ def _canonical_email(address: str) -> str:
     return f"{address[:at_sign]}@{address[at_sign + 1 :].lower()}"
 
 
-def _count(text: str, character: str) -> int:
-    return sum(1 for candidate in text if candidate == character)
-
-
 def _trim_url_tail(span: str) -> str:
-    """Drop trailing sentence punctuation and unbalanced closing brackets."""
+    """Drop trailing sentence punctuation and unbalanced closing brackets.
+
+    The bracket counts are taken once and adjusted as characters are dropped,
+    because recounting the remaining text for every trailing character made a
+    long run of closing brackets quadratic.
+    """
     end = len(span)
+    open_round = span.count("(")
+    close_round = span.count(")")
+    open_square = span.count("[")
+    close_square = span.count("]")
     while end > 0:
         character = span[end - 1]
         if character in _URL_TAIL_PUNCTUATION:
             end -= 1
             continue
-        head = span[:end]
-        if character == ")" and _count(head, "(") < _count(head, ")"):
+        if character == ")" and open_round < close_round:
+            close_round -= 1
             end -= 1
             continue
-        if character == "]" and _count(head, "[") < _count(head, "]"):
+        if character == "]" and open_square < close_square:
+            close_square -= 1
             end -= 1
             continue
         break
@@ -343,19 +359,14 @@ def _looks_like_filename(domain: str) -> bool:
 def _is_reserved_address(address: str) -> bool:
     """True for an address no external service can be asked about.
 
-    Private, loopback, link local, multicast, unspecified and otherwise
-    reserved ranges all land here. They are reported separately rather than
+    Uses the same test as the actions that take an address, so an address
+    reported as public here is one ScanIp and SearchIp will accept: shared
+    address space (100.64.0.0/10) and every other range that is not globally
+    routable lands here too. They are reported separately rather than
     discarded, because internal infrastructure in a report is often the point.
     """
     parsed = ipaddress.ip_address(address)
-    return bool(
-        parsed.is_private
-        or parsed.is_reserved
-        or parsed.is_loopback
-        or parsed.is_link_local
-        or parsed.is_multicast
-        or parsed.is_unspecified
-    )
+    return parsed.is_unspecified or non_public(parsed) is not None
 
 
 def _candidate_value(indicator_type: str, raw: str) -> str | None:
@@ -392,10 +403,6 @@ def _candidate_value(indicator_type: str, raw: str) -> str | None:
     return None
 
 
-def _overlaps_any(start: int, end: int, kept: list[tuple[int, int, str, str]]) -> bool:
-    return any(start < other_end and end > other_start for other_start, other_end, _, _ in kept)
-
-
 def extract_indicators(text: str) -> dict[str, list[str]]:
     """Extract indicators from text and return one deduplicated list per type.
 
@@ -422,10 +429,21 @@ def extract_indicators(text: str) -> dict[str, list[str]]:
     # so matches that tie on every key stay in the order they were found.
     candidates.sort(key=lambda candidate: (-(candidate[1] - candidate[0]), _PRIORITY[candidate[2]]))
 
+    # Whether a candidate overlaps anything already kept is answered from a
+    # coverage map, one byte per character of the text. Kept spans never
+    # overlap, so marking them touches each character at most once, and a
+    # candidate is tested by looking for a marked byte inside its own span.
+    # That is linear in the text however many matches there are, where
+    # comparing every candidate against every kept span grows with the square
+    # of the match count and let a few hundred kilobytes run for seconds.
+    covered = bytearray(len(refanged))
     kept: list[tuple[int, int, str, str]] = []
     for candidate in candidates:
-        if not _overlaps_any(candidate[0], candidate[1], kept):
-            kept.append(candidate)
+        start, end = candidate[0], candidate[1]
+        if covered.find(_COVERED, start, end) != -1:
+            continue
+        covered[start:end] = _COVERED * (end - start)
+        kept.append(candidate)
 
     kept.sort(key=lambda candidate: (candidate[0], _PRIORITY[candidate[2]]))
 
@@ -441,11 +459,16 @@ def extract_indicators(text: str) -> dict[str, list[str]]:
         "reserved_ip": [],
     }
 
+    # A set beside each list answers "seen already" in constant time, and the
+    # list keeps the order the indicators appeared in.
+    seen: dict[str, set[str]] = {name: set() for name in buckets}
+
     for _, _, indicator_type, value in kept:
         bucket = indicator_type
         if indicator_type in ("ipv4", "ipv6") and _is_reserved_address(value):
             bucket = "reserved_ip"
-        if value not in buckets[bucket]:
+        if value not in seen[bucket]:
+            seen[bucket].add(value)
             buckets[bucket].append(value)
 
     return buckets

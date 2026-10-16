@@ -14,6 +14,7 @@
       "detect_threshold": {
         "type": "integer",
         "default": 1,
+        "minimum": 1,
         "description": "How many malicious engine detections activate the detected branch"
       }
     },
@@ -38,8 +39,11 @@
         "description": "Link to the PolySwarm scan result"
       },
       "polyscore": {
-        "type": "number",
-        "description": "PolySwarm threat score (0.0 - 1.0). The score is built around file artifacts. For a URL, a domain or an address, branch on the detection counts rather than on this score."
+        "type": [
+          "number",
+          "null"
+        ],
+        "description": "PolySwarm threat score (0.0 - 1.0). The score is built around file artifacts. For a URL, a domain or an address, branch on the detection counts rather than on this score. Null when PolySwarm returned no score."
       },
       "malicious_count": {
         "type": "integer",
@@ -70,13 +74,17 @@
               "type": "string"
             },
             "verdict": {
-              "type": "boolean"
+              "type": [
+                "boolean",
+                "null"
+              ]
             }
           }
         }
       }
     }
   },
+  "slug": "search_url",
   "outputs": {
     "detected": "PolySwarm engines detected this artifact",
     "not detected": "PolySwarm has scanned this artifact and no engine detected it",

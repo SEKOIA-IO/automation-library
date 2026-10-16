@@ -270,3 +270,88 @@ def test_an_oversized_file_is_refused_without_being_read(action: ExtractIocs, da
 
     assert response is None
     assert "limit" in action.error_message
+
+
+# --- what counts as public, and how the run time grows ---
+
+
+def test_shared_address_space_is_reported_as_reserved(
+    action: ExtractIocs,
+) -> None:
+    response = action.run({"text": "Carrier side 100.64.1.1 and 100.127.255.254, public 8.8.8.8"})
+
+    assert response["ipv4"] == ["8.8.8.8"]
+    assert response["reserved_ip"] == ["100.64.1.1", "100.127.255.254"]
+
+
+@pytest.mark.parametrize("address", ["8.8.8.8", "45.33.32.156", "2606:4700:4700::1111"])
+def test_every_reported_public_address_is_accepted_by_the_ip_validator(action: ExtractIocs, address: str) -> None:
+    from polyswarm_modules.validators import invalid_ip_reason
+
+    response = action.run({"text": f"seen {address}"})
+
+    assert invalid_ip_reason((response["ipv4"] + response["ipv6"])[0]) is None
+
+
+def test_dedup_keeps_first_seen_order_across_many_repeats(action: ExtractIocs) -> None:
+    text = " ".join(["b.example.com", "a.example.com"] * 500 + ["c.example.com"])
+
+    response = action.run({"text": text})
+
+    assert response["domain"] == ["b.example.com", "a.example.com", "c.example.com"]
+
+
+def test_the_longest_overlapping_match_still_wins(action: ExtractIocs) -> None:
+    response = action.run(
+        {"text": "see https://evil.example.com/a and evil.example.com and mail bob@evil.example.com"}
+    )
+
+    assert response["url"] == ["https://evil.example.com/a"]
+    assert response["domain"] == ["evil.example.com"]
+    assert response["email"] == ["bob@evil.example.com"]
+
+
+def test_a_long_run_of_closing_brackets_does_not_slow_the_trim(action: ExtractIocs) -> None:
+    import time
+
+    started = time.perf_counter()
+    response = action.run({"text": "http://a.example.com/" + ")" * 100_000})
+
+    assert time.perf_counter() - started < 5
+    assert response["url"] == ["http://a.example.com/"]
+
+
+def test_run_time_does_not_grow_with_the_square_of_the_match_count(action: ExtractIocs) -> None:
+    """Over a megabyte of dense indicators took many seconds when each candidate was compared with every kept match."""
+    import time
+
+    lines = [
+        f"host{i}.example.com https://evil{i}.example.net/p {i % 250}.{i % 200}.1.1 user{i}@mail.example.org\n"
+        for i in range(15_000)
+    ]
+    text = "".join(lines)
+    assert len(text) > 1_000_000
+
+    started = time.perf_counter()
+    response = action.run({"text": text})
+
+    assert time.perf_counter() - started < 15
+    assert len(response["url"]) == 15_000
+
+
+def test_a_run_of_percent_signs_does_not_blow_up_the_email_pattern(action: ExtractIocs) -> None:
+    """A percent sign is valid in a local part.
+
+    Allowing one behind the match made every position after one rescan to the
+    end of the input.
+    """
+    import time
+
+    text = "a%" * 40_000
+    assert len(text) == 80_000
+
+    started = time.perf_counter()
+    response = action.run({"text": text})
+
+    assert time.perf_counter() - started < 2
+    assert response["email"] == []

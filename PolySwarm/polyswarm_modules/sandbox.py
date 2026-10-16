@@ -49,37 +49,6 @@ def report_url(api: PolyswarmAPI, task_id: str, community: str | None) -> str:
     return base
 
 
-def validate_provider(
-    api: PolyswarmAPI,
-    sandbox: str,
-    log: Callable[..., Any],
-    error: Callable[[str], Any],
-) -> bool:
-    """True when the provider checks out, or the check could not be made and the value is trusted instead.
-
-    The action's own log and error are passed in so a refusal is recorded on
-    the run that asked, exactly as if the action had made the check itself.
-    """
-    try:
-        providers = list(api.sandbox_providers())
-    except CLIENT_ERRORS as exc:
-        log(
-            f"Could not validate the sandbox provider against PolySwarm's provider list "
-            f"({failure_kind(exc)}), trusting the configured value",
-            level="warning",
-        )
-        return True
-
-    slugs = {getattr(p, "slug", "") for p in providers if getattr(p, "slug", "")}
-    if slugs and sandbox not in slugs:
-        error(
-            f"'{sandbox}' is not a sandbox provider PolySwarm currently offers. "
-            f"Known providers: {', '.join(sorted(slugs))}."
-        )
-        return False
-    return True
-
-
 def poll_until_terminal(
     api: PolyswarmAPI,
     task: Any,

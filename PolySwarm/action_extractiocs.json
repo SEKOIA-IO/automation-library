@@ -89,5 +89,6 @@
         "description": "Total number of indicators returned across every list, including the reserved addresses"
       }
     }
-  }
+  },
+  "slug": "extract_iocs"
 }

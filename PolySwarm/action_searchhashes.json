@@ -56,8 +56,11 @@
               "description": "Total number of engines that returned a verdict"
             },
             "polyscore": {
-              "type": "number",
-              "description": "PolySwarm threat score (0.0 - 1.0)"
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "PolySwarm threat score (0.0 - 1.0). Null when PolySwarm returned no score."
             },
             "permalink": {
               "type": "string",
@@ -132,6 +135,7 @@
       }
     }
   },
+  "slug": "search_hashes",
   "outputs": {
     "detected": "At least one of the looked up hashes was detected by PolySwarm",
     "not detected": "PolySwarm returned a verdict for every hash that was queried and none was detected",

@@ -34,6 +34,7 @@ import ast
 import importlib
 import json
 import pkgutil
+import re
 from pathlib import Path
 from typing import Any
 
@@ -202,5 +203,181 @@ def test_descriptor_matches_model(descriptor_name: str, arguments: dict[str, Any
             )
             assert declared[json_key] == bound, f"{descriptor_name}: {name} {json_key} differs"
 
+        # The reverse direction: a bound the model enforces must also be declared, otherwise the
+        # catalogue lets the user type a value the action then rejects.
+        for json_key, model_attr in bound_checks:
+            bound = _model_bound(field, model_attr)
+            if bound is not _UNSET:
+                assert json_key in declared, (
+                    f"{descriptor_name}: {name} has {model_attr}={bound} on {model.__name__} "
+                    f"but the descriptor declares no {json_key}"
+                )
+
     for name in fields:
         assert name in properties, f"{descriptor_name}: {model.__name__}.{name} has no matching property in arguments"
+
+
+# ---------------------------------------------------------------------------
+# Results schema: every declared result field must agree with the response model
+# ---------------------------------------------------------------------------
+
+import types  # noqa: E402
+import typing  # noqa: E402
+
+_SCALAR_TYPES = {bool: "boolean", int: "integer", float: "number", str: "string"}
+
+
+def _json_types(annotation: Any) -> set[str] | None:
+    """JSON types a pydantic annotation allows, or None when it accepts anything (Any / unparameterised object)."""
+    if annotation is Any or annotation is object:
+        return None
+    if annotation is type(None):
+        return {"null"}
+    origin = typing.get_origin(annotation)
+    if origin in (typing.Union, types.UnionType):
+        collected: set[str] = set()
+        for arm in typing.get_args(annotation):
+            arm_types = _json_types(arm)
+            if arm_types is None:
+                return None
+            collected |= arm_types
+        return collected
+    if annotation in _SCALAR_TYPES:
+        return {_SCALAR_TYPES[annotation]}
+    if origin in (list, set, tuple, frozenset) or annotation in (list, set, tuple, frozenset):
+        return {"array"}
+    if origin is dict or annotation is dict:
+        return {"object"}
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return {"object"}
+    pytest.fail(f"unsupported annotation in a response model: {annotation!r}")
+
+
+def _item_annotation(annotation: Any) -> Any:
+    """The element annotation of a list, looking through Optional."""
+    origin = typing.get_origin(annotation)
+    if origin in (typing.Union, types.UnionType):
+        for arm in typing.get_args(annotation):
+            if arm is not type(None) and _item_annotation(arm) is not None:
+                return _item_annotation(arm)
+        return None
+    if origin in (list, set, tuple, frozenset):
+        args = typing.get_args(annotation)
+        return args[0] if args else Any
+    return None
+
+
+def _object_model(annotation: Any) -> type[BaseModel] | None:
+    origin = typing.get_origin(annotation)
+    if origin in (typing.Union, types.UnionType):
+        for arm in typing.get_args(annotation):
+            found = _object_model(arm)
+            if found is not None:
+                return found
+        return None
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return annotation
+    return None
+
+
+def _declared_types(declared: dict[str, Any]) -> set[str]:
+    raw = declared.get("type")
+    if raw is None:
+        return set()
+    return {raw} if isinstance(raw, str) else set(raw)
+
+
+def _check_schema(path: str, schema: dict[str, Any], annotation: Any, model_name: str, problems: list[str]) -> None:
+    allowed = _json_types(annotation)
+    declared = _declared_types(schema)
+    if allowed is not None and declared != allowed:
+        problems.append(
+            f"{path}: descriptor declares type {sorted(declared)} but {model_name} allows {sorted(allowed)}"
+        )
+
+    nested = _object_model(annotation)
+    if nested is not None and "properties" in schema:
+        _check_properties(path, schema["properties"], nested, problems)
+
+    item_annotation = _item_annotation(annotation)
+    if item_annotation is not None and "items" in schema:
+        _check_schema(f"{path}[]", schema["items"], item_annotation, model_name, problems)
+
+
+def _check_properties(path: str, properties: dict[str, Any], model: type[BaseModel], problems: list[str]) -> None:
+    for name, schema in properties.items():
+        field_path = f"{path}.{name}" if path else name
+        if name not in model.model_fields:
+            problems.append(f"{field_path}: declared in results but {model.__name__} has no such field")
+            continue
+        _check_schema(field_path, schema, model.model_fields[name].annotation, model.__name__, problems)
+    for name in model.model_fields:
+        if name not in properties:
+            problems.append(f"{path + '.' if path else ''}{name}: {model.__name__} field is missing from results")
+
+
+def _discover_result_cases() -> list[tuple[str, dict[str, Any], type[BaseModel]]]:
+    table = _registration_table()
+    owners = _submodules_by_defined_class()
+    cases: list[tuple[str, dict[str, Any], type[BaseModel]]] = []
+    for path in sorted(MODULE_ROOT.glob("*.json")):
+        if not path.name.startswith(DESCRIPTOR_PREFIXES):
+            continue
+        results = json.loads(path.read_text()).get("results")
+        if not results or "properties" not in results:
+            continue
+        class_name = table.get(json.loads(path.read_text()).get("docker_parameters"))
+        submodule = owners.get(class_name) if class_name else None
+        if submodule is None:
+            pytest.fail(f"{path.name}: no registered class found for its docker_parameters")
+            continue
+        candidates = [m for m in _local_models(submodule) if m.__name__.endswith("Response")]
+        if len(candidates) != 1:
+            # Triggers and connectors declare their payload differently and are covered by their own tests.
+            continue
+        cases.append((path.name, results, candidates[0]))
+    return cases
+
+
+_RESULT_CASES = _discover_result_cases()
+
+
+def test_result_cases_cover_every_action() -> None:
+    """A new action must not slip past the results check by lacking a Response model."""
+    covered = {name for name, _, _ in _RESULT_CASES}
+    expected = {p.name for p in MODULE_ROOT.glob("action_*.json")}
+    assert covered == expected, f"actions without a checked results schema: {sorted(expected - covered)}"
+
+
+@pytest.mark.parametrize("descriptor_name,results,model", _RESULT_CASES, ids=[n for n, _, _ in _RESULT_CASES])
+def test_results_match_response_model(descriptor_name: str, results: dict[str, Any], model: type[BaseModel]) -> None:
+    """A result field typed more narrowly than its model misleads the playbook author.
+
+    A field declared number where the model allows None is the case that got
+    through last round.
+    """
+    problems: list[str] = []
+    _check_properties("", results["properties"], model, problems)
+    assert not problems, f"{descriptor_name}:\n" + "\n".join(problems)
+
+
+def test_every_action_has_a_unique_snake_case_slug() -> None:
+    """The slug is what makes an action callable by name from a notebook, and it must never change."""
+    slugs: dict[str, str] = {}
+    for path in sorted(MODULE_ROOT.glob("action_*.json")):
+        slug = json.loads(path.read_text()).get("slug")
+        assert slug, f"{path.name}: no slug"
+        assert re.fullmatch(r"[a-z][a-z0-9]*(_[a-z0-9]+)*", slug), f"{path.name}: slug {slug!r} is not snake_case"
+        assert slug not in slugs, f"{path.name}: slug {slug!r} is already used by {slugs[slug]}"
+        slugs[slug] = path.name
+    assert slugs.get("scan_domain") == "action_scandomain.json", "scan_domain is published and must not be renamed"
+
+
+def test_descriptors_use_the_linter_format() -> None:
+    """The Sekoia linter wants exactly json.dumps(..., indent=2) with no trailing newline."""
+    bad = [
+        path.name
+        for path in sorted(MODULE_ROOT.glob("*.json"))
+        if path.read_text() != json.dumps(json.loads(path.read_text()), indent=2)
+    ]
+    assert not bad, f"not in linter format: {bad}"

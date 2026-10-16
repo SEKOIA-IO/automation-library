@@ -76,6 +76,15 @@ Chunks the intake did accept the first time are sent a second time, so delivery
 is at least once, which is the safe side of the trade: the alternative is a
 window marked done with artifacts in it that never arrived.
 
+The SDK also drops, without an id and without raising, any single event longer
+than EVENT_BYTES_MAX_SIZE (250000 characters of JSON). Left alone that reads as
+a failed push, and since the next attempt rebuilds the same window with the same
+event, it would fail forever. Two things prevent it. The list fields of an event
+are capped (see MAX_LIST_ITEMS), which is what makes an oversized event possible
+in the first place, and any event still over the limit is dropped and counted
+here, before the push, so the id comparison only covers events that were really
+submitted. The limit is measured the way the SDK measures it.
+
 CATCH UP PACING
 
 A run that reaches the frontier (now minus lag_seconds) sleeps for the
@@ -83,6 +92,13 @@ configured frequency. A run that stops short of it, because the window was
 capped at MAX_WINDOW_MINUTES or halved, does not sleep, so a connector that was
 down for a day or a month walks forward as fast as the API answers instead of
 one slice per frequency.
+
+On a busy backlog the span that fits under max_events_per_run is found by
+halving, and every discarded attempt reads up to max_events_per_run + 1 results.
+The span that last fit is therefore remembered between runs, next to the
+digests, and the next run starts from it rather than from MAX_WINDOW_MINUTES. A
+run that fits doubles it again, up to MAX_WINDOW_MINUTES, so a backlog that has
+cleared is walked at full width again.
 
 CHECKPOINTING
 
@@ -130,9 +146,10 @@ back off a PolySwarm API result is a different story: the client does not
 always attach a UTC offset to a field the platform itself reports in UTC, so a
 naive value can arrive. A naive datetime is assumed to already be UTC rather
 than read as the process's local zone, which is what Python's astimezone
-would otherwise do to it. See format_window_bound and _as_text.
+would otherwise do to it. See format_window_bound and coerce.as_text.
 """
 
+import json
 import time
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
@@ -144,11 +161,12 @@ from polyswarm_api.api import PolyswarmAPI
 from pydantic import BaseModel, Field
 from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
 from sekoia_automation.storage import PersistentJSON
 
 from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.client import MISSING_RESULT, build_client
-from polyswarm_modules.coerce import NUMERIC_ERRORS, as_names, as_score
+from polyswarm_modules.coerce import NUMERIC_ERRORS, as_names, as_score, as_text
 from polyswarm_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 # The Splunk input applies these ceilings and refuses a larger value at save time
@@ -173,7 +191,33 @@ MAX_REMEMBERED_DIGESTS = 1000
 MAX_BACKOFF_SECONDS = 3600
 MIN_WINDOW_SECONDS: int = 60
 
+# The SDK retries every chunk for up to 3600 seconds (stop_after_delay(3600)),
+# and the attempt that straddles that deadline can still run for its 30 second
+# request timeout plus a retry wait of up to 10 seconds. Chunks go out in
+# parallel, so that is also the longest one push can take.
+PUSH_RETRY_CEILING_SECONDS = 3600 + 30 + 10
+
 DIGEST_FILE_NAME = "polyswarm_intel_feed.json"
+WINDOW_KEY = "window_seconds"
+
+# Caps on the list fields of one event. The three lists are unbounded in the
+# metadata document, and one artifact submitted under thousands of names is
+# enough to push an event past the SDK's per event limit. With these caps the
+# three lists together stay near 155000 characters, under the 250000 limit.
+MAX_LIST_ITEMS = 100
+MAX_ITEM_CHARACTERS = 512
+
+# Failures that mean one document could not be turned into an event. A document
+# is data from outside, so a field of an unexpected type (a string where an
+# object was expected, a number too large to convert) is an unreadable artifact,
+# not a reason to stop the feed. pydantic's ValidationError is a ValueError.
+EVENT_BUILD_ERRORS: tuple[type[Exception], ...] = (
+    AttributeError,
+    KeyError,
+    OverflowError,
+    TypeError,
+    ValueError,
+)
 
 # Tag pulled when the operator names neither a family nor a tag, so a connector
 # left on its defaults collects the curated feed instead of everything.
@@ -325,24 +369,14 @@ def polyscore_band(polyscore: float | None) -> str:
     return "benign"
 
 
-def _as_text(value: Any) -> str:
-    """Render a value as plain text, treating an absent value as empty.
+def _capped(names: list[str]) -> list[str]:
+    """Bound a list of names in both length and item size, keeping the first ones."""
+    return [name[:MAX_ITEM_CHARACTERS] for name in names[:MAX_LIST_ITEMS]]
 
-    A datetime read off a PolySwarm API result does not always carry a UTC
-    offset: the client can hand back a naive value for a field the platform
-    itself always reports in UTC. Calling astimezone on a naive datetime does
-    not know that, it reads the naive value as the machine's local zone and
-    silently shifts it, which is the recurring bug this guards against. A
-    naive value is therefore treated as already being UTC (tzinfo attached,
-    nothing shifted), and only a value that already carries an offset is
-    normalised with astimezone.
-    """
-    if value is None:
-        return ""
-    if isinstance(value, datetime):
-        aware = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
-        return aware.astimezone(UTC).isoformat()
-    return str(value)
+
+def event_characters(event: dict[str, Any]) -> int:
+    """Length of an event the way the SDK measures it against EVENT_BYTES_MAX_SIZE."""
+    return len(json.dumps(event, ensure_ascii=False, separators=(",", ":")))
 
 
 def _as_number(value: Any) -> int | None:
@@ -381,6 +415,9 @@ class IntelFeed(Connector):
         self._digests: PersistentJSON | None = None
         self._consecutive_failures = 0
         self._api: PolyswarmAPI | None = None
+        # True once the "matched nothing" line has been said for the current
+        # run of idle cycles. Reset when anything else happens.
+        self._idle_announced = False
 
     @property
     def frequency(self) -> int:
@@ -391,25 +428,56 @@ class IntelFeed(Connector):
         """How long without a completed cycle before the platform restarts this.
 
         Generous on purpose. A cycle ends with a sleep of up to the configured
-        frequency, and an hour of back off on top when PolySwarm is unreachable,
-        so anything tighter would restart a connector that is merely waiting.
+        frequency, and the longest a cycle can go without finishing is a push
+        that the SDK keeps retrying for its full hour (PUSH_RETRY_CEILING_SECONDS)
+        followed by the back off that a failed push earns. Anything tighter
+        would restart a connector that is merely waiting out an intake outage.
         Read before the configuration is attached, it answers zero, which the
         SDK reads as no check.
         """
         if not getattr(self, "configuration", None):
             return 0
-        return max(3 * self.frequency, 2 * MAX_BACKOFF_SECONDS)
+        return max(3 * self.frequency, PUSH_RETRY_CEILING_SECONDS + max(MAX_BACKOFF_SECONDS, self.frequency))
 
     @property
     def checkpoint(self) -> CheckpointDatetime:
         """The SDK checkpoint holding the end of the last window covered whole."""
         if self._checkpoint is None:
+            self.warn_if_checkpoint_clamped()
             self._checkpoint = CheckpointDatetime(
                 path=self.data_path,
                 start_at=timedelta(minutes=self.configuration.lookback_minutes),
                 ignore_older_than=timedelta(minutes=MAX_LOOKBACK_MINUTES),
             )
         return self._checkpoint
+
+    def warn_if_checkpoint_clamped(self) -> None:
+        """Say so when a stored checkpoint is older than the lookback ceiling.
+
+        The SDK moves such a checkpoint forward to the ceiling without a word,
+        which skips whatever lay in between. The operator should be told that
+        a stretch of time was not pulled.
+        """
+        with PersistentJSON("context.json", self.data_path) as cache:
+            stored = cache.get("most_recent_date_seen")
+        if not stored:
+            return
+        try:
+            moment = datetime.fromisoformat(str(stored))
+        except EVENT_BUILD_ERRORS:
+            return
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=UTC)
+        limit = datetime.now(UTC) - timedelta(minutes=MAX_LOOKBACK_MINUTES)
+        if moment < limit:
+            self.log(
+                message=(
+                    f"The saved checkpoint ({format_window_bound(moment)} UTC) is older than the "
+                    f"{MAX_LOOKBACK_MINUTES} minute lookback ceiling, so the connector resumes from "
+                    f"{format_window_bound(limit)} UTC. Artifacts created in between are not pulled"
+                ),
+                level="warning",
+            )
 
     @property
     def digests(self) -> PersistentJSON:
@@ -472,51 +540,75 @@ class IntelFeed(Connector):
         note at the top of this file.
         """
         frontier = datetime.now(UTC) - timedelta(seconds=self.configuration.lag_seconds)
-        candidate = min(frontier, window_start + timedelta(minutes=MAX_WINDOW_MINUTES))
+        candidate = min(frontier, window_start + timedelta(seconds=self.window_span_seconds()))
         if candidate <= window_start:
             return None
         return candidate
+
+    def window_span_seconds(self) -> int:
+        """The span a run starts from: the last one that fit, else the ceiling."""
+        ceiling = MAX_WINDOW_MINUTES * 60
+        with self.digests as cache:
+            stored = cache.get(WINDOW_KEY)
+        if isinstance(stored, bool) or not isinstance(stored, int | float):
+            return ceiling
+        return int(min(max(stored, MIN_WINDOW_SECONDS), ceiling))
+
+    def remember_window_span(self, covered: timedelta, halved: bool) -> None:
+        """Keep the span for the next run: what fit after halving, doubled after a clean fit."""
+        ceiling = MAX_WINDOW_MINUTES * 60
+        seconds = covered.total_seconds()
+        if halved:
+            span = max(seconds, MIN_WINDOW_SECONDS)
+        else:
+            span = max(self.window_span_seconds(), min(seconds * 2, ceiling))
+        span = int(min(span, ceiling))
+        if span == self.window_span_seconds():
+            return
+        with self.digests as cache:
+            cache[WINDOW_KEY] = span
 
     def build_event(self, item: Any) -> IntelFeedEvent | None:
         """Turn one metadata document into an event, or None when it is unreadable.
 
         An artifact with no readable sha256 has nothing an analyst can pivot on
         and nothing the connector can deduplicate on, so it is dropped rather
-        than emitted half formed.
+        than emitted half formed. A document whose fields cannot be converted
+        raises one of EVENT_BUILD_ERRORS, which the caller counts the same way.
         """
         document: dict[str, Any] = getattr(item, "json", None) or {}
         artifact: dict[str, Any] = document.get("artifact") or {}
         latest_scan: dict[str, Any] = (document.get("scan") or {}).get("latest_scan") or {}
         polyunite: dict[str, Any] = document.get("polyunite") or {}
 
-        sha256 = _as_text(getattr(item, "sha256", "") or artifact.get("sha256", "")).strip()
+        sha256 = as_text(getattr(item, "sha256", "") or artifact.get("sha256", "")).strip()
         if not sha256:
             return None
 
         polyscore = as_score(getattr(item, "polyscore", None) or latest_scan.get("polyscore"))
 
-        families = as_names(polyunite.get("malware_family")) + as_names(document.get("families"))
-        created = _as_text(getattr(item, "created", None))
+        families = _capped(as_names(as_names(polyunite.get("malware_family")) + as_names(document.get("families"))))
+        created = as_text(getattr(item, "created", None))
 
         return IntelFeedEvent(
             timestamp=created,
             sha256=sha256.lower(),
-            sha1=_as_text(getattr(item, "sha1", "")),
-            md5=_as_text(getattr(item, "md5", "")),
+            sha1=as_text(getattr(item, "sha1", "")),
+            md5=as_text(getattr(item, "md5", "")),
             polyscore=polyscore,
             polyscore_band=polyscore_band(polyscore),
             malicious_detections=_as_number(getattr(item, "malicious", None)),
             benign_detections=_as_number(getattr(item, "benign", None)),
             total_detections=_as_number(getattr(item, "total_detections", None)),
-            families=as_names(families),
-            tags=as_names(document.get("tags")),
-            first_seen=_as_text(getattr(item, "first_seen", "")),
-            last_scanned=_as_text(getattr(item, "last_scanned", "")),
-            mimetype=_as_text(getattr(item, "mimetype", "")),
-            extended_mimetype=_as_text(getattr(item, "extended_mimetype", "")),
-            filenames=as_names(getattr(item, "filenames", None)),
+            families=families,
+            tags=_capped(as_names(document.get("tags"))),
+            first_seen=as_text(getattr(item, "first_seen", "")),
+            last_scanned=as_text(getattr(item, "last_scanned", "")),
+            mimetype=as_text(getattr(item, "mimetype", "")),
+            extended_mimetype=as_text(getattr(item, "extended_mimetype", "")),
+            filenames=_capped(as_names(getattr(item, "filenames", None))),
             permalink=f"{ps_settings.DEFAULT_PERMALINK_BASE}/{sha256.lower()}",
-            community=_as_text(document.get("community") or document.get("meta_community") or ""),
+            community=as_text(document.get("community") or document.get("meta_community") or ""),
         )
 
     def remembered_digests(self) -> set[str]:
@@ -561,7 +653,10 @@ class IntelFeed(Connector):
         unreadable = 0
 
         for item in self.results(api, query):
-            event = self.build_event(item)
+            try:
+                event = self.build_event(item)
+            except EVENT_BUILD_ERRORS:
+                event = None
             if event is None:
                 unreadable += 1
                 continue
@@ -575,7 +670,10 @@ class IntelFeed(Connector):
 
         if unreadable:
             self.log(
-                message=f"Dropped {unreadable} PolySwarm artifacts with no readable sha256",
+                message=(
+                    f"Dropped {unreadable} PolySwarm artifacts that could not be read "
+                    "(no sha256, or a field that could not be converted)"
+                ),
                 level="warning",
             )
 
@@ -647,6 +745,7 @@ class IntelFeed(Connector):
     def fail_cycle(self, message: str) -> int:
         """Record a failed cycle, back off, and report that nothing was pushed."""
         self._consecutive_failures += 1
+        self._idle_announced = False
         delay = self.backoff_seconds()
         self.log(
             message=f"{message}. The checkpoint is unchanged and the next attempt is in {delay:.0f} seconds",
@@ -665,6 +764,7 @@ class IntelFeed(Connector):
 
         intake_key = self.configuration.intake_key
         started = time.monotonic()
+        requested_end = window_end
 
         try:
             events, digests, window_end, oversized = self.collect_fitting_window(window_start, window_end)
@@ -680,6 +780,16 @@ class IntelFeed(Connector):
                     f"max_events_per_run ({self.configuration.max_events_per_run}). It was pushed whole "
                     "because it cannot be made smaller. Tighten the family, tag or polyscore filter, "
                     "or raise max_events_per_run"
+                ),
+                level="warning",
+            )
+
+        events, digests, dropped = self.drop_oversized(events, digests)
+        if dropped:
+            self.log(
+                message=(
+                    f"Dropped {dropped} PolySwarm artifacts whose event was longer than "
+                    f"{EVENT_BYTES_MAX_SIZE} characters, the most the intake accepts for one event"
                 ),
                 level="warning",
             )
@@ -700,6 +810,7 @@ class IntelFeed(Connector):
         self._consecutive_failures = 0
         self.checkpoint.offset = window_end
         self.remember_digests(digests)
+        self.remember_window_span(window_end - window_start, halved=window_end < requested_end)
 
         now = datetime.now(UTC)
         FORWARD_EVENTS_DURATION.labels(intake_key=intake_key).observe(time.monotonic() - started)
@@ -713,7 +824,10 @@ class IntelFeed(Connector):
         frontier = now - timedelta(seconds=self.configuration.lag_seconds)
         behind = window_end < frontier - timedelta(seconds=MIN_WINDOW_SECONDS)
 
-        if not events and not behind:
+        if events or dropped:
+            self._idle_announced = False
+        elif not behind and not self._idle_announced:
+            self._idle_announced = True
             # A feed filtered to one malware family can legitimately match
             # nothing for days, and a connector that says nothing at all while
             # doing that is indistinguishable from one that is broken. Said only
@@ -723,13 +837,31 @@ class IntelFeed(Connector):
                 message=(
                     f"No PolySwarm artifacts matched {self.filter_summary()} in the window ending "
                     f"{format_window_bound(window_end)}. The connector is up to date and will look again "
-                    f"in {self.frequency} seconds."
+                    f"every {self.frequency} seconds. This is said once, and again after the feed "
+                    "has delivered events or failed."
                 ),
                 level="info",
             )
 
         self.sleep(0 if behind else self.frequency)
         return len(events)
+
+    def drop_oversized(
+        self, events: list[dict[str, Any]], digests: list[str]
+    ) -> tuple[list[dict[str, Any]], list[str], int]:
+        """Remove events the SDK would silently discard, so the push only covers what it can send.
+
+        Events and digests are parallel lists, so a dropped event takes its
+        digest with it. Returns what is left and how many were dropped.
+        """
+        kept_events: list[dict[str, Any]] = []
+        kept_digests: list[str] = []
+        for event, digest in zip(events, digests, strict=True):
+            if event_characters(event) > EVENT_BYTES_MAX_SIZE:
+                continue
+            kept_events.append(event)
+            kept_digests.append(digest)
+        return kept_events, kept_digests, len(events) - len(kept_events)
 
     def filter_summary(self) -> str:
         """The operator's filters in one phrase, for a log line they can act on.

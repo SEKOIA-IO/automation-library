@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction
 from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.coerce import as_score
 from polyswarm_modules.sandbox import MAX_WAIT_SECONDS_CEILING, TERMINAL_STATUSES, poll_until_terminal
 from polyswarm_modules.validators import invalid_hash_reason
 
@@ -16,6 +17,27 @@ NOT_FOUND_STATUS: str = "NOT_FOUND"
 # Sandbox actions do after submitting one.
 POLL_INTERVAL_CEILING: float = 60.0
 SHA256_LENGTH: int = 64
+
+# Lowest provider score reported as malicious. Neither number is something the
+# platform returns or documents in this repository, so both are deliberately
+# strict: a sample is only called malicious on a score that is clearly high.
+# Triage scores run 1 to 10, with 1 meaning no malicious behaviour, and its
+# own published bands read: 10 known bad, 8 and 9 likely malicious, 5 to 7
+# suspicious behaviour that also has common benign uses, 2 to 4 likely benign,
+# 1 nothing malicious seen. So the malicious line sits at 8, and a 7 is a
+# reason to look rather than a verdict. CAPE publishes no comparable band; 6
+# is the lowest score a known malicious sample (the captured cryptominer
+# below) received here, so nothing lower has evidence behind it. The CAPE
+# number is a floor taken from one sample and wants a benign corpus to tune.
+# Measured against the live service on 2026-10-16: the industry test file,
+# which every engine flags and which scores 1.0 on the engine side, detonates
+# inertly and scores cape_malscore 0.25 and a Triage dynamic 3. A low sandbox
+# score therefore says the sample did nothing here, not that it is safe. Forty
+# consecutive feed artifacts carried no sandbox report at all, so a benign
+# corpus cannot be mined from existing reports and has to be detonated on
+# purpose, which is metered.
+TRIAGE_MALICIOUS_SCORE: float = 8.0
+CAPE_MALICIOUS_SCORE: float = 6.0
 
 
 class ReportArguments(BaseModel):
@@ -246,30 +268,41 @@ def _is_malicious(provider: str, report: dict[str, Any], config: dict[str, Any] 
     """Decide the malicious / not malicious branch from the provider's own score.
 
     CAPE stores its overall verdict score on the task config as
-    cape_malscore. Triage stores two: traige_analysis_score (the dynamic
-    run; "traige" is the provider's own spelling, not a typo introduced
-    here) and triage_static_score (static analysis only, sometimes the only
-    one populated). When neither score is present, a report that named a
-    malware family or fired a behaviour signature described the sample
-    doing something, which is the same bar the score exists to capture, so
-    that stands in instead.
+    cape_malscore. Triage stores two: the dynamic run score and
+    triage_static_score (static analysis only, sometimes the only one
+    populated). The live service spells the dynamic key "traige_analysis_score",
+    measured on a real completed task on 2026-10-16, so that misspelling is
+    theirs and not ours. The correct spelling is read as well, so a fix on
+    their side cannot silently drop every detonation to the static score.
+
+    A non-zero score is not a verdict. Triage scores run from 1 to 10 and 1
+    means no malicious behaviour was seen, and CAPE scores plenty of benign
+    software above zero, so each provider is held to its own threshold. The
+    scores are coerced first: a string would otherwise raise on comparison.
+    When no readable score is present, a report that named a malware family
+    stands in for it. Behaviour signatures do not: benign installers fire
+    anti-VM and environment query signatures all the time, so their mere
+    presence says nothing about intent.
     """
     config = config or {}
     score: float | None = None
+    threshold: float | None = None
 
     if provider == "cape":
-        score = config.get("cape_malscore")
+        score = as_score(config.get("cape_malscore"))
+        threshold = CAPE_MALICIOUS_SCORE
     elif provider == "triage":
-        score = config.get("traige_analysis_score")
+        score = as_score(config.get("traige_analysis_score"))
         if score is None:
-            score = config.get("triage_static_score")
+            score = as_score(config.get("triage_analysis_score"))
+        if score is None:
+            score = as_score(config.get("triage_static_score"))
+        threshold = TRIAGE_MALICIOUS_SCORE
 
-    if score is not None:
-        return score > 0
+    if score is not None and threshold is not None:
+        return score >= threshold
 
-    if report.get("malware_family"):
-        return True
-    return bool(_signature_names(provider, report))
+    return bool(report.get("malware_family"))
 
 
 class Report(PolyswarmAction):

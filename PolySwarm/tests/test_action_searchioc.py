@@ -117,6 +117,24 @@ def test_malformed_ip_is_refused_without_an_api_call(action: SearchIoc) -> None:
     assert "not a valid ip" in action.error_message.lower()
 
 
+@pytest.mark.parametrize(
+    "imphash",
+    [
+        "d41d8cd98f00b204e9800998ecf8427",  # 31 characters
+        "d41d8cd98f00b204e9800998ecf8427e0",  # 33 characters
+        "z41d8cd98f00b204e9800998ecf8427e",  # not hexadecimal
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",  # a SHA256, not an imphash
+    ],
+)
+def test_malformed_imphash_is_refused_without_an_api_call(action: SearchIoc, imphash: str) -> None:
+    with patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client) as mock_build_client:
+        response = action.run({"imphash": imphash})
+
+    assert response is None
+    mock_build_client.assert_not_called()
+    assert "not a plausible imphash" in action.error_message.lower()
+
+
 # --- each indicator type reaches the client as exactly one keyword argument ---
 
 
@@ -375,3 +393,37 @@ def test_the_http_status_is_reported_without_the_client_message(
     assert response is None
     assert "HTTP 429" in action.error_message
     assert "SECRET" not in action.error_message
+
+
+@pytest.mark.parametrize("domain", ["8.8.8.8", "not a host", "nodots"])
+def test_implausible_domain_is_refused_without_an_api_call(action: SearchIoc, domain: str) -> None:
+    with patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client) as mock_build_client:
+        response = action.run({"domain": domain})
+
+    assert response is None
+    mock_build_client.assert_not_called()
+    assert action.error_message.startswith("Refusing to search")
+
+
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
+def test_plausible_domain_reaches_the_client(mock_build_client: MagicMock, action: SearchIoc) -> None:
+    mock_build_client.return_value.search_by_ioc.return_value = iter([_make_item()])
+
+    response = action.run({"domain": "example.com"})
+
+    assert response["found"] is True
+    mock_build_client.return_value.search_by_ioc.assert_called_once_with(domain="example.com")
+
+
+@pytest.mark.parametrize("scan_extra", [{"first_scan": None}, {"first_scan": {"created": None}}])
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
+def test_null_first_scan_is_an_empty_first_seen(
+    mock_build_client: MagicMock, action: SearchIoc, scan_extra: dict[str, Any]
+) -> None:
+    item = _make_item()
+    item.json["scan"].update(scan_extra)
+    mock_build_client.return_value.search_by_ioc.return_value = iter([item])
+
+    response = action.run({"ip": "8.8.8.8"})
+
+    assert response["results"][0]["first_seen"] == ""

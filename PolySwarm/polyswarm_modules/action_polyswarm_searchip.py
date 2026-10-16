@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction
 from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.coerce import as_text
 from polyswarm_modules.validators import invalid_ip_reason
 from polyswarm_modules.verdict import AssertionResult, tally_assertions
 
@@ -74,12 +75,13 @@ class SearchIp(PolyswarmAction):
         api = build_client(self.module.configuration)
 
         try:
-            results = list(api.search_url(args.ip))
+            # Only the most recent result is read, so do not follow every page.
+            first = next(iter(api.search_url(args.ip)), None)
         except MISSING_RESULT:
             # The client raises on 204 and 404 rather than returning an empty
             # list, and an unseen IP is the most common thing an analyst asks
             # about. Without this the playbook gets a Python traceback.
-            results = []
+            first = None
         except CLIENT_ERRORS as exc:
             # Never quote the client's own message: it renders the request, which carries the key.
             self.error(f"PolySwarm did not search for the IP ({failure_kind(exc)}).")
@@ -88,7 +90,7 @@ class SearchIp(PolyswarmAction):
         # A result exists but has no verdict yet when its assertion window is
         # still open: it must not be served as detected or not detected, so
         # it is treated the same as never having been seen at all.
-        result = results[0] if results and self.is_complete(results[0]) else None
+        result = first if first is not None and self.is_complete(first) else None
 
         if result is None:
             self.set_output("unknown", True)
@@ -111,6 +113,6 @@ class SearchIp(PolyswarmAction):
             malicious_count=tally.malicious_count,
             benign_count=tally.benign_count,
             total_count=tally.total_count,
-            last_scanned=str(result.last_scanned),
+            last_scanned=as_text(result.last_scanned),
             assertions=tally.assertions,
         )

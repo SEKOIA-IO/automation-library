@@ -252,3 +252,30 @@ def test_lookup_failure_returns_none_without_quoting_the_client(
     assert response is None
     assert action.error_message is not None
     assert secret_message not in action.error_message
+
+
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
+def test_absent_and_datetime_last_scanned_are_text(mock_build_client: MagicMock, action) -> None:
+    from datetime import UTC, datetime
+
+    api = mock_build_client.return_value
+    api.search_url.return_value = [_make_search_result(last_scanned=None)]
+    assert action.run({"ip": "8.8.8.8"})["last_scanned"] == ""
+
+    api.search_url.return_value = [_make_search_result(last_scanned=datetime(2024, 2, 1, 6, 0))]
+    assert action.run({"ip": "8.8.8.8"})["last_scanned"] == datetime(2024, 2, 1, 6, 0, tzinfo=UTC).isoformat()
+
+
+@patch("polyswarm_modules.action_polyswarm_searchip.build_client", new_callable=autospec_build_client)
+def test_only_the_first_page_item_is_consumed(mock_build_client: MagicMock, action) -> None:
+    consumed: list[int] = []
+
+    def _pages():
+        for i in range(3):
+            consumed.append(i)
+            yield _make_search_result()
+
+    mock_build_client.return_value.search_url.return_value = _pages()
+    action.run({"ip": "8.8.8.8"})
+
+    assert consumed == [0]

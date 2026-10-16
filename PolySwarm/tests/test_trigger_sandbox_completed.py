@@ -6,6 +6,7 @@ from typing import Any
 from unittest.mock import MagicMock, create_autospec, patch
 
 import pytest
+import requests
 from polyswarm_api import exceptions as ps_exceptions
 from sekoia_automation.exceptions import SendEventError
 
@@ -14,6 +15,9 @@ from polyswarm_modules.client import RETRY_TOTAL
 from polyswarm_modules.trigger_polyswarm_sandbox_completed import (
     IN_FLIGHT_MAX_AGE_SECONDS,
     MAX_BACKOFF_SECONDS,
+    MAX_IN_FLIGHT_TASKS,
+    MAX_LOOKUP_FAILURES,
+    PAGE_SIZE,
     TASK_LIST_TIMEOUT,
     SandboxCompleted,
     SandboxCompletedConfiguration,
@@ -282,19 +286,12 @@ def test_the_client_has_retries_installed_for_safe_methods(trigger: SandboxCompl
 
 def test_only_one_page_is_ever_requested(trigger: SandboxCompleted) -> None:
     """A request carrying a page offset does not answer, so a second page would hang the cycle."""
-    api = _with_tasks(
-        trigger,
-        _make_sandbox_task(task_id="1"),
-        _make_sandbox_task(task_id="2"),
-        _make_sandbox_task(task_id="3"),
-    )
-    trigger.configuration.page_size = 2
-    trigger.configuration.max_tasks_per_cycle = 100
+    api = _with_tasks(trigger, *[_make_sandbox_task(task_id=str(i)) for i in range(PAGE_SIZE + 5)])
 
     tasks = trigger._recent_tasks()
 
-    assert len(tasks) == 2
-    api.sandbox_my_tasks_list.assert_called_once_with(limit=2)
+    assert len(tasks) == PAGE_SIZE == 10
+    api.sandbox_my_tasks_list.assert_called_once_with(limit=PAGE_SIZE)
 
 
 def test_the_descriptor_matches_the_model() -> None:
@@ -422,25 +419,129 @@ def test_a_task_polyswarm_no_longer_knows_is_dropped(trigger: SandboxCompleted) 
     assert trigger._in_flight() == {}
 
 
-def test_a_lookup_error_propagates_but_rotates_the_task_to_the_back(trigger: SandboxCompleted) -> None:
-    _with_tasks(
-        trigger,
-        _make_sandbox_task(task_id="a", status="RUNNING", report=None),
-        _make_sandbox_task(task_id="b", status="RUNNING", report=None),
-    )
+def _http_error(status: int) -> ps_exceptions.RequestException:
+    request = autospec_request()
+    request.status_code = status
+    return ps_exceptions.RequestException(request, f"http {status}")
+
+
+def _track(trigger: SandboxCompleted, *task_ids: str) -> None:
+    _with_tasks(trigger, *[_make_sandbox_task(task_id=i, status="RUNNING", report=None) for i in task_ids])
     trigger.poll_once()
 
+
+def test_a_task_whose_lookup_keeps_failing_does_not_stop_the_others(trigger: SandboxCompleted) -> None:
+    """One bad task must not put the whole trigger into back off, nor starve the rest."""
+    _track(trigger, "bad", "good1", "good2")
+
+    def lookup(task_id: str) -> MagicMock:
+        if task_id == "bad":
+            raise _http_error(500)
+        return _make_sandbox_task(task_id=task_id, status="SUCCEEDED")
+
     api = _with_tasks(trigger)
-    api.sandbox_task_status.side_effect = ps_exceptions.RequestException(autospec_request(), "server error")
+    api.sandbox_task_status.side_effect = lookup
+
+    # No exception, and the two healthy tasks complete in the same cycle.
+    assert trigger.poll_once() == 2
+    sent = {call.args[1]["sandbox_task_id"] for call in trigger.send_event.call_args_list}
+    assert sent == {"good1", "good2"}
+    assert "bad" in trigger._in_flight()
+    warned = " ".join(str(call) for call in trigger.log.call_args_list)
+    assert "bad" in warned
+    assert "HTTP 500" in warned
+
+
+def test_a_task_is_dropped_after_too_many_failed_lookups(trigger: SandboxCompleted) -> None:
+    _track(trigger, "bad", "ok")
+
+    def lookup(task_id: str) -> MagicMock:
+        if task_id == "bad":
+            raise _http_error(500)
+        return _make_sandbox_task(task_id=task_id, status="RUNNING")
+
+    api = _with_tasks(trigger)
+    api.sandbox_task_status.side_effect = lookup
+
+    for _ in range(MAX_LOOKUP_FAILURES - 1):
+        trigger.poll_once()
+        assert "bad" in trigger._in_flight()
+    trigger.poll_once()
+
+    assert "bad" not in trigger._in_flight()
+    assert "ok" in trigger._in_flight()
+    warned = " ".join(str(call) for call in trigger.log.call_args_list)
+    assert "Stopped following sandbox task bad" in warned
+
+
+def test_a_successful_lookup_resets_the_failure_count(trigger: SandboxCompleted) -> None:
+    _track(trigger, "flaky", "ok")
+    outcomes = {"flaky": [_http_error(500)] * (MAX_LOOKUP_FAILURES - 1)}
+
+    def lookup(task_id: str) -> MagicMock:
+        queue = outcomes.get(task_id)
+        if queue:
+            raise queue.pop()
+        return _make_sandbox_task(task_id=task_id, status="RUNNING")
+
+    api = _with_tasks(trigger)
+    api.sandbox_task_status.side_effect = lookup
+
+    for _ in range(MAX_LOOKUP_FAILURES - 1):
+        trigger.poll_once()
+    trigger.poll_once()
+    assert "failures" not in trigger._in_flight()["flaky"]
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        ps_exceptions.UsageLimitsExceededException(autospec_request(), "rate limited"),
+        _http_error(401),
+        _http_error(403),
+        requests.ConnectionError("connection refused"),
+        requests.Timeout("timed out"),
+    ],
+    ids=["429", "401", "403", "connection", "timeout"],
+)
+def test_account_wide_errors_still_fail_the_poll(trigger: SandboxCompleted, error: Exception) -> None:
+    _track(trigger, "a", "b")
+    api = _with_tasks(trigger)
+    api.sandbox_task_status.side_effect = error
+
+    with pytest.raises(type(error)):
+        trigger.poll_once()
+
+    # Nothing was charged to the tasks: the account is the problem, not them.
+    assert all("failures" not in record for record in trigger._in_flight().values())
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        _http_error(500),
+        _http_error(422),
+        ps_exceptions.FailedInstanceException(autospec_request(), "unprocessable"),
+        ps_exceptions.NoResultsException(autospec_request(), "empty"),
+        ps_exceptions.DecodeErrorException("bad body"),
+    ],
+    ids=["500", "422", "failed-instance", "no-results", "decode"],
+)
+def test_task_level_errors_are_not_account_wide(error: Exception) -> None:
+    assert SandboxCompleted._is_account_wide(error) is False
+
+
+def test_a_cycle_where_every_lookup_fails_is_an_outage_and_backs_off(trigger: SandboxCompleted) -> None:
+    """Five hundred answers for every task means the service is down, so the tasks keep their budget."""
+    _track(trigger, "a", "b", "c")
+    api = _with_tasks(trigger)
+    api.sandbox_task_status.side_effect = _http_error(503)
+
     with pytest.raises(ps_exceptions.RequestException):
         trigger.poll_once()
-    failed_first = api.sandbox_task_status.call_args.args[0]
 
-    api.sandbox_task_status.reset_mock()
-    with pytest.raises(ps_exceptions.RequestException):
-        trigger.poll_once()
-
-    assert api.sandbox_task_status.call_args.args[0] != failed_first
+    assert all("failures" not in record for record in trigger._in_flight().values())
+    assert len(trigger._in_flight()) == 3
 
 
 def test_a_filtered_out_running_task_is_not_followed(trigger: SandboxCompleted) -> None:
@@ -638,3 +739,133 @@ def test_the_first_poll_says_why_it_emitted_nothing(data_storage: str, module: P
 
     assert any("First poll" in message for message in said), said
     assert any("without starting a playbook run" in message for message in said), said
+
+
+def test_a_filtered_out_failed_task_is_remembered_so_a_later_setting_change_does_not_fire_it(
+    trigger: SandboxCompleted,
+) -> None:
+    trigger.configuration = {"frequency": 10, "emit_failed": False}
+    failed = _make_sandbox_task(task_id="f1", status="FAILED", report=None)
+    _with_tasks(trigger, failed)
+    assert trigger.poll_once() == 0
+    assert "f1" in trigger._emitted_task_ids()
+
+    trigger.configuration = {"frequency": 10, "emit_failed": True}
+    _with_tasks(trigger, failed)
+
+    assert trigger.poll_once() == 0
+    trigger.send_event.assert_not_called()
+
+
+def test_a_task_from_another_sandbox_is_remembered_so_changing_the_sandbox_does_not_fire_it(
+    trigger: SandboxCompleted,
+) -> None:
+    trigger.configuration = {"frequency": 10, "sandbox": "triage"}
+    cape = _make_sandbox_task(task_id="c1", sandbox="cape")
+    _with_tasks(trigger, cape)
+    assert trigger.poll_once() == 0
+
+    trigger.configuration = {"frequency": 10}
+    _with_tasks(trigger, cape)
+
+    assert trigger.poll_once() == 0
+    trigger.send_event.assert_not_called()
+
+
+def test_a_running_task_that_finishes_filtered_out_is_remembered_by_the_lookup(trigger: SandboxCompleted) -> None:
+    trigger.configuration = {"frequency": 10, "emit_failed": False}
+    _track(trigger, "late")
+    api = _with_tasks(trigger)
+    api.sandbox_task_status.return_value = _make_sandbox_task(task_id="late", status="FAILED", report=None)
+
+    assert trigger.poll_once() == 0
+    assert "late" in trigger._emitted_task_ids()
+    assert "late" not in trigger._in_flight()
+
+
+def _warnings(trigger: SandboxCompleted) -> list[str]:
+    return [
+        str(call.args[0]) for call in trigger.log.call_args_list if call.args and call.kwargs.get("level") == "warning"
+    ]
+
+
+def test_more_completions_than_fit_on_a_page_between_two_polls_warns_and_loses_only_the_unseen(
+    trigger: SandboxCompleted,
+) -> None:
+    """Fifteen detonations finish between two polls but the page shows ten.
+
+    The ten on the page are emitted. The other five left the page unseen and
+    cannot be recovered, so the trigger says that the page rolled past them
+    instead of staying quiet.
+    """
+    _with_tasks(trigger, _make_sandbox_task(task_id="old"))
+    trigger.poll_once()
+    trigger.send_event.reset_mock()
+    trigger.log.reset_mock()
+
+    burst = [_make_sandbox_task(task_id=f"b{i}") for i in range(15)]
+    _with_tasks(trigger, *burst)  # the fake listing is cut to one page by the trigger
+
+    assert trigger.poll_once() == PAGE_SIZE
+    sent = {call.args[1]["sandbox_task_id"] for call in trigger.send_event.call_args_list}
+    assert sent == {f"b{i}" for i in range(PAGE_SIZE)}
+    assert any("may have moved past" in message for message in _warnings(trigger))
+
+
+def test_a_page_that_overlaps_what_was_seen_does_not_warn(trigger: SandboxCompleted) -> None:
+    _with_tasks(trigger, _make_sandbox_task(task_id="a"), _make_sandbox_task(task_id="b"))
+    trigger.poll_once()
+    trigger.log.reset_mock()
+
+    _with_tasks(trigger, _make_sandbox_task(task_id="c"), _make_sandbox_task(task_id="a"))
+    trigger.poll_once()
+
+    assert _warnings(trigger) == []
+
+
+def test_an_empty_page_and_the_first_poll_do_not_warn(data_storage: str, module: PolyswarmModule) -> None:
+    fresh = _fresh_trigger(module, data_storage)
+    _with_tasks(fresh, _make_sandbox_task(task_id="x"))
+    fresh.poll_once()
+    assert _warnings(fresh) == []
+
+    _with_tasks(fresh)
+    fresh.poll_once()
+    assert _warnings(fresh) == []
+
+
+def test_evicting_followed_tasks_past_the_cap_is_logged(trigger: SandboxCompleted) -> None:
+    with trigger._store as cache:
+        now = trigger._now()
+        cache["in_flight_tasks"] = {
+            f"t{i}": {"first_seen": now + i, "last_checked": now} for i in range(MAX_IN_FLIGHT_TASKS)
+        }
+
+    trigger._track_in_flight("one-too-many")
+
+    assert len(trigger._in_flight()) == MAX_IN_FLIGHT_TASKS
+    assert "t0" not in trigger._in_flight()
+    assert any("no longer followed" in message for message in _warnings(trigger))
+
+
+def test_the_heartbeat_threshold_is_switched_on_and_covers_the_longest_healthy_gap(
+    trigger: SandboxCompleted,
+) -> None:
+    # Before the configuration is attached the SDK reads zero, meaning no check.
+    bare = SandboxCompleted.__new__(SandboxCompleted)
+    assert bare.last_heartbeat_threshold == 0
+
+    threshold = trigger.last_heartbeat_threshold
+    assert threshold > 2 * MAX_BACKOFF_SECONDS
+    assert threshold > 3 * trigger.configuration.frequency
+
+    trigger.configuration = {"frequency": 86400}
+    assert trigger.last_heartbeat_threshold > 3 * 86400
+
+
+def test_backing_off_counts_as_a_sign_of_life(trigger: SandboxCompleted) -> None:
+    trigger.heartbeat = MagicMock()
+
+    trigger._back_off("failed", ps_exceptions.RequestException(autospec_request(), "x"))
+
+    trigger.heartbeat.assert_called_once()

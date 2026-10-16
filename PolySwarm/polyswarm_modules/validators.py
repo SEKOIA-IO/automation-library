@@ -37,13 +37,13 @@ def invalid_ip_reason(value: str) -> str | None:
     except ValueError:
         return f"'{value}' is not a valid IP address"
 
-    description = _non_public(parsed)
+    description = non_public(parsed)
     if description:
         return f"'{value}' is a {description} address and will not be sent to {_PUBLIC}"
     return None
 
 
-def _non_public(parsed: ipaddress.IPv4Address | ipaddress.IPv6Address) -> str | None:
+def non_public(parsed: ipaddress.IPv4Address | ipaddress.IPv6Address) -> str | None:
     """What kind of internal address this is, or None when it is publicly routable."""
     for test, description in (
         (parsed.is_loopback, "loopback"),
@@ -75,15 +75,15 @@ def invalid_url_reason(value: str) -> str | None:
         parts = urlsplit(value)
         host = parts.hostname
     except ValueError:
-        return f"'{_without_credentials(value)}' is not a valid URL"
+        return f"'{without_credentials(value)}' is not a valid URL"
 
     if parts.scheme.lower() not in ALLOWED_SCHEMES:
-        return f"'{_without_credentials(value)}' does not use the http or https scheme"
+        return f"'{without_credentials(value)}' does not use the http or https scheme"
 
     # Report the host, not the URL, wherever there is one: a URL can carry a
     # username and password, and a refusal is written to the playbook log.
     if not host:
-        return f"'{_without_credentials(value)}' has no host"
+        return f"'{without_credentials(value)}' has no host"
     host = host.rstrip(".").lower()
 
     try:
@@ -98,18 +98,27 @@ def invalid_url_reason(value: str) -> str | None:
         else:
             return f"The host '{host}' is an IP address written in an unusual form and will not be sent to {_PUBLIC}"
     else:
-        description = _non_public(ipaddress.ip_address(host))
+        description = non_public(ipaddress.ip_address(host))
         if description:
             return f"The URL points at a {description} address '{host}' and will not be sent to {_PUBLIC}"
         return None
 
-    if host == "localhost" or host.endswith(PRIVATE_SUFFIXES) or "." not in host:
+    if _is_internal_name(host) or "." not in host:
         return f"The host '{host}' only exists inside a network and will not be sent to {_PUBLIC}"
 
     return None
 
 
-def _without_credentials(value: str) -> str:
+def _is_internal_name(host: str) -> bool:
+    """True for a lower case hostname the standards reserve for use inside a network.
+
+    The one rule behind both the URL and the domain checks, so a name that is
+    refused as part of a URL cannot be accepted on its own.
+    """
+    return host == "localhost" or host.endswith(PRIVATE_SUFFIXES)
+
+
+def without_credentials(value: str) -> str:
     """A URL with any username and password taken out, safe to put in a message."""
     marker = value.rfind("@")
     if marker == -1:
@@ -143,6 +152,8 @@ def invalid_domain_reason(value: str, ip_action: str = "ScanIp") -> str | None:
         return f"'{value}' is not a plausible hostname"
     if not all(LABEL.match(label) for label in candidate.split(".")):
         return f"'{value}' is not a plausible hostname"
+    if _is_internal_name(candidate.lower()):
+        return f"'{candidate}' is a name that only exists inside a network and will not be sent to {_PUBLIC}"
 
     return None
 
@@ -158,6 +169,20 @@ def invalid_hash_reason(value: str) -> str | None:
         return "no hash was supplied"
     if len(candidate) not in HASH_LENGTHS or not HEX.match(candidate):
         return f"'{value}' is not a plausible MD5, SHA1 or SHA256 hash: expected 32, 40 or 64 hexadecimal characters"
+    return None
+
+
+def invalid_imphash_reason(value: str) -> str | None:
+    """Why an import hash is refused, or None when it is 32 hexadecimal characters.
+
+    An imphash is an MD5 of a file's import table, so it has the shape of an
+    MD5 and nothing else.
+    """
+    candidate = value.strip()
+    if not candidate:
+        return "no import hash was supplied"
+    if len(candidate) != 32 or not HEX.match(candidate):
+        return f"'{value}' is not a plausible imphash: expected 32 hexadecimal characters"
     return None
 
 

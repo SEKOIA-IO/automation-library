@@ -555,7 +555,7 @@ def test_waits_for_already_running_detonation_with_exponential_backoff(
     mock_api.sandbox_task_latest.return_value = running_task
 
     running = [_make_sandbox_task(status="RUNNING") for _ in range(4)]
-    done = _make_sandbox_task(status="SUCCEEDED", report=CAPE_REPORT, config={"cape_malscore": 1.0})
+    done = _make_sandbox_task(status="SUCCEEDED", report=CAPE_REPORT, config={"cape_malscore": 6.0})
     mock_api.sandbox_task_status.side_effect = [*running, done]
 
     response = action.run({"sha256": "aa" * 32, "sandbox": "cape", "max_wait_seconds": 300})
@@ -669,3 +669,70 @@ def test_a_malformed_or_short_hash_is_refused_before_any_request(
     assert action._error is not None
     assert "Refusing" in action._error
     mock_build_client.assert_not_called()
+
+
+# --- Score thresholds --------------------------------------------------------
+
+
+def _verdict_for(mock_build_client: MagicMock, action: Report, sandbox: str, config: dict, report: dict | None = None):
+    clean = {"malware_family": [], "ttp": [], "signature_names": ["queries_computer_name"], "network": {}}
+    task = _make_sandbox_task(sandbox=sandbox, report=report or clean, config=config)
+    mock_build_client.return_value.sandbox_task_latest.return_value = task
+    response = action.run({"sha256": "aa" * 32, "sandbox": sandbox})
+    assert response is not None
+    return response["malicious"]
+
+
+@pytest.mark.parametrize("score", [1, 3, 6, "1", 6.9, 7, 7.9, "7"])
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_triage_scores_below_the_malicious_band_are_not_malicious(
+    mock_build_client: MagicMock, action: Report, score: object
+) -> None:
+    """Triage calls 5 to 7 suspicious, with common benign causes, so 7 is not a verdict."""
+    assert _verdict_for(mock_build_client, action, "triage", {"traige_analysis_score": score}) is False
+
+
+@pytest.mark.parametrize("score", [8, 9, 10, "9"])
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_high_triage_scores_are_malicious(mock_build_client: MagicMock, action: Report, score: object) -> None:
+    """Triage puts 8 and 9 at likely malicious and 10 at a named family."""
+    assert _verdict_for(mock_build_client, action, "triage", {"traige_analysis_score": score}) is True
+
+
+@pytest.mark.parametrize("key", ["traige_analysis_score", "triage_analysis_score"])
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_either_spelling_of_the_dynamic_triage_key_is_read(
+    mock_build_client: MagicMock, action: Report, key: str
+) -> None:
+    """Reading only one spelling would fall through to the static score on every detonation."""
+    assert _verdict_for(mock_build_client, action, "triage", {key: 9}) is True
+
+
+@pytest.mark.parametrize("score", [0.5, 1.0, 2.5, 5.9, "3.0"])
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_low_cape_scores_are_not_malicious(mock_build_client: MagicMock, action: Report, score: object) -> None:
+    assert _verdict_for(mock_build_client, action, "cape", {"cape_malscore": score}) is False
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_the_captured_malicious_cape_score_is_malicious(mock_build_client: MagicMock, action: Report) -> None:
+    assert _verdict_for(mock_build_client, action, "cape", {"cape_malscore": 6.0}, CAPE_REPORT) is True
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_triage_static_score_is_used_when_the_dynamic_score_is_absent(
+    mock_build_client: MagicMock, action: Report
+) -> None:
+    assert _verdict_for(mock_build_client, action, "triage", {"triage_static_score": 1}) is False
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_an_unreadable_score_does_not_raise_and_falls_back_to_the_family(
+    mock_build_client: MagicMock, action: Report
+) -> None:
+    assert _verdict_for(mock_build_client, action, "cape", {"cape_malscore": "n/a"}) is False
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_signatures_alone_never_make_a_report_malicious(mock_build_client: MagicMock, action: Report) -> None:
+    assert _verdict_for(mock_build_client, action, "cape", {}, CAPE_REPORT) is False

@@ -14,6 +14,7 @@
       "detect_threshold": {
         "type": "integer",
         "default": 1,
+        "minimum": 1,
         "description": "How many malicious engine detections activate the detected branch. Default of 1 flags on any single detection."
       }
     },
@@ -53,8 +54,11 @@
         "description": "Link to the PolySwarm scan result"
       },
       "polyscore": {
-        "type": "number",
-        "description": "PolySwarm threat score (0.0 - 1.0)"
+        "type": [
+          "number",
+          "null"
+        ],
+        "description": "PolySwarm threat score (0.0 - 1.0). Null when PolySwarm returned no score."
       },
       "tags": {
         "type": "array",
@@ -77,6 +81,7 @@
       }
     }
   },
+  "slug": "search_hash",
   "outputs": {
     "detected": "PolySwarm engines detected this artifact",
     "not detected": "PolySwarm has scanned this artifact and no engine detected it",

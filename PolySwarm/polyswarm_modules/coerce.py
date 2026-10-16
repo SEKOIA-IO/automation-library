@@ -5,6 +5,7 @@ the deployment is, and a playbook must never see a traceback because a counter
 arrived as a string or a tag list as a bare name.
 """
 
+from datetime import UTC, datetime
 from typing import Any
 
 NUMERIC_ERRORS: tuple[type[Exception], ...] = (TypeError, ValueError)
@@ -50,3 +51,30 @@ def as_score(value: Any) -> float | None:
         return float(value)
     except NUMERIC_ERRORS:
         return None
+
+
+def as_text(value: Any) -> str:
+    """Render a value as plain text, treating an absent value as empty.
+
+    A datetime read off a PolySwarm API result does not always carry a UTC
+    offset: the client can hand back a naive value for a field the platform
+    itself always reports in UTC. Calling astimezone on a naive datetime does
+    not know that, it reads the naive value as the machine's local zone and
+    silently shifts it, which is the recurring bug this guards against. A
+    naive value is therefore treated as already being UTC (tzinfo attached,
+    nothing shifted), and only a value that already carries an offset is
+    normalised with astimezone.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, datetime):
+        aware = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+        return aware.astimezone(UTC).isoformat()
+    return str(value)
+
+
+def as_optional_text(value: Any) -> str | None:
+    """Render a scalar field as text, keeping an absent value absent rather than empty."""
+    if value is None:
+        return None
+    return str(value)

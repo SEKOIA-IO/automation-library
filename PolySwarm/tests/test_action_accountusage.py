@@ -355,3 +355,35 @@ def test_mixed_boolean_and_metered_features_are_reported_independently(
     assert by_name["Sandbox"]["kind"] == "metered"
     assert by_name["Sandbox"]["unlimited"] is True
     assert response["exhausted_features"] == ["Hunts"]
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [ps_exceptions.InvalidJSONResponseException("bad body"), ps_exceptions.DecodeErrorException("bad bytes")],
+)
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
+def test_a_response_the_client_cannot_decode_is_an_error_not_a_traceback(
+    mock_build_client: MagicMock, action: AccountUsage, failure: Exception
+) -> None:
+    mock_build_client.return_value.account_whois.side_effect = failure
+
+    response = action.run({})
+
+    assert response is None
+    assert action.error_message is not None
+    assert "bad body" not in action.error_message
+    assert "bad bytes" not in action.error_message
+
+
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
+def test_an_undecodable_plan_response_still_reports_the_identity(
+    mock_build_client: MagicMock, action: AccountUsage
+) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.account_whois.return_value = _make_whois()
+    mock_api.account_features.side_effect = ps_exceptions.InvalidJSONResponseException("bad body")
+
+    response = action.run({})
+
+    assert response is not None
+    assert response["account_name"] == "Acme SOC"

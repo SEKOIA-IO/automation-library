@@ -46,7 +46,6 @@ mentioned in this action's scope and their filtering behaviour relative to
 the query string was not verified.
 """
 
-from datetime import datetime
 from typing import Any
 
 from polyswarm_api import exceptions as ps_exceptions
@@ -55,7 +54,7 @@ from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction
 from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
-from polyswarm_modules.coerce import as_names, as_number, as_score
+from polyswarm_modules.coerce import as_names, as_number, as_score, as_text
 
 # A sane default that returns enough to be useful without an operator asking
 # for it, and a hard ceiling a broad query cannot push past. The endpoint
@@ -69,25 +68,6 @@ MAX_LIMIT = 200
 # playbook variable that expanded to something unintended, and it is refused
 # before it is sent rather than left for the endpoint to reject.
 MAX_QUERY_LENGTH = 2000
-
-
-def _as_text(value: Any) -> str:
-    """Render a value as plain text, treating an absent value as empty.
-
-    A datetime field on a metadata document does not always carry a UTC
-    offset, and astimezone reads a naive datetime as the local machine's
-    zone rather than as UTC, which silently shifts it. A naive value is
-    therefore treated as already UTC, matching how the same problem is
-    handled in connector_polyswarm_intel_feed.py.
-    """
-    if value is None:
-        return ""
-    if isinstance(value, datetime):
-        from datetime import UTC
-
-        aware = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
-        return aware.astimezone(UTC).isoformat()
-    return str(value)
 
 
 def _first_present(*values: Any) -> Any:
@@ -277,13 +257,13 @@ class SearchMetadata(PolyswarmAction):
         family = polyunite.get("malware_family", "") if isinstance(polyunite, dict) else ""
         families = as_names(family) + as_names(document.get("families"))
 
-        sha256 = _as_text(getattr(item, "sha256", "") or document.get("artifact", {}).get("sha256", "")).lower()
+        sha256 = as_text(getattr(item, "sha256", "") or document.get("artifact", {}).get("sha256", "")).lower()
         permalink = f"{ps_settings.DEFAULT_PERMALINK_BASE}/{sha256}" if sha256 else ""
 
         return MetadataArtifact(
             sha256=sha256,
-            sha1=_as_text(getattr(item, "sha1", "")),
-            md5=_as_text(getattr(item, "md5", "")),
+            sha1=as_text(getattr(item, "sha1", "")),
+            md5=as_text(getattr(item, "md5", "")),
             malicious_detections=as_number(
                 _first_present(getattr(item, "malicious", None), detections.get("malicious"))
             ),
@@ -296,8 +276,8 @@ class SearchMetadata(PolyswarmAction):
             family=family or "",
             families=as_names(families),
             tags=as_names(document.get("tags")),
-            first_seen=_as_text(getattr(item, "first_seen", "")),
-            last_scanned=_as_text(getattr(item, "last_scanned", "")),
-            mimetype=_as_text(getattr(item, "mimetype", "")),
+            first_seen=as_text(getattr(item, "first_seen", "")),
+            last_scanned=as_text(getattr(item, "last_scanned", "")),
+            mimetype=as_text(getattr(item, "mimetype", "")),
             filenames=as_names(getattr(item, "filenames", None)),
         )

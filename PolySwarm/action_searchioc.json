@@ -79,8 +79,11 @@
               "description": "Total number of engines that returned a verdict"
             },
             "polyscore": {
-              "type": "number",
-              "description": "PolySwarm threat score (0.0 - 1.0), when the document carries one"
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "PolySwarm threat score (0.0 - 1.0), when the document carries one. Null when PolySwarm returned no score."
             },
             "permalink": {
               "type": "string",
@@ -140,6 +143,7 @@
       }
     }
   },
+  "slug": "search_ioc",
   "outputs": {
     "found": "PolySwarm returned at least one artifact for the indicator, and every one of them was returned",
     "not found": "PolySwarm has never seen this indicator",

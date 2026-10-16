@@ -4,16 +4,22 @@ from polyswarm_api.api import PolyswarmAPI
 from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, choose_vm_slug, failure_kind
+from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.coerce import as_optional_text
 from polyswarm_modules.sandbox import (
     DEFAULT_MAX_WAIT_SECONDS,
     MAX_WAIT_SECONDS_CEILING,
     SUBMIT_POLL_INTERVAL_CEILING,
     poll_until_terminal,
     report_url,
-    validate_provider,
 )
-from polyswarm_modules.validators import invalid_url_reason
+from polyswarm_modules.sandbox_provider import (
+    no_image_message,
+    pick_vm_slug,
+    read_providers,
+    unknown_provider_message,
+)
+from polyswarm_modules.validators import invalid_url_reason, without_credentials
 
 
 class SandboxUrlArguments(BaseModel):
@@ -84,27 +90,27 @@ class SandboxUrl(PolyswarmAction):
 
         api = build_client(self.module.configuration)
 
-        if not validate_provider(api, args.sandbox, self.log, self.error):
+        listing = read_providers(api, self.log)
+        refusal = unknown_provider_message(listing, args.sandbox)
+        if refusal is not None:
+            self.error(refusal)
             return None
 
-        resolved_vm = args.vm_slug or choose_vm_slug(api, args.sandbox, "URL")
-
-        if not resolved_vm:
-            self.error(
-                f"PolySwarm has no sandbox image for {args.sandbox} that can detonate this artifact. "
-                "Name one explicitly, or check the provider."
-            )
-
-            return None
-
-        args.vm_slug = resolved_vm
+        # Resolved only after a reusable report has been looked for, so a provider list that
+        # cannot be read never costs the analyst a report that already exists.
+        args.vm_slug = args.vm_slug or pick_vm_slug(listing, args.sandbox, "URL") or ""
 
         if not args.force:
             existing = self._lookup_existing(api, args.url, args.sandbox)
             if existing is not None:
-                self.log(f"Found existing sandbox report for {args.url} on {args.sandbox}", level="info")
+                shown = without_credentials(args.url)
+                self.log(f"Found existing sandbox report for {shown} on {args.sandbox}", level="info")
                 self.set_output("already analysed", True)
                 return self._respond(api, existing, args, already_analysed=True).model_dump()
+
+        if not args.vm_slug:
+            self.error(no_image_message(listing, args.sandbox))
+            return None
 
         task = self._submit(api, args)
         if task is None:
@@ -173,20 +179,17 @@ class SandboxUrl(PolyswarmAction):
     ) -> SandboxUrlResponse:
         # vm_slug is not a field the API hands back on a sandbox task, so the
         # value requested for this run is echoed rather than read off task.
-        community = self._as_text(getattr(task, "community", None)) or self.module.configuration.community
+        community = as_optional_text(getattr(task, "community", None)) or self.module.configuration.community
         return SandboxUrlResponse(
             sandbox_task_id=str(task.id),
-            url=args.url,
-            sha256=self._as_text(getattr(task, "sha256", None)) or "",
-            sandbox=self._as_text(getattr(task, "sandbox", None)) or "",
+            # Scrubbed, because this value is stored by the platform and can
+            # surface on an alert. Any credentials in the submitted URL would
+            # otherwise outlive the run.
+            url=without_credentials(args.url),
+            sha256=as_optional_text(getattr(task, "sha256", None)) or "",
+            sandbox=as_optional_text(getattr(task, "sandbox", None)) or "",
             vm_slug=args.vm_slug,
             status=str(getattr(task, "status", "") or ""),
             already_analysed=already_analysed,
             report_url=report_url(api, str(task.id), community),
         )
-
-    @staticmethod
-    def _as_text(value: Any) -> str | None:
-        if value is None:
-            return None
-        return str(value)

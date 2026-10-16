@@ -204,9 +204,59 @@ def test_no_image_and_no_provider_list_refuses_rather_than_guessing(
     response = action.run({"url": "https://example.com/payload"})
 
     assert response is None
-    assert "sandbox image" in action.error_message
+    assert "provider list could not be read" in action.error_message
+    assert "RequestException" in action.error_message
+    assert "connection reset" not in action.error_message
     mock_api.sandbox_url.assert_not_called()
     mock_api.sandbox_file.assert_not_called()
+
+
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
+def test_an_existing_report_is_returned_when_the_provider_list_cannot_be_read(
+    mock_build_client: MagicMock, action: SandboxUrl
+) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.sandbox_providers.side_effect = RequestException("connection reset")
+    mock_api.search_url.return_value = [_make_artifact_instance()]
+    mock_api.sandbox_task_latest.return_value = _make_sandbox_task(status="SUCCEEDED", report={"ok": True})
+
+    response = action.run({"url": "https://example.com/payload"})
+
+    assert response is not None
+    assert response["already_analysed"] is True
+    mock_api.sandbox_url.assert_not_called()
+    mock_api.sandbox_file.assert_not_called()
+
+
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
+def test_the_provider_list_is_read_once_per_run(mock_build_client: MagicMock, action: SandboxUrl) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.sandbox_providers.return_value = [_make_provider("cape")]
+    mock_api.search_url.side_effect = ps_exceptions.NoResultsException("no results")
+    mock_api.sandbox_task_latest.side_effect = ps_exceptions.NoResultsException("no results")
+    mock_api.sandbox_url.return_value = _make_sandbox_task(status="PENDING")
+    mock_api.sandbox_file.return_value = _make_sandbox_task(status="PENDING")
+
+    response = action.run({"url": "https://example.com/payload"})
+
+    assert response is not None
+    assert mock_api.sandbox_providers.call_count == 1
+
+
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
+def test_a_provider_that_lists_no_suitable_image_keeps_the_no_image_message(
+    mock_build_client: MagicMock, action: SandboxUrl
+) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.sandbox_providers.return_value = [_make_provider("cape", artifact_types=())]
+    mock_api.search_url.side_effect = ps_exceptions.NoResultsException("no results")
+    mock_api.sandbox_task_latest.side_effect = ps_exceptions.NoResultsException("no results")
+
+    response = action.run({"url": "https://example.com/payload"})
+
+    assert response is None
+    assert "no sandbox image for cape" in action.error_message
+    assert "could not be read" not in action.error_message
 
 
 # --- Failures never quote the client -----------------------------------
@@ -307,3 +357,34 @@ def test_uses_the_shared_retrying_client(
     action.run({"url": "https://example.com/payload"})
 
     mock_build_client.assert_called_once_with(module.configuration)
+
+
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
+def test_credentials_in_the_url_are_not_logged(mock_build_client: MagicMock, action: SandboxUrl) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.sandbox_providers.return_value = [_make_provider("cape")]
+    mock_api.search_url.return_value = [_make_artifact_instance()]
+    mock_api.sandbox_task_latest.return_value = _make_sandbox_task(status="SUCCEEDED", report={"ok": True})
+
+    with patch.object(action, "log") as log:
+        response = action.run({"url": "https://user:hunter2@example.com/payload"})
+
+    assert response is not None
+    logged = " ".join(str(call.args[0]) for call in log.call_args_list)
+    assert "example.com/payload" in logged
+    assert "hunter2" not in logged
+
+
+@patch("polyswarm_modules.action_polyswarm_sandboxurl.build_client", new_callable=autospec_build_client)
+def test_the_echoed_url_carries_no_credentials(mock_build_client: MagicMock, action: SandboxUrl) -> None:
+    """The response is stored by the platform and can surface on an alert, so a password must not outlive the run."""
+    mock_api = mock_build_client.return_value
+    mock_api.sandbox_providers.return_value = [_make_provider("cape")]
+    mock_api.search_url.return_value = [_make_artifact_instance()]
+    mock_api.sandbox_task_latest.return_value = _make_sandbox_task(status="SUCCEEDED", report={"ok": True})
+
+    response = action.run({"url": "https://user:hunter2@example.com/payload"})
+
+    assert response is not None
+    assert "hunter2" not in response["url"]
+    assert "example.com/payload" in response["url"]

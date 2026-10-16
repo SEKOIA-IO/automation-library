@@ -2,24 +2,15 @@ from typing import Any
 
 from polyswarm_api import exceptions as ps_exceptions
 from pydantic import BaseModel, Field
-from requests import RequestException as RequestsException
 
 from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import build_client, failure_kind
+from polyswarm_modules.client import CLIENT_ERRORS, build_client, failure_kind
 from polyswarm_modules.coerce import NUMERIC_ERRORS
 
 # The account endpoints are the only place the platform states an entitlement,
 # so this action exists to answer one question: is the playbook failing because
 # the key is wrong, because the plan does not carry the feature, or because the
 # quota for the period is spent. None of the answers include the key itself.
-CALL_FAILURES = (
-    ps_exceptions.NoResultsException,
-    ps_exceptions.NotFoundException,
-    ps_exceptions.InvalidValueException,
-    ps_exceptions.UsageLimitsExceededException,
-    ps_exceptions.RequestException,
-    RequestsException,
-)
 
 
 def _as_int(value: Any) -> int | None:
@@ -106,7 +97,7 @@ class AccountUsage(PolyswarmAction):
 
         try:
             whois = api.account_whois()
-        except CALL_FAILURES as exc:
+        except CLIENT_ERRORS as exc:
             self.error(self._failure_message(exc, "identify the account"))
             return None
 
@@ -120,7 +111,7 @@ class AccountUsage(PolyswarmAction):
 
         try:
             account = api.account_features()
-        except CALL_FAILURES as exc:
+        except CLIENT_ERRORS as exc:
             # The identity answer is still worth returning: an analyst chasing a
             # failing playbook needs to know which account the key belongs to
             # even when the plan endpoint is the thing refusing them.

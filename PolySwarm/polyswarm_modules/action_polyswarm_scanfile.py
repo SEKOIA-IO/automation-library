@@ -6,15 +6,8 @@ from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction, sha256_handle
 from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.scan import DEFAULT_MAX_WAIT_SECONDS, MAX_WAIT_SECONDS_CEILING, MIN_WAIT_SECONDS, wait_for_scan
 from polyswarm_modules.verdict import AssertionResult, tally_assertions
-
-# A scan waits on engines that can answer slowly, but the SDK's own default of
-# fifteen minutes is the kind of blocked playbook run the sandbox actions were
-# written to avoid, so the wait is bounded here and exposed to the analyst
-# instead. The ceiling matches the longest scan window PolySwarm offers.
-DEFAULT_MAX_WAIT_SECONDS: int = 300
-MAX_WAIT_SECONDS_CEILING: int = 600
-MIN_WAIT_SECONDS: int = 30
 
 
 class ScanFileArguments(BaseModel):
@@ -130,7 +123,7 @@ class ScanFile(PolyswarmAction):
                     # patching the library. The limitation is stated in the descriptor instead, and
                     # only the wait after the upload is bounded here.
                     instance = api.submit(handle, artifact_name=file_path.name, scan_config=args.scan_config)
-                    result = api.wait_for(instance, timeout=args.max_wait_seconds)
+                    result = wait_for_scan(api, instance, args.max_wait_seconds)
                 except ps_exceptions.TimeoutException:
                     # The scan itself is not cancelled, only the wait for it, so it can still be read later.
                     self.error(

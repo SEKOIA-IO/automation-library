@@ -70,7 +70,7 @@ def test_submits_when_no_existing(mock_build_client: MagicMock, action: ScanDoma
     mock_api.search_url.return_value = []
     mock_instance = MagicMock()
     mock_api.submit.return_value = mock_instance
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     response = action.run({"domain": "example.com"})
 
@@ -79,7 +79,7 @@ def test_submits_when_no_existing(mock_build_client: MagicMock, action: ScanDoma
         artifact_type=ArtifactType.URL,
         scan_config="more-time",
     )
-    mock_api.wait_for.assert_called_once_with(mock_instance, timeout=300)
+    mock_api.lookup.assert_called_once_with(mock_instance)
     assert response["cached"] is False
 
 
@@ -87,7 +87,7 @@ def test_submits_when_no_existing(mock_build_client: MagicMock, action: ScanDoma
 def test_force_rescan_skips_lookup(mock_build_client: MagicMock, action: ScanDomain) -> None:
     mock_api = mock_build_client.return_value
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     response = action.run({"domain": "example.com", "force_rescan": True})
 
@@ -102,7 +102,7 @@ def test_submits_when_existing_failed(mock_build_client: MagicMock, action: Scan
     mock_api = mock_build_client.return_value
     mock_api.search_url.return_value = [failed]
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     response = action.run({"domain": "example.com"})
 
@@ -118,7 +118,7 @@ def test_excludes_unmasked(mock_build_client: MagicMock, action: ScanDomain) -> 
     ]
     mock_build_client.return_value.search_url.return_value = []
     mock_build_client.return_value.submit.return_value = MagicMock()
-    mock_build_client.return_value.wait_for.return_value = _make_scan_result(assertions=assertions)
+    mock_build_client.return_value.lookup.return_value = _make_scan_result(assertions=assertions)
 
     response = action.run({"domain": "example.com"})
 
@@ -132,7 +132,7 @@ def test_detections_activate_the_detected_branch(mock_build_client: MagicMock, a
     mock_api = mock_build_client.return_value
     mock_api.search_url.return_value = []
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     action.run({"domain": "example.com"})
 
@@ -145,7 +145,7 @@ def test_the_threshold_moves_the_branch(mock_build_client: MagicMock, action: Sc
     mock_api = mock_build_client.return_value
     mock_api.search_url.return_value = []
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     action.run({"domain": "example.com", "detect_threshold": 99})
 
@@ -160,7 +160,7 @@ def test_uses_the_shared_retrying_client(
     mock_api = mock_build_client.return_value
     mock_api.search_url.return_value = []
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     action.run({"domain": "example.com"})
 
@@ -219,24 +219,28 @@ def test_submit_failure_returns_none_without_quoting_the_client(
 # --- bounded wait ---
 
 
+@patch("polyswarm_modules.action_polyswarm_scandomain.wait_for_scan")
 @patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
-def test_the_wait_is_bounded_by_the_argument(mock_build_client: MagicMock, action: ScanDomain) -> None:
-    mock_api = mock_build_client.return_value
-    mock_api.search_url.return_value = []
-    mock_api.wait_for.return_value = _make_scan_result()
-
-    action.run({**{"domain": "example.com"}, "max_wait_seconds": 45})
-
-    assert mock_api.wait_for.call_args.kwargs == {"timeout": 45}
-
-
-@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
-def test_a_scan_that_outlasts_the_wait_is_reported_as_still_running(
-    mock_build_client: MagicMock, action: ScanDomain
+def test_the_wait_is_bounded_by_the_argument(
+    mock_build_client: MagicMock, mock_wait: MagicMock, action: ScanDomain
 ) -> None:
     mock_api = mock_build_client.return_value
     mock_api.search_url.return_value = []
-    mock_api.wait_for.side_effect = ps_exceptions.TimeoutException("scan abc timed out, key=SECRET")
+    mock_wait.return_value = _make_scan_result()
+
+    action.run({**{"domain": "example.com"}, "max_wait_seconds": 45})
+
+    assert mock_wait.call_args.args[2] == 45
+
+
+@patch("polyswarm_modules.action_polyswarm_scandomain.wait_for_scan")
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
+def test_a_scan_that_outlasts_the_wait_is_reported_as_still_running(
+    mock_build_client: MagicMock, mock_wait: MagicMock, action: ScanDomain
+) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.search_url.return_value = []
+    mock_wait.side_effect = ps_exceptions.TimeoutException("scan abc timed out, key=SECRET")
 
     response = action.run({"domain": "example.com"})
 
@@ -268,3 +272,55 @@ def test_the_http_status_is_reported_without_the_client_message(
     assert response is None
     assert "HTTP 429" in action.error_message
     assert "SECRET" not in action.error_message
+
+
+# --- internal names and the submitted value ---
+
+
+@pytest.mark.parametrize(
+    "domain",
+    [
+        "printer.local",
+        "nas.internal",
+        "router.home.arpa",
+        "app.localhost",
+        "PRINTER.LOCAL",
+        "printer.local.",
+        "deep.sub.nas.internal",
+    ],
+)
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
+def test_refuses_private_suffix_domains(mock_build_client: MagicMock, action: ScanDomain, domain: str) -> None:
+    response = action.run({"domain": domain})
+
+    assert response is None
+    assert action.error_message is not None
+    assert "only exists inside a network" in action.error_message
+    mock_build_client.assert_not_called()
+
+
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
+def test_a_domain_that_merely_ends_in_a_similar_word_is_scanned(
+    mock_build_client: MagicMock, action: ScanDomain
+) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.search_url.return_value = [_make_scan_result()]
+
+    response = action.run({"domain": "example.localhost.com"})
+
+    assert response is not None
+
+
+@patch("polyswarm_modules.action_polyswarm_scandomain.build_client", new_callable=autospec_build_client)
+def test_the_checked_value_is_the_one_submitted(mock_build_client: MagicMock, action: ScanDomain) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.search_url.return_value = []
+    mock_api.submit.return_value = MagicMock()
+    mock_api.lookup.return_value = _make_scan_result()
+
+    response = action.run({"domain": "  example.com.  "})
+
+    assert response is not None
+    assert response["domain"] == "example.com"
+    mock_api.search_url.assert_called_once_with("example.com")
+    assert mock_api.submit.call_args.args == ("example.com",)

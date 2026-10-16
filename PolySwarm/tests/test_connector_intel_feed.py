@@ -9,17 +9,24 @@ from typing import Any
 from unittest.mock import MagicMock, create_autospec, patch
 
 import pytest
+import requests_mock
 from polyswarm_api import exceptions as ps_exceptions
+from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
+from tenacity import Retrying, stop_after_attempt
 
 from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.client import DEFAULT_TIMEOUT, RETRY_TOTAL
+from polyswarm_modules.coerce import as_text
 from polyswarm_modules.connector_polyswarm_intel_feed import (
     MAX_BACKOFF_SECONDS,
+    MAX_LIST_ITEMS,
+    MAX_WINDOW_MINUTES,
+    PUSH_RETRY_CEILING_SECONDS,
     IntelFeed,
     IntelFeedConfiguration,
-    _as_text,
     escape_lucene_phrase,
     escape_lucene_term,
+    event_characters,
     format_window_bound,
     polyscore_band,
 )
@@ -761,13 +768,13 @@ def test_a_naive_datetime_is_treated_as_utc_not_local_time() -> None:
     which is the recurring bug this guards against.
     """
     naive = datetime(2026, 9, 20, 10, 0, 0)
-    assert _as_text(naive) == "2026-09-20T10:00:00+00:00"
+    assert as_text(naive) == "2026-09-20T10:00:00+00:00"
 
 
 def test_an_aware_datetime_in_another_zone_is_normalised_to_utc() -> None:
     eastern = timezone(timedelta(hours=-4))
     aware = datetime(2026, 9, 20, 6, 0, 0, tzinfo=eastern)
-    assert _as_text(aware) == "2026-09-20T10:00:00+00:00"
+    assert as_text(aware) == "2026-09-20T10:00:00+00:00"
 
 
 def test_format_window_bound_normalises_a_non_utc_aware_datetime() -> None:
@@ -869,6 +876,9 @@ def test_liveness_rests_on_the_heartbeat_not_on_events(connector: IntelFeed) -> 
     assert connector.seconds_without_events == 0
     assert connector.last_heartbeat_threshold >= 3 * connector.frequency
     assert connector.last_heartbeat_threshold > MAX_BACKOFF_SECONDS
+    # The SDK keeps retrying one push for an hour, and a failed push then backs off.
+    assert connector.last_heartbeat_threshold >= PUSH_RETRY_CEILING_SECONDS + MAX_BACKOFF_SECONDS
+    assert PUSH_RETRY_CEILING_SECONDS > 3600
 
 
 def test_the_heartbeat_threshold_is_off_before_the_configuration_is_attached() -> None:
@@ -912,3 +922,264 @@ def test_catching_up_does_not_log_a_line_for_every_empty_slice(
     connector.next_run()
 
     assert not [m for m in logged_messages(connector) if "matched" in m]
+
+
+# ---------------------------------------------------------------------------
+# Oversized events, through the real SDK push
+# ---------------------------------------------------------------------------
+
+
+def real_push(connector: IntelFeed) -> None:
+    """Put the SDK's own push_events_to_intakes back, instead of the mock make_connector installs."""
+    del connector.push_events_to_intakes
+
+
+def intake_answering_per_event(mocker: requests_mock.Mocker) -> Any:
+    """An intake that answers like the real one: one event id per event in the batch."""
+
+    def answer(request: Any, context: Any) -> dict[str, list[str]]:
+        context.status_code = 200
+        return {"event_ids": [f"id-{n}" for n in range(len(request.json()["jsons"]))]}
+
+    return mocker.post("https://intake.example/batch", json=answer)
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_an_oversized_event_is_dropped_and_does_not_stall_the_feed(
+    mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
+) -> None:
+    """The SDK discards an event over 250000 characters and returns no id for it.
+
+    Counted as a failed push, that holds the checkpoint and rebuilds the same
+    window forever. This goes through the real SDK push so the discard is real.
+    """
+    connector = make_connector(data_storage, module)
+    real_push(connector)
+    created = datetime.now(UTC) - timedelta(minutes=5)
+    normal = make_artifact("aa" * 32, created)
+    huge = make_artifact("bb" * 32, created)
+    # A field the connector does not cap, so the event is over the limit however the lists are bounded.
+    huge.mimetype = "x" * (EVENT_BYTES_MAX_SIZE + 10)
+
+    install_api(mock_api_class, lambda query: iter([normal, huge]))
+    before = connector.checkpoint.offset
+
+    with requests_mock.Mocker() as mocker:
+        intake = intake_answering_per_event(mocker)
+        assert connector.next_run() == 1
+
+    sent = [json.loads(body) for call in intake.request_history for body in call.json()["jsons"]]
+    assert [event["sha256"] for event in sent] == ["aa" * 32]
+    assert connector.checkpoint.offset > before
+    assert connector.remembered_digests() == {"aa" * 32}
+    assert any("longer than" in message for message in logged_messages(connector))
+    assert connector._consecutive_failures == 0
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_a_window_holding_only_an_oversized_event_still_moves_on(
+    mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
+) -> None:
+    connector = make_connector(data_storage, module)
+    real_push(connector)
+    huge = make_artifact("cc" * 32, datetime.now(UTC) - timedelta(minutes=5))
+    huge.mimetype = "x" * (EVENT_BYTES_MAX_SIZE + 10)
+    install_api(mock_api_class, lambda query: iter([huge]))
+    before = connector.checkpoint.offset
+
+    with requests_mock.Mocker() as mocker:
+        intake = intake_answering_per_event(mocker)
+        assert connector.next_run() == 0
+
+    assert intake.call_count == 0
+    assert connector.checkpoint.offset > before
+    assert not [m for m in logged_messages(connector) if "matched" in m]
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_an_artifact_with_thousands_of_filenames_fits_the_intake_limit(
+    mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
+) -> None:
+    connector = make_connector(data_storage, module)
+    real_push(connector)
+    artifact = make_artifact("dd" * 32, datetime.now(UTC) - timedelta(minutes=5))
+    artifact.filenames = [f"payload-{n}-" + "y" * 600 + ".exe" for n in range(20000)]
+    artifact.json["tags"] = [f"tag-{n}" for n in range(20000)]
+    artifact.json["families"] = [f"family-{n}" for n in range(20000)]
+    install_api(mock_api_class, lambda query: iter([artifact]))
+
+    with requests_mock.Mocker() as mocker:
+        intake = intake_answering_per_event(mocker)
+        assert connector.next_run() == 1
+
+    (body,) = [body for call in intake.request_history for body in call.json()["jsons"]]
+    event = json.loads(body)
+    assert len(event["filenames"]) == MAX_LIST_ITEMS
+    assert len(event["tags"]) == MAX_LIST_ITEMS
+    assert len(event["families"]) == MAX_LIST_ITEMS
+    assert max(len(name) for name in event["filenames"]) <= 512
+    assert event_characters(event) < EVENT_BYTES_MAX_SIZE
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_a_real_push_that_fails_still_holds_the_window(
+    mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
+) -> None:
+    """The shortfall check still works against the real SDK when the intake refuses the batch."""
+    connector = make_connector(data_storage, module)
+    real_push(connector)
+    # One attempt only, so the test does not wait out the SDK's hour of retries.
+    connector._retry = lambda: Retrying(stop=stop_after_attempt(1), reraise=True)  # type: ignore[method-assign]
+    install_api(
+        mock_api_class, lambda query: iter([make_artifact("ee" * 32, datetime.now(UTC) - timedelta(minutes=5))])
+    )
+    before = connector.checkpoint.offset
+
+    with requests_mock.Mocker() as mocker:
+        mocker.post("https://intake.example/batch", status_code=500)
+        assert connector.next_run() == 0
+
+    assert connector.checkpoint.offset == before
+    assert any("accepted 0 of 1 events" in message for message in logged_messages(connector))
+
+
+# ---------------------------------------------------------------------------
+# One unreadable artifact must not stall the feed
+# ---------------------------------------------------------------------------
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+@pytest.mark.parametrize("field", ["scan", "polyunite", "artifact"])
+def test_an_artifact_with_a_malformed_field_is_counted_unreadable_and_the_rest_flow(
+    mock_api_class: MagicMock, connector: IntelFeed, field: str
+) -> None:
+    created = datetime.now(UTC) - timedelta(minutes=5)
+    broken = make_artifact("f1" * 32, created)
+    broken.json[field] = "not an object"
+    broken.sha256 = ""
+    good = make_artifact("f2" * 32, created)
+    install_api(mock_api_class, lambda query: iter([broken, good]))
+    before = connector.checkpoint.offset
+
+    assert connector.next_run() == 1
+
+    assert [event["sha256"] for event in pushed_events(connector)] == ["f2" * 32]
+    assert connector.checkpoint.offset > before
+    assert any("could not be read" in message for message in logged_messages(connector))
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_an_artifact_that_raises_during_conversion_does_not_fail_the_cycle(
+    mock_api_class: MagicMock, connector: IntelFeed
+) -> None:
+    created = datetime.now(UTC) - timedelta(minutes=5)
+    broken = make_artifact("f3" * 32, created)
+    broken.json["scan"] = ["a", "list"]
+    broken.created = 10**400  # an int too large for any conversion that follows
+    install_api(mock_api_class, lambda query: iter([broken, make_artifact("f4" * 32, created)]))
+
+    assert connector.next_run() == 1
+    assert connector._consecutive_failures == 0
+
+
+# ---------------------------------------------------------------------------
+# Catch up remembers the span that fit
+# ---------------------------------------------------------------------------
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_the_span_that_fit_is_remembered_and_the_next_run_starts_from_it(
+    mock_api_class: MagicMock, data_storage: str, module: PolyswarmModule
+) -> None:
+    connector = make_connector(data_storage, module, lookback_minutes=1000, max_events_per_run=2)
+    spans: list[float] = []
+
+    def search(query: str) -> Iterator[Any]:
+        bounds = re.search(r"artifact\.created:\[(\S+) TO (\S+)\]", query)
+        start = datetime.fromisoformat(bounds.group(1))
+        end = datetime.fromisoformat(bounds.group(2))
+        span = (end - start).total_seconds()
+        spans.append(span)
+        # Busy: more than the ceiling in anything wider than 100 minutes.
+        count = 5 if span > 6000 else 1
+        for n in range(count):
+            yield make_artifact(f"{n + 1:02x}" * 32, start + timedelta(seconds=n + 1))
+
+    install_api(mock_api_class, search)
+
+    connector.next_run()
+    first_run_attempts = len(spans)
+    assert first_run_attempts > 1
+    fitted = spans[-1]
+    assert connector.window_span_seconds() == fitted
+
+    # A new instance on the same data path: the span survives a restart.
+    again = make_connector(data_storage, module, lookback_minutes=1000, max_events_per_run=2)
+    assert again.window_span_seconds() == fitted
+
+    spans.clear()
+    connector.next_run()
+    assert spans[0] == fitted, "the next run starts from the span that fit, not from the ceiling"
+    # It fit, so the span doubles for the run after.
+    assert connector.window_span_seconds() == min(2 * fitted, MAX_WINDOW_MINUTES * 60)
+
+
+def test_the_span_starts_at_the_ceiling_and_ignores_a_corrupt_value(
+    data_storage: str, module: PolyswarmModule
+) -> None:
+    connector = make_connector(data_storage, module)
+    assert connector.window_span_seconds() == MAX_WINDOW_MINUTES * 60
+    with connector.digests as cache:
+        cache["window_seconds"] = "soon"
+    assert connector.window_span_seconds() == MAX_WINDOW_MINUTES * 60
+    with connector.digests as cache:
+        cache["window_seconds"] = 5
+    assert connector.window_span_seconds() == 60
+
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+
+
+def test_a_checkpoint_older_than_the_lookback_ceiling_is_logged(data_storage: str, module: PolyswarmModule) -> None:
+    connector = make_connector(data_storage, module)
+    stale = datetime.now(UTC) - timedelta(days=45)
+    (Path(data_storage) / "context.json").write_text(json.dumps({"most_recent_date_seen": stale.isoformat()}))
+
+    connector.checkpoint
+
+    said = [m for m in logged_messages(connector) if "lookback ceiling" in m]
+    assert said and "not pulled" in said[0]
+
+
+def test_a_recent_checkpoint_logs_nothing_about_clamping(data_storage: str, module: PolyswarmModule) -> None:
+    connector = make_connector(data_storage, module)
+    recent = datetime.now(UTC) - timedelta(hours=2)
+    (Path(data_storage) / "context.json").write_text(json.dumps({"most_recent_date_seen": recent.isoformat()}))
+
+    connector.checkpoint
+
+    assert not [m for m in logged_messages(connector) if "lookback ceiling" in m]
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_the_idle_line_is_said_once_and_again_after_events_arrive(
+    mock_api_class: MagicMock, connector: IntelFeed
+) -> None:
+    created = datetime.now(UTC) - timedelta(minutes=1)
+    answers: list[list[Any]] = [[], [], [], [make_artifact("a1" * 32, created)], [], []]
+    install_api(mock_api_class, lambda query: iter(answers.pop(0)))
+
+    def idle_lines() -> int:
+        return len([m for m in logged_messages(connector) if "matched" in m])
+
+    connector.next_run()
+    connector.next_run()
+    connector.next_run()
+    assert idle_lines() == 1
+
+    connector.next_run()
+    connector.next_run()
+    connector.next_run()
+    assert idle_lines() == 2

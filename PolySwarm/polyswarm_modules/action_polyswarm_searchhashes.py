@@ -10,7 +10,6 @@ sequentially, and a rate limit stops the loop immediately and returns whatever
 was already gathered instead of hammering the API.
 """
 
-import re
 from typing import Any
 
 from polyswarm_api import exceptions as ps_exceptions
@@ -18,24 +17,10 @@ from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction
 from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.validators import hash_kind
+from polyswarm_modules.verdict import AssertionResult, tally_assertions
 
 MAX_HASHES_PER_CALL = 100
-
-_HASH_LENGTHS: dict[int, str] = {32: "MD5", 40: "SHA1", 64: "SHA256"}
-_HEX_RE = re.compile(r"^[0-9a-fA-F]+$")
-
-
-def _hash_kind(value: str) -> str | None:
-    """Return the hash type a value plausibly is, or None when it is neither.
-
-    A wrong-length or non-hex value is rejected before it costs an API
-    request: the server would refuse it anyway, and finding that out over the
-    network burns quota and a request slot for an answer that is knowable
-    locally.
-    """
-    if not _HEX_RE.match(value):
-        return None
-    return _HASH_LENGTHS.get(len(value))
 
 
 class SearchHashesArguments(BaseModel):
@@ -53,12 +38,6 @@ class SearchHashesArguments(BaseModel):
     )
 
 
-class HashAssertion(BaseModel):
-    engine_name: str
-    author_name: str
-    verdict: bool | None
-
-
 class HashVerdict(BaseModel):
     hash: str
     sha256: str
@@ -68,7 +47,7 @@ class HashVerdict(BaseModel):
     polyscore: float | None
     permalink: str
     family: str = ""
-    assertions: list[HashAssertion] = []
+    assertions: list[AssertionResult] = []
 
 
 class HashLookupError(BaseModel):
@@ -117,7 +96,7 @@ class SearchHashes(PolyswarmAction):
 
         # One request per distinct hash. There is no batch route to use instead.
         for query_hash in wanted:
-            if _hash_kind(query_hash) is None:
+            if hash_kind(query_hash) is None:
                 # Rejected locally: the server would refuse this anyway, and an
                 # API request is not spent finding that out.
                 errors.append(
@@ -131,15 +110,19 @@ class SearchHashes(PolyswarmAction):
                 continue
             try:
                 queried += 1
-                found = list(api.search(query_hash))
+                # Only the most recent result is read, so do not follow every page.
+                found = next(iter(api.search(query_hash)), None)
             except ps_exceptions.UsageLimitsExceededException:
                 # Stop on the first rate limit rather than burning the rest of
                 # the list against a limit that is already refusing requests.
                 rate_limited = True
-                self.error(
+                # Not self.error(): that marks the whole run as failed, and the
+                # partial branch below exists to deliver what was gathered.
+                self.log(
                     f"PolySwarm rejected the lookup for usage limits on request {queried} of {len(wanted)}. "
                     f"{len(wanted) - queried} hashes were not looked up, and the results gathered "
-                    "before the limit are returned. Retry the remainder later or raise the plan limit."
+                    "before the limit are returned. Retry the remainder later or raise the plan limit.",
+                    level="warning",
                 )
                 break
             except MISSING_RESULT:
@@ -165,11 +148,11 @@ class SearchHashes(PolyswarmAction):
                 )
                 continue
 
-            if not found:
+            if found is None:
                 not_found.append(query_hash)
                 continue
 
-            result = found[0]
+            result = found
             if getattr(result, "failed", False):
                 errors.append(
                     HashLookupError(
@@ -192,7 +175,8 @@ class SearchHashes(PolyswarmAction):
             results.append(self._build_verdict(query_hash, result, args.include_assertions))
 
         if not results and not not_found:
-            self.error("None of the supplied hashes could be looked up in PolySwarm")
+            reason = " PolySwarm rejected a lookup for usage limits." if rate_limited else ""
+            self.error(f"None of the supplied hashes could be looked up in PolySwarm.{reason}")
             return None
 
         response = SearchHashesResponse(
@@ -232,33 +216,18 @@ class SearchHashes(PolyswarmAction):
         return list(seen)
 
     def _build_verdict(self, query_hash: str, result: Any, include_assertions: bool) -> HashVerdict:
-        # Only assertions inside the bloom mask are real answers from an engine.
-        # An engine that abstained answers None, and it is neither malicious nor
-        # benign: counting abstentions as benign inflates the clean side of any
-        # ratio a customer writes a detection rule against.
-        scored = [a for a in result.assertions if a.mask]
-
-        assertions: list[HashAssertion] = []
-        if include_assertions:
-            assertions = [
-                HashAssertion(
-                    engine_name=a.engine_name,
-                    author_name=a.author_name,
-                    verdict=a.verdict,
-                )
-                for a in scored
-            ]
+        tally = tally_assertions(result)
 
         return HashVerdict(
             hash=query_hash,
             sha256=result.sha256,
-            malicious_count=sum(1 for a in scored if a.verdict is True),
-            benign_count=sum(1 for a in scored if a.verdict is False),
-            total_count=len(scored),
+            malicious_count=tally.malicious_count,
+            benign_count=tally.benign_count,
+            total_count=tally.total_count,
             polyscore=result.polyscore,
             permalink=result.permalink,
             family=self._extract_family(result),
-            assertions=assertions,
+            assertions=tally.assertions if include_assertions else [],
         )
 
     @staticmethod

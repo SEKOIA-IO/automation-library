@@ -15,6 +15,8 @@ def action(data_storage: str, module: PolyswarmModule) -> SearchHash:
 
 def _make_assertion(*, verdict: bool, mask: bool = True) -> MagicMock:
     a = MagicMock()
+    a.engine_name = "EngineA"
+    a.author_name = "enginea"
     a.verdict = verdict
     a.mask = mask
     return a
@@ -28,14 +30,17 @@ def _make_mock_result(
     first_seen: str = "2024-01-15T00:00:00Z",
     permalink: str = "https://polyswarm.network/scan/results/abc123",
     polyscore: float = 0.85,
-    family: str = "GenericTrojan",
     sha256: str = "cc" * 32,
+    window_closed: bool = True,
+    family: str | None = "GenericTrojan",
 ) -> MagicMock:
     result = MagicMock()
     result.sha256 = sha256
     result.first_seen = first_seen
     result.permalink = permalink
     result.polyscore = polyscore
+    result.failed = False
+    result.window_closed = window_closed
 
     malicious = [_make_assertion(verdict=True) for _ in range(malicious_count)]
     benign = [_make_assertion(verdict=False) for _ in range(benign_count)]
@@ -297,3 +302,75 @@ def test_valid_length_hashes_are_accepted(query_hash: str, action: SearchHash) -
 
     assert response is not None
     assert response["found"] is True
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
+def test_open_assertion_window_takes_the_unknown_branch(mock_build_client: MagicMock, action: SearchHash) -> None:
+    """Engines still answering means zero counts, which must never read as clean."""
+    api = mock_build_client.return_value
+    api.search.return_value = iter([_make_mock_result(malicious_count=0, benign_count=0, window_closed=False)])
+
+    response = action.run({"query_hash": "ab" * 32})
+
+    assert response["found"] is False
+    assert action._outputs == {"unknown": True}
+    assert action.error_message is None
+    api.tag_link_get.assert_not_called()
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
+def test_failed_scan_takes_the_unknown_branch(mock_build_client: MagicMock, action: SearchHash) -> None:
+    result = _make_mock_result()
+    result.failed = True
+    mock_build_client.return_value.search.return_value = iter([result])
+
+    action.run({"query_hash": "ab" * 32})
+
+    assert action._outputs == {"unknown": True}
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
+def test_null_malware_family_is_an_empty_string(mock_build_client: MagicMock, action: SearchHash) -> None:
+    """polyunite can carry a null family, which must not fail the response model."""
+    api = mock_build_client.return_value
+    result = _make_mock_result()
+    result.metadata.json = {"polyunite": {"malware_family": None}}
+    api.search.return_value = iter([result])
+    api.tag_link_get.return_value = _make_tag_link()
+
+    response = action.run({"query_hash": "ab" * 32})
+
+    assert response["family"] == ""
+    assert response["families"] == []
+    assert action.error_message is None
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
+def test_absent_first_seen_is_empty_and_dates_are_iso(mock_build_client: MagicMock, action: SearchHash) -> None:
+    from datetime import UTC, datetime
+
+    api = mock_build_client.return_value
+    api.tag_link_get.return_value = _make_tag_link()
+    api.search.return_value = iter([_make_mock_result(first_seen=None)])
+    assert action.run({"query_hash": "ab" * 32})["first_seen"] == ""
+
+    api.search.return_value = iter([_make_mock_result(first_seen=datetime(2024, 1, 15, 8, 30))])
+    assert action.run({"query_hash": "ab" * 32})["first_seen"] == datetime(2024, 1, 15, 8, 30, tzinfo=UTC).isoformat()
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
+def test_only_the_first_result_is_consumed(mock_build_client: MagicMock, action: SearchHash) -> None:
+    """The client pages lazily, so reading past the first result costs requests for nothing."""
+    api = mock_build_client.return_value
+    api.tag_link_get.return_value = _make_tag_link()
+    consumed: list[int] = []
+
+    def _pages():
+        for i in range(3):
+            consumed.append(i)
+            yield _make_mock_result()
+
+    api.search.return_value = _pages()
+    action.run({"query_hash": "ab" * 32})
+
+    assert consumed == [0]

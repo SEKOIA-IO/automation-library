@@ -93,7 +93,7 @@ def test_submits_when_no_existing(
     mock_api.search.return_value = []
     mock_instance = MagicMock()
     mock_api.submit.return_value = mock_instance
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     response = action.run({"file": sample_file})
 
@@ -102,7 +102,7 @@ def test_submits_when_no_existing(
     submitted = mock_api.submit.call_args.args[0]
     assert hasattr(submitted, "read")
     assert mock_api.submit.call_args.kwargs == {"artifact_name": "malware.exe", "scan_config": "default"}
-    mock_api.wait_for.assert_called_once_with(mock_instance, timeout=300)
+    mock_api.lookup.assert_called_once_with(mock_instance)
     assert response["cached"] is False
     assert response["malicious_count"] == 2
     assert response["benign_count"] == 1
@@ -115,7 +115,7 @@ def test_force_rescan_skips_lookup(
 ) -> None:
     mock_api = mock_build_client.return_value
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     response = action.run({"file": sample_file, "force_rescan": True})
 
@@ -133,7 +133,7 @@ def test_submits_when_existing_failed(
     mock_api = mock_build_client.return_value
     mock_api.search.return_value = [failed]
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     response = action.run({"file": sample_file})
 
@@ -152,7 +152,7 @@ def test_excludes_unmasked_assertions(
     ]
     mock_build_client.return_value.search.return_value = []
     mock_build_client.return_value.submit.return_value = MagicMock()
-    mock_build_client.return_value.wait_for.return_value = _make_scan_result(assertions=assertions)
+    mock_build_client.return_value.lookup.return_value = _make_scan_result(assertions=assertions)
 
     response = action.run({"file": sample_file})
 
@@ -168,7 +168,7 @@ def test_detections_activate_the_detected_branch(
     mock_api = mock_build_client.return_value
     mock_api.search.return_value = []
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     action.run({"file": sample_file})
 
@@ -181,7 +181,7 @@ def test_the_threshold_moves_the_branch(mock_build_client: MagicMock, action: Sc
     mock_api = mock_build_client.return_value
     mock_api.search.return_value = []
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     action.run({"file": sample_file, "detect_threshold": 99})
 
@@ -197,7 +197,7 @@ def test_uses_the_shared_retrying_client(
     mock_api = mock_build_client.return_value
     mock_api.search.return_value = []
     mock_api.submit.return_value = MagicMock()
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     action.run({"file": sample_file})
 
@@ -242,24 +242,28 @@ def test_lookup_failure_returns_none_without_quoting_the_client(
 # --- bounded wait, and reading through the path object ---
 
 
+@patch("polyswarm_modules.action_polyswarm_scanfile.wait_for_scan")
 @patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
-def test_the_wait_is_bounded_by_the_argument(mock_build_client: MagicMock, action: ScanFile, sample_file: str) -> None:
-    mock_api = mock_build_client.return_value
-    mock_api.search.return_value = []
-    mock_api.wait_for.return_value = _make_scan_result()
-
-    action.run({"file": sample_file, "max_wait_seconds": 45})
-
-    assert mock_api.wait_for.call_args.kwargs == {"timeout": 45}
-
-
-@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
-def test_a_scan_that_outlasts_the_wait_is_reported_as_still_running(
-    mock_build_client: MagicMock, action: ScanFile, sample_file: str
+def test_the_wait_is_bounded_by_the_argument(
+    mock_build_client: MagicMock, mock_wait: MagicMock, action: ScanFile, sample_file: str
 ) -> None:
     mock_api = mock_build_client.return_value
     mock_api.search.return_value = []
-    mock_api.wait_for.side_effect = ps_exceptions.TimeoutException("scan abc timed out, key=SECRET")
+    mock_wait.return_value = _make_scan_result()
+
+    action.run({"file": sample_file, "max_wait_seconds": 45})
+
+    assert mock_wait.call_args.args[2] == 45
+
+
+@patch("polyswarm_modules.action_polyswarm_scanfile.wait_for_scan")
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
+def test_a_scan_that_outlasts_the_wait_is_reported_as_still_running(
+    mock_build_client: MagicMock, mock_wait: MagicMock, action: ScanFile, sample_file: str
+) -> None:
+    mock_api = mock_build_client.return_value
+    mock_api.search.return_value = []
+    mock_wait.side_effect = ps_exceptions.TimeoutException("scan abc timed out, key=SECRET")
 
     response = action.run({"file": sample_file})
 
@@ -284,7 +288,7 @@ def test_a_file_that_is_not_on_the_local_disk_is_read_through_its_path_object(
     remote.open.return_value = io.BytesIO(b"bytes that only the path object can read")
     mock_api = mock_build_client.return_value
     mock_api.search.return_value = []
-    mock_api.wait_for.return_value = _make_scan_result()
+    mock_api.lookup.return_value = _make_scan_result()
 
     with patch.object(ScanFile, "resolve_data_file", return_value=remote, autospec=True):
         response = action.run({"file": "remote.bin"})

@@ -76,8 +76,11 @@
               "description": "Total number of engines that returned a verdict"
             },
             "polyscore": {
-              "type": "number",
-              "description": "PolySwarm threat score (0.0 - 1.0), when the document carries one"
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "PolySwarm threat score (0.0 - 1.0), when the document carries one. Null when PolySwarm returned no score."
             },
             "permalink": {
               "type": "string",
@@ -137,6 +140,7 @@
       }
     }
   },
+  "slug": "search_metadata",
   "outputs": {
     "found": "The query matched at least one artifact, and every match was returned",
     "not found": "The query matched no artifacts in PolySwarm",

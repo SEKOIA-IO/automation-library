@@ -71,35 +71,6 @@ def install_retries(api: PolyswarmAPI) -> None:
     session.mount("https://", adapter)
 
 
-def choose_vm_slug(api: Any, provider_slug: str, artifact_type: str) -> str | None:
-    """Pick a sandbox image that can actually detonate this kind of artifact.
-
-    Hardcoding an image is how this module shipped a default of
-    win-10-build-19045, which does not exist: the real CAPE image is
-    win-10-build-19041, so every detonation using the default would have been
-    refused by the platform with "unknown sandbox provider or vm id". Images
-    also differ by what they can take, and only some of them can open a URL at
-    all, so the choice depends on the artifact as well as the provider.
-
-    Returns None when the provider list cannot be read or offers nothing
-    suitable, which the caller reports rather than guessing.
-    """
-    try:
-        providers = list(api.sandbox_providers())
-    except Exception:
-        return None
-
-    wanted = artifact_type.upper()
-    for provider in providers:
-        raw = getattr(provider, "json", None) or {}
-        if (raw.get("slug") or getattr(provider, "slug", "")) != provider_slug:
-            continue
-        for name, vm in (raw.get("vms") or {}).items():
-            if wanted in (vm.get("supported_artifact_types") or []):
-                return str(vm.get("slug") or name)
-    return None
-
-
 def failure_kind(exc: Exception) -> str:
     """The exception class and, when there is one, the HTTP status, for an error message.
 

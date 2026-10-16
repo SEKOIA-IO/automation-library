@@ -33,11 +33,17 @@
         }
       },
       "daily_api_limit": {
-        "type": "integer",
+        "type": [
+          "integer",
+          "null"
+        ],
         "description": "Daily API request allowance, or null when the plan does not meter daily requests"
       },
       "daily_api_remaining": {
-        "type": "integer",
+        "type": [
+          "integer",
+          "null"
+        ],
         "description": "Daily API requests still available, or null when the plan does not meter daily requests"
       },
       "exhausted_features": {
@@ -62,15 +68,24 @@
               "description": "Feature tag used by the platform"
             },
             "base_uses": {
-              "type": "integer",
+              "type": [
+                "integer",
+                "null"
+              ],
               "description": "Uses included for the plan period, or null when the feature is not metered by count"
             },
             "remaining_uses": {
-              "type": "integer",
+              "type": [
+                "integer",
+                "null"
+              ],
               "description": "Uses still available in the plan period, or null when the feature is not metered by count"
             },
             "overage": {
-              "type": "integer",
+              "type": [
+                "integer",
+                "null"
+              ],
               "description": "Uses consumed beyond the included allowance, or null when the feature allows no overage"
             },
             "kind": {
@@ -120,5 +135,6 @@
         "description": "Tenant the account belongs to, empty on accounts with no tenant"
       }
     }
-  }
+  },
+  "slug": "account_usage"
 }

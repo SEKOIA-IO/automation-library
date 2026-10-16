@@ -255,8 +255,10 @@ def test_rate_limit_stops_early_and_keeps_what_was_gathered(
     assert [row["hash"] for row in response["results"]] == hashes[:2]
     assert response["rate_limited"] is True
     assert response["queried_count"] == 3
-    assert "usage limits" in action.error_message
-    assert "2 hashes were not looked up" in action.error_message
+    # A cut-short run still delivers its rows, so it must not be marked failed.
+    assert action.error_message is None
+    warnings = [entry["message"] for entry in action.logs if entry["level"] == "warning"]
+    assert any("usage limits" in m and "2 hashes were not looked up" in m for m in warnings)
     # Both rows gathered so far are detections, but the run is incomplete: the
     # partial branch must fire instead of detected, so a playbook cannot read
     # a cut-short run as a clean or complete detected answer.
@@ -412,3 +414,28 @@ def test_valid_and_malformed_hashes_mix_without_failing_the_call(
     ]
     assert mock_build_client.return_value.search.call_count == 1
     assert response["queried_count"] == 1
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
+def test_rate_limit_before_any_answer_names_the_limit(mock_build_client: MagicMock, action: SearchHashes) -> None:
+    mock_build_client.return_value.search.side_effect = ps_exceptions.UsageLimitsExceededException(MagicMock(), "429")
+
+    response = action.run({"hashes": ["aa" * 32, "bb" * 32]})
+
+    assert response is None
+    assert "usage limits" in action.error_message
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
+def test_only_the_first_result_per_hash_is_consumed(mock_build_client: MagicMock, action: SearchHashes) -> None:
+    consumed: list[int] = []
+
+    def _pages():
+        for i in range(3):
+            consumed.append(i)
+            yield _make_result(sha256="aa" * 32)
+
+    mock_build_client.return_value.search.side_effect = lambda _hash: _pages()
+    action.run({"hashes": ["aa" * 32]})
+
+    assert consumed == [0]

@@ -23,7 +23,6 @@ artifact. A field absent from a particular response is left blank rather
 than guessed at.
 """
 
-from datetime import datetime
 from typing import Any
 
 from polyswarm_api import exceptions as ps_exceptions
@@ -32,8 +31,8 @@ from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction
 from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
-from polyswarm_modules.coerce import as_names, as_number, as_score
-from polyswarm_modules.validators import invalid_ip_reason
+from polyswarm_modules.coerce import as_names, as_number, as_score, as_text
+from polyswarm_modules.validators import invalid_domain_reason, invalid_imphash_reason, invalid_ip_reason
 
 # A pivot on a busy indicator can match thousands of artifacts, and the client
 # pages through all of them for as long as the generator is consumed. The
@@ -41,25 +40,6 @@ from polyswarm_modules.validators import invalid_ip_reason
 # on this side, as SearchMetadata does for the same reason.
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 200
-
-
-def _as_text(value: Any) -> str:
-    """Render a value as plain text, treating an absent value as empty.
-
-    A datetime field on an artifact document does not always carry a UTC
-    offset, and astimezone reads a naive datetime as the local machine's
-    zone rather than as UTC, which silently shifts it. A naive value is
-    therefore treated as already UTC, matching how the same problem is
-    handled in connector_polyswarm_intel_feed.py.
-    """
-    if value is None:
-        return ""
-    if isinstance(value, datetime):
-        from datetime import UTC
-
-        aware = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
-        return aware.astimezone(UTC).isoformat()
-    return str(value)
 
 
 class SearchIocArguments(BaseModel):
@@ -187,6 +167,18 @@ class SearchIoc(PolyswarmAction):
                 self.error(f"Refusing to search {reason}.")
                 return None
 
+        elif indicator_type == "domain":
+            reason = invalid_domain_reason(indicator, ip_action="SearchIp")
+            if reason is not None:
+                self.error(f"Refusing to search {reason}.")
+                return None
+
+        elif indicator_type == "imphash":
+            reason = invalid_imphash_reason(indicator)
+            if reason is not None:
+                self.error(f"Refusing to search {reason}.")
+                return None
+
         api = build_client(self.module.configuration)
 
         try:
@@ -259,13 +251,13 @@ class SearchIoc(PolyswarmAction):
         family = polyunite.get("malware_family", "") if isinstance(polyunite, dict) else ""
         families = as_names(family) + as_names(document.get("families"))
 
-        sha256 = _as_text(artifact.get("sha256") or document.get("sha256")).lower()
+        sha256 = as_text(artifact.get("sha256") or document.get("sha256")).lower()
         permalink = f"{ps_settings.DEFAULT_PERMALINK_BASE}/{sha256}" if sha256 else ""
 
         return IocArtifact(
             sha256=sha256,
-            sha1=_as_text(artifact.get("sha1") or document.get("sha1")),
-            md5=_as_text(artifact.get("md5") or document.get("md5")),
+            sha1=as_text(artifact.get("sha1") or document.get("sha1")),
+            md5=as_text(artifact.get("md5") or document.get("md5")),
             malicious_detections=as_number(detections.get("malicious")),
             benign_detections=as_number(detections.get("benign")),
             total_detections=as_number(detections.get("total")),
@@ -274,8 +266,8 @@ class SearchIoc(PolyswarmAction):
             family=family or "",
             families=as_names(families),
             tags=as_names(document.get("tags")),
-            first_seen=_as_text(scan.get("first_scan", {}).get("created") if isinstance(scan, dict) else None),
-            last_scanned=_as_text(latest_scan.get("created")),
-            mimetype=_as_text((scan.get("mimetype") or {}).get("mime")),
+            first_seen=as_text((scan.get("first_scan") or {}).get("created")),
+            last_scanned=as_text(latest_scan.get("created")),
+            mimetype=as_text((scan.get("mimetype") or {}).get("mime")),
             filenames=as_names(scan.get("filename")),
         )
