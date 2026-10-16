@@ -286,6 +286,7 @@ def test_get_assets_handles_exception(connector):
     assets = list(connector.get_assets())
 
     assert len(assets) == 0
+    assert connector.skipped_users == 1
 
 
 @pytest.fixture

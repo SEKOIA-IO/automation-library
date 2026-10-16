@@ -82,6 +82,7 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
         )
         self.cycle_stats = {"fetched": 0, "pushed_batches": 0, "failed_batches": 0}
         self._cycle_complete = False
+        self.skipped_users = 0
 
         # TODO: use the generic AssetItem type once this cycle moves to the SDK
         # (https://github.com/SEKOIA-IO/sekoia-automation-sdk/pull/291)
@@ -101,6 +102,13 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
 
         if assets:
             self._push_batch(assets)
+
+        if self.skipped_users:
+            self.log(
+                message=f"{self.skipped_users} user(s) could not be mapped and were skipped: "
+                "they will only be read again by a full resync",
+                level="warning",
+            )
 
         # The whole directory has been read and pushed: commit the checkpoint,
         # even if the connector was stopped after the last push

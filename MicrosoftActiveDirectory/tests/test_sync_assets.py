@@ -248,7 +248,12 @@ def test_failed_push_sends_the_counters_with_the_error(build_action, api):
     data = send_request.call_args.args[0]
     assert data["status"] == "finished"
     assert data["error"] == "A batch of assets could not be pushed to Sekoia.io"
-    assert data["results"] == {"fetched": 1, "pushed_batches": 0, "failed_batches": 1, "has_more": False}
+    assert data["results"] == {
+        "fetched": 1,
+        "pushed_batches": 0,
+        "failed_batches": 1,
+        "has_more": False,
+    }
 
 
 @pytest.fixture
@@ -404,7 +409,12 @@ def test_run_skips_the_signal_handlers_not_installed_from_python(build_action, a
         ):
             results = build_action().run(ARGUMENTS)
 
-        assert results == {"fetched": 3, "pushed_batches": 3, "failed_batches": 0, "has_more": False}
+        assert results == {
+            "fetched": 3,
+            "pushed_batches": 3,
+            "failed_batches": 0,
+            "has_more": False,
+        }
         assert signal.getsignal(signal.SIGTERM) is handler
     finally:
         signal.signal(signal.SIGINT, previous_sigint)
@@ -520,6 +530,39 @@ def test_run_pushes_ad_users_to_the_asset_connector(tmp_path, api):
     assert pushed_sids(api) == ["S-1-5-21-1"]
     assert requests_to(api, LOGS_URL)
     assert read_context(tmp_path)["most_recent_datetime"] == "20240601000000.0Z"
+
+
+def test_run_logs_the_users_that_could_not_be_mapped(tmp_path, api):
+    entries = [
+        build_entry("S-1-5-21-1", datetime(2024, 1, 1)),
+        build_entry("S-1-5-21-2", datetime(2025, 6, 1)),
+        build_entry("S-1-5-21-3", datetime(2023, 3, 1)),
+    ]
+    original_map = MicrosoftADUserAssetConnector.map_user_fields
+
+    def map_or_fail(connector, entry):
+        if entry["attributes"]["objectSid"] == "S-1-5-21-2":
+            raise ValueError("unexpected attribute")
+        return original_map(connector, entry)
+
+    with (
+        patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries)),
+        patch.object(MicrosoftADUserAssetConnector, "map_user_fields", map_or_fail),
+    ):
+        results = build_real_action(tmp_path).run(ARGUMENTS)
+
+    assert results == {"fetched": 2, "pushed_batches": 2, "failed_batches": 0, "has_more": False}
+    assert sorted(pushed_sids(api)) == ["S-1-5-21-1", "S-1-5-21-3"]
+    logs = sent_logs(api)
+    assert any(log["level"] == "error" and "Failed to map user" in log["message"] for log in logs)
+    assert any(
+        log["level"] == "warning"
+        and "1 user(s) could not be mapped" in log["message"]
+        and "full resync" in log["message"]
+        for log in logs
+    )
+    # Known limit: the cursor moves past the skipped user, only a full resync reads it again
+    assert read_context(tmp_path)["most_recent_datetime"] == "20250601000000.0Z"
 
 
 def test_interrupted_cycle_resumes_without_missing_users(tmp_path, api):
