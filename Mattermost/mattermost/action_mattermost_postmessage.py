@@ -1,9 +1,15 @@
-# natives
+import requests
 
 # third parties
-import requests
+from pydantic import BaseModel, Field
 from requests import Response
 from sekoia_automation.action import Action
+
+
+class MattermostPostMessageArguments(BaseModel):
+    message: str = Field(..., min_length=1, description="The message to post")
+    channel: str | None = None
+    username: str | None = None
 
 
 class MattermostPostMessageAction(Action):
@@ -14,12 +20,12 @@ class MattermostPostMessageAction(Action):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def run(self, arguments) -> dict:
+    def run(self, arguments: MattermostPostMessageArguments) -> dict:
         hook_url: str = self.module.configuration.get("hook_url")
 
-        text: str = arguments["message"]
-        channel: str = arguments.get("channel")
-        username: str | None = arguments.get("username")
+        text: str = arguments.message
+        channel: str | None = arguments.channel
+        username: str | None = arguments.username
 
         params: dict = {
             "text": text,
