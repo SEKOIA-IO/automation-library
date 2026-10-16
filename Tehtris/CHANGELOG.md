@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-16 - 1.16.2
+
+### Changed
+
+- Clarify that the alternative url must be the full base URL of the TEHTRIS API
+
 ## 2025-09-01 - 1.16.1
 
 ### Changed
