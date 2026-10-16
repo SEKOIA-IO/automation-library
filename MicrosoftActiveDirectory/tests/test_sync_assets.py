@@ -484,9 +484,30 @@ def test_connector_manifest_declares_the_on_premise_action():
     assert connector["on_premise_action"] == action["uuid"]
     assert action["internal"] is True
     assert {"asset_connector_uuid", "connector_configuration_token"} <= set(action["arguments"]["required"])
-    assert "basedn" in connector["arguments"]["required"]
+    # Optional on both sides: the action fails with a clear error when it is empty
+    assert "basedn" not in connector["arguments"]["required"]
+    assert "basedn" not in action["arguments"]["required"]
     assert "failed_batches" in action["results"]["properties"]
     assert action["arguments"]["properties"]["batch_size"]["default"] == 1000
+
+
+BASEDN_ERROR = "A base DN is required to synchronize Active Directory users"
+
+
+@pytest.mark.parametrize("basedn", [None, ""])
+def test_run_fails_at_once_without_a_base_dn(build_action, api, tmp_path, basedn):
+    arguments = {**ARGUMENTS, "basedn": basedn}
+    action = build_action()
+
+    with patch.object(MicrosoftADUserAssetSyncConnector, "asset_fetch_cycle") as asset_fetch_cycle:
+        results = action.run(arguments)
+
+    assert results == {"fetched": 0, "pushed_batches": 0, "failed_batches": 0, "has_more": False}
+    assert action.error_message == BASEDN_ERROR
+    asset_fetch_cycle.assert_not_called()
+    assert not requests_to(api, PUSH_URL)
+    assert any(log["level"] == "error" and log["message"] == BASEDN_ERROR for log in sent_logs(api))
+    assert "most_recent_datetime" not in read_context(tmp_path)
 
 
 def test_run_pushes_ad_users_to_the_asset_connector(tmp_path, api):

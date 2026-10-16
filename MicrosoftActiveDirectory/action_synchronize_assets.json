@@ -45,7 +45,6 @@
     "required": [
       "asset_connector_uuid",
       "connector_configuration_token",
-      "basedn",
       "sekoia_api_key"
     ],
     "secrets": [

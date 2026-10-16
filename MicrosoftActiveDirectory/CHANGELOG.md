@@ -16,7 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Make the base DN required in the Microsoft AD user asset connector configuration
 - Set a 120-second receive timeout on LDAP connections, so a hung Active Directory server cannot block an action or a connector forever
 
 ## 2026-07-13 - 1.5.8

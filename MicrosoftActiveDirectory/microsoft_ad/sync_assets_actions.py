@@ -24,7 +24,7 @@ class SynchronizeAssetsArguments(BaseModel):
 
     sekoia_base_url: str = "https://api.sekoia.io"
     sekoia_api_key: str
-    basedn: str
+    basedn: str | None = None
     batch_size: int = Field(1000, ge=1)
 
 
@@ -94,7 +94,13 @@ class SynchronizeAssetsAction(MicrosoftADAction):
         stats: Counter[str] = Counter()
         has_more = False
         try:
-            connector.asset_fetch_cycle()
+            if arguments.basedn:
+                connector.asset_fetch_cycle()
+            else:
+                basedn_error = "A base DN is required to synchronize Active Directory users"
+                self.error(basedn_error)
+                with self._warn_on_error("send the connector error log"):
+                    connector.log(message=basedn_error, level="error")
         except AssetConnectorStoppedError:
             if time_limit_reached.is_set():
                 reason = f"reached the time limit of {self.MAX_DURATION // 60} minutes"

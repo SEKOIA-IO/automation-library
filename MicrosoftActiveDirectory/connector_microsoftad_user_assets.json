@@ -49,8 +49,7 @@
     },
     "required": [
       "sekoia_base_url",
-      "sekoia_api_key",
-      "basedn"
+      "sekoia_api_key"
     ],
     "secrets": [
       "sekoia_api_key"
