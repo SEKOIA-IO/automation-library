@@ -1,3 +1,9 @@
 OFFICE365_AUTHORITY_DEFAULT = "https://login.microsoftonline.com/common"
 OFFICE365_URL_BASE = "https://manage.office.com/api/v1.0/{tenant_id}/activity/feed"
 OFFICE365_ACTIVE_SUBSCRIPTION_STATUS = "enabled"
+
+MAX_ERROR_BODY_LENGTH = 200
+
+REQUEST_MAX_ATTEMPTS = 5
+REQUEST_BASE_BACKOFF_SECONDS = 1.0
+REQUEST_MAX_BACKOFF_SECONDS = 60.0
