@@ -1,4 +1,8 @@
+import os
+from pathlib import Path, PosixPath, WindowsPath
 from typing import Any
+
+from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
 
 # Upload logs <-> Add an observable as a log file OR add_attachment in alert
@@ -8,8 +12,32 @@ from .thehiveconnector import TheHiveConnector
 from .helpers import copy_to_tempfile
 
 
+class TheHiveUploadLogsArguments(BaseModel):
+    alert_id: str = Field(..., min_length=1, description="The Unique identifier of the alert")
+    filepath: str = Field(
+        ..., min_length=1, description="Path of the file to upload, relative to the action's data path"
+    )
+
+
 class TheHiveUploadLogsV5(Action):
-    def run(self, arguments: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    def _get_filepath_in_data_path(self, filepath: str) -> Path:
+        error_msg = f"File path must be inside the action data directory: {filepath}"
+
+        if isinstance(self.data_path, (PosixPath, WindowsPath)):
+            # local storage: resolve symlinks and `..` before checking containment
+            resolved_path = self.data_path.joinpath(filepath).resolve()
+            if not resolved_path.is_relative_to(self.data_path.resolve()):
+                raise ValueError(error_msg)
+            return resolved_path
+
+        # remote storage (e.g. S3) cannot be resolved locally: lexical check
+        base_path = os.path.normpath(str(self.data_path))
+        candidate_path = os.path.normpath(str(self.data_path.joinpath(filepath)))
+        if os.path.commonpath([base_path, candidate_path]) != base_path:
+            raise ValueError(error_msg)
+        return self.data_path.joinpath(os.path.relpath(candidate_path, base_path))
+
+    def run(self, arguments: TheHiveUploadLogsArguments) -> dict[str, list[dict[str, Any]]]:
         api = TheHiveConnector(
             self.module.configuration["base_url"],
             self.module.configuration["apikey"],
@@ -19,8 +47,8 @@ class TheHiveUploadLogsV5(Action):
             log_fn=self.log,
         )
 
-        arg_alert_id = arguments["alert_id"]
-        arg_filepath = self.data_path.joinpath(arguments["filepath"])
+        arg_alert_id = arguments.alert_id
+        arg_filepath = self._get_filepath_in_data_path(arguments.filepath)
 
         # Verify file exists before attempting upload
         if not arg_filepath.exists():

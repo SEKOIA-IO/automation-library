@@ -1,5 +1,7 @@
 from typing import Any
 import requests_mock
+from requests import HTTPError, Response
+from thehive4py.endpoints.alert import AlertEndpoint
 
 from thehive.create_alert import TheHiveCreateAlertV5
 
@@ -76,3 +78,79 @@ def test_create_alert_action_api_error(requests_mock):
 
     assert not result
     assert mock_alert.call_count == 1
+
+
+def test_create_alert_action_long_type_tlp_pap(requests_mock):
+    mock_alert = requests_mock.post(url="https://thehive-project.org/api/v1/alert", status_code=200, json=HIVE_OUTPUT)
+
+    action = TheHiveCreateAlertV5()
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+    alert = {**ALERT, "alert_type": {"category": "information-gathering", "value": "a-very-long-alert-type"}}
+
+    result = action.run({"sekoia_base_url": SEKOIA_BASE_URL, "alert": alert, "tlp": "3", "pap": 1})
+
+    assert result is not None
+    body = mock_alert.last_request.json()
+    assert body["type"] == "information-gathering"
+    assert body["tlp"] == 3
+    assert body["pap"] == 1
+
+
+def test_create_alert_action_api_init_error(monkeypatch):
+    def raise_error(*args, **kwargs):
+        raise ValueError("invalid configuration")
+
+    monkeypatch.setattr("thehive.create_alert.TheHiveApi", raise_error)
+
+    action = TheHiveCreateAlertV5()
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+
+    assert action.run({"sekoia_base_url": SEKOIA_BASE_URL, "alert": ALERT}) is None
+
+
+def test_create_alert_action_http_error(monkeypatch):
+    response = Response()
+    response.status_code = 403
+    response._content = b"forbidden"
+
+    def raise_http_error(self, alert):
+        raise HTTPError("403 Client Error", response=response)
+
+    monkeypatch.setattr(AlertEndpoint, "create", raise_http_error)
+
+    action = TheHiveCreateAlertV5()
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+
+    assert action.run({"sekoia_base_url": SEKOIA_BASE_URL, "alert": ALERT}) is None
+
+
+def test_create_alert_action_http_error_without_response(monkeypatch):
+    def raise_http_error(self, alert):
+        raise HTTPError("connection reset")
+
+    monkeypatch.setattr(AlertEndpoint, "create", raise_http_error)
+
+    action = TheHiveCreateAlertV5()
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+    logs = []
+    action.log = lambda message, level="info", **kwargs: logs.append((message, level))
+
+    assert action.run({"sekoia_base_url": SEKOIA_BASE_URL, "alert": ALERT}) is None
+    assert ("[CreateAlert] HTTPError (HTTPError): connection reset", "error") in logs
+    assert not any("Status code" in message for message, _ in logs)
