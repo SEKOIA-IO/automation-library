@@ -1,8 +1,13 @@
 import json
 
 import requests
+from pydantic import BaseModel, Field
 from requests import Response
 from sekoia_automation.action import Action
+
+
+class FortigateDisableLocalUserArguments(BaseModel):
+    name: str = Field(..., min_length=1, description="the fw local user account name")
 
 
 class FortigateDisableLocalUserAction(Action):
@@ -10,7 +15,7 @@ class FortigateDisableLocalUserAction(Action):
     Action to disable a local user on a remote fortigate
     """
 
-    def run(self, arguments: dict) -> None:
+    def run(self, arguments: FortigateDisableLocalUserArguments) -> None:
         """
         Parameters
         ----------
@@ -21,7 +26,7 @@ class FortigateDisableLocalUserAction(Action):
         Http status code: 200 if ok, 4xx if an error occurs
         """
 
-        name = arguments["name"]
+        name = arguments.name
 
         payload: dict = {
             "json": {
@@ -49,8 +54,8 @@ class FortigateDisableLocalUserAction(Action):
                 )
                 response.raise_for_status()
 
-            except requests.exceptions.Timeout:
-                self.log_exception(message=f"Time out session on firewall {base_ip}")
+            except requests.exceptions.Timeout as error:
+                self.log_exception(error, message=f"Time out session on firewall {base_ip}")
                 pass
 
             except Exception as error:
