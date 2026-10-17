@@ -1,9 +1,23 @@
+import importlib
+import sys
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
+import whois
+from pydantic import ValidationError
 from whois.parser import WhoisEntry
 
-from whois_module.whois_action import WhoisAction, extract_domain_from_url, is_ip_adress
+from whois_module import whois_action
+from whois_module.whois_action import (
+    WhoisAction,
+    WhoisLookupError,
+    extract_domain_from_url,
+    is_ip_adress,
+    list_tool,
+    my_converter,
+    time_list_tool,
+)
 
 
 @pytest.fixture
@@ -195,3 +209,74 @@ def test_whois_action(whois_results, raw_google_whois):
         assert whois_data["Registrar"]["AbuseEmail"] == "abusecomplaints@markmonitor.com"
         assert whois_data["Registrant"]["Name"] == "None"
         assert whois_data["Registrant"]["Email"] == "whoisrequest@markmonitor.com"
+
+
+@pytest.mark.parametrize("arguments", [{}, {"query": ""}, {"query": None}])
+def test_whois_action_requires_query(arguments):
+    action = WhoisAction()
+
+    with patch("whois.whois") as mock_whois:
+        with pytest.raises(ValidationError):
+            action.run(arguments)
+
+    mock_whois.assert_not_called()
+
+
+def test_list_tool():
+    assert list_tool(["first", "second"], list, 0) == "first"
+    assert list_tool(["first", "second"], list, 1) == "second"
+    assert list_tool("single", list, 0) == "single"
+    assert list_tool(None, list, 1) is None
+
+
+def test_my_converter():
+    naive = datetime(2024, 1, 2, 3, 4, 5)
+    aware = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone(timedelta(hours=2)))
+
+    assert my_converter(naive) == "2024-01-02 03:04:05"
+    assert my_converter(aware) == "2024-01-02 03:04:05"
+    assert my_converter("2024-01-02") == "2024-01-02"
+    assert my_converter(None) is None
+
+
+def test_time_list_tool():
+    first = datetime(2020, 1, 1)
+    last = datetime(2021, 6, 15, 12, 30)
+
+    assert time_list_tool([first, last]) == "2021-06-15 12:30:00"
+    assert time_list_tool([]) == []
+    assert time_list_tool(last) == "2021-06-15 12:30:00"
+    assert time_list_tool(None) is None
+
+
+def test_whois_action_returns_empty_result_on_lookup_error():
+    action = WhoisAction()
+
+    with patch("whois.whois", side_effect=WhoisLookupError("No match for domain")) as mock_whois:
+        assert action.run({"query": "https://www.unknown-domain.com/path"}) == {}
+
+    mock_whois.assert_called_once_with("unknown-domain.com")
+
+
+def test_whois_action_queries_ip_address_as_is(whois_results):
+    action = WhoisAction()
+
+    with patch("whois.whois", return_value=whois_results) as mock_whois:
+        results = action.run({"query": "8.8.8.8"})
+
+    mock_whois.assert_called_once_with("8.8.8.8")
+    assert results["Domain"]["Name"] == "GOOGLE.COM"
+
+
+def test_whois_lookup_error_falls_back_to_exception(monkeypatch):
+    # a None entry in sys.modules makes `from whois.parser import ...` raise ImportError
+    monkeypatch.setitem(sys.modules, "whois.parser", None)
+    monkeypatch.delattr(whois, "WhoisError", raising=False)
+    try:
+        reloaded = importlib.reload(whois_action)
+        assert reloaded.WhoisLookupError is Exception
+    finally:
+        monkeypatch.undo()
+        importlib.reload(whois_action)
+
+    assert whois_action.WhoisLookupError is whois.WhoisError

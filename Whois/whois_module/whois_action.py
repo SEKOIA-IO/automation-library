@@ -2,6 +2,7 @@ import ipaddress
 from datetime import datetime
 
 import whois
+from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
 from tldextract import extract
 
@@ -58,10 +59,14 @@ def extract_domain_from_url(arg: str) -> str:
     return f"{extract_domain.domain}.{extract_domain.suffix}"
 
 
+class WhoisArguments(BaseModel):
+    query: str = Field(..., min_length=1, description="Domain, URL or IP address to look up")
+
+
 class WhoisAction(Action):
-    def run(self, arguments):
+    def run(self, arguments: WhoisArguments):
         try:
-            get_domain = extract_domain_from_url(arguments["query"])
+            get_domain = extract_domain_from_url(arguments.query)
             whois_result = whois.whois(get_domain)
             return {
                 "Domain": {
