@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from .action_base import MicrosoftGraphActionBase
 
@@ -8,8 +8,8 @@ from .action_base import MicrosoftGraphActionBase
 class ForwardMessageArguments(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    user: str
-    message_id: str
+    user: str = Field(..., min_length=1)
+    message_id: str = Field(..., min_length=1)
     recipients: list[str]
     comment: str = ""
 

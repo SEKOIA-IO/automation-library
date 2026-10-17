@@ -8,7 +8,7 @@ from .action_base import MicrosoftGraphActionBase
 class SendMessageArguments(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
-    user: str
+    user: str = Field(..., min_length=1)
     content: str
     content_type: Literal["text", "html"] = "text"
     bcc: list[str] | None = None

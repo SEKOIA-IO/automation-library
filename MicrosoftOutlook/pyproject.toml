@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "Automation module for Microsoft Outlook"
-version = "0.4.0"
+version = "0.4.1"
 description = ""
 authors = []
 package-mode = false
