@@ -127,7 +127,7 @@ class SynchronizeAssetsAction(MicrosoftADAction):
         has_more = False
         try:
             if arguments.basedn:
-                with self._run_lock() as acquired:
+                with self._run_lock(data_path) as acquired:
                     if acquired:
                         connector.asset_fetch_cycle()
                     else:
