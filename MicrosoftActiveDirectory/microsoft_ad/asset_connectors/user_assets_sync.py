@@ -15,6 +15,7 @@ from tenacity import Retrying, stop_after_delay, stop_when_event_set, wait_expon
 from microsoft_ad.asset_connectors.exceptions import (
     AssetConnectorCriticalError,
     AssetConnectorPushError,
+    AssetConnectorSearchError,
     AssetConnectorStoppedError,
     RetryableStatusError,
 )
@@ -119,6 +120,13 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
         if not self.running:
             raise AssetConnectorStoppedError()
 
+    def _ensure_search_completed(self) -> None:
+        result = getattr(self._ldap_client, "result", None)
+        if isinstance(result, dict) and result.get("result", 0) != 0:
+            raise AssetConnectorSearchError(
+                f"The LDAP search stopped before its last page: {result.get('description')} ({result.get('result')})"
+            )
+
     def asset_fetch_cycle(self) -> None:
         """Fetch assets from the connector and push them to Sekoia.io, once."""
         self.log(
@@ -159,6 +167,7 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
         # even if the connector was stopped after the last push
         if self._critical_log_sent:
             raise AssetConnectorCriticalError()
+        self._ensure_search_completed()
         self._cycle_complete = True
         self.update_checkpoint()
 

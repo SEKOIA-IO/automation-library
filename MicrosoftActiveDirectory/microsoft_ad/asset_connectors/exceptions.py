@@ -29,3 +29,7 @@ class AssetConnectorCriticalError(AutomationSDKError):
 
 class RetryableStatusError(requests.HTTPError):
     """A transient error answer from Sekoia.io, retried like a connection error."""
+
+
+class AssetConnectorSearchError(AutomationSDKError):
+    """Raised when the directory search ended on an error result before its last page."""

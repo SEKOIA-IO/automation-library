@@ -18,7 +18,7 @@ from sekoia_automation.trigger import Trigger
 from tenacity import wait_none
 
 from microsoft_ad.actions_base import MicrosoftADModule
-from microsoft_ad.asset_connectors.exceptions import AssetConnectorCriticalError
+from microsoft_ad.asset_connectors.exceptions import AssetConnectorCriticalError, AssetConnectorSearchError
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
 from microsoft_ad.asset_connectors.user_assets_sync import MicrosoftADUserAssetSyncConnector
 from microsoft_ad.client.ldap_client import LDAPClient
@@ -60,12 +60,15 @@ def build_user_model(sid: str) -> UserOCSFModel:
     return connector.map_user_fields(build_entry(sid, datetime(2024, 1, 1, 12, 0, 0)))
 
 
-def fake_directory(entries: list[dict[str, Any]], sorts: bool = True) -> Callable[..., Any]:
+def fake_directory(
+    entries: list[dict[str, Any]], sorts: bool = True, error_after: int | None = None
+) -> Callable[..., Any]:
     """
     Fake `_run_paged_search`: return the entries filtered by the stored checkpoint like
     the LDAP filter `(whenCreated>=checkpoint)`, in directory order (not sorted by
     `whenCreated`). With the sort control, sort them by `whenCreated`, or refuse it like
-    a directory that cannot sort (`sorts=False`).
+    a directory that cannot sort (`sorts=False`). With `error_after`, end the search after
+    that many entries on an error result, like ldap3 does on an error page.
     """
 
     def run_paged_search(connector: MicrosoftADUserAssetConnector, controls: Any = None) -> Any:
@@ -80,6 +83,10 @@ def fake_directory(entries: list[dict[str, Any]], sorts: bool = True) -> Callabl
                 connector._ldap_client = Mock(result={"result": 12, "description": "unavailableCriticalExtension"})
                 return iter([])
             matching.sort(key=lambda entry: entry["attributes"]["whenCreated"])
+        if error_after is not None:
+            connector._ldap_client = Mock(result={"result": 51, "description": "busy"})
+            return iter(matching[:error_after])
+        connector._ldap_client = Mock(result={"result": 0, "description": "success"})
         return iter(matching)
 
     return run_paged_search
@@ -701,6 +708,40 @@ def test_run_warns_when_the_directory_refuses_to_sort(tmp_path, api):
         for log in sent_logs(api)
     )
     assert read_context(tmp_path)["most_recent_datetime"] == "20240101000000.0Z"
+
+
+@pytest.mark.parametrize(
+    "sorts, checkpoint_after_error",
+    [
+        # Sorted: the checkpoint stays on the pushed batches (one entry behind)
+        (True, "20230301000000.0Z"),
+        # Sort refused: the checkpoint must not jump to the most recent user read, past the unread pages
+        (False, None),
+    ],
+)
+def test_run_fails_when_the_search_ends_on_an_error_page(tmp_path, api, sorts, checkpoint_after_error):
+    entries = [
+        build_entry("S-1-5-21-1", datetime(2024, 1, 1)),
+        build_entry("S-1-5-21-2", datetime(2025, 6, 1)),
+        build_entry("S-1-5-21-3", datetime(2023, 3, 1)),
+        build_entry("S-1-5-21-4", datetime(2024, 2, 1)),
+    ]
+
+    with patch.object(
+        MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries, sorts=sorts, error_after=2)
+    ):
+        with pytest.raises(AssetConnectorSearchError, match="busy"):
+            build_real_action(tmp_path).run(ARGUMENTS)
+
+    assert read_context(tmp_path).get("most_recent_datetime") == checkpoint_after_error
+    assert any(log["level"] == "error" and "stopped before its last page" in log["message"] for log in sent_logs(api))
+
+    # The next run reads the users of the unread pages
+    with patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries, sorts=sorts)):
+        build_real_action(tmp_path).run(ARGUMENTS)
+
+    assert set(pushed_sids(api)) == {"S-1-5-21-1", "S-1-5-21-2", "S-1-5-21-3", "S-1-5-21-4"}
+    assert read_context(tmp_path)["most_recent_datetime"] == "20250601000000.0Z"
 
 
 def test_paged_search_passes_the_sort_control(tmp_path):
