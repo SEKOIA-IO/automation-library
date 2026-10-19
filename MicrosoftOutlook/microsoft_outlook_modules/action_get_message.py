@@ -23,7 +23,7 @@ class GetMessageAction(MicrosoftGraphActionBase):
         message_id = self._resolve_message_id(validated_arguments.message_id)
 
         self.log(
-            message=("Start get message action " f"user={user_id_or_principal_name!r} " f"message_id={message_id!r}"),
+            message=(f"Start get message action user={user_id_or_principal_name!r} message_id={message_id!r}"),
             level="debug",
         )
 

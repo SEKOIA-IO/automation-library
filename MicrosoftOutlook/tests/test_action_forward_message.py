@@ -17,7 +17,11 @@ def test_forward_message(configured_action, message_id_input):
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "POST",

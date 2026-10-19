@@ -82,7 +82,11 @@ def test_graph_auth_refreshes_expired_credentials(monkeypatch):
                 "expires_in": 3600,
             }
 
-    monkeypatch.setattr(auth._GraphApiAuthentication__http_session, "get", lambda *_args, **_kwargs: DummyResponse())
+    monkeypatch.setattr(
+        auth._GraphApiAuthentication__http_session,
+        "get",
+        lambda *_args, **_kwargs: DummyResponse(),
+    )
 
     credentials = auth.get_credentials()
     assert credentials.authorization == "Bearer new-token"
@@ -162,7 +166,11 @@ def test_graph_auth_get_credentials_raises_on_http_error(monkeypatch):
         def raise_for_status():
             raise requests.HTTPError("token endpoint failure")
 
-    monkeypatch.setattr(auth._GraphApiAuthentication__http_session, "get", lambda *_args, **_kwargs: DummyResponse())
+    monkeypatch.setattr(
+        auth._GraphApiAuthentication__http_session,
+        "get",
+        lambda *_args, **_kwargs: DummyResponse(),
+    )
 
     with pytest.raises(requests.HTTPError, match="token endpoint failure"):
         auth.get_credentials()

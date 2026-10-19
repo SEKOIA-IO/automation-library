@@ -19,7 +19,11 @@ def test_linear_chain_search_get_update_forward_uses_enriched_results(configured
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",

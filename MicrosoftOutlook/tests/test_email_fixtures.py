@@ -58,7 +58,11 @@ def test_anonymized_fixture_headers_map_pertinently_to_search(configured_action)
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",

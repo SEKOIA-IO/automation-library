@@ -17,10 +17,17 @@ def test_delete_message(configured_action, message_id_input):
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
-            "DELETE", "https://graph.microsoft.com/v1.0/users/1111/messages/2222", status_code=204, content=b""
+            "DELETE",
+            "https://graph.microsoft.com/v1.0/users/1111/messages/2222",
+            status_code=204,
+            content=b"",
         )
 
         action = configured_action(DeleteMessageAction)
