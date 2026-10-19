@@ -1,0 +1,34 @@
+{
+  "configuration": {
+    "properties": {
+      "apikey": {
+        "type": "string",
+        "description": "Your PolySwarm API key. Every action in this module spends against the plan it carries, so the search actions are read only while the scan and sandbox actions cost quota.",
+        "title": "API Key"
+      },
+      "community": {
+        "type": "string",
+        "description": "The PolySwarm community the key is scoped to, which decides whose results you can read back. Leave this as default, the public community, unless PolySwarm gave you a private one. A key scoped to a private community cannot read public results, or the other way around, which is the usual reason a lookup returns nothing for an artifact you know exists.",
+        "default": "default",
+        "title": "Community"
+      }
+    },
+    "required": [
+      "apikey"
+    ],
+    "title": "PolySwarm",
+    "type": "object",
+    "secrets": [
+      "apikey"
+    ]
+  },
+  "description": "Look up, scan and detonate indicators against PolySwarm's marketplace of detection engines. Search reads what PolySwarm already holds and spends no scanning quota. Scan submits to the engines and returns a fresh multi-engine verdict. Sandbox detonates and returns where the report can be fetched. Accepts SHA256, SHA1 and MD5 hashes, files, URLs, domains and IP addresses, and searches by malware family, tag and other metadata. A trigger starts a playbook when a detonation finishes, and a connector ingests new PolySwarm results into a Sekoia intake on a schedule. Verdicts come from the engine detection counts, and an engine that abstained is never counted as benign.",
+  "name": "PolySwarm",
+  "slug": "polyswarm",
+  "categories": [
+    "Threat Intelligence"
+  ],
+  "uuid": "a268e99e-bf36-4015-af10-5050958f9080",
+  "version": "1.0.0",
+  "supports_validation": true
+}
