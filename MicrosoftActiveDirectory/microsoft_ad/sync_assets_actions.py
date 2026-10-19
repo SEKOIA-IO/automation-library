@@ -67,17 +67,19 @@ class SynchronizeAssetsAction(MicrosoftADAction):
             self.log(f"Unable to {reason}: {error}", "warning")
 
     @contextmanager
-    def _run_lock(self) -> Iterator[bool]:
+    def _run_lock(self, data_path: Path) -> Iterator[bool]:
         """
         Hold the run lock of the configuration in its storage, so a run started while another one
         is still running skips its cycle instead of pushing the same users again. Yield whether
         the lock was acquired.
         """
         run_id = str(uuid4())
-        # A new PersistentJSON each time: it only reads the file once
-        with PersistentJSON(self.LOCK_FILE, self.data_path) as lock:
-            acquired = not lock.get("run_id") or lock.get("expires_at", 0) <= time.time()
-            if acquired:
+        lock_path = data_path / self.LOCK_FILE
+        current = json.loads(lock_path.read_text()) if lock_path.is_file() else {}
+        acquired = not current.get("run_id") or current.get("expires_at", 0) <= time.time()
+        if acquired:
+            # Only the run taking the lock writes it: a skipped run never writes back a released lock
+            with PersistentJSON(self.LOCK_FILE, data_path) as lock:
                 lock.update(run_id=run_id, expires_at=time.time() + self.LOCK_TTL)
         try:
             yield acquired
