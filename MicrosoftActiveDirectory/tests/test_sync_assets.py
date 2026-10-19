@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import signal
 import time
 from collections.abc import Callable, Generator
@@ -13,6 +14,7 @@ import pytest
 import requests
 import requests_mock
 from ldap3.core.exceptions import LDAPException
+from ldap3.extend.standard.PagedSearch import paged_search_generator
 from pydantic.v1 import ValidationError
 from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel
 from sekoia_automation.storage import PersistentJSON
@@ -26,7 +28,7 @@ from microsoft_ad.asset_connectors.exceptions import (
     RetryableStatusError,
 )
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
-from microsoft_ad.asset_connectors.user_assets_sync import MicrosoftADUserAssetSyncConnector
+from microsoft_ad.asset_connectors.user_assets_sync import PAGED_RESULTS_CONTROL_OID, MicrosoftADUserAssetSyncConnector
 from microsoft_ad.client.ldap_client import LDAPClient
 from microsoft_ad.helpers import SORT_REQUEST_CONTROL_OID, sort_control
 from microsoft_ad.sync_assets_actions import SynchronizeAssetsAction
@@ -66,36 +68,101 @@ def build_user_model(sid: str) -> UserOCSFModel:
     return connector.map_user_fields(build_entry(sid, datetime(2024, 1, 1, 12, 0, 0)))
 
 
-def fake_directory(
-    entries: list[dict[str, Any]], sorts: bool = True, error_after: int | None = None
-) -> Callable[..., Any]:
+class FakeDirectory:
     """
-    Fake `_run_paged_search`: return the entries filtered by the stored checkpoint like
-    the LDAP filter `(whenCreated>=checkpoint)`, in directory order (not sorted by
-    `whenCreated`). With the sort control, sort them by `whenCreated`, or refuse it like
-    a directory that cannot sort (`sorts=False`). With `error_after`, end the search after
-    that many entries on an error result, like ldap3 does on an error page.
+    Fake LDAP connection: `search` answers one page of the entries matching the checkpoint
+    filter `(whenCreated>=checkpoint)`, in directory order (not sorted by `whenCreated`),
+    with a paged results cookie. With the sort control, sort them by `whenCreated`, or refuse
+    it like a directory that cannot sort (`sorts=False`). With `error_after`, answer the page
+    starting at that entry with an error result. `page_size` sends smaller pages than asked,
+    which RFC 2696 allows.
+
+    `extend.standard.paged_search` runs the real ldap3 paged search over these pages.
     """
 
-    def run_paged_search(connector: MicrosoftADUserAssetConnector, controls: Any = None) -> Any:
-        checkpoint = connector.most_recent_datetime
+    raise_exceptions = False
+    check_names = False
+    auto_referrals = False
+
+    def __init__(
+        self,
+        entries: list[dict[str, Any]],
+        sorts: bool = True,
+        error_after: int | None = None,
+        page_size: int | None = None,
+    ) -> None:
+        self.entries = entries
+        self.sorts = sorts
+        self.error_after = error_after
+        self.page_size = page_size
+        self.searches: list[dict[str, Any]] = []
+        self.cookie_filters: dict[bytes, str] = {}
+        self.response: list[dict[str, Any]] | None = None
+        self.result: dict[str, Any] = {}
+        self.strategy = Mock(sync=True, thread_safe=False)
+        self.extend = Mock()
+        self.extend.standard.paged_search = self._ldap3_paged_search
+
+    def _ldap3_paged_search(self, generator: bool = True, **kwargs: Any) -> Any:
+        return paged_search_generator(self, **kwargs)
+
+    def _answer(self, code: int, description: str, page: list[dict[str, Any]], cookie: bytes = b"") -> bool:
+        self.response = page
+        self.result = {
+            "result": code,
+            "description": description,
+            "referrals": None,
+            "controls": {PAGED_RESULTS_CONTROL_OID: {"value": {"cookie": cookie}}} if code == 0 else {},
+        }
+        return code == 0
+
+    def search(
+        self,
+        search_base: str,
+        search_filter: str,
+        search_scope: Any = None,
+        dereference_aliases: Any = None,
+        attributes: Any = None,
+        size_limit: int = 0,
+        time_limit: int = 0,
+        types_only: bool = False,
+        get_operational_attributes: bool = False,
+        controls: Any = None,
+        paged_size: int = 0,
+        paged_criticality: bool = False,
+        paged_cookie: bytes | None = None,
+    ) -> bool:
+        self.searches.append({"search_filter": search_filter, "controls": controls, "paged_cookie": paged_cookie})
+        match = re.search(r"whenCreated>=([0-9.]+Z)", search_filter)
+        checkpoint = match.group(1) if match else None
         matching = [
             entry
-            for entry in entries
+            for entry in self.entries
             if checkpoint is None or entry["attributes"]["whenCreated"].strftime("%Y%m%d%H%M%S.0Z") >= checkpoint
         ]
         if any(control[0] == SORT_REQUEST_CONTROL_OID for control in controls or []):
-            if not sorts:
-                connector._ldap_client = Mock(result={"result": 12, "description": "unavailableCriticalExtension"})
-                return iter([])
+            if not self.sorts:
+                return self._answer(12, "unavailableCriticalExtension", [])
             matching.sort(key=lambda entry: entry["attributes"]["whenCreated"])
-        if error_after is not None:
-            connector._ldap_client = Mock(result={"result": 51, "description": "busy"})
-            return iter(matching[:error_after])
-        connector._ldap_client = Mock(result={"result": 0, "description": "success"})
-        return iter(matching)
 
-    return run_paged_search
+        # Like a real server: a cookie only goes on the search it was issued for
+        if paged_cookie and self.cookie_filters.get(paged_cookie) != search_filter:
+            return self._answer(53, "unwillingToPerform", [])
+        start = int(paged_cookie or 0)
+        if self.error_after is not None and start >= self.error_after:
+            return self._answer(51, "busy", [])
+        end = start + (self.page_size or paged_size)
+        cookie = str(end).encode() if end < len(matching) else b""
+        self.cookie_filters[cookie] = search_filter
+        return self._answer(0, "success", matching[start:end], cookie)
+
+    def unbind(self) -> None:
+        pass
+
+
+def fake_directory(entries: list[dict[str, Any]], **behaviour: Any) -> Any:
+    """Patch the LDAP connections of the connectors with a `FakeDirectory`."""
+    return patch.object(LDAPClient, "_create_ldap_connection", return_value=FakeDirectory(entries, **behaviour))
 
 
 def build_fake_connector(
@@ -642,7 +709,7 @@ def test_run_fails_at_once_without_a_base_dn(build_action, api, tmp_path, basedn
 def test_run_pushes_ad_users_to_the_asset_connector(tmp_path, api):
     entries = [build_entry("S-1-5-21-1", datetime(2024, 6, 1))]
 
-    with patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries)):
+    with fake_directory(entries):
         results = build_real_action(tmp_path).run({**ARGUMENTS, "batch_size": 1000})
 
     assert results == {"fetched": 1, "pushed_batches": 1, "failed_batches": 0, "has_more": False}
@@ -665,7 +732,7 @@ def test_run_logs_the_users_that_could_not_be_mapped(tmp_path, api):
         return original_map(connector, entry)
 
     with (
-        patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries)),
+        fake_directory(entries),
         patch.object(MicrosoftADUserAssetConnector, "map_user_fields", map_or_fail),
     ):
         results = build_real_action(tmp_path).run(ARGUMENTS)
@@ -712,7 +779,7 @@ def test_interrupted_cycle_resumes_without_missing_users(tmp_path, api, sorts, f
         return response
 
     with (
-        patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries, sorts=sorts)),
+        fake_directory(entries, sorts=sorts),
         patch.object(MicrosoftADUserAssetSyncConnector, "post_assets_to_api", post_then_stop),
     ):
         first = build_real_action(tmp_path).run(ARGUMENTS)
@@ -750,7 +817,7 @@ def test_run_from_an_existing_checkpoint_skips_seen_users(tmp_path, api):
         return response
 
     with (
-        patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries, sorts=False)),
+        fake_directory(entries, sorts=False),
         patch.object(MicrosoftADUserAssetSyncConnector, "post_assets_to_api", post_and_record_checkpoint),
     ):
         results = build_real_action(tmp_path).run(ARGUMENTS)
@@ -779,7 +846,7 @@ def test_sorted_cycle_commits_the_checkpoint_after_each_batch(tmp_path, api):
         return response
 
     with (
-        patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries)),
+        fake_directory(entries),
         patch.object(MicrosoftADUserAssetSyncConnector, "post_assets_to_api", post_and_record_checkpoint),
     ):
         results = build_real_action(tmp_path).run(ARGUMENTS)
@@ -794,7 +861,7 @@ def test_sorted_cycle_commits_the_checkpoint_after_each_batch(tmp_path, api):
 def test_run_warns_when_the_directory_refuses_to_sort(tmp_path, api):
     entries = [build_entry("S-1-5-21-1", datetime(2024, 1, 1))]
 
-    with patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries, sorts=False)):
+    with fake_directory(entries, sorts=False):
         results = build_real_action(tmp_path).run(ARGUMENTS)
 
     assert results == {"fetched": 1, "pushed_batches": 1, "failed_batches": 0, "has_more": False}
@@ -822,9 +889,7 @@ def test_run_fails_when_the_search_ends_on_an_error_page(tmp_path, api, sorts, c
         build_entry("S-1-5-21-4", datetime(2024, 2, 1)),
     ]
 
-    with patch.object(
-        MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries, sorts=sorts, error_after=2)
-    ):
+    with fake_directory(entries, sorts=sorts, error_after=2, page_size=2):
         with pytest.raises(AssetConnectorSearchError, match="busy"):
             build_real_action(tmp_path).run(ARGUMENTS)
 
@@ -832,23 +897,61 @@ def test_run_fails_when_the_search_ends_on_an_error_page(tmp_path, api, sorts, c
     assert any(log["level"] == "error" and "stopped before its last page" in log["message"] for log in sent_logs(api))
 
     # The next run reads the users of the unread pages
-    with patch.object(MicrosoftADUserAssetConnector, "_run_paged_search", fake_directory(entries, sorts=sorts)):
+    with fake_directory(entries, sorts=sorts):
         build_real_action(tmp_path).run(ARGUMENTS)
 
     assert set(pushed_sids(api)) == {"S-1-5-21-1", "S-1-5-21-2", "S-1-5-21-3", "S-1-5-21-4"}
     assert read_context(tmp_path)["most_recent_datetime"] == "20250601000000.0Z"
 
 
-def test_paged_search_passes_the_sort_control(tmp_path):
-    connector = object.__new__(MicrosoftADUserAssetSyncConnector)
-    connector._ldap_client = Mock()
-    connector._configuration = Mock(basedn="DC=example,DC=com")
-    connector.context = Mock()
-    connector.context.__enter__ = Mock(return_value={})
-    connector.context.__exit__ = Mock(return_value=False)
-    connector._ldap_client.extend.standard.paged_search.return_value = iter([{"dn": "CN=a"}])
+def test_paged_search_passes_the_sort_control_and_follows_the_cookie(tmp_path):
+    entries = [build_entry(f"S-1-5-21-{i}", datetime(2024, 1, i)) for i in range(1, 6)]
+    directory = FakeDirectory(entries, page_size=2)
+    connector = MicrosoftADUserAssetSyncConnector(module=MicrosoftADModule(), data_path=tmp_path)
+    connector._ldap_client = directory
+    connector.configuration = {  # type: ignore[assignment]
+        "basedn": "DC=example,DC=com",
+        "sekoia_base_url": BASE_URL,
+        "sekoia_api_key": "api-key",
+    }
 
-    assert list(connector._run_paged_search()) == [{"dn": "CN=a"}]
-    controls = connector._ldap_client.extend.standard.paged_search.call_args.kwargs["controls"]
-    assert controls == [sort_control("whenCreated")]
+    read = [entry["attributes"]["objectSid"] for entry in connector._run_paged_search()]
+
+    # Each page in server order: the whole stream is sorted by `whenCreated`
+    assert read == [f"S-1-5-21-{i}" for i in range(1, 6)]
     assert connector.sorted_search is True
+    assert [search["controls"] for search in directory.searches] == [[sort_control("whenCreated")]] * 3
+    assert [search["paged_cookie"] for search in directory.searches] == [None, b"2", b"4"]
+
+
+def test_sorted_checkpoint_never_skips_users_of_a_page_not_fully_pushed(tmp_path, api):
+    # ldap3's paged search yields each page in reverse: a batch ending inside a page
+    # committed the newest user of that page, ahead of its older users not pushed yet
+    entries = [build_entry(f"S-1-5-21-{i}", datetime(2024, 1, i)) for i in range(1, 9)]
+    original_post = MicrosoftADUserAssetSyncConnector.post_assets_to_api
+    pushes_before_stop = {"left": 1}
+
+    def post_then_stop(connector, assets, url):
+        response = original_post(connector, assets, url)
+        pushes_before_stop["left"] -= 1
+        if pushes_before_stop["left"] == 0:
+            connector.stop()
+        return response
+
+    # Pages of 4 users, batches of 3: the first batch ends inside the first page
+    with (
+        fake_directory(entries, page_size=4),
+        patch.object(MicrosoftADUserAssetSyncConnector, "post_assets_to_api", post_then_stop),
+    ):
+        first = build_real_action(tmp_path).run({**ARGUMENTS, "batch_size": 3})
+        assert first["has_more"] is True
+        pushed_first = set(pushed_sids(api))
+        checkpoint = read_context(tmp_path)["most_recent_datetime"]
+        not_pushed = [entry for entry in entries if entry["attributes"]["objectSid"] not in pushed_first]
+        assert all(
+            entry["attributes"]["whenCreated"].strftime("%Y%m%d%H%M%S.0Z") >= checkpoint for entry in not_pushed
+        )
+
+        build_real_action(tmp_path).run({**ARGUMENTS, "batch_size": 3})
+
+    assert set(pushed_sids(api)) == {entry["attributes"]["objectSid"] for entry in entries}

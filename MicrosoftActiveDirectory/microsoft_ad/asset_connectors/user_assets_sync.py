@@ -25,6 +25,9 @@ from microsoft_ad.helpers import retry_after_seconds, sort_control
 
 RETRYABLE_STATUS = {408, 429}
 
+# Paged results control (RFC 2696)
+PAGED_RESULTS_CONTROL_OID = "1.2.840.113556.1.4.319"
+
 
 def raise_on_retryable_status(response: requests.Response, *args: Any, **kwargs: Any) -> None:
     if response.status_code in RETRYABLE_STATUS or response.status_code >= 500:
@@ -102,30 +105,58 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
         session.hooks["response"].append(raise_on_retryable_status)
         return session
 
+    def _paged_search(self, controls: list[tuple[str, bool, bytes]] | None) -> Generator[dict[str, Any], None, None]:
+        """
+        The users, page by page, in the order of the directory.
+
+        ldap3's paged search yields each page in reverse (`responses.pop()`), so a sorted page comes
+        newest first and a batch ending inside it would commit a checkpoint ahead of its older users.
+        It also ends on an error result like on the last page. Page here instead: each page is yielded
+        in server order and an error result raises.
+        """
+        # The same filter for every page: the checkpoint it reads moves after each pushed batch
+        search_filter = self.user_ldap_query
+        cookie = None
+        while True:
+            self.ldap_client.search(
+                search_base=self.configuration.basedn,
+                search_filter=search_filter,
+                attributes=self.QUERY_ATTRIBUTES,
+                controls=controls,
+                paged_size=self.LIMIT,
+                paged_cookie=cookie,
+            )
+            result = self.ldap_client.result
+            if result["result"] != 0:
+                raise AssetConnectorSearchError(result)
+            yield from self.ldap_client.response or []
+            cookie = result.get("controls", {}).get(PAGED_RESULTS_CONTROL_OID, {}).get("value", {}).get("cookie")
+            if not cookie:
+                return
+
     def _run_paged_search(
         self, controls: list[tuple[str, bool, bytes]] | None = None
     ) -> Generator[dict[str, Any], None, None]:
-        sorted_entries = super()._run_paged_search(controls=[*(controls or []), sort_control("whenCreated")])
-        # The first page runs the search: a refused sort returns no entry and an error result
-        first_entry = next(sorted_entries, None)
-        if first_entry is None and self._sort_refused():
+        sorted_entries = self._paged_search([*(controls or []), sort_control("whenCreated")])
+        # The first page runs the search: a directory that refuses the sort answers it with an error result
+        try:
+            first_entry = next(sorted_entries, None)
+        except AssetConnectorSearchError as error:
+            if error.result_code not in self.SORT_REFUSED_RESULTS:
+                raise
             self.sorted_search = False
             self.log(
                 message="The directory refused to sort the users by creation date: the checkpoint is only "
                 "saved once the whole directory has been read, which may not fit in one run",
                 level="warning",
             )
-            yield from super()._run_paged_search(controls=controls)
+            yield from self._paged_search(controls)
             return
 
         self.sorted_search = True
         if first_entry is not None:
             yield first_entry
         yield from sorted_entries
-
-    def _sort_refused(self) -> bool:
-        result = getattr(self._ldap_client, "result", None) or {}
-        return result.get("result") in self.SORT_REFUSED_RESULTS
 
     def update_checkpoint(self) -> None:
         # `post_assets_to_api` calls this method after each pushed batch: safe when the
@@ -138,13 +169,6 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
             raise AssetConnectorCriticalError()
         if not self.running:
             raise AssetConnectorStoppedError()
-
-    def _ensure_search_completed(self) -> None:
-        result = getattr(self._ldap_client, "result", None)
-        if isinstance(result, dict) and result.get("result", 0) != 0:
-            raise AssetConnectorSearchError(
-                f"The LDAP search stopped before its last page: {result.get('description')} ({result.get('result')})"
-            )
 
     def asset_fetch_cycle(self) -> None:
         """Fetch assets from the connector and push them to Sekoia.io, once."""
@@ -186,7 +210,6 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
         # even if the connector was stopped after the last push
         if self._critical_log_sent:
             raise AssetConnectorCriticalError()
-        self._ensure_search_completed()
         self._cycle_complete = True
         self.update_checkpoint()
 

@@ -1,5 +1,7 @@
-from sekoia_automation.exceptions import AutomationSDKError
+from typing import Any
+
 import requests
+from sekoia_automation.exceptions import AutomationSDKError
 
 # TODO: drop this module and import these exceptions from
 # sekoia_automation.exceptions once
@@ -32,4 +34,10 @@ class RetryableStatusError(requests.HTTPError):
 
 
 class AssetConnectorSearchError(AutomationSDKError):
-    """Raised when the directory search ended on an error result before its last page."""
+    """Raised when a page of the directory search ends on an error result."""
+
+    def __init__(self, result: dict[str, Any]) -> None:
+        self.result_code = result.get("result")
+        super().__init__(
+            f"The LDAP search stopped before its last page: {result.get('description')} ({self.result_code})"
+        )
