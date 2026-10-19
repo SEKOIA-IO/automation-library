@@ -339,6 +339,31 @@ def test_run_reports_a_push_that_keeps_failing_to_connect(build_action, api, tmp
     assert any(log["level"] == "error" and "Unable to push a batch" in log["message"] for log in sent_logs(api))
 
 
+@pytest.mark.parametrize(
+    "push_answer",
+    [
+        {"exc": requests.ConnectionError("connection refused")},
+        # The SDK sends its own error log for an error answer: it raises too when the logs endpoint is down
+        {"status_code": 400, "json": {"message": "bad request", "code": "E400"}},
+    ],
+)
+def test_run_reports_the_failed_push_when_the_logs_endpoint_is_down(build_action, api, tmp_path, push_answer):
+    api.post(PUSH_URL, **push_answer)
+    api.post(LOGS_URL, status_code=503)
+
+    # Don't wait between the SDK's retries of the logs sending
+    with (
+        patch.object(MicrosoftADUserAssetSyncConnector, "PUSH_RETRY_MAX_DELAY", 0),
+        patch.object(Trigger._send_logs_to_api.retry, "wait", wait_none()),
+    ):
+        action = build_action()
+        results = action.run(ARGUMENTS)
+
+    assert results == {"fetched": 1, "pushed_batches": 0, "failed_batches": 1, "has_more": False}
+    assert action.error_message == "A batch of assets could not be pushed to Sekoia.io"
+    assert "most_recent_datetime" not in read_context(tmp_path)
+
+
 def test_run_returns_has_more_when_stopped_during_a_push(build_action, api, tmp_path):
     def stop_then_fail(connector: MicrosoftADUserAssetSyncConnector, *_: Any) -> None:
         connector.stop()

@@ -183,7 +183,11 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
             # The retries give up as soon as the connector is stopped: resume on the next run
             if not self.running:
                 raise AssetConnectorStoppedError() from error
-            self.log_exception(error, message="Unable to push a batch of assets to Sekoia.io")
+            # TODO: drop this guard once `Trigger.log` no longer raises in the SDK
+            try:
+                self.log_exception(error, message="Unable to push a batch of assets to Sekoia.io")
+            except Exception as log_error:
+                self.log(f"Unable to send the push error log: {log_error}", level="warning")
             response = None
 
         if response is None:
