@@ -110,7 +110,10 @@ class SynchronizeAssetsAction(MicrosoftADAction):
         # Drives the push endpoint and the User-Agent of the connector
         self.module._connector_configuration_uuid = asset_connector_uuid
 
-        connector = self.connector_class(module=self.module, data_path=self.data_path)
+        # One folder per configuration: two configurations on a runner keep their own checkpoint and lock
+        data_path = self.data_path / asset_connector_uuid
+        data_path.mkdir(parents=True, exist_ok=True)
+        connector = self.connector_class(module=self.module, data_path=data_path)
         connector.configuration = configuration  # type: ignore[assignment]
         connector._token = token
         base_url = (connector.configuration.sekoia_base_url or connector.production_base_url).rstrip("/")
