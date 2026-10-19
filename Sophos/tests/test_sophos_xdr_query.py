@@ -420,6 +420,81 @@ def test_getting_results_does_not_fallback_on_non_compatibility_error(trigger, a
         assert trigger.push_events_to_intakes.call_count == 0
 
 
+def test_post_query_http_error_with_non_json_response_sets_last_error(trigger):
+    response = Mock()
+    response.status_code = 400
+    response.text = "bad request"
+    response.json.side_effect = ValueError("invalid json")
+
+    trigger.client.run_query = Mock(return_value=response)
+
+    result, query_id = trigger.post_query({"adHocQuery": {"template": "SELECT 1"}})
+
+    assert (result, query_id) == ("failed", None)
+    assert trigger._last_query_error == {"status_code": 400, "message": "bad request"}
+
+
+def test_post_query_missing_query_id_sets_last_error(trigger):
+    response = Mock()
+    response.status_code = 200
+    response.json.return_value = {"status": "pending"}
+
+    trigger.client.run_query = Mock(return_value=response)
+
+    result, query_id = trigger.post_query({"adHocQuery": {"template": "SELECT 1"}})
+
+    assert (result, query_id) == ("failed", None)
+    assert trigger._last_query_error == {
+        "status_code": 200,
+        "message": "Missing query id in response",
+    }
+
+
+def test_post_query_unsuccessful_query_result_sets_last_error(trigger, monkeypatch):
+    response_run_query = Mock()
+    response_run_query.status_code = 200
+    response_run_query.json.return_value = {"id": "query-id"}
+
+    response_query_status = Mock()
+    response_query_status.status_code = 500
+    response_query_status.text = "status endpoint error"
+    response_query_status.json.return_value = {"status": "finished", "result": "failed"}
+
+    trigger.client.run_query = Mock(return_value=response_run_query)
+    trigger.client.get_query_status = Mock(return_value=response_query_status)
+    monkeypatch.setattr("sophos_module.trigger_sophos_xdr_query.time.sleep", lambda _: None)
+
+    result, query_id = trigger.post_query({"adHocQuery": {"template": "SELECT 1"}})
+
+    assert (result, query_id) == ("failed", "query-id")
+    assert trigger._last_query_error == {
+        "status_code": 500,
+        "message": "Query execution result: failed",
+    }
+
+
+def test_is_missing_ioc_detection_weight_error_is_false_without_last_error(trigger):
+    trigger._last_query_error = None
+
+    assert trigger._is_missing_ioc_detection_weight_error() is False
+
+
+def test_run_compatible_query_does_not_retry_for_other_errors(trigger):
+    def _mock_post_query(_query):
+        trigger._last_query_error = {
+            "status_code": 400,
+            "message": "column some_other_field does not exist",
+        }
+        return "failed", "query-id"
+
+    trigger.post_query = Mock(side_effect=_mock_post_query)
+
+    result, query_id = trigger.run_compatible_query()
+
+    assert (result, query_id) == ("failed", "query-id")
+    assert trigger.post_query.call_count == 1
+
+
 def test_observe_items_events_lag_with_calendar_time_camel_case(trigger):
     trigger._observe_items_events_lag(
         [
