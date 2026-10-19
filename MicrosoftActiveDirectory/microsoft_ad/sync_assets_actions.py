@@ -50,8 +50,8 @@ class SynchronizeAssetsAction(MicrosoftADAction):
     # The platform marks a run failed after 2 hours: keep time to stop cleanly.
     MAX_DURATION = 100 * 60
 
-    # A run holding the lock for longer was killed by the platform without releasing it
-    LOCK_TTL = 2 * 60 * 60
+    # A live run stops at MAX_DURATION: holding the lock for longer means it was killed without releasing it
+    LOCK_TTL = MAX_DURATION + 10 * 60
     LOCK_FILE = "sync_lock.json"
 
     def stop_on_time_limit(self, time_limit_reached: Event, connector: MicrosoftADUserAssetSyncConnector) -> None:
