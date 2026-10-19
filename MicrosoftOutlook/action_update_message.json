@@ -161,7 +161,10 @@
       },
       "from": {
         "description": "The sender information",
-        "type": "object"
+        "type": [
+          "object",
+          "null"
+        ]
       },
       "importance": {
         "description": "The importance level of the message used by the action",
@@ -184,21 +187,6 @@
         "description": "The Microsoft Graph message item ID",
         "type": "string"
       },
-      "original_from": {
-        "description": "The original mailbox owner email address provided in the input From header",
-        "type": [
-          "string",
-          "null"
-        ],
-        "format": "email"
-      },
-      "original_subject": {
-        "description": "The original subject provided in the input",
-        "type": [
-          "string",
-          "null"
-        ]
-      },
       "received_date_time": {
         "description": "The message reception timestamp",
         "type": "string",
@@ -216,12 +204,11 @@
         }
       },
       "sender": {
-        "description": "The updated sender email address used by the action",
+        "description": "The sender information returned by Microsoft Graph",
         "type": [
-          "string",
+          "object",
           "null"
-        ],
-        "format": "email"
+        ]
       },
       "status": {
         "description": "The execution status",
@@ -237,6 +224,29 @@
         "items": {
           "type": "object"
         }
+      },
+      "updated_from": {
+        "description": "The updated mailbox owner email address provided in the input From header",
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "email"
+      },
+      "updated_sender": {
+        "description": "The updated sender email address provided in the input",
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "email"
+      },
+      "updated_subject": {
+        "description": "The updated subject provided in the input",
+        "type": [
+          "string",
+          "null"
+        ]
       },
       "user": {
         "description": "The echo of the user identifier used for this action",

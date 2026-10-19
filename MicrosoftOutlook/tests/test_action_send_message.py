@@ -161,7 +161,7 @@ def test_send_message_includes_target_message_id_when_api_returns_id(configured_
         assert result["save_to_sent_items"] is True
         assert result["user"] == "1111"
         assert result["recipients"] == ["jane.doe@example.com"]
-        assert result["custom"] == "value"
+        assert "custom" not in result
 
 
 def test_send_message_handles_plain_value_error_from_json(configured_action):

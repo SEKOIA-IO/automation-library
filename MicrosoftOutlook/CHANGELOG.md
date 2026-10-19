@@ -22,8 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `user`: The echo of the user identifier used for this action
   - action `Search messages`:
     - `has_more`: The indicator that is true when Graph indicates additional pages may exist
+    - `messages[].network_message_id`: The NetworkMessageId extracted from Graph extended properties when available
     - `message_ids`: The list of Microsoft Graph message item IDs extracted from returned messages
-    - `network_message_id`: The NetworkMessageId extracted from Graph extended properties when available
     - `query_type`: The identifier type used for the search
     - `query_value`: The search identifier value, or concatenated values when both identifiers are provided
     - `returned_count`: The alias of total_results for explicit count-based playbook conditions
@@ -46,11 +46,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `bcc`: The updated list of BCC recipient email addresses used by the action
     - `cc`: The updated list of CC recipient email addresses used by the action
     - `importance`: The importance level of the message used by the action
-    - `original_from`: The original mailbox owner email address provided in the input From header
-    - `original_subject`: The original subject provided in the input
     - `recipients`: The updated list of recipient email addresses used by the action
-    - `sender`: The updated sender email address used by the action
+    - `sender`: The sender information returned by Microsoft Graph
     - `status`: The execution status
+    - `updated_from`: The updated mailbox owner email address provided in the input From header
+    - `updated_sender`: The updated sender email address provided in the input
+    - `updated_subject`: The updated subject provided in the input
     - `user`: The echo of the user identifier used for this action
 
 ### Changed
@@ -63,12 +64,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Allow `message_id` arguments to accept either a string ID or a message object containing `message_id` for `Foreach` operator compatibility
 - Factorize shared action helpers in `MicrosoftGraphActionBase` for `message_id` resolution, recipient generation, and payload cleanup
 - Harmonize action logging messages with a consistent descriptive style and structured key/value context
+- Upgrade `sekoia-automation-sdk` to `1.27.0`
+- Remove the logo background
 
 ### Fixed
 
 - Fix false-negative lookups for `email_local_id` by bounding and paginating client-side fallback scanning (`FALLBACK_PAGE_SIZE=50`, `FALLBACK_MAX_MESSAGES_SCANNED=1000`)
 - Ensure fallback scanning never processes messages beyond the 1,000-item cap by slicing each fetched page to the remaining scan budget
 - Normalize empty optional identifiers to null-equivalent values before fallback filtering to avoid false negatives when one identifier is empty
+- Preserve Microsoft Graph `sender` details in `Update a message` results instead of overwriting them with input payload values
+- Sort action descriptor `results.properties` keys alphabetically for consistency across actions
 
 ### Removed
 

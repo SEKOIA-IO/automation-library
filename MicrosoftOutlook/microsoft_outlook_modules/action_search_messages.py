@@ -97,13 +97,15 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
         if scanned_messages >= self.FALLBACK_MAX_MESSAGES_SCANNED and bool(next_url):
             scan_limit_reached = True
 
+        fallback_has_more = bool(next_url) or len(matched_messages) > max_messages_to_return
+
         self.log(
             message=(
                 "Completed search fallback with client-side filtering "
                 f"user={user_id_or_principal_name!r} "
                 f"scanned_messages={scanned_messages!r} "
                 f"matched_messages={len(matched_messages)!r} "
-                f"has_more={bool(next_url)!r} "
+                f"has_more={fallback_has_more!r} "
                 f"scan_limit_reached={scan_limit_reached!r}"
             ),
             level="debug",
@@ -112,6 +114,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
         return {
             "value": matched_messages[:max_messages_to_return],
             "@odata.nextLink": next_url,
+            "fallback_has_more": fallback_has_more,
             "scan_limit_reached": scan_limit_reached,
         }
 
@@ -247,7 +250,10 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
             if network_id is not None:
                 message["network_message_id"] = network_id
 
-        has_more = bool(payload.get("@odata.nextLink"))
+        if used_fallback:
+            has_more = bool(payload.get("fallback_has_more"))
+        else:
+            has_more = bool(payload.get("@odata.nextLink"))
         total_results = len(normalized_messages)
         message_ids = [
             message["message_id"] for message in normalized_messages if isinstance(message.get("message_id"), str)

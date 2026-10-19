@@ -96,7 +96,6 @@ class SendMessageAction(MicrosoftGraphActionBase):
             level="debug",
         )
         return {
-            **response_data,
             "status": "sent",
             "action": "send_message",
             "bcc": bcc,
