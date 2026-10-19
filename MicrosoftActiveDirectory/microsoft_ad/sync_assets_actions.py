@@ -86,7 +86,7 @@ class SynchronizeAssetsAction(MicrosoftADAction):
         finally:
             if acquired:
                 with self._warn_on_error("release the run lock"):
-                    with PersistentJSON(self.LOCK_FILE, self.data_path) as lock:
+                    with PersistentJSON(self.LOCK_FILE, data_path) as lock:
                         # Never release the lock of another run, taken once ours expired
                         if lock.get("run_id") == run_id:
                             lock.clear()
