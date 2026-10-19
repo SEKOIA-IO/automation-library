@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fall back on `sAMAccountName` for the user name when there is no given name or surname, and for the account name when there is no UPN, so built-in accounts such as `Guest` and `krbtgt` are no longer merged into a single `Unknown` asset
+- Fall back on `sAMAccountName` for the user name when there is no given name or surname, and for the account name when there is no UPN, a blank value counting as none, so built-in accounts such as `Guest` and `krbtgt` are no longer merged into a single `Unknown` asset
 
 ## 2026-10-16 - 1.6.0
 

@@ -219,6 +219,24 @@ def test_user_ocsf_object_without_names_with_upn(connector):
     assert user_ocsf.account.name == "svc-backup@example.com"
 
 
+def test_user_ocsf_object_keeps_inner_spaces_of_names(connector):
+    # The name is the asset atom: an existing user must keep the same one
+    user_attr = LDAPUserAttributes(givenName="John ", sn="Doe", objectSid="S-1-5-21-1002")
+
+    assert connector.user_ocsf_object(user_attr).name == "John  Doe"
+
+
+def test_user_ocsf_object_with_blank_names(connector):
+    user_attr = LDAPUserAttributes(
+        givenName=" ", sn="", userPrincipalName="  ", sAMAccountName="Guest", objectSid="S-1-5-21-501"
+    )
+
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.name == "Guest"
+    assert user_ocsf.account.name == "Guest"
+
+
 def test_user_ocsf_object_without_any_name(connector):
     user_attr = LDAPUserAttributes(objectSid="S-1-5-21-999")
 
