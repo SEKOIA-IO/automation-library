@@ -19,7 +19,7 @@ from pydantic.v1 import ValidationError
 from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel
 from sekoia_automation.storage import PersistentJSON
 from sekoia_automation.trigger import Trigger
-from tenacity import wait_none
+from tenacity import wait_fixed, wait_none
 
 from microsoft_ad.actions_base import MicrosoftADModule
 from microsoft_ad.asset_connectors.exceptions import (
@@ -449,6 +449,20 @@ def test_run_returns_has_more_when_stopped_during_a_push(build_action, api, tmp_
     assert results == {"fetched": 1, "pushed_batches": 0, "failed_batches": 0, "has_more": True}
     assert action.error_message is None
     assert "most_recent_datetime" not in read_context(tmp_path)
+
+
+def test_run_returns_has_more_when_the_time_limit_stops_a_push_that_times_out(build_action, api, tmp_path):
+    # The SDK catches the timeout and returns None once the retries give up on the stop
+    api.post(PUSH_URL, exc=requests.ReadTimeout("read timed out"))
+
+    with patch("microsoft_ad.asset_connectors.user_assets_sync.wait_exponential", return_value=wait_fixed(0.01)):
+        action = build_action(max_duration=0.2)
+        results = action.run(ARGUMENTS)
+
+    assert results == {"fetched": 1, "pushed_batches": 0, "failed_batches": 0, "has_more": True}
+    assert action.error_message is None
+    assert "most_recent_datetime" not in read_context(tmp_path)
+    assert any("time limit" in log["message"] for log in sent_logs(api))
 
 
 def test_run_logs_errors_to_the_connector_configuration(build_action, api):

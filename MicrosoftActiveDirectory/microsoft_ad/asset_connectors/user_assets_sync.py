@@ -233,6 +233,10 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
             response = None
 
         if response is None:
+            # The SDK returns None on a timeout, also when the retries gave up because the connector
+            # was stopped (time limit, SIGTERM): resume on the next run like for the other errors
+            if not self.running:
+                raise AssetConnectorStoppedError()
             # Stop the cycle: the checkpoint must not move past the assets of this batch
             self.cycle_stats["failed_batches"] += 1
             raise AssetConnectorPushError()
