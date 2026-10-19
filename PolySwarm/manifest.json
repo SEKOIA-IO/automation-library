@@ -3,12 +3,14 @@
     "properties": {
       "apikey": {
         "type": "string",
-        "description": "PolySwarm API key"
+        "description": "Your PolySwarm API key. Every action in this module spends against the plan it carries, so the search actions are read only while the scan and sandbox actions cost quota.",
+        "title": "API Key"
       },
       "community": {
         "type": "string",
-        "description": "PolySwarm community",
-        "default": "default"
+        "description": "The PolySwarm community the key is scoped to, which decides whose results you can read back. Leave this as default, the public community, unless PolySwarm gave you a private one. A key scoped to a private community cannot read public results, or the other way around, which is the usual reason a lookup returns nothing for an artifact you know exists.",
+        "default": "default",
+        "title": "Community"
       }
     },
     "required": [

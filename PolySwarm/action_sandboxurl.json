@@ -1,5 +1,5 @@
 {
-  "name": "SandboxUrl",
+  "name": "Detonate URL",
   "description": "Submit a URL to PolySwarm for sandbox detonation and return the task identity immediately, without blocking for the result. Only http and https URLs are accepted. PolySwarm's SandboxCompleted trigger already exists to start a playbook when a detonation finishes: submit here and let the trigger wake the next step, rather than holding this run open for the up to fifteen minutes a real detonation can take. An optional wait argument is available for interactive use, off by default and bounded to a short ceiling. Looks for an existing report for the same URL and provider first, so a resubmission does not spend a duplicate detonation, unless force says otherwise.",
   "uuid": "7ec6cfed-30e0-59e9-8caa-d2ba0c78026b",
   "docker_parameters": "SandboxUrl",

@@ -1,5 +1,5 @@
 {
-  "name": "ScanIp",
+  "name": "Scan IP Address",
   "description": "Submit an IP address to PolySwarm's engine marketplace for a fresh multi-engine verdict, via the URL scanning endpoint since PolySwarm has no separate IP endpoint. Spends a scan and creates account activity; reuses an existing result unless force_rescan is set.",
   "uuid": "48f4dd39-0d1b-5a0c-9756-43b734e3f89b",
   "docker_parameters": "ScanIp",

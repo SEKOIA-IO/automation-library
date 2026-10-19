@@ -381,3 +381,32 @@ def test_descriptors_use_the_linter_format() -> None:
         if path.read_text() != json.dumps(json.loads(path.read_text()), indent=2)
     ]
     assert not bad, f"not in linter format: {bad}"
+
+
+def test_every_descriptor_is_bound_to_a_registered_action() -> None:
+    """The display name is free to change, the binding key is not.
+
+    main.py registers each class under a string, and the platform matches that
+    string to the descriptor's docker_parameters. The name field beside it is
+    only what a playbook author reads, so renaming for readability is safe while
+    renaming docker_parameters would orphan the action.
+    """
+    registered = set(re.findall(r'module\.register\(\w+,\s*"([^"]+)"\)', MAIN_PY.read_text()))
+    assert registered, "no registrations found in main.py, the pattern must have changed"
+
+    unbound = []
+    for path in sorted(MODULE_ROOT.glob("action_*.json")):
+        descriptor = json.loads(path.read_text())
+        if descriptor.get("docker_parameters") not in registered:
+            unbound.append(path.name)
+    assert not unbound, f"descriptors with no matching registration: {unbound}"
+
+
+def test_action_names_read_as_names_rather_than_class_names() -> None:
+    """A playbook author picks actions from a list, and ScanUrl reads like code to them."""
+    offenders = []
+    for path in sorted(MODULE_ROOT.glob("action_*.json")):
+        name = json.loads(path.read_text()).get("name", "")
+        if " " not in name:
+            offenders.append(f"{path.name}: {name!r}")
+    assert not offenders, f"action names with no spaces, which reads as a class name: {offenders}"

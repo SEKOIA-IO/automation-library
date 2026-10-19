@@ -1,5 +1,5 @@
 {
-  "name": "Report",
+  "name": "Get Sandbox Report",
   "description": "Fetch the sandbox report already on file for a hash and provider. Reads only: it submits nothing and spends no detonation. If nothing has been detonated for this hash and provider yet, call SandboxFile, SandboxUrl or SandboxIp to submit one, then either wait here for it to finish or use the Sandbox detonation completed trigger to be notified instead of waiting.",
   "uuid": "be5609c3-003f-5335-a173-c4b52fe8f0e4",
   "docker_parameters": "Report",

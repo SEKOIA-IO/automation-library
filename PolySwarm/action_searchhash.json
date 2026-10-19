@@ -1,5 +1,5 @@
 {
-  "name": "SearchHash",
+  "name": "Search Hash",
   "description": "Look up a hash against what PolySwarm already knows. Read-only: nothing is submitted, no scan quota is spent, and an unseen hash comes back as unknown rather than an error. Use ScanFile to submit a file for a fresh verdict instead.",
   "uuid": "d4e6d0c8-5c5d-59bd-87ff-2be80c6efe58",
   "docker_parameters": "SearchHash",

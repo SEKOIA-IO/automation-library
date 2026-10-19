@@ -1,5 +1,5 @@
 {
-  "name": "SearchUrl",
+  "name": "Search URL",
   "description": "Look up any existing PolySwarm verdict for a URL. This action only reads: it spends no scanning quota and creates no activity on the account. To submit the URL for a fresh scan instead, use ScanUrl.",
   "uuid": "81b109cb-725d-4372-ae14-4d0b44fab106",
   "docker_parameters": "SearchUrl",

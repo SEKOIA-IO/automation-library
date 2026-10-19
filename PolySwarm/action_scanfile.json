@@ -1,5 +1,5 @@
 {
-  "name": "ScanFile",
+  "name": "Scan File",
   "description": "Submit a file to PolySwarm's engine marketplace for a fresh multi-engine verdict. Spends a scan and creates account activity; reuses an existing result unless force_rescan is set. Use SearchHash for a free, read-only lookup instead.",
   "uuid": "a4d91450-904d-5d5c-8ae5-f6012892be8f",
   "docker_parameters": "ScanFile",

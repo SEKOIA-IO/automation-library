@@ -1,5 +1,5 @@
 {
-  "name": "ScanDomain",
+  "name": "Scan Domain",
   "description": "Submit a domain to PolySwarm's engine marketplace for a fresh multi-engine verdict, via the URL scanning endpoint since PolySwarm has no separate domain endpoint. Spends a scan and creates account activity; reuses an existing result unless force_rescan is set. Use ScanIp for IP addresses.",
   "uuid": "85d9c6df-5e7e-50d8-85dd-4a6e60d83643",
   "docker_parameters": "ScanDomain",

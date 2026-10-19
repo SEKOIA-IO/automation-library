@@ -1,5 +1,5 @@
 {
-  "name": "SearchMetadata",
+  "name": "Search Metadata",
   "description": "Run an operator supplied Lucene style query against the PolySwarm metadata index, the same endpoint and query language the PolySwarm intel feed connector drives on a schedule, exposed here directly so a playbook can ask any query instead of the fixed family, tag and polyscore filters the connector applies. This action only reads the index and spends no scanning quota.",
   "uuid": "8470d489-3b63-4799-99c0-5b834d4e9229",
   "docker_parameters": "SearchMetadata",

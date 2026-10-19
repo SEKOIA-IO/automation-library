@@ -1,5 +1,5 @@
 {
-  "name": "SearchIoc",
+  "name": "Search IOC",
   "description": "Pivot from an indicator of compromise (IP, domain, TTP or imphash) to the PolySwarm artifacts associated with it, the pivot capability the PolySwarm app for Splunk has and this integration otherwise lacks. Wraps api.search_by_ioc, which accepts exactly one of the four indicator types. This action only reads and spends no scanning quota.",
   "uuid": "77c9c9a6-9793-4848-be3d-b138d8e4347c",
   "docker_parameters": "SearchIoc",

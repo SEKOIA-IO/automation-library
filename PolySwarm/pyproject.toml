@@ -3,7 +3,7 @@ name = "polyswarm-automation-module"
 version = "1.0.0"
 description = ""
 authors = []
-requires-python = ">=3.14,<3.15"
+requires-python = ">=3.12,<3.15"
 
 dependencies = [
     "sekoia-automation-sdk>=1.23.0,<2",
@@ -39,7 +39,7 @@ select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
 "tests/*" = ["ARG"]
 
 [tool.mypy]
-python_version = "3.14"
+python_version = "3.12"
 files = ["."]
 install_types = true
 non_interactive = true
