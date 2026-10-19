@@ -44,6 +44,9 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
     OCSF_SEVERITY = "Informational"
     OCSF_SEVERITY_ID = 1
 
+    # Users whose mapping failed: the cursor moves past them, so only a full resync reads them again
+    skipped_users: int = 0
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
@@ -289,12 +292,15 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
 
         return user_ocsf_model
 
-    def _run_paged_search(self) -> Generator[dict[str, Any], None, None]:
+    def _run_paged_search(
+        self, controls: list[tuple[str, bool, bytes]] | None = None
+    ) -> Generator[dict[str, Any], None, None]:
         return self.ldap_client.extend.standard.paged_search(
             search_base=self.configuration.basedn,
             search_filter=self.user_ldap_query,
             attributes=self.QUERY_ATTRIBUTES,
             paged_size=self.LIMIT,
+            controls=controls,
             generator=True,
         )
 
@@ -374,4 +380,5 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             except Exception as e:
                 user_dn = user.get("dn", "Unknown DN")
                 self.log(f"Failed to map user {user_dn}: {e}", level="error")
+                self.skipped_users += 1
                 continue
