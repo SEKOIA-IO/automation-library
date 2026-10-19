@@ -21,7 +21,6 @@ from microsoft_ad.asset_connectors.exceptions import (
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
 from microsoft_ad.helpers import sort_control
 
-
 RETRYABLE_STATUS = {408, 429}
 
 
