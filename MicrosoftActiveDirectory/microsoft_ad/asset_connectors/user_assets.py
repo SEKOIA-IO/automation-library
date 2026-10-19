@@ -224,7 +224,8 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         elif last_name:
             user_name = last_name.strip()
         else:
-            user_name = "Unknown"
+            # Built-in accounts (Guest, krbtgt) have no names: a shared placeholder merges them
+            user_name = user_attributes.sAMAccountName or "Unknown"
 
         # Parse alternative UID
         if uid_alt := user_attributes.objectGUID:
@@ -234,7 +235,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
 
         # Build account object
         account = Account(
-            name=user_attributes.userPrincipalName or "Unknown",
+            name=user_attributes.userPrincipalName or user_attributes.sAMAccountName or "Unknown",
             type_id=AccountTypeId.LDAP_ACCOUNT,
             type=AccountTypeStr.LDAP_ACCOUNT,
             uid=user_attributes.objectSid or "Unknown",
