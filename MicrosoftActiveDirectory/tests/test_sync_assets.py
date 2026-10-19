@@ -692,6 +692,8 @@ def run_retries(connector: MicrosoftADUserAssetSyncConnector, errors: list[Excep
     [
         (retryable_answer(429, retry_after="7"), 7),
         (retryable_answer(503, retry_after="2"), 2),
+        # A zero `Retry-After` still waits the exponential backoff
+        (retryable_answer(429, retry_after="0"), 1),
         # No or invalid `Retry-After`: the exponential backoff
         (retryable_answer(429), 1),
         (retryable_answer(429, retry_after="soon"), 1),
