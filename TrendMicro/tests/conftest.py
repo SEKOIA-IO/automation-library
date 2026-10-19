@@ -37,10 +37,12 @@ def mocked_vision_one_time():
 
 @pytest.fixture
 def mocked_email_worker_runtime():
-    with patch(
-        "trendmicro_modules.trigger_email_sec.TrendMicroWorker.get_last_timestamp",
-        return_value=0,
-    ), patch(
-        "trendmicro_modules.trigger_email_sec.TrendMicroWorker.set_last_timestamp"
-    ), patch("trendmicro_modules.trigger_email_sec.time") as mock_time:
+    with (
+        patch(
+            "trendmicro_modules.trigger_email_sec.TrendMicroWorker.get_last_timestamp",
+            return_value=0,
+        ),
+        patch("trendmicro_modules.trigger_email_sec.TrendMicroWorker.set_last_timestamp"),
+        patch("trendmicro_modules.trigger_email_sec.time") as mock_time,
+    ):
         yield mock_time

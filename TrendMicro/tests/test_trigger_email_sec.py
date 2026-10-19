@@ -189,14 +189,17 @@ def test_iterate_through_pages_handles_next_token_and_empty_page(trigger):
     consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
     first_page_event = {"mailID": "m1", "messageID": "msg1", "action": "Delivered", "genTime": "2020-11-25T06:53:19Z"}
 
-    with patch.object(
-        consumer,
-        "request_logs_page",
-        side_effect=[
-            {"logs": [first_page_event], "nextToken": "abc%2Bdef"},
-            {"logs": [], "nextToken": None},
-        ],
-    ) as mock_request_page, patch("trendmicro_modules.trigger_email_sec.time") as mock_time:
+    with (
+        patch.object(
+            consumer,
+            "request_logs_page",
+            side_effect=[
+                {"logs": [first_page_event], "nextToken": "abc%2Bdef"},
+                {"logs": [], "nextToken": None},
+            ],
+        ) as mock_request_page,
+        patch("trendmicro_modules.trigger_email_sec.time") as mock_time,
+    ):
         mock_time.time.return_value = 1666711174
 
         pages = list(consumer.iterate_through_pages(from_timestamp=0))
@@ -216,9 +219,10 @@ def test_iterate_through_pages_handles_next_token_and_empty_page(trigger):
 def test_iterate_through_pages_stops_when_next_token_is_missing(trigger, content):
     consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
 
-    with patch.object(consumer, "request_logs_page", return_value=content), patch(
-        "trendmicro_modules.trigger_email_sec.time"
-    ) as mock_time:
+    with (
+        patch.object(consumer, "request_logs_page", return_value=content),
+        patch("trendmicro_modules.trigger_email_sec.time") as mock_time,
+    ):
         mock_time.time.return_value = 1666711174
         pages = list(consumer.iterate_through_pages(from_timestamp=0))
 
@@ -229,9 +233,10 @@ def test_iterate_through_pages_exits_immediately_when_worker_is_stopped(trigger)
     consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
     consumer.stop()
 
-    with patch.object(consumer, "request_logs_page", return_value={"logs": [], "nextToken": None}), patch(
-        "trendmicro_modules.trigger_email_sec.time"
-    ) as mock_time:
+    with (
+        patch.object(consumer, "request_logs_page", return_value={"logs": [], "nextToken": None}),
+        patch("trendmicro_modules.trigger_email_sec.time") as mock_time,
+    ):
         mock_time.time.return_value = 1666711174
         pages = list(consumer.iterate_through_pages(from_timestamp=0))
 
@@ -252,9 +257,11 @@ def test_next_batch_does_not_update_timestamp_when_event_is_not_newer(trigger, m
     mock_time = mocked_email_worker_runtime
     mock_time.time.side_effect = [100, 101, 101]
 
-    with patch.object(consumer, "fetch_events", return_value=iter([[event]])), patch.object(
-        consumer, "get_last_timestamp", return_value=10
-    ), patch.object(consumer, "set_last_timestamp") as mock_set_last_timestamp:
+    with (
+        patch.object(consumer, "fetch_events", return_value=iter([[event]])),
+        patch.object(consumer, "get_last_timestamp", return_value=10),
+        patch.object(consumer, "set_last_timestamp") as mock_set_last_timestamp,
+    ):
         consumer.next_batch()
 
     assert trigger.push_events_to_intakes.call_count == 1

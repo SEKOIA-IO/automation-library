@@ -7,11 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.6.5] - 2026-10-16
+## [1.6.5] - 2026-10-19
 
 ### Changed
 
 - Upgrade `sekoia-automation-sdk` dependency to `1.27.0`
+- Migrate dependency management from Poetry to uv (`pyproject.toml`, `uv.lock`, and Docker install flow)
+- Raise minimum supported Python version to 3.14 (`>=3.14,<4`) and switch runtime image to Python 3.14
+- Add a dedicated `lint` dependency group (ruff, mypy) in uv configuration
 - Migrate module models and connector configurations to Pydantic v2 imports and APIs
 - Standardize Vision One connector logs with `self.log` and key=value context fields, and remove the obsolete local logging helper
 - Reorganize and extend tests to mirror `trendmicro_modules/` and enforce 100% branch coverage
