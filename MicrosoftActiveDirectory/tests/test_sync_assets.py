@@ -492,6 +492,28 @@ def test_run_is_skipped_while_another_run_holds_the_lock(build_action, api, tmp_
     )
 
 
+def test_a_skipped_run_never_writes_the_lock(build_action, api, tmp_path):
+    write_lock(tmp_path / UUID, "other-run", expires_in=60)
+
+    # Written back, it could restore a lock the other run released meanwhile
+    with patch.object(PersistentJSON, "dump") as dump:
+        build_action().run(ARGUMENTS)
+
+    dump.assert_not_called()
+
+
+def test_two_configurations_keep_their_own_checkpoint(build_action, api, tmp_path):
+    other = "9b5c1f0e-3a1d-4c2e-8f7a-1d2c3b4a5e6f"
+    api.post(f"{BASE_URL}/api/v2/asset-management/asset-connector/{other}", json={})
+    api.post(f"{BASE_URL}/api/v1/symphony/connector-configurations/{other}/logs")
+
+    build_action().run(ARGUMENTS)
+    build_action(items=[]).run({**ARGUMENTS, "asset_connector_uuid": other})
+
+    assert read_context(tmp_path / UUID)["most_recent_datetime"] == "20240103000000.0Z"
+    assert "most_recent_datetime" not in read_context(tmp_path / other)
+
+
 def test_run_takes_an_expired_lock(build_action, api, tmp_path):
     # Left by a run killed without releasing it
     write_lock(tmp_path, "killed-run", expires_in=-1)
