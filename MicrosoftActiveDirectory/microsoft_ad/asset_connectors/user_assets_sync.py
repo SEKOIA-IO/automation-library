@@ -45,7 +45,8 @@ class wait_retry_after(wait_base):
         if isinstance(error, RetryableStatusError) and error.response is not None:
             delay = retry_after_seconds(error.response.headers.get("Retry-After"))
             if delay is not None:
-                return delay
+                # A zero or past Retry-After still waits the fallback: never re-post at once when rate limited
+                return max(delay, self.fallback(retry_state))
         return self.fallback(retry_state)
 
 
