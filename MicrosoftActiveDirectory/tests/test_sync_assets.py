@@ -1,9 +1,11 @@
 import json
 import os
 import signal
+import time
 from collections.abc import Callable, Generator
 from datetime import datetime
 from pathlib import Path
+from threading import Timer
 from typing import Any
 from unittest.mock import Mock, patch
 
@@ -18,7 +20,11 @@ from sekoia_automation.trigger import Trigger
 from tenacity import wait_none
 
 from microsoft_ad.actions_base import MicrosoftADModule
-from microsoft_ad.asset_connectors.exceptions import AssetConnectorCriticalError, AssetConnectorSearchError
+from microsoft_ad.asset_connectors.exceptions import (
+    AssetConnectorCriticalError,
+    AssetConnectorSearchError,
+    RetryableStatusError,
+)
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
 from microsoft_ad.asset_connectors.user_assets_sync import MicrosoftADUserAssetSyncConnector
 from microsoft_ad.client.ldap_client import LDAPClient
@@ -501,6 +507,70 @@ def test_retry_stops_when_the_connector_is_stopped(tmp_path):
                 raise ConnectionError("Sekoia.io is unreachable")
 
     assert attempts == 1
+
+
+def retryable_answer(status_code: int, retry_after: str | None = None) -> RetryableStatusError:
+    response = requests.Response()
+    response.status_code = status_code
+    if retry_after is not None:
+        response.headers["Retry-After"] = retry_after
+    return RetryableStatusError(f"HTTP {status_code}", response=response)
+
+
+def run_retries(connector: MicrosoftADUserAssetSyncConnector, errors: list[Exception]) -> list[float]:
+    """Run `_retry` over attempts raising `errors` then succeeding, and return the waits asked."""
+    waits: list[float] = []
+
+    def record_wait(timeout: float) -> bool:
+        waits.append(timeout)
+        return False
+
+    connector._stop_event.wait = record_wait  # type: ignore[method-assign,assignment]
+    attempts = iter(errors)
+    for attempt in connector._retry():
+        with attempt:
+            if error := next(attempts, None):
+                raise error
+    return waits
+
+
+@pytest.mark.parametrize(
+    "error, expected_wait",
+    [
+        (retryable_answer(429, retry_after="7"), 7),
+        (retryable_answer(503, retry_after="2"), 2),
+        # No or invalid `Retry-After`: the exponential backoff
+        (retryable_answer(429), 1),
+        (retryable_answer(429, retry_after="soon"), 1),
+        (requests.ConnectionError("connection reset"), 1),
+    ],
+)
+def test_retry_waits_for_the_retry_after_of_the_answer(tmp_path, error, expected_wait):
+    connector = MicrosoftADUserAssetSyncConnector(module=MicrosoftADModule(), data_path=tmp_path)
+
+    assert run_retries(connector, [error]) == [expected_wait]
+
+
+def test_retry_gives_up_when_the_retry_after_exceeds_the_time_left(tmp_path):
+    connector = MicrosoftADUserAssetSyncConnector(module=MicrosoftADModule(), data_path=tmp_path)
+    error = retryable_answer(429, retry_after=str(connector.PUSH_RETRY_MAX_DELAY + 1))
+
+    with pytest.raises(RetryableStatusError):
+        run_retries(connector, [error])
+
+
+def test_retry_wakes_up_when_the_connector_is_stopped(tmp_path):
+    connector = MicrosoftADUserAssetSyncConnector(module=MicrosoftADModule(), data_path=tmp_path)
+    Timer(0.1, connector.stop).start()
+    started = time.monotonic()
+
+    with pytest.raises(RetryableStatusError):
+        for attempt in connector._retry():
+            with attempt:
+                raise retryable_answer(429, retry_after="60")
+
+    # Stopped after 0.1 s: well before the 60 s asked, and before the 1 s of the shortest backoff
+    assert time.monotonic() - started < 0.8
 
 
 def test_ldap_connection_has_a_receive_timeout():

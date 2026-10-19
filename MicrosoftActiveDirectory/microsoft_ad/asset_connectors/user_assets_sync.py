@@ -10,7 +10,8 @@ from ldap3.core.results import (
 )
 from sekoia_automation.asset_connector.models.connector import AssetList
 from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel
-from tenacity import Retrying, stop_after_delay, stop_when_event_set, wait_exponential
+from tenacity import RetryCallState, Retrying, stop_before_delay, stop_when_event_set, wait_exponential
+from tenacity.wait import wait_base
 
 from microsoft_ad.asset_connectors.exceptions import (
     AssetConnectorCriticalError,
@@ -20,7 +21,7 @@ from microsoft_ad.asset_connectors.exceptions import (
     RetryableStatusError,
 )
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
-from microsoft_ad.helpers import sort_control
+from microsoft_ad.helpers import retry_after_seconds, sort_control
 
 RETRYABLE_STATUS = {408, 429}
 
@@ -28,6 +29,21 @@ RETRYABLE_STATUS = {408, 429}
 def raise_on_retryable_status(response: requests.Response, *args: Any, **kwargs: Any) -> None:
     if response.status_code in RETRYABLE_STATUS or response.status_code >= 500:
         raise RetryableStatusError(f"HTTP {response.status_code} from {response.url}", response=response)
+
+
+class wait_retry_after(wait_base):
+    """Wait for the `Retry-After` of a transient error answer, or fall back to `fallback`."""
+
+    def __init__(self, fallback: wait_base) -> None:
+        self.fallback = fallback
+
+    def __call__(self, retry_state: RetryCallState) -> float:
+        error = retry_state.outcome.exception() if retry_state.outcome else None
+        if isinstance(error, RetryableStatusError) and error.response is not None:
+            delay = retry_after_seconds(error.response.headers.get("Retry-After"))
+            if delay is not None:
+                return delay
+        return self.fallback(retry_state)
 
 
 class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
@@ -68,8 +84,11 @@ class MicrosoftADUserAssetSyncConnector(MicrosoftADUserAssetConnector):
 
     def _retry(self) -> Retrying:  # type: ignore[override]
         return Retrying(
-            stop=stop_after_delay(self.PUSH_RETRY_MAX_DELAY) | stop_when_event_set(self._stop_event),
-            wait=wait_exponential(multiplier=1, min=1, max=10),
+            # Give up instead of waiting past the delay, e.g. for a `Retry-After` longer than the time left
+            stop=stop_before_delay(self.PUSH_RETRY_MAX_DELAY) | stop_when_event_set(self._stop_event),
+            wait=wait_retry_after(fallback=wait_exponential(multiplier=1, min=1, max=10)),
+            # Wake up as soon as the connector is stopped, instead of sleeping the whole wait
+            sleep=self._stop_event.wait,
             reraise=True,
         )
 

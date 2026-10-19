@@ -1,3 +1,6 @@
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
+
 # Server-side sort control (RFC 2891), supported by Active Directory
 SORT_REQUEST_CONTROL_OID = "1.2.840.113556.1.4.473"
 
@@ -23,3 +26,22 @@ def sort_control(attribute: str, reverse: bool = False) -> tuple[str, bool, byte
         key += b"\x81\x01\xff"
     sort_key = b"\x30" + ber_length(len(key)) + key
     return SORT_REQUEST_CONTROL_OID, True, b"\x30" + ber_length(len(sort_key)) + sort_key
+
+
+def retry_after_seconds(value: str | None, now: datetime | None = None) -> float | None:
+    """
+    The delay asked by a `Retry-After` header, in seconds or as an HTTP date (RFC 9110),
+    or None if the header is missing or invalid.
+    """
+    if not value:
+        return None
+    value = value.strip()
+    if value.isdigit():
+        return float(value)
+    try:
+        date = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if date.tzinfo is None:
+        date = date.replace(tzinfo=UTC)
+    return max(0.0, (date - (now or datetime.now(UTC))).total_seconds())
