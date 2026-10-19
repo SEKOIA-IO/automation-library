@@ -12,17 +12,14 @@ what samples talked to it.
 This action only reads. It never submits, never waits for a scan and never
 touches the sandbox, and it spends no scanning quota.
 
-The response items the installed client hands back from this call carry no
-parsed attributes of their own (unlike a hash search result): the client
-wraps the raw response JSON without extracting specific fields. This action
-reads that JSON through the same artifact document paths already
-established elsewhere in this module (artifact.sha256, scan.detections.*,
-scan.latest_scan.polyscore, polyunite.malware_family, tags), because that is
-the one document shape this codebase has verified PolySwarm uses for an
-artifact. A field absent from a particular response is left blank rather
-than guessed at.
+The live endpoint returns each match as a bare sha256 string, not as an
+artifact document (measured against the real API for ip, domain, ttp and
+imphash pivots). The client wraps each entry unchanged, so item.json is that
+string. A string item therefore yields an artifact with only sha256 and
+permalink filled in. A dict item, which this action also tolerates, is read only for its sha256.
 """
 
+import re
 from typing import Any
 
 from polyswarm_api import exceptions as ps_exceptions
@@ -31,7 +28,6 @@ from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction
 from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
-from polyswarm_modules.coerce import as_names, as_number, as_score, as_text
 from polyswarm_modules.validators import invalid_domain_reason, invalid_imphash_reason, invalid_ip_reason
 
 # A pivot on a busy indicator can match thousands of artifacts, and the client
@@ -40,6 +36,8 @@ from polyswarm_modules.validators import invalid_domain_reason, invalid_imphash_
 # on this side, as SearchMetadata does for the same reason.
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 200
+
+SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 
 
 class SearchIocArguments(BaseModel):
@@ -88,20 +86,7 @@ class SearchIocArguments(BaseModel):
 
 class IocArtifact(BaseModel):
     sha256: str = ""
-    sha1: str = ""
-    md5: str = ""
-    malicious_detections: int = 0
-    benign_detections: int = 0
-    total_detections: int = 0
-    polyscore: float | None = None
     permalink: str = ""
-    family: str = ""
-    families: list[str] = Field(default_factory=list)
-    tags: list[str] = Field(default_factory=list)
-    first_seen: str = ""
-    last_scanned: str = ""
-    mimetype: str = ""
-    filenames: list[str] = Field(default_factory=list)
 
 
 class SearchIocResponse(BaseModel):
@@ -185,9 +170,10 @@ class SearchIoc(PolyswarmAction):
             iterator = api.search_by_ioc(**{indicator_type: indicator})
             results, truncated = self._collect(iterator, args.limit)
         except MISSING_RESULT:
-            # A 204 or 404 is the client's way of saying nothing matched, and
-            # an indicator PolySwarm has never seen is an ordinary outcome,
-            # not an error.
+            # A 204 or 404 on the first page is the client's way of saying
+            # nothing matched, and an indicator PolySwarm has never seen is an
+            # ordinary outcome, not an error. A stop after items were already
+            # collected is handled in _collect and never reaches here.
             results, truncated = [], False
         except ps_exceptions.InvalidValueException as exc:
             self.error(f"PolySwarm rejected '{indicator}' as an invalid {indicator_type} ({failure_kind(exc)}).")
@@ -233,41 +219,42 @@ class SearchIoc(PolyswarmAction):
         is what proves there was more, without being included in the answer.
         """
         items: list[IocArtifact] = []
-        for item in iterator:
-            if len(items) >= limit:
+        try:
+            for item in iterator:
+                if len(items) >= limit:
+                    return items, True
+                items.append(SearchIoc._build_artifact(item))
+        except MISSING_RESULT:
+            # The client can report "no results" part way through paging. With
+            # nothing collected that is a genuine not found. With items already
+            # in hand the pivot did match, so they are kept, and the answer is
+            # flagged truncated because the pages after the stop were never
+            # read. The response model has no separate incomplete field, and
+            # truncated is the one flag a playbook already treats as "do not
+            # read this as the full set".
+            if items:
                 return items, True
-            items.append(SearchIoc._build_artifact(item))
+            return [], False
         return items, False
 
     @staticmethod
     def _build_artifact(item: Any) -> IocArtifact:
-        document: dict[str, Any] = getattr(item, "json", None) or {}
-        artifact: dict[str, Any] = document.get("artifact") or {}
-        scan: dict[str, Any] = document.get("scan") or {}
-        latest_scan: dict[str, Any] = scan.get("latest_scan") or {}
-        detections: dict[str, Any] = scan.get("detections") or {}
-        polyunite: dict[str, Any] = document.get("polyunite") or {}
+        """Reduce one pivot match to its sha256 and permalink.
 
-        family = polyunite.get("malware_family", "") if isinstance(polyunite, dict) else ""
-        families = as_names(family) + as_names(document.get("families"))
+        The live endpoint returns a bare sha256 string per match, and that is
+        all it knows about the artifact. A dict item is still tolerated, and
+        only its sha256 is read. A value that is not a sha256 is not trusted:
+        the row is kept so returned_count stays honest, but sha256 and
+        permalink stay blank rather than building a link from arbitrary text.
+        """
+        raw = getattr(item, "json", None)
+        candidate: Any = raw
+        if isinstance(raw, dict):
+            artifact = raw.get("artifact")
+            candidate = (artifact.get("sha256") if isinstance(artifact, dict) else None) or raw.get("sha256")
 
-        sha256 = as_text(artifact.get("sha256") or document.get("sha256")).lower()
-        permalink = f"{ps_settings.DEFAULT_PERMALINK_BASE}/{sha256}" if sha256 else ""
-
-        return IocArtifact(
-            sha256=sha256,
-            sha1=as_text(artifact.get("sha1") or document.get("sha1")),
-            md5=as_text(artifact.get("md5") or document.get("md5")),
-            malicious_detections=as_number(detections.get("malicious")),
-            benign_detections=as_number(detections.get("benign")),
-            total_detections=as_number(detections.get("total")),
-            polyscore=as_score(latest_scan.get("polyscore")),
-            permalink=permalink,
-            family=family or "",
-            families=as_names(families),
-            tags=as_names(document.get("tags")),
-            first_seen=as_text((scan.get("first_scan") or {}).get("created")),
-            last_scanned=as_text(latest_scan.get("created")),
-            mimetype=as_text((scan.get("mimetype") or {}).get("mime")),
-            filenames=as_names(scan.get("filename")),
-        )
+        if isinstance(candidate, str):
+            sha256 = candidate.strip().lower()
+            if SHA256_PATTERN.fullmatch(sha256):
+                return IocArtifact(sha256=sha256, permalink=f"{ps_settings.DEFAULT_PERMALINK_BASE}/{sha256}")
+        return IocArtifact()

@@ -25,6 +25,11 @@ def _as_names(values: Any) -> list[str]:
     The tag link resource hands back whatever the endpoint sent, which is a
     list of names on the current API and a list of objects carrying a name on
     older deployments. Anything else is treated as no attribution at all.
+
+    Deliberately not coerce.as_names: that one also accepts a bare string as a
+    single name, while here a bare string is no attribution (so "Emotet" gives
+    an empty list). Deduplication is left to _unique, applied where the lists
+    are merged, so the actor lookup still sees the tags as sent.
     """
     if not isinstance(values, (list, tuple, set)):
         return []

@@ -117,9 +117,10 @@ THE API KEY
 
 It comes from self.module.configuration.apikey and is never logged, never put in
 an event, and never interpolated into a message. Failures are reported by
-exception class name only. The client's own exception text can embed the request
-parameters that produced it, so formatting an exception into a log line is how a
-query, and on some code paths a credential, escapes.
+exception class name and message, and the message first goes through the
+trigger's redaction, which strips the key. The client's own exception text can
+embed the request parameters that produced it, so an exception is never
+formatted into a log line raw.
 
 ARTIFACTS THAT QUALIFY LATE
 
@@ -165,9 +166,9 @@ from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
 from sekoia_automation.storage import PersistentJSON
 
 from polyswarm_modules import PolyswarmModule
-from polyswarm_modules.client import MISSING_RESULT, build_client
+from polyswarm_modules.client import MISSING_RESULT, build_client, redact_key
 from polyswarm_modules.coerce import NUMERIC_ERRORS, as_names, as_score, as_text
-from polyswarm_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from polyswarm_modules.metrics import COLLECTED_EVENTS, EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 # The Splunk input applies these ceilings and refuses a larger value at save time
 # rather than silently correcting it. They are repeated here so the two products
@@ -387,6 +388,13 @@ def _as_number(value: Any) -> int | None:
         return None
 
 
+class TruncatedWindowError(Exception):
+    """A later page answered with no result after earlier pages had delivered some.
+
+    The window was read only in part, so it must not be marked done.
+    """
+
+
 class IntelFeed(Connector):
     """Pull new PolySwarm artifacts on a schedule and push them to an intake."""
 
@@ -418,6 +426,13 @@ class IntelFeed(Connector):
         # True once the "matched nothing" line has been said for the current
         # run of idle cycles. Reset when anything else happens.
         self._idle_announced = False
+        # Artifacts dropped while reading the window, by reason. Reset by each
+        # collect, so after collect_fitting_window it describes the final attempt.
+        self._dropped: dict[str, int] = {}
+
+    def redact(self, error: Exception) -> str:
+        """Message of an error with the API key removed."""
+        return redact_key(error, self.module.configuration.apikey)
 
     @property
     def frequency(self) -> int:
@@ -618,22 +633,44 @@ class IntelFeed(Connector):
         return {str(digest) for digest in stored}
 
     def remember_digests(self, digests: list[str]) -> None:
-        """Record this run's digests so the next run can refuse the boundary repeat."""
+        """Record this run's digests so the next run can refuse the boundary repeat.
+
+        Digests already remembered are kept behind the new ones, up to the cap.
+        A retry of a window whose digests were saved before a crash dedupes every
+        event and so has no digests of its own, and replacing the list with that
+        empty one would forget the boundary it exists to remember.
+        """
         with self.digests as cache:
-            cache["emitted_digests"] = digests[:MAX_REMEMBERED_DIGESTS]
+            previous = [str(digest) for digest in cache.get("emitted_digests") or []]
+            fresh = set(digests)
+            merged = digests + [digest for digest in previous if digest not in fresh]
+            cache["emitted_digests"] = merged[:MAX_REMEMBERED_DIGESTS]
 
     def results(self, api: PolyswarmAPI, query: str) -> Iterator[Any]:
         """Walk every page of a metadata search.
 
         The client returns a generator that fetches the next page on demand, so
-        pagination happens by consuming this. A 204 or a 404 is the client's way
-        of saying there is nothing more, on the first page or any later one, and
-        is not an error.
+        pagination happens by consuming this. Every later page is a full request
+        run through the same response parsing as the first, so a 204 or a 404 can
+        come back on any page, not only the first.
+
+        On the first page it means the window is empty, which is a clean result.
+        After at least one artifact has been yielded it cannot be told apart from
+        a truncated window, and treating it as the end would advance the
+        checkpoint past artifacts that were never read. It raises
+        TruncatedWindowError instead, so the cycle fails and the window is asked
+        for again.
         """
+        yielded = 0
         try:
-            yield from api.search_by_metadata(query)
-        except MISSING_RESULT:
-            return
+            for item in api.search_by_metadata(query):
+                yielded += 1
+                yield item
+        except MISSING_RESULT as missing:
+            if yielded:
+                raise TruncatedWindowError(
+                    f"a later page answered with no result after {yielded} artifacts ({type(missing).__name__})"
+                ) from missing
 
     def collect(
         self, window_start: datetime, window_end: datetime, enforce_ceiling: bool = True
@@ -651,22 +688,32 @@ class IntelFeed(Connector):
         digests: list[str] = []
         seen: set[str] = set()
         unreadable = 0
+        duplicates = 0
+        self._dropped = {}
 
         for item in self.results(api, query):
+            # The dump sits inside the guard with the build, so one document that
+            # cannot be turned into an event is counted and skipped, never
+            # allowed to abandon the rest of the window.
             try:
                 event = self.build_event(item)
+                dumped = event.model_dump() if event is not None else None
             except EVENT_BUILD_ERRORS:
                 event = None
-            if event is None:
+                dumped = None
+            if event is None or dumped is None:
                 unreadable += 1
                 continue
             if event.sha256 in seen or event.sha256 in already_seen:
+                duplicates += 1
                 continue
             if enforce_ceiling and len(events) >= self.configuration.max_events_per_run:
                 return [], [], True
             seen.add(event.sha256)
             digests.append(event.sha256)
-            events.append(event.model_dump())
+            events.append(dumped)
+
+        self._dropped = {"duplicate": duplicates, "unreadable": unreadable}
 
         if unreadable:
             self.log(
@@ -754,8 +801,12 @@ class IntelFeed(Connector):
         self.sleep(delay)
         return 0
 
-    def next_run(self) -> int:
-        """Run one poll cycle. Returns the number of events pushed."""
+    def next_run(self) -> int:  # type: ignore[override]
+        """Run one poll cycle. Returns the number of events pushed.
+
+        The SDK declares no return value. The count is returned so the tests
+        can assert what a cycle did without reading the intake.
+        """
         window_start = self.checkpoint.offset
         window_end = self.window_end(window_start)
         if window_end is None:
@@ -768,10 +819,17 @@ class IntelFeed(Connector):
 
         try:
             events, digests, window_end, oversized = self.collect_fitting_window(window_start, window_end)
+        except TruncatedWindowError as exception:
+            # Part of the window was read and then the feed answered empty. The
+            # checkpoint stays put so the whole window is asked for again.
+            return self.fail_cycle(f"The PolySwarm intel pull was cut short, {exception}")
         except Exception as exception:
-            # Only the class name. The client's exception text can carry the
-            # request that produced it, and the request carries the query.
-            return self.fail_cycle(f"PolySwarm rejected the intel pull ({type(exception).__name__})")
+            # The client's exception text can carry the request that produced
+            # it, and the request carries the query, so the message goes through
+            # the key redaction the trigger uses.
+            return self.fail_cycle(
+                f"PolySwarm rejected the intel pull ({type(exception).__name__}: {self.redact(exception)})"
+            )
 
         if oversized:
             self.log(
@@ -785,6 +843,7 @@ class IntelFeed(Connector):
             )
 
         events, digests, dropped = self.drop_oversized(events, digests)
+        self._dropped["oversized"] = dropped
         if dropped:
             self.log(
                 message=(
@@ -798,7 +857,10 @@ class IntelFeed(Connector):
             # The SDK never raises from a push. A chunk that still fails after
             # its retries is logged and left out of the returned ids, so the
             # shortfall is the only sign that events did not arrive.
-            event_ids = self.push_events_to_intakes(events)
+            # The SDK accepts dicts, strings or models, and a list is invariant,
+            # so the wider element type has to be spelled out to hand ours over.
+            payload: list[dict[str, Any] | str | BaseModel] = list(events)
+            event_ids = self.push_events_to_intakes(payload)
             if len(event_ids) < len(events):
                 return self.fail_cycle(
                     f"The intake accepted {len(event_ids)} of {len(events)} events, so the window was not "
@@ -807,9 +869,17 @@ class IntelFeed(Connector):
             OUTCOMING_EVENTS.labels(intake_key=intake_key).inc(len(event_ids))
             self.log(message=f"Pushed {len(events)} PolySwarm artifacts", level="info")
 
+        for reason, count in self._dropped.items():
+            if count:
+                COLLECTED_EVENTS.labels(intake_key=intake_key, reason=reason).inc(count)
+
         self._consecutive_failures = 0
-        self.checkpoint.offset = window_end
+        # Digests first. A crash between the two writes then leaves the window
+        # open with its digests saved, so the retry refuses every event it
+        # already pushed. The other order leaves the window closed with no
+        # digests, and the next window's boundary artifact is pushed twice.
         self.remember_digests(digests)
+        self.checkpoint.offset = window_end
         self.remember_window_span(window_end - window_start, halved=window_end < requested_end)
 
         now = datetime.now(UTC)
@@ -883,7 +953,10 @@ class IntelFeed(Connector):
                 self.next_run()
             except Exception as exception:
                 self.log(
-                    message=f"The PolySwarm intel feed stopped unexpectedly ({type(exception).__name__})",
+                    message=(
+                        "The PolySwarm intel feed stopped unexpectedly "
+                        f"({type(exception).__name__}: {self.redact(exception)})"
+                    ),
                     level="error",
                 )
                 self.sleep(self.frequency)

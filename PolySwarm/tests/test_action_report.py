@@ -654,8 +654,10 @@ def test_client_error_looking_up_report_returns_none_with_safe_message(
 
 
 def test_a_wait_beyond_the_ceiling_is_rejected(action: Report) -> None:
-    with pytest.raises(ValueError):
-        action.run({"sha256": "aa" * 32, "max_wait_seconds": 301})
+    response = action.run({"sha256": "aa" * 32, "max_wait_seconds": 301})
+    assert response is None
+    assert action.error_message is not None
+    assert "max_wait_seconds" in action.error_message
 
 
 @pytest.mark.parametrize("value", ["not-a-hash", "zz" * 32, "", "aa" * 16, "aa" * 20])
@@ -727,12 +729,139 @@ def test_triage_static_score_is_used_when_the_dynamic_score_is_absent(
 
 
 @patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
-def test_an_unreadable_score_does_not_raise_and_falls_back_to_the_family(
+def test_an_unreadable_score_does_not_raise_and_is_not_a_clean_verdict(
     mock_build_client: MagicMock, action: Report
 ) -> None:
-    assert _verdict_for(mock_build_client, action, "cape", {"cape_malscore": "n/a"}) is False
+    assert _verdict_for(mock_build_client, action, "cape", {"cape_malscore": "n/a"}) is None
 
 
 @patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
-def test_signatures_alone_never_make_a_report_malicious(mock_build_client: MagicMock, action: Report) -> None:
-    assert _verdict_for(mock_build_client, action, "cape", {}, CAPE_REPORT) is False
+def test_signatures_alone_never_make_a_report_malicious_or_clean(mock_build_client: MagicMock, action: Report) -> None:
+    assert _verdict_for(mock_build_client, action, "cape", {}, CAPE_REPORT) is None
+
+
+# --- Unscored reports are not clean reports -----------------------------------
+
+_NO_FAMILY_REPORT = {"malware_family": [], "ttp": [], "signature_names": ["queries_computer_name"], "network": {}}
+
+
+def _assert_unscored(response: dict, action: Report) -> None:
+    assert response["status"] == "SUCCEEDED"
+    assert response["malicious"] is None
+    assert response["unscored"] is True
+    assert action._outputs == {"no report available": True}
+    assert "not malicious" not in action._outputs
+    # The evidence is still handed over for an analyst.
+    assert response["report"] == _NO_FAMILY_REPORT
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_a_succeeded_report_with_no_score_and_no_family_is_not_a_clean_verdict(
+    mock_build_client: MagicMock, action: Report
+) -> None:
+    task = _make_sandbox_task(sandbox="cape", report=_NO_FAMILY_REPORT, config={})
+    mock_build_client.return_value.sandbox_task_latest.return_value = task
+
+    response = action.run({"sha256": "aa" * 32})
+    assert response is not None
+    _assert_unscored(response, action)
+
+
+@pytest.mark.parametrize(
+    ("sandbox", "config"),
+    [
+        ("cape", None),
+        ("cape", {"cape_malscore": None}),
+        ("cape", {"cape_malscore": "n/a"}),
+        ("cape", {"triage_static_score": 9}),
+        ("triage", {}),
+        ("triage", {"traige_analysis_score": None, "triage_analysis_score": None, "triage_static_score": None}),
+        ("triage", {"traige_analysis_score": "n/a"}),
+        ("triage", {"cape_malscore": 9}),
+        ("other", {"cape_malscore": 9, "traige_analysis_score": 9}),
+    ],
+)
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_each_cause_of_a_missing_score_reads_as_unscored_not_clean(
+    mock_build_client: MagicMock, action: Report, sandbox: str, config: dict | None
+) -> None:
+    task = _make_sandbox_task(sandbox=sandbox, report=_NO_FAMILY_REPORT)
+    task.config = config
+    mock_build_client.return_value.sandbox_task_latest.return_value = task
+
+    response = action.run({"sha256": "aa" * 32, "sandbox": sandbox})
+    assert response is not None
+    _assert_unscored(response, action)
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_a_scored_clean_report_is_still_not_malicious_and_not_unscored(
+    mock_build_client: MagicMock, action: Report
+) -> None:
+    task = _make_sandbox_task(sandbox="cape", report=_NO_FAMILY_REPORT, config={"cape_malscore": 0.5})
+    mock_build_client.return_value.sandbox_task_latest.return_value = task
+
+    response = action.run({"sha256": "aa" * 32})
+    assert response is not None
+    assert response["malicious"] is False
+    assert response["unscored"] is False
+    assert action._outputs == {"not malicious": True}
+
+
+# --- include_raw_report -------------------------------------------------------
+
+
+def _run_with_flag(mock_build_client: MagicMock, action: Report, task: MagicMock, **extra: object) -> dict:
+    mock_build_client.return_value.sandbox_task_latest.return_value = task
+    response = action.run({"sha256": "aa" * 32, "sandbox": task.sandbox, **extra})
+    assert response is not None
+    return response
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_include_raw_report_defaults_to_returning_the_whole_report(
+    mock_build_client: MagicMock, action: Report
+) -> None:
+    task = _make_sandbox_task(config={"cape_malscore": 6.0}, report=CAPE_REPORT)
+    response = _run_with_flag(mock_build_client, action, task)
+    assert response["report"] == CAPE_REPORT
+
+    explicit = _run_with_flag(mock_build_client, action, task, include_raw_report=True)
+    assert explicit == response
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_include_raw_report_false_nulls_only_the_report(mock_build_client: MagicMock, action: Report) -> None:
+    task = _make_sandbox_task(config={"cape_malscore": 6.0}, report=CAPE_REPORT)
+    full = _run_with_flag(mock_build_client, action, task)
+    slim = _run_with_flag(mock_build_client, action, task, include_raw_report=False)
+
+    assert slim["report"] is None
+    assert {k: v for k, v in slim.items() if k != "report"} == {k: v for k, v in full.items() if k != "report"}
+    assert slim["behavior"] == full["behavior"]
+    assert slim["behavior"]["behavior_signatures"]
+    assert slim["unscored"] is False
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_include_raw_report_false_still_gives_the_malicious_verdict(
+    mock_build_client: MagicMock, action: Report
+) -> None:
+    task = _make_sandbox_task(config={"cape_malscore": 9.0}, report=CAPE_REPORT)
+    response = _run_with_flag(mock_build_client, action, task, include_raw_report=False)
+    assert response["malicious"] is True
+    assert response["report"] is None
+    assert action._outputs == {"malicious": True}
+
+    triage = _make_sandbox_task(sandbox="triage", config={"traige_analysis_score": 8}, report=TRIAGE_REPORT)
+    response = _run_with_flag(mock_build_client, action, triage, include_raw_report=False)
+    assert response["malicious"] is True
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_include_raw_report_false_keeps_the_unscored_flag(mock_build_client: MagicMock, action: Report) -> None:
+    task = _make_sandbox_task(sandbox="cape", report=_NO_FAMILY_REPORT, config={})
+    response = _run_with_flag(mock_build_client, action, task, include_raw_report=False)
+    assert response["malicious"] is None
+    assert response["unscored"] is True
+    assert response["report"] is None

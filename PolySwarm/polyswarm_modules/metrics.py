@@ -25,3 +25,10 @@ EVENTS_LAG = Gauge(
     namespace=prom_namespace,
     labelnames=["intake_key"],
 )
+
+COLLECTED_EVENTS = Counter(
+    name="collected_events",
+    documentation="Number of collected events dropped before forwarding, by reason",
+    namespace=prom_namespace,
+    labelnames=["intake_key", "reason"],
+)

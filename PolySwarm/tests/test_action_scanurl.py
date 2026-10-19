@@ -239,8 +239,10 @@ def test_a_scan_that_outlasts_the_wait_is_reported_as_still_running(
 
 @pytest.mark.parametrize("seconds", [29, 601])
 def test_a_wait_outside_the_bounds_is_rejected(action: ScanUrl, seconds: int) -> None:
-    with pytest.raises(ValueError):
-        action.run({**{"url": "https://evil.example.com/payload"}, "max_wait_seconds": seconds})
+    response = action.run({**{"url": "https://evil.example.com/payload"}, "max_wait_seconds": seconds})
+    assert response is None
+    assert action.error_message is not None
+    assert "max_wait_seconds" in action.error_message
 
 
 @patch("polyswarm_modules.action_polyswarm_scanurl.build_client", new_callable=autospec_build_client)
@@ -269,3 +271,22 @@ def test_credentials_in_the_url_are_not_logged(mock_build_client: MagicMock, act
     logged = " ".join(str(call.args[0]) for call in log.call_args_list)
     assert "evil.example.com/payload" in logged
     assert "hunter2" not in logged
+
+
+@patch("polyswarm_modules.action_polyswarm_scanurl.build_client", new_callable=autospec_build_client)
+def test_null_failed_and_text_fields_do_not_raise(mock_build_client: MagicMock, action: ScanUrl) -> None:
+    existing = _make_scan_result()
+    existing.failed = None
+    existing.sha256 = None
+    existing.extended_type = None
+    existing.permalink = None
+    mock_build_client.return_value.search_url.return_value = iter([existing])
+
+    response = action.run({"url": "https://evil.example.com/payload"})
+
+    assert response is not None
+    assert response["failed"] is False
+    assert response["sha256"] == ""
+    assert response["extended_type"] == ""
+    assert response["permalink"] == ""
+    assert response["cached"] is True

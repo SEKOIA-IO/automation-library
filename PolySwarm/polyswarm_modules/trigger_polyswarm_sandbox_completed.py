@@ -67,7 +67,7 @@ from sekoia_automation.storage import PersistentJSON
 from sekoia_automation.trigger import Trigger
 
 from polyswarm_modules import PolyswarmModule
-from polyswarm_modules.client import CLIENT_ERRORS, RETRY_TOTAL, build_client, failure_kind
+from polyswarm_modules.client import CLIENT_ERRORS, RETRY_TOTAL, build_client, failure_kind, redact_key
 from polyswarm_modules.coerce import as_optional_text
 from polyswarm_modules.sandbox import TERMINAL_STATUSES, report_url
 
@@ -106,6 +106,10 @@ MAX_BACKOFF_SECONDS: int = 1800
 # it. A task whose lookup fails every time is a problem with that task, not with
 # the account, and polling it for six hours would spend lookups other tasks need.
 MAX_LOOKUP_FAILURES: int = 5
+
+# How many failed sends a single task gets before we stop retrying its event.
+# Counted apart from lookup failures, since a lookup that succeeds resets those.
+MAX_EMIT_FAILURES: int = 5
 
 # When at least this many lookups ran in one cycle and every one of them failed,
 # the cause is the service rather than the tasks, so the cycle fails and backs
@@ -195,7 +199,7 @@ class SandboxCompleted(Trigger):
     """
 
     module: PolyswarmModule
-    configuration: SandboxCompletedConfiguration  # type: ignore[assignment]
+    configuration: SandboxCompletedConfiguration  # type: ignore[assignment,override]
     results_model = SandboxCompletedEvent
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -279,6 +283,10 @@ class SandboxCompleted(Trigger):
         known_before = already_emitted | set(self._in_flight())
         emitted = 0
         on_page: set[str] = set()
+        # Send attempts and failures across the page and the identifier lookups,
+        # settled together at the end of the cycle, see _settle_emit_failures.
+        attempted: list[str] = []
+        failures: list[tuple[str, Exception]] = []
 
         page = self._recent_tasks()
         self._warn_if_page_rolled_past(page, known_before, first_run)
@@ -300,8 +308,10 @@ class SandboxCompleted(Trigger):
                 self._remember(task_id)
                 already_emitted.add(task_id)
             else:
-                if self._emit(task, task_id):
+                if self._emit_safely(task, task_id, attempted, failures):
                     emitted += 1
+                # A task whose send failed is no longer judged from the page: it
+                # is in the in flight set, and retried there by identifier.
                 already_emitted.add(task_id)
 
         if first_run:
@@ -319,7 +329,9 @@ class SandboxCompleted(Trigger):
                 level="info",
             )
 
-        return emitted + self._check_in_flight(already_emitted, on_page)
+        emitted += self._check_in_flight(already_emitted, on_page, attempted, failures)
+        self._settle_emit_failures(attempted, failures)
+        return emitted
 
     def _warn_if_page_rolled_past(self, page: list[Any], known_before: set[str], first_run: bool) -> None:
         """Say so when the newest page shares nothing with what this trigger has seen.
@@ -360,7 +372,48 @@ class SandboxCompleted(Trigger):
         self._remember(task_id)
         return True
 
-    def _check_in_flight(self, already_emitted: set[str], on_page: set[str]) -> int:
+    def _emit_safely(
+        self, task: Any, task_id: str, attempted: list[str], failures: list[tuple[str, Exception]]
+    ) -> bool:
+        """Emit one task, keeping a failure to that task so the rest of the page still goes out.
+
+        A failed send leaves the task unrecorded, as _emit promises. It is also
+        put into the in flight set, so it is retried by identifier on later
+        polls even once ten newer tasks have pushed it off the page, and the
+        failure is handed back for _settle_emit_failures to charge.
+        """
+        if self._is_reportable(task):
+            attempted.append(task_id)
+        try:
+            return self._emit(task, task_id)
+        except Exception as error:  # one bad task must not stop the others
+            self._track_in_flight(task_id)
+            failures.append((task_id, error))
+            return False
+
+    def _settle_emit_failures(self, attempted: list[str], failures: list[tuple[str, Exception]]) -> None:
+        """Charge each failed send to its task, unless every send failed.
+
+        Unlike lookups, a cycle can legitimately try a single send, and one
+        failure out of one is no evidence about the task. So when at least one
+        send was tried and none went through, the channel is suspect: the
+        cycle fails and backs off and no task spends its budget. Only a cycle
+        with at least one successful send shows the channel is healthy, and
+        then each failure counts against its own task, and MAX_EMIT_FAILURES
+        of them end the retrying.
+        """
+        if failures and len(failures) == len(attempted):
+            raise failures[-1][1]
+        for task_id, error in failures:
+            self._charge_emit_failure(task_id, error)
+
+    def _check_in_flight(
+        self,
+        already_emitted: set[str],
+        on_page: set[str],
+        attempted: list[str] | None = None,
+        failures: list[tuple[str, Exception]] | None = None,
+    ) -> int:
         """Look up, by identifier, the running tasks that the newest page no longer shows.
 
         Tasks still on the page were judged from the page itself, which is as
@@ -383,6 +436,10 @@ class SandboxCompleted(Trigger):
             key=lambda task_id: in_flight[task_id]["last_checked"],
         )
 
+        if attempted is None:
+            attempted = []
+        if failures is None:
+            failures = []
         emitted = 0
         deadline = self._now() + self.configuration.frequency * IN_FLIGHT_BUDGET_SHARE
         checked = 0
@@ -414,7 +471,7 @@ class SandboxCompleted(Trigger):
             self._clear_lookup_failures(task_id)
             if not self._is_terminal(task):
                 continue
-            if self._emit(task, task_id):
+            if self._emit_safely(task, task_id, attempted, failures):
                 emitted += 1
             already_emitted.add(task_id)
 
@@ -468,6 +525,36 @@ class SandboxCompleted(Trigger):
             self.log(
                 f"Could not look up running sandbox task {task_id} ({failure_kind(error)}), "
                 f"failure {failures} of {MAX_LOOKUP_FAILURES}",
+                level="warning",
+            )
+
+    def _charge_emit_failure(self, task_id: str, error: Exception) -> None:
+        """Count one failed send against a task, and give up on it after MAX_EMIT_FAILURES.
+
+        Kept apart from the lookup count because a lookup that works clears that
+        one, and a task that is found every time but never sends would then
+        never reach the limit. Giving up records the task as handled: left out
+        of the emitted store it would still be on the newest page, be judged
+        again, and be retried every cycle for as long as it stays there.
+        """
+        with self._store as cache:
+            in_flight = dict(cache.get(IN_FLIGHT_KEY, {}))
+            record = in_flight.get(task_id)
+            failures = int((record or {}).get("emit_failures", 0)) + 1
+            if record is not None and failures < MAX_EMIT_FAILURES:
+                in_flight[task_id] = {**record, "emit_failures": failures}
+                cache[IN_FLIGHT_KEY] = in_flight
+        if failures >= MAX_EMIT_FAILURES:
+            self._remember(task_id)
+            self.log(
+                f"Stopped retrying the event for sandbox task {task_id} after {failures} failed sends "
+                f"({failure_kind(error)}). It will not produce an event",
+                level="warning",
+            )
+        else:
+            self.log(
+                f"Could not send the event for sandbox task {task_id} ({failure_kind(error)}), "
+                f"failure {failures} of {MAX_EMIT_FAILURES}, will retry",
                 level="warning",
             )
 
@@ -662,16 +749,8 @@ class SandboxCompleted(Trigger):
         self._wait(delay)
 
     def _redact(self, error: Exception) -> str:
-        """Strip the API key out of anything headed for a log line.
-
-        The PolySwarm client renders request parameters into some of its error
-        messages, so the message is never trusted to be key free.
-        """
-        message = str(error) or error.__class__.__name__
-        apikey = self.module.configuration.apikey
-        if apikey:
-            message = message.replace(apikey, "[REDACTED]")
-        return message
+        """Strip the API key out of anything headed for a log line."""
+        return redact_key(error, self.module.configuration.apikey)
 
     def _wait(self, seconds: float) -> None:
         """Sleep, but wake up at once when Sekoia asks the trigger to stop."""

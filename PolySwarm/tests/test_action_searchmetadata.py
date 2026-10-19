@@ -102,8 +102,10 @@ def test_query_at_the_length_ceiling_is_accepted(action: SearchMetadata) -> None
 
 def test_limit_above_the_hard_ceiling_is_rejected_by_the_argument_model(action: SearchMetadata) -> None:
     with patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client) as mock_build_client:
-        with pytest.raises(Exception):
-            action.run({"query": "tags:ransomware", "limit": MAX_LIMIT + 1})
+        response = action.run({"query": "tags:ransomware", "limit": MAX_LIMIT + 1})
+    assert response is None
+    assert action.error_message is not None
+    assert "limit" in action.error_message
     mock_build_client.assert_not_called()
 
 
@@ -182,6 +184,60 @@ def test_a_204_style_exception_is_treated_as_not_found_not_an_error(
     assert response["found"] is False
     assert action.error_message is None
     assert action._outputs == {"not found": True}
+
+
+def _pages_then_raise(items: list[Any], exc: Exception) -> Any:
+    """Yield items as a first page, then raise exc the way a later page's request does."""
+    yield from items
+    raise exc
+
+
+@pytest.mark.parametrize("exc_type", [ps_exceptions.NoResultsException, ps_exceptions.NotFoundException])
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
+def test_a_missing_result_on_a_later_page_keeps_the_collected_items(
+    mock_build_client: MagicMock, action: SearchMetadata, exc_type: type[Exception]
+) -> None:
+    items = [_make_item(sha256=f"{i:02x}" * 32) for i in range(1, 4)]
+    mock_build_client.return_value.search_by_metadata.return_value = _pages_then_raise(items, exc_type("page 2"))
+
+    response = action.run({"query": "tags:ransomware"})
+    assert response is not None
+
+    assert action.error_message is None
+    assert "not found" not in action._outputs
+    assert action._outputs == {"truncated": True}
+    assert response["found"] is True
+    assert response["incomplete"] is True
+    assert response["truncated"] is True
+    assert response["returned_count"] == 3
+    assert [r["sha256"] for r in response["results"]] == [f"{i:02x}" * 32 for i in range(1, 4)]
+
+
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
+def test_a_missing_result_on_the_first_page_is_not_incomplete(
+    mock_build_client: MagicMock, action: SearchMetadata
+) -> None:
+    mock_build_client.return_value.search_by_metadata.return_value = _pages_then_raise(
+        [], ps_exceptions.NoResultsException("204")
+    )
+
+    response = action.run({"query": "tags:nonexistent"})
+    assert response is not None
+
+    assert action._outputs == {"not found": True}
+    assert response["found"] is False
+    assert response["incomplete"] is False
+
+
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
+def test_a_complete_run_is_not_flagged_incomplete(mock_build_client: MagicMock, action: SearchMetadata) -> None:
+    mock_build_client.return_value.search_by_metadata.return_value = iter([_make_item()])
+
+    response = action.run({"query": "tags:ransomware"})
+    assert response is not None
+
+    assert response["incomplete"] is False
+    assert action._outputs == {"found": True}
 
 
 @patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)

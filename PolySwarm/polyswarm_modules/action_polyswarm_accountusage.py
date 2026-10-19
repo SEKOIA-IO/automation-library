@@ -4,7 +4,7 @@ from polyswarm_api import exceptions as ps_exceptions
 from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import CLIENT_ERRORS, build_client, failure_kind
+from polyswarm_modules.client import CLIENT_ERRORS, build_client, failure_kind, status_of
 from polyswarm_modules.coerce import NUMERIC_ERRORS
 
 # The account endpoints are the only place the platform states an entitlement,
@@ -31,7 +31,13 @@ def _as_text(value: Any) -> str:
 
 
 def _as_community_names(values: Any) -> list[str]:
-    """Normalise the community list, which is names on the current API and objects on older ones."""
+    """Normalise the community list, which is names on the current API and objects on older ones.
+
+    Deliberately not coerce.as_names: a community object is keyed by name or
+    slug (as_names reads name, tag or family, so it would drop a slug only
+    object), and the list keeps the order and repeats the account reports
+    rather than deduplicating, since it describes membership and not a label set.
+    """
     if not isinstance(values, (list, tuple, set)):
         return []
 
@@ -192,12 +198,9 @@ class AccountUsage(PolyswarmAction):
     @staticmethod
     def _failure_message(exc: Exception, attempt: str) -> str:
         """Describe a failed account call without quoting the client, which echoes the request back."""
-        # The polyswarm client keeps the status on the request it attaches to its own
-        # exceptions; a connection level failure from requests keeps it on the response.
-        carrier = getattr(exc, "response", None)
-        if carrier is None:
-            carrier = getattr(exc, "request", None)
-        status = getattr(carrier, "status_code", None)
+        # The lookup is client.status_of; what counts as a bad key or a spent
+        # quota is this action's own decision, so the comparisons stay here.
+        status = status_of(exc)
         if status in (401, 403):
             return (
                 f"PolySwarm rejected the configured API key, so it could not {attempt}. "

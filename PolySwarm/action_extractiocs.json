@@ -84,9 +84,16 @@
           "type": "string"
         }
       },
+      "skipped_filenames": {
+        "type": "array",
+        "description": "Bare names that end in a top level domain and were not reported as domains because they look like a file. These labels (zip, mov, sh, py, md and others) are both real top level domains and common file extensions, so the action cannot tell report.zip the file from report.zip the domain, and it lists the name here instead of guessing. They are not counted in total_count.",
+        "items": {
+          "type": "string"
+        }
+      },
       "total_count": {
         "type": "integer",
-        "description": "Total number of indicators returned across every list, including the reserved addresses"
+        "description": "Total number of indicators returned across every list, including the reserved addresses and excluding skipped_filenames"
       }
     }
   },

@@ -50,81 +50,17 @@
       },
       "results": {
         "type": "array",
-        "description": "Artifacts PolySwarm associates with the indicator. Empty when PolySwarm has never seen it.",
+        "description": "Artifacts PolySwarm associates with the indicator. Each entry carries the artifact's sha256 and a permalink only, because this endpoint returns no verdict, score, family, tag or metadata: look an entry's sha256 up with the Search Hash action to enrich it. Empty when PolySwarm has never seen the indicator.",
         "items": {
           "type": "object",
           "properties": {
             "sha256": {
               "type": "string",
-              "description": "SHA256 hash of the artifact"
-            },
-            "sha1": {
-              "type": "string",
-              "description": "SHA1 hash of the artifact, when the document carries one"
-            },
-            "md5": {
-              "type": "string",
-              "description": "MD5 hash of the artifact, when the document carries one"
-            },
-            "malicious_detections": {
-              "type": "integer",
-              "description": "Number of engines that returned a malicious verdict"
-            },
-            "benign_detections": {
-              "type": "integer",
-              "description": "Number of engines that returned a benign verdict"
-            },
-            "total_detections": {
-              "type": "integer",
-              "description": "Total number of engines that returned a verdict"
-            },
-            "polyscore": {
-              "type": [
-                "number",
-                "null"
-              ],
-              "description": "PolySwarm threat score (0.0 - 1.0), when the document carries one. Null when PolySwarm returned no score."
+              "description": "SHA256 hash of the artifact. Always populated."
             },
             "permalink": {
               "type": "string",
-              "description": "Link to the PolySwarm scan result"
-            },
-            "family": {
-              "type": "string",
-              "description": "Malware family name, when the metadata carries one"
-            },
-            "families": {
-              "type": "array",
-              "description": "Every malware family PolySwarm associates with the artifact. Empty when PolySwarm carries no family.",
-              "items": {
-                "type": "string"
-              }
-            },
-            "tags": {
-              "type": "array",
-              "description": "Tags PolySwarm associates with the artifact. Empty when there are none.",
-              "items": {
-                "type": "string"
-              }
-            },
-            "first_seen": {
-              "type": "string",
-              "description": "First seen timestamp, when the document carries one"
-            },
-            "last_scanned": {
-              "type": "string",
-              "description": "Last scanned timestamp, when the document carries one"
-            },
-            "mimetype": {
-              "type": "string",
-              "description": "MIME type of the artifact, when the document carries one"
-            },
-            "filenames": {
-              "type": "array",
-              "description": "Filenames PolySwarm has seen for the artifact",
-              "items": {
-                "type": "string"
-              }
+              "description": "Link to the PolySwarm result page for the sha256. Always populated."
             }
           }
         }
@@ -139,7 +75,7 @@
       },
       "truncated": {
         "type": "boolean",
-        "description": "True when PolySwarm holds more artifacts for the indicator than limit allowed to be returned. A truncated answer is not a complete one: raise limit to see more."
+        "description": "True when the answer is known to be incomplete, either because PolySwarm holds more artifacts for the indicator than limit allowed to be returned, or because paging stopped before every page was read. A truncated answer is not a complete one: raise limit to see more."
       }
     }
   },
@@ -147,6 +83,6 @@
   "outputs": {
     "found": "PolySwarm returned at least one artifact for the indicator, and every one of them was returned",
     "not found": "PolySwarm has never seen this indicator",
-    "truncated": "PolySwarm holds more artifacts for the indicator than limit allowed to be returned, so this answer is incomplete"
+    "truncated": "This answer is incomplete, either because PolySwarm holds more artifacts for the indicator than limit allowed to be returned, or because paging stopped early with artifacts already collected"
   }
 }

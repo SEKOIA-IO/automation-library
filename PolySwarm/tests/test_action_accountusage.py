@@ -387,3 +387,18 @@ def test_an_undecodable_plan_response_still_reports_the_identity(
 
     assert response is not None
     assert response["account_name"] == "Acme SOC"
+
+
+@patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)
+def test_community_list_keeps_slug_keys_and_repeats(mock_build_client: MagicMock, action: AccountUsage) -> None:
+    # Pins the deliberate difference from coerce.as_names: a community object is
+    # keyed by name or slug (not tag or family) and the account's list is not deduplicated.
+    api = mock_build_client.return_value
+    api.account_whois.return_value = _make_whois(
+        communities=[{"slug": "gamma"}, {"tag": "ignored"}, "default", "Default"]
+    )
+    api.account_features.return_value = _make_features()
+
+    response = action.run({})
+
+    assert response["communities"] == ["gamma", "default", "Default"]

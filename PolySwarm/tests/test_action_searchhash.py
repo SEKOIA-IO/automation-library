@@ -374,3 +374,19 @@ def test_only_the_first_result_is_consumed(mock_build_client: MagicMock, action:
     action.run({"query_hash": "ab" * 32})
 
     assert consumed == [0]
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhash.build_client", new_callable=autospec_build_client)
+def test_a_bare_string_tag_link_is_no_attribution(mock_build_client: MagicMock, action: SearchHash) -> None:
+    # Pins a deliberate difference from coerce.as_names, which would read a
+    # bare string as one name: here it is treated as no attribution at all.
+    api = mock_build_client.return_value
+    api.search.return_value = iter([_make_mock_result()])
+    api.tag_link_get.return_value = _make_tag_link(tags="actor:FIN7", families="Emotet")
+
+    response = action.run({"query_hash": "cc" * 32})
+    assert response is not None
+
+    assert response["tags"] == []
+    assert response["threat_actor"] == ""
+    assert response["families"] == ["GenericTrojan"]

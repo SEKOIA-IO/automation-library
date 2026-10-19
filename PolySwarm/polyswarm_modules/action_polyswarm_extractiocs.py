@@ -10,8 +10,10 @@ and an extractor that does not refang those forms silently returns nothing for
 the documents analysts share most often.
 
 Suppression is deliberate and narrow. A domain is only reported when its final
-label is a real top level domain and is not a common file extension, so
-report.docx does not read as a host. A domain that only appears as part of a
+label is on the IANA top level domain list and is not a common file extension,
+so report.docx does not read as a host. Where a label is both (zip, mov, sh),
+a bare name is treated as a file and listed in skipped_filenames rather than
+dropped; a URL or an email address on that host is extracted normally. A domain that only appears as part of a
 URL or an email address is not reported a second time on its own, because the
 longest match at a position wins; the same domain written on its own elsewhere
 in the text still reports as a domain. Private, loopback, link local and other
@@ -39,99 +41,62 @@ _FLAGS = re.IGNORECASE | re.ASCII
 # the length of the regular expression pass.
 MAX_INPUT_BYTES = 5 * 1024 * 1024
 
-# A curated top level domain list, not a public suffix list. It deliberately
-# leaves out labels that collide with common file extensions, such as zip, mov
-# and sh, so a filename in a report does not read as a host.
-ALLOWED_TLDS = (
-    # generic
-    "com",
-    "net",
-    "org",
-    "info",
-    "biz",
-    "pro",
-    "name",
-    "mobi",
-    "asia",
-    # infrastructure and newer generic labels that abuse tends to concentrate in
-    "io",
-    "co",
-    "app",
-    "dev",
-    "cloud",
-    "tech",
-    "online",
-    "site",
-    "store",
-    "shop",
-    "club",
-    "live",
-    "icu",
-    "vip",
-    "top",
-    "xyz",
-    "link",
-    "click",
-    "download",
-    "stream",
-    "work",
-    "space",
-    "fun",
-    "monster",
-    "cyou",
-    "rest",
-    # restricted
-    "gov",
-    "edu",
-    "mil",
-    "int",
-    # country codes seen most often in threat reporting
-    "us",
-    "uk",
-    "ca",
-    "eu",
-    "de",
-    "fr",
-    "nl",
-    "it",
-    "es",
-    "pl",
-    "se",
-    "no",
-    "fi",
-    "dk",
-    "ch",
-    "at",
-    "be",
-    "cz",
-    "ru",
-    "su",
-    "cn",
-    "jp",
-    "kr",
-    "in",
-    "br",
-    "au",
-    "za",
-    "tr",
-    "ua",
-    "ir",
-    "mx",
-    "ar",
-    "cc",
-    "tv",
-    "me",
-    "ws",
-    "pw",
-    "tk",
-    "ml",
-    "ga",
-    "cf",
-    "gq",
-)
+# The IANA top level domain list, vendored beside this module so nothing is
+# fetched at run time. It is read once at import and held as a frozenset.
+#
+# Source:    https://data.iana.org/TLD/tlds-alpha-by-domain.txt (version 2026101900)
+# Captured:  2026-10-19
+# Refresh, one line from the PolySwarm directory:
+#   curl -sS https://data.iana.org/TLD/tlds-alpha-by-domain.txt | grep -v '^#' | tr 'A-Z' 'a-z' | sort -u \
+#     > polyswarm_modules/tlds-alpha-by-domain.txt
+#
+# The path is resolved from this file, not from the working directory, so it is
+# the same under the Docker image, Sekoia's importer and the test runner.
+TLD_FILE = Path(__file__).resolve().parent / "tlds-alpha-by-domain.txt"
+
+# A refresh that returns a truncated or error page must not load quietly. The
+# real list holds well over a thousand entries.
+_MIN_TLD_COUNT = 1000
+
+_TLD_LINE_RE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\Z")
+
+
+def load_tlds(path: Path = TLD_FILE) -> frozenset[str]:
+    """Read the vendored top level domain list, or raise if it is unusable.
+
+    Blank lines and lines starting with a hash are skipped, entries are lower
+    cased, and any other line that is not a valid label is an error. A missing,
+    unreadable, malformed or implausibly short file raises RuntimeError rather
+    than yielding a smaller set, because a smaller set would silently drop
+    indicators.
+    """
+    try:
+        raw = path.read_text(encoding="ascii")
+    except (OSError, UnicodeDecodeError) as error:
+        raise RuntimeError(f"The top level domain list could not be read from {path}") from error
+
+    tlds: set[str] = set()
+    for number, line in enumerate(raw.splitlines(), start=1):
+        entry = line.strip().lower()
+        if not entry or entry.startswith("#"):
+            continue
+        if _TLD_LINE_RE.match(entry) is None:
+            raise RuntimeError(f"The top level domain list {path} has an invalid entry on line {number}")
+        tlds.add(entry)
+
+    if len(tlds) < _MIN_TLD_COUNT or "com" not in tlds:
+        raise RuntimeError(f"The top level domain list {path} holds {len(tlds)} entries and looks truncated")
+    return frozenset(tlds)
+
+
+IANA_TLDS = load_tlds()
 
 # Final labels that make a bare domain candidate a filename rather than a host.
-# Nothing here may also appear in ALLOWED_TLDS.
+# Several of these are also real top level domains (zip, mov, sh, py, md, pl,
+# rs, so, ps, pm, cab, java and dot), and for those the filename reading wins:
+# a bare report.zip or README.md is not reported as a domain. Only a bare
+# domain is affected. A URL or an email address on such a host is still
+# extracted, because the scheme or the at sign settles that it is a host.
 FILE_EXTENSIONS = (
     "exe",
     "dll",
@@ -190,6 +155,15 @@ FILE_EXTENSIONS = (
     "lnk",
     "hta",
     "chm",
+    "md",
+    "pl",
+    "rs",
+    "so",
+    "ps",
+    "pm",
+    "cab",
+    "java",
+    "dot",
 )
 
 # Defang rewrites, applied in this order. The scheme rewrite runs before the
@@ -205,7 +179,7 @@ _REFANG_AT_WORD_RE = re.compile(r"\[at\]|\(at\)|\{at\}", _FLAGS)
 _LABEL = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
 
 # Longest label first so that com wins over co at the same starting position.
-_TLD_ALT = "|".join(sorted(ALLOWED_TLDS, key=len, reverse=True))
+_TLD_ALT = "|".join(sorted(IANA_TLDS, key=len, reverse=True))
 
 # A host name: one or more labels followed by an allowed top level domain.
 _HOST = r"(?:" + _LABEL + r"\.)+(?:" + _TLD_ALT + r")"
@@ -275,6 +249,7 @@ _PRIORITY = {
     "ipv6": 5,
     "ipv4": 6,
     "domain": 7,
+    "skipped_filename": 8,
 }
 
 # The byte that marks a character of the text as taken by a kept match.
@@ -388,10 +363,8 @@ def _candidate_value(indicator_type: str, raw: str) -> str | None:
             return None
         return str(parsed)
 
-    if indicator_type == "domain":
+    if indicator_type in ("domain", "skipped_filename"):
         domain = raw.lower()
-        if _looks_like_filename(domain):
-            return None
         return domain
 
     if indicator_type == "email":
@@ -422,8 +395,14 @@ def extract_indicators(text: str) -> dict[str, list[str]]:
                 if not raw:
                     continue
             value = _candidate_value(indicator_type, raw)
-            if value is not None:
-                candidates.append((match.start(), match.start() + len(raw), indicator_type, value))
+            if value is None:
+                continue
+            # A bare name whose last label is a top level domain and also a
+            # common file extension is kept as a candidate of its own type, so
+            # it still takes part in overlap resolution and a name inside a URL
+            # or an email address is absorbed by the longer match.
+            kind = "skipped_filename" if indicator_type == "domain" and _looks_like_filename(value) else indicator_type
+            candidates.append((match.start(), match.start() + len(raw), kind, value))
 
     # Longest span first, type priority breaking a tie. Both sorts are stable,
     # so matches that tie on every key stay in the order they were found.
@@ -457,6 +436,7 @@ def extract_indicators(text: str) -> dict[str, list[str]]:
         "sha256": [],
         "email": [],
         "reserved_ip": [],
+        "skipped_filenames": [],
     }
 
     # A set beside each list answers "seen already" in constant time, and the
@@ -464,7 +444,7 @@ def extract_indicators(text: str) -> dict[str, list[str]]:
     seen: dict[str, set[str]] = {name: set() for name in buckets}
 
     for _, _, indicator_type, value in kept:
-        bucket = indicator_type
+        bucket = "skipped_filenames" if indicator_type == "skipped_filename" else indicator_type
         if indicator_type in ("ipv4", "ipv6") and _is_reserved_address(value):
             bucket = "reserved_ip"
         if value not in seen[bucket]:
@@ -502,6 +482,14 @@ class ExtractIocsResponse(BaseModel):
     sha256: list[str]
     email: list[str]
     reserved_ip: list[str]
+    skipped_filenames: list[str] = Field(
+        description=(
+            "Bare names that end in a top level domain and were not reported as domains because they look like "
+            "a file. These labels (zip, mov, sh, py, md and others) are both real top level domains and common "
+            "file extensions, so the action cannot tell report.zip the file from report.zip the domain, and it "
+            "lists the name here instead of guessing. They are not counted in total_count."
+        ),
+    )
     total_count: int
 
 
@@ -542,7 +530,8 @@ class ExtractIocs(PolyswarmAction):
                 return None
 
         buckets = extract_indicators(content)
-        total_count = sum(len(values) for values in buckets.values())
+        # Skipped names are not indicators, so they stay out of the count.
+        total_count = sum(len(values) for name, values in buckets.items() if name != "skipped_filenames")
 
         return ExtractIocsResponse(total_count=total_count, **buckets).model_dump()
 

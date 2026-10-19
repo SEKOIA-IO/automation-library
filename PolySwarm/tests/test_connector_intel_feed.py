@@ -6,7 +6,7 @@ from pathlib import Path
 from threading import Event
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock, create_autospec, patch
+from unittest.mock import MagicMock, PropertyMock, create_autospec, patch
 
 import pytest
 import requests_mock
@@ -476,8 +476,7 @@ def test_an_api_error_leaves_the_checkpoint_untouched_and_backs_off(
     assert connector.checkpoint.offset == before
 
     messages = logged_messages(connector)
-    assert any("RequestException" in message for message in messages)
-    assert all("the request failed" not in message for message in messages)
+    assert any("RequestException" in message and "the request failed" in message for message in messages)
     assert all(API_KEY not in message for message in messages)
 
     connector.sleep.assert_called_once_with(float(connector.frequency))
@@ -1183,3 +1182,182 @@ def test_the_idle_line_is_said_once_and_again_after_events_arrive(
     connector.next_run()
     connector.next_run()
     assert idle_lines() == 2
+
+
+# ---------------------------------------------------------------------------
+# Truncated windows, drop counters, redaction, digest ordering
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "missing",
+    [ps_exceptions.NoResultsException, ps_exceptions.NotFoundException],
+)
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_a_later_page_with_no_result_fails_the_cycle_and_holds_the_checkpoint(
+    mock_api_class: MagicMock, missing: type[Exception], connector: IntelFeed
+) -> None:
+    created = datetime.now(UTC) - timedelta(minutes=5)
+
+    def search(query: str) -> Iterator[Any]:
+        yield make_artifact("a1" * 32, created)
+        yield make_artifact("a2" * 32, created)
+        raise missing(autospec_request(), "later page")
+
+    install_api(mock_api_class, search)
+
+    before = connector.checkpoint.offset
+    assert connector.next_run() == 0
+
+    connector.push_events_to_intakes.assert_not_called()
+    assert connector.checkpoint.offset == before
+    assert connector.remembered_digests() == set()
+    assert connector._consecutive_failures == 1
+    assert any("cut short" in message for message in logged_messages(connector))
+    connector.sleep.assert_called_once_with(float(connector.frequency))
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_a_truncated_window_is_retried_whole_and_then_completes(
+    mock_api_class: MagicMock, connector: IntelFeed
+) -> None:
+    created = datetime.now(UTC) - timedelta(minutes=5)
+    attempts = {"count": 0}
+
+    def search(query: str) -> Iterator[Any]:
+        attempts["count"] += 1
+        yield make_artifact("b1" * 32, created)
+        if attempts["count"] == 1:
+            raise ps_exceptions.NotFoundException(autospec_request(), "404")
+        yield make_artifact("b2" * 32, created)
+
+    install_api(mock_api_class, search)
+
+    before = connector.checkpoint.offset
+    assert connector.next_run() == 0
+    assert connector.next_run() == 2
+    assert connector.checkpoint.offset > before
+    assert len(pushed_events(connector)) == 2
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_a_first_page_with_no_result_is_still_a_clean_empty_window(
+    mock_api_class: MagicMock, connector: IntelFeed
+) -> None:
+    def search(query: str) -> Iterator[Any]:
+        raise ps_exceptions.NotFoundException(autospec_request(), "404")
+        yield  # pragma: no cover
+
+    install_api(mock_api_class, search)
+
+    before = connector.checkpoint.offset
+    assert connector.next_run() == 0
+    assert connector.checkpoint.offset > before
+    assert connector._consecutive_failures == 0
+    assert not any("cut short" in message for message in logged_messages(connector))
+
+
+@patch("polyswarm_modules.connector_polyswarm_intel_feed.COLLECTED_EVENTS", autospec=True)
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_collected_events_counts_each_drop_reason(
+    mock_api_class: MagicMock, collected: MagicMock, data_storage: str, module: PolyswarmModule
+) -> None:
+    connector = make_connector(data_storage, module)
+    created = datetime.now(UTC) - timedelta(minutes=5)
+    huge = make_artifact("c3" * 32, created)
+    huge.filenames = ["x" * MAX_LIST_ITEMS] * MAX_LIST_ITEMS
+    bad = make_artifact("", created)
+
+    def search(query: str) -> Iterator[Any]:
+        yield make_artifact("c1" * 32, created)
+        yield make_artifact("c1" * 32, created)
+        yield make_artifact("c1" * 32, created)
+        yield bad
+        yield huge
+
+    install_api(mock_api_class, search)
+    with patch(
+        "polyswarm_modules.connector_polyswarm_intel_feed.event_characters",
+        side_effect=lambda event: EVENT_BYTES_MAX_SIZE + 1 if event["sha256"] == "c3" * 32 else 10,
+    ):
+        assert connector.next_run() == 1
+
+    counts = {
+        call.kwargs["reason"]: collected.labels.return_value.inc.call_args_list[index].args[0]
+        for index, call in enumerate(collected.labels.call_args_list)
+    }
+    assert counts == {"duplicate": 2, "unreadable": 1, "oversized": 1}
+    assert all(call.kwargs["intake_key"] == "test-intake-key" for call in collected.labels.call_args_list)
+
+
+@patch("polyswarm_modules.connector_polyswarm_intel_feed.COLLECTED_EVENTS", autospec=True)
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_a_halved_window_counts_drops_only_once(
+    mock_api_class: MagicMock, collected: MagicMock, data_storage: str, module: PolyswarmModule
+) -> None:
+    connector = make_connector(data_storage, module, max_events_per_run=1)
+    created = datetime.now(UTC) - timedelta(minutes=5)
+    calls = {"count": 0}
+
+    def search(query: str) -> Iterator[Any]:
+        calls["count"] += 1
+        yield make_artifact("d1" * 32, created)
+        yield make_artifact("d1" * 32, created)
+        if calls["count"] == 1:
+            yield make_artifact("d2" * 32, created)
+
+    install_api(mock_api_class, search)
+    connector.next_run()
+
+    assert calls["count"] == 2
+    incs = [args.args[0] for args in collected.labels.return_value.inc.call_args_list]
+    assert incs == [1]
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_an_unexpected_error_is_logged_with_its_message_but_never_the_key(
+    mock_api_class: MagicMock, connector: IntelFeed
+) -> None:
+    def search(query: str) -> Iterator[Any]:
+        raise KeyError(f"missing field near {connector.module.configuration.apikey}")
+        yield  # pragma: no cover
+
+    install_api(mock_api_class, search)
+    connector.next_run()
+
+    messages = logged_messages(connector)
+    assert any("KeyError" in message and "missing field near [REDACTED]" in message for message in messages)
+    assert all(connector.module.configuration.apikey not in message for message in messages)
+
+
+@patch("polyswarm_modules.client.PolyswarmAPI", autospec=True)
+def test_digests_are_saved_before_the_checkpoint_moves(mock_api_class: MagicMock, connector: IntelFeed) -> None:
+    created = datetime.now(UTC) - timedelta(minutes=5)
+
+    def search(query: str) -> Iterator[Any]:
+        yield make_artifact("e1" * 32, created)
+
+    install_api(mock_api_class, search)
+    before = connector.checkpoint.offset
+
+    class FailingCheckpoint:
+        @property
+        def offset(self) -> datetime:
+            return before
+
+        @offset.setter
+        def offset(self, value: datetime) -> None:
+            raise RuntimeError("crash at checkpoint write")
+
+    with patch.object(IntelFeed, "checkpoint", new_callable=PropertyMock, return_value=FailingCheckpoint()):
+        with pytest.raises(RuntimeError):
+            connector.next_run()
+
+    assert "e1" * 32 in connector.remembered_digests()
+    assert connector.checkpoint.offset == before
+
+
+def test_remembered_digests_survive_a_retry_that_has_none_of_its_own(connector: IntelFeed) -> None:
+    connector.remember_digests(["f1" * 32])
+    connector.remember_digests([])
+    assert connector.remembered_digests() == {"f1" * 32}

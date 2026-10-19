@@ -143,6 +143,11 @@ class SearchMetadataResponse(BaseModel):
     returned_count: int = 0
     limit: int = DEFAULT_LIMIT
     truncated: bool = False
+    # True when pagination stopped early on a missing result (a 204 or 404 on
+    # a later page) after items had been collected. The items are kept, but
+    # the list may be missing matches. The "truncated" branch fires so a
+    # playbook cannot read the answer as complete, and truncated is also true.
+    incomplete: bool = False
 
 
 class SearchMetadata(PolyswarmAction):
@@ -156,7 +161,9 @@ class SearchMetadata(PolyswarmAction):
 
     Three branches: found (at least one match, and every match requested was
     returned), truncated (at least one match, but the limit cut the answer
-    before the query was exhausted), and not found (no matches at all). The
+    before the query was exhausted, or pagination stopped early on a missing
+    result, flagged by incomplete), and not found (the first page returned
+    nothing). The
     truncated branch exists on its own, separate from found, so a capped
     answer can never be read by a playbook as a complete one.
     """
@@ -178,16 +185,16 @@ class SearchMetadata(PolyswarmAction):
         api = build_client(self.module.configuration)
 
         try:
-            iterator = api.search_by_metadata(
-                query,
-                include=args.include or None,
-                exclude=args.exclude or None,
-            )
-            results, truncated = self._collect(iterator, args.limit)
-        except MISSING_RESULT:
-            # A 204 or 404 is the client's way of saying nothing matched, on
-            # the first page or any later one, and is not an error.
-            results, truncated = [], False
+            try:
+                iterator = api.search_by_metadata(
+                    query,
+                    include=args.include or None,
+                    exclude=args.exclude or None,
+                )
+            except MISSING_RESULT:
+                # A 204 or 404 on the first request: nothing matched.
+                iterator = iter(())
+            results, truncated, incomplete = self._collect(iterator, args.limit)
         except ps_exceptions.InvalidValueException as exc:
             self.error(
                 f"PolySwarm rejected the query as malformed ({failure_kind(exc)}). "
@@ -211,12 +218,21 @@ class SearchMetadata(PolyswarmAction):
                 truncated=False,
             ).model_dump()
 
+        if incomplete:
+            self.log(
+                f"The metadata search stopped early after {len(results)} results because PolySwarm returned "
+                "no result for a later page; the answer may be missing matches",
+                level="warning",
+            )
+            truncated = True
+
         response = SearchMetadataResponse(
             found=True,
             results=results,
             returned_count=len(results),
             limit=args.limit,
             truncated=truncated,
+            incomplete=incomplete,
         )
 
         if truncated:
@@ -227,7 +243,7 @@ class SearchMetadata(PolyswarmAction):
         return response.model_dump()
 
     @staticmethod
-    def _collect(iterator: Any, limit: int) -> tuple[list[MetadataArtifact], bool]:
+    def _collect(iterator: Any, limit: int) -> tuple[list[MetadataArtifact], bool, bool]:
         """Consume the search generator up to limit, and detect whether more remained.
 
         The client owns pagination internally behind a lazily consumed
@@ -236,15 +252,26 @@ class SearchMetadata(PolyswarmAction):
         cap the work, and the length check runs before an item is appended
         so that the item which would have exceeded the limit is what proves
         there was more to find, without being included in the answer.
+
+        A missing result (204 or 404) raised while consuming the generator is
+        handled here so the items already collected survive. Each later page
+        is a full request through the same parser as the first, so it can
+        raise exactly as the first page can. With nothing collected yet it
+        means nothing matched; with items collected it means the run stopped
+        early, which is returned as the incomplete flag, never as not found.
         """
         items: list[MetadataArtifact] = []
         truncated = False
-        for item in iterator:
-            if len(items) >= limit:
-                truncated = True
-                break
-            items.append(SearchMetadata._build_artifact(item))
-        return items, truncated
+        incomplete = False
+        try:
+            for item in iterator:
+                if len(items) >= limit:
+                    truncated = True
+                    break
+                items.append(SearchMetadata._build_artifact(item))
+        except MISSING_RESULT:
+            incomplete = bool(items)
+        return items, truncated, incomplete
 
     @staticmethod
     def _build_artifact(item: Any) -> MetadataArtifact:

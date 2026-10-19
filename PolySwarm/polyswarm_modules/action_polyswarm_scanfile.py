@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction, sha256_handle
 from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.coerce import as_text
 from polyswarm_modules.scan import DEFAULT_MAX_WAIT_SECONDS, MAX_WAIT_SECONDS_CEILING, MIN_WAIT_SECONDS, wait_for_scan
 from polyswarm_modules.verdict import AssertionResult, tally_assertions
 
@@ -150,9 +151,9 @@ class ScanFile(PolyswarmAction):
     def _lookup_existing(self, api: PolyswarmAPI, handle: Any) -> Any:
         file_hash: str = sha256_handle(handle)
         try:
-            results = list(api.search(file_hash))
-            if results and self.is_complete(results[0]):
-                return results[0]
+            first = next(iter(api.search(file_hash)), None)
+            if first is not None and self.is_complete(first):
+                return first
         except MISSING_RESULT:
             pass
         return None
@@ -161,16 +162,16 @@ class ScanFile(PolyswarmAction):
         tally = tally_assertions(result)
 
         return ScanFileResponse(
-            sha256=result.sha256,
-            sha1=result.sha1,
-            md5=result.md5,
-            extended_type=result.extended_type,
+            sha256=as_text(result.sha256),
+            sha1=as_text(result.sha1),
+            md5=as_text(result.md5),
+            extended_type=as_text(result.extended_type),
             polyscore=result.polyscore,
-            permalink=result.permalink,
+            permalink=as_text(result.permalink),
             malicious_count=tally.malicious_count,
             benign_count=tally.benign_count,
             total_count=tally.total_count,
-            failed=result.failed,
+            failed=bool(result.failed),
             cached=cached,
             assertions=tally.assertions,
         )

@@ -15,6 +15,7 @@ from polyswarm_modules.client import RETRY_TOTAL
 from polyswarm_modules.trigger_polyswarm_sandbox_completed import (
     IN_FLIGHT_MAX_AGE_SECONDS,
     MAX_BACKOFF_SECONDS,
+    MAX_EMIT_FAILURES,
     MAX_IN_FLIGHT_TASKS,
     MAX_LOOKUP_FAILURES,
     PAGE_SIZE,
@@ -175,8 +176,7 @@ def test_a_send_failure_partway_through_a_cycle_only_loses_the_failed_task(trigg
     _with_tasks(trigger, first_task, second_task)
     trigger.send_event.side_effect = [None, SendEventError("could not reach Sekoia")]
 
-    with pytest.raises(SendEventError):
-        trigger.poll_once()
+    assert trigger.poll_once() == 1
 
     trigger.send_event.side_effect = None
     trigger.send_event.reset_mock()
@@ -869,3 +869,109 @@ def test_backing_off_counts_as_a_sign_of_life(trigger: SandboxCompleted) -> None
     trigger._back_off("failed", ps_exceptions.RequestException(autospec_request(), "x"))
 
     trigger.heartbeat.assert_called_once()
+
+
+def test_a_send_failure_on_one_task_does_not_stop_later_tasks_on_the_page(trigger: SandboxCompleted) -> None:
+    """A task that always fails to send must not block the tasks behind it, cycle after cycle."""
+    bad = _make_sandbox_task(task_id="1")
+    good_one = _make_sandbox_task(task_id="2")
+    good_two = _make_sandbox_task(task_id="3")
+
+    def send(name: str, event: dict[str, Any]) -> None:
+        if event["sandbox_task_id"] == "1":
+            raise SendEventError("rejected")
+
+    trigger.send_event.side_effect = send
+    _with_tasks(trigger, bad, good_one, good_two)
+
+    assert trigger.poll_once() == 2
+
+    sent = [call.args[1]["sandbox_task_id"] for call in trigger.send_event.call_args_list]
+    assert sent == ["1", "2", "3"]
+    # The failed task is followed by identifier, the others are recorded.
+    assert set(trigger._in_flight()) == {"1"}
+    assert set(trigger._emitted_task_ids()) == {"2", "3"}
+    # A healthy cycle (two sends went through) charges the failure to that task alone.
+    assert trigger._in_flight()["1"]["emit_failures"] == 1
+
+
+def test_a_task_first_seen_terminal_whose_emit_fails_is_retried_after_it_leaves_the_page(
+    trigger: SandboxCompleted,
+) -> None:
+    """The reported loss: a failed send, then ten newer tasks, must not drop the completion."""
+    task = _make_sandbox_task(task_id="7")
+    _with_tasks(trigger, task)
+    trigger.send_event.side_effect = SendEventError("could not reach Sekoia")
+    with pytest.raises(SendEventError):
+        trigger.poll_once()
+    assert "7" in trigger._in_flight()
+
+    # Ten newer running tasks push it off the page. The lookup finds it terminal.
+    trigger.send_event.side_effect = None
+    trigger.send_event.reset_mock()
+    newer = [_make_sandbox_task(task_id=f"n{i}", status="RUNNING", report=None) for i in range(PAGE_SIZE)]
+    api = _with_tasks(trigger, *newer)
+    api.sandbox_task_status.return_value = task
+
+    assert trigger.poll_once() == 1
+    api.sandbox_task_status.assert_called_once_with("7")
+    assert trigger.send_event.call_args.args[1]["sandbox_task_id"] == "7"
+    assert "7" not in trigger._in_flight()
+    assert "7" in trigger._emitted_task_ids()
+
+
+def test_a_task_that_always_fails_to_send_is_given_up_after_a_bounded_number_of_cycles(
+    trigger: SandboxCompleted,
+) -> None:
+    bad = _make_sandbox_task(task_id="1")
+
+    def send(name: str, event: dict[str, Any]) -> None:
+        if event["sandbox_task_id"] == "1":
+            raise SendEventError("rejected")
+
+    trigger.send_event.side_effect = send
+
+    # Each cycle also sends a different healthy task, which shows the channel is up.
+    for cycle in range(MAX_EMIT_FAILURES):
+        _with_tasks(trigger, bad, _make_sandbox_task(task_id=f"ok{cycle}"))
+        assert trigger.poll_once() == 1
+
+    assert "1" not in trigger._in_flight()
+    assert "1" in trigger._emitted_task_ids()
+    calls_to_bad = [c for c in trigger.send_event.call_args_list if c.args[1]["sandbox_task_id"] == "1"]
+    assert len(calls_to_bad) == MAX_EMIT_FAILURES
+
+    # Still on the page, but no longer tried.
+    _with_tasks(trigger, bad)
+    trigger.poll_once()
+    calls_to_bad = [c for c in trigger.send_event.call_args_list if c.args[1]["sandbox_task_id"] == "1"]
+    assert len(calls_to_bad) == MAX_EMIT_FAILURES
+
+
+def test_a_single_task_cycle_whose_only_send_fails_backs_off_instead_of_charging_the_task(
+    trigger: SandboxCompleted,
+) -> None:
+    trigger.send_event.side_effect = SendEventError("Sekoia is down")
+
+    for _ in range(MAX_EMIT_FAILURES + 2):
+        _with_tasks(trigger, _make_sandbox_task(task_id="1"))
+        with pytest.raises(SendEventError):
+            trigger.poll_once()
+
+    # Never charged, never dropped, so it still goes out once the channel is back.
+    assert set(trigger._in_flight()) == {"1"}
+    assert "emit_failures" not in trigger._in_flight()["1"]
+    trigger.send_event.side_effect = None
+    _with_tasks(trigger, _make_sandbox_task(task_id="1"))
+    assert trigger.poll_once() == 1
+
+
+def test_a_cycle_where_every_send_fails_backs_off_and_keeps_the_tasks_budget(trigger: SandboxCompleted) -> None:
+    _with_tasks(trigger, _make_sandbox_task(task_id="1"), _make_sandbox_task(task_id="2"))
+    trigger.send_event.side_effect = SendEventError("Sekoia is down")
+
+    with pytest.raises(SendEventError):
+        trigger.poll_once()
+
+    assert set(trigger._in_flight()) == {"1", "2"}
+    assert all("emit_failures" not in record for record in trigger._in_flight().values())

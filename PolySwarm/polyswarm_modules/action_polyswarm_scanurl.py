@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from polyswarm_modules.base import PolyswarmAction
 from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.coerce import as_text
 from polyswarm_modules.scan import DEFAULT_MAX_WAIT_SECONDS, MAX_WAIT_SECONDS_CEILING, MIN_WAIT_SECONDS, wait_for_scan
 from polyswarm_modules.validators import invalid_url_reason, without_credentials
 from polyswarm_modules.verdict import AssertionResult, tally_assertions
@@ -134,9 +135,9 @@ class ScanUrl(PolyswarmAction):
 
     def _lookup_existing(self, api: PolyswarmAPI, url: str) -> Any:
         try:
-            results = list(api.search_url(url))
-            if results and self.is_complete(results[0]):
-                return results[0]
+            first = next(iter(api.search_url(url)), None)
+            if first is not None and self.is_complete(first):
+                return first
         except MISSING_RESULT:
             pass
         return None
@@ -145,14 +146,14 @@ class ScanUrl(PolyswarmAction):
         tally = tally_assertions(result)
 
         return ScanUrlResponse(
-            sha256=result.sha256,
-            permalink=result.permalink,
+            sha256=as_text(result.sha256),
+            permalink=as_text(result.permalink),
             polyscore=result.polyscore,
-            extended_type=result.extended_type,
+            extended_type=as_text(result.extended_type),
             malicious_count=tally.malicious_count,
             benign_count=tally.benign_count,
             total_count=tally.total_count,
-            failed=result.failed,
+            failed=bool(result.failed),
             cached=cached,
             assertions=tally.assertions,
         )

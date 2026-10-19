@@ -439,3 +439,69 @@ def test_only_the_first_result_per_hash_is_consumed(mock_build_client: MagicMock
     action.run({"hashes": ["aa" * 32]})
 
     assert consumed == [0]
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
+def test_unseen_plus_errored_hash_is_partial_not_clean(mock_build_client: MagicMock, action: SearchHashes) -> None:
+    """One unseen hash and one whose lookup failed with a server error must not read as clean."""
+    unseen = "aa" * 32
+    broken = "bb" * 32
+
+    def _search(query_hash: str):
+        if query_hash == unseen:
+            raise ps_exceptions.NotFoundException(MagicMock(), "404")
+        raise ps_exceptions.RequestException(MagicMock(), "503")
+
+    mock_build_client.return_value.search.side_effect = _search
+
+    response = action.run({"hashes": [unseen, broken]})
+
+    assert response is not None
+    assert response["not_found"] == [unseen]
+    assert [e["hash"] for e in response["errors"]] == [broken]
+    assert action._outputs == {"partial": True}
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
+def test_clean_result_plus_errored_hash_is_partial(mock_build_client: MagicMock, action: SearchHashes) -> None:
+    clean = "aa" * 32
+    broken = "bb" * 32
+
+    def _search(query_hash: str):
+        if query_hash == clean:
+            return iter([_make_result(sha256=clean, malicious_count=0, benign_count=9)])
+        raise ps_exceptions.RequestException(MagicMock(), "503")
+
+    mock_build_client.return_value.search.side_effect = _search
+
+    response = action.run({"hashes": [clean, broken]})
+
+    assert [row["hash"] for row in response["results"]] == [clean]
+    assert len(response["errors"]) == 1
+    assert action._outputs == {"partial": True}
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
+def test_unseen_plus_malformed_hash_is_partial(mock_build_client: MagicMock, action: SearchHashes) -> None:
+    unseen = "aa" * 32
+    mock_build_client.return_value.search.side_effect = ps_exceptions.NoResultsException(MagicMock(), "204")
+
+    response = action.run({"hashes": [unseen, "not-a-hash"]})
+
+    assert response["not_found"] == [unseen]
+    assert len(response["errors"]) == 1
+    assert action._outputs == {"partial": True}
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
+def test_open_window_scan_plus_clean_result_is_partial(mock_build_client: MagicMock, action: SearchHashes) -> None:
+    open_window = _make_result(sha256="aa" * 32)
+    open_window.window_closed = False
+    complete = _make_result(sha256="bb" * 32, malicious_count=0, benign_count=9)
+    mock_build_client.return_value.search.side_effect = _search_returning(
+        {"aa" * 32: [open_window], "bb" * 32: [complete]}
+    )
+
+    action.run({"hashes": ["aa" * 32, "bb" * 32]})
+
+    assert action._outputs == {"partial": True}

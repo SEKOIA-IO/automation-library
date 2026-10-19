@@ -10,6 +10,7 @@ running in another.
 import time
 from collections.abc import Callable
 from typing import Any
+from urllib.parse import urlencode
 
 from polyswarm_api.api import PolyswarmAPI
 
@@ -41,12 +42,14 @@ def report_url(api: PolyswarmAPI, task_id: str, community: str | None) -> str:
     """The API URL the PolySwarm client itself calls to read this task.
 
     Built from the client's own base URI and resource path rather than a
-    hard coded host, so a non default deployment stays correct.
+    hard coded host, so a non default deployment stays correct. The query is
+    encoded rather than concatenated, since a community name is configuration
+    and need not be URL safe.
     """
-    base = f"{api.uri}{SANDBOX_TASK_ENDPOINT}?sandbox_task_id={task_id}"
+    query = {"sandbox_task_id": task_id}
     if community:
-        return f"{base}&community={community}"
-    return base
+        query["community"] = community
+    return f"{api.uri}{SANDBOX_TASK_ENDPOINT}?{urlencode(query)}"
 
 
 def poll_until_terminal(

@@ -1,10 +1,32 @@
+import functools
 import hashlib
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
 from sekoia_automation.action import Action
 
 from polyswarm_modules import PolyswarmModule
+
+# Every action names its argument model <Action>Arguments. A ValidationError
+# from any other model is a payload problem, not a playbook input problem.
+ARGUMENTS_MODEL_SUFFIX = "Arguments"
+
+
+def describe_validation_error(exc: ValidationError) -> str:
+    """One analyst readable sentence per rejected argument, naming the field and what was expected.
+
+    The rejected value is left out on purpose: it can be a URL or an indicator
+    the analyst did not mean to put in a run log.
+    """
+    problems: list[str] = []
+    for item in exc.errors(include_input=False, include_url=False):
+        field = ".".join(str(part) for part in item["loc"]) or "arguments"
+        if item["type"] == "missing":
+            problems.append(f"'{field}' is required")
+        else:
+            problems.append(f"'{field}': {item['msg']}")
+    return "Invalid action arguments, " + "; ".join(problems) + ". Correct the playbook inputs and run again."
 
 
 def sha256_handle(handle: Any) -> str:
@@ -28,6 +50,33 @@ class PolyswarmAction(Action):
     """
 
     module: PolyswarmModule
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Guard each action's run so rejected arguments become an action error.
+
+        Every action builds its own pydantic arguments model at the top of run.
+        Wrapping run here covers all of them in one place: a bad value reaches
+        the playbook as a readable message instead of a raw traceback.
+        """
+        super().__init_subclass__(**kwargs)
+        run = cls.__dict__.get("run")
+        if run is None:
+            return
+
+        @functools.wraps(run)
+        def guarded(self: PolyswarmAction, arguments: Any) -> Any:
+            try:
+                return run(self, arguments)
+            except ValidationError as exc:
+                if not exc.title.endswith(ARGUMENTS_MODEL_SUFFIX):
+                    # A response model refusing a payload means the API answered
+                    # with something the module did not expect. Reporting that as
+                    # a bad argument sends the analyst to the wrong place.
+                    raise
+                self.error(describe_validation_error(exc))
+                return None
+
+        cls.run = guarded  # type: ignore[method-assign,assignment]
 
     @staticmethod
     def is_complete(result: object) -> bool:

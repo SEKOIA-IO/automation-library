@@ -136,7 +136,11 @@
       },
       "truncated": {
         "type": "boolean",
-        "description": "True when more artifacts matched the query than limit allowed to be returned. A truncated answer is not a complete one: raise limit or narrow the query to see the rest."
+        "description": "True when the answer is known to be incomplete, either because more artifacts matched the query than limit allowed to be returned, or because paging stopped before every page was read. A truncated answer is not a complete one: raise limit or narrow the query to see the rest."
+      },
+      "incomplete": {
+        "type": "boolean",
+        "description": "True when paging stopped before every matching page was read, so artifacts that matched the query are missing from results. The artifacts already collected are still returned, and the answer must not be read as the full set."
       }
     }
   },
@@ -144,6 +148,6 @@
   "outputs": {
     "found": "The query matched at least one artifact, and every match was returned",
     "not found": "The query matched no artifacts in PolySwarm",
-    "truncated": "The query matched more artifacts than limit allowed to be returned, so this answer is incomplete"
+    "truncated": "The answer is incomplete, either because the query matched more artifacts than limit allowed to be returned, or because paging stopped early with artifacts already collected"
   }
 }

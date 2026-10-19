@@ -56,6 +56,16 @@ class ReportArguments(BaseModel):
             "detonation itself; submit one with SandboxFile, SandboxUrl or SandboxIp first."
         ),
     )
+    include_raw_report: bool = Field(
+        default=True,
+        description=(
+            "Whether to return the raw sandbox report in the report field. True, the default, returns it "
+            "unmodified, as this action always has. Set it to false to get report back as null: a CAPE or "
+            "Triage report commonly runs to several megabytes, so turn it off when a playbook only needs "
+            "the verdict and the typed behavior fields, which are unchanged either way. The report is never "
+            "truncated: it is returned whole or not at all."
+        ),
+    )
 
 
 class ProcessEvidence(BaseModel):
@@ -95,7 +105,14 @@ class ReportResponse(BaseModel):
     # is never inferred to be False, since that would tell a playbook a
     # sample is clean when nobody has looked at it.
     malicious: bool | None
+    # True when the task succeeded and produced a report but no readable
+    # score and no named malware family, so there is nothing to base a
+    # verdict on. malicious is None in that case and the "no report
+    # available" branch fires: an unscored report is not a clean one.
+    unscored: bool = False
     behavior: SandboxBehavior
+    # None when the caller turned include_raw_report off. The verdict and the
+    # behavior fields are computed from the report before it is dropped.
     report: Any
     sandbox_artifacts: list[dict[str, Any]]
 
@@ -264,7 +281,7 @@ def _typed_behavior(provider: str, report: dict[str, Any]) -> SandboxBehavior:
     )
 
 
-def _is_malicious(provider: str, report: dict[str, Any], config: dict[str, Any] | None) -> bool:
+def _is_malicious(provider: str, report: dict[str, Any], config: dict[str, Any] | None) -> bool | None:
     """Decide the malicious / not malicious branch from the provider's own score.
 
     CAPE stores its overall verdict score on the task config as
@@ -283,6 +300,11 @@ def _is_malicious(provider: str, report: dict[str, Any], config: dict[str, Any] 
     stands in for it. Behaviour signatures do not: benign installers fire
     anti-VM and environment query signatures all the time, so their mere
     presence says nothing about intent.
+
+    Returns None when there is neither a readable score nor a named family
+    (a missing config, a missing score key, an unknown provider, or a score
+    that does not coerce). No score is not a clean verdict, so the caller
+    must not report it as one.
     """
     config = config or {}
     score: float | None = None
@@ -302,7 +324,9 @@ def _is_malicious(provider: str, report: dict[str, Any], config: dict[str, Any] 
     if score is not None and threshold is not None:
         return score >= threshold
 
-    return bool(report.get("malware_family"))
+    if report.get("malware_family"):
+        return True
+    return None
 
 
 class Report(PolyswarmAction):
@@ -312,8 +336,10 @@ class Report(PolyswarmAction):
     Activates one of three branches: malicious, not malicious, or no report
     available. The last covers every case that leaves nothing to report a
     verdict on: no sandbox task has ever been created for this hash and
-    provider, a submitted detonation failed, or one is still running and
-    either no wait was requested or the wait ceiling was reached first. To
+    provider, a submitted detonation failed, one is still running and
+    either no wait was requested or the wait ceiling was reached first, or
+    the task succeeded but its report carries no readable score and no
+    malware family (flagged by unscored being true, with malicious null). To
     create a report, call SandboxFile, SandboxUrl or SandboxIp; this action
     never does.
     """
@@ -349,7 +375,7 @@ class Report(PolyswarmAction):
         if args.max_wait_seconds > 0 and task.status not in TERMINAL_STATUSES:
             task = poll_until_terminal(api, task, args.max_wait_seconds, POLL_INTERVAL_CEILING, self.log)
 
-        return self._respond(task)
+        return self._respond(task, args.include_raw_report)
 
     def _not_found_response(self, args: ReportArguments) -> dict[str, Any] | None:
         self.log(
@@ -369,7 +395,7 @@ class Report(PolyswarmAction):
             sandbox_artifacts=[],
         ).model_dump()
 
-    def _respond(self, task: Any) -> dict[str, Any] | None:
+    def _respond(self, task: Any, include_raw_report: bool = True) -> dict[str, Any] | None:
         provider = (getattr(task, "sandbox", "") or "").lower()
 
         if task.status != "SUCCEEDED" or not task.report:
@@ -391,12 +417,20 @@ class Report(PolyswarmAction):
                 status=task.status,
                 malicious=None,
                 behavior=SandboxBehavior(),
-                report=task.report,
+                report=task.report if include_raw_report else None,
                 sandbox_artifacts=[],
             ).model_dump()
 
         malicious = _is_malicious(provider, task.report, getattr(task, "config", None))
-        self.set_output("malicious" if malicious else "not malicious", True)
+        if malicious is None:
+            self.log(
+                f"Sandbox task {task.id} for {task.sha256} succeeded with a report but no readable score "
+                f"or malware family on {provider or 'an unknown provider'}, so no verdict was reached",
+                level="warning",
+            )
+            self.set_output("no report available", True)
+        else:
+            self.set_output("malicious" if malicious else "not malicious", True)
 
         return ReportResponse(
             sandbox_task_id=str(task.id),
@@ -404,8 +438,9 @@ class Report(PolyswarmAction):
             sandbox=task.sandbox,
             status=task.status,
             malicious=malicious,
+            unscored=malicious is None,
             behavior=_typed_behavior(provider, task.report),
-            report=task.report,
+            report=task.report if include_raw_report else None,
             sandbox_artifacts=[
                 {
                     "id": a.id,

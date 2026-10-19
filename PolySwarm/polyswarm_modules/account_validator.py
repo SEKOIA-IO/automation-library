@@ -15,24 +15,11 @@ from polyswarm_api import exceptions as ps_exceptions
 from sekoia_automation.account_validator import AccountValidator
 
 from polyswarm_modules import PolyswarmModule
-from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind, status_of
 
+# Which statuses mean a rejected key is this check's own decision; the lookup
+# is client.status_of and the display text is client.failure_kind.
 REJECTED_STATUSES: frozenset[int] = frozenset({401, 403})
-
-
-def _status_of(exception: Exception) -> int | None:
-    """The HTTP status a client or transport exception carries, when it carries one.
-
-    The polyswarm client keeps it on the request it attaches to its own
-    exceptions, and requests keeps it on the response. Compared with None
-    rather than tested for truth, because a requests Response is falsy for
-    any 4xx or 5xx status.
-    """
-    carrier = getattr(exception, "response", None)
-    if carrier is None:
-        carrier = getattr(exception, "request", None)
-    status = getattr(carrier, "status_code", None)
-    return status if isinstance(status, int) else None
 
 
 class PolyswarmAccountValidator(AccountValidator):
@@ -57,7 +44,7 @@ class PolyswarmAccountValidator(AccountValidator):
         except CLIENT_ERRORS as exception:
             # Never quote the client's own message: it renders the request,
             # which carries the key.
-            if _status_of(exception) in REJECTED_STATUSES:
+            if status_of(exception) in REJECTED_STATUSES:
                 return self._refuse(f"PolySwarm rejected the configured API key ({failure_kind(exception)}).")
             return self._refuse(
                 f"PolySwarm could not be reached to check the configured API key ({failure_kind(exception)}). "

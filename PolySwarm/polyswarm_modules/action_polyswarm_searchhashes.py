@@ -7,7 +7,8 @@ hash, exactly as the PolySwarm app for Splunk does. A list of fifty hashes
 costs fifty requests against the configured plan, not one. The input list is
 deduplicated first so a repeated hash is never paid for twice, the lookups run
 sequentially, and a rate limit stops the loop immediately and returns whatever
-was already gathered instead of hammering the API.
+was already gathered instead of hammering the API. Any hash that could not be
+checked sends the run to the partial branch, never to not detected.
 """
 
 from typing import Any
@@ -188,11 +189,12 @@ class SearchHashes(PolyswarmAction):
             rate_limited=rate_limited,
         )
 
-        # A usage limit cutting the run short means the list of hashes that
-        # were never looked up is unknown territory, not a clean answer. That
-        # branch takes priority over detected/not detected so a partial batch
-        # can never be read as a definitive clean result.
-        if response.rate_limited:
+        # A hash that was never checked is unknown territory, not a clean
+        # answer. That covers a usage limit cutting the run short and any
+        # per-hash failure (server error, malformed hash, failed or still open
+        # scan). Either one takes priority over detected/not detected, so a
+        # non-empty errors list can never produce a clean verdict.
+        if response.rate_limited or response.errors:
             self.set_output("partial", True)
         elif any(row.malicious_count > 0 for row in results):
             self.set_output("detected", True)

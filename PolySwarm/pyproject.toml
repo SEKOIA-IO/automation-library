@@ -6,31 +6,27 @@ authors = []
 requires-python = ">=3.12,<3.15"
 
 dependencies = [
-    "sekoia-automation-sdk>=1.23.0,<2",
-    "polyswarm-api (>=3.20.0,<4.0.0)"
+    "sekoia-automation-sdk>=1.27.0,<2",
+    "polyswarm-api>=3.21.0,<4",
+    "requests>=2.32.0,<3",
 ]
 
 [dependency-groups]
 dev = [
     "pytest",
     "pytest-cov",
-    "requests",
     "requests-mock",
     "ruff>=0.14",
     "mypy",
 ]
 
 
-[build-system]
-requires = ["uv_build>=0.9.7,<1.0.0"]
-build-backend = "uv_build"
-
 [tool.uv]
 package = false
 
 [tool.ruff]
 line-length = 119
-target-version = "py314"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
@@ -66,7 +62,6 @@ addopts = '''
   --tb=short
   --cov=polyswarm_modules
   --cov-branch
-  --cov-report=html
   --cov-report=term-missing:skip-covered
   --cov-fail-under=85
   --capture=sys

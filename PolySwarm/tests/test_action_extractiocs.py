@@ -5,7 +5,13 @@ from unittest.mock import patch
 import pytest
 
 from polyswarm_modules import PolyswarmModule
-from polyswarm_modules.action_polyswarm_extractiocs import MAX_INPUT_BYTES, ExtractIocs
+from polyswarm_modules.action_polyswarm_extractiocs import (
+    IANA_TLDS,
+    MAX_INPUT_BYTES,
+    TLD_FILE,
+    ExtractIocs,
+    load_tlds,
+)
 
 
 @pytest.fixture
@@ -355,3 +361,155 @@ def test_a_run_of_percent_signs_does_not_blow_up_the_email_pattern(action: Extra
 
     assert time.perf_counter() - started < 2
     assert response["email"] == []
+
+
+# --- the vendored IANA top level domain list ---
+
+
+@pytest.mark.parametrize("tld", ["ai", "ly", "to", "gg", "vn"])
+def test_domain_on_a_tld_the_old_hand_list_missed_is_extracted(action: ExtractIocs, tld: str) -> None:
+    response = action.run({"text": f"C2 at beacon-host.{tld} was seen"})
+
+    assert response["domain"] == [f"beacon-host.{tld}"]
+
+
+@pytest.mark.parametrize("tld", ["ai", "ly", "to", "gg", "vn"])
+def test_url_and_email_on_a_new_tld_are_extracted(action: ExtractIocs, tld: str) -> None:
+    response = action.run({"text": f"see https://drop.example.{tld}/a and mail ops@example.{tld}"})
+
+    assert response["url"] == [f"https://drop.example.{tld}/a"]
+    assert response["email"] == [f"ops@example.{tld}"]
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "report.doc",
+        "report.docx",
+        "invoice.pdf",
+        "sheet.xlsx",
+        "notes.txt",
+        "README.md",
+        "build.log",
+        "run.pl",
+        "lib.so",
+    ],
+)
+def test_filename_with_a_document_extension_is_not_a_domain(action: ExtractIocs, name: str) -> None:
+    response = action.run({"text": f"The attachment {name} was opened"})
+
+    assert response["domain"] == []
+    assert response["total_count"] == 0
+
+
+@pytest.mark.parametrize("name", ["payload.zip", "clip.mov", "script.sh", "tool.py"])
+def test_bare_name_on_a_tld_that_is_also_a_file_extension_is_a_file(action: ExtractIocs, name: str) -> None:
+    # zip, mov, sh and py are real top level domains and also real file
+    # extensions. A bare name is read as a file, as the old list did.
+    assert name.rsplit(".", 1)[1] in IANA_TLDS
+
+    response = action.run({"text": f"Dropped {name} on disk"})
+
+    assert response["domain"] == []
+    assert response["skipped_filenames"] == [name]
+
+
+@pytest.mark.parametrize("name", ["payload.zip", "clip.mov"])
+def test_url_and_email_on_a_zip_or_mov_host_are_still_extracted(action: ExtractIocs, name: str) -> None:
+    response = action.run({"text": f"fetch http://{name}/x and write to ops@{name}"})
+
+    assert response["url"] == [f"http://{name}/x"]
+    assert response["email"] == [f"ops@{name}"]
+
+
+def test_every_file_extension_collision_is_deliberate() -> None:
+    from polyswarm_modules.action_polyswarm_extractiocs import FILE_EXTENSIONS
+
+    assert {"zip", "mov", "sh", "py", "md"} <= set(FILE_EXTENSIONS) & IANA_TLDS
+
+
+def test_vendored_list_loads_lower_case_and_is_not_trivial() -> None:
+    assert TLD_FILE.is_absolute()
+    assert len(IANA_TLDS) > 1000
+    assert {"com", "ai", "ly", "to", "gg", "vn"} <= IANA_TLDS
+    assert all(entry == entry.lower() for entry in IANA_TLDS)
+    assert load_tlds() == IANA_TLDS
+
+
+def test_loader_raises_when_the_file_is_missing(tmp_path: Path) -> None:
+    with pytest.raises(RuntimeError, match="could not be read"):
+        load_tlds(tmp_path / "absent.txt")
+
+
+def test_loader_raises_when_the_file_is_empty(tmp_path: Path) -> None:
+    empty = tmp_path / "tlds.txt"
+    empty.write_text("", encoding="ascii")
+
+    with pytest.raises(RuntimeError, match="truncated"):
+        load_tlds(empty)
+
+
+def test_loader_raises_when_the_file_holds_only_comments(tmp_path: Path) -> None:
+    comments = tmp_path / "tlds.txt"
+    comments.write_text("# Version 1\n\n", encoding="ascii")
+
+    with pytest.raises(RuntimeError, match="truncated"):
+        load_tlds(comments)
+
+
+def test_loader_raises_when_the_list_is_cut_short(tmp_path: Path) -> None:
+    short = tmp_path / "tlds.txt"
+    short.write_text("com\nnet\norg\n", encoding="ascii")
+
+    with pytest.raises(RuntimeError, match="truncated"):
+        load_tlds(short)
+
+
+def test_loader_raises_on_a_malformed_entry(tmp_path: Path) -> None:
+    bad = tmp_path / "tlds.txt"
+    bad.write_text("<html>Not Found</html>\n", encoding="ascii")
+
+    with pytest.raises(RuntimeError, match="invalid entry"):
+        load_tlds(bad)
+
+
+def test_loader_resolves_the_default_path_from_the_module_not_the_working_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    assert load_tlds() == IANA_TLDS
+
+
+@pytest.mark.parametrize("name", ["evil.zip", "evil.mov", "evil.sh", "evil.py", "evil.md"])
+def test_bare_name_on_a_collision_label_is_listed_as_skipped_not_as_a_domain(action: ExtractIocs, name: str) -> None:
+    response = action.run({"text": f"Seen: {name}, and again {name.upper()}"})
+
+    assert response["skipped_filenames"] == [name]
+    assert response["domain"] == []
+
+
+def test_skipped_filenames_do_not_count_toward_total_count(action: ExtractIocs) -> None:
+    response = action.run({"text": "evil.zip clip.mov beacon-host.ai 45.33.32.156"})
+
+    assert response["skipped_filenames"] == ["evil.zip", "clip.mov"]
+    assert response["domain"] == ["beacon-host.ai"]
+    assert response["total_count"] == 2
+
+
+@pytest.mark.parametrize("name", ["evil.zip", "evil.mov", "evil.sh", "evil.py", "evil.md"])
+def test_url_or_email_on_a_collision_host_is_not_also_skipped(action: ExtractIocs, name: str) -> None:
+    response = action.run({"text": f"fetch http://{name}/x and write to ops@{name}"})
+
+    assert response["url"] == [f"http://{name}/x"]
+    assert response["email"] == [f"ops@{name}"]
+    assert response["skipped_filenames"] == []
+    assert response["domain"] == []
+
+
+def test_ordinary_document_name_is_neither_domain_nor_skipped(action: ExtractIocs) -> None:
+    response = action.run({"text": "Open report.docx and notes.txt"})
+
+    assert response["domain"] == []
+    assert response["skipped_filenames"] == []
+    assert response["total_count"] == 0

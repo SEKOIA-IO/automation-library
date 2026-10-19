@@ -1,3 +1,6 @@
+import json
+from collections.abc import Iterator
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -5,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 from polyswarm_api import exceptions as ps_exceptions
+from polyswarm_api.resources import IOC
 
 from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.action_polyswarm_searchioc import SearchIoc
@@ -18,29 +22,13 @@ def action(data_storage: str, module: PolyswarmModule) -> SearchIoc:
     return SearchIoc(module=module, data_path=data_storage)
 
 
-def _make_item(
-    *,
-    sha256: str = "aa" * 32,
-    sha1: str = "bb" * 20,
-    md5: str = "cc" * 16,
-    malicious: int = 4,
-    benign: int = 1,
-    total_detections: int = 5,
-    polyscore: float = 0.91,
-    family: str = "Emotet",
-    tags: list[str] | None = None,
-) -> SimpleNamespace:
+def _make_item(*, sha256: str = "aa" * 32) -> SimpleNamespace:
+    """A full artifact document, the shape the dict path tolerates; only its sha256 is read."""
     document: dict[str, Any] = {
-        "artifact": {"sha256": sha256, "sha1": sha1, "md5": md5},
-        "scan": {
-            "latest_scan": {"polyscore": polyscore, "created": "2026-02-01T00:00:00Z"},
-            "detections": {"malicious": malicious, "benign": benign, "total": total_detections},
-            "first_scan": {"created": "2026-01-01T00:00:00Z"},
-            "mimetype": {"mime": "application/x-dosexec"},
-            "filename": ["dropper.exe"],
-        },
-        "polyunite": {"malware_family": family} if family else {},
-        "tags": tags if tags is not None else [],
+        "artifact": {"sha256": sha256, "sha1": "bb" * 20, "md5": "cc" * 16},
+        "scan": {"latest_scan": {"polyscore": 0.91}, "detections": {"malicious": 4}},
+        "polyunite": {"malware_family": "Emotet"},
+        "tags": ["x"],
     }
     return SimpleNamespace(json=document)
 
@@ -191,13 +179,8 @@ def test_a_hit_activates_the_found_branch(mock_build_client: MagicMock, action: 
     assert response["returned_count"] == 1
     result = response["results"][0]
     assert result["sha256"] == "aa" * 32
-    assert result["malicious_detections"] == 4
-    assert result["benign_detections"] == 1
-    assert result["polyscore"] == 0.91
-    assert result["family"] == "Emotet"
     assert result["permalink"].endswith("aa" * 32)
-    assert result["mimetype"] == "application/x-dosexec"
-    assert result["filenames"] == ["dropper.exe"]
+    assert set(result) == {"sha256", "permalink"}
 
 
 @patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
@@ -278,22 +261,6 @@ def test_generic_polyswarm_failure_does_not_quote_the_client_exception(
 
 
 @patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
-def test_a_document_missing_family_and_tags_still_returns_a_result(
-    mock_build_client: MagicMock, action: SearchIoc
-) -> None:
-    item = _make_item(family="", tags=[])
-    mock_build_client.return_value.search_by_ioc.return_value = iter([item])
-
-    response = action.run({"domain": "evil.example.com"})
-    assert response is not None
-
-    result = response["results"][0]
-    assert result["family"] == ""
-    assert result["tags"] == []
-    assert result["families"] == []
-
-
-@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
 def test_an_item_with_no_readable_json_still_returns_a_row_with_blank_fields(
     mock_build_client: MagicMock, action: SearchIoc
 ) -> None:
@@ -307,7 +274,6 @@ def test_an_item_with_no_readable_json_still_returns_a_row_with_blank_fields(
     result = response["results"][0]
     assert result["sha256"] == ""
     assert result["permalink"] == ""
-    assert result["polyscore"] is None
 
 
 # --- the pivot is bounded ---
@@ -361,8 +327,10 @@ def test_the_limit_defaults_when_not_supplied(mock_build_client: MagicMock, acti
 
 @pytest.mark.parametrize("limit", [0, 201])
 def test_a_limit_outside_the_bounds_is_rejected(action: SearchIoc, limit: int) -> None:
-    with pytest.raises(ValueError):
-        action.run({"domain": "evil.example.com", "limit": limit})
+    response = action.run({"domain": "evil.example.com", "limit": limit})
+    assert response is None
+    assert action.error_message is not None
+    assert "limit" in action.error_message
 
 
 # --- connection errors and statuses ---
@@ -415,15 +383,117 @@ def test_plausible_domain_reaches_the_client(mock_build_client: MagicMock, actio
     mock_build_client.return_value.search_by_ioc.assert_called_once_with(domain="example.com")
 
 
-@pytest.mark.parametrize("scan_extra", [{"first_scan": None}, {"first_scan": {"created": None}}])
+# --- the live endpoint returns bare sha256 strings, parsed by the real client ---
+
+FIXTURE = Path(__file__).parent / "fixtures" / "search_by_ioc_bare_sha256.json"
+
+
+def _real_items(entries: list[Any]) -> list[IOC]:
+    """Run raw results entries through the client's own parser, as a live call does."""
+    return IOC.parse_result_list(MagicMock(), entries)
+
+
+def _live_hashes() -> list[str]:
+    return json.loads(FIXTURE.read_text())
+
+
 @patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
-def test_null_first_scan_is_an_empty_first_seen(
-    mock_build_client: MagicMock, action: SearchIoc, scan_extra: dict[str, Any]
+def test_bare_sha256_strings_from_the_real_parser_become_artifacts(
+    mock_build_client: MagicMock, action: SearchIoc
 ) -> None:
-    item = _make_item()
-    item.json["scan"].update(scan_extra)
-    mock_build_client.return_value.search_by_ioc.return_value = iter([item])
+    hashes = _live_hashes()
+    items = _real_items(hashes)
+    assert all(isinstance(item.json, str) for item in items)
+    mock_build_client.return_value.search_by_ioc.return_value = iter(items)
 
     response = action.run({"ip": "8.8.8.8"})
+    assert response is not None
 
-    assert response["results"][0]["first_seen"] == ""
+    assert response["found"] is True
+    assert response["truncated"] is False
+    assert [r["sha256"] for r in response["results"]] == hashes
+    first = response["results"][0]
+    assert first["permalink"].endswith(f"/{hashes[0]}")
+    assert set(first) == {"sha256", "permalink"}
+
+
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
+def test_a_mixed_list_of_strings_and_dicts_is_read_item_by_item(
+    mock_build_client: MagicMock, action: SearchIoc
+) -> None:
+    hashes = _live_hashes()
+    document = _make_item(sha256="dd" * 32).json
+    items = _real_items([hashes[0], document, hashes[1]])
+    mock_build_client.return_value.search_by_ioc.return_value = iter(items)
+
+    response = action.run({"domain": "example.com"})
+    assert response is not None
+
+    results = response["results"]
+    assert [r["sha256"] for r in results] == [hashes[0], "dd" * 32, hashes[1]]
+    assert all(set(r) == {"sha256", "permalink"} for r in results)
+
+
+def test_an_uppercase_sha256_string_is_normalised_to_lowercase() -> None:
+    upper = _live_hashes()[0].upper()
+    artifact = SearchIoc._build_artifact(_real_items([upper])[0])
+    assert artifact.sha256 == upper.lower()
+    assert artifact.permalink.endswith(upper.lower())
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["not-a-hash", "", "../../etc/passwd", "ab" * 20, "zz" * 32, "aa" * 32 + "0"],
+)
+def test_a_string_that_is_not_a_sha256_is_kept_as_a_blank_row_with_no_permalink(text: str) -> None:
+    artifact = SearchIoc._build_artifact(_real_items([text])[0])
+    assert artifact.sha256 == ""
+    assert artifact.permalink == ""
+
+
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
+def test_a_non_sha256_string_still_counts_as_a_returned_row(mock_build_client: MagicMock, action: SearchIoc) -> None:
+    mock_build_client.return_value.search_by_ioc.return_value = iter(_real_items(["junk", _live_hashes()[0]]))
+
+    response = action.run({"imphash": "d" * 32})
+    assert response is not None
+
+    assert response["returned_count"] == 2
+    assert response["results"][0]["sha256"] == ""
+    assert response["results"][1]["sha256"] == _live_hashes()[0]
+
+
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
+def test_a_stop_during_pagination_keeps_collected_items_and_reports_truncated(
+    mock_build_client: MagicMock, action: SearchIoc
+) -> None:
+    hashes = _live_hashes()
+    items = _real_items(hashes[:3])
+
+    def pages() -> Iterator[IOC]:
+        yield from items
+        raise ps_exceptions.NoResultsException(MagicMock(), "204")
+
+    mock_build_client.return_value.search_by_ioc.return_value = pages()
+
+    response = action.run({"ip": "8.8.8.8"})
+    assert response is not None
+
+    assert response["found"] is True
+    assert response["truncated"] is True
+    assert [r["sha256"] for r in response["results"]] == hashes[:3]
+    assert response["returned_count"] == 3
+
+
+@patch(f"{MODULE_PATH}.build_client", new_callable=autospec_build_client)
+def test_a_stop_before_any_item_is_still_not_found(mock_build_client: MagicMock, action: SearchIoc) -> None:
+    def pages() -> Iterator[IOC]:
+        raise ps_exceptions.NotFoundException(MagicMock(), "404")
+        yield
+
+    mock_build_client.return_value.search_by_ioc.return_value = pages()
+
+    response = action.run({"ip": "8.8.8.8"})
+    assert response is not None
+    assert response["found"] is False
+    assert response["truncated"] is False

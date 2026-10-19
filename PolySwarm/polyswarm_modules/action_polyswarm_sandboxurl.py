@@ -96,8 +96,9 @@ class SandboxUrl(PolyswarmAction):
             self.error(refusal)
             return None
 
-        # Resolved only after a reusable report has been looked for, so a provider list that
-        # cannot be read never costs the analyst a report that already exists.
+        # Resolved before the reusable report lookup, from the provider list already read above.
+        # An empty result is only refused after that lookup, so a missing image never costs the
+        # analyst a report that already exists.
         args.vm_slug = args.vm_slug or pick_vm_slug(listing, args.sandbox, "URL") or ""
 
         if not args.force:
@@ -132,7 +133,7 @@ class SandboxUrl(PolyswarmAction):
         failure, and both fall through to submitting a fresh detonation.
         """
         try:
-            results = list(api.search_url(url))
+            first = next(iter(api.search_url(url)), None)
         except MISSING_RESULT:
             return None
         except CLIENT_ERRORS as exc:
@@ -143,9 +144,9 @@ class SandboxUrl(PolyswarmAction):
             )
             return None
 
-        if not results:
+        if first is None:
             return None
-        sha256 = str(getattr(results[0], "sha256", "") or "")
+        sha256 = str(getattr(first, "sha256", "") or "")
         if not sha256:
             return None
 

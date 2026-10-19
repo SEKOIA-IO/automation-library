@@ -274,8 +274,10 @@ def test_a_scan_that_outlasts_the_wait_is_reported_as_still_running(
 
 @pytest.mark.parametrize("seconds", [29, 601])
 def test_a_wait_outside_the_bounds_is_rejected(action: ScanFile, sample_file: str, seconds: int) -> None:
-    with pytest.raises(ValueError):
-        action.run({"file": sample_file, "max_wait_seconds": seconds})
+    response = action.run({"file": sample_file, "max_wait_seconds": seconds})
+    assert response is None
+    assert action.error_message is not None
+    assert "max_wait_seconds" in action.error_message
 
 
 @patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
@@ -310,3 +312,29 @@ def test_an_unreadable_file_is_an_action_error_not_a_traceback(mock_build_client
     assert response is None
     assert "could not be read" in action.error_message
     mock_build_client.return_value.submit.assert_not_called()
+
+
+@patch("polyswarm_modules.action_polyswarm_scanfile.sha256_handle", return_value="aa" * 32, autospec=True)
+@patch("polyswarm_modules.action_polyswarm_scanfile.build_client", new_callable=autospec_build_client)
+def test_null_failed_and_text_fields_do_not_raise(
+    mock_build_client: MagicMock, mock_hash: MagicMock, action: ScanFile, sample_file: str
+) -> None:
+    existing = _make_scan_result()
+    existing.failed = None
+    existing.sha256 = None
+    existing.sha1 = None
+    existing.md5 = None
+    existing.extended_type = None
+    existing.permalink = None
+    mock_build_client.return_value.search.return_value = iter([existing])
+
+    response = action.run({"file": sample_file})
+
+    assert response is not None
+    assert response["failed"] is False
+    assert response["sha256"] == ""
+    assert response["sha1"] == ""
+    assert response["md5"] == ""
+    assert response["extended_type"] == ""
+    assert response["permalink"] == ""
+    assert response["cached"] is True
