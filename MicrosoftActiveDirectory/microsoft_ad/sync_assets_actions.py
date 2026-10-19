@@ -1,11 +1,14 @@
 import signal
+import time
 from collections import Counter
 from collections.abc import Iterator
 from contextlib import contextmanager
 from threading import Event, Timer
 from typing import Any
+from uuid import uuid4
 
 from pydantic.v1 import BaseModel, Field
+from sekoia_automation.storage import PersistentJSON
 
 from microsoft_ad.actions_base import MicrosoftADAction
 from microsoft_ad.asset_connectors.exceptions import AssetConnectorPushError, AssetConnectorStoppedError
@@ -45,6 +48,10 @@ class SynchronizeAssetsAction(MicrosoftADAction):
     # The platform marks a run failed after 2 hours: keep time to stop cleanly.
     MAX_DURATION = 100 * 60
 
+    # A run holding the lock for longer was killed by the platform without releasing it
+    LOCK_TTL = 2 * 60 * 60
+    LOCK_FILE = "sync_lock.json"
+
     def stop_on_time_limit(self, time_limit_reached: Event, connector: MicrosoftADUserAssetSyncConnector) -> None:
         time_limit_reached.set()
         connector.stop()
@@ -56,6 +63,29 @@ class SynchronizeAssetsAction(MicrosoftADAction):
             yield
         except Exception as error:
             self.log(f"Unable to {reason}: {error}", "warning")
+
+    @contextmanager
+    def _run_lock(self) -> Iterator[bool]:
+        """
+        Hold the run lock of the configuration in its storage, so a run started while another one
+        is still running skips its cycle instead of pushing the same users again. Yield whether
+        the lock was acquired.
+        """
+        run_id = str(uuid4())
+        # A new PersistentJSON each time: it only reads the file once
+        with PersistentJSON(self.LOCK_FILE, self.data_path) as lock:
+            acquired = not lock.get("run_id") or lock.get("expires_at", 0) <= time.time()
+            if acquired:
+                lock.update(run_id=run_id, expires_at=time.time() + self.LOCK_TTL)
+        try:
+            yield acquired
+        finally:
+            if acquired:
+                with self._warn_on_error("release the run lock"):
+                    with PersistentJSON(self.LOCK_FILE, self.data_path) as lock:
+                        # Never release the lock of another run, taken once ours expired
+                        if lock.get("run_id") == run_id:
+                            lock.clear()
 
     def run(self, arguments: SynchronizeAssetsArguments) -> dict[str, Any]:
         # The connector registers its own SIGINT/SIGTERM handlers: restore the
@@ -95,7 +125,14 @@ class SynchronizeAssetsAction(MicrosoftADAction):
         has_more = False
         try:
             if arguments.basedn:
-                connector.asset_fetch_cycle()
+                with self._run_lock() as acquired:
+                    if acquired:
+                        connector.asset_fetch_cycle()
+                    else:
+                        connector.log(
+                            message="Another run of this configuration is still in progress: this run is skipped",
+                            level="warning",
+                        )
             else:
                 basedn_error = "A base DN is required to synchronize Active Directory users"
                 self.error(basedn_error)

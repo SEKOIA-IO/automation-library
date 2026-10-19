@@ -465,6 +465,78 @@ def test_run_returns_has_more_when_the_time_limit_stops_a_push_that_times_out(bu
     assert any("time limit" in log["message"] for log in sent_logs(api))
 
 
+def write_lock(path: Path, run_id: str, expires_in: float) -> None:
+    with PersistentJSON(SynchronizeAssetsAction.LOCK_FILE, path) as lock:
+        lock.update(run_id=run_id, expires_at=time.time() + expires_in)
+
+
+def read_lock(path: Path) -> dict[str, Any]:
+    with PersistentJSON(SynchronizeAssetsAction.LOCK_FILE, path) as lock:
+        return dict(lock)
+
+
+def test_run_is_skipped_while_another_run_holds_the_lock(build_action, api, tmp_path):
+    write_lock(tmp_path, "other-run", expires_in=60)
+    action = build_action()
+
+    results = action.run(ARGUMENTS)
+
+    # Not an error, and no immediate re-run: the other run goes on
+    assert results == {"fetched": 0, "pushed_batches": 0, "failed_batches": 0, "has_more": False}
+    assert action.error_message is None
+    assert not requests_to(api, PUSH_URL)
+    assert read_lock(tmp_path)["run_id"] == "other-run"
+    assert any(
+        log["level"] == "warning" and "Another run of this configuration is still in progress" in log["message"]
+        for log in sent_logs(api)
+    )
+
+
+def test_run_takes_an_expired_lock(build_action, api, tmp_path):
+    # Left by a run killed without releasing it
+    write_lock(tmp_path, "killed-run", expires_in=-1)
+
+    results = build_action().run(ARGUMENTS)
+
+    assert results["pushed_batches"] == 3
+    assert read_lock(tmp_path) == {}
+
+
+def test_run_holds_the_lock_during_the_cycle_and_releases_it(build_action, api, tmp_path):
+    original_post = MicrosoftADUserAssetSyncConnector.post_assets_to_api
+    locks_during_push: list[dict[str, Any]] = []
+
+    def post_and_read_lock(connector, assets, url):
+        locks_during_push.append(read_lock(tmp_path))
+        return original_post(connector, assets, url)
+
+    with patch.object(MicrosoftADUserAssetSyncConnector, "post_assets_to_api", post_and_read_lock):
+        build_action().run(ARGUMENTS)
+
+    assert len({lock["run_id"] for lock in locks_during_push}) == 1
+    assert all(lock["expires_at"] > time.time() for lock in locks_during_push)
+    assert read_lock(tmp_path) == {}
+
+
+def test_run_releases_the_lock_on_an_error(build_action, api, tmp_path):
+    with pytest.raises(RuntimeError):
+        build_action(error=RuntimeError("LDAP is down")).run(ARGUMENTS)
+
+    assert read_lock(tmp_path) == {}
+
+
+def test_run_never_releases_the_lock_of_another_run(build_action, api, tmp_path):
+    # Our lock expired and another run took it in the meantime
+    def take_the_lock(connector, assets, url):
+        write_lock(tmp_path, "next-run", expires_in=60)
+        return {}
+
+    with patch.object(MicrosoftADUserAssetSyncConnector, "post_assets_to_api", take_the_lock):
+        build_action().run(ARGUMENTS)
+
+    assert read_lock(tmp_path)["run_id"] == "next-run"
+
+
 def test_run_logs_errors_to_the_connector_configuration(build_action, api):
     with pytest.raises(RuntimeError):
         build_action(error=RuntimeError("LDAP is down")).run(ARGUMENTS)
