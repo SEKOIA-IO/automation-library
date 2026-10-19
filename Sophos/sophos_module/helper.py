@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from typing import Any
 
 MAPPING = {
@@ -30,6 +31,23 @@ def strip_null_values(data: dict[str, Any]) -> dict[str, Any]:
             del data[k]
 
     return data
+
+
+def parse_iso8601_timestamp(raw: Any) -> float | None:
+    if not isinstance(raw, str):
+        return None
+
+    value = raw.strip()
+    if not value:
+        return None
+
+    if value.endswith("Z"):
+        value = f"{value[:-1]}+00:00"
+
+    try:
+        return datetime.fromisoformat(value).timestamp()
+    except ValueError:
+        return None
 
 
 THREAT_REGEX = re.compile("'(?P<detection_identity_name>.*?)'.+'(?P<filePath>.*?)'")
