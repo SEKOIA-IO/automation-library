@@ -237,6 +237,7 @@ def sent_logs(api) -> list[dict[str, Any]]:
 
 
 def read_context(path: Path) -> dict[str, Any]:
+    assert path.is_dir(), f"no storage folder {path}"
     with PersistentJSON("context.json", path) as cache:
         return dict(cache)
 
@@ -250,7 +251,7 @@ def test_run_pushes_assets_to_the_connector_configuration(build_action, api, tmp
     assert pushes[0].headers["Authorization"] == "Bearer api-key"
     assert pushes[0].headers["User-Agent"] == f"sekoiaio-asset-connector-{UUID}"
     # The checkpoint is committed once, at the end of the complete cycle
-    assert read_context(tmp_path)["most_recent_datetime"] == "20240103000000.0Z"
+    assert read_context(tmp_path / UUID)["most_recent_datetime"] == "20240103000000.0Z"
 
 
 def test_run_sends_the_logs_to_the_connector_configuration(build_action, api):
@@ -269,7 +270,7 @@ def test_run_returns_has_more_when_stopped(build_action, api, tmp_path):
     assert results["pushed_batches"] == 1
     assert len(requests_to(api, PUSH_URL)) == 1
     # A stopped cycle never advances the checkpoint
-    assert "most_recent_datetime" not in read_context(tmp_path)
+    assert "most_recent_datetime" not in read_context(tmp_path / UUID)
 
 
 @pytest.mark.parametrize(
@@ -285,7 +286,7 @@ def test_run_warns_when_the_time_limit_is_reached(build_action, api, tmp_path, s
 
     assert results["has_more"] is sorted_search
     assert not requests_to(api, PUSH_URL)
-    assert "most_recent_datetime" not in read_context(tmp_path)
+    assert "most_recent_datetime" not in read_context(tmp_path / UUID)
     assert any(
         log["level"] == "warning" and "time limit" in log["message"] and resume in log["message"]
         for log in sent_logs(api)
@@ -303,7 +304,7 @@ def test_run_returns_has_more_on_sigterm_and_restores_the_handler(build_action, 
         assert results["has_more"] is True
         assert results["pushed_batches"] == 1
         assert len(requests_to(api, PUSH_URL)) == 1
-        assert "most_recent_datetime" not in read_context(tmp_path)
+        assert "most_recent_datetime" not in read_context(tmp_path / UUID)
         assert signal.getsignal(signal.SIGTERM) is handler
     finally:
         signal.signal(signal.SIGTERM, previous)
@@ -319,7 +320,7 @@ def test_run_reports_a_failed_push(build_action, api, tmp_path):
     assert results == {"fetched": 2, "pushed_batches": 1, "failed_batches": 1, "has_more": False}
     assert action.error_message == "A batch of assets could not be pushed to Sekoia.io"
     assert len(requests_to(api, PUSH_URL)) == 2
-    assert "most_recent_datetime" not in read_context(tmp_path)
+    assert "most_recent_datetime" not in read_context(tmp_path / UUID)
     logs = sent_logs(api)
     assert any(log["level"] == "error" and "Error while pushing assets" in log["message"] for log in logs)
     assert any(
@@ -384,7 +385,7 @@ def test_run_fails_after_retrying_a_lasting_transient_error(build_action, api, f
     assert results == {"fetched": 1, "pushed_batches": 0, "failed_batches": 1, "has_more": False}
     assert len(requests_to(api, PUSH_URL)) > 1
     assert action.error_message == "A batch of assets could not be pushed to Sekoia.io"
-    assert "most_recent_datetime" not in read_context(tmp_path)
+    assert "most_recent_datetime" not in read_context(tmp_path / UUID)
 
 
 @pytest.mark.parametrize("status_code", [400, 401, 403, 404, 413])
@@ -408,7 +409,7 @@ def test_run_reports_a_push_that_keeps_failing_to_connect(build_action, api, tmp
 
     assert results == {"fetched": 1, "pushed_batches": 0, "failed_batches": 1, "has_more": False}
     assert action.error_message == "A batch of assets could not be pushed to Sekoia.io"
-    assert "most_recent_datetime" not in read_context(tmp_path)
+    assert "most_recent_datetime" not in read_context(tmp_path / UUID)
     assert any(log["level"] == "error" and "Unable to push a batch" in log["message"] for log in sent_logs(api))
 
 
@@ -434,7 +435,7 @@ def test_run_reports_the_failed_push_when_the_logs_endpoint_is_down(build_action
 
     assert results == {"fetched": 1, "pushed_batches": 0, "failed_batches": 1, "has_more": False}
     assert action.error_message == "A batch of assets could not be pushed to Sekoia.io"
-    assert "most_recent_datetime" not in read_context(tmp_path)
+    assert "most_recent_datetime" not in read_context(tmp_path / UUID)
 
 
 def test_run_returns_has_more_when_stopped_during_a_push(build_action, api, tmp_path):
@@ -448,7 +449,7 @@ def test_run_returns_has_more_when_stopped_during_a_push(build_action, api, tmp_
 
     assert results == {"fetched": 1, "pushed_batches": 0, "failed_batches": 0, "has_more": True}
     assert action.error_message is None
-    assert "most_recent_datetime" not in read_context(tmp_path)
+    assert "most_recent_datetime" not in read_context(tmp_path / UUID)
 
 
 def test_run_returns_has_more_when_the_time_limit_stops_a_push_that_times_out(build_action, api, tmp_path):
@@ -461,22 +462,24 @@ def test_run_returns_has_more_when_the_time_limit_stops_a_push_that_times_out(bu
 
     assert results == {"fetched": 1, "pushed_batches": 0, "failed_batches": 0, "has_more": True}
     assert action.error_message is None
-    assert "most_recent_datetime" not in read_context(tmp_path)
+    assert "most_recent_datetime" not in read_context(tmp_path / UUID)
     assert any("time limit" in log["message"] for log in sent_logs(api))
 
 
 def write_lock(path: Path, run_id: str, expires_in: float) -> None:
+    path.mkdir(parents=True, exist_ok=True)
     with PersistentJSON(SynchronizeAssetsAction.LOCK_FILE, path) as lock:
         lock.update(run_id=run_id, expires_at=time.time() + expires_in)
 
 
 def read_lock(path: Path) -> dict[str, Any]:
+    assert path.is_dir(), f"no storage folder {path}"
     with PersistentJSON(SynchronizeAssetsAction.LOCK_FILE, path) as lock:
         return dict(lock)
 
 
 def test_run_is_skipped_while_another_run_holds_the_lock(build_action, api, tmp_path):
-    write_lock(tmp_path, "other-run", expires_in=60)
+    write_lock(tmp_path / UUID, "other-run", expires_in=60)
     action = build_action()
 
     results = action.run(ARGUMENTS)
@@ -485,7 +488,7 @@ def test_run_is_skipped_while_another_run_holds_the_lock(build_action, api, tmp_
     assert results == {"fetched": 0, "pushed_batches": 0, "failed_batches": 0, "has_more": False}
     assert action.error_message is None
     assert not requests_to(api, PUSH_URL)
-    assert read_lock(tmp_path)["run_id"] == "other-run"
+    assert read_lock(tmp_path / UUID)["run_id"] == "other-run"
     assert any(
         log["level"] == "warning" and "Another run of this configuration is still in progress" in log["message"]
         for log in sent_logs(api)
@@ -516,12 +519,12 @@ def test_two_configurations_keep_their_own_checkpoint(build_action, api, tmp_pat
 
 def test_run_takes_an_expired_lock(build_action, api, tmp_path):
     # Left by a run killed without releasing it
-    write_lock(tmp_path, "killed-run", expires_in=-1)
+    write_lock(tmp_path / UUID, "killed-run", expires_in=-1)
 
     results = build_action().run(ARGUMENTS)
 
     assert results["pushed_batches"] == 3
-    assert read_lock(tmp_path) == {}
+    assert read_lock(tmp_path / UUID) == {}
 
 
 def test_run_holds_the_lock_during_the_cycle_and_releases_it(build_action, api, tmp_path):
@@ -529,7 +532,7 @@ def test_run_holds_the_lock_during_the_cycle_and_releases_it(build_action, api, 
     locks_during_push: list[dict[str, Any]] = []
 
     def post_and_read_lock(connector, assets, url):
-        locks_during_push.append(read_lock(tmp_path))
+        locks_during_push.append(read_lock(tmp_path / UUID))
         return original_post(connector, assets, url)
 
     with patch.object(MicrosoftADUserAssetSyncConnector, "post_assets_to_api", post_and_read_lock):
@@ -537,26 +540,26 @@ def test_run_holds_the_lock_during_the_cycle_and_releases_it(build_action, api, 
 
     assert len({lock["run_id"] for lock in locks_during_push}) == 1
     assert all(lock["expires_at"] > time.time() for lock in locks_during_push)
-    assert read_lock(tmp_path) == {}
+    assert read_lock(tmp_path / UUID) == {}
 
 
 def test_run_releases_the_lock_on_an_error(build_action, api, tmp_path):
     with pytest.raises(RuntimeError):
         build_action(error=RuntimeError("LDAP is down")).run(ARGUMENTS)
 
-    assert read_lock(tmp_path) == {}
+    assert read_lock(tmp_path / UUID) == {}
 
 
 def test_run_never_releases_the_lock_of_another_run(build_action, api, tmp_path):
     # Our lock expired and another run took it in the meantime
     def take_the_lock(connector, assets, url):
-        write_lock(tmp_path, "next-run", expires_in=60)
+        write_lock(tmp_path / UUID, "next-run", expires_in=60)
         return {}
 
     with patch.object(MicrosoftADUserAssetSyncConnector, "post_assets_to_api", take_the_lock):
         build_action().run(ARGUMENTS)
 
-    assert read_lock(tmp_path)["run_id"] == "next-run"
+    assert read_lock(tmp_path / UUID)["run_id"] == "next-run"
 
 
 def test_run_logs_errors_to_the_connector_configuration(build_action, api):
@@ -591,7 +594,7 @@ def test_run_stops_on_a_critical_log(build_action, api, tmp_path):
     assert [log["level"] for log in sent_logs(api) if log["message"] == "Invalid AD credentials"] == ["critical"]
     # The cycle stops at once: nothing pushed, checkpoint not advanced
     assert not requests_to(api, PUSH_URL)
-    assert "most_recent_datetime" not in read_context(tmp_path)
+    assert "most_recent_datetime" not in read_context(tmp_path / UUID)
 
 
 def test_run_requires_the_connector_configuration(build_action, api):
@@ -813,7 +816,7 @@ def test_run_fails_at_once_without_a_base_dn(build_action, api, tmp_path, basedn
     asset_fetch_cycle.assert_not_called()
     assert not requests_to(api, PUSH_URL)
     assert any(log["level"] == "error" and log["message"] == BASEDN_ERROR for log in sent_logs(api))
-    assert "most_recent_datetime" not in read_context(tmp_path)
+    assert "most_recent_datetime" not in read_context(tmp_path / UUID)
 
 
 def test_run_pushes_ad_users_to_the_asset_connector(tmp_path, api):
@@ -825,7 +828,7 @@ def test_run_pushes_ad_users_to_the_asset_connector(tmp_path, api):
     assert results == {"fetched": 1, "pushed_batches": 1, "failed_batches": 0, "has_more": False}
     assert pushed_sids(api) == ["S-1-5-21-1"]
     assert requests_to(api, LOGS_URL)
-    assert read_context(tmp_path)["most_recent_datetime"] == "20240601000000.0Z"
+    assert read_context(tmp_path / UUID)["most_recent_datetime"] == "20240601000000.0Z"
 
 
 def test_run_logs_the_users_that_could_not_be_mapped(tmp_path, api):
@@ -858,7 +861,7 @@ def test_run_logs_the_users_that_could_not_be_mapped(tmp_path, api):
         for log in logs
     )
     # Known limit: the cursor moves past the skipped user, only a full resync reads it again
-    assert read_context(tmp_path)["most_recent_datetime"] == "20250601000000.0Z"
+    assert read_context(tmp_path / UUID)["most_recent_datetime"] == "20250601000000.0Z"
 
 
 @pytest.mark.parametrize(
@@ -896,19 +899,20 @@ def test_interrupted_cycle_resumes_without_missing_users(tmp_path, api, sorts, f
         # Without the sort, the next run is the next scheduled one, not an immediate re-run
         assert first["has_more"] is sorts
         assert pushed_sids(api) == first_run_sids
-        assert read_context(tmp_path).get("most_recent_datetime") == first_run_checkpoint
+        assert read_context(tmp_path / UUID).get("most_recent_datetime") == first_run_checkpoint
 
         second = build_real_action(tmp_path).run(ARGUMENTS)
 
     assert second["has_more"] is False
     assert set(pushed_sids(api)) == {"S-1-5-21-1", "S-1-5-21-2", "S-1-5-21-3", "S-1-5-21-4"}
-    context = read_context(tmp_path)
+    context = read_context(tmp_path / UUID)
     assert context["most_recent_datetime"] == "20250601000000.0Z"
     assert context["seen_sids_at_checkpoint"] == ["S-1-5-21-2"]
 
 
 def test_run_from_an_existing_checkpoint_skips_seen_users(tmp_path, api):
-    with PersistentJSON("context.json", tmp_path) as cache:
+    (tmp_path / UUID).mkdir()
+    with PersistentJSON("context.json", tmp_path / UUID) as cache:
         cache["most_recent_datetime"] = "20240201000000.0Z"
         cache["seen_sids_at_checkpoint"] = ["S-1-5-21-4"]
     entries = [
@@ -936,7 +940,7 @@ def test_run_from_an_existing_checkpoint_skips_seen_users(tmp_path, api):
     assert pushed_sids(api) == ["S-1-5-21-2", "S-1-5-21-5"]
     # Sort refused: the checkpoint is not committed after each batch, only once the whole directory has been read
     assert checkpoints_at_push == ["20240201000000.0Z", "20240201000000.0Z"]
-    context = read_context(tmp_path)
+    context = read_context(tmp_path / UUID)
     assert context["most_recent_datetime"] == "20250601000000.0Z"
     assert context["seen_sids_at_checkpoint"] == ["S-1-5-21-2"]
 
@@ -965,7 +969,7 @@ def test_sorted_cycle_commits_the_checkpoint_after_each_batch(tmp_path, api):
     assert pushed_sids(api) == ["S-1-5-21-3", "S-1-5-21-1", "S-1-5-21-2"]
     # One entry behind the pushed batch: the cursor moves once the next entry is read
     assert checkpoints_after_push == [None, "20230301000000.0Z", "20240101000000.0Z"]
-    assert read_context(tmp_path)["most_recent_datetime"] == "20250601000000.0Z"
+    assert read_context(tmp_path / UUID)["most_recent_datetime"] == "20250601000000.0Z"
 
 
 def test_run_warns_when_the_directory_refuses_to_sort(tmp_path, api):
@@ -979,7 +983,7 @@ def test_run_warns_when_the_directory_refuses_to_sort(tmp_path, api):
         log["level"] == "warning" and "refused to sort the users by creation date" in log["message"]
         for log in sent_logs(api)
     )
-    assert read_context(tmp_path)["most_recent_datetime"] == "20240101000000.0Z"
+    assert read_context(tmp_path / UUID)["most_recent_datetime"] == "20240101000000.0Z"
 
 
 @pytest.mark.parametrize(
@@ -1003,7 +1007,7 @@ def test_run_fails_when_the_search_ends_on_an_error_page(tmp_path, api, sorts, c
         with pytest.raises(AssetConnectorSearchError, match="busy"):
             build_real_action(tmp_path).run(ARGUMENTS)
 
-    assert read_context(tmp_path).get("most_recent_datetime") == checkpoint_after_error
+    assert read_context(tmp_path / UUID).get("most_recent_datetime") == checkpoint_after_error
     assert any(log["level"] == "error" and "stopped before its last page" in log["message"] for log in sent_logs(api))
 
     # The next run reads the users of the unread pages
@@ -1011,7 +1015,7 @@ def test_run_fails_when_the_search_ends_on_an_error_page(tmp_path, api, sorts, c
         build_real_action(tmp_path).run(ARGUMENTS)
 
     assert set(pushed_sids(api)) == {"S-1-5-21-1", "S-1-5-21-2", "S-1-5-21-3", "S-1-5-21-4"}
-    assert read_context(tmp_path)["most_recent_datetime"] == "20250601000000.0Z"
+    assert read_context(tmp_path / UUID)["most_recent_datetime"] == "20250601000000.0Z"
 
 
 def test_paged_search_passes_the_sort_control_and_follows_the_cookie(tmp_path):
@@ -1056,7 +1060,7 @@ def test_sorted_checkpoint_never_skips_users_of_a_page_not_fully_pushed(tmp_path
         first = build_real_action(tmp_path).run({**ARGUMENTS, "batch_size": 3})
         assert first["has_more"] is True
         pushed_first = set(pushed_sids(api))
-        checkpoint = read_context(tmp_path)["most_recent_datetime"]
+        checkpoint = read_context(tmp_path / UUID)["most_recent_datetime"]
         not_pushed = [entry for entry in entries if entry["attributes"]["objectSid"] not in pushed_first]
         assert all(
             entry["attributes"]["whenCreated"].strftime("%Y%m%d%H%M%S.0Z") >= checkpoint for entry in not_pushed
