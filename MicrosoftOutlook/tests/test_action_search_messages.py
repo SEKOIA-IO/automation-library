@@ -422,6 +422,56 @@ def test_search_messages_by_network_message_id_fallback_paginates_until_match(co
         assert "$orderby=" not in decoded_continuation_query
 
 
+def test_search_messages_fallback_sets_has_more_for_truncated_last_page(configured_action):
+    def _match(message_id: str) -> dict[str, object]:
+        return {
+            "id": message_id,
+            "singleValueExtendedProperties": [
+                {
+                    "id": SearchMessagesAction.NETWORK_MESSAGE_ID_EXTENDED_PROPERTY,
+                    "value": "00000000-0000-4000-8000-000000000001",
+                }
+            ],
+        }
+
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+        )
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages",
+            [
+                {"status_code": 200, "json": {"value": []}},
+                {
+                    "status_code": 200,
+                    "json": {
+                        "value": [
+                            _match("graph-item-id-1"),
+                            _match("graph-item-id-2"),
+                        ]
+                    },
+                },
+            ],
+        )
+
+        action = configured_action(SearchMessagesAction)
+        result = action.run(
+            arguments={
+                "user": "1111",
+                "email_local_id": "00000000-0000-4000-8000-000000000001",
+                "max_messages_to_return": 1,
+            }
+        )
+
+        assert result["message_ids"] == ["graph-item-id-1"]
+        assert len(result["messages"]) == 1
+        assert result["has_more"] is True
+        assert result["scan_limit_reached"] is False
+
+
 @pytest.mark.parametrize(
     "scenario,next_link,expected_has_more,expected_request_count",
     [

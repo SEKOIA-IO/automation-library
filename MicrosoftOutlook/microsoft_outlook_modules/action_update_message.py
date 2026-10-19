@@ -122,10 +122,12 @@ class UpdateMessageAction(MicrosoftGraphActionBase):
         normalized_result["bcc"] = bcc
         normalized_result["cc"] = cc
         normalized_result["importance"] = importance
-        normalized_result["original_from"] = mailbox_owner
-        normalized_result["original_subject"] = subject
         normalized_result["recipients"] = recipients
-        normalized_result["sender"] = sender
+        normalized_result.setdefault("from", None)
+        normalized_result.setdefault("sender", None)
+        normalized_result["updated_from"] = mailbox_owner
+        normalized_result["updated_subject"] = subject
+        normalized_result["updated_sender"] = sender
         normalized_result["status"] = "updated"
         normalized_result["message_id"] = resolved_message_id
         self.log(
