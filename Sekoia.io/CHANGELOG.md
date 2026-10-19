@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-02 - 2.79.0
+
+### Added
+
+- Edit Alert: add the `assignee` argument to assign the alert to a user
+
 ## 2026-09-30 - 2.78.1
 
 ### Fixed
