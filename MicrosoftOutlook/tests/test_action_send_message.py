@@ -9,9 +9,17 @@ def test_send_message(configured_action):
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
-        mock.register_uri("POST", "https://graph.microsoft.com/v1.0/users/1111/sendMail", status_code=202)
+        mock.register_uri(
+            "POST",
+            "https://graph.microsoft.com/v1.0/users/1111/sendMail",
+            status_code=202,
+        )
 
         action = configured_action(SendMessageAction)
         result = action.run(
@@ -46,9 +54,17 @@ def test_send_message_with_all_optional_fields(configured_action):
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
-        mock.register_uri("POST", "https://graph.microsoft.com/v1.0/users/1111/sendMail", status_code=202)
+        mock.register_uri(
+            "POST",
+            "https://graph.microsoft.com/v1.0/users/1111/sendMail",
+            status_code=202,
+        )
 
         action = configured_action(SendMessageAction)
         action.run(
@@ -89,7 +105,11 @@ def test_send_message_falls_back_when_response_payload_is_not_usable(configured_
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "POST",
@@ -131,7 +151,11 @@ def test_send_message_includes_target_message_id_when_api_returns_id(configured_
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "POST",

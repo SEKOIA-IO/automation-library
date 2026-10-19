@@ -10,7 +10,7 @@ from . import MicrosoftOutlookModule
 from .client import ApiClient
 
 
-class GraphAPIException(Exception):
+class GraphAPIError(Exception):
     """Represent a Microsoft Graph API error."""
 
 
@@ -98,9 +98,7 @@ class MicrosoftGraphActionBase(Action, ABC):
             request_url = request.url if request is not None else None
 
             message = (
-                "Microsoft Graph API request failed "
-                f"status_code={response.status_code!r} "
-                f"reason={response.reason!r}"
+                f"Microsoft Graph API request failed status_code={response.status_code!r} reason={response.reason!r}"
             )
             if response.status_code == 400:
                 message = response.text
@@ -115,7 +113,7 @@ class MicrosoftGraphActionBase(Action, ABC):
                     ),
                     level="error",
                 )
-                raise GraphAPIException(message)
+                raise GraphAPIError(message)
 
             self.log(
                 message=(

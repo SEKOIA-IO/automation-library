@@ -23,9 +23,7 @@ class DeleteMessageAction(MicrosoftGraphActionBase):
         message_id = self._resolve_message_id(validated_arguments.message_id)
 
         self.log(
-            message=(
-                "Start delete message action " f"user={user_id_or_principal_name!r} " f"message_id={message_id!r}"
-            ),
+            message=(f"Start delete message action user={user_id_or_principal_name!r} message_id={message_id!r}"),
             level="debug",
         )
 
@@ -36,9 +34,7 @@ class DeleteMessageAction(MicrosoftGraphActionBase):
         self.handle_response(response)
 
         self.log(
-            message=(
-                "Completed delete message action " f"user={user_id_or_principal_name!r} " f"message_id={message_id!r}"
-            ),
+            message=(f"Completed delete message action user={user_id_or_principal_name!r} message_id={message_id!r}"),
             level="debug",
         )
 

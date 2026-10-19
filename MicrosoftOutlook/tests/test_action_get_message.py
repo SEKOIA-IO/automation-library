@@ -2,7 +2,7 @@ import pytest
 import requests_mock
 from requests import HTTPError
 
-from microsoft_outlook_modules.action_base import GraphAPIException
+from microsoft_outlook_modules.action_base import GraphAPIError
 from microsoft_outlook_modules.action_get_message import GetMessageAction
 
 
@@ -19,9 +19,17 @@ def test_get_message(configured_action, get_message_1, message_id_input):
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
-        mock.register_uri("GET", "https://graph.microsoft.com/v1.0/users/1111/messages/2222", json=get_message_1)
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages/2222",
+            json=get_message_1,
+        )
 
         action = configured_action(GetMessageAction)
         result = action.run(arguments={"user": "1111", "message_id": message_id_input})
@@ -44,9 +52,17 @@ def test_get_message_keeps_non_dict_payload_unchanged(configured_action):
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
-        mock.register_uri("GET", "https://graph.microsoft.com/v1.0/users/1111/messages/2222", json=["message"])
+        mock.register_uri(
+            "GET",
+            "https://graph.microsoft.com/v1.0/users/1111/messages/2222",
+            json=["message"],
+        )
 
         action = configured_action(GetMessageAction)
         result = action.run(arguments={"user": "1111", "message_id": "2222"})
@@ -58,7 +74,11 @@ def test_get_message_message_id_falls_back_to_input_message_id(configured_action
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -75,7 +95,11 @@ def test_get_message_message_id_falls_back_to_input_message_id(configured_action
 @pytest.mark.parametrize(
     "status_code,body,expected_exception",
     [
-        (400, '{"error":{"code":"ErrorInvalidIdMalformed","message":"Id is malformed."}}', GraphAPIException),
+        (
+            400,
+            '{"error":{"code":"ErrorInvalidIdMalformed","message":"Id is malformed."}}',
+            GraphAPIError,
+        ),
         (500, "server_error", HTTPError),
     ],
 )

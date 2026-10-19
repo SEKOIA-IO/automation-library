@@ -66,6 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Harmonize action logging messages with a consistent descriptive style and structured key/value context
 - Upgrade `sekoia-automation-sdk` to `1.27.0`
 - Remove the logo background
+- Raise the minimum supported Python version to `3.14`
+- Migrate project dependency management from Poetry to uv (`pyproject.toml` PEP 621 + `uv.lock`)
 
 ### Fixed
 

@@ -2,7 +2,7 @@ from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .action_base import GraphAPIException, MicrosoftGraphActionBase
+from .action_base import GraphAPIError, MicrosoftGraphActionBase
 
 
 class SearchMessagesArguments(BaseModel):
@@ -57,7 +57,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
         }
 
         if network_message_id:
-            initial_params["$expand"] = "singleValueExtendedProperties(" f"$filter=id eq '{escaped_property}'" ")"
+            initial_params["$expand"] = f"singleValueExtendedProperties($filter=id eq '{escaped_property}')"
 
         if return_most_recent_first:
             initial_params["$orderby"] = "receivedDateTime desc"
@@ -130,7 +130,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
 
         if not internet_message_id and not network_message_id:
             self.log(
-                message=("Detected invalid search message arguments " f"user={user_id_or_principal_name!r}"),
+                message=(f"Detected invalid search message arguments user={user_id_or_principal_name!r}"),
                 level="error",
             )
             raise ValueError("Either email_message_id or email_local_id must be provided")
@@ -188,7 +188,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
 
         if network_message_id:
             escaped_property = self._escape_odata_literal(self.NETWORK_MESSAGE_ID_EXTENDED_PROPERTY)
-            params["$expand"] = "singleValueExtendedProperties(" f"$filter=id eq '{escaped_property}'" ")"
+            params["$expand"] = f"singleValueExtendedProperties($filter=id eq '{escaped_property}')"
 
         try:
             response = self.client.get(
@@ -198,7 +198,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
             )
             self.handle_response(response)
             payload = response.json()
-        except GraphAPIException as exc:
+        except GraphAPIError as exc:
             if "InefficientFilter" in str(exc):
                 used_fallback = True
                 self.log(

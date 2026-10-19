@@ -4,7 +4,7 @@ import pytest
 import requests_mock
 
 from microsoft_outlook_modules import MicrosoftOutlookModule
-from microsoft_outlook_modules.action_base import GraphAPIException
+from microsoft_outlook_modules.action_base import GraphAPIError
 from microsoft_outlook_modules.action_search_messages import SearchMessagesAction
 from microsoft_outlook_modules.client import ApiClient
 
@@ -14,7 +14,11 @@ def test_search_messages_by_internet_message_id(configured_action, get_message_1
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -51,12 +55,23 @@ def test_search_messages_return_most_recent_first_adds_orderby(configured_action
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
             "https://graph.microsoft.com/v1.0/users/1111/messages",
-            json={"value": [{"id": "graph-item-id-1", "internetMessageId": "<sample-message-id@example.com>"}]},
+            json={
+                "value": [
+                    {
+                        "id": "graph-item-id-1",
+                        "internetMessageId": "<sample-message-id@example.com>",
+                    }
+                ]
+            },
         )
 
         action = configured_action(SearchMessagesAction)
@@ -146,7 +161,11 @@ def test_search_messages_by_network_message_id(configured_action, get_message_1)
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -155,7 +174,12 @@ def test_search_messages_by_network_message_id(configured_action, get_message_1)
         )
 
         action = configured_action(SearchMessagesAction)
-        result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
+        result = action.run(
+            arguments={
+                "user": "1111",
+                "email_local_id": "00000000-0000-4000-8000-000000000001",
+            }
+        )
 
         assert result["messages"][0]["message_id"] == get_message_1["id"]
         assert result["messages"][0]["network_message_id"] == "00000000-0000-4000-8000-000000000001"
@@ -191,7 +215,11 @@ def test_search_messages_with_combined_identifiers(configured_action, get_messag
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -252,7 +280,10 @@ def test_search_messages_max_messages_to_return_range_validation_error(
         {"status_code": 200, "json": {"value": []}},
         {
             "status_code": 400,
-            "text": '{"error":{"code":"InefficientFilter","message":"The restriction or sort order is too complex for this operation."}}',
+            "text": (
+                '{"error":{"code":"InefficientFilter","message":"The restriction or sort order is too '
+                'complex for this operation."}}'
+            ),
         },
     ],
     ids=["empty_result", "inefficient_filter"],
@@ -262,7 +293,11 @@ def test_search_messages_by_network_message_id_fallback(configured_action, initi
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -289,7 +324,12 @@ def test_search_messages_by_network_message_id_fallback(configured_action, initi
         )
 
         action = configured_action(SearchMessagesAction)
-        result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
+        result = action.run(
+            arguments={
+                "user": "1111",
+                "email_local_id": "00000000-0000-4000-8000-000000000001",
+            }
+        )
 
         assert len(result["messages"]) == 1
         assert result["messages"][0]["message_id"] == "graph-item-id-2"
@@ -305,7 +345,11 @@ def test_search_messages_fallback_ignores_empty_optional_identifier(configured_a
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -348,14 +392,20 @@ def test_search_messages_fallback_ignores_empty_optional_identifier(configured_a
         assert len(mock.request_history) == 3
 
 
-def test_search_messages_by_network_message_id_fallback_paginates_until_match(configured_action):
+def test_search_messages_by_network_message_id_fallback_paginates_until_match(
+    configured_action,
+):
     next_link = "https://graph.microsoft.com/v1.0/users/1111/messages?$skiptoken=abc123"
 
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -401,7 +451,12 @@ def test_search_messages_by_network_message_id_fallback_paginates_until_match(co
         )
 
         action = configured_action(SearchMessagesAction)
-        result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
+        result = action.run(
+            arguments={
+                "user": "1111",
+                "email_local_id": "00000000-0000-4000-8000-000000000001",
+            }
+        )
 
         assert result["message_ids"] == ["graph-item-id-match"]
         assert result["messages"][0]["message_id"] == "graph-item-id-match"
@@ -422,7 +477,9 @@ def test_search_messages_by_network_message_id_fallback_paginates_until_match(co
         assert "$orderby=" not in decoded_continuation_query
 
 
-def test_search_messages_fallback_sets_has_more_for_truncated_last_page(configured_action):
+def test_search_messages_fallback_sets_has_more_for_truncated_last_page(
+    configured_action,
+):
     def _match(message_id: str) -> dict[str, object]:
         return {
             "id": message_id,
@@ -438,7 +495,11 @@ def test_search_messages_fallback_sets_has_more_for_truncated_last_page(configur
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -520,7 +581,11 @@ def test_search_messages_fallback_scan_limit_signals(
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -545,7 +610,12 @@ def test_search_messages_fallback_scan_limit_signals(
             )
 
         action = configured_action(SearchMessagesAction)
-        result = action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
+        result = action.run(
+            arguments={
+                "user": "1111",
+                "email_local_id": "00000000-0000-4000-8000-000000000001",
+            }
+        )
 
         assert result["message_ids"] == []
         assert result["messages"] == []
@@ -595,7 +665,11 @@ def test_search_messages_fallback_on_inefficient_filter(
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -603,7 +677,10 @@ def test_search_messages_fallback_on_inefficient_filter(
             [
                 {
                     "status_code": 400,
-                    "text": '{"error":{"code":"InefficientFilter","message":"The restriction or sort order is too complex for this operation."}}',
+                    "text": (
+                        '{"error":{"code":"InefficientFilter","message":"The restriction or sort order is too '
+                        'complex for this operation."}}'
+                    ),
                 },
                 {
                     "status_code": 200,
@@ -627,7 +704,10 @@ def test_search_messages_fallback_on_inefficient_filter(
         {"status_code": 200, "json": {"value": []}},
         {
             "status_code": 400,
-            "text": '{"error":{"code":"InefficientFilter","message":"The restriction or sort order is too complex for this operation."}}',
+            "text": (
+                '{"error":{"code":"InefficientFilter","message":"The restriction or sort order is too '
+                'complex for this operation."}}'
+            ),
         },
     ],
     ids=["empty_result", "inefficient_filter"],
@@ -637,7 +717,11 @@ def test_search_messages_combined_identifiers_fallback_applies_and_filter(config
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -706,7 +790,11 @@ def test_search_messages_fallback_orderby_behavior(
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -747,12 +835,18 @@ def test_search_messages_fallback_orderby_behavior(
         assert ("$orderby=receivedDateTime desc" in decoded_query) is order_by_expected
 
 
-def test_search_messages_omits_message_id_when_graph_id_is_not_string(configured_action):
+def test_search_messages_omits_message_id_when_graph_id_is_not_string(
+    configured_action,
+):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -761,7 +855,12 @@ def test_search_messages_omits_message_id_when_graph_id_is_not_string(configured
         )
 
         action = configured_action(SearchMessagesAction)
-        result = action.run(arguments={"user": "1111", "email_message_id": "<sample-message-id@example.com>"})
+        result = action.run(
+            arguments={
+                "user": "1111",
+                "email_message_id": "<sample-message-id@example.com>",
+            }
+        )
         assert result["messages"] == [{"subject": "test-subject"}]
         assert result["message_ids"] == []
 
@@ -771,7 +870,11 @@ def test_search_messages_returns_empty_selection_when_no_results(configured_acti
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -780,7 +883,12 @@ def test_search_messages_returns_empty_selection_when_no_results(configured_acti
         )
 
         action = configured_action(SearchMessagesAction)
-        result = action.run(arguments={"user": "1111", "email_message_id": "<sample-message-id@example.com>"})
+        result = action.run(
+            arguments={
+                "user": "1111",
+                "email_message_id": "<sample-message-id@example.com>",
+            }
+        )
 
         assert result == {
             "user": "1111",
@@ -800,7 +908,11 @@ def test_search_messages_rejects_removed_item_index_input(configured_action):
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -844,12 +956,18 @@ def test_extract_network_message_id_returns_none_when_unusable(message):
     assert SearchMessagesAction._extract_network_message_id(message) is None
 
 
-def test_search_messages_by_network_message_id_raises_non_inefficient_filter_error(configured_action):
+def test_search_messages_by_network_message_id_raises_non_inefficient_filter_error(
+    configured_action,
+):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
-            json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
         )
         mock.register_uri(
             "GET",
@@ -859,5 +977,10 @@ def test_search_messages_by_network_message_id_raises_non_inefficient_filter_err
         )
 
         action = configured_action(SearchMessagesAction)
-        with pytest.raises(GraphAPIException, match="BadRequest"):
-            action.run(arguments={"user": "1111", "email_local_id": "00000000-0000-4000-8000-000000000001"})
+        with pytest.raises(GraphAPIError, match="BadRequest"):
+            action.run(
+                arguments={
+                    "user": "1111",
+                    "email_local_id": "00000000-0000-4000-8000-000000000001",
+                }
+            )
