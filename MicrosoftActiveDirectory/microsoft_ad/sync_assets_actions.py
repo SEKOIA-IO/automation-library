@@ -114,7 +114,8 @@ class SynchronizeAssetsAction(MicrosoftADAction):
                 message=f"The fetch cycle {reason} before reading the whole directory: {resume}",
                 level="warning",
             )
-            has_more = True
+            # Without the sort, a stop never moves the checkpoint: an immediate re-run would only redo the same work
+            has_more = connector.sorted_search
         except AssetConnectorPushError:
             # Fail the run without raising, so the counters are still returned
             self.error("A batch of assets could not be pushed to Sekoia.io")

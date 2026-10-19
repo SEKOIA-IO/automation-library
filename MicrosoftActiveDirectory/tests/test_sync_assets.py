@@ -93,8 +93,12 @@ def build_fake_connector(
     error: Exception | None = None,
     critical: str | None = None,
     ldap_client: Any = None,
+    sorted_search: bool = True,
 ) -> type[MicrosoftADUserAssetSyncConnector]:
-    """Build a sync connector class whose `get_assets` yields `items` with the given behaviour."""
+    """Build a sync connector class whose `get_assets` yields `items` with the given behaviour.
+
+    `sorted_search` tells whether the directory accepted the sort, like `_run_paged_search` does.
+    """
 
     class FakeSyncConnector(MicrosoftADUserAssetSyncConnector):
         def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -102,6 +106,7 @@ def build_fake_connector(
             self._ldap_client = ldap_client
 
         def get_assets(self) -> Generator[UserOCSFModel, None, None]:
+            self.sorted_search = sorted_search
             for index, item in enumerate(items):
                 if index == stop_after:
                     self.stop()
@@ -187,16 +192,22 @@ def test_run_returns_has_more_when_stopped(build_action, api, tmp_path):
     assert "most_recent_datetime" not in read_context(tmp_path)
 
 
-def test_run_warns_when_the_time_limit_is_reached(build_action, api, tmp_path):
-    results = build_action(wait_for_stop=True, max_duration=0.05).run(ARGUMENTS)
+@pytest.mark.parametrize(
+    "sorted_search, resume",
+    [
+        (True, "resumes from the last pushed batch"),
+        # Without the sort the checkpoint does not move: an immediate re-run would only redo the same work
+        (False, "checkpoint was not advanced"),
+    ],
+)
+def test_run_warns_when_the_time_limit_is_reached(build_action, api, tmp_path, sorted_search, resume):
+    results = build_action(wait_for_stop=True, max_duration=0.05, sorted_search=sorted_search).run(ARGUMENTS)
 
-    assert results["has_more"] is True
+    assert results["has_more"] is sorted_search
     assert not requests_to(api, PUSH_URL)
     assert "most_recent_datetime" not in read_context(tmp_path)
     assert any(
-        log["level"] == "warning"
-        and "time limit" in log["message"]
-        and "checkpoint was not advanced" in log["message"]
+        log["level"] == "warning" and "time limit" in log["message"] and resume in log["message"]
         for log in sent_logs(api)
     )
 
@@ -603,7 +614,8 @@ def test_interrupted_cycle_resumes_without_missing_users(tmp_path, api, sorts, f
         patch.object(MicrosoftADUserAssetSyncConnector, "post_assets_to_api", post_then_stop),
     ):
         first = build_real_action(tmp_path).run(ARGUMENTS)
-        assert first["has_more"] is True
+        # Without the sort, the next run is the next scheduled one, not an immediate re-run
+        assert first["has_more"] is sorts
         assert pushed_sids(api) == first_run_sids
         assert read_context(tmp_path).get("most_recent_datetime") == first_run_checkpoint
 
