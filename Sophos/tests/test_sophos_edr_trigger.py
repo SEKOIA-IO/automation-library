@@ -162,13 +162,6 @@ def test_fetch_next_events_with_created_at_camel_case(trigger):
         assert len(calls) > 0
 
 
-def test_parse_timestamp_handles_invalid_values(trigger):
-    assert trigger._parse_timestamp(None) is None
-    assert trigger._parse_timestamp(123) is None
-    assert trigger._parse_timestamp("") is None
-    assert trigger._parse_timestamp("not-a-date") is None
-
-
 def test_get_most_recent_timestamp_returns_none_without_parseable_fields(trigger):
     assert trigger._get_most_recent_timestamp_from_items([{"foo": "bar"}]) is None
 

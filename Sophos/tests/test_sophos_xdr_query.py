@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from unittest.mock import Mock
 
@@ -379,8 +380,44 @@ def test_getting_results_with_compatibility_fallback_query(
         trigger.getting_results("7")
 
         query_calls = [call for call in mock.request_history if call.method == "POST" and call.url == url]
+
+        first_query = json.loads(query_calls[0].body.decode("utf-8"))
+        second_query = json.loads(query_calls[1].body.decode("utf-8"))
+
         assert len(query_calls) == 2
+        assert first_query["adHocQuery"]["template"] == "SELECT * FROM xdr_ioc_view WHERE ioc_detection_weight > 3"
+        assert second_query["adHocQuery"]["template"] == "SELECT * FROM xdr_ioc_view WHERE ioc_severity > 3"
         assert trigger.push_events_to_intakes.call_count == 1
+
+
+def test_getting_results_does_not_fallback_on_non_compatibility_error(trigger, authorization_message, whoami_message):
+    host = "https://api-eu01.central.sophos.com"
+    url = f"{host}/xdr-query/v1/queries/runs"
+
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            f"{trigger.module.configuration.oauth2_authorization_url}",
+            status_code=200,
+            json=authorization_message,
+        )
+
+        mock.get(
+            f"{trigger.module.configuration.api_host}/whoami/v1",
+            status_code=200,
+            json=whoami_message,
+        )
+
+        mock.post(
+            url,
+            status_code=429,
+            json={"error": "TooManyRequests", "message": "rate limit exceeded"},
+        )
+
+        trigger.getting_results("7")
+
+        query_calls = [call for call in mock.request_history if call.method == "POST" and call.url == url]
+        assert len(query_calls) == 1
+        assert trigger.push_events_to_intakes.call_count == 0
 
 
 def test_observe_items_events_lag_with_calendar_time_camel_case(trigger):
@@ -393,7 +430,14 @@ def test_observe_items_events_lag_with_calendar_time_camel_case(trigger):
 
 
 def test_run_compatible_query_failed_after_all_templates(trigger):
-    trigger.post_query = Mock(return_value=("failed", None))
+    def _mock_post_query(_query):
+        trigger._last_query_error = {
+            "status_code": 400,
+            "message": "column ioc_detection_weight does not exist",
+        }
+        return "failed", None
+
+    trigger.post_query = Mock(side_effect=_mock_post_query)
 
     result, query_id = trigger.run_compatible_query()
 
@@ -402,11 +446,11 @@ def test_run_compatible_query_failed_after_all_templates(trigger):
     assert trigger.log.call_count >= 1
 
 
-def test_parse_timestamp_handles_invalid_values(trigger):
-    assert trigger._parse_timestamp(None) is None
-    assert trigger._parse_timestamp(123) is None
-    assert trigger._parse_timestamp("") is None
-    assert trigger._parse_timestamp("not-a-date") is None
+def test_extract_event_timestamp_handles_invalid_values(trigger):
+    assert trigger._extract_event_timestamp({"createdAt": None}) is None
+    assert trigger._extract_event_timestamp({"createdAt": 123}) is None
+    assert trigger._extract_event_timestamp({"createdAt": ""}) is None
+    assert trigger._extract_event_timestamp({"createdAt": "not-a-date"}) is None
 
 
 def test_extract_event_timestamp_falls_back_to_created_at(trigger):
