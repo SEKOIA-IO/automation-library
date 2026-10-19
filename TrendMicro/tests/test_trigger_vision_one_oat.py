@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock, patch
 
 import pytest
@@ -55,7 +55,11 @@ def message_1():
                     "ips": ["10.209.14.33", "fe80::8473:af77:b312:35ea"],
                 },
                 "entityType": "endpoint",
-                "entityName": "desktop 1 (127.0.0.1) or 127.0.0.1 | xxxx@gmail.com | arn:aws:lambda:*:%s:function:%s | k8s_container-8c55678bd-8r7zt_default_4b291f63-c0e1-46e6-8503-ee2a834a876c_6411 | 6d7d30d2148a | -",
+                "entityName": (
+                    "desktop 1 (127.0.0.1) or 127.0.0.1 | xxxx@gmail.com | arn:aws:lambda:*:%s:function:%s | "
+                    "k8s_container-8c55678bd-8r7zt_default_4b291f63-c0e1-46e6-8503-ee2a834a876c_6411 | "
+                    "6d7d30d2148a | -"
+                ),
                 "detectedDateTime": "2020-06-01T02:12:56Z",
                 "ingestedDateTime": "2020-06-01T02:12:56Z",
                 "detail": {
@@ -140,7 +144,7 @@ def message_1():
     ],
 )
 def test_next_batch_sleep_behavior(trigger, message_1, batch_duration, expected_sleep_calls, mocked_vision_one_time):
-    trigger.cursor.offset = datetime(year=2024, month=11, day=1, tzinfo=timezone.utc)
+    trigger.cursor.offset = datetime(year=2024, month=11, day=1, tzinfo=UTC)
     with requests_mock.Mocker() as mock_requests:
         mock_time = mocked_vision_one_time
         mock_requests.register_uri("GET", "https://api.xdr.trendmicro.com/v3.0/oat/detections", json=message_1)
@@ -156,7 +160,7 @@ def test_next_batch_sleep_behavior(trigger, message_1, batch_duration, expected_
 
 
 def test_fetch_events_should_reset_future_checkpoint(trigger):
-    future_date = datetime.now(timezone.utc) + timedelta(days=1)
+    future_date = datetime.now(UTC) + timedelta(days=1)
     trigger.from_date = future_date
     trigger.cursor.offset = future_date
 
@@ -167,7 +171,7 @@ def test_fetch_events_should_reset_future_checkpoint(trigger):
 
     assert fetch_mock.call_count == 1
     fetched_from_date = fetch_mock.call_args.args[0]
-    assert fetched_from_date <= datetime.now(timezone.utc)
+    assert fetched_from_date <= datetime.now(UTC)
     assert trigger.from_date == fetched_from_date
     assert trigger.cursor.offset == fetched_from_date
     trigger.log.assert_any_call(
@@ -181,7 +185,7 @@ def test_fetch_events_should_reset_future_checkpoint(trigger):
 
 
 def test_fetch_events_retries_future_checkpoint_recovery_after_persistence_error(trigger):
-    future_date = datetime.now(timezone.utc) + timedelta(days=1)
+    future_date = datetime.now(UTC) + timedelta(days=1)
     trigger.from_date = future_date
     trigger.cursor.offset = future_date
 
@@ -204,12 +208,12 @@ def test_fetch_events_retries_future_checkpoint_recovery_after_persistence_error
     assert reset_mock.call_count == 2
     assert fetch_mock.call_count == 1
     recovered_from_date = fetch_mock.call_args.args[0]
-    assert recovered_from_date <= datetime.now(timezone.utc)
+    assert recovered_from_date <= datetime.now(UTC)
     assert trigger.from_date == recovered_from_date
 
 
 def test_fetch_events_updates_checkpoint_when_newer_events_are_seen(trigger):
-    trigger.from_date = datetime(2024, 11, 1, tzinfo=timezone.utc)
+    trigger.from_date = datetime(2024, 11, 1, tzinfo=UTC)
     trigger.cursor.offset = trigger.from_date
     next_events = [{"detectedDateTime": "2024-11-01T00:00:30Z"}]
     fetch_mock = Mock(return_value=iter([next_events]))
@@ -218,12 +222,12 @@ def test_fetch_events_updates_checkpoint_when_newer_events_are_seen(trigger):
     batches = list(trigger.fetch_events())
 
     assert batches == [next_events]
-    assert trigger.from_date == datetime(2024, 11, 1, 0, 0, 31, tzinfo=timezone.utc)
+    assert trigger.from_date == datetime(2024, 11, 1, 0, 0, 31, tzinfo=UTC)
     assert trigger.cursor.offset == trigger.from_date
 
 
 def test_fetch_events_skips_empty_batches(trigger):
-    initial_from_date = datetime(2024, 11, 1, tzinfo=timezone.utc)
+    initial_from_date = datetime(2024, 11, 1, tzinfo=UTC)
     trigger.from_date = initial_from_date
     trigger.cursor.offset = initial_from_date
     fetch_mock = Mock(return_value=iter([[]]))

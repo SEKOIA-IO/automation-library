@@ -1,8 +1,9 @@
 import time
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta, timezone
+from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from typing import Any, Generator, Literal
+from typing import Any, Literal
 
 import orjson
 import requests
@@ -83,7 +84,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
         :return: A safe cursor date
         :rtype: datetime
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if from_date > now:
             self.log(
                 (
@@ -98,7 +99,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
         return from_date
 
     @abstractmethod
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list]:
         raise NotImplementedError
 
     def reset_cursor_offset(self, offset: datetime) -> None:
@@ -154,9 +155,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
                 total_events_forwarded += events_count
             else:
                 self.log(
-                    message=(
-                        "No events to forward " f"connector={self.CONNECTOR_METRICS_LABEL} " "events_forwarded=0"
-                    ),
+                    message=(f"No events to forward connector={self.CONNECTOR_METRICS_LABEL} events_forwarded=0"),
                     level="debug",
                 )
 
@@ -180,11 +179,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
         delta_sleep = self.typed_configuration.frequency - batch_duration
         if delta_sleep > 0:
             self.log(
-                (
-                    "Sleeping before next batch "
-                    f"connector={self.CONNECTOR_METRICS_LABEL} "
-                    f"wait_seconds={delta_sleep}"
-                ),
+                (f"Sleeping before next batch connector={self.CONNECTOR_METRICS_LABEL} wait_seconds={delta_sleep}"),
                 level="debug",
             )
             time.sleep(delta_sleep)
@@ -207,5 +202,5 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
             except Exception as error:
                 self.log_exception(
                     error,
-                    message=("Batch processing failed " f"connector={self.CONNECTOR_METRICS_LABEL}"),
+                    message=(f"Batch processing failed connector={self.CONNECTOR_METRICS_LABEL}"),
                 )

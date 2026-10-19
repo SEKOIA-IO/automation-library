@@ -33,7 +33,10 @@ def trigger(symphony_storage, prepare_connector_mocks):
 @pytest.fixture
 def response_message():
     return {
-        "nextToken": "Lu2XNNHim8CZpKoJEJKREJj6jpojvvROIwMK6xL+zILf8DsPpkW5W8/XhJiWH5tsJh8VrkdCIvpmJPEd71JKaUVoxTzDTU8/3RZVvYMfxzSyGIl2XYpWj9Qo+wigLGpHY4w==",
+        "nextToken": (
+            "Lu2XNNHim8CZpKoJEJKREJj6jpojvvROIwMK6xL+zILf8DsPpkW5W8/XhJiWH5tsJh8VrkdCIvpmJPEd7"
+            "1JKaUVoxTzDTU8/3RZVvYMfxzSyGIl2XYpWj9Qo+wigLGpHY4w=="
+        ),
         "logs": [
             {
                 "genTime": "2020-11-25T06:53:19Z",
@@ -111,7 +114,7 @@ def test_supervise_consumers(trigger):
 
 
 def test_stop_consumers(trigger):
-    with patch("trendmicro_modules.trigger_email_sec.TrendMicroWorker.start") as mock_start:
+    with patch("trendmicro_modules.trigger_email_sec.TrendMicroWorker.start"):
         consumers = {
             "param_set_1": Mock(**{"is_alive.return_value": False}),
             "param_set_2": None,

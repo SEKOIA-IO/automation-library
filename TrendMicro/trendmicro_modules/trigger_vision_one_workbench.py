@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta, timezone
-from typing import Generator
+from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urljoin
 
 from dateutil.parser import isoparse
@@ -35,8 +35,8 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
         )
         self.from_date = self.cursor.offset
 
-    def __fetch_events(self, from_date: datetime) -> Generator[list, None, None]:
-        to_date = datetime.now(timezone.utc)
+    def __fetch_events(self, from_date: datetime) -> Generator[list]:
+        to_date = datetime.now(UTC)
 
         query_params = {
             "startDateTime": from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -72,7 +72,7 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
 
             response = self.client.get(url, timeout=60)
 
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list]:
         initial_from_date = self.from_date
         most_recent_date_seen = self.sanitize_from_date(self.from_date)
         if most_recent_date_seen != self.from_date:
@@ -96,7 +96,7 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
             self.from_date = most_recent_date_seen
             self.reset_cursor_offset(self.from_date)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         current_lag = now - most_recent_date_seen
         current_lag_seconds = int(current_lag.total_seconds())
         EVENTS_LAG.labels(intake_key=self.typed_configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL).set(

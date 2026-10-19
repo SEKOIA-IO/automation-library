@@ -1,5 +1,5 @@
 import threading
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sekoia_automation.checkpoint import CheckpointDatetime
@@ -38,12 +38,12 @@ def make_connector(symphony_storage, prepare_connector_mocks):
     ("input_datetime", "expected_datetime"),
     [
         (
-            datetime(2026, 1, 1, 12, 0, 0, 1000, tzinfo=timezone.utc),
-            datetime(2026, 1, 1, 12, 0, 1, tzinfo=timezone.utc),
+            datetime(2026, 1, 1, 12, 0, 0, 1000, tzinfo=UTC),
+            datetime(2026, 1, 1, 12, 0, 1, tzinfo=UTC),
         ),
         (
-            datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
-            datetime(2026, 1, 1, 12, 0, 1, tzinfo=timezone.utc),
+            datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC),
+            datetime(2026, 1, 1, 12, 0, 1, tzinfo=UTC),
         ),
     ],
 )
@@ -53,7 +53,7 @@ def test_get_upper_second_rounds_to_next_second(input_datetime, expected_datetim
 
 def test_sanitize_from_date_returns_input_when_not_in_future(symphony_storage, prepare_connector_mocks):
     connector = make_connector(symphony_storage, prepare_connector_mocks)
-    current = datetime.now(timezone.utc) - timedelta(seconds=1)
+    current = datetime.now(UTC) - timedelta(seconds=1)
     assert connector.sanitize_from_date(current) == current
 
 
@@ -66,7 +66,7 @@ def test_reset_cursor_offset_supports_subkey_and_lock(symphony_storage, prepare_
         lock=threading.Lock(),
         subkey="vision_one",
     )
-    target = datetime.now(timezone.utc) - timedelta(minutes=2)
+    target = datetime.now(UTC) - timedelta(minutes=2)
 
     connector.reset_cursor_offset(target)
 
@@ -83,8 +83,8 @@ def test_reset_cursor_offset_persists_after_restart(symphony_storage, prepare_co
         lock=threading.Lock(),
         subkey=subkey,
     )
-    future_target = datetime(2099, 1, 1, tzinfo=timezone.utc)
-    rollback_target = datetime(2098, 12, 31, 23, 59, 0, tzinfo=timezone.utc)
+    future_target = datetime(2099, 1, 1, tzinfo=UTC)
+    rollback_target = datetime(2098, 12, 31, 23, 59, 0, tzinfo=UTC)
 
     connector.cursor.offset = future_target
     connector.reset_cursor_offset(rollback_target)
@@ -136,8 +136,8 @@ def test_reset_cursor_offset_supports_existing_subkey_cache_entry(symphony_stora
         lock=threading.Lock(),
         subkey="vision_one",
     )
-    first_target = datetime.now(timezone.utc) - timedelta(minutes=3)
-    second_target = datetime.now(timezone.utc) - timedelta(minutes=2)
+    first_target = datetime.now(UTC) - timedelta(minutes=3)
+    second_target = datetime.now(UTC) - timedelta(minutes=2)
 
     connector.reset_cursor_offset(first_target)
     connector.reset_cursor_offset(second_target)
@@ -163,7 +163,7 @@ def test_reset_cursor_offset_releases_lock_when_persistence_fails(symphony_stora
         subkey="vision_one",
     )
     connector.cursor._context = FailingContext()
-    target = datetime.now(timezone.utc) - timedelta(minutes=2)
+    target = datetime.now(UTC) - timedelta(minutes=2)
 
     with pytest.raises(RuntimeError, match="persistence failed"):
         connector.reset_cursor_offset(target)

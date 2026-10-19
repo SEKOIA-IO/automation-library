@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def dumb_log(
     message: str,
     level: Literal["fatal", "critical", "error", "warning", "info", "debug"] = "info",
-    **kwargs: Any,
+    **_kwargs: Any,
 ) -> None:
     log_level = logging.getLevelName(level.upper())
     logger.log(log_level, message)
