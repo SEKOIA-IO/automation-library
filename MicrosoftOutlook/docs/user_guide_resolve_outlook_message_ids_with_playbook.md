@@ -101,6 +101,9 @@ flowchart LR
 **Notes:**
 
 - With this setup, `{{ node.2.default.value }}` is a full message object containing `message_id`.
+- `Search messages` can return multiple matches for the same identifiers (for example duplicates or related copies), so `Foreach` operator is used to process each candidate safely.
+- In each loop iteration, the current item is an object containing `message_id` (for example `{{ node.2.default.value }}`), not always a raw string.
+- So that's why `Get a message`, `Delete a message`, `Forward a message`, and `Update a message` accept either a raw `message_id` string or an object containing `message_id`.
 
 ### Node 3 - Get a message
 
