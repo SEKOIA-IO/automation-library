@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Replace Cortex XDR alerts intake (`/public_api/v1/alerts/get_alerts_multi_events`) with the Issues API v5 endpoint (`/public_api/v1/issue/search`)
+- Update the trigger payload flow to ingest issues (including `is_excluded`) instead of splitting alerts and embedded events
+
 ## 2026-07-29 - 1.3.12
 
 ### Fixed

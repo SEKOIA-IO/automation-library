@@ -7,18 +7,18 @@ from cortex_module.helper import format_fqdn, handle_fqdn
     "input_fqdn, expected",
     [
         # handle_fqdn tests
-        ("https://example.com", "https://example.com/public_api/v1/alerts/get_alerts_multi_events"),
-        ("https://example.com/", "https://example.com/public_api/v1/alerts/get_alerts_multi_events"),
+        ("https://example.com", "https://example.com/public_api/v1/issue/search"),
+        ("https://example.com/", "https://example.com/public_api/v1/issue/search"),
         (
-            "https://example.com/public_api/v1/alerts/get_alerts_multi_events",
-            "https://example.com/public_api/v1/alerts/get_alerts_multi_events",
+            "https://example.com/public_api/v1/issue/search",
+            "https://example.com/public_api/v1/issue/search",
         ),
         (
-            "https://example.com/public_api/v1/alerts/get_alerts_multi_events/",
-            "https://example.com/public_api/v1/alerts/get_alerts_multi_events",
+            "https://example.com/public_api/v1/issue/search/",
+            "https://example.com/public_api/v1/issue/search",
         ),
-        ("api-example.com", "https://api-example.com/public_api/v1/alerts/get_alerts_multi_events"),
-        ("example.com", "https://api-example.com/public_api/v1/alerts/get_alerts_multi_events"),
+        ("api-example.com", "https://api-example.com/public_api/v1/issue/search"),
+        ("example.com", "https://api-example.com/public_api/v1/issue/search"),
     ],
 )
 def test_handle_fqdn(input_fqdn, expected):

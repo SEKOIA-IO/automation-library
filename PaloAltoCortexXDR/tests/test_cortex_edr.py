@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, call, patch
 
 import orjson
@@ -6,10 +5,7 @@ import pytest
 import requests_mock
 from freezegun import freeze_time
 from requests.exceptions import ConnectionError as RequestsConnectionError
-from requests.exceptions import HTTPError
-from sekoia_automation.storage import PersistentJSON
 
-from cortex_module.base import CortexModule
 from cortex_module.cortex_edr_connector import CortexQueryEDRTrigger
 from cortex_module.helper import handle_fqdn
 
@@ -31,62 +27,47 @@ def trigger(module, symphony_storage):
 
 
 @pytest.fixture
-def alert_query_2():
+def issue_query_2():
     return {
         "request_data": {
-            "filters": [{"field": "server_creation_time", "operator": "gte", "value": 1706003700}],
+            "filters": [{"field": "modification_time", "operator": "gte", "value": 1706003700000}],
             "search_from": 0,
             "search_to": 2,
-            "sort": {"field": "creation_time", "keyword": "desc"},
+            "sort": {"field": "modification_time", "keyword": "desc"},
         }
     }
 
 
 @pytest.fixture
-def alert_query_4():
+def issue_query_4():
     return {
         "request_data": {
-            "filters": [{"field": "server_creation_time", "operator": "gte", "value": 1706003700}],
+            "filters": [{"field": "modification_time", "operator": "gte", "value": 1706003700000}],
             "search_from": 2,
             "search_to": 4,
-            "sort": {"field": "creation_time", "keyword": "desc"},
+            "sort": {"field": "modification_time", "keyword": "desc"},
         }
     }
 
 
 @pytest.fixture
-def alert_response_2():
+def issue_response_2():
     return {
         "reply": {
             "total_count": 2,
             "result_count": 2,
-            "alerts": [
+            "issues": [
                 {
-                    "external_id": "5e60680403934d",
-                    "severity": "medium",
-                    "events": [
-                        {
-                            "agent_install_type": "STANDARD",
-                            "agent_host_boot_time": None,
-                            "event_sub_type": None,
-                        }
-                    ],
-                    "alert_id": "5930923",
-                    "detection_timestamp": 1705912900118,
+                    "issue_id": "5930923",
+                    "severity": "MEDIUM",
+                    "modification_time": 1705912900118,
+                    "is_excluded": False,
                 },
                 {
-                    "external_id": "7317728957437371542",
-                    "severity": "medium",
-                    "events": [
-                        {
-                            "agent_install_type": "STANDARD",
-                            "agent_host_boot_time": None,
-                            "event_sub_type": None,
-                            "image_name": None,
-                        }
-                    ],
-                    "alert_id": "1",
-                    "detection_timestamp": 1705912686000,
+                    "issue_id": "1",
+                    "severity": "MEDIUM",
+                    "modification_time": 1705912686000,
+                    "is_excluded": False,
                 },
             ],
         }
@@ -94,38 +75,23 @@ def alert_response_2():
 
 
 @pytest.fixture
-def alert_response_3_2():
+def issue_response_3_2():
     return {
         "reply": {
             "total_count": 3,
             "result_count": 2,
-            "alerts": [
+            "issues": [
                 {
-                    "external_id": "5e60680403934d",
-                    "severity": "medium",
-                    "events": [
-                        {
-                            "agent_install_type": "STANDARD",
-                            "agent_host_boot_time": None,
-                            "event_sub_type": None,
-                        }
-                    ],
-                    "alert_id": "5930923",
-                    "detection_timestamp": 1705912900118,
+                    "issue_id": "5930923",
+                    "severity": "MEDIUM",
+                    "modification_time": 1705912900118,
+                    "is_excluded": False,
                 },
                 {
-                    "external_id": "7317728957437374548",
-                    "severity": "medium",
-                    "events": [
-                        {
-                            "agent_install_type": "STANDARD",
-                            "agent_host_boot_time": None,
-                            "event_sub_type": None,
-                            "image_name": None,
-                        }
-                    ],
-                    "alert_id": "1",
-                    "detection_timestamp": 1705912686000,
+                    "issue_id": "1",
+                    "severity": "MEDIUM",
+                    "modification_time": 1705912686000,
+                    "is_excluded": False,
                 },
             ],
         }
@@ -133,25 +99,17 @@ def alert_response_3_2():
 
 
 @pytest.fixture
-def alert_response_3_1():
+def issue_response_3_1():
     return {
         "reply": {
             "total_count": 3,
             "result_count": 1,
-            "alerts": [
+            "issues": [
                 {
-                    "external_id": "7317728957437371548",
-                    "severity": "medium",
-                    "events": [
-                        {
-                            "agent_install_type": "STANDARD",
-                            "agent_host_boot_time": None,
-                            "event_sub_type": None,
-                            "image_name": None,
-                        }
-                    ],
-                    "alert_id": "2",
-                    "detection_timestamp": 1705912200,
+                    "issue_id": "2",
+                    "severity": "LOW",
+                    "modification_time": 1705912200000,
+                    "is_excluded": True,
                 },
             ],
         }
@@ -159,189 +117,134 @@ def alert_response_3_1():
 
 
 @pytest.fixture
-def alert_response_4():
-    return {
-        "reply": {
-            "total_count": 3,
-            "result_count": 1,
-            "alerts": [
-                {
-                    "external_id": "7317728957437371558",
-                    "severity": "medium",
-                    "events": [
-                        {
-                            "agent_install_type": "STANDARD",
-                            "agent_host_boot_time": None,
-                            "event_sub_type": None,
-                            "image_name": None,
-                        },
-                        {"agent_install_type": "STANDARD", "agent_host_boot_time": None, "event_sub_type": "process"},
-                    ],
-                    "alert_id": "2",
-                    "detection_timestamp": 1705912200,
-                },
-            ],
-        }
-    }
+def issue_response_0():
+    return {"reply": {"total_count": 0, "result_count": 0, "issues": []}}
 
 
 @pytest.fixture
-def alert_response_0():
-    return {"reply": {"total_count": 0, "result_count": 0, "alerts": []}}
-
-
-@pytest.fixture
-def alert_response_empty():
-    return {"reply": {"total_count": 0, "result_count": 0, "alerts": None}}
+def issue_response_empty():
+    return {"reply": {"total_count": 0, "result_count": 0, "issues": None}}
 
 
 def test_handle_fqdn():
     assert (
         handle_fqdn("https://api-XXXX.test.paloaltonetworks.com")
-        == "https://api-XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events"
+        == "https://api-XXXX.test.paloaltonetworks.com/public_api/v1/issue/search"
     )
     assert (
         handle_fqdn("api-XXXX.test.paloaltonetworks.com")
-        == "https://api-XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events"
+        == "https://api-XXXX.test.paloaltonetworks.com/public_api/v1/issue/search"
     )
     assert (
         handle_fqdn("XXXX.test.paloaltonetworks.com")
-        == "https://api-XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events"
+        == "https://api-XXXX.test.paloaltonetworks.com/public_api/v1/issue/search"
     )
     assert (
-        handle_fqdn("https://XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events")
-        == "https://XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events"
+        handle_fqdn("https://XXXX.test.paloaltonetworks.com/public_api/v1/issue/search")
+        == "https://XXXX.test.paloaltonetworks.com/public_api/v1/issue/search"
     )
 
 
 @freeze_time("2024-01-23 10:00:00")
-def test_getting_data_2(trigger, alert_response_2, alert_query_2):
+def test_getting_data_2(trigger, issue_response_2, issue_query_2):
     fqdn = trigger.module.configuration.fqdn
-    alert_url = f"https://api-{fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+    issue_url = f"https://api-{fqdn}/public_api/v1/issue/search"
 
     with requests_mock.Mocker() as mock:
         mock.post(
-            alert_url,
+            issue_url,
             status_code=200,
-            json=alert_response_2,
-            additional_matcher=lambda request: request.json() == alert_query_2,
+            json=issue_response_2,
+            additional_matcher=lambda request: request.json() == issue_query_2,
         )
 
-        trigger.get_all_alerts(2)
+        trigger.get_all_issues(2)
         calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
-        alerts_list = [orjson.loads(data) for data in calls[0]]
-        assert len(alerts_list) == 2
-
-        count_alerts = 0
-        count_events = 0
-        for data in alerts_list:
-            if data.get("severity"):
-                count_alerts += 1
-            if data.get("agent_install_type"):
-                count_events += 1
-
-        assert count_alerts == 2
-        assert count_events == 0
+        issues = [orjson.loads(data) for data in calls[0]]
+        assert len(issues) == 2
+        assert all(issue.get("is_excluded") is False for issue in issues)
 
 
 @freeze_time("2024-01-23 10:00:00")
-def test_getting_data_3(trigger, alert_response_3_2, alert_response_3_1, alert_query_2, alert_query_4):
+def test_getting_data_3(trigger, issue_response_3_2, issue_response_3_1, issue_query_2, issue_query_4):
     fqdn = trigger.module.configuration.fqdn
-    alert_url = f"https://api-{fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+    issue_url = f"https://api-{fqdn}/public_api/v1/issue/search"
 
     with requests_mock.Mocker() as mock:
         mock.post(
-            alert_url,
+            issue_url,
             status_code=200,
-            json=alert_response_3_2,
-            additional_matcher=lambda request: request.json() == alert_query_2,
+            json=issue_response_3_2,
+            additional_matcher=lambda request: request.json() == issue_query_2,
         )
 
         mock.post(
-            alert_url,
+            issue_url,
             status_code=200,
-            json=alert_response_3_1,
-            additional_matcher=lambda request: request.json() == alert_query_4,
+            json=issue_response_3_1,
+            additional_matcher=lambda request: request.json() == issue_query_4,
         )
 
-        trigger.get_all_alerts(2)
+        trigger.get_all_issues(2)
         calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
-        first_alerts_batch = [orjson.loads(data) for data in calls[0]]
-        second_alerts_batch = [orjson.loads(data) for data in calls[1]]
-        assert len(first_alerts_batch) == 2
-        assert len(second_alerts_batch) == 1
-
-        count_alerts = 0
-        count_events = 0
-        first_alerts_batch.extend(second_alerts_batch)
-        all_alerts = first_alerts_batch
-        for data in all_alerts:
-            if data.get("severity"):
-                count_alerts += 1
-            if data.get("agent_install_type"):
-                count_events += 1
-
-        assert count_alerts == 3
-        assert count_events == 0
+        first_issues_batch = [orjson.loads(data) for data in calls[0]]
+        second_issues_batch = [orjson.loads(data) for data in calls[1]]
+        assert len(first_issues_batch) == 2
+        assert len(second_issues_batch) == 1
+        assert sorted(issue["issue_id"] for issue in first_issues_batch + second_issues_batch) == ["1", "2", "5930923"]
 
 
 @freeze_time("2024-01-23 10:00:00")
-def test_getting_data_0(trigger, alert_response_0, alert_query_2):
+def test_getting_data_0(trigger, issue_response_0, issue_query_2):
     fqdn = trigger.module.configuration.fqdn
-    alert_url = f"https://api-{fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+    issue_url = f"https://api-{fqdn}/public_api/v1/issue/search"
 
     with requests_mock.Mocker() as mock:
         mock.post(
-            alert_url,
+            issue_url,
             status_code=200,
-            json=alert_response_0,
-            additional_matcher=lambda request: request.json() == alert_query_2,
+            json=issue_response_0,
+            additional_matcher=lambda request: request.json() == issue_query_2,
         )
 
-        assert trigger.get_alerts_events_by_offset(0, trigger.timestamp_cursor, 2) == (0, [])
+        assert trigger.get_issues_by_offset(0, trigger.timestamp_cursor, 2) == (0, [])
 
 
 @freeze_time("2024-01-23 10:00:00")
-def test_getting_data_0(trigger, alert_response_empty, alert_query_2):
+def test_getting_data_empty_issues(trigger, issue_response_empty, issue_query_2):
     fqdn = trigger.module.configuration.fqdn
-    alert_url = f"https://api-{fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+    issue_url = f"https://api-{fqdn}/public_api/v1/issue/search"
 
     with requests_mock.Mocker() as mock:
         mock.post(
-            alert_url,
+            issue_url,
             status_code=200,
-            json=alert_response_empty,
-            additional_matcher=lambda request: request.json() == alert_query_2,
+            json=issue_response_empty,
+            additional_matcher=lambda request: request.json() == issue_query_2,
         )
 
-        assert trigger.get_alerts_events_by_offset(0, trigger.timestamp_cursor, 2) == (0, [])
+        assert trigger.get_issues_by_offset(0, trigger.timestamp_cursor, 2) == (0, [])
 
 
 @freeze_time("2024-01-23 10:00:00")
-def test_getting_data_400_http_code(trigger, alert_query_2):
+def test_getting_data_400_http_code(trigger):
     fqdn = trigger.module.configuration.fqdn
-    alert_url = f"https://api-{fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+    issue_url = f"https://api-{fqdn}/public_api/v1/issue/search"
 
-    with patch("cortex_module.cortex_edr_connector.time") as mock_time, requests_mock.Mocker() as mock:
-        mock.post(
-            alert_url,
-            status_code=400,
-        )
+    with patch("cortex_module.cortex_edr_connector.time"), requests_mock.Mocker() as mock:
+        mock.post(issue_url, status_code=400)
 
         trigger.forward_next_batch()
         assert trigger.log_exception.called
 
 
 @freeze_time("2024-01-23 10:00:00")
-def test_getting_data_with_authentication_failure(trigger, alert_query_2):
+def test_getting_data_with_authentication_failure(trigger):
     fqdn = trigger.module.configuration.fqdn
-    alert_url = f"https://api-{fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+    issue_url = f"https://api-{fqdn}/public_api/v1/issue/search"
 
-    with patch("cortex_module.cortex_edr_connector.time") as mock_time, requests_mock.Mocker() as mock:
-        mock.post(
-            alert_url,
-            status_code=401,
-        )
+    with patch("cortex_module.cortex_edr_connector.time"), requests_mock.Mocker() as mock:
+        mock.post(issue_url, status_code=401)
 
         trigger.forward_next_batch()
         assert trigger.log.mock_calls == [
@@ -350,15 +253,12 @@ def test_getting_data_with_authentication_failure(trigger, alert_query_2):
 
 
 @freeze_time("2024-01-23 10:00:00")
-def test_getting_data_with_permission_failure(trigger, alert_query_2):
+def test_getting_data_with_permission_failure(trigger):
     fqdn = trigger.module.configuration.fqdn
-    alert_url = f"https://api-{fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+    issue_url = f"https://api-{fqdn}/public_api/v1/issue/search"
 
-    with patch("cortex_module.cortex_edr_connector.time") as mock_time, requests_mock.Mocker() as mock:
-        mock.post(
-            alert_url,
-            status_code=403,
-        )
+    with patch("cortex_module.cortex_edr_connector.time"), requests_mock.Mocker() as mock:
+        mock.post(issue_url, status_code=403)
 
         trigger.forward_next_batch()
         assert trigger.log.mock_calls == [
@@ -367,12 +267,12 @@ def test_getting_data_with_permission_failure(trigger, alert_query_2):
 
 
 @freeze_time("2024-01-23 10:00:00")
-def test_getting_data_with_connection_failure(trigger, alert_query_2):
+def test_getting_data_with_connection_failure(trigger):
     with (
-        patch("cortex_module.cortex_edr_connector.time") as mock_time,
+        patch("cortex_module.cortex_edr_connector.time"),
         patch.object(
             trigger,
-            "get_all_alerts",
+            "get_all_issues",
             side_effect=RequestsConnectionError("Remote end closed connection without response"),
         ),
     ):
@@ -380,17 +280,17 @@ def test_getting_data_with_connection_failure(trigger, alert_query_2):
 
         trigger.log.assert_any_call(
             level="warning",
-            message="Temporary connection issue while fetching Cortex alerts, will retry on next run",
+            message="Temporary connection issue while fetching Cortex issues, will retry on next run",
         )
 
 
 @freeze_time("2024-01-23 10:00:00")
-def test_getting_data_reconnect_notification(trigger, alert_query_2):
+def test_getting_data_reconnect_notification(trigger):
     with (
-        patch("cortex_module.cortex_edr_connector.time") as mock_time,
+        patch("cortex_module.cortex_edr_connector.time"),
         patch.object(
             trigger,
-            "get_all_alerts",
+            "get_all_issues",
             side_effect=[RequestsConnectionError("Remote end closed connection without response"), None],
         ),
     ):
@@ -399,36 +299,29 @@ def test_getting_data_reconnect_notification(trigger, alert_query_2):
 
         trigger.log.assert_any_call(
             level="warning",
-            message="Temporary connection issue while fetching Cortex alerts, will retry on next run",
+            message="Temporary connection issue while fetching Cortex issues, will retry on next run",
         )
         trigger.log.assert_any_call(
             level="info", message="Cortex connection restored, the connector reconnected successfully"
         )
 
 
-def test_splitting_events(trigger, alert_response_4):
-    # first event should stay with alert, others should split into separate events
-    result = trigger.split_alerts_events(alerts=alert_response_4["reply"]["alerts"])
+def test_normalize_issues_with_cache(trigger, issue_response_2):
+    issues = issue_response_2["reply"]["issues"] * 10
 
-    assert result == [
-        '{"external_id":"7317728957437371558","severity":"medium","events":[{"agent_install_type":"STANDARD",'
-        '"agent_host_boot_time":null,"event_sub_type":null,"image_name":null}],"alert_id":"2",'
-        '"detection_timestamp":1705912200}',
-        '{"agent_install_type":"STANDARD","agent_host_boot_time":null,"event_sub_type":"process","alert_id":"2"}',
-    ]
-
-
-def test_splitting_events_with_cache(trigger, alert_response_4):
-    data = []
-    for _ in range(10):
-        data += alert_response_4["reply"]["alerts"]
-
-    result = trigger.split_alerts_events(alerts=data)
+    normalized_issues = trigger.normalize_issues(issues=issues)
 
     # caching should protect from duplicates
-    assert result == [
-        '{"external_id":"7317728957437371558","severity":"medium","events":[{"agent_install_type":"STANDARD",'
-        '"agent_host_boot_time":null,"event_sub_type":null,"image_name":null}],"alert_id":"2",'
-        '"detection_timestamp":1705912200}',
-        '{"agent_install_type":"STANDARD","agent_host_boot_time":null,"event_sub_type":"process","alert_id":"2"}',
+    assert len(normalized_issues) == 2
+
+
+def test_normalize_issues_without_issue_id(trigger):
+    issues = [
+        {"severity": "MEDIUM", "modification_time": 1705912900118, "is_excluded": False},
+        {"issue_id": "123", "severity": "LOW", "modification_time": 1705912800000, "is_excluded": False},
     ]
+
+    normalized_issues = trigger.normalize_issues(issues=issues)
+
+    assert len(normalized_issues) == 1
+    trigger.log.assert_called_with(level="warning", message="Skipping Cortex issue without issue_id")
