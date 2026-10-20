@@ -60,6 +60,7 @@ class MicrosoftGraphActionBase(Action, ABC):
         if isinstance(message_id_or_item, str):
             return message_id_or_item
 
+        # Foreach items are message objects; support direct chaining without manual field extraction.
         if isinstance(message_id_or_item, dict):
             nested_message_id = message_id_or_item.get("message_id")
             if isinstance(nested_message_id, str):
