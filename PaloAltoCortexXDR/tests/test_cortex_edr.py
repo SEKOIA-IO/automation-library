@@ -341,12 +341,15 @@ def test_normalize_issues_without_issue_id(trigger):
     trigger.log.assert_called_with(level="warning", message="Skipping Cortex issue without issue_id")
 
 
+@freeze_time("2024-01-23 10:00:00")
 def test_timestamp_cursor_setter_keeps_exact_milliseconds(trigger):
     exact_timestamp = 1705912800500
 
     trigger.timestamp_cursor = exact_timestamp
 
-    assert trigger.timestamp_cursor == exact_timestamp
+    assert trigger._timestamp_cursor == exact_timestamp
+    with trigger.context as cache:
+        assert cache["timestamp_cursor"] == exact_timestamp
 
 
 @freeze_time("2024-01-23 10:00:00")
