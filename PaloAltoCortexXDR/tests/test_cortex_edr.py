@@ -316,6 +316,19 @@ def test_normalize_issues_with_cache(trigger, issue_response_2):
     assert len(normalized_issues) == 2
 
 
+def test_normalize_issues_forward_updated_revision(trigger):
+    issues = [
+        {"issue_id": "123", "severity": "LOW", "modification_time": 1705912800000, "is_excluded": False},
+        {"issue_id": "123", "severity": "LOW", "modification_time": 1705912800500, "is_excluded": True},
+    ]
+
+    normalized_issues = trigger.normalize_issues(issues=issues)
+    decoded_issues = [orjson.loads(issue) for issue in normalized_issues]
+
+    assert len(normalized_issues) == 2
+    assert [issue["modification_time"] for issue in decoded_issues] == [1705912800000, 1705912800500]
+
+
 def test_normalize_issues_without_issue_id(trigger):
     issues = [
         {"severity": "MEDIUM", "modification_time": 1705912900118, "is_excluded": False},
@@ -326,6 +339,14 @@ def test_normalize_issues_without_issue_id(trigger):
 
     assert len(normalized_issues) == 1
     trigger.log.assert_called_with(level="warning", message="Skipping Cortex issue without issue_id")
+
+
+def test_timestamp_cursor_setter_keeps_exact_milliseconds(trigger):
+    exact_timestamp = 1705912800500
+
+    trigger.timestamp_cursor = exact_timestamp
+
+    assert trigger.timestamp_cursor == exact_timestamp
 
 
 @freeze_time("2024-01-23 10:00:00")
