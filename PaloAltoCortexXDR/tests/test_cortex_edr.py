@@ -1,10 +1,11 @@
-from unittest.mock import Mock, call, patch
+from unittest.mock import ANY, Mock, call, patch
 
 import orjson
 import pytest
 import requests_mock
 from freezegun import freeze_time
 from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import HTTPError
 
 from cortex_module.cortex_edr_connector import CortexQueryEDRTrigger
 from cortex_module.helper import handle_fqdn
@@ -325,3 +326,32 @@ def test_normalize_issues_without_issue_id(trigger):
 
     assert len(normalized_issues) == 1
     trigger.log.assert_called_with(level="warning", message="Skipping Cortex issue without issue_id")
+
+
+@freeze_time("2024-01-23 10:00:00")
+def test_get_all_issues_no_data_logs_info(trigger):
+    with patch.object(trigger, "get_issues_by_offset", return_value=(0, [])):
+        trigger.get_all_issues(2)
+
+    trigger.log.assert_any_call(message=f"No issues to forward at {trigger.timestamp_cursor}", level="info")
+    trigger.push_events_to_intakes.assert_not_called()
+
+
+@freeze_time("2024-01-23 10:00:00")
+def test_get_all_issues_raises_when_modification_time_missing(trigger):
+    issue_payload_without_modification_time = orjson.dumps({"issue_id": "1", "severity": "LOW"}).decode("utf-8")
+
+    with patch.object(trigger, "get_issues_by_offset", return_value=(1, [issue_payload_without_modification_time])):
+        with pytest.raises(ValueError, match="Received Cortex issue without modification_time"):
+            trigger.get_all_issues(2)
+
+
+@freeze_time("2024-01-23 10:00:00")
+def test_forward_next_batch_http_error_without_response(trigger):
+    with (
+        patch("cortex_module.cortex_edr_connector.time"),
+        patch.object(trigger, "get_all_issues", side_effect=HTTPError("boom")),
+    ):
+        trigger.forward_next_batch()
+
+    trigger.log_exception.assert_called_with(ANY, message="Response does not contain any valid data")
