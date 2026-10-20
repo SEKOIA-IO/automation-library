@@ -15,5 +15,10 @@
   "version": "2.79.0",
   "categories": [
     "Generic"
-  ]
+  ],
+  "fission": {
+    "python-version": [
+      "3.14"
+    ]
+  }
 }
