@@ -120,9 +120,7 @@ class CortexQueryEDRTrigger(CortexConnector):
 
         return normalized_data
 
-    def get_issues_by_offset(
-        self, offset: int, modification_time: int, pagination: int
-    ) -> Tuple[int, List[Any]]:
+    def get_issues_by_offset(self, offset: int, modification_time: int, pagination: int) -> Tuple[int, List[Any]]:
         """Requests the Cortex API using the offset."""
 
         search_from, search_to = offset, offset + pagination
