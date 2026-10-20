@@ -13,6 +13,7 @@ from cortex_module.cortex_edr_connector import CortexQueryEDRTrigger
 if __name__ == "__main__":
     module = CortexModule()
     module.register(CortexQueryEDRTrigger, "cortex_query_issues")
+    module.register(CortexQueryEDRTrigger, "cortex_query_alerts")
 
     module.register(AbortScanEndpointsAction, "abort_scan_endpoints")
     module.register(BlockMaliciousFilesAction, "block_malicious_files")

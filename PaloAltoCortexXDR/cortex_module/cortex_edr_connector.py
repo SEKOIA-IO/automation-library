@@ -83,8 +83,7 @@ class CortexQueryEDRTrigger(CortexConnector):
 
     @timestamp_cursor.setter
     def timestamp_cursor(self, time: int) -> None:
-        # add 1 second to the most recent date seen
-        self._timestamp_cursor = time + 1000
+        self._timestamp_cursor = time
         with self.context as cache:
             cache["timestamp_cursor"] = self._timestamp_cursor
 
@@ -111,7 +110,7 @@ class CortexQueryEDRTrigger(CortexConnector):
                 self.log(level="warning", message="Skipping Cortex issue without issue_id")
                 continue
 
-            normalized_issue_id = str(issue_id)
+            normalized_issue_id = f"{issue_id}:{issue.get('modification_time')}"
             if normalized_issue_id in self.issues_cache:
                 continue
 
@@ -180,7 +179,7 @@ class CortexQueryEDRTrigger(CortexConnector):
 
     def forward_next_batch(self) -> None:
         """
-        Collect and forward the next batch of alerts
+        Collect and forward the next batch of issues.
         """
         start = time.time()
         connection_issue_detected = self._connection_issue_detected

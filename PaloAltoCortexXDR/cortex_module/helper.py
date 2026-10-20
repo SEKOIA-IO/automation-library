@@ -1,6 +1,10 @@
 def handle_fqdn(fqdn: str) -> str:
     base_fqdn = fqdn.rstrip("/")
+    legacy_alerts_path = "/public_api/v1/alerts/get_alerts_multi_events"
     issue_search_path = "/public_api/v1/issue/search"
+
+    if base_fqdn.endswith(legacy_alerts_path):
+        base_fqdn = base_fqdn[: -len(legacy_alerts_path)]
 
     if base_fqdn.startswith("https://"):
         if base_fqdn.endswith(issue_search_path):
