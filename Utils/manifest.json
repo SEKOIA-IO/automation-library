@@ -9,8 +9,13 @@
   "name": "Utils",
   "uuid": "07cce76b-a319-40ee-a0cf-1ba433431e21",
   "slug": "utils",
-  "version": "1.4.7",
+  "version": "1.5.0",
   "categories": [
     "Generic"
-  ]
+  ],
+  "fission": {
+    "python-version": [
+      "3.14"
+    ]
+  }
 }
