@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-16 - 1.6.0
+
+### Changed
+
+- Migrate from Poetry to uv and mise, build on Python 3.14
+- Upgrade sekoia-automation-sdk to 1.27.0 (minimum 1.26), gql 3.5.3 and pydantic v2
+- Remove the unused `logger` package and use per-instance rate limiters
+- Add optional `frequency` argument (default 60 s, minimum 1) to the connector and trigger: refetch immediately while events are returned, sleep when the feed is empty (previously polled non-stop)
+- Report API errors to the platform with exponential backoff
+- Log one platform message per forwarded batch and nothing for empty polls
+- Raise `critical` only after 3 consecutive authentication failures matching known messages
+- Reset the authentication failure counter as soon as the events feed is fetched, even if the intake push then fails
+- Raise a single `critical` when the intake keeps rejecting the same batch; the marker is never skipped
+- Measure the `EVENTS_LAG` metric from the newest event
+
+### Fixed
+
+- Silence gql transport INFO logs that dumped full request and response payloads (customer data) to container logs
+- Save the marker only after the intake acknowledged every event; previously it was saved before the push, so events could be lost
+- Drop oversized events with a warning and count them in the metrics
+- Set explicit 60 s timeouts and reuse the gql session
+
+### Security
+
+- Enable TLS certificate verification; it was effectively disabled by gql's default `ssl=False`
+
+## 2026-07-01 - 1.5.2
+
 ### Fixed
 
 - Accept Cato account IDs from 4 to 8 digits in module configuration
