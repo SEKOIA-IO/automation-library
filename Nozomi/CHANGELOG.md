@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-21 - 1.2.1
+
+### Added
+
+- Add explicit maximum thresholds for Nozomi Vantage and Nozomi Device Assets batch/chunk sizes in connector schemas, and enforce Vantage chunk size limits in runtime configuration.
+
 ## 2026-09-16 - 1.2.0
 
 ### Added
