@@ -92,6 +92,16 @@ def issue_response_3_1():
     }
 
 
+@pytest.fixture
+def issue_response_0():
+    return {"reply": {"total_count": 0, "result_count": 0, "issues": []}}
+
+
+@pytest.fixture
+def issue_response_empty():
+    return {"reply": {"total_count": 0, "result_count": 0, "issues": None}}
+
+
 @freeze_time("2024-01-23 10:00:00")
 def test_getting_data_with_pagination(
     issues_trigger,
@@ -126,6 +136,38 @@ def test_getting_data_with_pagination(
         assert sorted(issue["issue_id"] for issue in first_issues_batch + second_issues_batch) == ["1", "2", "5930923"]
 
 
+@freeze_time("2024-01-23 10:00:00")
+def test_getting_data_0(issues_trigger, issue_response_0, issue_query_2):
+    fqdn = issues_trigger.module.configuration.fqdn
+    issue_url = f"https://api-{fqdn}/public_api/v1/issue/search"
+
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            issue_url,
+            status_code=200,
+            json=issue_response_0,
+            additional_matcher=lambda request: request.json() == issue_query_2,
+        )
+
+        assert issues_trigger.get_issues_by_offset(0, issues_trigger.timestamp_cursor, 2) == (0, [])
+
+
+@freeze_time("2024-01-23 10:00:00")
+def test_getting_data_empty_issues(issues_trigger, issue_response_empty, issue_query_2):
+    fqdn = issues_trigger.module.configuration.fqdn
+    issue_url = f"https://api-{fqdn}/public_api/v1/issue/search"
+
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            issue_url,
+            status_code=200,
+            json=issue_response_empty,
+            additional_matcher=lambda request: request.json() == issue_query_2,
+        )
+
+        assert issues_trigger.get_issues_by_offset(0, issues_trigger.timestamp_cursor, 2) == (0, [])
+
+
 def test_normalize_issues_forwards_new_revision(issues_trigger):
     issues = [
         {"issue_id": "123", "modification_time": 1705912800000, "is_excluded": False},
@@ -138,6 +180,18 @@ def test_normalize_issues_forwards_new_revision(issues_trigger):
 
     assert len(normalized_issues) == 2
     assert [issue["modification_time"] for issue in decoded] == [1705912800000, 1705912800500]
+
+
+def test_normalize_issues_without_issue_id(issues_trigger):
+    issues = [
+        {"severity": "MEDIUM", "modification_time": 1705912900118, "is_excluded": False},
+        {"issue_id": "123", "severity": "LOW", "modification_time": 1705912800000, "is_excluded": False},
+    ]
+
+    normalized_issues = issues_trigger.normalize_issues(issues=issues)
+
+    assert len(normalized_issues) == 1
+    issues_trigger.log.assert_called_with(level="warning", message="Skipping Cortex issue without issue_id")
 
 
 def test_timestamp_cursor_setter_keeps_exact_milliseconds(issues_trigger):
@@ -186,6 +240,18 @@ def test_forward_next_batch_http_error_without_response(issues_trigger):
 
 
 @freeze_time("2024-01-23 10:00:00")
+def test_getting_data_400_http_code(issues_trigger):
+    fqdn = issues_trigger.module.configuration.fqdn
+    issue_url = f"https://api-{fqdn}/public_api/v1/issue/search"
+
+    with patch("cortex_module.cortex_xdr_issues_connector.time"), requests_mock.Mocker() as mock:
+        mock.post(issue_url, status_code=400)
+
+        issues_trigger.forward_next_batch()
+        assert issues_trigger.log_exception.called
+
+
+@freeze_time("2024-01-23 10:00:00")
 def test_getting_data_with_authentication_failure(issues_trigger):
     fqdn = issues_trigger.module.configuration.fqdn
     issue_url = f"https://api-{fqdn}/public_api/v1/issue/search"
@@ -228,4 +294,26 @@ def test_getting_data_with_connection_failure(issues_trigger):
         issues_trigger.log.assert_any_call(
             level="warning",
             message="Temporary connection issue while fetching Cortex issues, will retry on next run",
+        )
+
+
+@freeze_time("2024-01-23 10:00:00")
+def test_getting_data_reconnect_notification(issues_trigger):
+    with (
+        patch("cortex_module.cortex_xdr_issues_connector.time"),
+        patch.object(
+            issues_trigger,
+            "get_all_issues",
+            side_effect=[RequestsConnectionError("Remote end closed connection without response"), None],
+        ),
+    ):
+        issues_trigger.forward_next_batch()
+        issues_trigger.forward_next_batch()
+
+        issues_trigger.log.assert_any_call(
+            level="warning",
+            message="Temporary connection issue while fetching Cortex issues, will retry on next run",
+        )
+        issues_trigger.log.assert_any_call(
+            level="info", message="Cortex connection restored, the connector reconnected successfully"
         )
