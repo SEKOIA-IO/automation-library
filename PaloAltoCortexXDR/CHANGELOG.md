@@ -7,11 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Add a dedicated Cortex XDR Issues API v5 connector/trigger (`cortex_query_issues`) while keeping the legacy Alerts API v3 connector (`cortex_query_alerts`)
+
 ### Changed
 
-- Replace Cortex XDR alerts intake (`/public_api/v1/alerts/get_alerts_multi_events`) with the Issues API v5 endpoint (`/public_api/v1/issue/search`)
-- Update the trigger payload flow to ingest issues (including `is_excluded`) instead of splitting alerts and embedded events
-- Keep backward compatibility for legacy full alert endpoint URLs and `cortex_query_alerts` command invocations
+- Add helper logic to normalize FQDNs for both Alerts API v3 and Issues API v5 endpoints
 
 ## 2026-07-29 - 1.3.12
 
