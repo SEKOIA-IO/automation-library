@@ -348,7 +348,7 @@ def test_forward_next_batch_reraises_unknown_exception(issues_trigger):
 
 
 def test_forward_next_batch_no_sleep_when_duration_exceeds_frequency(issues_trigger):
-    issues_trigger.configuration["frequency"] = 1
+    issues_trigger.configuration.frequency = 1
 
     with (
         patch("cortex_module.cortex_xdr_issues_connector.time") as mock_time,
