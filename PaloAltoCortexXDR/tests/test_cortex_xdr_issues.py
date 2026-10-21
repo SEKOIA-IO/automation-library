@@ -204,6 +204,26 @@ def test_timestamp_cursor_setter_keeps_exact_milliseconds(issues_trigger):
 
 
 @freeze_time("2024-01-23 10:00:00")
+def test_timestamp_cursor_default_and_one_week_floor(issues_trigger):
+    assert issues_trigger.timestamp_cursor == 1706003700000
+
+    with issues_trigger.context as cache:
+        cache["timestamp_cursor"] = 1705000000000
+
+    assert issues_trigger.timestamp_cursor == 1705399200000
+
+
+def test_load_issues_cache_with_existing_values(issues_trigger):
+    with issues_trigger.context as cache:
+        cache["issues"] = ["1:1705912800000", "2:1705912900000"]
+
+    issues_cache = issues_trigger.load_issues_cache()
+
+    assert "1:1705912800000" in issues_cache
+    assert "2:1705912900000" in issues_cache
+
+
+@freeze_time("2024-01-23 10:00:00")
 def test_get_all_issues_no_data_logs_info(issues_trigger):
     with patch.object(issues_trigger, "get_issues_by_offset", return_value=(0, [])):
         issues_trigger.get_all_issues(2)
@@ -317,3 +337,24 @@ def test_getting_data_reconnect_notification(issues_trigger):
         issues_trigger.log.assert_any_call(
             level="info", message="Cortex connection restored, the connector reconnected successfully"
         )
+
+
+def test_forward_next_batch_reraises_unknown_exception(issues_trigger):
+    with patch.object(issues_trigger, "get_all_issues", side_effect=RuntimeError("boom")):
+        with pytest.raises(RuntimeError, match="boom"):
+            issues_trigger.forward_next_batch()
+
+    issues_trigger.log_exception.assert_called_with(ANY, message="An unknown exception occurred")
+
+
+def test_forward_next_batch_no_sleep_when_duration_exceeds_frequency(issues_trigger):
+    issues_trigger.configuration["frequency"] = 1
+
+    with (
+        patch("cortex_module.cortex_xdr_issues_connector.time") as mock_time,
+        patch.object(issues_trigger, "get_all_issues", return_value=None),
+    ):
+        mock_time.time.side_effect = [0, 2]
+        issues_trigger.forward_next_batch()
+
+        assert not mock_time.sleep.called
