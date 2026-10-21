@@ -33,7 +33,7 @@ def vantage_connector(
     connector = NozomiVantageConnector(module=module)
     connector.configuration = NozomiVantageConfiguration(
         intake_key=session_faker.word(),
-        batch_size=3,
+        chunk_size=3,
     )
     connector.push_data_to_intakes = mock_push_data_to_intakes
 
