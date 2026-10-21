@@ -24,7 +24,7 @@ class CortexEDRConfiguration(DefaultConnectorConfiguration):
 
 class CortexQueryEDRTrigger(CortexConnector):
     """
-    Cortex EDR Query reads issues exposed after querying the Cortex
+    Cortex EDR Query reads the alerts messages exposed after querying the Cortex
     API and forward it to the playbook run.
     """
 
@@ -35,33 +35,33 @@ class CortexQueryEDRTrigger(CortexConnector):
         self.context = PersistentJSON("context.json", self._data_path)
         self.query: Dict[str, Any] = {
             "request_data": {
-                "filters": [{"field": "modification_time", "operator": "gte", "value": 0}],
+                "filters": [{"field": "server_creation_time", "operator": "gte", "value": 0}],
                 "search_from": 0,
                 "search_to": 0,
-                "sort": {"field": "modification_time", "keyword": "desc"},
+                "sort": {"field": "creation_time", "keyword": "desc"},
             }
         }
         self._timestamp_cursor = 0
 
-        # This cache should be big enough to cover all issues within 1 second.
+        # This cache should be big enough to cover all events within 1 second.
         self.cache_size = 10_000
-        self.issues_cache: Cache[str, bool] = self.load_issues_cache()
+        self.alerts_cache: Cache[str, bool] = self.load_alerts_cache()
         self._connection_issue_detected = False
 
-    def load_issues_cache(self) -> Cache[str, bool]:
+    def load_alerts_cache(self) -> Cache[str, bool]:
         result: LRUCache[str, bool] = LRUCache(maxsize=self.cache_size)
 
         with self.context as cache:
-            events_ids = cache.get("issues", [])
+            events_ids = cache.get("alerts", [])
 
         for event_id in events_ids:
             result[event_id] = True
 
         return result
 
-    def save_issues_cache(self) -> None:
+    def save_alerts_cache(self) -> None:
         with self.context as cache:
-            cache["issues"] = list(self.issues_cache.keys())
+            cache["alerts"] = list(self.alerts_cache.keys())
 
     @property
     def timestamp_cursor(self) -> int:
@@ -72,7 +72,7 @@ class CortexQueryEDRTrigger(CortexConnector):
 
             if timestamp_cursor is None:
                 before_five_minutes = now - timedelta(minutes=5)
-                return int(before_five_minutes.timestamp() * 1000)
+                return int(before_five_minutes.timestamp())
 
             # We don't collect events older than 7 days
             one_week_ago = int((now - timedelta(days=7)).timestamp()) * 1000
@@ -83,12 +83,13 @@ class CortexQueryEDRTrigger(CortexConnector):
 
     @timestamp_cursor.setter
     def timestamp_cursor(self, time: int) -> None:
-        self._timestamp_cursor = time
+        # add 1 second to the most recent date seen
+        self._timestamp_cursor = time + 1000
         with self.context as cache:
             cache["timestamp_cursor"] = self._timestamp_cursor
 
     @cached_property
-    def issue_url(self) -> str:
+    def alert_url(self) -> str:
         return handle_fqdn(self.module.configuration.fqdn)
 
     @cached_property
@@ -102,57 +103,68 @@ class CortexQueryEDRTrigger(CortexConnector):
             self.module.configuration.api_key_id,
         )
 
-    def normalize_issues(self, issues: List[Any]) -> List[str]:
-        normalized_data: List[str] = []
-        for issue in issues:
-            issue_id = issue.get("issue_id")
-            if issue_id is None:
-                self.log(level="warning", message="Skipping Cortex issue without issue_id")
+    def split_alerts_events(self, alerts: List[Any]) -> List[str]:
+        combined_data = []
+        for alert in alerts:
+            # Skip already processed alerts
+            external_id = alert.get("external_id")
+            if external_id in self.alerts_cache:
                 continue
 
-            normalized_issue_id = f"{issue_id}:{issue.get('modification_time')}"
-            if normalized_issue_id in self.issues_cache:
-                continue
+            self.alerts_cache[external_id] = True
 
-            self.issues_cache[normalized_issue_id] = True
-            normalized_data.append(orjson.dumps(issue).decode("utf-8"))
+            shared_id = alert["alert_id"]
+            events = alert["events"]
 
-        return normalized_data
+            # first event should stay in alert, others should be separated
+            events_to_split = events[1:] if len(events) > 1 else []
+            if len(events) > 1:
+                del alert["events"][1:]
 
-    def get_issues_by_offset(self, offset: int, modification_time: int, pagination: int) -> Tuple[int, List[Any]]:
-        """Requests the Cortex API using the offset."""
+            combined_data.append(orjson.dumps(alert).decode("utf-8"))
+
+            for event in events_to_split:
+                event["alert_id"] = shared_id
+                combined_data.append(orjson.dumps(event).decode("utf-8"))
+
+        return combined_data
+
+    def get_alerts_events_by_offset(
+        self, offset: int, server_creation_time: int, pagination: int
+    ) -> Tuple[int, List[Any]]:
+        """Requests the Cortex API using the offset"""
 
         search_from, search_to = offset, offset + pagination
         self.query["request_data"]["search_from"] = search_from
         self.query["request_data"]["search_to"] = search_to
-        self.query["request_data"]["filters"][0]["value"] = modification_time
+        self.query["request_data"]["filters"][0]["value"] = server_creation_time
 
-        # Get the issues
-        response = self.client.post(url=self.issue_url, json=self.query)
+        # Get the alerts
+        response = self.client.post(url=self.alert_url, json=self.query)
         response.raise_for_status()
 
         # Extract the payload
         response_query = response.json().get("reply", {})
 
-        # Extract issues
-        issues = response_query.get("issues") or []
-        combined_data = self.normalize_issues(issues)
+        # extract alerts
+        alerts = response_query.get("alerts") or []
+        combined_data = self.split_alerts_events(alerts)
 
         return response_query["total_count"], combined_data
 
-    def get_all_issues(self, pagination: int) -> None:
-        """Get all Cortex issues from the API."""
+    def get_all_alerts(self, pagination: int) -> None:
+        """Get all Cortex alerts from the API"""
 
         has_more_events = True
         page_number = 0
         events = []
 
         while has_more_events:
-            total_issues, combined_data = self.get_issues_by_offset(
+            total_alerts, combined_data = self.get_alerts_events_by_offset(
                 page_number * pagination, self.timestamp_cursor, pagination
             )
-            self.log(message=f"Sending batch of {len(combined_data)} issues", level="info")
-            has_more_events = total_issues > (page_number + 1) * pagination
+            self.log(message=f"Sending batch of {len(combined_data)} events", level="info")
+            has_more_events = total_alerts > (page_number + 1) * pagination
             page_number += 1
             events.extend(combined_data)
 
@@ -160,31 +172,29 @@ class CortexQueryEDRTrigger(CortexConnector):
             if len(combined_data) > 0:
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(combined_data))
                 self.push_events_to_intakes(events=combined_data)
-                self.save_issues_cache()
+                self.save_alerts_cache()
 
         current_lag: int = 0
         if len(events) > 0:
-            most_recent_timestamp = orjson.loads(events[0]).get("modification_time")
-            if most_recent_timestamp is None:
-                raise ValueError("Received Cortex issue without modification_time")
+            most_recent_timestamp = orjson.loads(events[0]).get("detection_timestamp")
             self.timestamp_cursor = most_recent_timestamp
 
             # compute the current_lag in seconds
             current_lag = int(time.time() - (most_recent_timestamp / 1000))
 
         else:
-            self.log(message=f"No issues to forward at {self.timestamp_cursor}", level="info")
+            self.log(message=f"No alerts to forward at {self.timestamp_cursor}", level="info")
 
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
     def forward_next_batch(self) -> None:
         """
-        Collect and forward the next batch of issues.
+        Collect and forward the next batch of alerts
         """
         start = time.time()
         connection_issue_detected = self._connection_issue_detected
         try:
-            self.get_all_issues(self.pagination_limit)
+            self.get_all_alerts(self.pagination_limit)
             if connection_issue_detected:
                 self.log(
                     level="info",
@@ -192,11 +202,11 @@ class CortexQueryEDRTrigger(CortexConnector):
                 )
                 self._connection_issue_detected = False
 
-        except RequestsConnectionError as ex:
+        except RequestsConnectionError:
             self._connection_issue_detected = True
             self.log(
                 level="warning",
-                message="Temporary connection issue while fetching Cortex issues, will retry on next run",
+                message="Temporary connection issue while fetching Cortex alerts, will retry on next run",
             )
         except (HTTPError, BaseHTTPError) as ex:
             error_response = getattr(ex, "response", None)
@@ -213,7 +223,7 @@ class CortexQueryEDRTrigger(CortexConnector):
                         message="Permission denied: The operation isn't allowed for these credentials",
                     )
                 else:
-                    self.log_exception(ex, message="Failed to get next batch of issues")
+                    self.log_exception(ex, message="Failed to get next batch of events")
         except Exception as ex:
             self.log_exception(ex, message="An unknown exception occurred")
             raise
@@ -228,9 +238,9 @@ class CortexQueryEDRTrigger(CortexConnector):
     def run(self) -> None:
         """Run Cortex EDR Connector"""
 
-        self.log(message="Cortex EDR Issues Trigger has started", level="info")
+        self.log(message="Cortex EDR Events Trigger has started", level="info")
         try:
             while self.running:
                 self.forward_next_batch()
         finally:
-            self.log(message="Cortex Issues Trigger has stopped", level="info")
+            self.log(message="Cortex Events Trigger has stopped", level="info")
