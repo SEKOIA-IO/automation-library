@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -182,3 +183,13 @@ def test_stop_consumers(trigger):
 
     assert consumers["auditevents"] is not None
     assert consumers["auditevents"].stop.called
+
+
+def test_scalability_labels_from_descriptor(trigger, monkeypatch):
+    monkeypatch.chdir(Path(__file__).resolve().parents[1])
+    trigger.module._command = "get_1password_epm_events"
+
+    assert trigger.scalability_labels == {
+        "scalable_horizontally": "false",
+        "scalable_vertically": "true",
+    }

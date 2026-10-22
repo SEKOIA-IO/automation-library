@@ -48,5 +48,9 @@
     ],
     "title": "Flowlog records"
   },
-  "uuid": "e1e721c1-0263-4763-8812-25bf24d062f4"
+  "uuid": "e1e721c1-0263-4763-8812-25bf24d062f4",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": false
+  }
 }
