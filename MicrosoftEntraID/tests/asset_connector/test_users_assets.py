@@ -782,6 +782,7 @@ async def test_get_assets_with_last_run_date(test_entra_id_asset_connector):
         yield mock_user_ocsf_model
 
     test_entra_id_asset_connector.fetch_new_users = mock_fetch_new_users
+    test_entra_id_asset_connector.fetch_mfa_updated_users = empty_async_generator
 
     # Act
     assets = [asset async for asset in test_entra_id_asset_connector.get_assets()]
@@ -790,6 +791,224 @@ async def test_get_assets_with_last_run_date(test_entra_id_asset_connector):
     assert len(assets) == 1
     # Verify that the last_run_date was passed
     assert call_tracker["last_run_date"] is not None
+
+
+def mock_audit(*targets):
+    from msgraph.generated.models.directory_audit import DirectoryAudit
+    from msgraph.generated.models.target_resource import TargetResource
+
+    return DirectoryAudit(
+        target_resources=[TargetResource(id=target_id, type=target_type) for target_id, target_type in targets]
+    )
+
+
+async def empty_async_generator(*args, **kwargs):
+    for item in ():
+        yield item
+
+
+@pytest.mark.asyncio
+async def test_fetch_mfa_updated_users(test_entra_id_asset_connector):
+    from msgraph.generated.models.o_data_errors.o_data_error import ODataError
+    from msgraph.generated.models.user import User
+
+    client = mock_graph_service_client()
+    client.audit_logs.directory_audits.get = AsyncMock(
+        return_value=MagicMock(
+            value=[
+                mock_audit(("user1", "User"), ("group1", "Group")),
+                mock_audit(("already-sent", "User"), (None, "User")),
+            ],
+            odata_next_link="next-page-link",
+        )
+    )
+    client.audit_logs.directory_audits.with_url.return_value.get = AsyncMock(
+        return_value=MagicMock(
+            value=[mock_audit(("user1", "User"), ("deleted", "User"), ("user2", "User"))],
+            odata_next_link=None,
+        )
+    )
+
+    def by_user_id(user_id):
+        if user_id == "deleted":
+            error = ODataError()
+            error.response_status_code = 404
+            return MagicMock(get=AsyncMock(side_effect=error))
+        return MagicMock(get=AsyncMock(return_value=User(id=user_id)))
+
+    client.users.by_user_id.side_effect = by_user_id
+    test_entra_id_asset_connector.client = client
+    test_entra_id_asset_connector.fetch_user = AsyncMock(side_effect=lambda user: user.id)
+
+    since = datetime.datetime(2026, 9, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
+    result = [user async for user in test_entra_id_asset_connector.fetch_mfa_updated_users(since, {"already-sent"})]
+
+    assert result == ["user1", "user2"]
+    request_configuration = client.audit_logs.directory_audits.get.call_args.kwargs["request_configuration"]
+    assert (
+        request_configuration.query_parameters.filter
+        == "loggedByService eq 'Authentication Methods' and activityDateTime ge 2026-09-01T12:00:00Z"
+    )
+    test_entra_id_asset_connector.log.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_fetch_mfa_updated_users_audit_error(test_entra_id_asset_connector):
+    test_entra_id_asset_connector.client = mock_graph_service_client()
+    test_entra_id_asset_connector.client.audit_logs.directory_audits.get = AsyncMock(
+        side_effect=Exception("Forbidden")
+    )
+
+    since = datetime.datetime(2026, 9, 1, tzinfo=datetime.timezone.utc)
+    with pytest.raises(ValueError, match="Error fetching authentication methods audit logs"):
+        [user async for user in test_entra_id_asset_connector.fetch_mfa_updated_users(since, set())]
+
+
+@pytest.mark.asyncio
+async def test_fetch_mfa_updated_users_user_error(test_entra_id_asset_connector):
+    from msgraph.generated.models.o_data_errors.o_data_error import ODataError
+
+    client = mock_graph_service_client()
+    client.audit_logs.directory_audits.get = AsyncMock(
+        return_value=MagicMock(value=[mock_audit(("user1", "User"))], odata_next_link=None)
+    )
+    error = ODataError()
+    error.response_status_code = 403
+    client.users.by_user_id.return_value.get = AsyncMock(side_effect=error)
+    test_entra_id_asset_connector.client = client
+
+    since = datetime.datetime(2026, 9, 1, tzinfo=datetime.timezone.utc)
+    with pytest.raises(ValueError, match="Error fetching user user1"):
+        [user async for user in test_entra_id_asset_connector.fetch_mfa_updated_users(since, set())]
+
+
+@pytest.mark.asyncio
+async def test_get_assets_first_run_skips_mfa_refresh(test_entra_id_asset_connector):
+    async def mock_fetch_new_users(last_run_date=None):
+        yield MagicMock()
+
+    test_entra_id_asset_connector.fetch_new_users = mock_fetch_new_users
+    test_entra_id_asset_connector.fetch_mfa_updated_users = MagicMock()
+
+    assets = [asset async for asset in test_entra_id_asset_connector.get_assets()]
+
+    assert len(assets) == 1
+    test_entra_id_asset_connector.fetch_mfa_updated_users.assert_not_called()
+    assert test_entra_id_asset_connector.most_recent_audit_date_seen is not None
+
+
+@pytest.mark.asyncio
+async def test_get_assets_upgrade_scans_audit_retention(test_entra_id_asset_connector):
+    with test_entra_id_asset_connector.context as cache:
+        cache["most_recent_date_seen"] = "2026-01-01T00:00:00+00:00"
+
+    refreshed_user = MagicMock()
+    calls = {}
+
+    async def mock_fetch_mfa_updated_users(since, excluded_user_ids):
+        calls["since"] = since
+        yield refreshed_user
+
+    test_entra_id_asset_connector.fetch_new_users = empty_async_generator
+    test_entra_id_asset_connector.fetch_mfa_updated_users = mock_fetch_mfa_updated_users
+
+    before = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+    assets = [asset async for asset in test_entra_id_asset_connector.get_assets()]
+
+    assert assets == [refreshed_user]
+    retention = datetime.timedelta(days=EntraIDAssetConnector.AUDIT_LOG_MAX_RETENTION_DAYS)
+    assert before - retention <= calls["since"] <= datetime.datetime.now(datetime.timezone.utc) - retention
+    test_entra_id_asset_connector.log.assert_not_called()
+    assert test_entra_id_asset_connector.most_recent_audit_date_seen is None
+
+    await test_entra_id_asset_connector.update_checkpoint()
+
+    assert test_entra_id_asset_connector.most_recent_audit_date_seen is not None
+
+
+@pytest.mark.asyncio
+async def test_get_assets_refreshes_mfa_updated_users(test_entra_id_asset_connector):
+    last_audit_date = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0) - datetime.timedelta(days=1)
+    with test_entra_id_asset_connector.context as cache:
+        cache["most_recent_audit_date_seen"] = last_audit_date.isoformat()
+
+    new_user = MagicMock()
+    new_user.user.uid = "user1"
+    refreshed_user = MagicMock()
+    calls = {}
+
+    async def mock_fetch_new_users(last_run_date=None):
+        yield new_user
+
+    async def mock_fetch_mfa_updated_users(since, excluded_user_ids):
+        calls["since"] = since
+        calls["excluded_user_ids"] = set(excluded_user_ids)
+        yield refreshed_user
+
+    test_entra_id_asset_connector.fetch_new_users = mock_fetch_new_users
+    test_entra_id_asset_connector.fetch_mfa_updated_users = mock_fetch_mfa_updated_users
+
+    assets = [asset async for asset in test_entra_id_asset_connector.get_assets()]
+
+    assert assets == [new_user, refreshed_user]
+    assert calls["since"] == last_audit_date - datetime.timedelta(seconds=EntraIDAssetConnector.AUDIT_LOOKBACK_SECONDS)
+    assert calls["excluded_user_ids"] == {"user1"}
+    test_entra_id_asset_connector.log.assert_not_called()
+    # Saved only once the refreshed users are pushed
+    assert test_entra_id_asset_connector.most_recent_audit_date_seen == last_audit_date.isoformat()
+
+    await test_entra_id_asset_connector.update_checkpoint()
+
+    new_audit_date = datetime.datetime.fromisoformat(test_entra_id_asset_connector.most_recent_audit_date_seen)
+    assert new_audit_date > last_audit_date
+
+
+@pytest.mark.asyncio
+async def test_get_assets_saves_audit_date_when_refreshed_users_fill_the_last_batch(test_entra_id_asset_connector):
+    last_audit_date = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0) - datetime.timedelta(days=1)
+    with test_entra_id_asset_connector.context as cache:
+        cache["most_recent_audit_date_seen"] = last_audit_date.isoformat()
+
+    async def mock_fetch_mfa_updated_users(since, excluded_user_ids):
+        yield MagicMock()
+        yield MagicMock()
+
+    test_entra_id_asset_connector.fetch_new_users = empty_async_generator
+    test_entra_id_asset_connector.fetch_mfa_updated_users = mock_fetch_mfa_updated_users
+
+    # The SDK pushes and checkpoints every full batch, then the residual one.
+    # Two refreshed users with a batch size of two leave no residual batch.
+    batch_size = 2
+    batch = []
+    async for asset in test_entra_id_asset_connector.get_assets():
+        batch.append(asset)
+        if len(batch) == batch_size:
+            await test_entra_id_asset_connector.update_checkpoint()
+            batch = []
+    if batch:
+        await test_entra_id_asset_connector.update_checkpoint()
+
+    new_audit_date = datetime.datetime.fromisoformat(test_entra_id_asset_connector.most_recent_audit_date_seen)
+    assert new_audit_date > last_audit_date
+
+
+@pytest.mark.asyncio
+async def test_get_assets_warns_when_mfa_refresh_is_beyond_audit_retention(test_entra_id_asset_connector):
+    last_audit_date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=8)
+    with test_entra_id_asset_connector.context as cache:
+        cache["most_recent_audit_date_seen"] = last_audit_date.isoformat()
+
+    test_entra_id_asset_connector.fetch_new_users = empty_async_generator
+    test_entra_id_asset_connector.fetch_mfa_updated_users = empty_async_generator
+
+    assets = [asset async for asset in test_entra_id_asset_connector.get_assets()]
+
+    assert assets == []
+    test_entra_id_asset_connector.log.assert_called_once()
+    assert test_entra_id_asset_connector.log.call_args.kwargs["level"] == "warning"
+    # Nothing refreshed: position saved right away
+    new_audit_date = datetime.datetime.fromisoformat(test_entra_id_asset_connector.most_recent_audit_date_seen)
+    assert new_audit_date > last_audit_date
 
 
 def test_map_fields_with_none_values(test_entra_id_asset_connector):
@@ -1001,18 +1220,23 @@ def test_map_fields_enrichment_without_optional_fields(test_entra_id_asset_conne
 
 @pytest.mark.asyncio
 async def test_reset_checkpoint(test_entra_id_asset_connector):
-    """Test that reset_checkpoint clears most_recent_date_seen and _latest_time."""
+    """Test that reset_checkpoint clears both checkpoints and their pending values."""
     # Arrange: set a checkpoint first
     test_entra_id_asset_connector._latest_time = 1640995200.0
+    test_entra_id_asset_connector._pending_audit_date = "2022-01-01T00:00:00+00:00"
     await test_entra_id_asset_connector.update_checkpoint()
     assert test_entra_id_asset_connector.most_recent_date_seen is not None
+    assert test_entra_id_asset_connector.most_recent_audit_date_seen == "2022-01-01T00:00:00+00:00"
+    test_entra_id_asset_connector._pending_audit_date = "2022-01-02T00:00:00+00:00"
 
     # Act
     await test_entra_id_asset_connector.reset_checkpoint()
 
     # Assert
     assert test_entra_id_asset_connector.most_recent_date_seen is None
+    assert test_entra_id_asset_connector.most_recent_audit_date_seen is None
     assert test_entra_id_asset_connector._latest_time is None
+    assert test_entra_id_asset_connector._pending_audit_date is None
 
 
 @pytest.mark.asyncio
