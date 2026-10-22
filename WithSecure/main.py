@@ -1,4 +1,5 @@
 from withsecure import WithSecureModule
+from withsecure.asset_connector.device_assets import WithSecureDeviceAssetConnector
 from withsecure.comment_incident import CommentIncident
 from withsecure.enumerate_processes import EnumerateProcesses
 from withsecure.isolate_device_from_network_action import IsolateDeviceFromNetworkAction
@@ -24,5 +25,6 @@ if __name__ == "__main__":
     module.register(EnumerateProcesses, "enumerate_processes")
     module.register(KillThread, "kill_thread")
     module.register(KillProcess, "kill_process")
+    module.register(WithSecureDeviceAssetConnector, "withsecure_device_asset_connector")
 
     module.run()
