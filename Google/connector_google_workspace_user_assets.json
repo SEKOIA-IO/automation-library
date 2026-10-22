@@ -1,0 +1,41 @@
+{
+  "name": "Google Workspace Users",
+  "description": "Fetch Google Workspace user assets",
+  "uuid": "0beae7f6-e483-4bf9-b106-014ec8b25283",
+  "docker_parameters": "google_workspace_user_asset_connector",
+  "type": "asset",
+  "capability": "account_detection",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "sekoia_base_url": {
+        "description": "Sekoia base URL",
+        "type": "string"
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "minimum": 10800,
+        "default": 86400
+      },
+      "sekoia_api_key": {
+        "description": "API key to use from sekoia.io",
+        "type": "string"
+      },
+      "batch_size": {
+        "type": "integer",
+        "description": "Batch size",
+        "minimum": 1,
+        "default": 100
+      },
+      "admin_mail": {
+        "description": "Email of the Google Workspace administrator impersonated by the service account",
+        "type": "string"
+      }
+    },
+    "required": ["sekoia_api_key", "admin_mail"],
+    "secrets": ["sekoia_api_key"],
+    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"]
+  }
+}
