@@ -3,12 +3,19 @@ import json
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
+import aiohttp
 import pytest
 from prometheus_client import Counter
 
 from office365.management_api.checkpoint import Checkpoint
 from office365.management_api.connector import FORWARD_EVENTS_DURATION
-from office365.management_api.errors import FailedToActivateO365Subscription, SessionClosedError
+from office365.management_api.errors import (
+    ApplicationAuthenticationFailed,
+    FailedToActivateO365Subscription,
+    FailedToGetO365SubscriptionContents,
+    FailedToListO365Subscriptions,
+    SessionClosedError,
+)
 
 
 @pytest.mark.asyncio
@@ -282,3 +289,160 @@ async def test_forward_events_forever_resets_client_on_unexpected_session_closed
     reset_spy.assert_called_once()
     connector.log_exception.assert_called_once()
     assert "rebuilding" in connector.log_exception.call_args.kwargs.get("message", "").lower()
+
+
+@pytest.mark.asyncio
+async def test_forward_events_forever_handles_auth_failure(connector, symphony_storage):
+    """Authentication failures are logged at warning/critical and trigger a long sleep."""
+    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
+
+    call_count = 0
+    sleep_durations: list[float] = []
+
+    async def mock_forward_next_batches(cp):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise ApplicationAuthenticationFailed(
+                "Failed to get access token",
+                response={"error_description": "AADSTS70011: invalid scope"},
+            )
+        connector._stop_event.set()
+
+    async def fake_sleep(seconds):
+        sleep_durations.append(seconds)
+
+    with (
+        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
+        patch("office365.management_api.connector.asyncio.sleep", side_effect=fake_sleep),
+    ):
+        await connector.forward_events_forever(checkpoint)
+
+    connector.log.assert_called()
+    log_message = connector.log.call_args_list[0].kwargs["message"]
+    assert "Authentication" in log_message
+    assert "AADSTS70011" in log_message
+    # First sleep is the auth recovery sleep (>= frequency, capped at 600).
+    assert sleep_durations[0] >= connector._frequency
+
+
+@pytest.mark.asyncio
+async def test_forward_events_forever_handles_o365_api_failure(connector, symphony_storage):
+    """O365 Management API errors are logged with status/operation and exponential backoff."""
+    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
+
+    call_count = 0
+
+    async def mock_forward_next_batches(cp):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise FailedToGetO365SubscriptionContents(status_code=503, body="<html>Service Unavailable</html>")
+        connector._stop_event.set()
+
+    with (
+        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
+        patch("office365.management_api.connector.asyncio.sleep", return_value=None),
+    ):
+        await connector.forward_events_forever(checkpoint)
+
+    connector.log.assert_called()
+    log_message = connector.log.call_args_list[0].kwargs["message"]
+    assert "FailedToGetO365SubscriptionContents" in log_message
+    assert "consecutive=1" in log_message
+
+
+@pytest.mark.asyncio
+async def test_forward_events_forever_handles_network_failure(connector, symphony_storage):
+    """Network errors hit the dedicated branch and are labeled by exc type."""
+    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
+
+    call_count = 0
+
+    async def mock_forward_next_batches(cp):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise aiohttp.ClientConnectionError("connection reset")
+        connector._stop_event.set()
+
+    with (
+        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
+        patch("office365.management_api.connector.asyncio.sleep", return_value=None),
+    ):
+        await connector.forward_events_forever(checkpoint)
+
+    connector.log.assert_called()
+    log_message = connector.log.call_args_list[0].kwargs["message"]
+    assert "Network error" in log_message
+    assert "ClientConnectionError" in log_message
+
+
+@pytest.mark.asyncio
+async def test_forward_events_forever_dedups_repeated_failures(connector, symphony_storage):
+    """Identical consecutive failures should not all be logged."""
+    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
+
+    call_count = 0
+
+    async def mock_forward_next_batches(cp):
+        nonlocal call_count
+        call_count += 1
+        # Raise the same error N times, then stop without ever succeeding so no
+        # recovery log fires. The 9th call sets the stop event and re-raises so
+        # the loop exits via the same error path.
+        if call_count >= 9:
+            connector._stop_event.set()
+        raise FailedToListO365Subscriptions(status_code=503, body="boom")
+
+    with (
+        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
+        patch("office365.management_api.connector.asyncio.sleep", return_value=None),
+    ):
+        await connector.forward_events_forever(checkpoint)
+
+    # 9 consecutive failures: should_log returns True for n in {1,2,3} only.
+    assert connector.log.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_forward_events_forever_logs_recovery_on_success(connector, symphony_storage):
+    """After a streak of failures, a successful run should log a recovery message."""
+    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
+
+    call_count = 0
+
+    async def mock_forward_next_batches(cp):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise aiohttp.ClientConnectionError("transient")
+        if call_count == 2:
+            return  # success
+        connector._stop_event.set()
+
+    with (
+        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
+        patch("office365.management_api.connector.asyncio.sleep", return_value=None),
+    ):
+        await connector.forward_events_forever(checkpoint)
+
+    recovery_logged = any(
+        "Recovered from network failures" in call.kwargs.get("message", "") for call in connector.log.call_args_list
+    )
+    assert recovery_logged
+
+
+def test_compute_backoff_seconds_caps_at_max(connector):
+    # Very large count should still cap at MAX_RECOVERY_SLEEP_SECONDS (600).
+    assert connector._compute_backoff_seconds(1000) == 600
+
+
+def test_compute_backoff_seconds_doubles_each_step(connector):
+    # _frequency defaults to 60. Sequence: 60, 120, 240, 480, 600 (cap), 600...
+    assert connector._compute_backoff_seconds(1) == 60
+    assert connector._compute_backoff_seconds(2) == 120
+    assert connector._compute_backoff_seconds(3) == 240
+    assert connector._compute_backoff_seconds(4) == 480
+    assert connector._compute_backoff_seconds(5) == 600
+    assert connector._compute_backoff_seconds(6) == 600
