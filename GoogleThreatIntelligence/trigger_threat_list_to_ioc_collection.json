@@ -1,0 +1,54 @@
+{
+  "uuid": "b2c3d4e5-6f7a-4b5c-9d0e-1f2a3b4c5d6e",
+  "name": "Threat List to IOC Collection",
+  "slug": "trigger-google-threat-intelligence-threat-list-to-ioc-collection",
+  "description": "Threat List to IOC Collection",
+  "docker_parameters": "trigger-google-threat-intelligence-threat-list-to-ioc-collection",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Threat List to IOC Collection Configuration",
+    "properties": {
+      "ioc_collection_uuid": {
+        "type": "string",
+        "description": "UUID of the target IOC Collection in Sekoia.io format: ioc-collection--xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      },
+      "threat_list_id": {
+        "type": "string",
+        "description": "Single threat list to monitor",
+        "enum": ["ransomware", "malicious-network-infrastructure", "malware", "threat-actor", "trending", "mobile", "osx", "linux", "iot", "cryptominer", "phishing", "first-stage-delivery-vectors", "vulnerability-weaponization", "infostealer"]
+      },
+      "ioc_types": {
+        "type": "array",
+        "description": "List of IOC types to retrieve. Accepted values: file, url, ip_address, domain",
+        "default": ["file", "url", "ip_address", "domain"]
+      },
+      "polling_frequency_hours": {
+        "type": "integer",
+        "description": "Hours between each poll (1-24)",
+        "default": 1
+      },
+      "max_iocs": {
+        "type": "integer",
+        "description": "Maximum number of IoCs to retrieve per execution",
+        "default": 4000
+      },
+      "extra_query_params": {
+        "type": "string",
+        "description": "Advanced filtering query (optional)"
+      },
+      "sekoia_base_url": {
+        "type": "string",
+        "description": "SEKOIA.IO API base URL",
+        "default": "https://api.sekoia.io"
+      }
+    },
+    "required": ["ioc_collection_uuid", "threat_list_id"]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Event Output",
+    "properties": {}
+  }
+}
