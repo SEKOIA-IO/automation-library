@@ -33,7 +33,7 @@ def vantage_connector(
     connector = NozomiVantageConnector(module=module)
     connector.configuration = NozomiVantageConfiguration(
         intake_key=session_faker.word(),
-        batch_size=3,
+        chunk_size=3,
     )
     connector.push_data_to_intakes = mock_push_data_to_intakes
 
@@ -96,3 +96,9 @@ async def test_vantage_connector(vantage_connector: NozomiVantageConnector, sess
     assert result == sum([len(value) for _, value in response_data.items()])
 
     await vantage_connector.nozomi_client.close()
+
+
+def test_vantage_configuration_maps_legacy_batch_size() -> None:
+    configuration = NozomiVantageConfiguration(intake_key="test", batch_size=250)
+
+    assert configuration.chunk_size == 250

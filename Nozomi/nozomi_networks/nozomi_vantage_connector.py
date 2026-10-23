@@ -8,6 +8,7 @@ import orjson
 from cachetools import LRUCache
 from dateutil.parser import isoparse
 from loguru import logger
+from pydantic.v1 import Field, root_validator
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
@@ -60,8 +61,14 @@ class NozomiVantageConfiguration(DefaultConnectorConfiguration):
     """NozomiVantageConfiguration."""
 
     frequency: int = 600
-    batch_size: int = 1000
+    chunk_size: int = Field(default=1000, ge=1, le=1000)
     page_size: int = 25
+
+    @root_validator(pre=True)
+    def map_legacy_batch_size_to_chunk_size(cls, values: dict[str, Any]) -> dict[str, Any]:
+        if "chunk_size" not in values and "batch_size" in values:
+            values["chunk_size"] = values["batch_size"]
+        return values
 
 
 class NozomiVantageConnector(AsyncConnector):
@@ -208,7 +215,7 @@ class NozomiVantageConnector(AsyncConnector):
                 new_last_event_date = max(new_last_event_date, event_date)
                 records.append(formated_event)
 
-                if len(records) >= self.configuration.batch_size:
+                if len(records) >= self.configuration.chunk_size:
                     # If we have enough records, push them to intakes
                     total_pushed = len(
                         await self.push_data_to_intakes([orjson.dumps(record).decode("utf-8") for record in records])
