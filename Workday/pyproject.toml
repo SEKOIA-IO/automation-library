@@ -1,0 +1,58 @@
+[tool.poetry]
+name = "Automation module for Workday"
+version = "0.1"
+description = "A connector to monitor activity logging"
+authors = []
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.14"
+# >=1.21.2 is required: earlier versions logged intake HTTP errors without raising, so a rejected
+# batch was never retried and was reported as a success (see CHANGELOG 0.3.0).
+sekoia-automation-sdk = {version = "^1.21.2", extras= ["all"]}
+cachetools = "^6.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+pytest-asyncio = "*"
+aioresponses = "*"
+faker = "*"
+requests = "*"
+requests-mock = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "tests",
+]
+addopts = '''
+  --strict-markers
+  --tb=short
+  --cov=workday_modules
+  --cov-branch
+  --cache-clear
+  --cov-report=html
+  --cov-report=term-missing:skip-covered
+  --cov-fail-under=5
+  --capture=sys
+'''
