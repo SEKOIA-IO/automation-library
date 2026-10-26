@@ -1,7 +1,7 @@
-import os
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
+from typing import Any
 
 import orjson
 import requests
@@ -23,7 +23,7 @@ class TAPConfig(DefaultConnectorConfiguration):
     api_host: str
     client_principal: str
     client_secret: str
-    frequency = 60
+    frequency: int = 60
 
 
 class TAPEventsTrigger(Connector):
@@ -79,7 +79,7 @@ class TAPEventsTrigger(Connector):
 
     def get_next_events(self, from_date: datetime) -> dict | None:
         # We don't retrieve messages older than one hour
-        one_hour_ago = datetime.now(timezone.utc) - MAX_LOOKBACK
+        one_hour_ago = datetime.now(UTC) - MAX_LOOKBACK
         if from_date < one_hour_ago:
             from_date = one_hour_ago
 
@@ -120,7 +120,7 @@ class TAPEventsTrigger(Connector):
         if response is None:
             return
 
-        events: list[str] = []
+        events: list[Any] = []
         for message in response.get("messagesDelivered", []):
             message["status"] = "delivered"
             message["type"] = "message"

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta, timezone, tzinfo
+from datetime import UTC, datetime, timedelta, tzinfo
 
 import orjson
 from dateutil.parser import parse
@@ -14,10 +14,10 @@ def format_datetime(date: datetime) -> str:
     :rtype: str
     :return: The RFC3339 representation of the datetime
     """
-    return date.astimezone(timezone.utc).strftime(RFC3339_STRICT_FORMAT)
+    return date.astimezone(UTC).strftime(RFC3339_STRICT_FORMAT)
 
 
-def parse_user_date(user_date: str | None, default_tzinfo: tzinfo = timezone.utc) -> datetime | None:
+def parse_user_date(user_date: str | None, default_tzinfo: tzinfo = UTC) -> datetime | None:
     """
     Parse the date provided by the user and return an offset-aware datetime
 
@@ -45,7 +45,7 @@ def normalize_since_time(initial_since_time: str | None) -> datetime:
     :rtype: datetime
     :return: The normalized datetime
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # parse the date
     date = parse_user_date(initial_since_time)
@@ -59,7 +59,7 @@ def normalize_since_time(initial_since_time: str | None) -> datetime:
     if date < thirsty_days_ago:
         date = thirsty_days_ago
 
-    return date.astimezone(timezone.utc)
+    return date.astimezone(UTC)
 
 
 def split_message(message: dict) -> list:
