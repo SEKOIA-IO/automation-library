@@ -1,6 +1,7 @@
 """Contains connector, configuration and module."""
 
 import asyncio
+import hashlib
 import time
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -22,8 +23,6 @@ from connectors.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EV
 
 # Soft bound on the number of pages read in one run (see `get_trellix_epo_events`)
 MAX_PAGES_PER_RUN = 100
-# Bound on the number of ids of the checkpoint second kept in context.json for deduplication
-MAX_LAST_EVENT_IDS = 10_000
 
 
 class TrellixEpoConnectorConfig(DefaultConnectorConfiguration):
@@ -104,11 +103,28 @@ class TrellixEpoConnector(AsyncConnector):
 
         return self._trellix_client
 
+    @staticmethod
+    def query_start(checkpoint: datetime) -> datetime:
+        """
+        Get the date of the `GT` filter for a checkpoint: one second before the checkpoint second.
+
+        The filter only has a second precision, and it is not known whether the API compares it with the
+        milliseconds of the events. Starting one second earlier makes the whole checkpoint second readable again,
+        including events at exactly `<second>.000`: the events already forwarded are skipped by `_is_new_event`.
+
+        Args:
+            checkpoint: datetime
+
+        Returns:
+            datetime:
+        """
+        return checkpoint.replace(microsecond=0) - timedelta(seconds=1)
+
     async def get_trellix_epo_events(self) -> list[str]:
         """
         Collect and forward all the available trellix epo events.
 
-        Pages are read inside one `GT <checkpoint second>` window sorted by ascending timestamp, following
+        Pages are read inside one `GT <checkpoint second - 1s>` window sorted by ascending timestamp, following
         `links.next` when the API returns it and using `page[offset]` otherwise. Each page is pushed, then the
         checkpoint is saved, so a failure loses nothing and only re-reads the pages not saved yet.
 
@@ -117,33 +133,36 @@ class TrellixEpoConnector(AsyncConnector):
         """
         start_date = self.last_event_date
         start_second = start_date.replace(microsecond=0)
+        query_start = self.query_start(start_date)
         limit = self.configuration.records_per_request
 
         offset = 0
         next_url: URL | None = None
         pages = 0
-        # Ids forwarded during this run, to skip events moved to a later page by a concurrent insertion
-        seen_event_ids: set[str] = set()
+        # Keys of the events read during this run: skip events moved to a later page by a concurrent insertion,
+        # and detect pages that bring nothing new (e.g. an API ignoring `page[offset]`)
+        seen_event_keys: set[str] = set()
         result: list[str] = []
 
         while self.running:
-            page = await self.trellix_client.get_epo_events_page(start_date, limit, offset, url=next_url)
+            page = await self.trellix_client.get_epo_events_page(query_start, limit, offset, url=next_url)
             pages += 1
 
-            # The API filter is `timestamp GT <checkpoint truncated to the second>`,
-            # so events of the checkpoint second are returned again: skip those already forwarded.
+            checkpoint_date = self.last_event_date
             with self.context as cache:
-                boundary_event_ids = set(cache.get("last_event_ids") or [])
+                checkpoint_event_ids = set(cache.get("last_event_ids") or [])
 
             new_events: list[TrellixResponse[EpoEventAttributes]] = []
+            page_has_unseen_events = False
             for event in page.events:
-                event_id = self._event_id(event)
-                if event_id is not None:
-                    if event_id in boundary_event_ids or event_id in seen_event_ids:
-                        continue
-                    seen_event_ids.add(event_id)
+                event_key = self._event_key(event)
+                if event_key in seen_event_keys:
+                    continue
 
-                new_events.append(event)
+                seen_event_keys.add(event_key)
+                page_has_unseen_events = True
+                if self._is_new_event(event, checkpoint_date, checkpoint_event_ids):
+                    new_events.append(event)
 
             if new_events:
                 pushed_ids = await self.push_data_to_intakes(
@@ -167,6 +186,15 @@ class TrellixEpoConnector(AsyncConnector):
             if not self._has_next_page(page, limit):
                 break
 
+            # A full page made only of events already read in this run means that the pagination does not move
+            # (e.g. `page[offset]` ignored): stop instead of requesting the same page until the bound.
+            if not page_has_unseen_events:
+                self.log(
+                    message=f"Page {pages} only returned events already read in this run, stopping the pagination",
+                    level="warning",
+                )
+                break
+
             # Stop at the per-run bound, but only once the checkpoint left the second the run started from:
             # the next run then starts from a new window. Otherwise, a second holding more events than one run
             # can read would be read again from its first page at every run, and the connector would be stuck.
@@ -181,6 +209,53 @@ class TrellixEpoConnector(AsyncConnector):
             next_url = page.next_url
 
         return result
+
+    def _is_new_event(
+        self,
+        event: TrellixResponse[EpoEventAttributes],
+        checkpoint_date: datetime,
+        checkpoint_event_ids: set[str],
+    ) -> bool:
+        """
+        Tell whether an event of the window was not forwarded yet.
+
+        Events are read by ascending timestamp and the checkpoint is the timestamp of the newest forwarded event:
+        older events were forwarded, newer ones were not, and those at exactly the checkpoint timestamp were
+        forwarded if their id is in `last_event_ids`.
+
+        Args:
+            event: TrellixResponse[EpoEventAttributes]
+            checkpoint_date: datetime
+            checkpoint_event_ids: set[str]
+
+        Returns:
+            bool:
+        """
+        timestamp = self._event_timestamp(event)
+        if timestamp is None or timestamp > checkpoint_date:
+            return True
+
+        if timestamp < checkpoint_date:
+            return False
+
+        event_id = self._event_id(event)
+        return event_id is None or event_id not in checkpoint_event_ids
+
+    def _event_key(self, event: TrellixResponse[EpoEventAttributes]) -> str:
+        """
+        Get a key identifying an event: its id, or a digest of its content when it has none.
+
+        Args:
+            event: TrellixResponse[EpoEventAttributes]
+
+        Returns:
+            str:
+        """
+        event_id = self._event_id(event)
+        if event_id is not None:
+            return f"id:{event_id}"
+
+        return "sha256:" + hashlib.sha256(orjson.dumps(event.model_dump(), option=orjson.OPT_SORT_KEYS)).hexdigest()
 
     @staticmethod
     def _has_next_page(page: EpoEventsPage, limit: int) -> bool:
@@ -217,10 +292,12 @@ class TrellixEpoConnector(AsyncConnector):
 
     def _save_checkpoint(self, events: list[TrellixResponse[EpoEventAttributes]]) -> None:
         """
-        Save the most recent event timestamp and the ids of the events of that second.
+        Save the timestamp of the newest event and the ids of the events at exactly that timestamp.
 
-        The checkpoint never moves backward. The ids of the checkpoint second are merged with those already
-        saved while the checkpoint stays in that second, and capped to the `MAX_LAST_EVENT_IDS` most recent.
+        The checkpoint never moves backward. While it does not move, the ids are merged with those already saved.
+        They are never truncated: dropping some would forward their events again when the checkpoint timestamp
+        is read again. Their number is bounded by the number of events sharing the newest timestamp, and the list
+        is reset as soon as a newer event is saved.
 
         Args:
             events: list[TrellixResponse[EpoEventAttributes]]
@@ -231,23 +308,17 @@ class TrellixEpoConnector(AsyncConnector):
 
         current_date = self.last_event_date
         checkpoint_date = max(current_date, max(timestamps))
-        checkpoint_second = checkpoint_date.replace(microsecond=0)
 
-        page_event_ids: list[str] = []
-        for event in events:
-            timestamp = self._event_timestamp(event)
-            event_id = self._event_id(event)
-            if (
-                timestamp is not None
-                and event_id is not None
-                and timestamp.replace(microsecond=0) == checkpoint_second
-            ):
-                page_event_ids.append(event_id)
+        page_event_ids = [
+            event_id
+            for event in events
+            if self._event_timestamp(event) == checkpoint_date and (event_id := self._event_id(event)) is not None
+        ]
 
         with self.context as cache:
-            # Keep the ids already seen when the checkpoint stays in the same second
+            # Keep the ids already saved when the checkpoint does not move
             last_event_ids: list[str] = []
-            if current_date.replace(microsecond=0) == checkpoint_second:
+            if current_date == checkpoint_date:
                 last_event_ids = list(cache.get("last_event_ids") or [])
 
             known_ids = set(last_event_ids)
@@ -257,7 +328,7 @@ class TrellixEpoConnector(AsyncConnector):
                     last_event_ids.append(event_id)
 
             cache["last_event_date"] = checkpoint_date.isoformat()
-            cache["last_event_ids"] = last_event_ids[-MAX_LAST_EVENT_IDS:]
+            cache["last_event_ids"] = last_event_ids
 
     async def async_run(self) -> None:  # pragma: no cover
         previous_processing_end: float | None = None

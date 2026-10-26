@@ -1,6 +1,7 @@
 """Tests for http client."""
 
 import asyncio
+from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import patch
 
@@ -460,3 +461,26 @@ async def test_trellix_http_client_logs_daily_rate_limit_once(session_faker: Fak
         TrellixHttpClient._rate_limiter = None
         TrellixHttpClient._rate_limiter_per_day = None
         TrellixHttpClient._daily_rate_limit_reached = False
+
+
+def test_trellix_http_client_resolve_next_link():
+    """`links.next` is resolved against the request URL and must stay on the origin of `base_url`."""
+    http_client = TrellixHttpClient("id", "secret", "key", "https://auth.example.com", "https://api.example.com/v1")
+    request_url = http_client.epo_events_url(datetime(2026, 10, 26, tzinfo=UTC), limit=100)
+
+    def resolve(next_link: Any) -> str | None:
+        url = http_client._resolve_next_link({"data": [], "links": {"next": next_link}}, request_url)
+        return None if url is None else str(url)
+
+    assert resolve("?page%5Boffset%5D=100") == "https://api.example.com/v1/epo/v2/events?page%5Boffset%5D=100"
+    assert (
+        resolve("/epo/v2/events?page%5Boffset%5D=100") == "https://api.example.com/epo/v2/events?page%5Boffset%5D=100"
+    )
+    assert (
+        resolve("https://api.example.com/v1/epo/v2/events?page%5Boffset%5D=100")
+        == "https://api.example.com/v1/epo/v2/events?page%5Boffset%5D=100"
+    )
+    assert resolve("https://evil.example.com/epo/v2/events") is None
+    assert resolve(None) is None
+    assert resolve("") is None
+    assert http_client._resolve_next_link({"data": []}, request_url) is None

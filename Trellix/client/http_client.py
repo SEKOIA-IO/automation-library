@@ -271,15 +271,17 @@ class TrellixHttpClient:
 
         return URL(f"{self.base_url}/epo/v2/events").with_query(params)
 
-    def _resolve_next_link(self, data: dict[str, Any]) -> URL | None:
+    def _resolve_next_link(self, data: dict[str, Any], request_url: URL) -> URL | None:
         """
         Get the `links.next` URL of a JSON:API response, if it is usable.
 
-        A relative link is resolved against `base_url`. A link to another host is ignored so that
-        the credentials are never sent elsewhere.
+        A relative link is resolved against the URL of the request that returned it (RFC 3986), so that
+        `?page[offset]=100` keeps the `/epo/v2/events` path. A link to another origin than `base_url` is ignored
+        so that the credentials are never sent elsewhere.
 
         Args:
             data: dict[str, Any]
+            request_url: URL
 
         Returns:
             URL | None:
@@ -292,9 +294,8 @@ class TrellixHttpClient:
         if not isinstance(next_link, str) or not next_link:
             return None
 
-        base_url = URL(self.base_url)
-        next_url = base_url.join(URL(next_link))
-        if next_url.origin() != base_url.origin():
+        next_url = request_url.join(URL(next_link))
+        if next_url.origin() != URL(self.base_url).origin():
             return None
 
         return next_url
@@ -480,7 +481,7 @@ class TrellixHttpClient:
         return EpoEventsPage(
             events=[TrellixResponse[EpoEventAttributes](**result) for result in data["data"]],
             has_links=isinstance(data.get("links"), dict),
-            next_url=self._resolve_next_link(data),
+            next_url=self._resolve_next_link(data, url),
         )
 
     async def get_edr_threats(
