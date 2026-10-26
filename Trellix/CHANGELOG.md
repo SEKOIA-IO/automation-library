@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-26 - 1.11.1
+
+### Fixed
+
+- Trellix ePO: save the checkpoint after each successful push so that events are no longer re-collected from the last 7 days at every iteration
+- Trellix ePO: do not forward twice the events of the checkpoint second
+
 ## 2024-10-30 - 1.11.0
 
 ### Changed

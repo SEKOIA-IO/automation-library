@@ -14,6 +14,8 @@ from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from client.http_client import TrellixHttpClient
+from client.schemas.attributes.epo_events import EpoEventAttributes
+from client.schemas.trellix_response import TrellixResponse
 from connectors import TrellixModule
 from connectors.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
@@ -108,11 +110,69 @@ class TrellixEpoConnector(AsyncConnector):
             self.configuration.records_per_request,
         )
 
-        result: list[str] = await self.push_data_to_intakes(
-            [orjson.dumps(event.attributes.dict()).decode("utf-8") for event in events]
-        )
+        # The API filter is `timestamp GT <checkpoint truncated to the second>`,
+        # so events of the checkpoint second are returned again: skip those already forwarded.
+        with self.context as cache:
+            boundary_event_ids = set(cache.get("last_event_ids") or [])
+
+        new_events = [event for event in events if self._event_id(event) not in boundary_event_ids]
+
+        result: list[str] = []
+        if new_events:
+            result = await self.push_data_to_intakes(
+                [orjson.dumps(event.attributes.dict()).decode("utf-8") for event in new_events]
+            )
+
+        # Save the checkpoint only once the events have been pushed
+        self._save_checkpoint(events, boundary_event_ids)
 
         return result
+
+    @staticmethod
+    def _event_id(event: TrellixResponse[EpoEventAttributes]) -> str | None:
+        return event.id or event.attributes.autoguid
+
+    @staticmethod
+    def _event_timestamp(event: TrellixResponse[EpoEventAttributes]) -> datetime | None:
+        timestamp = event.attributes.timestamp
+        if timestamp is not None and timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=timezone.utc)
+
+        return timestamp
+
+    def _save_checkpoint(
+        self, events: list[TrellixResponse[EpoEventAttributes]], boundary_event_ids: set[str]
+    ) -> None:
+        """
+        Save the most recent event timestamp and the ids of the events of that second.
+
+        Args:
+            events: list[TrellixResponse[EpoEventAttributes]]
+            boundary_event_ids: set[str]
+        """
+        timestamps = [timestamp for event in events if (timestamp := self._event_timestamp(event)) is not None]
+        if not timestamps:
+            return
+
+        most_recent_date = max(timestamps)
+        if most_recent_date < self.last_event_date:
+            return
+
+        most_recent_second = most_recent_date.replace(microsecond=0)
+        last_event_ids = {
+            event_id
+            for event in events
+            if (timestamp := self._event_timestamp(event)) is not None
+            and timestamp.replace(microsecond=0) == most_recent_second
+            and (event_id := self._event_id(event)) is not None
+        }
+        # Keep the ids already seen when the checkpoint stays in the same second
+        if self.last_event_date.replace(microsecond=0) == most_recent_second:
+            last_event_ids |= boundary_event_ids
+
+        with self.context as cache:
+            cache["last_event_date"] = most_recent_date.isoformat()
+            cache["last_event_ids"] = sorted(last_event_ids)
 
     async def async_run(self) -> None:  # pragma: no cover
         previous_processing_end: float | None = None
