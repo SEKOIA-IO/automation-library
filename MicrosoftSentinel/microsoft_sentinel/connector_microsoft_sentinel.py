@@ -48,7 +48,7 @@ class MicrosoftSentineldConnector(Connector):
         super().__init__(*args, **kwargs)
 
         self.cursor = CheckpointDatetime(
-            path=self._data_path,  # type: ignore[arg-type]
+            path=self.data_path,
             start_at=timedelta(days=1),
             ignore_older_than=timedelta(days=30),
         )
@@ -56,7 +56,7 @@ class MicrosoftSentineldConnector(Connector):
 
         # versions (name + lastModifiedTimeUtc) of the incidents already forwarded
         self._forwarded: LRUCache[str, bool] = LRUCache(maxsize=DEDUP_CACHE_SIZE)
-        self._boundary_store = PersistentJSON(BOUNDARY_KEYS_FILE, self._data_path)
+        self._boundary_store = PersistentJSON(BOUNDARY_KEYS_FILE, self.data_path)
         self._boundary_time: datetime | None = None
         self._boundary_keys: set[str] = set()
         self._load_boundary_keys()
