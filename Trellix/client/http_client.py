@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -22,6 +23,16 @@ from .token_refresher import TrellixTokenRefresher
 
 class AuthenticationError(ValueError):
     """Authentication error."""
+
+
+@dataclass(frozen=True)
+class EpoEventsPage:
+    """One page of EPO events."""
+
+    events: list[TrellixResponse[EpoEventAttributes]]
+    # True when the response has a JSON:API `links` object: then `next_url` tells whether more pages exist
+    has_links: bool = False
+    next_url: URL | None = None
 
 
 class TrellixHttpClient:
@@ -205,13 +216,17 @@ class TrellixHttpClient:
 
                 return result
 
-    def epo_events_url(self, start_date: datetime, limit: int = 10) -> URL:
+    def epo_events_url(self, start_date: datetime, limit: int = 10, offset: int = 0) -> URL:
         """
         Get EPO events url.
+
+        Events are sorted by ascending `timestamp`, so offset paging inside the same `GT` window is stable:
+        new events are appended after the pages already read.
 
         Args:
             start_date: datetime
             limit: int
+            offset: int
 
         Returns:
             URL:
@@ -221,8 +236,38 @@ class TrellixHttpClient:
             "filter": '{"GT": {"timestamp": "' + start_date.strftime("%Y-%m-%dT%H:%M:%SZ") + '"}}',
             "page[limit]": str(limit),
         }
+        if offset > 0:
+            params["page[offset]"] = str(offset)
 
         return URL(f"{self.base_url}/epo/v2/events").with_query(params)
+
+    def _resolve_next_link(self, data: dict[str, Any]) -> URL | None:
+        """
+        Get the `links.next` URL of a JSON:API response, if it is usable.
+
+        A relative link is resolved against `base_url`. A link to another host is ignored so that
+        the credentials are never sent elsewhere.
+
+        Args:
+            data: dict[str, Any]
+
+        Returns:
+            URL | None:
+        """
+        links = data.get("links")
+        if not isinstance(links, dict):
+            return None
+
+        next_link = links.get("next")
+        if not isinstance(next_link, str) or not next_link:
+            return None
+
+        base_url = URL(self.base_url)
+        next_url = base_url.join(URL(next_link))
+        if next_url.origin() != base_url.origin():
+            return None
+
+        return next_url
 
     def edr_threats_url(self, start_date: datetime, end_date: datetime, limit: int = 10, offset: int = 0) -> URL:
         """
@@ -372,8 +417,29 @@ class TrellixHttpClient:
         Returns:
             list[TrellixResponse[EpoEventAttributes]]:
         """
+        page = await self.get_epo_events_page(start_date, limit)
+
+        return page.events
+
+    async def get_epo_events_page(
+        self, start_date: datetime, limit: int = 10, offset: int = 0, url: URL | None = None
+    ) -> EpoEventsPage:
+        """
+        Get one page of EPO events.
+
+        Args:
+            start_date: datetime
+            limit: int
+            offset: int
+            url: URL | None: `links.next` of the previous page; when set, `start_date`, `limit` and `offset`
+                are ignored
+
+        Returns:
+            EpoEventsPage:
+        """
         headers = await self._request_headers(Scope.complete_set_of_scopes())
-        url = self.epo_events_url(start_date, limit)
+        if url is None:
+            url = self.epo_events_url(start_date, limit, offset)
 
         try:
             data = await self._get_data(url, headers)
@@ -381,7 +447,11 @@ class TrellixHttpClient:
             headers = await self._request_headers(Scope.complete_set_of_scopes())
             data = await self._get_data(url, headers)
 
-        return [TrellixResponse[EpoEventAttributes](**result) for result in data["data"]]
+        return EpoEventsPage(
+            events=[TrellixResponse[EpoEventAttributes](**result) for result in data["data"]],
+            has_links=isinstance(data.get("links"), dict),
+            next_url=self._resolve_next_link(data),
+        )
 
     async def get_edr_threats(
         self, start_date: datetime, end_date: datetime, limit: int = 10, offset: int = 0
