@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Request incidents in ascending last modification order and advance the checkpoint after each forwarded batch
 - Use `chunk_size` as the maximum batch size (capped to 1000) instead of a minimum
 - The `events_lags` metric is measured from the checkpoint on every poll, also when no new incident is forwarded, instead of being reset to 0
-- Forward an incident without entities, log a warning and count it in the `entities_fetch_errors` metric when its entities cannot be fetched because of an Azure error; other errors are no longer silenced
+- Forward an incident without entities, log a warning and count it in the `entities_fetch_errors` metric when its entities cannot be fetched (Azure error) or are malformed (deserialization or conversion error); other errors are no longer silenced
 
 ### Fixed
 
@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Convert dates to UTC before building the incidents filter
 - Stop the connector promptly instead of waiting for the end of the polling interval
 - Keep polling after an Azure API error while listing incidents, with an exponential backoff (capped to 5 minutes) on consecutive failures
+- Retry the poll, instead of stopping the connector, when the Azure SDK cannot deserialize an incident
+- Serialize the Azure model fields of an incident (e.g. `system_data`) as objects instead of failing the poll
 - Collect incidents written late: incidents are queried from 5 minutes before the checkpoint and the versions already forwarded in that window are deduplicated, including after a restart
 
 ## 2026-05-27 - 1.1.0

@@ -3,6 +3,7 @@ from unittest.mock import Mock, call, patch
 
 import orjson
 import pytest
+from azure.core.exceptions import DeserializationError
 from azure.mgmt.securityinsight.models import Incident, IncidentAdditionalData, IncidentLabel, IncidentOwnerInfo
 
 from microsoft_sentinel import MicrosoftSentinelModule
@@ -422,20 +423,72 @@ def test_entities_azure_error_forwards_incident_and_counts(trigger, first_incide
     assert any(first_incident_item.name in c.kwargs["message"] for c in warnings)
 
 
-def test_entities_unexpected_error_propagates(trigger, first_incident_item):
+@pytest.mark.parametrize(
+    "error",
+    [DeserializationError("malformed entity"), KeyError("kind"), TypeError("bad type"), ValueError("bad value")],
+)
+def test_entities_malformed_data_is_charged_to_the_incident(trigger, first_incident_item, error):
     from unittest.mock import MagicMock
 
+    from microsoft_sentinel.metrics import ENTITIES_FETCH_ERRORS
+
+    counter = ENTITIES_FETCH_ERRORS.labels(intake_key="0123456789")
+    errors_before = counter._value.get()
     trigger.client = MagicMock()
-    trigger.client.incidents.list_entities.side_effect = ValueError("bug")
+    trigger.client.incidents.list_entities.side_effect = error
 
     with patch(
         "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator"
     ) as mock_incidents_iterator:
         mock_incidents_iterator.return_value = [first_incident_item]
-        with pytest.raises(ValueError, match="bug"):
+        trigger.get_incidents()
+
+    events = [orjson.loads(e) for c in trigger.push_events_to_intakes.call_args_list for e in c.kwargs["events"]]
+    assert [(e["name"], e["entities"]) for e in events] == [(first_incident_item.name, [])]
+    assert counter._value.get() == errors_before + 1
+
+
+def test_unexpected_error_propagates(trigger, first_incident_item):
+    with (
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator"
+        ) as mock_incidents_iterator,
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._get_incident_entities",
+            return_value=[],
+        ),
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._serialize_incident",
+            side_effect=RuntimeError("bug"),
+        ),
+    ):
+        mock_incidents_iterator.return_value = [first_incident_item]
+        with pytest.raises(RuntimeError, match="bug"):
             trigger.get_incidents()
 
     trigger.push_events_to_intakes.assert_not_called()
+
+
+def test_serialize_incident_with_azure_models(trigger, first_incident_item):
+    from azure.mgmt.securityinsight.models import SystemData
+
+    first_incident_item.system_data = SystemData(
+        created_by="someone", created_at=datetime(2021, 9, 1, tzinfo=UTC), last_modified_by_type="User"
+    )
+
+    serialized = trigger._serialize_incident(first_incident_item)
+    assert serialized["system_data"]["created_by"] == "someone"
+    event = orjson.loads(orjson.dumps(serialized))
+    assert event["system_data"]["created_at"].startswith("2021-09-01T00:00:00")
+    assert event["system_data"]["last_modified_by_type"] == "User"
+
+
+def test_run_retries_deserialization_errors(trigger):
+    polls, waits = run_with_polls(trigger, [DeserializationError("cannot deserialize incident"), None])
+
+    assert len(polls) == 2
+    assert waits == [60, 60]
+    trigger.log_exception.assert_called_once()
 
 
 def make_incident(base, name, last_modified, status="New"):

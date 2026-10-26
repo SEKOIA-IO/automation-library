@@ -6,7 +6,7 @@ from functools import cached_property
 from typing import Any
 
 import orjson
-from azure.core.exceptions import AzureError
+from azure.core.exceptions import AzureError, DeserializationError
 from azure.core.paging import ItemPaged
 from azure.identity import ClientSecretCredential
 from azure.mgmt.securityinsight import SecurityInsights
@@ -118,7 +118,8 @@ class MicrosoftSentineldConnector(Connector):
         """
         Fetch entities for a given incident.
 
-        Azure errors are logged and counted, and the incident is forwarded without entities.
+        Azure errors and malformed entities (deserialization or conversion errors) are charged to this
+        incident: they are logged and counted, and the incident is forwarded without entities.
         Any other exception is a bug and propagates.
         """
         try:
@@ -137,7 +138,8 @@ class MicrosoftSentineldConnector(Connector):
 
             return parsed_entities
 
-        except AzureError as e:
+        except (AzureError, KeyError, TypeError, ValueError) as e:
+            # DeserializationError (malformed entities) is a ValueError, not an AzureError
             self.log(
                 message=f"Failed to fetch entities for incident {incident_id}, forwarding it without entities: {e}",
                 level="warning",
@@ -161,7 +163,9 @@ class MicrosoftSentineldConnector(Connector):
             elif type(value) in conversion_map:
                 new_dict[key] = conversion_map[type(value)](value)
             else:
-                new_dict[key] = value
+                # any other msrest / azure model (e.g. system_data: SystemData) is converted to a dict
+                as_dict = getattr(value, "as_dict", None)
+                new_dict[key] = as_dict() if callable(as_dict) else value
 
         return new_dict
 
@@ -247,7 +251,8 @@ class MicrosoftSentineldConnector(Connector):
             if incident_id:
                 serialized_incident["entities"] = self._get_incident_entities(incident_id)
 
-            batch.append(orjson.dumps(serialized_incident).decode("utf-8"))
+            # default=str: an unexpected field type must not crash the whole poll
+            batch.append(orjson.dumps(serialized_incident, default=str).decode("utf-8"))
             versions.append((key, self._as_utc(item.last_modified_time_utc)))
 
             if len(batch) >= self.batch_limit:
@@ -289,8 +294,9 @@ class MicrosoftSentineldConnector(Connector):
                     self.get_incidents()
                     consecutive_failures = 0
 
-                except (AzureError, HTTPError, BaseHTTPError) as ex:
-                    # transient API errors: nothing unpushed was checkpointed, retry with a backoff
+                except (AzureError, DeserializationError, HTTPError, BaseHTTPError) as ex:
+                    # API errors, including incidents the Azure SDK cannot deserialize: nothing unpushed was
+                    # checkpointed, retry with a backoff (log_exception logs at the error level)
                     consecutive_failures += 1
                     self.log_exception(
                         ex, message=f"Failed to fetch incidents ({consecutive_failures} consecutive failures)"
