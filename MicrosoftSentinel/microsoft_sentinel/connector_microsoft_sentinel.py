@@ -291,8 +291,11 @@ class MicrosoftSentineldConnector(Connector):
         if collected == 0:
             self.log(message=f"No new incidents to forward ({duplicates} already forwarded)", level="info")
 
-        # lag from the most recent forwarded creation date (the checkpoint), on every poll: an idle
-        # Sentinel workspace and a stuck connector both show a growing lag
+        self._update_events_lag()
+
+    def _update_events_lag(self) -> None:
+        # lag from the most recent forwarded creation date (the checkpoint), on every poll, failed ones
+        # included: an idle Sentinel workspace and a stuck connector both show a growing lag
         events_lag = int(time.time() - self.cursor.offset.timestamp())
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
 
@@ -324,6 +327,7 @@ class MicrosoftSentineldConnector(Connector):
                     # API errors, incidents the Azure SDK cannot deserialize, intake failures: nothing unpushed
                     # was checkpointed, retry with a backoff (log_exception logs at the error level)
                     consecutive_failures += 1
+                    self._update_events_lag()
                     self.log_exception(
                         ex, message=f"Failed to fetch incidents ({consecutive_failures} consecutive failures)"
                     )

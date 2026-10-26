@@ -714,6 +714,20 @@ def test_run_keeps_polling_after_azure_error(trigger):
     assert trigger.log_exception.call_count == 2
 
 
+def test_run_updates_events_lag_on_failed_polls(trigger):
+    from azure.core.exceptions import AzureError
+
+    from microsoft_sentinel.metrics import EVENTS_LAG
+
+    gauge = EVENTS_LAG.labels(intake_key="0123456789")
+    gauge.set(0)
+    trigger.cursor.offset = datetime.now(UTC) - timedelta(minutes=10)
+
+    run_with_polls(trigger, [AzureError("unavailable")])
+
+    assert 590 <= gauge._value.get() <= 610
+
+
 def test_run_backoff_is_capped_and_reset_after_success(trigger):
     from azure.core.exceptions import AzureError
 

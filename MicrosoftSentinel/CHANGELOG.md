@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Request incidents in ascending creation order and advance the checkpoint after each forwarded batch
 - Upgrade note: 1.1.0 never persisted its checkpoint, so the first start after upgrading from 1.1.0 forwards once again the incidents created in the last 24 hours
 - Use `chunk_size` as the maximum batch size (capped to 1000) instead of a minimum
-- The `events_lags` metric is measured from the checkpoint on every poll, also when no new incident is forwarded, instead of being reset to 0
+- The `events_lags` metric is measured from the checkpoint on every poll, also when no new incident is forwarded or the poll fails, instead of being reset to 0
 - Forward an incident without entities, log a warning and count it in the `entities_fetch_errors` metric when its entities cannot be fetched (Azure error) or are malformed (deserialization or conversion error); other errors are no longer silenced
 
 ### Fixed
