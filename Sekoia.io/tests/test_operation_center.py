@@ -517,6 +517,7 @@ def test_list_cases_drops_empty_parameters():
         "match[status_name]": "",  # unset filter -> must be dropped
         "match[tags]": "",  # unset filter -> must be dropped
         "match[assignees]": None,  # unset filter -> must be dropped
+        "match[type]": "",  # unset filter -> must be dropped, the API then keeps manual cases only
         "match[created_by]": "analyst",  # set filter -> must be kept
         "limit": 20,
         "offset": 0,  # int 0 -> must be kept
@@ -531,6 +532,19 @@ def test_list_cases_drops_empty_parameters():
         assert "match[status_name]" not in sent
         assert "match[tags]" not in sent
         assert "match[assignees]" not in sent
+        assert "match[type]" not in sent
         assert sent["match[created_by]"] == ["analyst"]
         assert sent["limit"] == ["20"]
         assert sent["offset"] == ["0"]
+
+
+def test_list_cases_forwards_the_case_type():
+    action: ListsCases = ListsCases()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{base_url}cases", json={"items": [], "total": 0})
+
+        action.run({"match[type]": "manual,automatic"})
+
+        assert mock.request_history[0].qs["match[type]"] == ["manual,automatic"]
