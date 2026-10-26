@@ -71,9 +71,13 @@ class TrendMicroWorker(Thread):
             most_recent_ts_seen = cache.get(self.log_type, {}).get("last_timestamp")
         self.connector.context_lock.release()
 
-        # if undefined, retrieve events from the last 5 minutes
+        # if undefined, retrieve events from the last 5 minutes.
+        # This lower bound is persisted: if the first window is interrupted, the next run must restart from it
+        # instead of computing a later one, otherwise the events of the unread pages would be skipped.
         if most_recent_ts_seen is None:
-            return now - 5 * 60
+            most_recent_ts_seen = now - 5 * 60
+            self.set_last_timestamp(most_recent_ts_seen)
+            return most_recent_ts_seen
 
         # We can't retrieve messages older than 72 hours
         one_week_ago = now - 72 * 60 * 60
@@ -201,8 +205,8 @@ class TrendMicroWorker(Thread):
                 self.all_pages_fetched = True
                 return
 
-    def fetch_events(self) -> Generator[list]:
-        for events in self.iterate_through_pages(self.get_last_timestamp()):
+    def fetch_events(self, from_timestamp: int) -> Generator[list]:
+        for events in self.iterate_through_pages(from_timestamp):
             if events:
                 yield events
 
@@ -213,11 +217,13 @@ class TrendMicroWorker(Thread):
         recent_pushed_events = {
             tuple(self.get_event_metadata(event).values()) for event in self.get_recent_pushed_events()
         }
-        pushed_events: list[dict[str, Any]] = []
+        # keep only the genTime and the metadata of the pushed events, not their payloads,
+        # to bound the memory used by a large catch-up window
+        pushed_events: list[tuple[int, dict[str, Any]]] = []
         has_fetched_events = False
 
         # Iterate through all the pages of the window and push each page as soon as it is fetched
-        for events in self.fetch_events():
+        for events in self.fetch_events(previous_timestamp):
             has_fetched_events = True
 
             # skip the events already pushed in the previous run (boundary second) or earlier in this run
@@ -239,7 +245,10 @@ class TrendMicroWorker(Thread):
                 )
 
                 self.connector.push_events_to_intakes(events=batch_of_events)
-                pushed_events.extend(next_events)
+                pushed_events.extend(
+                    (iso8601_to_timestamp(event.get("genTime")), self.get_event_metadata(event))
+                    for event in next_events
+                )
 
                 OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).inc(
                     len(batch_of_events)
@@ -253,14 +262,12 @@ class TrendMicroWorker(Thread):
         # of the window have been pushed: an interruption between pages leads to the window being collected again
         # (duplicates are possible) instead of skipping unpushed events.
         if len(pushed_events) > 0 and self.all_pages_fetched:
-            last_event_timestamp = max(iso8601_to_timestamp(event.get("genTime")) for event in pushed_events)
+            last_event_timestamp = max(gen_time for gen_time, _ in pushed_events)
             new_timestamp = max(last_event_timestamp, previous_timestamp)
 
             # The next run queries from the checkpoint second, inclusive: only the events of this second
             # have to be remembered to avoid duplicates, which keeps the cache bounded.
-            boundary_events = [
-                event for event in pushed_events if iso8601_to_timestamp(event.get("genTime")) == new_timestamp
-            ]
+            boundary_events = [metadata for gen_time, metadata in pushed_events if gen_time == new_timestamp]
             if new_timestamp > previous_timestamp:
                 self.set_last_timestamp(new_timestamp)
                 self.set_recent_pushed_events(boundary_events)

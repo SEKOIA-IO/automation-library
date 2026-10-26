@@ -318,3 +318,38 @@ def test_checkpoint_not_moved_when_a_page_fails(trigger, paginated_responses):
     # the second page was not collected: the window must be collected again on the next run
     assert consumer.get_last_timestamp() == checkpoint
     assert consumer.get_recent_pushed_events() == []
+
+
+def test_first_window_is_retried_from_the_same_start_when_a_page_fails(trigger):
+    url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
+    now = 1793016000
+    first_start = now - 5 * 60
+    first_page = {"nextToken": "token%2Fpage2", "logs": [build_log("mail-1", first_start + 200)]}
+
+    # no checkpoint yet: the first window starts 5 minutes ago and its second page fails
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch("trendmicro_modules.trigger_email_sec.time.time", return_value=now),
+        patch("trendmicro_modules.trigger_email_sec.time.sleep"),
+    ):
+        mock_requests.get(
+            url,
+            [{"status_code": 200, "json": first_page}, {"status_code": 500, "text": "Internal Server Error"}],
+        )
+        consumer.next_batch()
+
+    assert mock_requests.request_history[0].qs["start"] == [unixtime_to_iso8601(first_start).lower()]
+    assert consumer.get_last_timestamp() == first_start
+
+    # two minutes later, the retry must start from the same lower bound, not from a new "5 minutes ago"
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch("trendmicro_modules.trigger_email_sec.time.time", return_value=now + 120),
+        patch("trendmicro_modules.trigger_email_sec.time.sleep"),
+    ):
+        mock_requests.get(url, status_code=200, json={"logs": [build_log("mail-1", first_start + 200)]})
+        consumer.next_batch()
+
+    assert mock_requests.request_history[0].qs["start"] == [unixtime_to_iso8601(first_start).lower()]
+    assert consumer.get_last_timestamp() == first_start + 200

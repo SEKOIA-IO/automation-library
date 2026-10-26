@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
         batch_size: int = 2
         frequency: int = 13
-        intake_key = args.intake_key
+        intake_key: str = args.intake_key
 
         # https://intake.test.sekoia.io or https://intake.sekoia.io
         intake_server: str = "https://intake.sekoia.io"
