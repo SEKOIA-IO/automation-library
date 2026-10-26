@@ -196,7 +196,8 @@ class MicrosoftSentineldConnector(Connector):
 
                 delta_sleep = self.configuration.frequency - duration
                 if delta_sleep > 0:
-                    time.sleep(delta_sleep)
+                    # interruptible wait: returns as soon as stop() sets the SDK stop event
+                    self._stop_event.wait(delta_sleep)
         finally:
             trigger_end_time = datetime.now().isoformat()
             self.log(message=f"Microsoft Sentinel Trigger process has stopped at {trigger_end_time}", level="info")

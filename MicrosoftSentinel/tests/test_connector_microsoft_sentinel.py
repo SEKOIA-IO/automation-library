@@ -277,3 +277,27 @@ def test_get_incidents_persists_checkpoint(trigger, incidents_list, symphony_sto
     new_trigger = MicrosoftSentineldConnector(module=MicrosoftSentinelModule(), data_path=symphony_storage)
     assert new_trigger.cursor.offset == most_recent
     assert new_trigger.from_date == most_recent
+
+
+def test_run_stops_promptly_while_waiting(trigger):
+    import threading
+    import time
+
+    calls = []
+
+    def mock_get_incidents():
+        calls.append(1)
+
+    trigger.get_incidents = mock_get_incidents
+    trigger.configuration.frequency = 600
+
+    thread = threading.Thread(target=trigger.run)
+    start = time.monotonic()
+    thread.start()
+    time.sleep(0.2)
+    trigger.stop()
+    thread.join(timeout=5)
+
+    assert not thread.is_alive()
+    assert time.monotonic() - start < 5
+    assert calls == [1]
