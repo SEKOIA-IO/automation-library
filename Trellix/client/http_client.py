@@ -3,7 +3,7 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from aiohttp_retry import ExponentialRetry, RetryClient
@@ -23,6 +23,22 @@ from .token_refresher import TrellixTokenRefresher
 
 SECONDS_PER_MINUTE = 60
 SECONDS_PER_DAY = 86400
+
+
+def to_utc(date: datetime) -> datetime:
+    """
+    Get an aware UTC datetime: naive datetimes are considered as UTC, aware ones are converted.
+
+    Args:
+        date: datetime
+
+    Returns:
+        datetime:
+    """
+    if date.tzinfo is None:
+        return date.replace(tzinfo=UTC)
+
+    return date.astimezone(UTC)
 
 
 class AuthenticationError(ValueError):
@@ -251,7 +267,8 @@ class TrellixHttpClient:
         Get EPO events url.
 
         Events are sorted by ascending `timestamp`, so offset paging inside the same `GT` window is stable:
-        new events are appended after the pages already read.
+        new events are appended after the pages already read. `start_date` is converted to UTC (naive means UTC)
+        before being formatted with the `Z` suffix.
 
         Args:
             start_date: datetime
@@ -263,7 +280,7 @@ class TrellixHttpClient:
         """
         params = {
             "sort": "timestamp",
-            "filter": '{"GT": {"timestamp": "' + start_date.strftime("%Y-%m-%dT%H:%M:%SZ") + '"}}',
+            "filter": '{"GT": {"timestamp": "' + to_utc(start_date).strftime("%Y-%m-%dT%H:%M:%SZ") + '"}}',
             "page[limit]": str(limit),
         }
         if offset > 0:

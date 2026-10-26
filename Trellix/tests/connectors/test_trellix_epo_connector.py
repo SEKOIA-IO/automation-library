@@ -1,6 +1,6 @@
 """Tests for Trellix EPO connector."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -923,3 +923,133 @@ async def test_trellix_connector_run_after_more_than_10k_events_at_one_timestamp
     assert connector.last_event_date == second + timedelta(seconds=1)
     with connector.context as cache:
         assert cache["last_event_ids"] == ["event-later"]
+
+
+PARIS_SUMMER = timezone(timedelta(hours=2))
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_non_utc_event_timestamp(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """
+    An event timestamp with a +02:00 offset is saved in UTC, and the next run filters on the UTC second
+    (`GT 09:59:59Z` for `12:00:00.500+02:00`), not on the local time with a `Z` suffix.
+    """
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=4)
+    connector = _paginated_connector(connector, start_date)
+    second_utc = start_date + timedelta(hours=1)
+    event = _event(epo_event_response, "event-1", second_utc + timedelta(milliseconds=500))
+    event["attributes"]["timestamp"] = (second_utc + timedelta(milliseconds=500)).astimezone(PARIS_SUMMER).isoformat()
+    newer = _event(epo_event_response, "event-2", second_utc + timedelta(minutes=1))
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE), status=200, payload={"data": [event]}
+        )
+        await connector.get_trellix_epo_events()
+
+        with connector.context as cache:
+            assert cache["last_event_date"] == (second_utc + timedelta(milliseconds=500)).isoformat()
+            assert cache["last_event_date"].endswith("+00:00")
+
+        # The filter is the UTC second before the checkpoint second, written explicitly
+        utc_filter = (second_utc - timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        mocked_responses.get(
+            URL(f"{http_client.base_url}/epo/v2/events").with_query(
+                {"sort": "timestamp", "filter": '{"GT": {"timestamp": "' + utc_filter + '"}}', "page[limit]": "2"}
+            ),
+            status=200,
+            payload={"data": [event, newer]},
+        )
+        mocked_responses.get(
+            http_client.epo_events_url(_window(second_utc), limit=PAGE_SIZE, offset=2),
+            status=200,
+            payload={"data": []},
+        )
+        await connector.get_trellix_epo_events()
+
+    assert _pushed_ids(connector) == [["event-1"], ["event-2"]]
+
+
+def test_trellix_connector_legacy_checkpoint_values_are_utc(connector: TrellixEpoConnector):
+    """`last_event_date` is aware UTC for a checkpoint saved with an offset and for a legacy naive value."""
+    utc_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+
+    with connector.context as cache:
+        cache["last_event_date"] = utc_date.astimezone(PARIS_SUMMER).isoformat()
+    assert connector.last_event_date == utc_date
+    assert connector.last_event_date.utcoffset() == timedelta(0)
+    assert TrellixEpoConnector.query_start(connector.last_event_date) == utc_date - timedelta(seconds=1)
+
+    with connector.context as cache:
+        cache["last_event_date"] = utc_date.replace(tzinfo=None).isoformat()
+    assert connector.last_event_date == utc_date
+    assert connector.last_event_date.utcoffset() == timedelta(0)
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_events_without_id_not_forwarded_twice(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """
+    Events without `id` nor `autoguid` at the checkpoint timestamp are saved by a content digest, so the next
+    runs, which read them again, do not forward them again.
+    """
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+    newest = start_date + timedelta(minutes=10, milliseconds=250)
+
+    def anonymous_event(name: str) -> dict[str, Any]:
+        event = _epo_event(epo_event_response, "unused", newest)
+        event["id"] = None
+        event["attributes"]["autoguid"] = None
+        event["attributes"]["threatname"] = name
+        return event
+
+    events = [anonymous_event("threat-1"), anonymous_event("threat-2")]
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE), status=200, payload={"data": events}
+        )
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE, offset=2),
+            status=200,
+            payload={"data": []},
+        )
+        assert len(await connector.get_trellix_epo_events()) == 2
+
+        with connector.context as cache:
+            saved_keys = cache["last_event_ids"]
+        assert len(saved_keys) == 2
+        assert all(key.startswith("sha256:") for key in saved_keys)
+
+        # Two more runs, with a new connector instance (restart) for the last one
+        for _ in range(2):
+            mocked_responses.get(
+                http_client.epo_events_url(_window(newest), limit=PAGE_SIZE), status=200, payload={"data": events}
+            )
+            mocked_responses.get(
+                http_client.epo_events_url(_window(newest), limit=PAGE_SIZE, offset=2),
+                status=200,
+                payload={"data": []},
+            )
+        assert await connector.get_trellix_epo_events() == []
+
+        restarted = TrellixEpoConnector(module=connector.module, data_path=connector._data_path)
+        restarted.configuration = connector.configuration
+        restarted.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
+        restarted._trellix_client = http_client
+        assert await restarted.get_trellix_epo_events() == []
+
+    assert connector.push_data_to_intakes.await_count == 1
+    restarted.push_data_to_intakes.assert_not_awaited()

@@ -1,7 +1,7 @@
 """Tests for http client."""
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 from unittest.mock import patch
 
@@ -484,3 +484,17 @@ def test_trellix_http_client_resolve_next_link():
     assert resolve(None) is None
     assert resolve("") is None
     assert http_client._resolve_next_link({"data": []}, request_url) is None
+
+
+def test_trellix_http_client_epo_events_url_is_utc():
+    """`epo_events_url` formats the filter in UTC, whatever the offset of the date (naive means UTC)."""
+    http_client = TrellixHttpClient("id", "secret", "key", "https://auth.example.com", "https://api.example.com")
+    utc_date = datetime(2026, 10, 26, 10, 0, 0, tzinfo=UTC)
+    paris_date = utc_date.astimezone(timezone(timedelta(hours=2)))
+
+    assert paris_date.hour == 12
+    assert http_client.epo_events_url(paris_date, limit=10) == http_client.epo_events_url(utc_date, limit=10)
+    assert http_client.epo_events_url(utc_date.replace(tzinfo=None), limit=10) == http_client.epo_events_url(
+        utc_date, limit=10
+    )
+    assert '"2026-10-26T10:00:00Z"' in http_client.epo_events_url(paris_date, limit=10).query["filter"]

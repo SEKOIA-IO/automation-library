@@ -15,7 +15,7 @@ from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 from yarl import URL
 
-from client.http_client import SECONDS_PER_DAY, SECONDS_PER_MINUTE, EpoEventsPage, TrellixHttpClient
+from client.http_client import SECONDS_PER_DAY, SECONDS_PER_MINUTE, EpoEventsPage, TrellixHttpClient, to_utc
 from client.schemas.attributes.epo_events import EpoEventAttributes
 from client.schemas.trellix_response import TrellixResponse
 from connectors import TrellixModule
@@ -68,8 +68,8 @@ class TrellixEpoConnector(AsyncConnector):
             if last_event_date_str is None:
                 return one_week_ago
 
-            # Parse the most recent date seen
-            last_event_date: datetime = isoparse(last_event_date_str)
+            # Parse the most recent date seen, as an aware UTC datetime (a legacy naive value is UTC)
+            last_event_date: datetime = to_utc(isoparse(last_event_date_str))
 
             # We don't retrieve messages older than one week
             if last_event_date < one_week_ago:
@@ -118,7 +118,7 @@ class TrellixEpoConnector(AsyncConnector):
         Returns:
             datetime:
         """
-        return checkpoint.replace(microsecond=0) - timedelta(seconds=1)
+        return to_utc(checkpoint).replace(microsecond=0) - timedelta(seconds=1)
 
     async def get_trellix_epo_events(self) -> list[str]:
         """
@@ -221,7 +221,7 @@ class TrellixEpoConnector(AsyncConnector):
 
         Events are read by ascending timestamp and the checkpoint is the timestamp of the newest forwarded event:
         older events were forwarded, newer ones were not, and those at exactly the checkpoint timestamp were
-        forwarded if their id is in `last_event_ids`.
+        forwarded if their key (id, or content digest without id) is in `last_event_ids`.
 
         Args:
             event: TrellixResponse[EpoEventAttributes]
@@ -238,12 +238,16 @@ class TrellixEpoConnector(AsyncConnector):
         if timestamp < checkpoint_date:
             return False
 
-        event_id = self._event_id(event)
-        return event_id is None or event_id not in checkpoint_event_ids
+        return self._event_key(event) not in checkpoint_event_ids
 
     def _event_key(self, event: TrellixResponse[EpoEventAttributes]) -> str:
         """
-        Get a key identifying an event: its id, or a digest of its content when it has none.
+        Get the key identifying an event: its id, or a digest of its content when it has none.
+
+        This key is used for the in-run deduplication and saved in `last_event_ids`, so the digest must be
+        stable across fetches: it is computed on canonical JSON (sorted keys, timestamp in UTC) of the `type`
+        and the attributes, which are the parsed fields of the event. Two events without id with the same
+        content and timestamp are considered the same event.
 
         Args:
             event: TrellixResponse[EpoEventAttributes]
@@ -253,9 +257,14 @@ class TrellixEpoConnector(AsyncConnector):
         """
         event_id = self._event_id(event)
         if event_id is not None:
-            return f"id:{event_id}"
+            return event_id
 
-        return "sha256:" + hashlib.sha256(orjson.dumps(event.model_dump(), option=orjson.OPT_SORT_KEYS)).hexdigest()
+        attributes = event.attributes.model_dump(mode="json")
+        timestamp = self._event_timestamp(event)
+        attributes["timestamp"] = None if timestamp is None else timestamp.isoformat()
+        content = orjson.dumps({"type": event.type, "attributes": attributes}, option=orjson.OPT_SORT_KEYS)
+
+        return "sha256:" + hashlib.sha256(content).hexdigest()
 
     @staticmethod
     def _has_next_page(page: EpoEventsPage, limit: int) -> bool:
@@ -285,14 +294,13 @@ class TrellixEpoConnector(AsyncConnector):
     @staticmethod
     def _event_timestamp(event: TrellixResponse[EpoEventAttributes]) -> datetime | None:
         timestamp = event.attributes.timestamp
-        if timestamp is not None and timestamp.tzinfo is None:
-            timestamp = timestamp.replace(tzinfo=UTC)
-
-        return timestamp
+        return None if timestamp is None else to_utc(timestamp)
 
     def _save_checkpoint(self, events: list[TrellixResponse[EpoEventAttributes]]) -> None:
         """
-        Save the timestamp of the newest event and the ids of the events at exactly that timestamp.
+        Save the timestamp (UTC) of the newest event and the keys of the events at exactly that timestamp.
+
+        The key is the event id, or a digest of the event content when it has no id (see `_event_key`).
 
         The checkpoint never moves backward. While it does not move, the ids are merged with those already saved.
         They are never truncated: dropping some would forward their events again when the checkpoint timestamp
@@ -310,9 +318,7 @@ class TrellixEpoConnector(AsyncConnector):
         checkpoint_date = max(current_date, max(timestamps))
 
         page_event_ids = [
-            event_id
-            for event in events
-            if self._event_timestamp(event) == checkpoint_date and (event_id := self._event_id(event)) is not None
+            self._event_key(event) for event in events if self._event_timestamp(event) == checkpoint_date
         ]
 
         with self.context as cache:
