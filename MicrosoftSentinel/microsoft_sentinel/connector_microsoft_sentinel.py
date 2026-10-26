@@ -1,5 +1,4 @@
 import datetime as date_time
-import itertools
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -131,18 +130,10 @@ class MicrosoftSentineldConnector(Connector):
     def get_incidents(self) -> None:
         self.log(message="Start fetching alerts from Microsoft sentinel", level="info")
 
-        first_element, response = itertools.tee(self._incidents_iterator())
-        first_item: Incident | None = next(first_element, None)
-
-        if first_item is None:
-            self.log(message="No messages to forward", level="info")
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
-            return
-
         alerts_batch = []
         stored_time = None
         incoming_events_sum = 0
-        for item in response:
+        for item in self._incidents_iterator():
             created_time = item.created_time_utc
             serialized_incident = self._serialize_incident(item)
 
@@ -174,6 +165,11 @@ class MicrosoftSentineldConnector(Connector):
             self.log(message=f"Sending batch of {last_alerts_len} messages", level="info")
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(last_alerts_len)
             self.push_events_to_intakes(events=alerts_batch)  # type: ignore[arg-type]
+
+        if incoming_events_sum == 0:
+            self.log(message="No messages to forward", level="info")
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+            return
 
         INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(incoming_events_sum)
 

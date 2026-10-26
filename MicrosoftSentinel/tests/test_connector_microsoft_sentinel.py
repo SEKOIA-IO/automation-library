@@ -342,3 +342,38 @@ def test_to_RFC3339_converts_to_utc(trigger):
     # naive datetimes are considered as UTC
     assert trigger._to_RFC3339(datetime(2021, 9, 1, 0, 0, 0)) == "2021-09-01T00:00:00.000000Z"
     assert trigger._to_RFC3339(None) is None
+
+
+def test_get_incidents_empty(trigger):
+    from microsoft_sentinel.metrics import EVENTS_LAG
+
+    EVENTS_LAG.labels(intake_key="0123456789").set(42)
+    initial_offset = trigger.cursor.offset
+
+    with patch(
+        "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator"
+    ) as mock_incidents_iterator:
+        mock_incidents_iterator.return_value = iter([])
+        trigger.get_incidents()
+
+    trigger.push_events_to_intakes.assert_not_called()
+    assert EVENTS_LAG.labels(intake_key="0123456789")._value.get() == 0
+    assert trigger.cursor.offset == initial_offset
+
+
+def test_get_incidents_consumes_iterator_once(trigger, incidents_list):
+    # the incidents iterator is a one-shot pager: every item must be forwarded, including the first one
+    with (
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator"
+        ) as mock_incidents_iterator,
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._get_incident_entities"
+        ) as mock_get_incident_entities,
+    ):
+        mock_incidents_iterator.return_value = iter(incidents_list)
+        mock_get_incident_entities.return_value = []
+        trigger.get_incidents()
+
+    assert mock_incidents_iterator.call_count == 1
+    assert sum(len(c.kwargs["events"]) for c in trigger.push_events_to_intakes.call_args_list) == 2
