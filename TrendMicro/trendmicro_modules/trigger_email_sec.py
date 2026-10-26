@@ -16,6 +16,10 @@ from .helpers import iso8601_to_timestamp, unixtime_to_iso8601
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
+class LogsPageRequestError(Exception):
+    pass
+
+
 class TrendMicroConnectorConfiguration(DefaultConnectorConfiguration):
     service_url: str = Field(..., description="Service URL")
     username: str = Field(..., description="Username")
@@ -41,6 +45,7 @@ class TrendMicroWorker(Thread):
             self.service_url = "https://%s" % self.service_url
 
         self._stop_event = Event()
+        self.all_pages_fetched = False
 
     def stop(self):
         self._stop_event.set()
@@ -124,7 +129,7 @@ class TrendMicroWorker(Thread):
         url = f"{self.service_url}/api/{self.API_VERSION}/log/mailtrackinglog"
         response = self.client.get(url, params=params, timeout=60)
 
-        if not response.ok:  # pragma: no cover
+        if not response.ok:
             self.log(
                 message=(
                     f"Request on Trend Micro Email Security API to fetch {response.url} "
@@ -133,7 +138,7 @@ class TrendMicroWorker(Thread):
                 level="error",
             )
 
-            return None
+            raise LogsPageRequestError(f"Failed to fetch {response.url} (status {response.status_code})")
 
         else:
             content = response.json() if len(response.content) > 0 else None
@@ -147,10 +152,30 @@ class TrendMicroWorker(Thread):
             "end": unixtime_to_iso8601(timestamp_now),
             "limit": self.connector.configuration.batch_size,
         }
-        content = self.request_logs_page(params=params)
+        self.all_pages_fetched = False
 
         while self.running:
+            try:
+                content = self.request_logs_page(params=params)
+
+            except LogsPageRequestError:
+                if "token" in params:
+                    # a page behind a nextToken could not be fetched: the window is incomplete
+                    self.log(
+                        message=f"{self.log_type}: Failed to fetch the next page of events. The window will be retried",
+                        level="warning",
+                    )
+                    return
+
+                content = None
+
             if content is None:
+                self.all_pages_fetched = True
+
+                # an empty page behind a nextToken just means that there are no more events
+                if "token" in params:
+                    return
+
                 self.log(
                     message=f"{self.log_type}: No events to forward. Waiting {self.frequency} seconds",
                     level="info",
@@ -165,71 +190,93 @@ class TrendMicroWorker(Thread):
                 yield events
 
             else:
+                self.all_pages_fetched = True
                 return
 
             if next_token is not None:
                 params["token"] = urllib.parse.unquote(next_token)  # it's provided url-encoded by API
 
             else:
+                self.all_pages_fetched = True
                 return
-
-            content = self.request_logs_page(params=params)
 
     def fetch_events(self) -> Generator[list, None, None]:
         for events in self.iterate_through_pages(self.get_last_timestamp()):
             if events:
-                recent_events = self.get_recent_pushed_events()
-                next_events = [event for event in events if self.get_event_metadata(event) not in recent_events]
-
-                yield next_events
+                yield events
 
     def next_batch(self):
         batch_start_time = time.time()
 
-        # Iterate through batches
-        try:
-            events = next(self.fetch_events())
-            events_len = len(events)
-            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
+        previous_timestamp = self.get_last_timestamp()
+        recent_pushed_events = {
+            tuple(self.get_event_metadata(event).values()) for event in self.get_recent_pushed_events()
+        }
+        pushed_events: list[dict[str, Any]] = []
+        has_fetched_events = False
 
-            # if the batch is full, push it
-            if len(batch_of_events) > 0:
+        # Iterate through all the pages of the window and push each page as soon as it is fetched
+        for events in self.fetch_events():
+            has_fetched_events = True
+
+            # skip the events already pushed in the previous run (boundary second) or earlier in this run
+            next_events = []
+            for event in events:
+                event_key = tuple(self.get_event_metadata(event).values())
+                if event_key not in recent_pushed_events:
+                    recent_pushed_events.add(event_key)
+                    next_events.append(event)
+
+            if len(next_events) > 0:
+                batch_of_events = [orjson.dumps(event).decode("utf-8") for event in next_events]
                 self.log(
-                    message=f"{self.log_type}: Forwarded {events_len} events to the intake",
+                    message=f"{self.log_type}: Forwarded {len(next_events)} events to the intake",
                     level="info",
                 )
                 INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).inc(
-                    events_len
+                    len(next_events)
                 )
 
                 self.connector.push_events_to_intakes(events=batch_of_events)
-
-                # We should persist the last event timestamp only after pushing the events
-                last_event = max(events, key=lambda x: iso8601_to_timestamp(x.get("genTime")))
-                last_event_timestamp = iso8601_to_timestamp(last_event.get("genTime"))
-                most_recent_timestamp_seen = self.get_last_timestamp()
-                if last_event_timestamp > most_recent_timestamp_seen:
-                    self.set_last_timestamp(last_event_timestamp)
-                events_lag = int(time.time()) - most_recent_timestamp_seen
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).set(
-                    events_lag
-                )
-                # We should cache the list of events that we pushed as well
-                self.set_recent_pushed_events(events)
+                pushed_events.extend(next_events)
 
                 OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).inc(
                     len(batch_of_events)
                 )
 
-            else:
-                self.log(
-                    message=f"{self.log_type}: No events to forward. Waiting {self.frequency} seconds",
-                    level="info",
-                )
-                time.sleep(self.frequency)
+            if not self.running:
+                break
 
-        except StopIteration:
-            pass
+        # The API doesn't guarantee that logs are sorted by genTime, so the maximum genTime of a page can be newer
+        # than events of the pages not fetched yet. The checkpoint is therefore persisted only once all the pages
+        # of the window have been pushed: an interruption between pages leads to the window being collected again
+        # (duplicates are possible) instead of skipping unpushed events.
+        if len(pushed_events) > 0 and self.all_pages_fetched:
+            last_event_timestamp = max(iso8601_to_timestamp(event.get("genTime")) for event in pushed_events)
+            new_timestamp = max(last_event_timestamp, previous_timestamp)
+
+            # The next run queries from the checkpoint second, inclusive: only the events of this second
+            # have to be remembered to avoid duplicates, which keeps the cache bounded.
+            boundary_events = [
+                event for event in pushed_events if iso8601_to_timestamp(event.get("genTime")) == new_timestamp
+            ]
+            if new_timestamp > previous_timestamp:
+                self.set_last_timestamp(new_timestamp)
+                self.set_recent_pushed_events(boundary_events)
+
+            elif len(boundary_events) > 0:
+                # the checkpoint doesn't move: keep the previous events of this second as well
+                self.set_recent_pushed_events(self.get_recent_pushed_events() + boundary_events)
+
+            events_lag = int(time.time()) - new_timestamp
+            EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).set(events_lag)
+
+        elif has_fetched_events and len(pushed_events) == 0:
+            self.log(
+                message=f"{self.log_type}: No events to forward. Waiting {self.frequency} seconds",
+                level="info",
+            )
+            time.sleep(self.frequency)
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
