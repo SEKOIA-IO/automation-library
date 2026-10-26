@@ -10,6 +10,11 @@ from microsoft_sentinel import MicrosoftSentinelModule
 from microsoft_sentinel.connector_microsoft_sentinel import MicrosoftSentineldConnector
 
 
+def fake_push():
+    """push_events_to_intakes returning one event id per event, like the intake."""
+    return Mock(side_effect=lambda events: [f"id-{i}" for i in range(len(events))])
+
+
 @pytest.fixture
 def trigger(symphony_storage):
     module = MicrosoftSentinelModule()
@@ -30,7 +35,7 @@ def trigger(symphony_storage):
         "intake_key": "0123456789",
     }
 
-    trigger.push_events_to_intakes = Mock()
+    trigger.push_events_to_intakes = fake_push()
     trigger.log_exception = Mock()
     trigger.log = Mock()
 
@@ -589,7 +594,7 @@ def test_boundary_dedup_survives_restart(trigger, first_incident_item, symphony_
 
     restarted = MicrosoftSentineldConnector(module=trigger.module, data_path=symphony_storage)
     restarted.configuration = trigger.configuration
-    restarted.push_events_to_intakes = Mock()
+    restarted.push_events_to_intakes = fake_push()
     restarted.log = Mock()
     restarted.log_exception = Mock()
 
@@ -597,7 +602,10 @@ def test_boundary_dedup_survives_restart(trigger, first_incident_item, symphony_
     assert poll(restarted, [a, b, c]) == [("C", "New")]
 
 
-def test_checkpoint_advanced_per_batch(trigger, first_incident_item, symphony_storage):
+@pytest.mark.parametrize("failed_push_ids", [[], ["id-0"]], ids=["no-event-id", "partial-event-ids"])
+def test_checkpoint_advanced_per_batch(trigger, first_incident_item, symphony_storage, failed_push_ids):
+    from microsoft_sentinel.errors import IncidentsForwardError
+
     t0 = datetime.now(UTC) - timedelta(minutes=10)
     incidents = [make_incident(first_incident_item, name, t0 + timedelta(seconds=i)) for i, name in enumerate("ABCDE")]
 
@@ -606,29 +614,53 @@ def test_checkpoint_advanced_per_batch(trigger, first_incident_item, symphony_st
     def push(events):
         offsets_at_push.append(trigger.cursor.offset)
         if len(offsets_at_push) == 2:
-            raise RuntimeError("intake unavailable")
-        return ["id"] * len(events)
+            # the SDK logs and swallows the intake errors: it returns fewer event ids than events
+            return failed_push_ids
+        return [f"id-{i}" for i in range(len(events))]
 
     trigger.push_events_to_intakes = Mock(side_effect=push)
 
-    # chunk_size is 2: batch [A, B] is pushed, batch [C, D] fails
-    with pytest.raises(RuntimeError):
+    # chunk_size is 2: batch [A, B] is pushed, batch [C, D] is not (fully) accepted
+    with pytest.raises(IncidentsForwardError):
         poll(trigger, incidents)
 
-    # the checkpoint was persisted after the first batch, before pushing the second one
+    # the checkpoint was persisted after the first batch, and not advanced by the failed one
     assert offsets_at_push[1] == t0 + timedelta(seconds=1)
     assert trigger.cursor.offset == t0 + timedelta(seconds=1)
+    # C and D are not marked as forwarded
+    assert sorted(persisted_dedup_keys(symphony_storage)) == [
+        f"A|{t0.isoformat()}",
+        f"B|{(t0 + timedelta(seconds=1)).isoformat()}",
+    ]
 
-    # a restarted connector resumes after B and does not re-send A nor B
-    restarted = MicrosoftSentineldConnector(module=trigger.module, data_path=symphony_storage)
-    restarted.configuration = trigger.configuration
-    restarted.push_events_to_intakes = Mock()
-    restarted.log = Mock()
-    restarted.log_exception = Mock()
-    assert restarted.from_date == t0 + timedelta(seconds=1)
-    # `ge` returns B again (boundary), then C, D, E
-    assert poll(restarted, incidents[1:]) == [("C", "New"), ("D", "New"), ("E", "New")]
-    assert restarted.cursor.offset == t0 + timedelta(seconds=4)
+    # the next poll does not re-send A nor B, and collects C and D again
+    assert poll(trigger, incidents) == [("C", "New"), ("D", "New"), ("E", "New")]
+
+    # a restarted connector resumes after E
+    restarted = new_connector(trigger.module, trigger.configuration, symphony_storage)
+    assert restarted.from_date == t0 + timedelta(seconds=4)
+    assert poll(restarted, incidents) == []
+
+
+def test_oversize_incident_is_dropped_and_not_blocking(trigger, first_incident_item):
+    t0 = datetime.now(UTC) - timedelta(minutes=10)
+    a = make_incident(first_incident_item, "A", t0)
+    huge = make_incident(first_incident_item, "HUGE", t0 + timedelta(seconds=1))
+    huge.description = "x" * 300_000
+
+    # the SDK would silently discard HUGE: it is dropped before pushing so the event ids count is exact
+    assert poll(trigger, [a, huge]) == [("A", "New")]
+    assert trigger.cursor.offset == t0 + timedelta(seconds=1)
+    warnings = [c.kwargs["message"] for c in trigger.log.call_args_list if c.kwargs.get("level") == "warning"]
+    assert any("HUGE" in message for message in warnings)
+
+
+def test_run_retries_forward_errors(trigger):
+    from microsoft_sentinel.errors import IncidentsForwardError
+
+    polls, waits = run_with_polls(trigger, [IncidentsForwardError("intake down"), None])
+    assert len(polls) == 2
+    assert waits == [60, 60]
 
 
 def run_with_polls(connector, outcomes):
@@ -683,7 +715,7 @@ def test_run_raises_unexpected_errors(trigger):
 def new_connector(module, configuration, data_path):
     connector = MicrosoftSentineldConnector(module=module, data_path=data_path)
     connector.configuration = configuration
-    connector.push_events_to_intakes = Mock()
+    connector.push_events_to_intakes = fake_push()
     connector.log = Mock()
     connector.log_exception = Mock()
     return connector

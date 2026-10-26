@@ -15,6 +15,7 @@ from cachetools import LRUCache
 from requests.exceptions import HTTPError
 from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector, EventType
+from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
 from sekoia_automation.storage import PersistentJSON
 from urllib3.exceptions import HTTPError as BaseHTTPError
 
@@ -23,6 +24,7 @@ from microsoft_sentinel import (
     MicrosoftSentinelModule,
     MicrosoftSentinelResponseModel,
 )
+from microsoft_sentinel.errors import IncidentsForwardError
 from microsoft_sentinel.metrics import (
     ENTITIES_FETCH_ERRORS,
     EVENTS_LAG,
@@ -209,10 +211,30 @@ class MicrosoftSentineldConnector(Connector):
         Incidents are requested in ascending lastModifiedTimeUtc order, so once a batch is pushed every
         incident modified before its most recent date has been forwarded. A later failure in the same poll
         resumes from this batch instead of collecting the already pushed ones again.
+
+        The SDK logs and swallows the errors of the intake: if fewer event ids than events sent are returned,
+        nothing is marked as forwarded nor checkpointed, and IncidentsForwardError is raised.
         """
-        self.log(message=f"Sending batch of {len(batch)} messages", level="info")
-        self.push_events_to_intakes(events=batch)
-        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch))
+        # the SDK silently discards events bigger than EVENT_BYTES_MAX_SIZE (measured on the string length):
+        # drop them here, so the number of returned event ids can be compared with the number of events sent
+        events: list[EventType] = []
+        for event, (key, _) in zip(batch, versions, strict=True):
+            if len(str(event)) > EVENT_BYTES_MAX_SIZE:
+                self.log(
+                    message=f"Incident {key} is bigger than {EVENT_BYTES_MAX_SIZE} bytes and cannot be forwarded",
+                    level="warning",
+                )
+            else:
+                events.append(event)
+
+        if events:
+            self.log(message=f"Sending batch of {len(events)} messages", level="info")
+            event_ids = self.push_events_to_intakes(events=events)
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(event_ids))
+            if len(event_ids) < len(events):
+                raise IncidentsForwardError(
+                    f"Only {len(event_ids)} of {len(events)} incidents were accepted by the intake"
+                )
 
         for key, last_modified in versions:
             if key is not None and last_modified is not None:
@@ -294,9 +316,9 @@ class MicrosoftSentineldConnector(Connector):
                     self.get_incidents()
                     consecutive_failures = 0
 
-                except (AzureError, DeserializationError, HTTPError, BaseHTTPError) as ex:
-                    # API errors, including incidents the Azure SDK cannot deserialize: nothing unpushed was
-                    # checkpointed, retry with a backoff (log_exception logs at the error level)
+                except (AzureError, DeserializationError, HTTPError, BaseHTTPError, IncidentsForwardError) as ex:
+                    # API errors, incidents the Azure SDK cannot deserialize, intake failures: nothing unpushed
+                    # was checkpointed, retry with a backoff (log_exception logs at the error level)
                     consecutive_failures += 1
                     self.log_exception(
                         ex, message=f"Failed to fetch incidents ({consecutive_failures} consecutive failures)"
