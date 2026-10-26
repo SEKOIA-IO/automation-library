@@ -7,7 +7,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Install dependencies
 COPY pyproject.toml uv.lock /app/
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-default-groups --no-install-project
 
 # Make the project virtual environment the default interpreter
 ENV PATH="/app/.venv/bin:$PATH"

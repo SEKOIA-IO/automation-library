@@ -77,7 +77,7 @@ tar -C "$module_dir" \
   --exclude='*~' \
   -cf - . | tar -C "$sources" -xf -
 
-uv export --project "$sources" --frozen --no-dev --no-emit-project --format pylock.toml > "$sources/pylock.toml"
+uv export --project "$sources" --frozen --no-default-groups --no-emit-project --format pylock.toml > "$sources/pylock.toml"
 
 for python_version in $python_versions; do
   echo "Packaging $module_dir for Python $python_version"

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.2 - 2026-10-26
+
+### Changed
+
+- Exclude the lint dependencies from the Docker image
+
 ## [0.4.1] - 2026-08-18
 
 ### Changed
