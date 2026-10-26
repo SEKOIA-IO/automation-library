@@ -5,13 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.6.1 - 2026-10-26
+## Unreleased
+
+## 2026-10-26 - 0.6.1
 
 ### Changed
 
 - Exclude the lint dependencies from the Docker image
-
-## Unreleased
 
 ## 2026-07-23 - 0.6.0
 
@@ -79,18 +79,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extracted the report CSV URL construction into a `_build_report_url()` helper for a single source of truth.
 - Guarded the "No events to push this cycle" log behind an error flag so failed polling cycles no longer log as empty successful ones.
 - Consolidated dev dependencies into a single `[dependency-groups]` table in `pyproject.toml` (removed the duplicate `[project.dependency-group.dev]` block).
+- Renamed the module class `LocateriskModule` → `LocateRiskModule`.
+- Renamed the connector class `LocateriskConnector` → `LocateRiskScanReportConnector`.
+- Renamed the connector manifest `connector_locateriskconnector.json` → `connector_locaterisk_scan_report.json`.
+- Renamed the connector implementation `locaterisk_modules/connector.py` → `locaterisk_modules/connector_locaterisk_scan_report.py`.
+- Renamed the `docker_parameters` value `LocateriskConnector` → `locaterisk_scan_report` (snake_case, matches repo convention).
 
 ### Removed
 
 - Stale `poetry.lock` file (the module uses `uv`).
-
-### Renamed (internal)
-
-- Module class `LocateriskModule` → `LocateRiskModule`.
-- Connector class `LocateriskConnector` → `LocateRiskScanReportConnector`.
-- Connector manifest `connector_locateriskconnector.json` → `connector_locaterisk_scan_report.json`.
-- Connector implementation `locaterisk_modules/connector.py` → `locaterisk_modules/connector_locaterisk_scan_report.py`.
-- `docker_parameters` value `LocateriskConnector` → `locaterisk_scan_report` (snake_case, matches repo convention).
 
 ## 0.1.8 - 2026-05-26
 
