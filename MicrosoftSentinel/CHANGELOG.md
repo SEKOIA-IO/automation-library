@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Do not re-collect already forwarded batches when a later batch of the same poll fails
 - Convert dates to UTC before building the incidents filter
 - Stop the connector promptly instead of waiting for the end of the polling interval
+- Keep polling after an Azure API error while listing incidents, with an exponential backoff (capped to 5 minutes) on consecutive failures
+- Collect incidents written late: incidents are queried from 5 minutes before the checkpoint and the versions already forwarded in that window are deduplicated, including after a restart
 
 ## 2026-05-27 - 1.1.0
 
