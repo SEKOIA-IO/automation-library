@@ -560,3 +560,52 @@ def test_checkpoint_advanced_per_batch(trigger, first_incident_item, symphony_st
     # `ge` returns B again (boundary), then C, D, E
     assert poll(restarted, incidents[1:]) == [("C", "New"), ("D", "New"), ("E", "New")]
     assert restarted.cursor.offset == t0 + timedelta(seconds=4)
+
+
+def run_with_polls(connector, outcomes):
+    """Run the connector loop over the given get_incidents outcomes (None = success) and return the waits."""
+    outcomes = list(outcomes)
+    polls = []
+    waits = []
+
+    def get_incidents():
+        outcome = outcomes[len(polls)]
+        polls.append(outcome)
+        if isinstance(outcome, BaseException):
+            raise outcome
+
+    def wait(timeout):
+        waits.append(timeout)
+        if len(waits) == len(outcomes):
+            connector._stop_event.set()
+        return connector._stop_event.is_set()
+
+    connector.get_incidents = get_incidents
+    connector._stop_event.wait = wait
+    connector.run()
+    return polls, waits
+
+
+def test_run_keeps_polling_after_azure_error(trigger):
+    from azure.core.exceptions import AzureError, HttpResponseError
+
+    polls, waits = run_with_polls(trigger, [HttpResponseError("list failed"), AzureError("paging failed"), None])
+
+    assert len(polls) == 3
+    # backoff on consecutive failures, then the normal polling interval after the successful poll
+    assert waits == [60, 120, 60]
+    assert trigger.log_exception.call_count == 2
+
+
+def test_run_backoff_is_capped_and_reset_after_success(trigger):
+    from azure.core.exceptions import AzureError
+
+    error = AzureError("unavailable")
+    _, waits = run_with_polls(trigger, [error] * 5 + [None, error])
+
+    assert waits == [60, 120, 240, 300, 300, 60, 60]
+
+
+def test_run_raises_unexpected_errors(trigger):
+    with pytest.raises(ValueError):
+        run_with_polls(trigger, [ValueError("bug")])

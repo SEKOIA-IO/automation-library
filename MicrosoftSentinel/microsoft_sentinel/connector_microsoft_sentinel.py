@@ -38,6 +38,8 @@ DEDUP_CACHE_SIZE = 10_000
 # keys of the incidents sharing the checkpoint date, persisted to survive restarts
 BOUNDARY_KEYS_FILE = "incidents_boundary.json"
 INCIDENTS_ORDER_BY = "properties/lastModifiedTimeUtc asc"
+# maximum wait, in seconds, between two polls after consecutive failures
+MAX_BACKOFF = 300
 
 
 class MicrosoftSentineldConnector(Connector):
@@ -271,18 +273,36 @@ class MicrosoftSentineldConnector(Connector):
         events_lag = int(time.time() - self.cursor.offset.timestamp())
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
 
+    def _next_wait(self, duration: int, consecutive_failures: int) -> float:
+        """
+        Seconds to wait before the next poll.
+
+        After a successful poll, wait for the rest of the polling interval. After consecutive failures,
+        wait exponentially longer (frequency, 2 x frequency, ...), capped to MAX_BACKOFF.
+        """
+        frequency = max(self.configuration.frequency, 1)
+        if consecutive_failures == 0:
+            return max(frequency - duration, 0)
+        return float(min(frequency * 2 ** (consecutive_failures - 1), max(MAX_BACKOFF, frequency)))
+
     def run(self) -> None:
         trigger_start_time = datetime.now(UTC).isoformat()
         self.log(message=f"Microsoft Sentinel Trigger process initiated at {trigger_start_time}", level="info")
 
+        consecutive_failures = 0
         try:
             while self.running:
                 start = time.time()
                 try:
                     self.get_incidents()
+                    consecutive_failures = 0
 
-                except (HTTPError, BaseHTTPError) as ex:
-                    self.log_exception(ex, message="Failed to fetch next batch of events")
+                except (AzureError, HTTPError, BaseHTTPError) as ex:
+                    # transient API errors: nothing unpushed was checkpointed, retry with a backoff
+                    consecutive_failures += 1
+                    self.log_exception(
+                        ex, message=f"Failed to fetch incidents ({consecutive_failures} consecutive failures)"
+                    )
                 except Exception as ex:
                     self.log_exception(ex, message="An unknown exception occurred")
                     raise
@@ -290,10 +310,10 @@ class MicrosoftSentineldConnector(Connector):
                 duration = int(time.time() - start)
                 FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
 
-                delta_sleep = self.configuration.frequency - duration
-                if delta_sleep > 0:
+                wait = self._next_wait(duration, consecutive_failures)
+                if wait > 0:
                     # interruptible wait: returns as soon as stop() sets the SDK stop event
-                    self._stop_event.wait(delta_sleep)
+                    self._stop_event.wait(wait)
         finally:
             trigger_end_time = datetime.now(UTC).isoformat()
             self.log(message=f"Microsoft Sentinel Trigger process has stopped at {trigger_end_time}", level="info")
