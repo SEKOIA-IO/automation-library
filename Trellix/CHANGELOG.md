@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-10-26 - 1.11.1
+## 2026-10-26 - 1.12.0
+
+### Changed
+
+- Migrated module from Poetry to uv (Python 3.14, ruff, mypy, mise)
+- Upgrade sekoia-automation-sdk to 1.27.0 (a failed push to the intake now raises an error instead of only being logged)
+- Migrate to pydantic v2
 
 ### Fixed
 

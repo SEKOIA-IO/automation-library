@@ -1,8 +1,9 @@
 """Trellix http client."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, AsyncGenerator, Optional, Set
+from typing import Any
 
 from aiohttp_retry import ExponentialRetry, RetryClient
 from aiolimiter import AsyncLimiter
@@ -23,14 +24,14 @@ class AuthenticationError(ValueError):
     """Authentication error."""
 
 
-class TrellixHttpClient(object):
+class TrellixHttpClient:
     """Class for Trellix http client."""
 
-    _client: Optional["TrellixHttpClient"] = None
+    _client: TrellixHttpClient | None = None
     _session: RetryClient | None = None
     _rate_limiter: AsyncLimiter | None = None
     _rate_limiter_per_day: AsyncLimiter | None = None
-    _token_refresher: Optional[TrellixTokenRefresher] = None
+    _token_refresher: TrellixTokenRefresher | None = None
 
     def __init__(
         self,
@@ -71,7 +72,7 @@ class TrellixHttpClient(object):
         auth_url: str,
         base_url: str,
         rate_limiter: AsyncLimiter | None = None,
-    ) -> "TrellixHttpClient":
+    ) -> TrellixHttpClient:
         """
         Get instance of TrellixHttpClient.
 
@@ -112,7 +113,7 @@ class TrellixHttpClient(object):
 
     @classmethod
     @asynccontextmanager
-    async def session(cls) -> AsyncGenerator[RetryClient, None]:
+    async def session(cls) -> AsyncGenerator[RetryClient]:
         """
         Get configured session with rate limiter.
 
@@ -136,7 +137,7 @@ class TrellixHttpClient(object):
         else:
             yield cls._session
 
-    async def _get_token_refresher(self, scopes: Set[Scope]) -> TrellixTokenRefresher:
+    async def _get_token_refresher(self, scopes: set[Scope]) -> TrellixTokenRefresher:
         """
         Get token refresher.
 
@@ -155,7 +156,7 @@ class TrellixHttpClient(object):
 
         return self._token_refresher
 
-    async def _request_headers(self, scopes: Set[Scope], encoding: bool = True) -> dict[str, str]:
+    async def _request_headers(self, scopes: set[Scope], encoding: bool = True) -> dict[str, str]:
         """
         Get authentication header with api key for defined scopes.
 
@@ -168,7 +169,7 @@ class TrellixHttpClient(object):
         async with token_refresher.with_access_token() as trellix_token:
             headers = {
                 "x-api-key": self.api_key,
-                "Authorization": "Bearer {0}".format(trellix_token.token.access_token),
+                "Authorization": f"Bearer {trellix_token.token.access_token}",
             }
 
             if encoding:
@@ -197,9 +198,7 @@ class TrellixHttpClient(object):
 
                 if response.status != 200:
                     raise Exception(
-                        "Error while getting data from {0} status {1}: {2}".format(
-                            url, response.status, await response.text()
-                        ),
+                        f"Error while getting data from {url} status {response.status}: {await response.text()}",
                     )
 
                 result: dict[str, Any] = await response.json()
@@ -223,7 +222,7 @@ class TrellixHttpClient(object):
             "page[limit]": str(limit),
         }
 
-        return URL("{0}/epo/v2/events".format(self.base_url)).with_query(params)
+        return URL(f"{self.base_url}/epo/v2/events").with_query(params)
 
     def edr_threats_url(self, start_date: datetime, end_date: datetime, limit: int = 10, offset: int = 0) -> URL:
         """
@@ -253,7 +252,7 @@ class TrellixHttpClient(object):
             "page[offset]": str(offset),
         }
 
-        return URL("{0}/edr/v2/threats".format(self.base_url)).with_query(params)
+        return URL(f"{self.base_url}/edr/v2/threats").with_query(params)
 
     def edr_threat_detections_url(
         self,
@@ -294,7 +293,7 @@ class TrellixHttpClient(object):
             "page[offset]": str(offset),
         }
 
-        return URL("{0}/edr/v2/threats/{1}/detections".format(self.base_url, threat_id)).with_query(params)
+        return URL(f"{self.base_url}/edr/v2/threats/{threat_id}/detections").with_query(params)
 
     def edr_threat_affectedhosts_url(
         self,
@@ -335,7 +334,7 @@ class TrellixHttpClient(object):
             "page[offset]": str(offset),
         }
 
-        return URL("{0}/edr/v2/threats/{1}/affectedhosts".format(self.base_url, threat_id)).with_query(params)
+        return URL(f"{self.base_url}/edr/v2/threats/{threat_id}/affectedhosts").with_query(params)
 
     def edr_alerts_url(self, start_date: datetime, limit: int = 10) -> URL:
         """
@@ -360,7 +359,7 @@ class TrellixHttpClient(object):
             "page[limit]": str(limit),
         }
 
-        return URL("{0}/edr/v2/alerts".format(self.base_url)).with_query(params)
+        return URL(f"{self.base_url}/edr/v2/alerts").with_query(params)
 
     async def get_epo_events(self, start_date: datetime, limit: int = 10) -> list[TrellixResponse[EpoEventAttributes]]:
         """

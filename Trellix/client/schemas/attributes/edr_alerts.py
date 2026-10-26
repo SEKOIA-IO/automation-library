@@ -40,7 +40,7 @@ class EdrAlertAttributes(BaseModel):
     hostName: str | None = None
 
     @staticmethod
-    def parse_response(json: dict[str, Any]) -> "EdrAlertAttributes":
+    def parse_response(json: dict[str, Any]) -> EdrAlertAttributes:
         """
         Parse the response.
 
@@ -51,11 +51,11 @@ class EdrAlertAttributes(BaseModel):
             EdrAlertAttributes
         """
         return EdrAlertAttributes(
-            traceId=json.get("Trace_Id"),
-            parentTraceId=json.get("Parent_Trace_Id"),
+            traceId=json.get("Trace_Id"),  # type: ignore[arg-type]
+            parentTraceId=json.get("Parent_Trace_Id"),  # type: ignore[arg-type]
             rootTraceId=json.get("Root_Trace_Id"),
-            aGuid=json.get("MAGUID"),
-            detectionDate=json.get("DetectionDate"),
+            aGuid=json.get("MAGUID"),  # type: ignore[arg-type]
+            detectionDate=json.get("DetectionDate"),  # type: ignore[arg-type]
             eventDate=json.get("Event_Date"),
             # api docs does not have this field, and seems like we do not parse it in format
             # but for backward compatibility `eventType` by default is set to `alert`

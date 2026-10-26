@@ -1,6 +1,6 @@
 """Tests for Trellix EPO connector."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -62,7 +62,7 @@ async def test_trellix_connector_last_event_date(connector: TrellixEpoConnector)
     with connector.context as cache:
         cache["last_event_date"] = None
 
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
     one_week_ago = current_date - timedelta(days=7)
 
     assert connector.last_event_date == one_week_ago
@@ -96,7 +96,7 @@ async def test_trellix_connector_get_epo_events(
         pushed_events_ids: list[str]
         epo_event_response: TrellixResponse[EpoEventAttributes]
     """
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
 
     with connector.context as cache:
         cache["last_event_date"] = current_date.isoformat()
@@ -106,9 +106,9 @@ async def test_trellix_connector_get_epo_events(
 
         token_refresher = await http_client._get_token_refresher(Scope.complete_set_of_scopes())
 
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump())
 
-        expected_edr_result = [epo_event_response.dict() for _ in range(0, session_faker.pyint(max_value=100))]
+        expected_edr_result = [epo_event_response.model_dump() for _ in range(0, session_faker.pyint(max_value=100))]
 
         mocked_responses.get(
             http_client.epo_events_url(current_date, limit=connector.configuration.records_per_request),
@@ -130,7 +130,7 @@ def _epo_event(
     event.id = event_id
     event.attributes.timestamp = timestamp
 
-    return orjson.loads(orjson.dumps(event.dict()))
+    return orjson.loads(orjson.dumps(event.model_dump()))
 
 
 @pytest.mark.asyncio
@@ -140,7 +140,7 @@ async def test_trellix_connector_checkpoint_moves_forward_between_iterations(
     epo_event_response: TrellixResponse[EpoEventAttributes],
 ):
     """The most recent event timestamp is saved after a push and used by the next iteration."""
-    start_date = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(hours=2)
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
     with connector.context as cache:
         cache["last_event_date"] = start_date.isoformat()
 
@@ -156,7 +156,7 @@ async def test_trellix_connector_checkpoint_moves_forward_between_iterations(
     with aioresponses() as mocked_responses:
         http_client = connector.trellix_client
         token_refresher = await http_client._get_token_refresher(Scope.complete_set_of_scopes())
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict(), repeat=True)
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump(), repeat=True)
 
         mocked_responses.get(
             http_client.epo_events_url(start_date, limit=limit), status=200, payload={"data": first_batch}
@@ -187,7 +187,7 @@ async def test_trellix_connector_checkpoint_not_saved_when_push_fails(
     epo_event_response: TrellixResponse[EpoEventAttributes],
 ):
     """If the push to the intake fails, the checkpoint must not move."""
-    start_date = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(hours=2)
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
     with connector.context as cache:
         cache["last_event_date"] = start_date.isoformat()
 
@@ -196,7 +196,7 @@ async def test_trellix_connector_checkpoint_not_saved_when_push_fails(
     with aioresponses() as mocked_responses:
         http_client = connector.trellix_client
         token_refresher = await http_client._get_token_refresher(Scope.complete_set_of_scopes())
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump())
         mocked_responses.get(
             http_client.epo_events_url(start_date, limit=connector.configuration.records_per_request),
             status=200,
@@ -220,7 +220,7 @@ async def test_trellix_connector_does_not_push_boundary_events_twice(
 
     They must not be forwarded twice, while new events of that same second must still be forwarded.
     """
-    start_date = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(hours=2)
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
     with connector.context as cache:
         cache["last_event_date"] = start_date.isoformat()
 
@@ -232,7 +232,7 @@ async def test_trellix_connector_does_not_push_boundary_events_twice(
     with aioresponses() as mocked_responses:
         http_client = connector.trellix_client
         token_refresher = await http_client._get_token_refresher(Scope.complete_set_of_scopes())
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict(), repeat=True)
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump(), repeat=True)
 
         mocked_responses.get(
             http_client.epo_events_url(start_date, limit=limit), status=200, payload={"data": [already_pushed]}

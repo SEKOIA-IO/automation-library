@@ -11,11 +11,11 @@ class TrellixModuleConfig(BaseModel):
     client_secret: str
     api_key: str
     delay: int = 60
-    auth_url: HttpUrl = HttpUrl("https://iam.mcafee-cloud.com/iam/v1.1", scheme="https")
-    base_url: HttpUrl = HttpUrl("https://api.manage.trellix.com", scheme="https")
+    auth_url: HttpUrl = HttpUrl("https://iam.mcafee-cloud.com/iam/v1.1")
+    base_url: HttpUrl = HttpUrl("https://api.manage.trellix.com")
 
 
 class TrellixModule(Module):
     """TrellixModule."""
 
-    configuration: TrellixModuleConfig
+    configuration: TrellixModuleConfig  # type: ignore[override]

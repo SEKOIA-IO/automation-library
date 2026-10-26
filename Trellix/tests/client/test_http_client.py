@@ -76,9 +76,9 @@ async def test_trellix_http_client_get_epo_events(
 
         token_refresher = await http_client._get_token_refresher(Scope.complete_set_of_scopes())
 
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump())
 
-        expected_result = [epo_event_response.dict() for _ in range(0, session_faker.pyint(max_value=100))]
+        expected_result = [epo_event_response.model_dump() for _ in range(0, session_faker.pyint(max_value=100))]
 
         mocked_responses.get(
             http_client.epo_events_url(results_start_date, limit=results_limit),
@@ -90,7 +90,7 @@ async def test_trellix_http_client_get_epo_events(
 
         result = await http_client.get_epo_events(results_start_date, results_limit)
 
-        assert result == expected_result
+        assert [event.model_dump() for event in result] == expected_result
 
 
 @pytest.mark.asyncio
@@ -127,9 +127,11 @@ async def test_trellix_http_client_get_edr_threat_events(
 
         token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
 
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump())
 
-        expected_result = [edr_threat_event_response.dict() for _ in range(0, session_faker.pyint(max_value=100))]
+        expected_result = [
+            edr_threat_event_response.model_dump() for _ in range(0, session_faker.pyint(max_value=100))
+        ]
 
         mocked_responses.get(
             http_client.edr_threats_url(
@@ -143,7 +145,7 @@ async def test_trellix_http_client_get_edr_threat_events(
 
         result = await http_client.get_edr_threats(results_start_date, results_end_date, results_limit, results_offset)
 
-        assert result == expected_result
+        assert [event.model_dump() for event in result] == expected_result
 
 
 @pytest.mark.asyncio
@@ -181,9 +183,11 @@ async def test_trellix_http_client_get_edr_detection_events(
 
         token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
 
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump())
 
-        expected_result = [edr_detection_event_response.dict() for _ in range(0, session_faker.pyint(max_value=100))]
+        expected_result = [
+            edr_detection_event_response.model_dump() for _ in range(0, session_faker.pyint(max_value=100))
+        ]
 
         mocked_responses.get(
             http_client.edr_threat_detections_url(
@@ -199,7 +203,7 @@ async def test_trellix_http_client_get_edr_detection_events(
             threat_id, results_start_date, results_end_date, results_limit, results_offset
         )
 
-        assert result == expected_result
+        assert [event.model_dump() for event in result] == expected_result
 
 
 @pytest.mark.asyncio
@@ -239,10 +243,10 @@ async def test_trellix_http_client_get_edr_affectedhost_events(
 
         token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
 
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump())
 
         expected_result = [
-            edr_affectedhost_event_response.dict() for _ in range(0, session_faker.pyint(max_value=100))
+            edr_affectedhost_event_response.model_dump() for _ in range(0, session_faker.pyint(max_value=100))
         ]
 
         mocked_responses.get(
@@ -259,7 +263,7 @@ async def test_trellix_http_client_get_edr_affectedhost_events(
             threat_id, results_start_date, results_end_date, results_limit, results_offset
         )
 
-        assert result == expected_result
+        assert [event.model_dump() for event in result] == expected_result
 
 
 @pytest.mark.asyncio
@@ -296,7 +300,7 @@ async def test_trellix_http_client_get_edr_alert_events(
 
         token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
 
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump())
 
         expected_result = [edr_alert_event_response[0] for _ in range(0, session_faker.pyint(max_value=100))]
         expected_result_dto = [edr_alert_event_response[1] for _ in expected_result]
@@ -348,7 +352,7 @@ async def test_trellix_http_client_retry(
 
         token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
 
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump())
 
         expected_result = [edr_alert_event_response[0] for _ in range(0, session_faker.pyint(max_value=100))]
         expected_result_dto = [edr_alert_event_response[1] for _ in expected_result]
@@ -404,7 +408,7 @@ async def test_trellix_http_client_api_limit_exhausted(
 
         token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
 
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump())
 
         expected_result = [edr_alert_event_response[0] for _ in range(0, session_faker.pyint(max_value=100))]
         expected_result_dto = [edr_alert_event_response[1] for _ in expected_result]

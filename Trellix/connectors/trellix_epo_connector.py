@@ -2,8 +2,8 @@
 
 import asyncio
 import time
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import orjson
 from aiolimiter import AsyncLimiter
@@ -39,7 +39,7 @@ class TrellixEpoConnector(AsyncConnector):
 
     _trellix_client: TrellixHttpClient | None = None
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         """Init TrellixEpoConnector."""
 
         super().__init__(*args, **kwargs)
@@ -53,7 +53,7 @@ class TrellixEpoConnector(AsyncConnector):
         Returns:
             datetime:
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         one_week_ago = (now - timedelta(days=7)).replace(microsecond=0)
 
         with self.context as cache:
@@ -64,7 +64,7 @@ class TrellixEpoConnector(AsyncConnector):
                 return one_week_ago
 
             # Parse the most recent date seen
-            last_event_date = isoparse(last_event_date_str)
+            last_event_date: datetime = isoparse(last_event_date_str)
 
             # We don't retrieve messages older than one week
             if last_event_date < one_week_ago:
@@ -90,8 +90,8 @@ class TrellixEpoConnector(AsyncConnector):
             client_id=self.module.configuration.client_id,
             client_secret=self.module.configuration.client_secret,
             api_key=self.module.configuration.api_key,
-            auth_url=self.module.configuration.auth_url,
-            base_url=self.module.configuration.base_url,
+            auth_url=str(self.module.configuration.auth_url).rstrip("/"),
+            base_url=str(self.module.configuration.base_url).rstrip("/"),
             rate_limiter=rate_limiter,
             rate_limiter_per_day=daily_rate_limiter,
         )
@@ -120,10 +120,11 @@ class TrellixEpoConnector(AsyncConnector):
         result: list[str] = []
         if new_events:
             result = await self.push_data_to_intakes(
-                [orjson.dumps(event.attributes.dict()).decode("utf-8") for event in new_events]
+                [orjson.dumps(event.attributes.model_dump()).decode("utf-8") for event in new_events]
             )
 
-        # Save the checkpoint only once the events have been pushed
+        # Save the checkpoint only once the events have been pushed.
+        # The SDK raises when the intake rejects a chunk (after its retries), so the checkpoint is not reached then.
         self._save_checkpoint(events, boundary_event_ids)
 
         return result
@@ -136,7 +137,7 @@ class TrellixEpoConnector(AsyncConnector):
     def _event_timestamp(event: TrellixResponse[EpoEventAttributes]) -> datetime | None:
         timestamp = event.attributes.timestamp
         if timestamp is not None and timestamp.tzinfo is None:
-            timestamp = timestamp.replace(tzinfo=timezone.utc)
+            timestamp = timestamp.replace(tzinfo=UTC)
 
         return timestamp
 
@@ -191,7 +192,7 @@ class TrellixEpoConnector(AsyncConnector):
 
                 log_message = "No records to forward"
                 if len(message_ids) > 0:
-                    log_message = "Pushed {0} records".format(len(message_ids))
+                    log_message = f"Pushed {len(message_ids)} records"
 
                 self.log(message=log_message, level="info")
 

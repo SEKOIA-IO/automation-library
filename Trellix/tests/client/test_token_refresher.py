@@ -23,7 +23,7 @@ async def test_trellix_refresher_refresh_token(http_token, session_faker, token_
     """
     token_refresher_session.post = MagicMock()
     token_refresher_session.post.return_value.__aenter__.return_value.status = 200
-    token_refresher_session.post.return_value.__aenter__.return_value.json.return_value = http_token.dict()
+    token_refresher_session.post.return_value.__aenter__.return_value.json.return_value = http_token.model_dump()
 
     token_refresher = TrellixTokenRefresher(
         session_faker.word(),
@@ -57,7 +57,7 @@ async def test_trellix_refresher_refresh_token_1(http_token, session_faker):
             session_faker.word(), session_faker.word(), session_faker.word(), auth_url, Scope.complete_set_of_scopes()
         )
 
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump())
 
         await token_refresher.refresh_token()
 
@@ -79,7 +79,7 @@ async def test_trellix_refresher_with_access_token(http_token, session_faker, to
     """
     token_refresher_session.post = MagicMock()
     token_refresher_session.post.return_value.__aenter__.return_value.status = 200
-    token_refresher_session.post.return_value.__aenter__.return_value.json.return_value = http_token.dict()
+    token_refresher_session.post.return_value.__aenter__.return_value.json.return_value = http_token.model_dump()
 
     token_refresher = TrellixTokenRefresher(
         session_faker.word(),
