@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Collect incident updates: incidents are tracked on their last modification date (`lastModifiedTimeUtc`) instead of their creation date, so a status, owner or new alert change forwards the updated incident again
 - Request incidents in ascending last modification order and advance the checkpoint after each forwarded batch
 - Use `chunk_size` as the maximum batch size (capped to 1000) instead of a minimum
+- The `events_lags` metric is measured from the checkpoint on every poll, also when no new incident is forwarded, instead of being reset to 0
 - Forward an incident without entities, log a warning and count it in the `entities_fetch_errors` metric when its entities cannot be fetched because of an Azure error; other errors are no longer silenced
 
 ### Fixed

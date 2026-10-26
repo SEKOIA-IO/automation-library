@@ -358,8 +358,23 @@ def test_get_incidents_empty(trigger):
         trigger.get_incidents()
 
     trigger.push_events_to_intakes.assert_not_called()
-    assert EVENTS_LAG.labels(intake_key="0123456789")._value.get() == 0
     assert trigger.cursor.offset == initial_offset
+    # no checkpoint yet: the cursor starts 1 day ago, the lag is measured from it
+    assert 86390 <= EVENTS_LAG.labels(intake_key="0123456789")._value.get() <= 86410
+
+
+def test_events_lag_when_nothing_new(trigger, first_incident_item):
+    from microsoft_sentinel.metrics import EVENTS_LAG
+
+    t0 = datetime.now(UTC) - timedelta(minutes=10)
+    a = make_incident(first_incident_item, "A", t0)
+    poll(trigger, [a])
+    assert 590 <= EVENTS_LAG.labels(intake_key="0123456789")._value.get() <= 610
+
+    # A is returned again by the lookback window, nothing new: the lag is still measured from the checkpoint
+    EVENTS_LAG.labels(intake_key="0123456789").set(0)
+    assert poll(trigger, [a]) == []
+    assert 590 <= EVENTS_LAG.labels(intake_key="0123456789")._value.get() <= 610
 
 
 def test_get_incidents_consumes_iterator_once(trigger, incidents_list):

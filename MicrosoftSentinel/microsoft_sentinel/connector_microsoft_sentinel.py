@@ -259,10 +259,9 @@ class MicrosoftSentineldConnector(Connector):
 
         if collected == 0:
             self.log(message=f"No new incidents to forward ({duplicates} already forwarded)", level="info")
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
-            return
 
-        # lag from the most recent forwarded modification date (the checkpoint)
+        # lag from the most recent forwarded modification date (the checkpoint), on every poll: an idle
+        # Sentinel workspace and a stuck connector both show a growing lag
         events_lag = int(time.time() - self.cursor.offset.timestamp())
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
 
