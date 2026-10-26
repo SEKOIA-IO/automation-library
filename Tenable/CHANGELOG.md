@@ -7,14 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-10-26 - 1.0.20
+## 2026-10-26 - 1.1.0
 
 ### Fixed
 
-- Device IP, OS, hostnames, network interfaces, cloud location and timestamps are filled again for assets read from the asset export
+- Device IP, OS, hostnames, network interfaces, cloud region and timestamps are filled again for assets read from the asset export
 - Fix duplicate vulnerabilities on every run
 - State changes (fixed, reopened) of an already sent vulnerability are always sent
-- No more missed vulnerabilities: the checkpoint is saved only after a complete export and once every batch is accepted by Sekoia.io
+- The checkpoint is saved only after a complete export and once every batch is accepted by Sekoia.io (a batch rejected with a 4xx is dropped and logged), so an interrupted cycle no longer skips findings
 - First run collects all open and reopened vulnerabilities; an old checkpoint is no longer moved forward
 - Same device hostname fallback (hostname, name, FQDN) whatever the asset source
 - A failed asset export no longer triggers a new export for every vulnerability
@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - REOPENED findings are sent with the OCSF activity name `Update`
 - Descriptions and references are capped to the platform limits
 - Tenable API payloads with explicit `null` values are accepted
+- The event `time` is when the current state was observed (latest of `last_found` and `last_fixed`), no longer `first_found`
+- The cloud region of the asset is sent in `device.region` instead of `device.location.city`
+- The Tenable severity is also sent as the OCSF event `severity` and `severity_id`
 - Mapping code split into `TenableVulnerabilityMapper`, `TenableDeviceMapper` and helper functions; mapping documentation updated
 
 ## 2026-08-28 - 1.0.19

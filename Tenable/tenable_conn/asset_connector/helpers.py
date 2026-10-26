@@ -279,21 +279,17 @@ class TraversalState:
             return self.export_start
         return raw_time
 
-    def already_sent(self, raw_time: int | None, finding_time: int | None, finding_key: FindingKey | None) -> bool:
+    def already_sent(self, finding_key: FindingKey | None) -> bool:
         """
-        Whether a previous run already sent this version of the finding: it is in the committed boundary and
-        either at the committed second (Tenable's inclusive `since` filter) or dated in the future (tracked at
-        the export start, so returned by every export until its date).
-        :param raw_time: The effective timestamp of the finding.
-        :param finding_time: The capped timestamp of the finding.
+        Whether a previous run already sent this version of the finding.
+
+        The key holds the finding id, its state and its `last_found`/`last_fixed` dates, so a key present in the
+        committed boundary is exactly a version that was sent: returned again by Tenable's inclusive `since`
+        filter at the committed second, or a future-dated finding (tracked at the export start) returned by every
+        export, before and after its date passes. A new state or a new date gives a new key, which is sent.
         :param finding_key: The dedup key of the finding.
         """
-        return (
-            finding_time is not None
-            and finding_key is not None
-            and finding_key in self.committed_boundary
-            and (finding_time == self.committed_cursor or (raw_time is not None and raw_time > self.export_start))
-        )
+        return finding_key is not None and finding_key in self.committed_boundary
 
     def track(self, finding_time: int | None, finding_key: FindingKey | None) -> None:
         """

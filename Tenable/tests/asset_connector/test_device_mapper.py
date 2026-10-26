@@ -11,10 +11,8 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 from tenable_conn.asset_connector.helpers import asset_details_to_export
 from tenable_conn.asset_connector.mapper import TenableDeviceMapper
 from tenable_conn.asset_connector.models.asset_details_model import AssetDetails
-from tenable_conn.asset_connector.models.assets_export_model import (
-    AssetExportV2 as AssetInfo,
-    NetworkInterfaceV2 as TenableNetworkInterface,
-)
+from tenable_conn.asset_connector.models.assets_export_model import AssetExportV2 as AssetInfo
+from tenable_conn.asset_connector.models.assets_export_model import NetworkInterfaceV2 as TenableNetworkInterface
 
 
 def test_map_os_type_windows():
@@ -189,8 +187,8 @@ def test_build_device_minimal():
     assert device.type == DeviceTypeStr.UNKNOWN
 
 
-def test_details_azure_location_maps_to_device_location():
-    """Fallback-fetched Azure assets keep their Device.location via azure_location."""
+def test_details_azure_location_maps_to_device_region():
+    """Fallback-fetched Azure assets keep their cloud region via azure_location."""
     details = AssetDetails.model_validate({"id": "asset-azure", "name": "az-host", "azure_location": ["westeurope"]})
     exported = asset_details_to_export(details)
     assert exported.cloud is not None
@@ -198,8 +196,24 @@ def test_details_azure_location_maps_to_device_location():
     assert exported.cloud.azure.location == "westeurope"
 
     device = TenableDeviceMapper(exported).map()
-    assert device.location is not None
-    assert device.location.city == "westeurope"
+    assert device.region == "westeurope"
+    assert device.location is None
+
+
+@pytest.mark.parametrize(
+    "cloud, region",
+    [
+        ({"aws": {"region": "eu-west-3"}, "gcp": {"zone": "europe-west1-b"}}, "eu-west-3"),
+        ({"azure": {"location": "westeurope"}, "gcp": {"zone": "europe-west1-b"}}, "westeurope"),
+        ({"gcp": {"zone": "europe-west1-b"}}, "europe-west1-b"),
+        ({}, None),
+    ],
+)
+def test_device_region_from_cloud(cloud, region):
+    device = TenableDeviceMapper(AssetInfo.model_validate({"id": "asset-1", "cloud": cloud})).map()
+
+    assert device.region == region
+    assert device.location is None
 
 
 def test_hostname_falls_back_to_name_when_no_host_or_fqdn():

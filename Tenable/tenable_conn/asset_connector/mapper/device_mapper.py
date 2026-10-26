@@ -2,7 +2,6 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     Device,
     DeviceTypeId,
     DeviceTypeStr,
-    GeoLocation,
     NetworkInterface,
     NetworkInterfaceTypeId,
     NetworkInterfaceTypeStr,
@@ -24,7 +23,8 @@ class TenableDeviceMapper:
     """
     Map one Tenable asset (Export Assets v2 shape) to the OCSF Device object.
 
-    One instance per asset: it is built with the asset and `map()` produces the OCSF object. The class-level
+    One instance per finding (the connector builds it for each finding; the cost is negligible): it is built
+    with the finding's asset and `map()` produces the OCSF object. The class-level
     helpers do not depend on the asset: `build_network_interfaces`, `build_network_interface`,
     `map_interface_type`, `map_os_type` and `map_device_type`.
     """
@@ -80,7 +80,7 @@ class TenableDeviceMapper:
             hostname=self.hostname,
             name=self.display_name,
             os=self.build_operating_system(),
-            location=self.build_location(),
+            region=self.cloud_region,
             ip=self.first_ipv4,
             network_interfaces=self.build_asset_network_interfaces(),
             first_seen_time=parse_datetime_to_timestamp(self.timestamps.first_seen if self.timestamps else None),
@@ -100,17 +100,14 @@ class TenableDeviceMapper:
         os_type_str, os_type_id = self.map_os_type(os_list[0])
         return OperatingSystem(name=os_list[0], type=os_type_str, type_id=os_type_id)
 
-    def build_location(self) -> GeoLocation | None:
-        """
-        Build the GeoLocation from the cloud region (AWS region, Azure location or GCP zone).
-        :return: A GeoLocation object, or None for a non-cloud asset.
-        """
+    @property
+    def cloud_region(self) -> str | None:
+        """The cloud region of the asset: AWS region, otherwise Azure location, otherwise GCP zone."""
         cloud = self.asset_info.cloud
         aws_region = cloud.aws.region if cloud and cloud.aws else None
         azure_location = cloud.azure.location if cloud and cloud.azure else None
         gcp_zone = cloud.gcp.zone if cloud and cloud.gcp else None
-        location_str = aws_region or azure_location or gcp_zone
-        return GeoLocation(country=None, city=location_str) if location_str else None
+        return aws_region or azure_location or gcp_zone
 
     def build_asset_network_interfaces(self) -> list[NetworkInterface] | None:
         """

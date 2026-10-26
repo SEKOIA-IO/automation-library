@@ -2,6 +2,10 @@ import os
 import time
 
 from tenable_conn.asset_connector.helpers import (
+    DESCRIPTION_MAX_LENGTH,
+    REFERENCE_MAX_LENGTH,
+    REFERENCES_MAX_COUNT,
+    TRUNCATION_SUFFIX,
     FindingKey,
     TraversalState,
     advance_checkpoint,
@@ -10,10 +14,6 @@ from tenable_conn.asset_connector.helpers import (
     boundary_to_json,
     dedup_key,
     effective_timestamp,
-    DESCRIPTION_MAX_LENGTH,
-    REFERENCE_MAX_LENGTH,
-    REFERENCES_MAX_COUNT,
-    TRUNCATION_SUFFIX,
     limit_description,
     limit_references,
     parse_datetime_to_timestamp,
@@ -215,15 +215,21 @@ def _state(committed_cursor=T2, boundary=(), export_start=T3) -> TraversalState:
 def test_traversal_state_already_sent():
     key = _key("a")
     state = _state(boundary={key})
-    # At the committed second and in the boundary
-    assert state.already_sent(T2, T2, key) is True
-    # In the boundary but at another second: a new version, sent
-    assert state.already_sent(T1, T1, key) is False
-    # Future-dated (capped at the export start) and in the boundary
-    assert state.already_sent(T3 + 100, state.cap_time(T3 + 100), key) is True
+    # The key holds the state and dates: in the boundary means this exact version was sent
+    assert state.already_sent(key) is True
+    # Another version of the same finding (new state or date) is sent
+    assert state.already_sent(FindingKey("a", "FIXED", None, "2025-01-02T00:00:00Z")) is False
     # Not in the boundary, or without key
-    assert state.already_sent(T2, T2, _key("b")) is False
-    assert state.already_sent(T2, T2, None) is False
+    assert state.already_sent(_key("b")) is False
+    assert state.already_sent(None) is False
+
+
+def test_traversal_state_future_finding_already_sent_after_its_date():
+    """A future-dated finding tracked at an earlier export start stays deduplicated once its date has passed."""
+    key = FindingKey("future", "FIXED", None, "2030-01-01T00:00:00Z")
+    state = _state(committed_cursor=T3, boundary={key}, export_start=T3 + 10**9)
+    assert state.cap_time(T3 + 10**8) == T3 + 10**8
+    assert state.already_sent(key) is True
 
 
 def test_traversal_state_cap_time():

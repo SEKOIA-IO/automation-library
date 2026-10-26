@@ -19,13 +19,19 @@ def sdk_iso(ts: int) -> str:
 
 
 def make_vuln(
-    base: dict, finding_id: str, last_found: int, state: str = "OPEN", last_fixed: int | None = None
+    base: dict,
+    finding_id: str,
+    last_found: int,
+    state: str = "OPEN",
+    last_fixed: int | None = None,
+    first_found: int | None = None,
 ) -> dict:
+    """A finding built from `base`; `first_found` defaults to `last_found`."""
     vuln = {
         **base,
         "finding_id": finding_id,
         "state": state,
-        "first_found": iso(last_found),
+        "first_found": iso(first_found if first_found is not None else last_found),
         "last_found": iso(last_found),
     }
     if last_fixed is not None:
