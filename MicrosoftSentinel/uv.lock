@@ -284,6 +284,7 @@ default-groups = ["dev", "lint"]
 dependencies = [
     { name = "azure-identity" },
     { name = "azure-mgmt-securityinsight" },
+    { name = "cachetools" },
     { name = "orjson" },
     { name = "sekoia-automation-sdk" },
 ]
@@ -302,6 +303,7 @@ lint = [
 requires-dist = [
     { name = "azure-identity", specifier = ">=1.19.0,<2" },
     { name = "azure-mgmt-securityinsight", specifier = ">=1.0.0,<2" },
+    { name = "cachetools", specifier = ">=7.2.5,<8" },
     { name = "orjson", specifier = ">=3.10.15,<4" },
     { name = "sekoia-automation-sdk", specifier = ">=1.27.0,<2" },
 ]

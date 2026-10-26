@@ -11,9 +11,11 @@ from azure.core.paging import ItemPaged
 from azure.identity import ClientSecretCredential
 from azure.mgmt.securityinsight import SecurityInsights
 from azure.mgmt.securityinsight.models import Incident, IncidentAdditionalData, IncidentLabel, IncidentOwnerInfo
+from cachetools import LRUCache
 from requests.exceptions import HTTPError
 from sekoia_automation.checkpoint import CheckpointDatetime
-from sekoia_automation.connector import Connector
+from sekoia_automation.connector import Connector, EventType
+from sekoia_automation.storage import PersistentJSON
 from urllib3.exceptions import HTTPError as BaseHTTPError
 
 from microsoft_sentinel import (
@@ -31,6 +33,11 @@ from microsoft_sentinel.metrics import (
 from microsoft_sentinel.utils import additional_data_to_dict, labels_data_to_dict, owner_data_to_dict
 
 MAX_BATCH_SIZE = 1000
+# number of incident versions remembered to avoid forwarding the same version twice
+DEDUP_CACHE_SIZE = 10_000
+# keys of the incidents sharing the checkpoint date, persisted to survive restarts
+BOUNDARY_KEYS_FILE = "incidents_boundary.json"
+INCIDENTS_ORDER_BY = "properties/lastModifiedTimeUtc asc"
 
 
 class MicrosoftSentineldConnector(Connector):
@@ -47,10 +54,18 @@ class MicrosoftSentineldConnector(Connector):
         )
         self.from_date = self.cursor.offset
 
+        # versions (name + lastModifiedTimeUtc) of the incidents already forwarded
+        self._forwarded: LRUCache[str, bool] = LRUCache(maxsize=DEDUP_CACHE_SIZE)
+        self._boundary_store = PersistentJSON(BOUNDARY_KEYS_FILE, self._data_path)
+        self._boundary_time: datetime | None = None
+        self._boundary_keys: set[str] = set()
+        self._load_boundary_keys()
+
     @property
     def incidents_filter(self) -> str:
         most_recent_date = self._to_RFC3339(self.from_date)
-        return f"properties/createdTimeUtc gt {most_recent_date}"
+        # `ge` (and not `gt`): incidents sharing the checkpoint date are collected again and deduplicated
+        return f"properties/lastModifiedTimeUtc ge {most_recent_date}"
 
     @cached_property
     def batch_limit(self) -> int:
@@ -69,21 +84,30 @@ class MicrosoftSentineldConnector(Connector):
             subscription_id=self.module.configuration.subscription_id,
         )
 
-    def _to_RFC3339(self, date: datetime | None) -> str | None:  # noqa: N802
+    @staticmethod
+    def _as_utc(date: datetime | None) -> datetime | None:
         """
-        Format a datetime as RFC3339 in UTC. Naive datetimes are considered as UTC.
+        Convert a datetime to UTC. Naive datetimes are considered as UTC.
         """
         if date is None:
             return None
         if date.tzinfo is None:
-            date = date.replace(tzinfo=UTC)
-        return date.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            return date.replace(tzinfo=UTC)
+        return date.astimezone(UTC)
+
+    def _to_RFC3339(self, date: datetime | None) -> str | None:  # noqa: N802
+        """
+        Format a datetime as RFC3339 in UTC. Naive datetimes are considered as UTC.
+        """
+        utc_date = self._as_utc(date)
+        return utc_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ") if utc_date else None
 
     def _incidents_iterator(self) -> ItemPaged[Incident]:
         return self.client.incidents.list(
             resource_group_name=self.module.configuration.resource_group,
             workspace_name=self.module.configuration.workspace_name,
             filter=self.incidents_filter,
+            orderby=INCIDENTS_ORDER_BY,
         )  # type: ignore
 
     def _get_incident_entities(self, incident_id: str) -> list[dict[str, Any]]:
@@ -137,58 +161,108 @@ class MicrosoftSentineldConnector(Connector):
 
         return new_dict
 
+    def _dedup_key(self, incident: Incident) -> str | None:
+        """
+        Key identifying a given version of an incident: its name and its last modification date.
+        """
+        name = getattr(incident, "name", None)
+        last_modified = self._as_utc(incident.last_modified_time_utc)
+        if not name or last_modified is None:
+            return None
+        return f"{name}|{last_modified.isoformat()}"
+
+    def _load_boundary_keys(self) -> None:
+        with self._boundary_store as store:
+            boundary_time = store.get("last_modified_time_utc")
+            boundary_keys = store.get("keys", [])
+
+        if boundary_time:
+            self._boundary_time = datetime.fromisoformat(boundary_time)
+            self._boundary_keys = set(boundary_keys)
+            for key in self._boundary_keys:
+                self._forwarded[key] = True
+
+    def _save_boundary_keys(self) -> None:
+        if self._boundary_time is None:
+            return
+
+        with self._boundary_store as store:
+            store["last_modified_time_utc"] = self._boundary_time.isoformat()
+            store["keys"] = sorted(self._boundary_keys)
+
+    def _mark_forwarded(self, key: str | None, last_modified: datetime | None) -> None:
+        if key is not None:
+            self._forwarded[key] = True
+
+        if key is None or last_modified is None:
+            return
+
+        # keep the keys of the incidents sharing the most recent modification date: they are returned again
+        # by the next `ge` query and must not be forwarded twice, even after a restart
+        if self._boundary_time is None or last_modified > self._boundary_time:
+            self._boundary_time = last_modified
+            self._boundary_keys = {key}
+        elif last_modified == self._boundary_time and len(self._boundary_keys) < DEDUP_CACHE_SIZE:
+            self._boundary_keys.add(key)
+
+    def _forward_batch(self, batch: list[EventType], versions: list[tuple[str | None, datetime | None]]) -> None:
+        self.log(message=f"Sending batch of {len(batch)} messages", level="info")
+        self.push_events_to_intakes(events=batch)
+        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch))
+
+        for key, last_modified in versions:
+            self._mark_forwarded(key, last_modified)
+
     def get_incidents(self) -> None:
         self.log(message="Start fetching alerts from Microsoft sentinel", level="info")
 
-        alerts_batch = []
-        stored_time = None
-        incoming_events_sum = 0
+        batch: list[EventType] = []
+        versions: list[tuple[str | None, datetime | None]] = []
+        seen_in_poll: set[str] = set()
+        collected = 0
+        duplicates = 0
+        most_recent: datetime | None = None
         for item in self._incidents_iterator():
-            created_time = item.created_time_utc
-            serialized_incident = self._serialize_incident(item)
+            key = self._dedup_key(item)
+            if key is not None:
+                if key in self._forwarded or key in seen_in_poll:
+                    # this version of the incident was already forwarded (boundary of the `ge` filter)
+                    duplicates += 1
+                    continue
+                seen_in_poll.add(key)
 
+            collected += 1
+            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+
+            serialized_incident = self._serialize_incident(item)
             incident_id = getattr(item, "name", None)
             if incident_id:
-                entities = self._get_incident_entities(incident_id)
-                serialized_incident["entities"] = entities
+                serialized_incident["entities"] = self._get_incident_entities(incident_id)
 
-            jsonify_item = orjson.dumps(serialized_incident).decode("utf-8")
-            alerts_batch.append(jsonify_item)
+            batch.append(orjson.dumps(serialized_incident).decode("utf-8"))
+            last_modified = self._as_utc(item.last_modified_time_utc)
+            versions.append((key, last_modified))
+            if last_modified is not None and (most_recent is None or last_modified > most_recent):
+                most_recent = last_modified
 
-            if stored_time is None:
-                stored_time = created_time
-            else:
-                if created_time is not None:
-                    stored_time = max(stored_time, created_time)
+            if len(batch) >= self.batch_limit:
+                self._forward_batch(batch, versions)
+                batch, versions = [], []
 
-            if (incoming_events_sum + 1) % self.batch_limit == 0:
-                alerts_len: int = len(alerts_batch)
-                self.log(message=f"Sending batch of {alerts_len} messages", level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(alerts_len)
-                self.push_events_to_intakes(events=alerts_batch)  # type: ignore[arg-type]
-                alerts_batch = []
+        if batch:
+            self._forward_batch(batch, versions)
 
-            incoming_events_sum += 1
-
-        if alerts_batch:
-            last_alerts_len: int = len(alerts_batch)
-            self.log(message=f"Sending batch of {last_alerts_len} messages", level="info")
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(last_alerts_len)
-            self.push_events_to_intakes(events=alerts_batch)  # type: ignore[arg-type]
-
-        if incoming_events_sum == 0:
-            self.log(message="No messages to forward", level="info")
+        if collected == 0:
+            self.log(message=f"No new incidents to forward ({duplicates} already forwarded)", level="info")
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
             return
 
-        INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(incoming_events_sum)
+        if most_recent:
+            self.cursor.offset = most_recent
+            self.from_date = self.cursor.offset
+            self._save_boundary_keys()
 
-        if stored_time:
-            self.cursor.offset = stored_time
-            self.from_date = stored_time
-
-            most_recent_timestamp = stored_time.timestamp()
-            events_lag = int(time.time() - most_recent_timestamp)
+            events_lag = int(time.time() - most_recent.timestamp())
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
 
     def run(self) -> None:

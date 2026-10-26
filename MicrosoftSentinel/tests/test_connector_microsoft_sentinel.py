@@ -100,7 +100,7 @@ def second_incident_item(incident_labels_object, incident_owner_object, addition
     incident = Incident()
     incident.additional_properties = {}
     incident.id = "/subscriptions/f00000000-0000-0000-0000-000000000000/resourceGroups/resource_group/providers/Microsoft.SecurityInsights/Incidents/"
-    incident.name = "7f744677-21e3-42c9"
+    incident.name = "8a855788-32f4-53da"
     incident.type = "Microsoft.SecurityInsights/Incidents"
     incident.system_data = None
     incident.etag = "00000000-0000-0000-0000-000000000000"
@@ -251,8 +251,8 @@ def test_run_method_coverage(trigger):
 
 def test_get_incidents_persists_checkpoint(trigger, incidents_list, symphony_storage):
     most_recent = datetime.now(UTC) - timedelta(hours=1)
-    incidents_list[1].created_time_utc = most_recent
-    incidents_list[0].created_time_utc = most_recent - timedelta(minutes=5)
+    incidents_list[0].last_modified_time_utc = most_recent - timedelta(minutes=5)
+    incidents_list[1].last_modified_time_utc = most_recent
 
     with (
         patch(
@@ -417,3 +417,108 @@ def test_entities_unexpected_error_propagates(trigger, first_incident_item):
             trigger.get_incidents()
 
     trigger.push_events_to_intakes.assert_not_called()
+
+
+def make_incident(base, name, last_modified, status="New"):
+    import copy
+
+    incident = copy.deepcopy(base)
+    incident.name = name
+    incident.last_modified_time_utc = last_modified
+    incident.status = status
+    return incident
+
+
+def poll(connector, incidents):
+    connector.push_events_to_intakes.reset_mock()
+    with (
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator"
+        ) as mock_incidents_iterator,
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._get_incident_entities"
+        ) as mock_get_incident_entities,
+    ):
+        mock_incidents_iterator.return_value = iter(incidents)
+        mock_get_incident_entities.return_value = []
+        connector.get_incidents()
+    return [
+        (event["name"], event["status"])
+        for c in connector.push_events_to_intakes.call_args_list
+        for event in map(orjson.loads, c.kwargs["events"])
+    ]
+
+
+def test_incidents_iterator_filters_and_orders_on_last_modified(trigger):
+    from unittest.mock import MagicMock
+
+    trigger.client = MagicMock()
+    trigger.from_date = datetime(2021, 9, 1, 2, 0, 0, tzinfo=timezone_plus_2())
+
+    trigger._incidents_iterator()
+
+    trigger.client.incidents.list.assert_called_once_with(
+        resource_group_name="resource_group",
+        workspace_name="workspace_name",
+        filter="properties/lastModifiedTimeUtc ge 2021-09-01T00:00:00.000000Z",
+        orderby="properties/lastModifiedTimeUtc asc",
+    )
+
+
+def timezone_plus_2():
+    from datetime import timezone
+
+    return timezone(timedelta(hours=2))
+
+
+def test_boundary_incidents_are_deduplicated(trigger, first_incident_item):
+    t1 = datetime.now(UTC) - timedelta(minutes=10)
+    t2 = t1 + timedelta(minutes=1)
+    a = make_incident(first_incident_item, "A", t1)
+    b = make_incident(first_incident_item, "B", t2)
+    c = make_incident(first_incident_item, "C", t2)
+
+    assert poll(trigger, [a, b]) == [("A", "New"), ("B", "New")]
+    assert trigger.cursor.offset == t2
+
+    # `ge` on the checkpoint returns B again, and C shares the boundary timestamp but was not visible before
+    assert poll(trigger, [b, c]) == [("C", "New")]
+    assert trigger.cursor.offset == t2
+
+    # nothing new: no push, no lag
+    assert poll(trigger, [b, c]) == []
+    trigger.push_events_to_intakes.assert_not_called()
+
+
+def test_duplicate_version_in_same_poll_is_forwarded_once(trigger, first_incident_item):
+    t1 = datetime.now(UTC) - timedelta(minutes=10)
+    a = make_incident(first_incident_item, "A", t1)
+    assert poll(trigger, [a, a]) == [("A", "New")]
+
+
+def test_updated_incident_is_forwarded_again(trigger, first_incident_item):
+    t1 = datetime.now(UTC) - timedelta(minutes=10)
+    t2 = t1 + timedelta(minutes=1)
+    a = make_incident(first_incident_item, "A", t1)
+    a_updated = make_incident(first_incident_item, "A", t2, status="Active")
+
+    assert poll(trigger, [a]) == [("A", "New")]
+    assert poll(trigger, [a, a_updated]) == [("A", "Active")]
+    assert trigger.cursor.offset == t2
+
+
+def test_boundary_dedup_survives_restart(trigger, first_incident_item, symphony_storage):
+    t1 = datetime.now(UTC) - timedelta(minutes=10)
+    a = make_incident(first_incident_item, "A", t1)
+    b = make_incident(first_incident_item, "B", t1)
+    c = make_incident(first_incident_item, "C", t1)
+    assert poll(trigger, [a, b]) == [("A", "New"), ("B", "New")]
+
+    restarted = MicrosoftSentineldConnector(module=trigger.module, data_path=symphony_storage)
+    restarted.configuration = trigger.configuration
+    restarted.push_events_to_intakes = Mock()
+    restarted.log = Mock()
+    restarted.log_exception = Mock()
+
+    assert restarted.from_date == t1
+    assert poll(restarted, [a, b, c]) == [("C", "New")]
