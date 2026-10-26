@@ -12,25 +12,6 @@ def handle_alerts_fqdn(fqdn: str) -> str:
     return f"https://api-{base_fqdn}/public_api/v1/alerts/get_alerts_multi_events"
 
 
-def handle_issues_fqdn(fqdn: str) -> str:
-    base_fqdn = fqdn.rstrip("/")
-    legacy_alerts_path = "/public_api/v1/alerts/get_alerts_multi_events"
-    issue_search_path = "/public_api/v1/issue/search"
-
-    if base_fqdn.endswith(legacy_alerts_path):
-        base_fqdn = base_fqdn[: -len(legacy_alerts_path)]
-
-    if base_fqdn.startswith("https://"):
-        if base_fqdn.endswith(issue_search_path):
-            return base_fqdn
-        return f"{base_fqdn}{issue_search_path}"
-
-    if base_fqdn.startswith("api-"):
-        return f"https://{base_fqdn}{issue_search_path}"
-
-    return f"https://api-{base_fqdn}{issue_search_path}"
-
-
 def handle_fqdn(fqdn: str) -> str:
     return handle_alerts_fqdn(fqdn)
 

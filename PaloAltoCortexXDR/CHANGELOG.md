@@ -7,13 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-### Added
-
-- Add a dedicated Cortex XDR Issues API v5 connector/trigger (`cortex_query_issues`) while keeping the legacy Alerts API v3 connector (`cortex_query_alerts`)
-
 ### Changed
 
-- Add helper logic to normalize FQDNs for both Alerts API v3 and Issues API v5 endpoints
+- Split the Issues API v5 connector into a dedicated module (`PaloAltoCortexXDRIssues`) and keep this module focused on Alerts API v3
 
 ## 2026-07-29 - 1.3.12
 
