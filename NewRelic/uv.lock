@@ -822,7 +822,7 @@ dev = [
 requires-dist = [
     { name = "requests", specifier = ">=2.33.0,<3" },
     { name = "requests-ratelimiter", specifier = ">=0.7.0,<0.8" },
-    { name = "sekoia-automation-sdk", specifier = ">=1.21.1,<2" },
+    { name = "sekoia-automation-sdk", specifier = ">=1.26.1,<2" },
 ]
 
 [package.metadata.requires-dev]
