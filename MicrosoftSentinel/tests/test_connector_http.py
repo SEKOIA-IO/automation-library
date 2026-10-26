@@ -66,7 +66,7 @@ def connector(symphony_storage):
         yield connector
 
 
-def incident_json(name: str, last_modified: str) -> dict:
+def incident_json(name: str, created: str) -> dict:
     return {
         "id": f"{INCIDENTS_URL}/{name}",
         "name": name,
@@ -79,8 +79,9 @@ def incident_json(name: str, last_modified: str) -> dict:
             "status": "New",
             "incidentNumber": 42,
             "incidentUrl": f"https://portal.azure.com/#asset/Microsoft_Azure_Security_Insights/Incident/{name}",
-            "createdTimeUtc": "2021-09-01T00:00:00.0000000Z",
-            "lastModifiedTimeUtc": last_modified,
+            "createdTimeUtc": created,
+            # modified later than created: only the creation date is tracked
+            "lastModifiedTimeUtc": "2099-01-01T00:00:00.0000000Z",
             "lastActivityTimeUtc": "2021-09-01T00:00:00Z",
             "firstActivityTimeUtc": "2021-09-01T00:00:00Z",
             "labels": [{"labelName": "phishing", "labelType": "User"}],
@@ -135,8 +136,8 @@ def test_poll_through_the_azure_sdk(connector):
         assert len(list_requests) == 2
         first = query(list_requests[0])
         expected_start = (from_date - timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        assert first["$filter"] == [f"properties/lastModifiedTimeUtc ge {expected_start}"]
-        assert first["$orderby"] == ["properties/lastModifiedTimeUtc asc"]
+        assert first["$filter"] == [f"properties/createdTimeUtc ge {expected_start}"]
+        assert first["$orderby"] == ["properties/createdTimeUtc asc"]
         assert query(list_requests[1])["$skipToken"] == ["page2"]
         assert list_requests[0].headers["Authorization"] == "Bearer fake-token"
 
@@ -151,7 +152,7 @@ def test_poll_through_the_azure_sdk(connector):
     assert errors._value.get() == errors_before + 1
 
     # 7 fractional digits are truncated to microseconds by the SDK: the checkpoint is C's date
-    assert events[2]["last_modified_time_utc"] == (t0 + timedelta(seconds=2)).isoformat()
+    assert events[2]["created_time_utc"] == (t0 + timedelta(seconds=2)).isoformat()
     assert connector.cursor.offset == t0 + timedelta(seconds=2)
 
     # the same incidents returned again by the lookback window are not forwarded twice

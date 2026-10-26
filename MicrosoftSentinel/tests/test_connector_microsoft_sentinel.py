@@ -257,8 +257,8 @@ def test_run_method_coverage(trigger):
 
 def test_get_incidents_persists_checkpoint(trigger, incidents_list, symphony_storage):
     most_recent = datetime.now(UTC) - timedelta(hours=1)
-    incidents_list[0].last_modified_time_utc = most_recent - timedelta(minutes=5)
-    incidents_list[1].last_modified_time_utc = most_recent
+    incidents_list[0].created_time_utc = most_recent - timedelta(minutes=5)
+    incidents_list[1].created_time_utc = most_recent
 
     with (
         patch(
@@ -496,12 +496,13 @@ def test_run_retries_deserialization_errors(trigger):
     trigger.log_exception.assert_called_once()
 
 
-def make_incident(base, name, last_modified, status="New"):
+def make_incident(base, name, created, status="New", last_modified=None):
     import copy
 
     incident = copy.deepcopy(base)
     incident.name = name
-    incident.last_modified_time_utc = last_modified
+    incident.created_time_utc = created
+    incident.last_modified_time_utc = last_modified or created
     incident.status = status
     return incident
 
@@ -526,7 +527,7 @@ def poll(connector, incidents):
     ]
 
 
-def test_incidents_iterator_filters_and_orders_on_last_modified(trigger):
+def test_incidents_iterator_filters_and_orders_on_created_time(trigger):
     from unittest.mock import MagicMock
 
     trigger.client = MagicMock()
@@ -538,8 +539,8 @@ def test_incidents_iterator_filters_and_orders_on_last_modified(trigger):
         resource_group_name="resource_group",
         workspace_name="workspace_name",
         # 5 minutes lookback before the checkpoint, in UTC
-        filter="properties/lastModifiedTimeUtc ge 2021-08-31T23:55:00.000000Z",
-        orderby="properties/lastModifiedTimeUtc asc",
+        filter="properties/createdTimeUtc ge 2021-08-31T23:55:00.000000Z",
+        orderby="properties/createdTimeUtc asc",
     )
 
 
@@ -568,21 +569,25 @@ def test_boundary_incidents_are_deduplicated(trigger, first_incident_item):
     trigger.push_events_to_intakes.assert_not_called()
 
 
-def test_duplicate_version_in_same_poll_is_forwarded_once(trigger, first_incident_item):
+def test_duplicate_in_same_poll_is_forwarded_once(trigger, first_incident_item):
     t1 = datetime.now(UTC) - timedelta(minutes=10)
     a = make_incident(first_incident_item, "A", t1)
     assert poll(trigger, [a, a]) == [("A", "New")]
 
 
-def test_updated_incident_is_forwarded_again(trigger, first_incident_item):
+def test_modified_incident_is_not_forwarded_again(trigger, first_incident_item, symphony_storage):
     t1 = datetime.now(UTC) - timedelta(minutes=10)
-    t2 = t1 + timedelta(minutes=1)
     a = make_incident(first_incident_item, "A", t1)
-    a_updated = make_incident(first_incident_item, "A", t2, status="Active")
+    # same incident, same creation date, modified later (status change)
+    a_modified = make_incident(first_incident_item, "A", t1, status="Active", last_modified=t1 + timedelta(minutes=3))
 
     assert poll(trigger, [a]) == [("A", "New")]
-    assert poll(trigger, [a, a_updated]) == [("A", "Active")]
-    assert trigger.cursor.offset == t2
+    assert poll(trigger, [a_modified]) == []
+    assert trigger.cursor.offset == t1
+
+    # neither after a restart
+    restarted = new_connector(trigger.module, trigger.configuration, symphony_storage)
+    assert poll(restarted, [a_modified]) == []
 
 
 def test_boundary_dedup_survives_restart(trigger, first_incident_item, symphony_storage):
@@ -629,8 +634,8 @@ def test_checkpoint_advanced_per_batch(trigger, first_incident_item, symphony_st
     assert trigger.cursor.offset == t0 + timedelta(seconds=1)
     # C and D are not marked as forwarded
     assert sorted(persisted_dedup_keys(symphony_storage)) == [
-        f"A|{t0.isoformat()}",
-        f"B|{(t0 + timedelta(seconds=1)).isoformat()}",
+        "A",
+        "B",
     ]
 
     # the next poll does not re-send A nor B, and collects C and D again
@@ -740,14 +745,14 @@ def test_late_incident_within_lookback_is_forwarded(trigger, first_incident_item
     collected = INCOMING_EVENTS.labels(intake_key="0123456789")
     collected_before = collected._value.get()
 
-    # LATE became visible after the first poll with a modification date older than the checkpoint
+    # LATE became visible after the first poll with a creation date older than the checkpoint
     assert poll(trigger, [a, late, b]) == [("LATE", "New")]
-    # only the newly forwarded version is counted as collected
+    # only the newly forwarded incident is counted as collected
     assert collected._value.get() == collected_before + 1
     # the checkpoint never moves backward
     assert trigger.cursor.offset == t0 + timedelta(minutes=2)
 
-    # the versions of the window are not sent again after a restart
+    # the incidents of the window are not sent again after a restart
     restarted = new_connector(trigger.module, trigger.configuration, symphony_storage)
     assert poll(restarted, [a, late, b, c]) == [("C", "New")]
     assert restarted.cursor.offset == t0 + timedelta(minutes=3)
@@ -761,17 +766,17 @@ def test_dedup_keys_older_than_lookback_are_pruned(trigger, first_incident_item,
 
     poll(trigger, [a, b])
     assert set(persisted_dedup_keys(symphony_storage)) == {
-        f"A|{t0.isoformat()}",
-        f"B|{(t0 + timedelta(minutes=4)).isoformat()}",
+        "A",
+        "B",
     }
 
     # checkpoint moves to t0 + 10 min: A is out of the [checkpoint - 5 min, checkpoint] window, B too
     poll(trigger, [c])
-    assert set(persisted_dedup_keys(symphony_storage)) == {f"C|{(t0 + timedelta(minutes=10)).isoformat()}"}
-    assert list(trigger._forwarded) == [f"C|{(t0 + timedelta(minutes=10)).isoformat()}"]
+    assert persisted_dedup_keys(symphony_storage) == {"C": (t0 + timedelta(minutes=10)).isoformat()}
+    assert list(trigger._forwarded) == ["C"]
 
     restarted = new_connector(trigger.module, trigger.configuration, symphony_storage)
-    assert list(restarted._forwarded) == [f"C|{(t0 + timedelta(minutes=10)).isoformat()}"]
+    assert list(restarted._forwarded) == ["C"]
 
 
 def test_dedup_keys_hard_cap(trigger, first_incident_item, symphony_storage):
@@ -783,8 +788,8 @@ def test_dedup_keys_hard_cap(trigger, first_incident_item, symphony_storage):
     connector.configuration.chunk_size = 10
 
     assert len(poll(connector, incidents)) == 3
-    # only the 2 most recent versions are remembered and persisted
+    # only the 2 most recent incidents are remembered and persisted
     assert sorted(persisted_dedup_keys(symphony_storage)) == [
-        f"B|{(t0 + timedelta(seconds=1)).isoformat()}",
-        f"C|{(t0 + timedelta(seconds=2)).isoformat()}",
+        "B",
+        "C",
     ]

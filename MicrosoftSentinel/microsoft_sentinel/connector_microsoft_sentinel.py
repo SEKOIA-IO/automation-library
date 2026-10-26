@@ -35,14 +35,15 @@ from microsoft_sentinel.metrics import (
 from microsoft_sentinel.utils import additional_data_to_dict, labels_data_to_dict, owner_data_to_dict
 
 MAX_BATCH_SIZE = 1000
-# incidents are queried from `checkpoint - LOOKBACK` to collect the ones written late, with a modification
+# incidents are queried from `checkpoint - LOOKBACK` to collect the ones written late, with a creation
 # date older than the checkpoint
 LOOKBACK = timedelta(minutes=5)
-# hard cap of the incident versions remembered (and persisted) to avoid forwarding the same version twice
+# hard cap of the incidents remembered (and persisted) to avoid forwarding the same incident twice
 DEDUP_CACHE_SIZE = 10_000
-# versions forwarded within the lookback window, persisted to survive restarts
+# incidents forwarded within the lookback window, persisted to survive restarts
 DEDUP_KEYS_FILE = "incidents_dedup.json"
-INCIDENTS_ORDER_BY = "properties/lastModifiedTimeUtc asc"
+# the creation date never changes: paging on it cannot skip an incident modified during the poll
+INCIDENTS_ORDER_BY = "properties/createdTimeUtc asc"
 # maximum wait, in seconds, between two polls after consecutive failures
 MAX_BACKOFF = 300
 
@@ -61,7 +62,7 @@ class MicrosoftSentineldConnector(Connector):
         )
         self.from_date = self.cursor.offset
 
-        # versions (name + lastModifiedTimeUtc) of the incidents already forwarded -> their lastModifiedTimeUtc
+        # names of the incidents already forwarded -> their createdTimeUtc (used to prune the lookback window)
         self._forwarded: LRUCache[str, datetime] = LRUCache(maxsize=DEDUP_CACHE_SIZE)
         self._dedup_store = PersistentJSON(DEDUP_KEYS_FILE, self.data_path)
         self._load_dedup_keys()
@@ -69,9 +70,9 @@ class MicrosoftSentineldConnector(Connector):
     @property
     def incidents_filter(self) -> str:
         # `ge` on a window before the checkpoint: incidents sharing the checkpoint date or written late are
-        # collected again, the already forwarded versions are deduplicated
+        # collected again, the already forwarded ones are deduplicated
         window_start = self._to_RFC3339(self.from_date - LOOKBACK)
-        return f"properties/lastModifiedTimeUtc ge {window_start}"
+        return f"properties/createdTimeUtc ge {window_start}"
 
     @cached_property
     def batch_limit(self) -> int:
@@ -173,43 +174,43 @@ class MicrosoftSentineldConnector(Connector):
 
     def _dedup_key(self, incident: Incident) -> str | None:
         """
-        Key identifying a given version of an incident: its name and its last modification date.
+        Key identifying an incident: its name. An incident is forwarded once, its later updates are not.
+        Incidents without a creation date cannot be checkpointed nor pruned from the window: no key.
         """
         name = getattr(incident, "name", None)
-        last_modified = self._as_utc(incident.last_modified_time_utc)
-        if not name or last_modified is None:
+        if not name or incident.created_time_utc is None:
             return None
-        return f"{name}|{last_modified.isoformat()}"
+        return str(name)
 
     def _load_dedup_keys(self) -> None:
         with self._dedup_store as store:
             keys: dict[str, str] = store.get("keys", {})
 
-        versions = sorted((datetime.fromisoformat(last_modified), key) for key, last_modified in keys.items())
-        # insert the oldest versions first so they are the first evicted from the LRU cache
-        for last_modified, key in versions:
-            self._forwarded[key] = last_modified
+        incidents = sorted((datetime.fromisoformat(created), name) for name, created in keys.items())
+        # insert the oldest incidents first so they are the first evicted from the LRU cache
+        for created, name in incidents:
+            self._forwarded[name] = created
 
     def _save_dedup_keys(self) -> None:
         """
-        Persist the versions forwarded within the lookback window, and forget the older ones: they are
+        Persist the incidents forwarded within the lookback window, and forget the older ones: they are
         no longer returned by the incidents query.
         """
         window_start = self.cursor.offset - LOOKBACK
-        for key, last_modified in list(self._forwarded.items()):
-            if last_modified < window_start:
-                del self._forwarded[key]
+        for name, created in list(self._forwarded.items()):
+            if created < window_start:
+                del self._forwarded[name]
 
         with self._dedup_store as store:
             store.clear()
-            store["keys"] = {key: last_modified.isoformat() for key, last_modified in self._forwarded.items()}
+            store["keys"] = {name: created.isoformat() for name, created in self._forwarded.items()}
 
-    def _forward_batch(self, batch: list[EventType], versions: list[tuple[str | None, datetime | None]]) -> None:
+    def _forward_batch(self, batch: list[EventType], created_dates: list[tuple[str | None, datetime | None]]) -> None:
         """
-        Push a batch of incidents, then advance the checkpoint to the most recent forwarded modification date.
+        Push a batch of incidents, then advance the checkpoint to the most recent forwarded creation date.
 
-        Incidents are requested in ascending lastModifiedTimeUtc order, so once a batch is pushed every
-        incident modified before its most recent date has been forwarded. A later failure in the same poll
+        Incidents are requested in ascending createdTimeUtc order, so once a batch is pushed every
+        incident created before its most recent date has been forwarded. A later failure in the same poll
         resumes from this batch instead of collecting the already pushed ones again.
 
         The SDK logs and swallows the errors of the intake: if fewer event ids than events sent are returned,
@@ -218,7 +219,7 @@ class MicrosoftSentineldConnector(Connector):
         # the SDK silently discards events bigger than EVENT_BYTES_MAX_SIZE (measured on the string length):
         # drop them here, so the number of returned event ids can be compared with the number of events sent
         events: list[EventType] = []
-        for event, (key, _) in zip(batch, versions, strict=True):
+        for event, (key, _) in zip(batch, created_dates, strict=True):
             if len(str(event)) > EVENT_BYTES_MAX_SIZE:
                 self.log(
                     message=f"Incident {key} is bigger than {EVENT_BYTES_MAX_SIZE} bytes and cannot be forwarded",
@@ -236,11 +237,11 @@ class MicrosoftSentineldConnector(Connector):
                     f"Only {len(event_ids)} of {len(events)} incidents were accepted by the intake"
                 )
 
-        for key, last_modified in versions:
-            if key is not None and last_modified is not None:
-                self._forwarded[key] = last_modified
+        for key, created in created_dates:
+            if key is not None and created is not None:
+                self._forwarded[key] = created
 
-        dates = [last_modified for _, last_modified in versions if last_modified is not None]
+        dates = [created for _, created in created_dates if created is not None]
         if dates:
             # the checkpoint setter only persists dates more recent than the current checkpoint, so a batch of
             # late incidents does not move it backward
@@ -252,7 +253,7 @@ class MicrosoftSentineldConnector(Connector):
         self.log(message="Start fetching alerts from Microsoft sentinel", level="info")
 
         batch: list[EventType] = []
-        versions: list[tuple[str | None, datetime | None]] = []
+        created_dates: list[tuple[str | None, datetime | None]] = []
         seen_in_poll: set[str] = set()
         collected = 0
         duplicates = 0
@@ -260,7 +261,7 @@ class MicrosoftSentineldConnector(Connector):
             key = self._dedup_key(item)
             if key is not None:
                 if key in self._forwarded or key in seen_in_poll:
-                    # this version of the incident was already forwarded (lookback window of the query)
+                    # this incident was already forwarded (lookback window of the query)
                     duplicates += 1
                     continue
                 seen_in_poll.add(key)
@@ -275,19 +276,19 @@ class MicrosoftSentineldConnector(Connector):
 
             # default=str: an unexpected field type must not crash the whole poll
             batch.append(orjson.dumps(serialized_incident, default=str).decode("utf-8"))
-            versions.append((key, self._as_utc(item.last_modified_time_utc)))
+            created_dates.append((key, self._as_utc(item.created_time_utc)))
 
             if len(batch) >= self.batch_limit:
-                self._forward_batch(batch, versions)
-                batch, versions = [], []
+                self._forward_batch(batch, created_dates)
+                batch, created_dates = [], []
 
         if batch:
-            self._forward_batch(batch, versions)
+            self._forward_batch(batch, created_dates)
 
         if collected == 0:
             self.log(message=f"No new incidents to forward ({duplicates} already forwarded)", level="info")
 
-        # lag from the most recent forwarded modification date (the checkpoint), on every poll: an idle
+        # lag from the most recent forwarded creation date (the checkpoint), on every poll: an idle
         # Sentinel workspace and a stuck connector both show a growing lag
         events_lag = int(time.time() - self.cursor.offset.timestamp())
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
