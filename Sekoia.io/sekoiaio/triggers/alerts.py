@@ -9,7 +9,7 @@ from typing import Any, ClassVar
 import orjson
 import requests
 import urllib3
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from sekoiaio.utils import user_agent
@@ -59,16 +59,7 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
             self.log_exception(exp, message="Failed to fetch alert from Alert API")
             return
 
-        if (
-            (rule_filter := self.configuration.get("rule_filter"))
-            and alert["rule"]["name"] != rule_filter
-            and alert["rule"]["uuid"] != rule_filter
-        ):
-            return
-
-        if (rule_names_filter := self.configuration.get("rule_names_filter")) and alert["rule"][
-            "name"
-        ] not in rule_names_filter:
+        if not self._match_rule_filters(alert):
             return
 
         work_dir = self._data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
@@ -121,6 +112,22 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
 
     def _filter_notifications(self, message) -> bool:
         return True
+
+    def _match_rule_filters(self, alert: dict[str, Any]) -> bool:
+        """Check the alert against `rule_filter` / `rule_names_filter`.
+
+        Surrounding whitespace in the configured values is ignored: a value
+        pasted with a leading or trailing space would otherwise never match
+        and the alerts would be silently dropped.
+        """
+        rule = alert.get("rule") or {}
+
+        rule_filter = (self.configuration.get("rule_filter") or "").strip()
+        if rule_filter and rule_filter not in (rule.get("name"), rule.get("uuid")):
+            return False
+
+        rule_names_filter = [name.strip() for name in self.configuration.get("rule_names_filter") or []]
+        return not any(rule_names_filter) or rule.get("name") in rule_names_filter
 
     @retry(
         reraise=True,
@@ -226,16 +233,7 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
             self.log_exception(exp, message="Failed to fetch alert from Alert API")
             return
 
-        if (
-            (rule_filter := self.configuration.get("rule_filter"))
-            and alert["rule"]["name"] != rule_filter
-            and alert["rule"]["uuid"] != rule_filter
-        ):
-            return
-
-        if (rule_names_filter := self.configuration.get("rule_names_filter")) and alert["rule"][
-            "name"
-        ] not in rule_names_filter:
+        if not self._match_rule_filters(alert):
             return
 
         work_dir = self._data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
@@ -387,6 +385,23 @@ class AlertEventsThresholdConfiguration(BaseModel):
         le=10000,
         description="Maximum number of events to fetch per trigger execution",
     )
+
+    @field_validator("rule_filter", mode="before")
+    @classmethod
+    def strip_rule_filter(cls, value):
+        """Ignore surrounding whitespace so a pasted rule name still matches."""
+        if isinstance(value, str):
+            return value.strip() or None
+        return value
+
+    @field_validator("rule_names_filter", mode="before")
+    @classmethod
+    def strip_rule_names_filter(cls, value):
+        """Ignore surrounding whitespace and drop blank entries."""
+        if isinstance(value, list):
+            stripped = [name.strip() if isinstance(name, str) else name for name in value]
+            return [name for name in stripped if name != ""]
+        return value
 
     @model_validator(mode="after")
     def validate_at_least_one_threshold(self):

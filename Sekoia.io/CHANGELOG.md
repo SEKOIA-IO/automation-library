@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-26 - 2.79.2
+
+### Fixed
+
+- Alert triggers: ignore leading and trailing whitespace in `rule_filter` and `rule_names_filter`, which previously caused matching alerts to be silently dropped
+
 ## 2026-10-22 - 2.79.1
 
 ### Changed
