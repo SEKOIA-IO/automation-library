@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.122.1 - 2026-10-26
+
+### Changed
+
+- Exclude the lint dependencies from the Docker image
+- Pin the uv image used to build the Docker image to 0.13.5
+
 ## 1.122.0 - 2026-10-06
 
 ### Added

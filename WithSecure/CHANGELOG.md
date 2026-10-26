@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## 2026-10-26 - 2.17.2
+
+### Changed
+
+- Exclude the lint dependencies from the Docker image
+- Pin the uv image used to build the Docker image to 0.13.5
+
 ## 2026-09-15 - 2.17.1
 
 ### Fixed
