@@ -301,3 +301,33 @@ def test_run_stops_promptly_while_waiting(trigger):
     assert not thread.is_alive()
     assert time.monotonic() - start < 5
     assert calls == [1]
+
+
+@pytest.mark.parametrize(("chunk_size", "expected"), [(2, 2), (1000, 1000), (5000, 1000), (0, 1), (-3, 1)])
+def test_batch_limit(trigger, chunk_size, expected):
+    trigger.configuration.chunk_size = chunk_size
+    assert trigger.batch_limit == expected
+
+
+def test_get_incidents_batches_by_chunk_size(trigger, incidents_list, first_incident_item):
+    import copy
+
+    third = copy.deepcopy(first_incident_item)
+    third.name = "third"
+    incidents = [*incidents_list, third]
+
+    with (
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator"
+        ) as mock_incidents_iterator,
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._get_incident_entities"
+        ) as mock_get_incident_entities,
+    ):
+        mock_incidents_iterator.return_value = incidents
+        mock_get_incident_entities.return_value = []
+
+        trigger.get_incidents()
+
+    # chunk_size is 2 in the fixture
+    assert [len(c.kwargs["events"]) for c in trigger.push_events_to_intakes.call_args_list] == [2, 1]

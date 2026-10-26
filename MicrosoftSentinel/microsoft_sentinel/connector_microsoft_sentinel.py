@@ -25,6 +25,8 @@ from microsoft_sentinel import (
 from microsoft_sentinel.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
 from microsoft_sentinel.utils import additional_data_to_dict, labels_data_to_dict, owner_data_to_dict
 
+MAX_BATCH_SIZE = 1000
+
 
 class MicrosoftSentineldConnector(Connector):
     module: MicrosoftSentinelModule
@@ -47,7 +49,8 @@ class MicrosoftSentineldConnector(Connector):
 
     @cached_property
     def batch_limit(self) -> int:
-        return max(self.configuration.chunk_size, 1000)
+        # chunk_size is an upper bound, capped to MAX_BATCH_SIZE, with a floor of 1
+        return max(1, min(self.configuration.chunk_size, MAX_BATCH_SIZE))
 
     @cached_property
     def client(self) -> SecurityInsights:
