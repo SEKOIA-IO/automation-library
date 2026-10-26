@@ -108,15 +108,16 @@ class TrendMicroWorker(Thread):
     # Several logs can share the same mail and action (e.g. one per recipient, or successive deferrals):
     # the recipient and the generation time are part of the identity of a log
     EVENT_KEY_FIELDS = ("mailID", "messageID", "action", "recipient", "genTime")
-    LEGACY_EVENT_KEY_FIELDS = ("mailID", "messageID", "action")
 
     @classmethod
     def get_event_metadata(cls, event: dict[str, Any]) -> dict[str, Any]:
         return {field: event.get(field) for field in cls.EVENT_KEY_FIELDS}
 
-    @staticmethod
-    def get_event_key(metadata: dict[str, Any], fields: tuple[str, ...]) -> tuple:
-        return tuple(tuple(value) if isinstance(value, list) else value for value in map(metadata.get, fields))
+    @classmethod
+    def get_event_key(cls, metadata: dict[str, Any]) -> tuple:
+        return tuple(
+            tuple(value) if isinstance(value, list) else value for value in map(metadata.get, cls.EVENT_KEY_FIELDS)
+        )
 
     def set_recent_pushed_events(self, events: list[Any]) -> None:
         self.connector.context_lock.acquire()
@@ -216,14 +217,10 @@ class TrendMicroWorker(Thread):
         batch_start_time = time.time()
 
         previous_timestamp = self.get_last_timestamp()
-        recent_pushed_events: set[tuple] = set()
-        # events cached by previous versions only have the legacy fields
-        legacy_pushed_events: set[tuple] = set()
-        for metadata in self.get_recent_pushed_events():
-            if "genTime" in metadata:
-                recent_pushed_events.add(self.get_event_key(metadata, self.EVENT_KEY_FIELDS))
-            else:
-                legacy_pushed_events.add(self.get_event_key(metadata, self.LEGACY_EVENT_KEY_FIELDS))
+        # Events cached by previous versions lack recipient and genTime: they never match, so the few events of
+        # the boundary second are pushed again once after an upgrade, rather than dropping distinct logs that share
+        # the same mail and action
+        recent_pushed_events = {self.get_event_key(metadata) for metadata in self.get_recent_pushed_events()}
 
         # keep only the genTime and the metadata of the pushed events, not their payloads,
         # to bound the memory used by a large catch-up window
@@ -237,9 +234,8 @@ class TrendMicroWorker(Thread):
             # skip the events already pushed in the previous run (boundary second) or earlier in this run
             next_events = []
             for event in events:
-                event_key = self.get_event_key(event, self.EVENT_KEY_FIELDS)
-                legacy_key = self.get_event_key(event, self.LEGACY_EVENT_KEY_FIELDS)
-                if event_key not in recent_pushed_events and legacy_key not in legacy_pushed_events:
+                event_key = self.get_event_key(event)
+                if event_key not in recent_pushed_events:
                     recent_pushed_events.add(event_key)
                     next_events.append(event)
 

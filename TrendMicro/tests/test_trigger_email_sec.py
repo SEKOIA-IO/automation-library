@@ -408,22 +408,23 @@ def test_logs_of_the_same_mail_are_not_deduplicated(trigger):
     assert pushed == [deferred_first, deferred_again, other_recipient]
 
 
-def test_legacy_recent_pushed_events_are_still_deduplicated(trigger):
+def test_legacy_recent_pushed_events_do_not_drop_distinct_logs(trigger):
     url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
     checkpoint = int(time.time()) - 3600
-    already_pushed = build_log("mail-1", checkpoint)
-    new_log = build_log("mail-2", checkpoint + 10)
+    boundary_log = build_log("mail-1", checkpoint) | {"action": "Deferred"}
+    later_deferral = build_log("mail-1", checkpoint + 60) | {"action": "Deferred"}
+    other_recipient = later_deferral | {"recipient": "other@example.com"}
 
     consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
     consumer.set_last_timestamp(checkpoint)
     # cache written by a previous version of the connector, without recipient and genTime
     with trigger.context as cache:
         cache["accepted_traffic"]["recent_pushed_events"] = [
-            {"mailID": "mail-1", "messageID": "<mail-1@example.com>", "action": "Delivered"}
+            {"mailID": "mail-1", "messageID": "<mail-1@example.com>", "action": "Deferred"}
         ]
 
     with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
-        mock_requests.get(url, status_code=200, json={"logs": [already_pushed, new_log]})
+        mock_requests.get(url, status_code=200, json={"logs": [boundary_log, later_deferral, other_recipient]})
         consumer.next_batch()
 
     pushed = [
@@ -431,5 +432,10 @@ def test_legacy_recent_pushed_events_are_still_deduplicated(trigger):
         for call in trigger.push_events_to_intakes.call_args_list
         for event in call.kwargs["events"]
     ]
-    assert pushed == [new_log]
-    assert consumer.get_recent_pushed_events() == [TrendMicroWorker.get_event_metadata(new_log)]
+    # the logs sharing the legacy key are not dropped; the boundary log is pushed again once
+    assert pushed == [boundary_log, later_deferral, other_recipient]
+    assert consumer.get_last_timestamp() == checkpoint + 60
+    assert consumer.get_recent_pushed_events() == [
+        TrendMicroWorker.get_event_metadata(later_deferral),
+        TrendMicroWorker.get_event_metadata(other_recipient),
+    ]
