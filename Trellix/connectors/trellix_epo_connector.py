@@ -14,7 +14,7 @@ from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 from yarl import URL
 
-from client.http_client import EpoEventsPage, TrellixHttpClient
+from client.http_client import SECONDS_PER_DAY, SECONDS_PER_MINUTE, EpoEventsPage, TrellixHttpClient
 from client.schemas.attributes.epo_events import EpoEventAttributes
 from client.schemas.trellix_response import TrellixResponse
 from connectors import TrellixModule
@@ -89,8 +89,8 @@ class TrellixEpoConnector(AsyncConnector):
         if self._trellix_client is not None:
             return self._trellix_client
 
-        rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
-        daily_rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_day)
+        rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute, time_period=SECONDS_PER_MINUTE)
+        daily_rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_day, time_period=SECONDS_PER_DAY)
 
         self._trellix_client = TrellixHttpClient(
             client_id=self.module.configuration.client_id,

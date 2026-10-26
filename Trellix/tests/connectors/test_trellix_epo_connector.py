@@ -742,3 +742,22 @@ def test_trellix_epo_connector_run_without_existing_event_loop(connector):
     connector.run()
 
     connector.async_run.assert_awaited_once()
+
+
+def test_trellix_epo_connector_rate_limiters(connector: TrellixEpoConnector):
+    """The per-minute and per-day limiters use the configured values over 60 s and 86400 s windows."""
+    connector.configuration = {
+        **connector.configuration.model_dump(),
+        "ratelimit_per_minute": 42,
+        "ratelimit_per_day": 1234,
+    }
+    connector._trellix_client = None
+
+    http_client = connector.trellix_client
+
+    assert http_client._rate_limiter is not None
+    assert http_client._rate_limiter.max_rate == 42
+    assert http_client._rate_limiter.time_period == 60
+    assert http_client._rate_limiter_per_day is not None
+    assert http_client._rate_limiter_per_day.max_rate == 1234
+    assert http_client._rate_limiter_per_day.time_period == 86400

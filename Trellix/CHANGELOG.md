@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trellix ePO: save the checkpoint after each successful push so that events are no longer re-collected from the last 7 days at every iteration
 - Trellix ePO: do not forward twice the events of the checkpoint second
 - Trellix ePO: read all the available pages in each run (following `links.next`, or `page[offset]` otherwise) instead of one page, so the connector catches up faster and is no longer stuck when more than `records_per_request` events share the same second
+- Trellix ePO and EDR: apply `ratelimit_per_day` over a day instead of a minute, and log when the daily limit starts throttling requests
 
 ## 2024-10-30 - 1.11.0
 

@@ -1,10 +1,12 @@
 """Tests for http client."""
 
+import asyncio
 from typing import Any
 from unittest.mock import patch
 
 import orjson
 import pytest
+from aiolimiter import AsyncLimiter
 from aioresponses import aioresponses
 from faker import Faker
 
@@ -427,3 +429,34 @@ async def test_trellix_http_client_api_limit_exhausted(
 
             assert result == expected_result_dto
             mock_sleep.assert_called_once_with(300)
+
+
+@pytest.mark.asyncio
+async def test_trellix_http_client_logs_daily_rate_limit_once(session_faker: Faker):
+    """Reaching the daily budget is logged once, and so is the recovery, not every throttled request."""
+    TrellixHttpClient.set_rate_limiter(AsyncLimiter(1000, time_period=60))
+    # 2 requests per 0.1 s: the third request of the burst waits for ~0.05 s
+    TrellixHttpClient.set_rate_limiter_per_day(AsyncLimiter(2, time_period=0.1))
+    TrellixHttpClient._daily_rate_limit_reached = False
+
+    try:
+        with patch("client.http_client.logger") as mocked_logger:
+            for _ in range(4):
+                async with TrellixHttpClient.session():
+                    pass
+
+            assert mocked_logger.warning.call_count == 1
+            assert "Daily request limit of 2 reached" in mocked_logger.warning.call_args.args[0].format(
+                **mocked_logger.warning.call_args.kwargs
+            )
+
+            await asyncio.sleep(0.2)
+            async with TrellixHttpClient.session():
+                pass
+
+            assert mocked_logger.info.call_count == 1
+            assert mocked_logger.warning.call_count == 1
+    finally:
+        TrellixHttpClient._rate_limiter = None
+        TrellixHttpClient._rate_limiter_per_day = None
+        TrellixHttpClient._daily_rate_limit_reached = False

@@ -8,6 +8,7 @@ from typing import Any
 
 from aiohttp_retry import ExponentialRetry, RetryClient
 from aiolimiter import AsyncLimiter
+from loguru import logger
 from yarl import URL
 
 from .retry import RetryWithRateLimiter
@@ -19,6 +20,9 @@ from .schemas.attributes.epo_events import EpoEventAttributes
 from .schemas.token import Scope
 from .schemas.trellix_response import TrellixResponse
 from .token_refresher import TrellixTokenRefresher
+
+SECONDS_PER_MINUTE = 60
+SECONDS_PER_DAY = 86400
 
 
 class AuthenticationError(ValueError):
@@ -42,6 +46,7 @@ class TrellixHttpClient:
     _session: RetryClient | None = None
     _rate_limiter: AsyncLimiter | None = None
     _rate_limiter_per_day: AsyncLimiter | None = None
+    _daily_rate_limit_reached: bool = False
     _token_refresher: TrellixTokenRefresher | None = None
 
     def __init__(
@@ -123,6 +128,30 @@ class TrellixHttpClient:
         cls._rate_limiter_per_day = rate_limiter
 
     @classmethod
+    def _log_daily_rate_limit_state(cls, rate_limiter: AsyncLimiter) -> None:
+        """
+        Log once when the daily request budget is exhausted, and once when requests flow freely again.
+
+        The limiter is a leaky bucket: once the burst of `max_rate` requests is spent, requests are spread
+        at `max_rate / time_period` per second (one every 43.2 seconds for 2000 per day).
+
+        Args:
+            rate_limiter: AsyncLimiter
+        """
+        has_capacity = rate_limiter.has_capacity()
+        if not has_capacity and not cls._daily_rate_limit_reached:
+            logger.warning(
+                "Daily request limit of {max_rate} reached: requests are now throttled to one every "
+                "{interval:.1f} seconds",
+                max_rate=rate_limiter.max_rate,
+                interval=rate_limiter.time_period / rate_limiter.max_rate,
+            )
+        elif has_capacity and cls._daily_rate_limit_reached:
+            logger.info("Daily request limit no longer throttling requests")
+
+        cls._daily_rate_limit_reached = not has_capacity
+
+    @classmethod
     @asynccontextmanager
     async def session(cls) -> AsyncGenerator[RetryClient]:
         """
@@ -139,6 +168,7 @@ class TrellixHttpClient:
             )
 
         if cls._rate_limiter and cls._rate_limiter_per_day:
+            cls._log_daily_rate_limit_state(cls._rate_limiter_per_day)
             async with cls._rate_limiter_per_day:
                 async with cls._rate_limiter:
                     yield cls._session
