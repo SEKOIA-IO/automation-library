@@ -168,6 +168,7 @@ class MicrosoftSentineldConnector(Connector):
         INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(incoming_events_sum)
 
         if stored_time:
+            self.cursor.offset = stored_time
             self.from_date = stored_time
 
             most_recent_timestamp = stored_time.timestamp()

@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 1.1.0
+## 2026-10-26 - 1.1.1
+
+### Fixed
+
+- Persist the incidents checkpoint so the connector resumes from the last collected incident after a restart
+
+## 2026-05-27 - 1.1.0
 
 ### Added
 - Fetch and forward incident entities from the list-entities endpoint.

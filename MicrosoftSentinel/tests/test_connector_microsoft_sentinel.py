@@ -1,6 +1,6 @@
 import pytest
 import orjson
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch, call
 
 
@@ -249,3 +249,30 @@ def test_run_method_coverage(trigger):
 
     with pytest.raises(Exception):
         trigger.run()
+
+
+def test_get_incidents_persists_checkpoint(trigger, incidents_list, symphony_storage):
+    most_recent = datetime.now(timezone.utc) - timedelta(hours=1)
+    incidents_list[1].created_time_utc = most_recent
+    incidents_list[0].created_time_utc = most_recent - timedelta(minutes=5)
+
+    with (
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator"
+        ) as mock_incidents_iterator,
+        patch(
+            "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._get_incident_entities"
+        ) as mock_get_incident_entities,
+    ):
+        mock_incidents_iterator.return_value = incidents_list
+        mock_get_incident_entities.return_value = []
+
+        trigger.get_incidents()
+
+    assert trigger.push_events_to_intakes.called
+    assert trigger.from_date == most_recent
+
+    # a new connector instance on the same data path resumes from the persisted checkpoint
+    new_trigger = MicrosoftSentineldConnector(module=MicrosoftSentinelModule(), data_path=symphony_storage)
+    assert new_trigger.cursor.offset == most_recent
+    assert new_trigger.from_date == most_recent
