@@ -7,19 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-09-17 - 1.0.20
+## 2026-10-26 - 1.0.20
 
 ### Fixed
 
-- Fix `_build_asset_map` validating Export Assets v2 payloads with the `AssetDetails` model (Get Asset Details endpoint): the mismatched field names made every field resolve to `None`, so the device hostname fell back to the literal `"unknown"` and all vulnerabilities collapsed onto a single asset. Assets are now validated with `AssetExportV2` and read using the export field names
-- Preserve the human-readable `name` from the Get Asset Details endpoint in the device hostname fallback chain, so fallback-enriched assets no longer default to `"unknown"`
-- Fix checkpoint using `first_found` instead of `last_found`, causing the connector to re-fetch all vulnerabilities on every run
-- Add finding ID deduplication cache to prevent duplicate assets from Tenable's inclusive `since` filter
+- Read assets with the Export Assets v2 model
+- Fix duplicate vulnerabilities on every run: the checkpoint follows the latest of `last_found` and `last_fixed`, and the findings at the checkpoint time are deduplicated
+- State changes (fixed, reopened) of an already sent vulnerability are always sent
+- No more missed vulnerabilities: the checkpoint is saved only after a complete export and once every batch is accepted by Sekoia.io
+- First run collects all open and reopened vulnerabilities; an old checkpoint is no longer moved forward
+- Same device hostname fallback (hostname, name, FQDN) whatever the asset source
+- A failed asset export no longer triggers a new export for every vulnerability
 
 ### Changed
 
-- Add `_asset_details_to_export` adapter converting the Get Asset Details fallback response into the `AssetExportV2` shape, so downstream device building uses a single homogeneous model
-- Add optional `name` field to the `AssetExportV2` model to carry the details endpoint label through the conversion
+- The existing checkpoint is reused: no full re-fetch on upgrade
+- Asset cache refreshed every 6 hours
+- Mapping code split into `TenableVulnerabilityMapper` and helper functions; mapping documentation updated
 
 ## 2026-08-28 - 1.0.19
 
