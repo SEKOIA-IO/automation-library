@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Update Flare description in `manifest.json` to provide a more detailed overview of the integration's capabilities and purpose.
 - Exclude the lint dependencies from the Docker image
+- Pin the uv image used to build the Docker image to 0.13.5
 
 ## 2026-07-30 - 0.5.1
 
