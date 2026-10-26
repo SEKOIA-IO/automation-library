@@ -137,6 +137,9 @@ class MicrosoftSentineldConnector(Connector):
 
             parsed_entities = []
             for entity in entities:
+                # the Azure SDK keeps null entries of a malformed list as None
+                if entity is None:
+                    continue
                 parsed_entities.append(entity.as_dict())
 
             return parsed_entities

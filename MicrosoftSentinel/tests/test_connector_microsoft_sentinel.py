@@ -428,6 +428,17 @@ def test_entities_azure_error_forwards_incident_and_counts(trigger, first_incide
     assert any(first_incident_item.name in c.kwargs["message"] for c in warnings)
 
 
+def test_entities_null_entries_are_skipped(trigger):
+    from unittest.mock import MagicMock
+
+    entity = MagicMock()
+    entity.as_dict.return_value = {"kind": "Ip"}
+    trigger.client = MagicMock()
+    trigger.client.incidents.list_entities.return_value.entities = [None, entity]
+
+    assert trigger._get_incident_entities("incident-1") == [{"kind": "Ip"}]
+
+
 @pytest.mark.parametrize(
     "error",
     [DeserializationError("malformed entity"), KeyError("kind"), TypeError("bad type"), ValueError("bad value")],

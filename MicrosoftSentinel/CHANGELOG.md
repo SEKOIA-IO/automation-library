@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Keep polling after an Azure API error while listing incidents, with an exponential backoff (capped to 5 minutes) on consecutive failures
 - Retry the poll, instead of stopping the connector, when the Azure SDK cannot deserialize an incident
 - Serialize the Azure model fields of an incident (e.g. `system_data`) as objects instead of failing the poll
+- Skip null entries in an incident's entities instead of stopping the connector
 
 ## 2026-05-27 - 1.1.0
 
