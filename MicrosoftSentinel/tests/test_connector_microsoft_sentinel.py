@@ -331,3 +331,14 @@ def test_get_incidents_batches_by_chunk_size(trigger, incidents_list, first_inci
 
     # chunk_size is 2 in the fixture
     assert [len(c.kwargs["events"]) for c in trigger.push_events_to_intakes.call_args_list] == [2, 1]
+
+
+def test_to_RFC3339_converts_to_utc(trigger):
+    from datetime import timezone
+
+    paris_summer = timezone(timedelta(hours=2))
+    assert trigger._to_RFC3339(datetime(2021, 9, 1, 2, 0, 0, tzinfo=paris_summer)) == "2021-09-01T00:00:00.000000Z"
+    assert trigger._to_RFC3339(datetime(2021, 9, 1, 0, 0, 0, tzinfo=UTC)) == "2021-09-01T00:00:00.000000Z"
+    # naive datetimes are considered as UTC
+    assert trigger._to_RFC3339(datetime(2021, 9, 1, 0, 0, 0)) == "2021-09-01T00:00:00.000000Z"
+    assert trigger._to_RFC3339(None) is None

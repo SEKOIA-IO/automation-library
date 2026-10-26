@@ -2,7 +2,7 @@ import datetime as date_time
 import itertools
 import time
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from typing import Any
 
@@ -65,7 +65,14 @@ class MicrosoftSentineldConnector(Connector):
         )
 
     def _to_RFC3339(self, date: datetime | None) -> str | None:  # noqa: N802
-        return date.strftime("%Y-%m-%dT%H:%M:%S.%fZ") if date else None
+        """
+        Format a datetime as RFC3339 in UTC. Naive datetimes are considered as UTC.
+        """
+        if date is None:
+            return None
+        if date.tzinfo is None:
+            date = date.replace(tzinfo=UTC)
+        return date.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
     def _incidents_iterator(self) -> ItemPaged[Incident]:
         return self.client.incidents.list(
@@ -179,7 +186,7 @@ class MicrosoftSentineldConnector(Connector):
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
 
     def run(self) -> None:
-        trigger_start_time = datetime.now().isoformat()
+        trigger_start_time = datetime.now(UTC).isoformat()
         self.log(message=f"Microsoft Sentinel Trigger process initiated at {trigger_start_time}", level="info")
 
         try:
@@ -202,5 +209,5 @@ class MicrosoftSentineldConnector(Connector):
                     # interruptible wait: returns as soon as stop() sets the SDK stop event
                     self._stop_event.wait(delta_sleep)
         finally:
-            trigger_end_time = datetime.now().isoformat()
+            trigger_end_time = datetime.now(UTC).isoformat()
             self.log(message=f"Microsoft Sentinel Trigger process has stopped at {trigger_end_time}", level="info")
