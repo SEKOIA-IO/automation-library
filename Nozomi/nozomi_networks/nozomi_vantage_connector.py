@@ -8,7 +8,7 @@ import orjson
 from cachetools import LRUCache
 from dateutil.parser import isoparse
 from loguru import logger
-from pydantic.v1 import Field, root_validator
+from pydantic.v1 import Field
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
@@ -17,6 +17,9 @@ from nozomi_networks import NozomiModule
 from nozomi_networks.client.event_type import EventType
 from nozomi_networks.client.http_client import NozomiClient
 from nozomi_networks.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+
+VANTAGE_MIN_CHUNK_SIZE = 1
+VANTAGE_MAX_CHUNK_SIZE = 1000
 
 
 def _format_event(record: dict[str, Any]) -> dict[str, Any]:
@@ -61,14 +64,8 @@ class NozomiVantageConfiguration(DefaultConnectorConfiguration):
     """NozomiVantageConfiguration."""
 
     frequency: int = 600
-    chunk_size: int = Field(default=1000, ge=1, le=1000)
+    chunk_size: int = Field(default=VANTAGE_MAX_CHUNK_SIZE, ge=VANTAGE_MIN_CHUNK_SIZE, le=VANTAGE_MAX_CHUNK_SIZE)
     page_size: int = 25
-
-    @root_validator(pre=True)
-    def map_legacy_batch_size_to_chunk_size(cls, values: dict[str, Any]) -> dict[str, Any]:
-        if "chunk_size" not in values and "batch_size" in values:
-            values["chunk_size"] = values["batch_size"]
-        return values
 
 
 class NozomiVantageConnector(AsyncConnector):
@@ -192,6 +189,7 @@ class NozomiVantageConnector(AsyncConnector):
 
     async def get_events(self) -> int:
         total_records = 0
+        chunk_size = min(self.configuration.chunk_size, VANTAGE_MAX_CHUNK_SIZE)
         for event_type in EventType:
             records = []
             last_event_date = self.last_event_date(event_type)
@@ -215,7 +213,7 @@ class NozomiVantageConnector(AsyncConnector):
                 new_last_event_date = max(new_last_event_date, event_date)
                 records.append(formated_event)
 
-                if len(records) >= self.configuration.chunk_size:
+                if len(records) >= chunk_size:
                     # If we have enough records, push them to intakes
                     total_pushed = len(
                         await self.push_data_to_intakes([orjson.dumps(record).decode("utf-8") for record in records])
