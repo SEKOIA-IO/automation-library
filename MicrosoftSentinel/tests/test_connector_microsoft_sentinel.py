@@ -1,12 +1,12 @@
-import pytest
-import orjson
-from datetime import datetime, timedelta, timezone
-from unittest.mock import Mock, patch, call
+from datetime import UTC, datetime, timedelta
+from unittest.mock import Mock, call, patch
 
+import orjson
+import pytest
+from azure.mgmt.securityinsight.models import Incident, IncidentAdditionalData, IncidentLabel, IncidentOwnerInfo
 
 from microsoft_sentinel import MicrosoftSentinelModule
 from microsoft_sentinel.connector_microsoft_sentinel import MicrosoftSentineldConnector
-from azure.mgmt.securityinsight.models import Incident, IncidentAdditionalData, IncidentOwnerInfo, IncidentLabel
 
 
 @pytest.fixture
@@ -79,14 +79,14 @@ def first_incident_item(incident_labels_object, incident_owner_object, additiona
     incident.classification = None
     incident.classification_comment = None
     incident.classification_reason = None
-    incident.created_time_utc = datetime(2021, 9, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
+    incident.created_time_utc = datetime(2021, 9, 1, 0, 0, 0, 0, tzinfo=UTC)
     incident.description = "description"
-    incident.first_activity_time_utc = datetime(2021, 9, 1, 0, 0, 1, 0, tzinfo=timezone.utc)
+    incident.first_activity_time_utc = datetime(2021, 9, 1, 0, 0, 1, 0, tzinfo=UTC)
     incident.incident_url = "https://incident_url"
     incident.incident_number = "incident_number"
     incident.labels = [incident_labels_object, incident_labels_object, incident_labels_object]
-    incident.last_activity_time_utc = datetime(2021, 9, 1, 0, 0, 2, 0, tzinfo=timezone.utc)
-    incident.last_modified_time_utc = datetime(2021, 9, 1, 0, 0, 3, 0, tzinfo=timezone.utc)
+    incident.last_activity_time_utc = datetime(2021, 9, 1, 0, 0, 2, 0, tzinfo=UTC)
+    incident.last_modified_time_utc = datetime(2021, 9, 1, 0, 0, 3, 0, tzinfo=UTC)
     incident.owner = incident_owner_object
     incident.related_alert_ids = ["related_alert_ids"]
     incident.severity = "severity"
@@ -108,14 +108,14 @@ def second_incident_item(incident_labels_object, incident_owner_object, addition
     incident.classification = None
     incident.classification_comment = None
     incident.classification_reason = None
-    incident.created_time_utc = datetime(2021, 9, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
+    incident.created_time_utc = datetime(2021, 9, 1, 0, 0, 0, 0, tzinfo=UTC)
     incident.description = "description 2"
-    incident.first_activity_time_utc = datetime(2021, 9, 1, 0, 0, 1, 0, tzinfo=timezone.utc)
+    incident.first_activity_time_utc = datetime(2021, 9, 1, 0, 0, 1, 0, tzinfo=UTC)
     incident.incident_url = "https://incident_url"
     incident.incident_number = "incident_number 2"
     incident.labels = [incident_labels_object, incident_labels_object, incident_labels_object]
-    incident.last_activity_time_utc = datetime(2021, 9, 1, 0, 0, 2, 0, tzinfo=timezone.utc)
-    incident.last_modified_time_utc = datetime(2021, 9, 1, 0, 0, 3, 0, tzinfo=timezone.utc)
+    incident.last_activity_time_utc = datetime(2021, 9, 1, 0, 0, 2, 0, tzinfo=UTC)
+    incident.last_modified_time_utc = datetime(2021, 9, 1, 0, 0, 3, 0, tzinfo=UTC)
     incident.owner = incident_owner_object
     incident.related_alert_ids = ["12E2837E", "12E2837E", "12E2837E"]
     incident.severity = "severity 2"
@@ -137,7 +137,7 @@ def test_to_RFC3339(trigger):
 
 def test_serialize_incident(trigger, first_incident_item):
     serialized_incident = trigger._serialize_incident(first_incident_item)
-    assert type(serialized_incident) == dict
+    assert isinstance(serialized_incident, dict)
     assert (
         serialized_incident["id"]
         == "/subscriptions/f00000000-0000-0000-0000-000000000000/resourceGroups/resource_group/providers/Microsoft.SecurityInsights/Incidents/"
@@ -177,8 +177,9 @@ def test_get_incidents_without_batch(trigger, incidents_list):
 
 
 def test_get_incident_entities_coverage(trigger):
-    from azure.core.exceptions import AzureError
     from unittest.mock import MagicMock
+
+    from azure.core.exceptions import AzureError
 
     class EntityAsDict:
         def as_dict(self):
@@ -252,7 +253,7 @@ def test_run_method_coverage(trigger):
 
 
 def test_get_incidents_persists_checkpoint(trigger, incidents_list, symphony_storage):
-    most_recent = datetime.now(timezone.utc) - timedelta(hours=1)
+    most_recent = datetime.now(UTC) - timedelta(hours=1)
     incidents_list[1].created_time_utc = most_recent
     incidents_list[0].created_time_utc = most_recent - timedelta(minutes=5)
 

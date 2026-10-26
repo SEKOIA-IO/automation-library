@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2026-10-26 - 1.1.1
 
+### Changed
+
+- Migrated module from Poetry to uv (Python 3.14, ruff, mypy, mise)
+- Upgraded sekoia-automation-sdk from 1.18.2 to 1.27.0
+- Moved to pydantic v2 APIs (`model_fields`, `json_schema_extra`)
+
 ### Fixed
 
 - Persist the incidents checkpoint so the connector resumes from the last collected incident after a restart

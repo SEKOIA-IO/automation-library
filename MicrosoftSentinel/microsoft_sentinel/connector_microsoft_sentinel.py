@@ -1,31 +1,29 @@
-import time
 import datetime as date_time
+import itertools
+import time
+from collections.abc import Callable
 from datetime import datetime, timedelta
+from functools import cached_property
+from typing import Any
 
 import orjson
-import itertools
-from typing import Dict, Any, Callable, Optional
-from functools import cached_property
-
-from urllib3.exceptions import HTTPError as BaseHTTPError
-from requests.exceptions import HTTPError
-
+from azure.core.exceptions import AzureError
+from azure.core.paging import ItemPaged
 from azure.identity import ClientSecretCredential
 from azure.mgmt.securityinsight import SecurityInsights
-from azure.core.paging import ItemPaged
-from azure.core.exceptions import AzureError
-from azure.mgmt.securityinsight.models import IncidentAdditionalData, IncidentOwnerInfo, Incident, IncidentLabel
-
-from sekoia_automation.connector import Connector
+from azure.mgmt.securityinsight.models import Incident, IncidentAdditionalData, IncidentLabel, IncidentOwnerInfo
+from requests.exceptions import HTTPError
 from sekoia_automation.checkpoint import CheckpointDatetime
+from sekoia_automation.connector import Connector
+from urllib3.exceptions import HTTPError as BaseHTTPError
 
-from microsoft_sentinel.utils import additional_data_to_dict, owner_data_to_dict, labels_data_to_dict
-from microsoft_sentinel.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
 from microsoft_sentinel import (
+    MicrosoftSentinelConnectorConfiguration,
     MicrosoftSentinelModule,
     MicrosoftSentinelResponseModel,
-    MicrosoftSentinelConnectorConfiguration,
 )
+from microsoft_sentinel.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+from microsoft_sentinel.utils import additional_data_to_dict, labels_data_to_dict, owner_data_to_dict
 
 
 class MicrosoftSentineldConnector(Connector):
@@ -36,7 +34,9 @@ class MicrosoftSentineldConnector(Connector):
         super().__init__(*args, **kwargs)
 
         self.cursor = CheckpointDatetime(
-            path=self._data_path, start_at=timedelta(days=1), ignore_older_than=timedelta(days=30)
+            path=self._data_path,  # type: ignore[arg-type]
+            start_at=timedelta(days=1),
+            ignore_older_than=timedelta(days=30),
         )
         self.from_date = self.cursor.offset
 
@@ -61,7 +61,7 @@ class MicrosoftSentineldConnector(Connector):
             subscription_id=self.module.configuration.subscription_id,
         )
 
-    def _to_RFC3339(self, date: Optional[datetime]) -> Optional[str]:
+    def _to_RFC3339(self, date: datetime | None) -> str | None:  # noqa: N802
         return date.strftime("%Y-%m-%dT%H:%M:%S.%fZ") if date else None
 
     def _incidents_iterator(self) -> ItemPaged[Incident]:
@@ -71,7 +71,7 @@ class MicrosoftSentineldConnector(Connector):
             filter=self.incidents_filter,
         )  # type: ignore
 
-    def _get_incident_entities(self, incident_id: str) -> list[Dict[str, Any]]:
+    def _get_incident_entities(self, incident_id: str) -> list[dict[str, Any]]:
         """
         Fetch entities for a given incident.
         """
@@ -98,14 +98,14 @@ class MicrosoftSentineldConnector(Connector):
             self.log_exception(e, message=f"Unexpected error while fetching entities for incident {incident_id}")
             return []
 
-    def _serialize_incident(self, incident: Incident) -> Dict[str, Any]:
-        keys_to_extract = list(MicrosoftSentinelResponseModel.__fields__.keys())
-        conversion_map: Dict[type, Callable[[Any], Any]] = {
+    def _serialize_incident(self, incident: Incident) -> dict[str, Any]:
+        keys_to_extract = list(MicrosoftSentinelResponseModel.model_fields.keys())
+        conversion_map: dict[type, Callable[[Any], Any]] = {
             IncidentAdditionalData: additional_data_to_dict,
             IncidentOwnerInfo: owner_data_to_dict,
             date_time.datetime: lambda dt: dt.isoformat(),
         }
-        new_dict: Dict[str, Any] = {}
+        new_dict: dict[str, Any] = {}
 
         for key in keys_to_extract:
             value = getattr(incident, key, None)
@@ -119,10 +119,10 @@ class MicrosoftSentineldConnector(Connector):
         return new_dict
 
     def get_incidents(self) -> None:
-        self.log(message=f"Start fetching alerts from Microsoft sentinel", level="info")
+        self.log(message="Start fetching alerts from Microsoft sentinel", level="info")
 
         first_element, response = itertools.tee(self._incidents_iterator())
-        first_item: Optional[Incident] = next(first_element, None)
+        first_item: Incident | None = next(first_element, None)
 
         if first_item is None:
             self.log(message="No messages to forward", level="info")
@@ -154,7 +154,7 @@ class MicrosoftSentineldConnector(Connector):
                 alerts_len: int = len(alerts_batch)
                 self.log(message=f"Sending batch of {alerts_len} messages", level="info")
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(alerts_len)
-                self.push_events_to_intakes(events=alerts_batch)
+                self.push_events_to_intakes(events=alerts_batch)  # type: ignore[arg-type]
                 alerts_batch = []
 
             incoming_events_sum += 1
@@ -163,7 +163,7 @@ class MicrosoftSentineldConnector(Connector):
             last_alerts_len: int = len(alerts_batch)
             self.log(message=f"Sending batch of {last_alerts_len} messages", level="info")
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(last_alerts_len)
-            self.push_events_to_intakes(events=alerts_batch)
+            self.push_events_to_intakes(events=alerts_batch)  # type: ignore[arg-type]
 
         INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(incoming_events_sum)
 
