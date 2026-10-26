@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-26 - 1.16.2
+
+### Fixed
+
+- TAP: persist the checkpoint (`queryEndTime`) so that collection resumes from the last retrieved date after a restart
+- TAP: only advance the checkpoint once the events have been pushed to the intake
+- Upgrade sekoia-automation-sdk to `^1.14.0` (provides `CheckpointDatetime`)
+
 ## 2026-02-13 - 1.16.1
 
 ### Fixed

@@ -1,16 +1,19 @@
+import json
 import os
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 import requests_mock
 
 from proofpoint_modules.trigger_tap_events import RFC3339_STRICT_FORMAT, TAPEventsTrigger
 
+TAP_URL = "https://tap-api-v2.proofpoint.com/v2/siem/all"
 
-@pytest.fixture
-def trigger(symphony_storage):
-    trigger = TAPEventsTrigger(data_path=symphony_storage)
+
+def build_trigger(data_path):
+    trigger = TAPEventsTrigger(data_path=data_path)
     trigger.module.configuration = {}
     trigger.configuration = {
         "frequency": 60,
@@ -25,8 +28,43 @@ def trigger(symphony_storage):
     return trigger
 
 
+@pytest.fixture
+def trigger(symphony_storage):
+    return build_trigger(symphony_storage)
+
+
+def to_api_date(dt: datetime) -> str:
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def save_checkpoint(data_path, dt: datetime) -> None:
+    (data_path / "context.json").write_text(json.dumps({"most_recent_date_seen": dt.isoformat()}))
+
+
+def read_checkpoint(data_path) -> datetime | None:
+    context = data_path / "context.json"
+    if not context.exists():
+        return None
+    value = json.loads(context.read_text()).get("most_recent_date_seen")
+    return datetime.fromisoformat(value) if value else None
+
+
+def requested_since_time(mock) -> datetime:
+    since_time = parse_qs(urlparse(mock.last_request.url).query)["sinceTime"][0]
+    return datetime.strptime(since_time, RFC3339_STRICT_FORMAT).replace(tzinfo=timezone.utc)
+
+
+def api_response(query_end_time: datetime) -> dict:
+    return {
+        "messagesDelivered": [{"GUID": "delivered-1", "messageTime": to_api_date(query_end_time)}],
+        "clicksBlocked": [{"GUID": "click-1", "clickTime": to_api_date(query_end_time)}],
+        "queryEndTime": to_api_date(query_end_time),
+    }
+
+
 def test_get_next_events(trigger):
     url = f"{trigger.configuration.api_host}/v2/siem/all"
+    query_end_time = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(seconds=30)
     with requests_mock.Mocker() as mock:
         # flake8: noqa
         reponse = {
@@ -128,13 +166,14 @@ def test_get_next_events(trigger):
                     "xmailer": "Spambot v2.5",
                 },
             ],
-            "queryEndTime": "2016-06-24T21:36:00Z",
+            "queryEndTime": to_api_date(query_end_time),
         }
         # flake8: qa
 
         mock.get(url, json=reponse)
         trigger.forward_next_batch()
-        assert trigger.last_retrieval_date == datetime(2016, 6, 24, 21, 36, tzinfo=timezone.utc)
+        assert trigger.last_retrieval_date == query_end_time
+        assert read_checkpoint(trigger.data_path) == query_end_time
         assert trigger.push_events_to_intakes.called
         records = trigger.push_events_to_intakes.call_args_list[0].kwargs.get("events", [])
         assert len(records) == 2
@@ -160,3 +199,109 @@ def test_forward_next_batches_integration(symphony_storage):
     trigger.forward_next_batch()
     calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
     assert len(calls) > 0
+
+
+def test_first_run_starts_five_minutes_ago(trigger):
+    now = datetime.now(timezone.utc)
+    with requests_mock.Mocker() as mock:
+        mock.get(TAP_URL, json=api_response(now))
+        trigger.forward_next_batch()
+
+    since_time = requested_since_time(mock)
+    assert now - timedelta(minutes=5, seconds=5) <= since_time <= now - timedelta(minutes=4, seconds=55)
+
+
+def test_resume_from_saved_checkpoint_after_restart(symphony_storage):
+    # the connector was down for 20 minutes: it must resume from the saved checkpoint, not from now - 5 minutes
+    saved = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(minutes=20)
+    save_checkpoint(symphony_storage, saved)
+    trigger = build_trigger(symphony_storage)
+
+    query_end_time = datetime.now(timezone.utc).replace(microsecond=0)
+    with requests_mock.Mocker() as mock:
+        mock.get(TAP_URL, json=api_response(query_end_time))
+        trigger.forward_next_batch()
+
+    assert requested_since_time(mock) == saved
+    assert read_checkpoint(symphony_storage) == query_end_time
+
+
+def test_new_instance_reads_checkpoint_written_by_previous_one(symphony_storage):
+    first = build_trigger(symphony_storage)
+    query_end_time = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(seconds=10)
+    with requests_mock.Mocker() as mock:
+        mock.get(TAP_URL, json=api_response(query_end_time))
+        first.forward_next_batch()
+
+    # restart: a brand new instance on the same data path
+    second = build_trigger(symphony_storage)
+    with requests_mock.Mocker() as mock:
+        mock.get(TAP_URL, json=api_response(datetime.now(timezone.utc)))
+        second.forward_next_batch()
+
+    assert requested_since_time(mock) == query_end_time
+
+
+def test_checkpoint_not_advanced_when_push_fails(symphony_storage):
+    saved = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(minutes=10)
+    save_checkpoint(symphony_storage, saved)
+    trigger = build_trigger(symphony_storage)
+    trigger.push_events_to_intakes.side_effect = Exception("intake unavailable")
+
+    with requests_mock.Mocker() as mock:
+        mock.get(TAP_URL, json=api_response(datetime.now(timezone.utc)))
+        with pytest.raises(Exception, match="intake unavailable"):
+            trigger.forward_next_batch()
+
+    assert read_checkpoint(symphony_storage) == saved
+    assert trigger.last_retrieval_date == saved
+
+    # the next attempt retries the same window
+    trigger.push_events_to_intakes.side_effect = None
+    with requests_mock.Mocker() as mock:
+        mock.get(TAP_URL, json=api_response(datetime.now(timezone.utc)))
+        trigger.forward_next_batch()
+    assert requested_since_time(mock) == saved
+
+
+@pytest.mark.parametrize("status_code", [401, 429, 500])
+def test_checkpoint_not_advanced_when_api_fails(symphony_storage, status_code):
+    saved = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(minutes=10)
+    save_checkpoint(symphony_storage, saved)
+    trigger = build_trigger(symphony_storage)
+
+    with requests_mock.Mocker() as mock:
+        mock.get(TAP_URL, status_code=status_code)
+        trigger.forward_next_batch()
+
+    assert not trigger.push_events_to_intakes.called
+    assert read_checkpoint(symphony_storage) == saved
+    assert trigger.last_retrieval_date == saved
+
+
+def test_checkpoint_advanced_when_no_events(symphony_storage):
+    saved = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(minutes=10)
+    save_checkpoint(symphony_storage, saved)
+    trigger = build_trigger(symphony_storage)
+
+    query_end_time = datetime.now(timezone.utc).replace(microsecond=0)
+    with requests_mock.Mocker() as mock:
+        mock.get(TAP_URL, json={"queryEndTime": to_api_date(query_end_time)})
+        trigger.forward_next_batch()
+
+    assert not trigger.push_events_to_intakes.called
+    assert read_checkpoint(symphony_storage) == query_end_time
+
+
+def test_since_time_capped_to_one_hour(symphony_storage):
+    # the API does not accept a sinceTime older than one hour
+    save_checkpoint(symphony_storage, datetime.now(timezone.utc) - timedelta(hours=3))
+    trigger = build_trigger(symphony_storage)
+
+    now = datetime.now(timezone.utc)
+    with requests_mock.Mocker() as mock:
+        mock.get(TAP_URL, json=api_response(now))
+        trigger.forward_next_batch()
+
+    since_time = requested_since_time(mock)
+    assert now - timedelta(hours=1, seconds=5) <= since_time <= now - timedelta(minutes=59, seconds=55)
