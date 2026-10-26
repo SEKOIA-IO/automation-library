@@ -1,6 +1,5 @@
 """Additional programmatic configuration for pytest."""
 
-import asyncio
 from shutil import rmtree
 from tempfile import mkdtemp
 from typing import Any
@@ -297,19 +296,3 @@ def edr_affectedhost_event_response(session_faker) -> TrellixResponse[EdrAffecte
             host={session_faker.word(): session_faker.word(), session_faker.word(): session_faker.pyint()},
         ),
     )
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """
-    Create event loop for pytest.mark.asyncio.
-
-    Yields:
-        loop:
-    """
-    policy = asyncio.get_event_loop_policy()
-    loop = policy.new_event_loop()
-
-    yield loop
-
-    loop.close()

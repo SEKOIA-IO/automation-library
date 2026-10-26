@@ -471,3 +471,12 @@ async def test_trellix_connector_get_threats_events(
                 ]
             ]
         )
+
+
+def test_trellix_edr_connector_run_without_existing_event_loop(connector):
+    """run() must start its own event loop (no current loop exists on Python 3.14)."""
+    connector.async_run = AsyncMock()
+
+    connector.run()
+
+    connector.async_run.assert_awaited_once()
