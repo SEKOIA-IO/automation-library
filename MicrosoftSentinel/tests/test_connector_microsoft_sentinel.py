@@ -195,11 +195,8 @@ def test_get_incident_entities_coverage(trigger):
     assert len(res) == 1
     assert res[0] == {"type": "as_dict"}
 
-    # Test exceptions
+    # Azure errors are handled
     trigger.client.incidents.list_entities.side_effect = AzureError("azure_err")
-    assert trigger._get_incident_entities("inc1") == []
-
-    trigger.client.incidents.list_entities.side_effect = Exception("err")
     assert trigger._get_incident_entities("inc1") == []
 
     # Test None / no entities
@@ -377,3 +374,46 @@ def test_get_incidents_consumes_iterator_once(trigger, incidents_list):
 
     assert mock_incidents_iterator.call_count == 1
     assert sum(len(c.kwargs["events"]) for c in trigger.push_events_to_intakes.call_args_list) == 2
+
+
+def test_entities_azure_error_forwards_incident_and_counts(trigger, first_incident_item):
+    from unittest.mock import MagicMock
+
+    from azure.core.exceptions import AzureError
+
+    from microsoft_sentinel.metrics import ENTITIES_FETCH_ERRORS
+
+    counter = ENTITIES_FETCH_ERRORS.labels(intake_key="0123456789")
+    errors_before = counter._value.get()
+
+    trigger.client = MagicMock()
+    trigger.client.incidents.list_entities.side_effect = AzureError("boom")
+
+    with patch(
+        "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator"
+    ) as mock_incidents_iterator:
+        mock_incidents_iterator.return_value = [first_incident_item]
+        trigger.get_incidents()
+
+    events = [e for c in trigger.push_events_to_intakes.call_args_list for e in c.kwargs["events"]]
+    assert len(events) == 1
+    assert orjson.loads(events[0])["entities"] == []
+    assert counter._value.get() == errors_before + 1
+    warnings = [c for c in trigger.log.call_args_list if c.kwargs.get("level") == "warning"]
+    assert any(first_incident_item.name in c.kwargs["message"] for c in warnings)
+
+
+def test_entities_unexpected_error_propagates(trigger, first_incident_item):
+    from unittest.mock import MagicMock
+
+    trigger.client = MagicMock()
+    trigger.client.incidents.list_entities.side_effect = ValueError("bug")
+
+    with patch(
+        "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator"
+    ) as mock_incidents_iterator:
+        mock_incidents_iterator.return_value = [first_incident_item]
+        with pytest.raises(ValueError, match="bug"):
+            trigger.get_incidents()
+
+    trigger.push_events_to_intakes.assert_not_called()

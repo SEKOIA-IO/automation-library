@@ -21,7 +21,13 @@ from microsoft_sentinel import (
     MicrosoftSentinelModule,
     MicrosoftSentinelResponseModel,
 )
-from microsoft_sentinel.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+from microsoft_sentinel.metrics import (
+    ENTITIES_FETCH_ERRORS,
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_EVENTS,
+    OUTCOMING_EVENTS,
+)
 from microsoft_sentinel.utils import additional_data_to_dict, labels_data_to_dict, owner_data_to_dict
 
 MAX_BATCH_SIZE = 1000
@@ -83,6 +89,9 @@ class MicrosoftSentineldConnector(Connector):
     def _get_incident_entities(self, incident_id: str) -> list[dict[str, Any]]:
         """
         Fetch entities for a given incident.
+
+        Azure errors are logged and counted, and the incident is forwarded without entities.
+        Any other exception is a bug and propagates.
         """
         try:
             response = self.client.incidents.list_entities(
@@ -101,10 +110,11 @@ class MicrosoftSentineldConnector(Connector):
             return parsed_entities
 
         except AzureError as e:
-            self.log_exception(e, message=f"AzureError while fetching entities for incident {incident_id}")
-            return []
-        except Exception as e:
-            self.log_exception(e, message=f"Unexpected error while fetching entities for incident {incident_id}")
+            self.log(
+                message=f"Failed to fetch entities for incident {incident_id}, forwarding it without entities: {e}",
+                level="warning",
+            )
+            ENTITIES_FETCH_ERRORS.labels(intake_key=self.configuration.intake_key).inc()
             return []
 
     def _serialize_incident(self, incident: Incident) -> dict[str, Any]:
