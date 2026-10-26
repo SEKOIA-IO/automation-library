@@ -20,6 +20,7 @@ class FindingKey(NamedTuple):
     last_found: str | None
     last_fixed: str | None
 
+
 def effective_timestamp(vuln: dict) -> int | None:
     """
     Compute the timestamp a finding is filtered on by Tenable's `since`: the latest of `last_found` and
@@ -37,7 +38,6 @@ def effective_timestamp(vuln: dict) -> int | None:
         except (ValueError, TypeError):
             continue
     return max(timestamps) if timestamps else None
-
 
 
 def dedup_key(vuln: dict) -> FindingKey | None:
