@@ -270,6 +270,10 @@ def test_get_incidents_persists_checkpoint(trigger, incidents_list, symphony_sto
     assert trigger.push_events_to_intakes.called
     assert trigger.from_date == most_recent
 
+    from microsoft_sentinel.metrics import EVENTS_LAG
+
+    assert 3590 <= EVENTS_LAG.labels(intake_key="0123456789")._value.get() <= 3610
+
     # a new connector instance on the same data path resumes from the persisted checkpoint
     new_trigger = MicrosoftSentineldConnector(module=MicrosoftSentinelModule(), data_path=symphony_storage)
     assert new_trigger.cursor.offset == most_recent
@@ -522,3 +526,37 @@ def test_boundary_dedup_survives_restart(trigger, first_incident_item, symphony_
 
     assert restarted.from_date == t1
     assert poll(restarted, [a, b, c]) == [("C", "New")]
+
+
+def test_checkpoint_advanced_per_batch(trigger, first_incident_item, symphony_storage):
+    t0 = datetime.now(UTC) - timedelta(minutes=10)
+    incidents = [make_incident(first_incident_item, name, t0 + timedelta(seconds=i)) for i, name in enumerate("ABCDE")]
+
+    offsets_at_push = []
+
+    def push(events):
+        offsets_at_push.append(trigger.cursor.offset)
+        if len(offsets_at_push) == 2:
+            raise RuntimeError("intake unavailable")
+        return ["id"] * len(events)
+
+    trigger.push_events_to_intakes = Mock(side_effect=push)
+
+    # chunk_size is 2: batch [A, B] is pushed, batch [C, D] fails
+    with pytest.raises(RuntimeError):
+        poll(trigger, incidents)
+
+    # the checkpoint was persisted after the first batch, before pushing the second one
+    assert offsets_at_push[1] == t0 + timedelta(seconds=1)
+    assert trigger.cursor.offset == t0 + timedelta(seconds=1)
+
+    # a restarted connector resumes after B and does not re-send A nor B
+    restarted = MicrosoftSentineldConnector(module=trigger.module, data_path=symphony_storage)
+    restarted.configuration = trigger.configuration
+    restarted.push_events_to_intakes = Mock()
+    restarted.log = Mock()
+    restarted.log_exception = Mock()
+    assert restarted.from_date == t0 + timedelta(seconds=1)
+    # `ge` returns B again (boundary), then C, D, E
+    assert poll(restarted, incidents[1:]) == [("C", "New"), ("D", "New"), ("E", "New")]
+    assert restarted.cursor.offset == t0 + timedelta(seconds=4)

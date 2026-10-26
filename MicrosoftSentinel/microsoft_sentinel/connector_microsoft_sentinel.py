@@ -206,12 +206,26 @@ class MicrosoftSentineldConnector(Connector):
             self._boundary_keys.add(key)
 
     def _forward_batch(self, batch: list[EventType], versions: list[tuple[str | None, datetime | None]]) -> None:
+        """
+        Push a batch of incidents, then advance the checkpoint to the most recent forwarded modification date.
+
+        Incidents are requested in ascending lastModifiedTimeUtc order, so once a batch is pushed every
+        incident modified before its most recent date has been forwarded. A later failure in the same poll
+        resumes from this batch instead of collecting the already pushed ones again.
+        """
         self.log(message=f"Sending batch of {len(batch)} messages", level="info")
         self.push_events_to_intakes(events=batch)
         OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch))
 
         for key, last_modified in versions:
             self._mark_forwarded(key, last_modified)
+
+        dates = [last_modified for _, last_modified in versions if last_modified is not None]
+        if dates:
+            # the checkpoint setter only persists dates more recent than the current checkpoint
+            self.cursor.offset = max(dates)
+            self.from_date = self.cursor.offset
+            self._save_boundary_keys()
 
     def get_incidents(self) -> None:
         self.log(message="Start fetching alerts from Microsoft sentinel", level="info")
@@ -221,7 +235,6 @@ class MicrosoftSentineldConnector(Connector):
         seen_in_poll: set[str] = set()
         collected = 0
         duplicates = 0
-        most_recent: datetime | None = None
         for item in self._incidents_iterator():
             key = self._dedup_key(item)
             if key is not None:
@@ -240,10 +253,7 @@ class MicrosoftSentineldConnector(Connector):
                 serialized_incident["entities"] = self._get_incident_entities(incident_id)
 
             batch.append(orjson.dumps(serialized_incident).decode("utf-8"))
-            last_modified = self._as_utc(item.last_modified_time_utc)
-            versions.append((key, last_modified))
-            if last_modified is not None and (most_recent is None or last_modified > most_recent):
-                most_recent = last_modified
+            versions.append((key, self._as_utc(item.last_modified_time_utc)))
 
             if len(batch) >= self.batch_limit:
                 self._forward_batch(batch, versions)
@@ -257,13 +267,9 @@ class MicrosoftSentineldConnector(Connector):
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
             return
 
-        if most_recent:
-            self.cursor.offset = most_recent
-            self.from_date = self.cursor.offset
-            self._save_boundary_keys()
-
-            events_lag = int(time.time() - most_recent.timestamp())
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
+        # lag from the most recent forwarded modification date (the checkpoint)
+        events_lag = int(time.time() - self.cursor.offset.timestamp())
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
 
     def run(self) -> None:
         trigger_start_time = datetime.now(UTC).isoformat()
