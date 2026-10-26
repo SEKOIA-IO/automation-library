@@ -105,13 +105,18 @@ class TrendMicroWorker(Thread):
 
         self.connector.context_lock.release()
 
+    # Several logs can share the same mail and action (e.g. one per recipient, or successive deferrals):
+    # the recipient and the generation time are part of the identity of a log
+    EVENT_KEY_FIELDS = ("mailID", "messageID", "action", "recipient", "genTime")
+    LEGACY_EVENT_KEY_FIELDS = ("mailID", "messageID", "action")
+
+    @classmethod
+    def get_event_metadata(cls, event: dict[str, Any]) -> dict[str, Any]:
+        return {field: event.get(field) for field in cls.EVENT_KEY_FIELDS}
+
     @staticmethod
-    def get_event_metadata(event: dict[str, Any]) -> dict[str, Any]:
-        return {
-            "mailID": event.get("mailID"),
-            "messageID": event.get("messageID"),
-            "action": event.get("action"),
-        }
+    def get_event_key(metadata: dict[str, Any], fields: tuple[str, ...]) -> tuple:
+        return tuple(tuple(value) if isinstance(value, list) else value for value in map(metadata.get, fields))
 
     def set_recent_pushed_events(self, events: list[Any]) -> None:
         self.connector.context_lock.acquire()
@@ -191,12 +196,9 @@ class TrendMicroWorker(Thread):
             events = content.get("logs")
             next_token = content.get("nextToken")
 
-            if events and len(events) > 0:
+            # an empty page can still be followed by other pages: only the absence of nextToken ends the window
+            if events:
                 yield events
-
-            else:
-                self.all_pages_fetched = True
-                return
 
             if next_token is not None:
                 params["token"] = urllib.parse.unquote(next_token)  # it's provided url-encoded by API
@@ -214,9 +216,15 @@ class TrendMicroWorker(Thread):
         batch_start_time = time.time()
 
         previous_timestamp = self.get_last_timestamp()
-        recent_pushed_events = {
-            tuple(self.get_event_metadata(event).values()) for event in self.get_recent_pushed_events()
-        }
+        recent_pushed_events: set[tuple] = set()
+        # events cached by previous versions only have the legacy fields
+        legacy_pushed_events: set[tuple] = set()
+        for metadata in self.get_recent_pushed_events():
+            if "genTime" in metadata:
+                recent_pushed_events.add(self.get_event_key(metadata, self.EVENT_KEY_FIELDS))
+            else:
+                legacy_pushed_events.add(self.get_event_key(metadata, self.LEGACY_EVENT_KEY_FIELDS))
+
         # keep only the genTime and the metadata of the pushed events, not their payloads,
         # to bound the memory used by a large catch-up window
         pushed_events: list[tuple[int, dict[str, Any]]] = []
@@ -229,8 +237,9 @@ class TrendMicroWorker(Thread):
             # skip the events already pushed in the previous run (boundary second) or earlier in this run
             next_events = []
             for event in events:
-                event_key = tuple(self.get_event_metadata(event).values())
-                if event_key not in recent_pushed_events:
+                event_key = self.get_event_key(event, self.EVENT_KEY_FIELDS)
+                legacy_key = self.get_event_key(event, self.LEGACY_EVENT_KEY_FIELDS)
+                if event_key not in recent_pushed_events and legacy_key not in legacy_pushed_events:
                     recent_pushed_events.add(event_key)
                     next_events.append(event)
 

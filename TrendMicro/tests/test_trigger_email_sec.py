@@ -353,3 +353,83 @@ def test_first_window_is_retried_from_the_same_start_when_a_page_fails(trigger):
 
     assert mock_requests.request_history[0].qs["start"] == [unixtime_to_iso8601(first_start).lower()]
     assert consumer.get_last_timestamp() == first_start + 200
+
+
+def test_empty_page_with_next_token_does_not_end_the_window(trigger):
+    url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
+    checkpoint = int(time.time()) - 3600
+    pages = [
+        {"nextToken": "token%2Fpage2", "logs": [build_log("mail-1", checkpoint + 100)]},
+        {"nextToken": "token%2Fpage3", "logs": []},
+        {"logs": [build_log("mail-2", checkpoint + 10)]},
+    ]
+
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    consumer.set_last_timestamp(checkpoint)
+
+    with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
+        mock_requests.get(url, [{"status_code": 200, "json": page} for page in pages])
+        consumer.next_batch()
+
+    assert mock_requests.call_count == 3
+    pushed = [
+        orjson.loads(event)["mailID"]
+        for call in trigger.push_events_to_intakes.call_args_list
+        for event in call.kwargs["events"]
+    ]
+    assert pushed == ["mail-1", "mail-2"]
+    assert consumer.get_last_timestamp() == checkpoint + 100
+
+
+def test_logs_of_the_same_mail_are_not_deduplicated(trigger):
+    url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
+    checkpoint = int(time.time()) - 3600
+    deferred_first = build_log("mail-1", checkpoint + 10) | {"action": "Deferred"}
+    deferred_again = build_log("mail-1", checkpoint + 70) | {"action": "Deferred"}
+    other_recipient = build_log("mail-1", checkpoint + 70) | {"action": "Deferred", "recipient": "other@example.com"}
+    pages = [
+        {"nextToken": "token%2Fpage2", "logs": [deferred_first, deferred_again]},
+        {"logs": [other_recipient, deferred_again]},
+    ]
+
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    consumer.set_last_timestamp(checkpoint)
+
+    with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
+        mock_requests.get(url, [{"status_code": 200, "json": page} for page in pages])
+        consumer.next_batch()
+
+    pushed = [
+        orjson.loads(event)
+        for call in trigger.push_events_to_intakes.call_args_list
+        for event in call.kwargs["events"]
+    ]
+    # the three distinct logs are pushed, the true duplicate of the second page is skipped
+    assert pushed == [deferred_first, deferred_again, other_recipient]
+
+
+def test_legacy_recent_pushed_events_are_still_deduplicated(trigger):
+    url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
+    checkpoint = int(time.time()) - 3600
+    already_pushed = build_log("mail-1", checkpoint)
+    new_log = build_log("mail-2", checkpoint + 10)
+
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    consumer.set_last_timestamp(checkpoint)
+    # cache written by a previous version of the connector, without recipient and genTime
+    with trigger.context as cache:
+        cache["accepted_traffic"]["recent_pushed_events"] = [
+            {"mailID": "mail-1", "messageID": "<mail-1@example.com>", "action": "Delivered"}
+        ]
+
+    with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
+        mock_requests.get(url, status_code=200, json={"logs": [already_pushed, new_log]})
+        consumer.next_batch()
+
+    pushed = [
+        orjson.loads(event)
+        for call in trigger.push_events_to_intakes.call_args_list
+        for event in call.kwargs["events"]
+    ]
+    assert pushed == [new_log]
+    assert consumer.get_recent_pushed_events() == [TrendMicroWorker.get_event_metadata(new_log)]
