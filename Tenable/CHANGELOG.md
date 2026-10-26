@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Read assets with the Export Assets v2 model
+- Device IP, OS, hostnames, network interfaces, cloud location and timestamps are filled again for assets read from the asset export
 - Fix duplicate vulnerabilities on every run
 - State changes (fixed, reopened) of an already sent vulnerability are always sent
 - No more missed vulnerabilities: the checkpoint is saved only after a complete export and once every batch is accepted by Sekoia.io
@@ -19,11 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Same device hostname fallback (hostname, name, FQDN) whatever the asset source
 - A failed asset export no longer triggers a new export for every vulnerability
 - A temporary error on the asset details endpoint no longer loses the finding: the checkpoint stops at that finding so it is fetched again on the next cycle
+- An incomplete cycle (asset API error, refused batch) is retried after a delay instead of immediately
+- Findings with an unknown state are sent as Create instead of being skipped
 
 ### Changed
 
 - The existing checkpoint is reused: no full re-fetch on upgrade
 - Asset cache refreshed every 6 hours
+- `device.name` falls back to the hostname, then the FQDN
+- REOPENED findings are sent with the OCSF activity name `Update`
+- Descriptions and references are capped to the platform limits
+- Tenable API payloads with explicit `null` values are accepted
 - Mapping code split into `TenableVulnerabilityMapper`, `TenableDeviceMapper` and helper functions; mapping documentation updated
 
 ## 2026-08-28 - 1.0.19

@@ -25,7 +25,8 @@ class TenableDeviceMapper:
     Map one Tenable asset (Export Assets v2 shape) to the OCSF Device object.
 
     One instance per asset: it is built with the asset and `map()` produces the OCSF object. The class-level
-    helpers (`map_os_type`, `map_device_type`, `build_network_interfaces`) do not depend on the asset.
+    helpers do not depend on the asset: `build_network_interfaces`, `build_network_interface`,
+    `map_interface_type`, `map_os_type` and `map_device_type`.
     """
 
     UNKNOWN_HOSTNAME: str = "unknown"
@@ -114,10 +115,10 @@ class TenableDeviceMapper:
     def build_asset_network_interfaces(self) -> list[NetworkInterface] | None:
         """
         Build the NetworkInterface list of the asset.
-        :return: The list of NetworkInterface objects, or None when the asset reports no interface.
+        :return: The list of NetworkInterface objects, or None when the asset reports no usable interface.
         """
         interfaces = self.network.network_interfaces if self.network else []
-        return self.build_network_interfaces(interfaces) if interfaces else None
+        return self.build_network_interfaces(interfaces) or None
 
     @classmethod
     def build_network_interfaces(cls, interfaces_data: list[TenableNetworkInterface]) -> list[NetworkInterface]:

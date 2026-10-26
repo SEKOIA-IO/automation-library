@@ -285,3 +285,13 @@ def test_hostname_parity_export_and_details(hostname, name, fqdn):
     from_details = TenableDeviceMapper(details).map()
 
     assert (from_export.hostname, from_export.name) == (from_details.hostname, from_details.name)
+
+
+def test_build_network_interface_empty_is_none():
+    assert TenableDeviceMapper.build_network_interface(TenableNetworkInterface()) is None
+
+
+def test_device_without_usable_interface_has_no_network_interfaces():
+    asset = AssetInfo.model_validate({"id": "asset-1", "network": {"network_interfaces": [{}]}})
+
+    assert TenableDeviceMapper(asset).map().network_interfaces is None

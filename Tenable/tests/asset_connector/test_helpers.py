@@ -1,17 +1,27 @@
+import os
+import time
+
 from tenable_conn.asset_connector.helpers import (
     FindingKey,
+    TraversalState,
     advance_checkpoint,
     asset_details_to_export,
     boundary_from_json,
     boundary_to_json,
     dedup_key,
     effective_timestamp,
+    DESCRIPTION_MAX_LENGTH,
+    REFERENCE_MAX_LENGTH,
+    REFERENCES_MAX_COUNT,
+    TRUNCATION_SUFFIX,
+    limit_description,
+    limit_references,
     parse_datetime_to_timestamp,
     truncate_description,
 )
 from tenable_conn.asset_connector.models.asset_details_model import AssetDetails
 
-from tests.asset_connector.conftest import T1, T2, T3
+from tests.asset_connector.factories import T1, T2, T3
 
 
 def test_truncate_description_multi_sentence():
@@ -162,3 +172,111 @@ def test_advance_checkpoint_edge_cases():
     assert boundary == set()
     assert advance_checkpoint(T2, boundary, T2, None) == T2
     assert boundary == set()
+
+
+def test_naive_datetime_is_read_as_utc():
+    original = os.environ.get("TZ")
+    os.environ["TZ"] = "Europe/Paris"
+    time.tzset()
+    try:
+        assert parse_datetime_to_timestamp("2025-01-01T00:00:00") == 1735689600
+        assert effective_timestamp({"last_found": "2025-01-01T00:00:00"}) == 1735689600
+    finally:
+        if original is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = original
+        time.tzset()
+
+
+def test_limit_description():
+    assert limit_description("short") == "short"
+    exact = "a" * DESCRIPTION_MAX_LENGTH
+    assert limit_description(exact) == exact
+
+    limited = limit_description("a" * (DESCRIPTION_MAX_LENGTH + 1))
+    assert len(limited) == DESCRIPTION_MAX_LENGTH
+    assert limited.endswith(TRUNCATION_SUFFIX)
+
+
+def test_limit_references():
+    assert limit_references(None) == []
+    references = [f"https://example.com/{i}" for i in range(REFERENCES_MAX_COUNT + 5)]
+    assert limit_references(references) == references[:REFERENCES_MAX_COUNT]
+    long_reference = "https://example.com/" + "a" * REFERENCE_MAX_LENGTH
+    # An over-long URL is dropped, not cut: the next valid ones are kept
+    assert limit_references([long_reference, "https://example.com/ok"]) == ["https://example.com/ok"]
+
+
+def _state(committed_cursor=T2, boundary=(), export_start=T3) -> TraversalState:
+    return TraversalState(committed_cursor, frozenset(boundary), export_start)
+
+
+def test_traversal_state_already_sent():
+    key = _key("a")
+    state = _state(boundary={key})
+    # At the committed second and in the boundary
+    assert state.already_sent(T2, T2, key) is True
+    # In the boundary but at another second: a new version, sent
+    assert state.already_sent(T1, T1, key) is False
+    # Future-dated (capped at the export start) and in the boundary
+    assert state.already_sent(T3 + 100, state.cap_time(T3 + 100), key) is True
+    # Not in the boundary, or without key
+    assert state.already_sent(T2, T2, _key("b")) is False
+    assert state.already_sent(T2, T2, None) is False
+
+
+def test_traversal_state_cap_time():
+    state = _state()
+    assert state.cap_time(T3 + 100) == T3
+    assert state.cap_time(T1) == T1
+    assert state.cap_time(None) is None
+
+
+def test_traversal_state_record_lookup_failure():
+    state = _state()
+    state.record_lookup_failure(T3)
+    state.record_lookup_failure(T1)
+    assert (state.retry_count, state.retry_from) == (2, T1)
+
+    # Without time: retried from the committed cursor
+    state = _state()
+    state.record_lookup_failure(None)
+    assert (state.retry_count, state.retry_from) == (1, T2)
+
+    # Without time during an initial sync: nothing to cap at
+    state = _state(committed_cursor=None)
+    state.record_lookup_failure(None)
+    assert (state.retry_count, state.retry_from) == (1, None)
+
+
+def test_traversal_state_next_checkpoint_without_failure():
+    state = _state()
+    state.track(T3, _key("c"))
+    assert state.next_checkpoint() == (T3, {_key("c")})
+
+
+def test_traversal_state_next_checkpoint_failure_after_committed():
+    state = _state(committed_cursor=T1)
+    state.track(T3, _key("c"))
+    state.record_lookup_failure(T2)
+    state.track(T2, None)
+    assert state.next_checkpoint() == (T2, set())
+
+
+def test_traversal_state_next_checkpoint_failure_at_or_before_committed():
+    state = _state(committed_cursor=T2, boundary={_key("b")})
+    state.track(T3, _key("c"))
+    state.record_lookup_failure(T2)
+    assert state.next_checkpoint() == (T2, {_key("b")})
+
+    state = _state(committed_cursor=T2, boundary={_key("b")})
+    state.track(T3, _key("c"))
+    state.record_lookup_failure(T1)
+    assert state.next_checkpoint() == (T2, {_key("b")})
+
+
+def test_traversal_state_next_checkpoint_empty_initial_sync():
+    state = _state(committed_cursor=None)
+    assert state.initial_sync is True
+    assert state.next_checkpoint() == (T3, set())
