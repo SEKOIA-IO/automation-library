@@ -33,10 +33,13 @@ from microsoft_sentinel.metrics import (
 from microsoft_sentinel.utils import additional_data_to_dict, labels_data_to_dict, owner_data_to_dict
 
 MAX_BATCH_SIZE = 1000
-# number of incident versions remembered to avoid forwarding the same version twice
+# incidents are queried from `checkpoint - LOOKBACK` to collect the ones written late, with a modification
+# date older than the checkpoint
+LOOKBACK = timedelta(minutes=5)
+# hard cap of the incident versions remembered (and persisted) to avoid forwarding the same version twice
 DEDUP_CACHE_SIZE = 10_000
-# keys of the incidents sharing the checkpoint date, persisted to survive restarts
-BOUNDARY_KEYS_FILE = "incidents_boundary.json"
+# versions forwarded within the lookback window, persisted to survive restarts
+DEDUP_KEYS_FILE = "incidents_dedup.json"
 INCIDENTS_ORDER_BY = "properties/lastModifiedTimeUtc asc"
 # maximum wait, in seconds, between two polls after consecutive failures
 MAX_BACKOFF = 300
@@ -56,18 +59,17 @@ class MicrosoftSentineldConnector(Connector):
         )
         self.from_date = self.cursor.offset
 
-        # versions (name + lastModifiedTimeUtc) of the incidents already forwarded
-        self._forwarded: LRUCache[str, bool] = LRUCache(maxsize=DEDUP_CACHE_SIZE)
-        self._boundary_store = PersistentJSON(BOUNDARY_KEYS_FILE, self.data_path)
-        self._boundary_time: datetime | None = None
-        self._boundary_keys: set[str] = set()
-        self._load_boundary_keys()
+        # versions (name + lastModifiedTimeUtc) of the incidents already forwarded -> their lastModifiedTimeUtc
+        self._forwarded: LRUCache[str, datetime] = LRUCache(maxsize=DEDUP_CACHE_SIZE)
+        self._dedup_store = PersistentJSON(DEDUP_KEYS_FILE, self.data_path)
+        self._load_dedup_keys()
 
     @property
     def incidents_filter(self) -> str:
-        most_recent_date = self._to_RFC3339(self.from_date)
-        # `ge` (and not `gt`): incidents sharing the checkpoint date are collected again and deduplicated
-        return f"properties/lastModifiedTimeUtc ge {most_recent_date}"
+        # `ge` on a window before the checkpoint: incidents sharing the checkpoint date or written late are
+        # collected again, the already forwarded versions are deduplicated
+        window_start = self._to_RFC3339(self.from_date - LOOKBACK)
+        return f"properties/lastModifiedTimeUtc ge {window_start}"
 
     @cached_property
     def batch_limit(self) -> int:
@@ -173,39 +175,28 @@ class MicrosoftSentineldConnector(Connector):
             return None
         return f"{name}|{last_modified.isoformat()}"
 
-    def _load_boundary_keys(self) -> None:
-        with self._boundary_store as store:
-            boundary_time = store.get("last_modified_time_utc")
-            boundary_keys = store.get("keys", [])
+    def _load_dedup_keys(self) -> None:
+        with self._dedup_store as store:
+            keys: dict[str, str] = store.get("keys", {})
 
-        if boundary_time:
-            self._boundary_time = datetime.fromisoformat(boundary_time)
-            self._boundary_keys = set(boundary_keys)
-            for key in self._boundary_keys:
-                self._forwarded[key] = True
+        versions = sorted((datetime.fromisoformat(last_modified), key) for key, last_modified in keys.items())
+        # insert the oldest versions first so they are the first evicted from the LRU cache
+        for last_modified, key in versions:
+            self._forwarded[key] = last_modified
 
-    def _save_boundary_keys(self) -> None:
-        if self._boundary_time is None:
-            return
+    def _save_dedup_keys(self) -> None:
+        """
+        Persist the versions forwarded within the lookback window, and forget the older ones: they are
+        no longer returned by the incidents query.
+        """
+        window_start = self.cursor.offset - LOOKBACK
+        for key, last_modified in list(self._forwarded.items()):
+            if last_modified < window_start:
+                del self._forwarded[key]
 
-        with self._boundary_store as store:
-            store["last_modified_time_utc"] = self._boundary_time.isoformat()
-            store["keys"] = sorted(self._boundary_keys)
-
-    def _mark_forwarded(self, key: str | None, last_modified: datetime | None) -> None:
-        if key is not None:
-            self._forwarded[key] = True
-
-        if key is None or last_modified is None:
-            return
-
-        # keep the keys of the incidents sharing the most recent modification date: they are returned again
-        # by the next `ge` query and must not be forwarded twice, even after a restart
-        if self._boundary_time is None or last_modified > self._boundary_time:
-            self._boundary_time = last_modified
-            self._boundary_keys = {key}
-        elif last_modified == self._boundary_time and len(self._boundary_keys) < DEDUP_CACHE_SIZE:
-            self._boundary_keys.add(key)
+        with self._dedup_store as store:
+            store.clear()
+            store["keys"] = {key: last_modified.isoformat() for key, last_modified in self._forwarded.items()}
 
     def _forward_batch(self, batch: list[EventType], versions: list[tuple[str | None, datetime | None]]) -> None:
         """
@@ -220,14 +211,16 @@ class MicrosoftSentineldConnector(Connector):
         OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch))
 
         for key, last_modified in versions:
-            self._mark_forwarded(key, last_modified)
+            if key is not None and last_modified is not None:
+                self._forwarded[key] = last_modified
 
         dates = [last_modified for _, last_modified in versions if last_modified is not None]
         if dates:
-            # the checkpoint setter only persists dates more recent than the current checkpoint
+            # the checkpoint setter only persists dates more recent than the current checkpoint, so a batch of
+            # late incidents does not move it backward
             self.cursor.offset = max(dates)
             self.from_date = self.cursor.offset
-            self._save_boundary_keys()
+            self._save_dedup_keys()
 
     def get_incidents(self) -> None:
         self.log(message="Start fetching alerts from Microsoft sentinel", level="info")
@@ -241,7 +234,7 @@ class MicrosoftSentineldConnector(Connector):
             key = self._dedup_key(item)
             if key is not None:
                 if key in self._forwarded or key in seen_in_poll:
-                    # this version of the incident was already forwarded (boundary of the `ge` filter)
+                    # this version of the incident was already forwarded (lookback window of the query)
                     duplicates += 1
                     continue
                 seen_in_poll.add(key)

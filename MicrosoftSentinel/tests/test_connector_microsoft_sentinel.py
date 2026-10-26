@@ -464,7 +464,8 @@ def test_incidents_iterator_filters_and_orders_on_last_modified(trigger):
     trigger.client.incidents.list.assert_called_once_with(
         resource_group_name="resource_group",
         workspace_name="workspace_name",
-        filter="properties/lastModifiedTimeUtc ge 2021-09-01T00:00:00.000000Z",
+        # 5 minutes lookback before the checkpoint, in UTC
+        filter="properties/lastModifiedTimeUtc ge 2021-08-31T23:55:00.000000Z",
         orderby="properties/lastModifiedTimeUtc asc",
     )
 
@@ -609,3 +610,81 @@ def test_run_backoff_is_capped_and_reset_after_success(trigger):
 def test_run_raises_unexpected_errors(trigger):
     with pytest.raises(ValueError):
         run_with_polls(trigger, [ValueError("bug")])
+
+
+def new_connector(module, configuration, data_path):
+    connector = MicrosoftSentineldConnector(module=module, data_path=data_path)
+    connector.configuration = configuration
+    connector.push_events_to_intakes = Mock()
+    connector.log = Mock()
+    connector.log_exception = Mock()
+    return connector
+
+
+def persisted_dedup_keys(data_path):
+    return orjson.loads((data_path / "incidents_dedup.json").read_bytes())["keys"]
+
+
+def test_late_incident_within_lookback_is_forwarded(trigger, first_incident_item, symphony_storage):
+    t0 = datetime.now(UTC) - timedelta(minutes=30)
+    a = make_incident(first_incident_item, "A", t0)
+    b = make_incident(first_incident_item, "B", t0 + timedelta(minutes=2))
+    late = make_incident(first_incident_item, "LATE", t0 + timedelta(minutes=1))
+    c = make_incident(first_incident_item, "C", t0 + timedelta(minutes=3))
+
+    assert poll(trigger, [a, b]) == [("A", "New"), ("B", "New")]
+    assert trigger.cursor.offset == t0 + timedelta(minutes=2)
+
+    from microsoft_sentinel.metrics import INCOMING_EVENTS
+
+    collected = INCOMING_EVENTS.labels(intake_key="0123456789")
+    collected_before = collected._value.get()
+
+    # LATE became visible after the first poll with a modification date older than the checkpoint
+    assert poll(trigger, [a, late, b]) == [("LATE", "New")]
+    # only the newly forwarded version is counted as collected
+    assert collected._value.get() == collected_before + 1
+    # the checkpoint never moves backward
+    assert trigger.cursor.offset == t0 + timedelta(minutes=2)
+
+    # the versions of the window are not sent again after a restart
+    restarted = new_connector(trigger.module, trigger.configuration, symphony_storage)
+    assert poll(restarted, [a, late, b, c]) == [("C", "New")]
+    assert restarted.cursor.offset == t0 + timedelta(minutes=3)
+
+
+def test_dedup_keys_older_than_lookback_are_pruned(trigger, first_incident_item, symphony_storage):
+    t0 = datetime.now(UTC) - timedelta(minutes=30)
+    a = make_incident(first_incident_item, "A", t0)
+    b = make_incident(first_incident_item, "B", t0 + timedelta(minutes=4))
+    c = make_incident(first_incident_item, "C", t0 + timedelta(minutes=10))
+
+    poll(trigger, [a, b])
+    assert set(persisted_dedup_keys(symphony_storage)) == {
+        f"A|{t0.isoformat()}",
+        f"B|{(t0 + timedelta(minutes=4)).isoformat()}",
+    }
+
+    # checkpoint moves to t0 + 10 min: A is out of the [checkpoint - 5 min, checkpoint] window, B too
+    poll(trigger, [c])
+    assert set(persisted_dedup_keys(symphony_storage)) == {f"C|{(t0 + timedelta(minutes=10)).isoformat()}"}
+    assert list(trigger._forwarded) == [f"C|{(t0 + timedelta(minutes=10)).isoformat()}"]
+
+    restarted = new_connector(trigger.module, trigger.configuration, symphony_storage)
+    assert list(restarted._forwarded) == [f"C|{(t0 + timedelta(minutes=10)).isoformat()}"]
+
+
+def test_dedup_keys_hard_cap(trigger, first_incident_item, symphony_storage):
+    t0 = datetime.now(UTC) - timedelta(minutes=30)
+    incidents = [make_incident(first_incident_item, name, t0 + timedelta(seconds=i)) for i, name in enumerate("ABC")]
+
+    with patch("microsoft_sentinel.connector_microsoft_sentinel.DEDUP_CACHE_SIZE", 2):
+        connector = new_connector(trigger.module, trigger.configuration, symphony_storage)
+    connector.configuration.chunk_size = 10
+
+    assert len(poll(connector, incidents)) == 3
+    # only the 2 most recent versions are remembered and persisted
+    assert sorted(persisted_dedup_keys(symphony_storage)) == [
+        f"B|{(t0 + timedelta(seconds=1)).isoformat()}",
+        f"C|{(t0 + timedelta(seconds=2)).isoformat()}",
+    ]
