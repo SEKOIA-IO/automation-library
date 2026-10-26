@@ -115,6 +115,10 @@
 		{
 			"name": "CatoNetwork",
 			"path": "CatoNetwork"
+		},
+		{
+			"name": "TrendMicro",
+			"path": "TrendMicro"
 		}
 	],
 	"settings": {

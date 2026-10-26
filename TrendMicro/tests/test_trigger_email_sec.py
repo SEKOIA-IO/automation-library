@@ -148,14 +148,15 @@ def test_saving_checkpoint(trigger):
 
 
 def test_fetch_event(trigger, response_message, response_message_empty):
-    with requests_mock.Mocker() as mock_requests, patch(
-        "trendmicro_modules.trigger_email_sec.TrendMicroWorker.get_last_timestamp",
-        return_value=0,
-    ) as mock_get_ts, patch(
-        "trendmicro_modules.trigger_email_sec.TrendMicroWorker.set_last_timestamp"
-    ) as mock_set_ts, patch(
-        "trendmicro_modules.trigger_email_sec.time"
-    ) as mock_time:
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch(
+            "trendmicro_modules.trigger_email_sec.TrendMicroWorker.get_last_timestamp",
+            return_value=0,
+        ) as mock_get_ts,
+        patch("trendmicro_modules.trigger_email_sec.TrendMicroWorker.set_last_timestamp") as mock_set_ts,
+        patch("trendmicro_modules.trigger_email_sec.time") as mock_time,
+    ):
         mock_requests.get(
             "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog",
             [{"status_code": 200, "json": response_message}, {"status_code": 200, "content": response_message_empty}],
@@ -183,14 +184,15 @@ def test_fetch_event(trigger, response_message, response_message_empty):
 
 
 def test_fetch_empty_content(trigger, response_message_empty):
-    with requests_mock.Mocker() as mock_requests, patch(
-        "trendmicro_modules.trigger_email_sec.TrendMicroWorker.get_last_timestamp",
-        return_value=0,
-    ) as mock_get_ts, patch(
-        "trendmicro_modules.trigger_email_sec.TrendMicroWorker.set_last_timestamp"
-    ) as mock_set_ts, patch(
-        "trendmicro_modules.trigger_email_sec.time"
-    ) as mock_time:
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch(
+            "trendmicro_modules.trigger_email_sec.TrendMicroWorker.get_last_timestamp",
+            return_value=0,
+        ) as mock_get_ts,
+        patch("trendmicro_modules.trigger_email_sec.TrendMicroWorker.set_last_timestamp") as mock_set_ts,
+        patch("trendmicro_modules.trigger_email_sec.time") as mock_time,
+    ):
         mock_requests.get(
             "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog",
             [{"status_code": 204, "content": response_message_empty}],

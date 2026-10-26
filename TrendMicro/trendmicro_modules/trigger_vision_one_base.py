@@ -1,12 +1,12 @@
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Generator
 from datetime import datetime, timedelta
 from functools import cached_property
-from typing import Generator
 
 import orjson
 import requests
-from pydantic.v1 import Field
+from pydantic import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from .client import TrendMicroVisionApiClient
@@ -18,12 +18,12 @@ logger = get_logger()
 
 class TrendMicroVisionOneBaseConfiguration(DefaultConnectorConfiguration):
     base_url: str = Field(..., description="Base URL")
-    api_key: str = Field(..., description="API key", secret=True)
+    api_key: str = Field(..., description="API key", json_schema_extra={"secret": True})
     frequency: int = Field(60, description="Batch frequency in seconds", ge=1)
 
 
 class TrendMicroVisionOneBaseConnector(Connector, ABC):
-    configuration: TrendMicroVisionOneBaseConfiguration
+    configuration: TrendMicroVisionOneBaseConfiguration  # type: ignore[assignment,override]
 
     CONNECTOR_METRICS_LABEL: str
     CONNECTOR_TITLE: str
@@ -50,10 +50,10 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
                     error_number=error.get("number"),
                 )
 
-            except Exception as e:
+            except Exception:
                 pass
 
-            self.log(message, level=level)
+            self.log(message, level=level)  # type: ignore[arg-type]
 
     @staticmethod
     def get_upper_second(time: datetime) -> datetime:
@@ -67,7 +67,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
         return (time + timedelta(seconds=1)).replace(microsecond=0)
 
     @abstractmethod
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list]:
         pass
 
     def next_batch(self):
