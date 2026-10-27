@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock, patch
 
 import pytest
 from msgraph.generated.models.compliance_state import ComplianceState
@@ -11,6 +11,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceOCSFModel,
     DeviceTypeId,
     DeviceTypeStr,
+    NetworkInterfaceTypeId,
     OSTypeId,
     OSTypeStr,
 )
@@ -18,7 +19,8 @@ from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId
 from sekoia_automation.module import Module
 
 from asset_connector.device_assets import MicrosoftDefenderDeviceAssetConnector
-from asset_connector.models import DefenderMachine, resolve_hostname
+from asset_connector.mappers import DeviceMapper, MissingHostnameError
+from asset_connector.models import DefenderMachine
 
 
 @pytest.fixture
@@ -58,7 +60,7 @@ def sample_defender_machine():
         version="1709",
         osProcessor="x64",
         lastIpAddress="172.17.230.209",
-        lastExternalIpAddress="167.220.196.71",
+        lastExternalIpAddress="203.0.113.10",
         osBuild=18209,
         healthStatus="Active",
         rbacGroupId=140,
@@ -98,84 +100,84 @@ def sample_managed_device():
 
 
 class TestResolveOsType:
-    def test_windows(self, connector):
-        os_str, os_id = connector._resolve_os_type("Windows10")
+    def test_windows(self):
+        os_str, os_id = DeviceMapper.resolve_os_type("Windows10")
         assert os_str == OSTypeStr.WINDOWS
         assert os_id == OSTypeId.WINDOWS
 
-    def test_linux(self, connector):
-        os_str, os_id = connector._resolve_os_type("Linux")
+    def test_linux(self):
+        os_str, os_id = DeviceMapper.resolve_os_type("Linux")
         assert os_str == OSTypeStr.LINUX
         assert os_id == OSTypeId.LINUX
 
-    def test_macos(self, connector):
-        os_str, os_id = connector._resolve_os_type("macOS")
+    def test_macos(self):
+        os_str, os_id = DeviceMapper.resolve_os_type("macOS")
         assert os_str == OSTypeStr.MACOS
         assert os_id == OSTypeId.MACOS
 
-    def test_android(self, connector):
-        os_str, os_id = connector._resolve_os_type("Android")
+    def test_android(self):
+        os_str, os_id = DeviceMapper.resolve_os_type("Android")
         assert os_str == OSTypeStr.ANDROID
         assert os_id == OSTypeId.ANDROID
 
-    def test_ios(self, connector):
-        os_str, os_id = connector._resolve_os_type("iOS")
+    def test_ios(self):
+        os_str, os_id = DeviceMapper.resolve_os_type("iOS")
         assert os_str == OSTypeStr.IOS
         assert os_id == OSTypeId.IOS
 
-    def test_unknown_os(self, connector):
-        os_str, os_id = connector._resolve_os_type(None)
+    def test_unknown_os(self):
+        os_str, os_id = DeviceMapper.resolve_os_type(None)
         assert os_str == OSTypeStr.UNKNOWN
         assert os_id == OSTypeId.UNKNOWN
 
-    def test_other_os(self, connector):
-        os_str, os_id = connector._resolve_os_type("ChromeOS")
+    def test_other_os(self):
+        os_str, os_id = DeviceMapper.resolve_os_type("ChromeOS")
         assert os_str == OSTypeStr.OTHER
         assert os_id == OSTypeId.OTHER
 
 
 class TestResolveDeviceType:
-    def test_desktop_for_windows(self, connector):
-        device_str, device_id = connector._resolve_device_type(OSTypeStr.WINDOWS)
+    def test_desktop_for_windows(self):
+        device_str, device_id = DeviceMapper.resolve_device_type(OSTypeStr.WINDOWS)
         assert device_str == DeviceTypeStr.DESKTOP
         assert device_id == DeviceTypeId.DESKTOP
 
-    def test_mobile_for_android(self, connector):
-        device_str, device_id = connector._resolve_device_type(OSTypeStr.ANDROID)
+    def test_mobile_for_android(self):
+        device_str, device_id = DeviceMapper.resolve_device_type(OSTypeStr.ANDROID)
         assert device_str == DeviceTypeStr.MOBILE
         assert device_id == DeviceTypeId.MOBILE
 
-    def test_mobile_for_ios(self, connector):
-        device_str, device_id = connector._resolve_device_type(OSTypeStr.IOS)
+    def test_mobile_for_ios(self):
+        device_str, device_id = DeviceMapper.resolve_device_type(OSTypeStr.IOS)
         assert device_str == DeviceTypeStr.MOBILE
         assert device_id == DeviceTypeId.MOBILE
 
 
 class TestResolveRiskLevel:
-    def test_low(self, connector):
-        level_str, level_id = connector._resolve_risk_level("Low")
+    def test_low(self):
+        level_str, level_id = DeviceMapper.resolve_risk_level("Low")
         assert level_str == RiskLevelStr.LOW
         assert level_id == RiskLevelId.LOW
 
-    def test_high(self, connector):
-        level_str, level_id = connector._resolve_risk_level("High")
+    def test_high(self):
+        level_str, level_id = DeviceMapper.resolve_risk_level("High")
         assert level_str == RiskLevelStr.HIGH
         assert level_id == RiskLevelId.HIGH
 
-    def test_none(self, connector):
-        level_str, level_id = connector._resolve_risk_level(None)
+    def test_none(self):
+        level_str, level_id = DeviceMapper.resolve_risk_level(None)
         assert level_str is None
         assert level_id is None
 
-    def test_unknown_value(self, connector):
-        level_str, level_id = connector._resolve_risk_level("SuperDanger")
+    def test_unknown_value(self):
+        level_str, level_id = DeviceMapper.resolve_risk_level("SuperDanger")
         assert level_str == RiskLevelStr.OTHER
         assert level_id == RiskLevelId.OTHER
 
 
 class TestBuildDeviceFromMachine:
-    def test_machine_only(self, connector, sample_defender_machine):
-        device = connector.build_device_from_machine(sample_defender_machine)
+    def test_machine_only(self, sample_defender_machine):
+        device = DeviceMapper(sample_defender_machine).build_device()
 
         assert device.uid == "1e5bc9d7e413ddd7902c2932e418702b84d0cc07"
         assert device.hostname == "mymachine1"
@@ -192,8 +194,8 @@ class TestBuildDeviceFromMachine:
         # No managed device → no enriched fields
         assert device.network_interfaces is None
 
-    def test_with_managed_device(self, connector, sample_defender_machine, sample_managed_device):
-        device = connector.build_device_from_machine(sample_defender_machine, sample_managed_device)
+    def test_with_managed_device(self, sample_defender_machine, sample_managed_device):
+        device = DeviceMapper(sample_defender_machine, sample_managed_device).build_device()
 
         assert device.uid == "1e5bc9d7e413ddd7902c2932e418702b84d0cc07"
         assert device.hostname == "mymachine1"
@@ -208,52 +210,144 @@ class TestBuildDeviceFromMachine:
         # OS version enriched from managed device
         assert device.os.name == "10.0.22631.3880"
 
-    def test_minimal_machine(self, connector):
+    def test_minimal_machine(self):
         machine = DefenderMachine(id="minimal-id")
-        result = connector.build_device_from_machine(machine)
+        with pytest.raises(MissingHostnameError, match="minimal-id"):
+            DeviceMapper(machine).build_device()
+
+    def test_minimal_machine_with_name(self):
+        machine = DefenderMachine(id="minimal-id", computerDnsName="pc01")
+        result = DeviceMapper(machine).build_device()
         assert result.uid == "minimal-id"
-        assert result.hostname == ""
+        assert result.hostname == "pc01"
         assert result.domain is None
         assert result.os.type == OSTypeStr.UNKNOWN
         assert result.network_interfaces is None
+
+    def test_hostname_falls_back_to_intune_device_name(self, sample_managed_device):
+        machine = DefenderMachine(id="no-dns-name", aadDeviceId="80fe8ff8-2624-418e-9591-41f0491218f9")
+        sample_managed_device.device_name = "PC01"
+        result = DeviceMapper(machine, sample_managed_device).build_device()
+        assert result.hostname == "PC01"
+        assert result.domain is None
+
+    def test_intune_fallback_keeps_defender_domain(self, sample_managed_device):
+        machine = DefenderMachine(id="short-dns-name", computerDnsName="a.corp.example.com")
+        sample_managed_device.device_name = "PC01"
+        result = DeviceMapper(machine, sample_managed_device).build_device()
+        assert result.hostname == "PC01"
+        assert result.domain == "corp.example.com"
+
+    def test_unusable_intune_device_name_raises(self, sample_managed_device):
+        machine = DefenderMachine(id="no-dns-name")
+        sample_managed_device.device_name = "x"
+        with pytest.raises(MissingHostnameError):
+            DeviceMapper(machine, sample_managed_device).build_device()
 
 
 class TestResolveHostname:
     @pytest.mark.parametrize(
         "computer_dns_name,expected",
         [
-            ("vdw109141.ad-its.credit-agricole.fr", ("vdw109141", "ad-its.credit-agricole.fr")),
+            ("pc01.corp.example.com", ("pc01", "corp.example.com")),
             ("mymachine1.contoso.com", ("mymachine1", "contoso.com")),
             ("shortname", ("shortname", None)),
             ("  padded.contoso.com  ", ("padded", "contoso.com")),
             ("trailingdot.", ("trailingdot", None)),
-            (None, ("", None)),
-            ("", ("", None)),
+            ("ab.example.com", ("ab", "example.com")),
+            (None, (None, None)),
+            ("", (None, None)),
+            ("   ", (None, None)),
+            (".corp.example.com", (None, "corp.example.com")),
+            ("a.example.com", (None, "example.com")),
         ],
     )
     def test_resolve_hostname(self, computer_dns_name, expected):
-        assert resolve_hostname(computer_dns_name) == expected
+        assert DeviceMapper.resolve_hostname(computer_dns_name) == expected
 
 
 class TestBuildEnrichments:
-    def test_machine_only(self, connector, sample_defender_machine):
-        enrichments = connector.build_enrichments(sample_defender_machine)
+    def test_machine_only(self, sample_defender_machine):
+        enrichments = DeviceMapper(sample_defender_machine).build_enrichments()
         names = [e.name for e in enrichments]
         assert "azure_ad_device_id" in names
         assert "health_status" in names
         assert "exposure_level" in names
         assert "rbac_group_name" in names
 
-    def test_with_managed_device(self, connector, sample_defender_machine, sample_managed_device):
-        enrichments = connector.build_enrichments(sample_defender_machine, sample_managed_device)
+    def test_with_managed_device(self, sample_defender_machine, sample_managed_device):
+        enrichments = DeviceMapper(sample_defender_machine, sample_managed_device).build_enrichments()
         names = [e.name for e in enrichments]
         assert "user_principal_name" in names
         assert "management_agent" in names
 
-    def test_no_enrichments(self, connector):
+    def test_no_enrichments(self):
         machine = DefenderMachine(id="test")
-        enrichments = connector.build_enrichments(machine)
+        enrichments = DeviceMapper(machine).build_enrichments()
         assert enrichments is None
+
+
+class TestDeviceMapperParts:
+    def test_os_name_from_defender(self, sample_defender_machine):
+        assert DeviceMapper(sample_defender_machine).build_os_name() == "Windows10 (Build 18209)"
+
+    def test_os_name_prefers_intune_version(self, sample_defender_machine, sample_managed_device):
+        assert DeviceMapper(sample_defender_machine, sample_managed_device).build_os_name() == "10.0.22631.3880"
+
+    def test_network_interfaces_prefer_intune_macs(self, sample_defender_machine, sample_managed_device):
+        interfaces = DeviceMapper(sample_defender_machine, sample_managed_device).build_network_interfaces()
+        assert [(i.name, i.mac) for i in interfaces] == [
+            ("ethernet", "11:22:33:44:55:66"),
+            ("wifi", "AA:BB:CC:DD:EE:FF"),
+        ]
+
+    def test_network_interfaces_fall_back_on_defender_addresses(self):
+        machine = DefenderMachine(
+            id="m1",
+            ipAddresses=[
+                {"ipAddress": "10.0.0.5", "macAddress": "001122334455", "type": "Ethernet"},
+                {"ipAddress": None, "macAddress": None, "type": "Wifi"},
+            ],
+        )
+        interfaces = DeviceMapper(machine).build_network_interfaces()
+        assert len(interfaces) == 1
+        assert interfaces[0].ip == "10.0.0.5"
+        assert interfaces[0].type_id == NetworkInterfaceTypeId.WIRED
+
+    def test_no_network_interfaces(self):
+        assert DeviceMapper(DefenderMachine(id="m1")).build_network_interfaces() is None
+
+    def test_groups(self, sample_defender_machine):
+        groups = DeviceMapper(sample_defender_machine).build_groups()
+        assert [(g.name, g.uid) for g in groups] == [("The-A-Team", "140")]
+        assert DeviceMapper(DefenderMachine(id="m1")).build_groups() is None
+
+    def test_intune_flags(self, sample_defender_machine, sample_managed_device):
+        mapper = DeviceMapper(sample_defender_machine, sample_managed_device)
+        assert mapper.build_is_compliant() is True
+        assert mapper.build_is_personal() is False
+        without_intune = DeviceMapper(sample_defender_machine)
+        assert without_intune.build_is_compliant() is None
+        assert without_intune.build_is_personal() is None
+
+    def test_event_time_uses_last_seen_then_first_seen(self):
+        last_seen = DefenderMachine(id="m1", firstSeen="2020-01-01T00:00:00Z", lastSeen="2024-12-01T10:00:00Z")
+        assert DeviceMapper(last_seen).build_event_time() == datetime(2024, 12, 1, 10, tzinfo=timezone.utc).timestamp()
+        first_seen = DefenderMachine(id="m1", firstSeen="2020-01-01T00:00:00Z")
+        assert DeviceMapper(first_seen).build_event_time() == datetime(2020, 1, 1, tzinfo=timezone.utc).timestamp()
+
+    def test_event_time_defaults_to_now(self):
+        before = datetime.now().timestamp()
+        assert DeviceMapper(DefenderMachine(id="m1")).build_event_time() >= before
+
+    def test_minimal_device(self, sample_defender_machine):
+        device = DeviceMapper(sample_defender_machine).build_minimal_device()
+        assert device.model_dump(exclude_none=True) == {
+            "type_id": DeviceTypeId.DESKTOP,
+            "type": DeviceTypeStr.DESKTOP,
+            "uid": sample_defender_machine.id,
+            "hostname": "mymachine1",
+        }
 
 
 class TestMapToOcsf:
@@ -326,9 +420,9 @@ class TestFetchMachines:
         with patch.object(connector, "defender_client", create=True) as mock_client:
             mock_client.base_url = "https://api.securitycenter.microsoft.com"
             mock_client.get = Mock(side_effect=Exception("API error"))
-            machines = connector._fetch_machines()
+            with pytest.raises(Exception, match="API error"):
+                connector._fetch_machines()
 
-        assert len(machines) == 0
         connector.log.assert_called()
 
     def test_checkpoint_filter_applied(self, connector, sample_defender_machine):
@@ -492,6 +586,42 @@ class TestGetAssets:
         assert assets[0].device.uid == "no-aad-machine"
         assert assets[0].device.model is None
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("computer_dns_name", [None, "", "   ", ".corp.example.com", "a.example.com"])
+    async def test_get_assets_skips_machine_without_usable_hostname(self, connector, computer_dns_name):
+        nameless = DefenderMachine(
+            id="nameless-machine",
+            computerDnsName=computer_dns_name,
+            osPlatform="Windows10",
+            lastSeen="2024-12-02T10:00:00Z",
+        )
+        named = DefenderMachine(
+            id="named-machine",
+            computerDnsName="pc01.corp.example.com",
+            osPlatform="Windows10",
+            lastSeen="2024-12-01T10:00:00Z",
+        )
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"value": [nameless.dict(), named.dict()]}
+
+        with patch.object(connector, "defender_client", create=True) as mock_def_client, patch.object(
+            connector, "_graph_client", _mock_graph_client(MagicMock())
+        ):
+            mock_def_client.base_url = "https://api.securitycenter.microsoft.com"
+            mock_def_client.get = Mock(return_value=mock_response)
+            assets = []
+            async for asset in connector.get_assets():
+                assets.append(asset)
+
+        assert len(assets) == 1
+        assert assets[0].device.uid == "named-machine"
+        assert all(len(asset.device.hostname) >= 2 for asset in assets)
+        # The skipped machine still moves the cursor, so it is not re-fetched every cycle
+        assert connector._latest_time_raw == "2024-12-02T10:00:00Z"
+
 
 class TestUpdateCheckpoint:
     @pytest.mark.asyncio
@@ -598,3 +728,43 @@ class TestGetAssetsCheckpointTracking:
 
         with connector.context as cache:
             assert cache["most_recent_date_seen"] == raw
+
+    @pytest.mark.asyncio
+    async def test_checkpoint_not_advanced_on_page_error(self, connector, sample_defender_machine):
+        # A page error must stop the cycle: the cursor must not move past machines never fetched
+        stored = "2024-01-01T00:00:00Z"
+        with connector.context as cache:
+            cache["most_recent_date_seen"] = stored
+
+        page1 = MagicMock()
+        page1.raise_for_status = Mock()
+        page1.json.return_value = {
+            "value": [sample_defender_machine.dict()],
+            "@odata.nextLink": "https://api.securitycenter.microsoft.com/api/machines?$skip=1",
+        }
+
+        with patch.object(connector, "defender_client", create=True) as mock_client, patch.object(
+            connector, "_graph_client", _mock_graph_client(MagicMock())
+        ):
+            mock_client.base_url = "https://api.securitycenter.microsoft.com"
+            mock_client.get = Mock(side_effect=[page1, Exception("boom")])
+            with pytest.raises(Exception, match="boom"):
+                async for _ in connector.get_assets():
+                    pass
+            await connector.update_checkpoint()
+
+        assert connector._latest_time_raw is None
+        with connector.context as cache:
+            assert cache["most_recent_date_seen"] == stored
+
+    @pytest.mark.asyncio
+    async def test_checkpoint_not_advanced_when_stopped(self, connector):
+        machine = DefenderMachine(id="m1", computerDnsName="pc01.corp.example.com", lastSeen="2024-12-01T10:00:00Z")
+
+        with patch.object(connector, "_fetch_machines", return_value=[machine]), patch.object(
+            connector, "_graph_client", _mock_graph_client(MagicMock())
+        ), patch.object(type(connector), "running", new_callable=PropertyMock, return_value=False):
+            assets = [asset async for asset in connector.get_assets()]
+
+        assert assets == []
+        assert connector._latest_time_raw is None
