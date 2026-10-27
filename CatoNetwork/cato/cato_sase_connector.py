@@ -43,6 +43,9 @@ RATE_LIMIT_ERROR_MESSAGE = re.compile(r"rate limit for operation", re.IGNORECASE
 RATE_LIMIT_HTTP_CODE = 429
 RATE_LIMIT_DELAY = 5
 
+# Ceiling of the error backoff, independent of the (short) idle `frequency`: don't hammer Cato during an outage
+BACKOFF_MAX_DELAY = 60
+
 # A Cato page (up to 3000 events, ~5 MB) is pushed as several smaller batches sent in parallel:
 # one SDK chunk (~9 MB) would be sent as a single slow POST, close to the intake payload limit once escaped.
 PUSH_BATCH_MAX_SIZE = 2_000_000
@@ -367,9 +370,10 @@ class CatoSaseConnector(Connector):
             await asyncio.sleep(1)
 
     async def _backoff(self) -> None:
-        """Sleep after an error: exponential delay (2, 4, 8... seconds) capped at `frequency`."""
+        """Sleep after an error: exponential delay (2, 4, 8... seconds) capped at `frequency`, at least 60 seconds."""
         self._consecutive_errors += 1
-        delay = max(1, min(self.configuration.frequency, 2**self._consecutive_errors))
+        max_delay = max(self.configuration.frequency, BACKOFF_MAX_DELAY)
+        delay = max(1, min(max_delay, 2**self._consecutive_errors))
         await self._sleep(delay)
 
     def _report_auth_failure(self, message: str) -> None:

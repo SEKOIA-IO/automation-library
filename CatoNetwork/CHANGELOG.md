@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fetch the next page of the events feed while the previous one is pushed to the intake; a marker is still saved only once every event of its page is acknowledged
 - Push each page as batches of 2 MB sent in parallel instead of a single request
-- Lower the default `frequency` from 60 to 5 seconds
+- Lower the default `frequency` from 60 to 5 seconds; the error backoff keeps a ceiling of at least 60 seconds
 - Retry after 5 seconds, with a warning, when Cato reports a rate limit (GraphQL error or HTTP 429)
 - Add the `fetch_events_duration` and `push_events_duration` metrics, and log both durations with each forwarded batch
 

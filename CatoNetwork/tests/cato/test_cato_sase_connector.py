@@ -508,15 +508,26 @@ async def test_run_cycle_unexpected_error_uses_log_exception(connector: CatoSase
 
 
 @pytest.mark.asyncio
-async def test_run_cycle_backoff_is_exponential_capped_and_reset(connector: CatoSaseConnector):
-    connector.configuration = CatoSaseConnectorConfig(intake_key="key", frequency=5)
-    mock_feed(connector, *[ValueError("boom")] * 4, make_feed("m", 1), ValueError("boom"))
+@pytest.mark.parametrize(
+    ("frequency", "delays"),
+    [
+        # The short idle frequency does not shorten the error backoff: it keeps a 60 s ceiling
+        (5, [2, 4, 8, 16, 32, 60, 60, 2]),
+        (120, [2, 4, 8, 16, 32, 64, 120, 2]),
+    ],
+)
+async def test_run_cycle_backoff_is_exponential_capped_and_reset(
+    connector: CatoSaseConnector, frequency: int, delays: list[int]
+):
+    connector.configuration = CatoSaseConnectorConfig(intake_key="key", frequency=frequency)
+    mock_feed(connector, *[ValueError("boom")] * 7, make_feed("m", 0), ValueError("boom"))
 
     with patch.object(connector, "_sleep", new_callable=AsyncMock) as sleep:
-        for _ in range(6):
+        for _ in range(9):
             await connector.run_cycle()
 
-    assert [c.args[0] for c in sleep.await_args_list] == [2, 4, 5, 5, 2]
+    # The successful empty poll sleeps `frequency` between the capped delays and the reset one
+    assert [c.args[0] for c in sleep.await_args_list] == [*delays[:-1], frequency, delays[-1]]
 
 
 def test_query_error_message_without_errors():
