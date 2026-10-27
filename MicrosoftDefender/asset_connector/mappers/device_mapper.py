@@ -59,8 +59,6 @@ class DeviceMapper:
         self.machine = machine
         self.managed_device = managed_device
 
-    # Value resolvers
-
     @staticmethod
     def resolve_hostname(computer_dns_name: str | None) -> tuple[str | None, str | None]:
         """Split a Defender computerDnsName into its short hostname and its domain.
@@ -101,8 +99,6 @@ class DeviceMapper:
     @staticmethod
     def to_epoch(value: str | None) -> float | None:
         return isoparse(value).timestamp() if value else None
-
-    # Device parts
 
     def build_hostname(self) -> tuple[str, str | None]:
         """Return the hostname and domain, falling back on the Intune device name.
@@ -201,8 +197,6 @@ class DeviceMapper:
         return (
             self.to_epoch(self.machine.lastSeen) or self.to_epoch(self.machine.firstSeen) or datetime.now().timestamp()
         )
-
-    # OCSF objects
 
     def build_device(self) -> Device:
         """Build the full OCSF Device. Raises MissingHostnameError when the machine has no usable name."""
