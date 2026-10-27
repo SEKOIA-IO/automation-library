@@ -10,7 +10,6 @@ class RateLimitedPushMixin(AssetConnector):
     Pace the asset pushes and retry the ones refused by the Sekoia.io rate limit.
     """
 
-
     RATE_LIMIT_RETRY_WAIT: float = 60.0
     MAX_RATE_LIMIT_RETRIES: int = 10
     MIN_PUSH_INTERVAL: float = 1.0
