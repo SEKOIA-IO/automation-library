@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-27 - 1.25.21
+
+### Fixed
+
+- Crowdstrike Falcon Devices asset connector: a push refused by the Sekoia.io rate limit
+  (HTTP 429) is retried within the cycle instead of failing it, so the checkpoint is
+  committed and the connector no longer re-pushes its whole inventory every cycle.
+
+### Changed
+
+- Crowdstrike Falcon asset connectors: pace the asset pushes to at most one per second
+  (devices and users).
+- Upgrade sekoia-automation-sdk to 1.27.0
+- Crowdstrike Falcon asset connectors: declare the field mappings of the asset connectors
+  and support the checkpoint reset.
+
 ## 2026-09-01 - 1.25.20
 
 ### Fixed

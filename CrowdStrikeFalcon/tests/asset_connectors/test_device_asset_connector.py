@@ -2,6 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 from requests.exceptions import HTTPError
+from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceTypeId,
     DeviceTypeStr,
@@ -11,7 +12,9 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 from sekoia_automation.asset_connector.models.ocsf.group import Group
 
 from crowdstrike_falcon.asset_connectors.crowdstrike_device_model import CrowdStrikeDevice, PolicyEntry
+from crowdstrike_falcon.asset_connectors import rate_limit
 from crowdstrike_falcon.asset_connectors.device_assets import CrowdstrikeDeviceAssetConnector
+from sekoia_automation.exceptions import AssetConnectorRateLimitError
 
 
 class _DummyContext:
@@ -528,7 +531,7 @@ def test_update_checkpoint_held_back_when_a_batch_was_dropped(connector):
 
 
 def test_post_assets_to_api_flags_a_dropped_batch(connector, monkeypatch):
-    monkeypatch.setattr(CrowdstrikeDeviceAssetConnector.__bases__[0], "post_assets_to_api", lambda *a, **kw: None)
+    monkeypatch.setattr(AssetConnector, "post_assets_to_api", lambda *a, **kw: None)
     assert connector.post_assets_to_api(Mock(), "https://api.fake") is None
     assert connector._push_failed is True
 
@@ -537,7 +540,7 @@ def test_asset_fetch_cycle_commits_the_checkpoint_once_every_batch_is_pushed(con
     def fake_cycle(self):
         self._latest_id = "u5"
 
-    monkeypatch.setattr(CrowdstrikeDeviceAssetConnector.__bases__[0], "asset_fetch_cycle", fake_cycle)
+    monkeypatch.setattr(AssetConnector, "asset_fetch_cycle", fake_cycle)
 
     connector.asset_fetch_cycle()
 
@@ -577,7 +580,7 @@ def _install_push_session(connector, statuses):
     return pushed
 
 
-def test_asset_fetch_cycle_replays_an_interrupted_backfill(connector):
+def test_asset_fetch_cycle_replays_an_interrupted_backfill(connector, monkeypatch):
     """SekoiaLab/integration#1846: a run cut short must not strand the devices it missed."""
     total, batch = 200, 100
     connector.LIMIT = batch
@@ -589,6 +592,8 @@ def test_asset_fetch_cycle_replays_an_interrupted_backfill(connector):
     }
     connector.module.connector_configuration_uuid = "adcd0095-0f3d-4699-8621-158977b6c2c3"
     connector.context = _PersistentContext()
+    monkeypatch.setattr(connector, "_check_schema_and_reset_if_needed", lambda: None)
+    monkeypatch.setattr(connector._stop_event, "wait", Mock(return_value=False))
 
     uuids = [f"dev-{i:03d}" for i in range(total)]  # first_seen.desc
     client = Mock()
@@ -619,3 +624,187 @@ def test_asset_fetch_cycle_replays_an_interrupted_backfill(connector):
     connector.asset_fetch_cycle()
 
     assert pushed == []
+
+
+def _cycle_connector(connector, monkeypatch, total, batch=100):
+    """Prepare a connector to run whole fetch cycles over `total` devices."""
+    connector.LIMIT = batch
+    connector.configuration = {
+        "sekoia_base_url": "https://api.fake.sekoia.io/",
+        "sekoia_api_key": "fake_api_key",
+        "batch_size": batch,
+        "frequency": 0,
+    }
+    connector.module.connector_configuration_uuid = "adcd0095-0f3d-4699-8621-158977b6c2c3"
+    connector.context = _PersistentContext()
+    monkeypatch.setattr(connector, "_check_schema_and_reset_if_needed", lambda: None)
+
+    uuids = [f"dev-{i:03d}" for i in range(total)]  # first_seen.desc
+    client = Mock()
+    client.get_devices_infos.side_effect = lambda ids: [
+        {"device_id": u, "hostname": f"host-{u}", "platform_name": "Windows"} for u in ids
+    ]
+    client.list_devices_uuids.side_effect = lambda **kwargs: iter(uuids)
+    connector.client = client
+
+    waits = Mock(return_value=False)
+    monkeypatch.setattr(connector._stop_event, "wait", waits)
+    return waits
+
+
+def test_asset_fetch_cycle_retries_a_rate_limited_push(connector, monkeypatch):
+    """SekoiaLab/integration#2073: a 429 must not make the connector re-push its inventory forever."""
+    waits = _cycle_connector(connector, monkeypatch, total=300)
+
+    pushed = _install_push_session(connector, [200, 429, 200, 200])
+    connector.asset_fetch_cycle()
+
+    assert sum(pushed) == 300
+    assert connector.context.store["most_recent_device_id"] == "dev-000"
+    rate_limit_waits = [c.args[0] for c in waits.call_args_list if c.args[0] > 1]
+    assert rate_limit_waits == [60.0]
+
+    # The next cycle has nothing new to push
+    pushed = _install_push_session(connector, [200] * 5)
+    connector.asset_fetch_cycle()
+    assert pushed == []
+
+
+def test_asset_fetch_cycle_gives_up_on_a_persistent_rate_limit(connector, monkeypatch):
+    waits = _cycle_connector(connector, monkeypatch, total=300)
+    connector.context.store["most_recent_device_id"] = "dev-200"
+    attempts = connector.MAX_RATE_LIMIT_RETRIES + 1
+    _install_push_session(connector, [429] * attempts)
+
+    with pytest.raises(AssetConnectorRateLimitError):
+        connector.asset_fetch_cycle()
+
+    assert connector._http_session.post.call_count == attempts
+    assert [c.args[0] for c in waits.call_args_list if c.args[0] > 1] == [60.0] * connector.MAX_RATE_LIMIT_RETRIES
+    assert connector.context.store["most_recent_device_id"] == "dev-200"
+
+
+def test_asset_fetch_cycle_stopped_while_waiting_for_the_rate_limit(connector, monkeypatch):
+    waits = _cycle_connector(connector, monkeypatch, total=300)
+
+    def stop_on_rate_limit_wait(delay):
+        if delay > 1:
+            connector._stop_event.set()
+        return connector._stop_event.is_set()
+
+    waits.side_effect = stop_on_rate_limit_wait
+    pushed = _install_push_session(connector, [200, 429])
+
+    connector.asset_fetch_cycle()
+
+    assert pushed == [100]
+    assert connector._http_session.post.call_count == 2
+    assert connector._push_failed is True
+    assert connector._latest_id is None
+    assert "most_recent_device_id" not in connector.context.store
+
+
+def test_post_assets_to_api_returns_none_when_stopped_during_the_rate_limit_wait(connector, monkeypatch):
+    def rate_limited(*args, **kwargs):
+        raise AssetConnectorRateLimitError(retry_after=3600)
+
+    monkeypatch.setattr(AssetConnector, "post_assets_to_api", rate_limited)
+    monkeypatch.setattr(connector._stop_event, "wait", lambda delay: connector._stop_event.set())
+
+    assert connector.post_assets_to_api(assets=Mock(), asset_connector_api_url="https://api.fake") is None
+    assert connector._push_failed is True
+
+
+class _FakeClock:
+    """Stands for `time` in the rate_limit module: only advances when the connector waits."""
+
+    def __init__(self):
+        self.now = 1000.0
+
+    def monotonic(self):
+        return self.now
+
+    def wait(self, delay):
+        self.now += delay
+        return False
+
+
+def test_asset_pushes_are_paced(connector, monkeypatch):
+    _cycle_connector(connector, monkeypatch, total=300)
+    clock = _FakeClock()
+    monkeypatch.setattr(rate_limit, "time", clock)
+    monkeypatch.setattr(connector._stop_event, "wait", clock.wait)
+
+    push_times = []
+    pushed = _install_push_session(connector, [200] * 3)
+    post = connector._http_session.post.side_effect
+
+    def timed_post(*args, **kwargs):
+        push_times.append(clock.now)
+        return post(*args, **kwargs)
+
+    connector._http_session.post.side_effect = timed_post
+
+    connector.asset_fetch_cycle()
+
+    assert pushed == [100, 100, 100]
+    intervals = [later - earlier for earlier, later in zip(push_times, push_times[1:])]
+    assert intervals == [connector.MIN_PUSH_INTERVAL] * 2
+
+
+def test_next_devices_stops_walking_when_the_connector_is_stopped(connector):
+    connector.LIMIT = 2
+    client = Mock()
+    client.list_devices_uuids.return_value = iter(["u5", "u4", "u3", "u2"])
+    client.get_devices_infos.side_effect = lambda batch: [{"device_id": b} for b in batch]
+    connector.client = client
+
+    devices = connector.next_devices()
+    assert next(devices).device_id == "u5"
+    connector._stop_event.set()
+
+    assert [d.device_id for d in devices] == ["u4"]
+    client.get_devices_infos.assert_called_once_with(["u5", "u4"])
+    assert connector._latest_id is None
+
+
+def test_asset_fetch_cycle_resumes_from_a_1_25_20_checkpoint(connector, monkeypatch):
+    _cycle_connector(connector, monkeypatch, total=300)
+    # Checkpoint as stored by the version 1.25.20 of the connector
+    connector.context.store.update({"most_recent_device_id": "dev-050"})
+
+    pushed = _install_push_session(connector, [200] * 3)
+    connector.asset_fetch_cycle()
+
+    assert pushed == [50]
+    pushed_ids = [item["device"]["uid"] for item in connector._http_session.post.call_args.kwargs["json"]["items"]]
+    assert pushed_ids == [f"dev-{i:03d}" for i in range(50)]
+    assert connector.context.store == {"most_recent_device_id": "dev-000"}
+
+
+def test_get_mapped_fields(connector):
+    fields = connector.get_mapped_fields()
+
+    assert isinstance(fields, dict)
+    assert fields
+    assert all(isinstance(key, str) and isinstance(value, str) for key, value in fields.items())
+    assert fields["device_id"] == "device.uid"
+
+
+def test_reset_checkpoint(connector):
+    connector._latest_id = "device-1"
+    connector.update_checkpoint()
+    assert connector.most_recent_device_id == "device-1"
+
+    connector.reset_checkpoint()
+
+    assert connector._latest_id is None
+    assert connector.most_recent_device_id is None
+
+
+def test_reset_checkpoint_only_pops_its_own_key(connector):
+    connector.context.store.update({"most_recent_device_id": "device-1", "other_key": "kept"})
+
+    connector.reset_checkpoint()
+
+    assert connector.context.store == {"other_key": "kept"}

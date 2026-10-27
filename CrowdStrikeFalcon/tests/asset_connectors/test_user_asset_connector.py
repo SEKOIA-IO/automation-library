@@ -445,3 +445,69 @@ class TestListIdentityEntities:
             query="query { test }",
             data_path=["entities", "nodes"],
         )
+
+
+def test_get_mapped_fields(connector):
+    fields = connector.get_mapped_fields()
+
+    assert isinstance(fields, dict)
+    assert fields
+    assert all(isinstance(key, str) and isinstance(value, str) for key, value in fields.items())
+    assert fields["entityId"] == "user.uid"
+
+
+def test_reset_checkpoint(connector):
+    connector._latest_time = "2025-01-01T00:00:00Z"
+    connector.update_checkpoint()
+    assert connector.most_recent_user_date == "2025-01-01T00:00:00Z"
+
+    connector.reset_checkpoint()
+
+    assert connector._latest_time is None
+    assert connector.most_recent_user_date is None
+
+
+def test_reset_checkpoint_only_pops_its_own_key(connector):
+    connector.context.update({connector.CHECKPOINT_KEY: "2025-01-01T00:00:00Z", "other_key": "kept"})
+
+    connector.reset_checkpoint()
+
+    assert dict(connector.context) == {"other_key": "kept"}
+
+
+def test_asset_fetch_cycle_retries_a_rate_limited_push(connector, monkeypatch):
+    connector.configuration = {
+        "sekoia_base_url": "https://api.fake.sekoia.io/",
+        "sekoia_api_key": "fake_api_key",
+        "batch_size": 100,
+        "frequency": 0,
+    }
+    connector.module.connector_configuration_uuid = "adcd0095-0f3d-4699-8621-158977b6c2c3"
+    monkeypatch.setattr(connector, "_check_schema_and_reset_if_needed", lambda: None)
+    waits = Mock(return_value=False)
+    monkeypatch.setattr(connector._stop_event, "wait", waits)
+
+    connector.client = Mock()
+    connector.client.list_identity_entities.return_value = iter(
+        [{"entityId": "user-1", "primaryDisplayName": "user1", "creationTime": "2025-01-01T00:00:00Z"}]
+    )
+
+    statuses = iter([429, 200])
+    pushed = []
+
+    def post(url, json=None, timeout=None):
+        res = Mock()
+        res.status_code = next(statuses)
+        res.headers = {}
+        res.json.return_value = {}
+        if res.status_code == 200:
+            pushed.extend(item["user"]["uid"] for item in json["items"])
+        return res
+
+    connector.__dict__["_http_session"] = Mock(post=Mock(side_effect=post))
+
+    connector.asset_fetch_cycle()
+
+    assert pushed == ["user-1"]
+    assert [c.args[0] for c in waits.call_args_list if c.args[0] > 1] == [60.0]
+    assert connector.most_recent_user_date == "2025-01-01T00:00:00Z"

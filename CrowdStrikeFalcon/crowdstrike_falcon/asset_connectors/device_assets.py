@@ -28,10 +28,11 @@ from sekoia_automation.asset_connector.models.ocsf.organization import Organizat
 from sekoia_automation.storage import PersistentJSON
 
 from crowdstrike_falcon.asset_connectors.crowdstrike_device_model import CrowdStrikeDevice
+from crowdstrike_falcon.asset_connectors.rate_limit import RateLimitedPushMixin
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
 
 
-class CrowdstrikeDeviceAssetConnector(AssetConnector):
+class CrowdstrikeDeviceAssetConnector(RateLimitedPushMixin, AssetConnector):
     PRODUCT_NAME: str = "Crowdstrike Falcon"
     PRODUCT_VERSION: str = "N/A"
     OCSF_VERSION: str = "1.6.0"
@@ -415,11 +416,16 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         return device_ocsf
 
     def post_assets_to_api(self, assets: AssetList, asset_connector_api_url: str) -> dict[str, str] | None:
-        """Push a batch and remember whether it made it through."""
-        response = super().post_assets_to_api(assets, asset_connector_api_url)
+        """
+        Push a batch and remember whether it made it through.
+
+        A batch refused by the rate limit is retried by `RateLimitedPushMixin`.
+        """
+        response = super().post_assets_to_api(assets=assets, asset_connector_api_url=asset_connector_api_url)
         if response is None:
-            # The batch was dropped, so the devices it carried were never ingested: hold
-            # the checkpoint back so the next cycle walks the whole listing again.
+            # The batch was dropped (or the connector stopped before it was pushed), so the
+            # devices it carried were never ingested: hold the checkpoint back so the next
+            # cycle walks the whole listing again.
             self._push_failed = True
         return response
 
@@ -429,6 +435,55 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         # Every batch of the cycle has been pushed by now, so this is the first moment we
         # know the run was complete. An interrupted cycle raises and never gets here.
         self.update_checkpoint()
+
+    def get_mapped_fields(self) -> dict[str, str]:
+        """
+        Return the CrowdStrike -> OCSF field mapping used for schema-change fingerprinting.
+
+        Sources prefixed with ``host_groups.`` come from the host-groups lookup used to
+        resolve group names. Static OCSF constants are excluded: they never depend on the
+        CrowdStrike payload, so they cannot invalidate a checkpoint.
+        """
+        return {
+            "device_id": "device.uid",
+            "hostname": "device.hostname",
+            "serial_number": "device.uid_alt",
+            "machine_domain": "device.domain",
+            "platform_name": "device.os.type",
+            "os_version": "device.os.name",
+            "product_type_desc": "device.type",
+            "external_ip": "device.ip",
+            "local_ip": "device.network_interfaces.ip",
+            "mac_address": "device.network_interfaces.mac",
+            "connection_ip": "device.network_interfaces.ip",
+            "connection_mac_address": "device.network_interfaces.mac",
+            "default_gateway_ip": "device.subnet",
+            "system_product_name": "device.model",
+            "system_manufacturer": "device.vendor_name",
+            "bios_manufacturer": "device.hypervisor",
+            "zone_group": "device.region",
+            "cid": "device.org.uid",
+            "service_provider": "device.org.name",
+            "groups": "device.groups.uid",
+            "host_groups.name": "device.groups.name",
+            "host_groups.description": "device.groups.desc",
+            "first_seen": "device.first_seen_time",
+            "last_seen": "device.last_seen_time",
+            "agent_local_time": "device.boot_time",
+            "modified_timestamp": "time",
+            "status": "device.is_compliant",
+            "reduced_functionality_mode": "device.is_compliant",
+            "filesystem_containment_status": "device.is_compliant",
+            "device_policies.firewall.applied": "enrichments.data.Firewall_status",
+            "last_login_user": "enrichments.data.Users",
+        }
+
+    def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so every device is collected again on the next cycle."""
+        with self.context as cache:
+            cache.pop("most_recent_device_id", None)
+        self._latest_id = None
+        self.log("Checkpoint reset - a full device re-collection will occur on the next cycle", level="info")
 
     def update_checkpoint(self) -> None:
         """Update the checkpoint with the latest device ID."""
@@ -471,6 +526,11 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         self._push_failed = False
 
         for idx, device_uuid in enumerate(self.client.list_devices_uuids(limit=self.LIMIT, sort="first_seen.desc")):
+            # Stopped: leave the walk incomplete so no checkpoint is committed
+            if not self.running:
+                self.log("Connector stopped, interrupting the device listing", level="info")
+                return
+
             if idx == 0:
                 if device_uuid == last_first_uuid:
                     self.log("No device has been added !!", level="info")
@@ -487,6 +547,10 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
                 self.log(f"Found {len(uuids_batch)} devices !!", level="info")
                 yield from self.next_devices_batch(uuids_batch)
                 uuids_batch = []
+
+        if not self.running:
+            self.log("Connector stopped, interrupting the device listing", level="info")
+            return
 
         if uuids_batch:
             self.log(f"Found {len(uuids_batch)} devices in the last batch!!", level="info")
