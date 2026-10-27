@@ -48,7 +48,7 @@ class RateLimitedPushMixin(AssetConnector):
                     )
                     raise
 
-                wait = min(error.retry_after, self.RATE_LIMIT_RETRY_WAIT)
+                wait = max(error.retry_after, self.RATE_LIMIT_RETRY_WAIT)
                 self.log(
                     f"Asset push rate limited (attempt {attempts}/{self.MAX_RATE_LIMIT_RETRIES}), "
                     f"retrying in {wait} seconds",
