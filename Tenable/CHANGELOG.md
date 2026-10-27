@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Device IP, OS, hostnames, network interfaces, cloud region and timestamps are filled again for assets read from the asset export
 - Fix duplicate vulnerabilities on every run
 - State changes (fixed, reopened) of an already sent vulnerability are always sent
-- The checkpoint is saved only after a complete export and once every batch is accepted by Sekoia.io (a batch rejected with a 4xx is dropped and logged), so an interrupted cycle no longer skips findings
+- The checkpoint is saved only after a complete export and once every batch is accepted by Sekoia.io (only a batch rejected as invalid, HTTP 400 or 422, is dropped and logged; other refusals are retried), so an interrupted cycle no longer skips findings
 - First run collects all open and reopened vulnerabilities; an old checkpoint is no longer moved forward
 - Same device hostname fallback (hostname, name, FQDN) whatever the asset source
 - A failed asset export no longer triggers a new export for every vulnerability
@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The existing checkpoint is reused: no full re-fetch on upgrade
-- Asset cache refreshed every 6 hours
+- Asset cache refreshed every 6 hours from a full asset export (no longer limited to the assets updated since the vulnerability checkpoint), up to 20000 assets
 - `device.name` falls back to the hostname, then the FQDN
 - REOPENED findings are sent with the OCSF activity name `Update`
 - Descriptions and references are capped to the platform limits
