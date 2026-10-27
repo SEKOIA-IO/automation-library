@@ -1,12 +1,13 @@
 import time
 import traceback
 import urllib.parse
+from collections.abc import Generator
 from functools import cached_property
 from threading import Event, Lock, Thread
-from typing import Any, Generator
+from typing import Any
 
 import orjson
-from pydantic.v1 import Field
+from pydantic import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
@@ -19,7 +20,7 @@ from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUT
 class TrendMicroConnectorConfiguration(DefaultConnectorConfiguration):
     service_url: str = Field(..., description="Service URL")
     username: str = Field(..., description="Username")
-    api_key: str = Field(..., description="API key", secret=True)
+    api_key: str = Field(..., description="API key", json_schema_extra={"secret": True})
     frequency: int = 60
     batch_size: int = 500
 
@@ -27,7 +28,7 @@ class TrendMicroConnectorConfiguration(DefaultConnectorConfiguration):
 class TrendMicroWorker(Thread):
     API_VERSION = "v1"
 
-    def __init__(self, connector: "TrendMicroEmailSecurityConnector", log_type: str):
+    def __init__(self, connector: TrendMicroEmailSecurityConnector, log_type: str):
         super().__init__()
 
         self.log_type = log_type
@@ -35,10 +36,10 @@ class TrendMicroWorker(Thread):
 
         self.service_url = connector.configuration.service_url.rstrip("/")
         if self.service_url.startswith("http://"):
-            self.service_url = "https://%s" % self.service_url[7:]
+            self.service_url = f"https://{self.service_url[7:]}"
 
         elif not self.service_url.startswith("https://"):
-            self.service_url = "https://%s" % self.service_url
+            self.service_url = f"https://{self.service_url}"
 
         self._stop_event = Event()
 
@@ -139,7 +140,7 @@ class TrendMicroWorker(Thread):
             content = response.json() if len(response.content) > 0 else None
             return content
 
-    def iterate_through_pages(self, from_timestamp: int) -> Generator[list, None, None]:
+    def iterate_through_pages(self, from_timestamp: int) -> Generator[list]:
         timestamp_now = int(time.time())
         params = {
             "type": self.log_type,
@@ -175,7 +176,7 @@ class TrendMicroWorker(Thread):
 
             content = self.request_logs_page(params=params)
 
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list]:
         for events in self.iterate_through_pages(self.get_last_timestamp()):
             if events:
                 recent_events = self.get_recent_pushed_events()
@@ -190,7 +191,7 @@ class TrendMicroWorker(Thread):
         try:
             events = next(self.fetch_events())
             events_len = len(events)
-            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
+            batch_of_events: list[Any] = [orjson.dumps(event).decode("utf-8") for event in events]
 
             # if the batch is full, push it
             if len(batch_of_events) > 0:

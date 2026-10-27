@@ -1,27 +1,29 @@
-import time
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, Mock, patch
+from datetime import UTC, datetime, timedelta
+from unittest.mock import Mock, patch
 
 import pytest
 import requests_mock
 
 from trendmicro_modules import TrendMicroModule
-from trendmicro_modules.trigger_vision_one_oat import TrendMicroVisionOneOATConnector
+from trendmicro_modules.trigger_vision_one_oat import (
+    TrendMicroVisionOneOATConnector,
+    TrendMicroVisionOneOATConnectorConfiguration,
+)
 
 
 @pytest.fixture
-def trigger(symphony_storage):
+def trigger(symphony_storage, prepare_connector_mocks):
     module = TrendMicroModule()
     trigger = TrendMicroVisionOneOATConnector(module=module, data_path=symphony_storage)
 
-    trigger.push_events_to_intakes = MagicMock()
-    trigger.configuration = {
-        "base_url": "https://api.xdr.trendmicro.com",
-        "api_key": "01234556789abcdef",
-        "intake_key": "intake_key",
-    }
-    trigger.log = MagicMock()
-    trigger.log_exception = MagicMock()
+    trigger = prepare_connector_mocks(trigger)
+    trigger.configuration = TrendMicroVisionOneOATConnectorConfiguration(
+        base_url="https://api.xdr.trendmicro.com",
+        api_key="01234556789abcdef",
+        intake_key="intake_key",
+        frequency=60,
+        filter=None,
+    )
 
     return trigger
 
@@ -53,7 +55,11 @@ def message_1():
                     "ips": ["10.209.14.33", "fe80::8473:af77:b312:35ea"],
                 },
                 "entityType": "endpoint",
-                "entityName": "desktop 1 (127.0.0.1) or 127.0.0.1 | xxxx@gmail.com | arn:aws:lambda:*:%s:function:%s | k8s_container-8c55678bd-8r7zt_default_4b291f63-c0e1-46e6-8503-ee2a834a876c_6411 | 6d7d30d2148a | -",
+                "entityName": (
+                    "desktop 1 (127.0.0.1) or 127.0.0.1 | xxxx@gmail.com | arn:aws:lambda:*:%s:function:%s | "
+                    "k8s_container-8c55678bd-8r7zt_default_4b291f63-c0e1-46e6-8503-ee2a834a876c_6411 | "
+                    "6d7d30d2148a | -"
+                ),
                 "detectedDateTime": "2020-06-01T02:12:56Z",
                 "ingestedDateTime": "2020-06-01T02:12:56Z",
                 "detail": {
@@ -130,14 +136,19 @@ def message_1():
     }
 
 
-def test_fetch_events(trigger, message_1):
-    trigger.cursor.offset = datetime(year=2024, month=11, day=1, tzinfo=timezone.utc)
-    with patch(
-        "trendmicro_modules.trigger_vision_one_base.time"
-    ) as mock_time, requests_mock.Mocker() as mock_requests:
+@pytest.mark.parametrize(
+    ("batch_duration", "expected_sleep_calls"),
+    [
+        (16, 1),
+        (80, 0),
+    ],
+)
+def test_next_batch_sleep_behavior(trigger, message_1, batch_duration, expected_sleep_calls, mocked_vision_one_time):
+    trigger.cursor.offset = datetime(year=2024, month=11, day=1, tzinfo=UTC)
+    with requests_mock.Mocker() as mock_requests:
+        mock_time = mocked_vision_one_time
         mock_requests.register_uri("GET", "https://api.xdr.trendmicro.com/v3.0/oat/detections", json=message_1)
 
-        batch_duration = 16  # the batch lasts 16 seconds
         start_time = 1666711174.0
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time]
@@ -145,22 +156,130 @@ def test_fetch_events(trigger, message_1):
         trigger.next_batch()
 
         assert trigger.push_events_to_intakes.call_count == 1
-        assert mock_time.sleep.call_count == 1
+        assert mock_time.sleep.call_count == expected_sleep_calls
 
 
-def test_long_next_batch_should_not_sleep(trigger, message_1):
-    trigger.cursor.offset = datetime(year=2024, month=11, day=1, tzinfo=timezone.utc)
-    with patch(
-        "trendmicro_modules.trigger_vision_one_base.time"
-    ) as mock_time, requests_mock.Mocker() as mock_requests:
-        mock_requests.register_uri("GET", "https://api.xdr.trendmicro.com/v3.0/oat/detections", json=message_1)
+def test_fetch_events_should_reset_future_checkpoint(trigger):
+    future_date = datetime.now(UTC) + timedelta(days=1)
+    trigger.from_date = future_date
+    trigger.cursor.offset = future_date
 
-        batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
-        start_time = 1666711174.0
-        end_time = start_time + batch_duration
-        mock_time.time.side_effect = [start_time, end_time]
+    fetch_mock = Mock(return_value=iter(()))
+    setattr(trigger, "_TrendMicroVisionOneOATConnector__fetch_events", fetch_mock)
 
-        trigger.next_batch()
+    list(trigger.fetch_events())
 
-        assert trigger.push_events_to_intakes.call_count == 1
-        assert mock_time.sleep.call_count == 0
+    assert fetch_mock.call_count == 1
+    fetched_from_date = fetch_mock.call_args.args[0]
+    assert fetched_from_date <= datetime.now(UTC)
+    assert trigger.from_date == fetched_from_date
+    assert trigger.cursor.offset == fetched_from_date
+    trigger.log.assert_any_call(
+        (
+            "Future checkpoint detected "
+            f"previous_checkpoint={future_date.isoformat()} "
+            f"new_checkpoint={fetched_from_date.isoformat()}"
+        ),
+        level="warning",
+    )
+
+
+def test_fetch_events_retries_future_checkpoint_recovery_after_persistence_error(trigger):
+    future_date = datetime.now(UTC) + timedelta(days=1)
+    trigger.from_date = future_date
+    trigger.cursor.offset = future_date
+
+    fetch_mock = Mock(return_value=iter([[]]))
+    setattr(trigger, "_TrendMicroVisionOneOATConnector__fetch_events", fetch_mock)
+
+    with patch.object(
+        trigger,
+        "reset_cursor_offset",
+        side_effect=[RuntimeError("persistence failed"), None],
+    ) as reset_mock:
+        with pytest.raises(RuntimeError, match="persistence failed"):
+            list(trigger.fetch_events())
+
+        assert trigger.from_date == future_date
+
+        second_cycle_batches = list(trigger.fetch_events())
+
+    assert second_cycle_batches == []
+    assert reset_mock.call_count == 2
+    assert fetch_mock.call_count == 1
+    recovered_from_date = fetch_mock.call_args.args[0]
+    assert recovered_from_date <= datetime.now(UTC)
+    assert trigger.from_date == recovered_from_date
+
+
+def test_fetch_events_updates_checkpoint_when_newer_events_are_seen(trigger):
+    trigger.from_date = datetime(2024, 11, 1, tzinfo=UTC)
+    trigger.cursor.offset = trigger.from_date
+    next_events = [{"detectedDateTime": "2024-11-01T00:00:30Z"}]
+    fetch_mock = Mock(return_value=iter([next_events]))
+    setattr(trigger, "_TrendMicroVisionOneOATConnector__fetch_events", fetch_mock)
+
+    batches = list(trigger.fetch_events())
+
+    assert batches == [next_events]
+    assert trigger.from_date == datetime(2024, 11, 1, 0, 0, 31, tzinfo=UTC)
+    assert trigger.cursor.offset == trigger.from_date
+
+
+def test_fetch_events_skips_empty_batches(trigger):
+    initial_from_date = datetime(2024, 11, 1, tzinfo=UTC)
+    trigger.from_date = initial_from_date
+    trigger.cursor.offset = initial_from_date
+    fetch_mock = Mock(return_value=iter([[]]))
+    setattr(trigger, "_TrendMicroVisionOneOATConnector__fetch_events", fetch_mock)
+
+    batches = list(trigger.fetch_events())
+
+    assert batches == []
+    assert trigger.from_date == initial_from_date
+
+
+def test_fetch_events_uses_filter_header_when_configured(trigger):
+    trigger.configuration.filter = "riskLevel eq 'high'"
+    mocked_response = Mock()
+    mocked_response.ok = True
+    mocked_response.json.return_value = {"items": []}
+
+    with patch.object(trigger.client, "get", return_value=mocked_response) as mock_get:
+        batches = list(trigger._TrendMicroVisionOneOATConnector__fetch_events(trigger.from_date))
+
+    assert batches == []
+    assert mock_get.call_args.kwargs["headers"] == {"TMV1-Filter": "riskLevel eq 'high'"}
+
+
+def test_configuration_dict_assignment_keeps_oat_model_and_filter(trigger):
+    trigger.configuration = {
+        "base_url": "https://api.xdr.trendmicro.com",
+        "api_key": "01234556789abcdef",
+        "intake_key": "intake_key",
+        "frequency": 60,
+        "filter": "riskLevel eq 'high'",
+    }
+    mocked_response = Mock()
+    mocked_response.ok = True
+    mocked_response.json.return_value = {"items": []}
+
+    with patch.object(trigger.client, "get", return_value=mocked_response) as mock_get:
+        batches = list(trigger._TrendMicroVisionOneOATConnector__fetch_events(trigger.from_date))
+
+    assert isinstance(trigger.configuration, TrendMicroVisionOneOATConnectorConfiguration)
+    assert trigger.configuration.filter == "riskLevel eq 'high'"
+    assert batches == []
+    assert mock_get.call_args.kwargs["headers"] == {"TMV1-Filter": "riskLevel eq 'high'"}
+
+
+def test_typed_configuration_reads_model_values(trigger):
+    typed_configuration = trigger.typed_configuration
+
+    assert typed_configuration.base_url == "https://api.xdr.trendmicro.com"
+    assert typed_configuration.frequency == 60
+
+
+def test_connector_init_requires_data_path():
+    with pytest.raises(ValueError, match="data_path is required"):
+        TrendMicroVisionOneOATConnector(module=TrendMicroModule(), data_path=None)
