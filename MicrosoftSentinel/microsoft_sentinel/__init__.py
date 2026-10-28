@@ -2,10 +2,10 @@ from sekoia_automation.module import Module
 
 from .models import (
     MicrosoftSentinelConfiguration,
-    MicrosoftSentinelResponseModel,
-    MicrosoftSentinelConnectorConfiguration,
+    MicrosoftSentinelConnectorConfiguration,  # noqa: F401
+    MicrosoftSentinelResponseModel,  # noqa: F401
 )
 
 
 class MicrosoftSentinelModule(Module):
-    configuration: MicrosoftSentinelConfiguration
+    configuration: MicrosoftSentinelConfiguration  # type: ignore[override]

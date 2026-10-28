@@ -1,7 +1,7 @@
 import pytest
+from azure.mgmt.securityinsight.models import IncidentAdditionalData, IncidentLabel, IncidentOwnerInfo
 
-from microsoft_sentinel.utils import additional_data_to_dict, owner_data_to_dict, labels_data_to_dict
-from azure.mgmt.securityinsight.models import IncidentAdditionalData, IncidentOwnerInfo, IncidentLabel
+from microsoft_sentinel.utils import additional_data_to_dict, labels_data_to_dict, owner_data_to_dict
 
 
 @pytest.fixture
@@ -36,7 +36,7 @@ def incident_labels_object():
 
 def test_additional_data_to_dict(additional_data_object):
     additional_data_response = additional_data_to_dict(additional_data_object)
-    assert type(additional_data_response) == dict
+    assert isinstance(additional_data_response, dict)
     assert additional_data_response == {
         "additional_properties": {},
         "alerts_count": 3,
@@ -49,7 +49,7 @@ def test_additional_data_to_dict(additional_data_object):
 
 def test_owner_data_to_dict(incident_owner_object):
     owner_data_response = owner_data_to_dict(incident_owner_object)
-    assert type(owner_data_response) == dict
+    assert isinstance(owner_data_response, dict)
     assert owner_data_response == {
         "additional_properties": {},
         "assigned_to": "Joe Done",
@@ -61,8 +61,8 @@ def test_owner_data_to_dict(incident_owner_object):
 
 def test_labels_data_to_dict(incident_labels_object):
     labels_data_response = labels_data_to_dict(incident_labels_object)
-    assert type(labels_data_response) == dict
+    assert isinstance(labels_data_response, dict)
     assert labels_data_response.get("additional_properties") == {}
     assert labels_data_response.get("label_name") == "label_name"
     # label_type is readonly and can't be set
-    assert labels_data_response.get("label_type") == None
+    assert labels_data_response.get("label_type") is None

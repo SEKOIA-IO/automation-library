@@ -41,8 +41,11 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 ### Wave 4 first batch completed in this session
 - CatoNetwork
 
+### Wave 6 first batch completed in this session
+- MicrosoftSentinel
+
 ### Remaining scope
-- Remaining modules to migrate: 85
+- Remaining modules to migrate: 84
 - Remaining planned effort: about 385.0 hours
 - Criticity scale: 1 (easiest) to 10 (hardest)
 
@@ -184,7 +187,6 @@ Estimated wave effort: 102h
 ### Wave 6: Criticity 9 (estimated 7h each)
 - AWS
 - Github
-- MicrosoftSentinel
 - Sekoia.io
 
 Estimated wave effort: 28h
