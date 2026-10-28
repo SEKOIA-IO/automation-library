@@ -63,18 +63,18 @@ def find_unreleased_section(lines: List[str]) -> Optional[int]:
     return None
 
 
-def find_version(lines: List[str], version: str, date: str) -> Optional[int]:
-    """Find the line index of the heading of a version, whatever the order of version and date."""
+def find_version(lines: List[str], version: str) -> Optional[int]:
+    """Find the line index of the heading of a version, whatever its date or the order of both."""
     for i, line in enumerate(lines):
         match = RELEASE_HEADING.match(line.strip())
-        if match and set(match.groups()) == {version, date}:
+        if match and version in match.groups():
             return i
     return None
 
 
-def version_exists(lines: List[str], version: str, date: str) -> bool:
+def version_exists(lines: List[str], version: str) -> bool:
     """Check if a version entry already exists."""
-    return find_version(lines, version, date) is not None
+    return find_version(lines, version) is not None
 
 
 def section_end(lines: List[str], start: int) -> int:
@@ -90,8 +90,8 @@ def insert_new_version_entry(
     message: str
 ) -> List[str]:
     """Insert a new version entry into the changelog, below the content of the Unreleased section."""
-    if version_exists(lines, version, date):
-        typer.echo(f"Error: Version {version} with date {date} already exists in changelog")
+    if version_exists(lines, version):
+        typer.echo(f"Error: Version {version} already exists in changelog")
         raise typer.Exit(1)
 
     unreleased_idx = find_unreleased_section(lines)
@@ -117,14 +117,13 @@ def insert_new_version_entry(
 def add_to_existing_version(
     lines: List[str],
     version: str,
-    date: str,
     category: str,
     message: str
 ) -> List[str]:
     """Add an entry to an existing version section."""
-    version_idx = find_version(lines, version, date)
+    version_idx = find_version(lines, version)
     if version_idx is None:
-        typer.echo(f"Error: Version {version} with date {date} not found")
+        typer.echo(f"Error: Version {version} not found")
         raise typer.Exit(1)
 
     version_end = section_end(lines, version_idx)
@@ -199,12 +198,12 @@ def main(
     lines = read_changelog(changelog_path)
     
     # Check if version already exists
-    if version_exists(lines, version, date_str):
-        # Add to existing version
-        updated_lines = add_to_existing_version(
-            lines, version, date_str, category, message
-        )
+    if version_exists(lines, version):
+        # Add to existing version, which keeps its recorded date
+        updated_lines = add_to_existing_version(lines, version, category, message)
         action = f"Added entry to existing version {version}"
+        if date:
+            typer.echo(f"Note: {version} already exists, its recorded date is kept")
     else:
         # Create new version entry
         updated_lines = insert_new_version_entry(
@@ -217,13 +216,13 @@ def main(
         typer.echo("=== DRY RUN MODE ===")
         typer.echo(f"{action}")
         typer.echo(f"\nChanges to be made:")
-        typer.echo(f"Version: {date_str} - {version}")
+        typer.echo(f"Version: {version}")
         typer.echo(f"Category: {category}")
         typer.echo(f"Message: {message}")
         typer.echo("\n=== Preview of new entry ===")
         
         # Show context around the change
-        i = find_version(updated_lines, version, date_str)
+        i = find_version(updated_lines, version)
         if i is not None:
             typer.echo("".join(updated_lines[max(0, i - 2) : i + 15]))
     else:
