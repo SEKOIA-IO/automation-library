@@ -33,5 +33,6 @@
   "slug": "nozomi",
   "categories": [
     "Network"
-  ]
+  ],
+  "supports_validation": true
 }

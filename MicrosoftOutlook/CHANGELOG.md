@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-19
+
+### Added
+
+- Enrich action outputs:
+  - action `Delete a message`: `user`
+  - action `Forward a message`: `comment`, `recipients`, `user`
+  - action `Get a message`: `user`
+  - action `Search messages`: `has_more`, `messages[].network_message_id`, `message_ids`, `query_type`, `query_value`, `returned_count`, `scan_limit_reached`, `total_results`, `user`
+  - action `Send a message`: `bcc`, `cc`, `content_type`, `from`, `importance`, `recipients`, `save_to_sent_items`, `sender`, `subject`, `user`
+  - action `Update a message`: `action`, `bcc`, `cc`, `importance`, `recipients`, `sender`, `status`, `updated_from`, `updated_sender`, `updated_subject`, `user`
+
+### Changed
+
+- Refactor `Search messages` for identifier-resolution playbooks:
+  - rename inputs to `max_messages_to_return` and `return_most_recent_first`
+  - remove legacy `item_index`
+  - add paginated fallback for `email_local_id` via `@odata.nextLink`
+- Update playbook/workflow tests to use `Search messages` for Foreach-based selection
+- For actions `Get a message`, `Delete a message`, `Forward a message`, and `Update a message`, accept `message_id` as either a raw string or a `Foreach` item object containing `message_id` (for example `{{ node.x.default.value }}`), so each search result can be chained directly
+- Extract shared helpers in `MicrosoftGraphActionBase` (`message_id` resolution, recipient building, payload cleanup)
+- Harmonize action logs with consistent key/value messages
+- Upgrade `sekoia-automation-sdk` to `1.27.0`
+- Remove the logo background
+- Raise the minimum supported Python version to `3.14`
+- Migrate project dependency management from Poetry to uv (`pyproject.toml` PEP 621 + `uv.lock`)
+
+### Fixed
+
+- Fix `email_local_id` false negatives with bounded, paginated fallback (`FALLBACK_PAGE_SIZE=50`, `FALLBACK_MAX_MESSAGES_SCANNED=1000`)
+- Enforce the 1,000-item scan cap by slicing each page to the remaining budget
+- Normalize empty optional identifiers before fallback filtering
+- Preserve Microsoft Graph `sender` in `Update a message` results (do not overwrite from input)
+- Sort `results.properties` keys alphabetically across action descriptors
+
+### Removed
+
+- Remove action `Resolve a message` (never deployed in FRA1)
+
 ## [0.4.0] - 2026-08-28
 
 ### Changed
@@ -59,8 +98,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added a `Search messages` action to search messages by Internet Message-ID or NetworkMessageId
-- Added a `Resolve a message` action to select a unique Graph item ID from search candidates
+- Add a `Search messages` action to search messages by Internet Message-ID or NetworkMessageId
+- Add a `Resolve a message` action to select a unique Graph item ID from search candidates
 
 ### Changed
 
@@ -69,16 +108,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Increase automated test coverage to 100%
-- Added a fallback lookup for `email_local_id` queries in search/resolve actions when Graph returns `InefficientFilter` or no results
+- Add a fallback lookup for `email_local_id` queries in search/resolve actions when Graph returns `InefficientFilter` or no results
 
 ## [0.1.2] - 2025-09-22
 
 ### Added
 
-- Added action to send emails
+- Add action to send emails
 
 ## [0.1.1] - 2025-02-07
 
 ### Changed
 
-- Improved error logging
+- Improve error logging

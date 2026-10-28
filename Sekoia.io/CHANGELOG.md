@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-22 - 2.79.1
+
+### Changed
+
+- Execute a query: relabel the `parameters` argument as "Parameters (SOL filters)" and describe how it maps to the SOL filters of the saved query
+
 ## 2026-10-02 - 2.79.0
 
 ### Added
