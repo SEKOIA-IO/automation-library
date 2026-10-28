@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-26 - 1.7.0
+
+### Changed
+
+- Migrated module from Poetry to uv
+- Pin the uv image used to build the Docker image to 0.13.5
+
+### Fixed
+
+- Trend Micro Email Security: collect all the pages of results instead of only the first one
+- Trend Micro Email Security: persist the checkpoint once all the pages are pushed and deduplicate events across pages and runs
+- Trend Micro Email Security: convert the API dates as UTC instead of the local time of the container
+- Trend Micro Email Security: accept event dates with fractional seconds
+
 ## 2026-03-24 - 1.6.4
 
 ### Changed
