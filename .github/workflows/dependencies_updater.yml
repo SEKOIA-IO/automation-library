@@ -1,7 +1,7 @@
 name: Update Module Dependencies
 
 # Every week, update the dependencies of each automation module with
-# `update_module_dependencies.py` and open one draft pull request per module
+# `update_module_dependencies.py` and open one auto-merged pull request per module
 # whose updated dependencies still pass the lint and the tests.
 on:
   schedule:
@@ -133,6 +133,7 @@ jobs:
       - name: Create pull request
         if: steps.update.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        id: create_pr
         with:
           token: ${{ steps.app-token.outputs.token }}
           branch: ${{ steps.update.outputs.branch }}
@@ -140,5 +141,11 @@ jobs:
           commit-message: "chore(${{ matrix.module }}): update dependencies"
           title: "[dependencies] Update dependencies of ${{ matrix.module }}"
           body-path: ${{ runner.temp }}/pull_request_body.md
-          draft: true
-          delete-branch: true
+          delete-branch: true  # not a draft: GitHub refuses auto-merge on draft pull requests
+
+      - name: Enable auto-merge on PR
+        if: steps.create_pr.outputs.pull-request-operation == 'created'
+        run: gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --auto --merge
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ steps.create_pr.outputs.pull-request-number }}
