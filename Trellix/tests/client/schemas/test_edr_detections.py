@@ -36,4 +36,4 @@ async def test_edr_detection_events(session_faker: Faker):
 
     assert isinstance(response, TrellixResponse)
     assert isinstance(response.attributes, EdrDetectionAttributes)
-    assert response.dict(exclude_none=True) == expected_response
+    assert response.model_dump(exclude_none=True) == expected_response

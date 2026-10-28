@@ -2,7 +2,6 @@
 
 from enum import Enum
 from time import time
-from typing import List, Set
 
 from pydantic import BaseModel
 
@@ -168,11 +167,11 @@ class Scope(str, Enum):
     MV_M_ADMIN = "mv:m:admin"
 
     @classmethod
-    def threats_set_of_scopes(cls) -> Set["Scope"]:
+    def threats_set_of_scopes(cls) -> set[Scope]:
         return {cls.SOC_ACT_TG}
 
     @classmethod
-    def complete_set_of_scopes(cls) -> Set["Scope"]:
+    def complete_set_of_scopes(cls) -> set[Scope]:
         """
         Get complete list of scopes to work with all Trellix api endpoints.
 
@@ -330,10 +329,10 @@ class TrellixToken(BaseModel):
 
     token: HttpToken
 
-    scopes: Set[Scope]
+    scopes: set[Scope]
     created_at: int
 
-    def is_valid(self, scopes: List[Scope] | None = None) -> bool:
+    def is_valid(self, scopes: list[Scope] | None = None) -> bool:
         """
         Check if token is not expired yet and valid for defined scopes.
 
@@ -351,7 +350,7 @@ class TrellixToken(BaseModel):
         """
         return scope in self.scopes
 
-    def is_valid_for_scopes(self, scopes: List[Scope]) -> bool:
+    def is_valid_for_scopes(self, scopes: list[Scope]) -> bool:
         """
         Check if token is valid for defined scopes.
 

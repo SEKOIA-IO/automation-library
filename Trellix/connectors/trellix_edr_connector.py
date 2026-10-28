@@ -2,8 +2,8 @@
 
 import asyncio
 import time
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional, Tuple
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import orjson
 from aiolimiter import AsyncLimiter
@@ -13,7 +13,7 @@ from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
-from client.http_client import TrellixHttpClient
+from client.http_client import SECONDS_PER_DAY, SECONDS_PER_MINUTE, TrellixHttpClient
 from connectors import TrellixModule
 from connectors.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
@@ -37,7 +37,7 @@ class TrellixEdrConnector(AsyncConnector):
 
     _trellix_client: TrellixHttpClient | None = None
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         """Init TrellixEdrConnector."""
 
         super().__init__(*args, **kwargs)
@@ -50,7 +50,7 @@ class TrellixEdrConnector(AsyncConnector):
         Returns:
             datetime:
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         one_week_ago = (now - timedelta(days=7)).replace(microsecond=0)
 
         with self.context as cache:
@@ -61,7 +61,7 @@ class TrellixEdrConnector(AsyncConnector):
                 return one_week_ago
 
             # Parse the most recent date seen
-            last_event_date = isoparse(last_event_date_str)
+            last_event_date: datetime = isoparse(last_event_date_str)
 
             # We don't retrieve messages older than one week
             if last_event_date < one_week_ago:
@@ -80,22 +80,22 @@ class TrellixEdrConnector(AsyncConnector):
         if self._trellix_client is not None:
             return self._trellix_client
 
-        rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
-        daily_rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_day)
+        rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute, time_period=SECONDS_PER_MINUTE)
+        daily_rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_day, time_period=SECONDS_PER_DAY)
 
         self._trellix_client = TrellixHttpClient(
             client_id=self.module.configuration.client_id,
             client_secret=self.module.configuration.client_secret,
             api_key=self.module.configuration.api_key,
-            auth_url=self.module.configuration.auth_url,
-            base_url=self.module.configuration.base_url,
+            auth_url=str(self.module.configuration.auth_url).rstrip("/"),
+            base_url=str(self.module.configuration.base_url).rstrip("/"),
             rate_limiter=rate_limiter,
             rate_limiter_per_day=daily_rate_limiter,
         )
 
         return self._trellix_client
 
-    async def populate_alerts(self) -> Tuple[list[str], datetime]:
+    async def populate_alerts(self) -> tuple[list[str], datetime]:
         """
         Process trellix edr alerts.
 
@@ -110,13 +110,13 @@ class TrellixEdrConnector(AsyncConnector):
         logger.info("Got {total} alerts from {start_date}", start_date=start_date, total=len(alerts))
 
         result: list[str] = await self.push_data_to_intakes(
-            [orjson.dumps(event.dict()).decode("utf-8") for event in alerts]
+            [orjson.dumps(event.model_dump()).decode("utf-8") for event in alerts]
         )
 
         last_event_date = start_date
         for alert in alerts:
             alert_detection_date = isoparse(alert.attributes.detectionDate)
-            if alert_detection_date.replace(tzinfo=timezone.utc) > last_event_date.replace(tzinfo=timezone.utc):
+            if alert_detection_date.replace(tzinfo=UTC) > last_event_date.replace(tzinfo=UTC):
                 last_event_date = alert_detection_date
 
         with self.context as cache:
@@ -124,7 +124,7 @@ class TrellixEdrConnector(AsyncConnector):
 
         return result, last_event_date
 
-    async def populate_threats(self, end_date: datetime | None = None) -> Tuple[list[str], datetime]:
+    async def populate_threats(self, end_date: datetime | None = None) -> tuple[list[str], datetime]:
         """
         Populate threats.
 
@@ -136,7 +136,7 @@ class TrellixEdrConnector(AsyncConnector):
         start_date = self.last_event_date("threats")
 
         if end_date is None:
-            end_date = datetime.now(timezone.utc).replace(microsecond=0)
+            end_date = datetime.now(UTC).replace(microsecond=0)
 
         most_recent_threat_date = start_date
 
@@ -156,11 +156,11 @@ class TrellixEdrConnector(AsyncConnector):
                 total=len(threats),
             )
 
-            result_data = [orjson.dumps(event.dict(exclude_none=True)).decode("utf-8") for event in threats]
+            result_data = [orjson.dumps(event.model_dump(exclude_none=True)).decode("utf-8") for event in threats]
             result.extend(await self.push_data_to_intakes(result_data))
 
             for threat in threats:
-                threat_date = isoparse(threat.attributes.lastDetected).replace(tzinfo=timezone.utc)
+                threat_date = isoparse(threat.attributes.lastDetected).replace(tzinfo=UTC)
 
                 if threat_date > most_recent_threat_date:
                     most_recent_threat_date = threat_date
@@ -214,7 +214,7 @@ class TrellixEdrConnector(AsyncConnector):
             )
 
             result_data = [
-                orjson.dumps({**event.dict(exclude_none=True), "threatId": threat_id}).decode("utf-8")
+                orjson.dumps({**event.model_dump(exclude_none=True), "threatId": threat_id}).decode("utf-8")
                 for event in detections
             ]
 
@@ -259,7 +259,7 @@ class TrellixEdrConnector(AsyncConnector):
             )
 
             result_data = [
-                orjson.dumps({**event.dict(exclude_none=True), "threatId": threat_id}).decode("utf-8")
+                orjson.dumps({**event.model_dump(exclude_none=True), "threatId": threat_id}).decode("utf-8")
                 for event in affectedhosts
             ]
 
@@ -295,7 +295,7 @@ class TrellixEdrConnector(AsyncConnector):
 
                 log_message = "No records to forward"
                 if len(message_ids) > 0:
-                    log_message = "Pushed {0} records".format(len(message_ids))
+                    log_message = f"Pushed {len(message_ids)} records"
 
                 self.log(message=log_message, level="info")
 
@@ -317,7 +317,6 @@ class TrellixEdrConnector(AsyncConnector):
                 self.log_exception(e, message="Error while running Trellix EDR")
                 await asyncio.sleep(self.configuration.frequency)
 
-    def run(self) -> None:  # pragma: no cover
+    def run(self) -> None:
         """Runs TrellixEdr."""
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.async_run())
+        asyncio.run(self.async_run())

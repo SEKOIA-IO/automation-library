@@ -115,6 +115,10 @@
 		{
 			"name": "CatoNetwork",
 			"path": "CatoNetwork"
+		},
+		{
+			"name": "Trellix",
+			"path": "Trellix"
 		}
 	],
 	"settings": {

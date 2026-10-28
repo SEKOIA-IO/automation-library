@@ -3,9 +3,9 @@
 import asyncio
 import time
 from asyncio import Lock, Task
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from posixpath import join as urljoin
-from typing import AsyncGenerator, Optional, Set
 from urllib.parse import urlencode
 
 from aiohttp import BasicAuth, ClientSession
@@ -16,7 +16,7 @@ from .errors import APIError, AuthenticationFailed
 from .schemas.token import HttpToken, Scope, TrellixToken
 
 
-class TrellixTokenRefresher(object):
+class TrellixTokenRefresher:
     """
     Contains access token refresher logic.
 
@@ -29,7 +29,7 @@ class TrellixTokenRefresher(object):
     >>>     print(access_token)
     """
 
-    _instances: dict[str, "TrellixTokenRefresher"] = {}
+    _instances: dict[str, TrellixTokenRefresher] = {}
     _locks: dict[str, Lock] = {}
     _session: ClientSession | None = None
 
@@ -39,7 +39,7 @@ class TrellixTokenRefresher(object):
         client_secret: str,
         api_key: str,
         base_url: str,
-        scopes: Set[Scope],
+        scopes: set[Scope],
     ):
         """
         Initialize TrellixTokenRefresher.
@@ -60,7 +60,7 @@ class TrellixTokenRefresher(object):
         self.scopes = scopes
 
         self._token: TrellixToken | None = None
-        self._token_refresh_task: Optional[Task[None]] = None
+        self._token_refresh_task: Task[None] | None = None
 
     @classmethod
     def session(cls) -> ClientSession:
@@ -84,8 +84,8 @@ class TrellixTokenRefresher(object):
         client_secret: str,
         api_key: str,
         auth_url: str,
-        scopes: Set[Scope],
-    ) -> "TrellixTokenRefresher":
+        scopes: set[Scope],
+    ) -> TrellixTokenRefresher:
         """
         Get singleton TrellixTokenRefresher instance for specified set of scopes.
 
@@ -162,7 +162,7 @@ class TrellixTokenRefresher(object):
             self._token = TrellixToken(
                 token=access_token,
                 scopes=self.scopes,
-                created_at=time.time(),
+                created_at=int(time.time()),
             )
 
             await self._schedule_token_refresh(self._token.token.expires_in)
@@ -205,7 +205,7 @@ class TrellixTokenRefresher(object):
             self._token_refresh_task.cancel()
 
     @asynccontextmanager
-    async def with_access_token(self) -> AsyncGenerator[TrellixToken, None]:  # pragma: no cover
+    async def with_access_token(self) -> AsyncGenerator[TrellixToken]:  # pragma: no cover
         """
         Get access token.
 

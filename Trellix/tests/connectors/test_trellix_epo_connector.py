@@ -1,13 +1,15 @@
 """Tests for Trellix EPO connector."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import orjson
 import pytest
-from aioresponses import aioresponses
+from aioresponses import CallbackResult, aioresponses
 from faker import Faker
+from yarl import URL
 
 from client.schemas.attributes.epo_events import EpoEventAttributes
 from client.schemas.token import HttpToken, Scope
@@ -61,7 +63,7 @@ async def test_trellix_connector_last_event_date(connector: TrellixEpoConnector)
     with connector.context as cache:
         cache["last_event_date"] = None
 
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
     one_week_ago = current_date - timedelta(days=7)
 
     assert connector.last_event_date == one_week_ago
@@ -95,7 +97,7 @@ async def test_trellix_connector_get_epo_events(
         pushed_events_ids: list[str]
         epo_event_response: TrellixResponse[EpoEventAttributes]
     """
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
 
     with connector.context as cache:
         cache["last_event_date"] = current_date.isoformat()
@@ -105,18 +107,949 @@ async def test_trellix_connector_get_epo_events(
 
         token_refresher = await http_client._get_token_refresher(Scope.complete_set_of_scopes())
 
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump())
 
-        expected_edr_result = [epo_event_response.dict() for _ in range(0, session_faker.pyint(max_value=100))]
+        # Events newer than the checkpoint, as returned by the `GT` filter
+        expected_edr_result = [
+            _epo_event(epo_event_response, f"event-{i}", current_date + timedelta(seconds=1))
+            for i in range(0, session_faker.pyint(min_value=1, max_value=100))
+        ]
 
         mocked_responses.get(
-            http_client.epo_events_url(current_date, limit=connector.configuration.records_per_request),
+            http_client.epo_events_url(_window(current_date), limit=connector.configuration.records_per_request),
             status=200,
             payload={
                 "data": orjson.loads(orjson.dumps(expected_edr_result).decode("utf-8")),
             },
         )
+        # Requested only when the first page is full
+        mocked_responses.get(
+            http_client.epo_events_url(
+                _window(current_date),
+                limit=connector.configuration.records_per_request,
+                offset=connector.configuration.records_per_request,
+            ),
+            status=200,
+            payload={"data": []},
+        )
 
         result = await connector.get_trellix_epo_events()
 
         assert result == pushed_events_ids
+
+
+def _window(checkpoint: datetime) -> datetime:
+    """Start of the `GT` filter used for a checkpoint."""
+    return TrellixEpoConnector.query_start(checkpoint)
+
+
+def _epo_event(
+    epo_event_response: TrellixResponse[EpoEventAttributes], event_id: str, timestamp: datetime
+) -> dict[str, Any]:
+    event = epo_event_response.copy(deep=True)
+    event.id = event_id
+    event.attributes.timestamp = timestamp
+
+    return orjson.loads(orjson.dumps(event.model_dump()))
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_checkpoint_moves_forward_between_iterations(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """The most recent event timestamp is saved after a push and used by the next iteration."""
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    with connector.context as cache:
+        cache["last_event_date"] = start_date.isoformat()
+
+    first_batch = [
+        _epo_event(epo_event_response, "event-1", start_date + timedelta(minutes=1)),
+        _epo_event(epo_event_response, "event-2", start_date + timedelta(minutes=10)),
+    ]
+    second_batch = [
+        _epo_event(epo_event_response, "event-3", start_date + timedelta(minutes=20)),
+    ]
+    limit = connector.configuration.records_per_request
+
+    with aioresponses() as mocked_responses:
+        http_client = connector.trellix_client
+        token_refresher = await http_client._get_token_refresher(Scope.complete_set_of_scopes())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump(), repeat=True)
+
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=limit), status=200, payload={"data": first_batch}
+        )
+        await connector.get_trellix_epo_events()
+        assert connector.last_event_date == start_date + timedelta(minutes=10)
+
+        # Second iteration must query from the new checkpoint (an unmatched URL would raise)
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date + timedelta(minutes=10)), limit=limit),
+            status=200,
+            payload={"data": second_batch},
+        )
+        await connector.get_trellix_epo_events()
+        assert connector.last_event_date == start_date + timedelta(minutes=20)
+
+    pushed = [call.args[0] for call in connector.push_data_to_intakes.call_args_list]
+    assert [[orjson.loads(e)["timestamp"] for e in batch] for batch in pushed] == [
+        [first_batch[0]["attributes"]["timestamp"], first_batch[1]["attributes"]["timestamp"]],
+        [second_batch[0]["attributes"]["timestamp"]],
+    ]
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_checkpoint_not_saved_when_push_fails(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """If the push to the intake fails, the checkpoint must not move."""
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    with connector.context as cache:
+        cache["last_event_date"] = start_date.isoformat()
+
+    connector.push_data_to_intakes = AsyncMock(side_effect=RuntimeError("intake unavailable"))
+
+    with aioresponses() as mocked_responses:
+        http_client = connector.trellix_client
+        token_refresher = await http_client._get_token_refresher(Scope.complete_set_of_scopes())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump())
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=connector.configuration.records_per_request),
+            status=200,
+            payload={"data": [_epo_event(epo_event_response, "event-1", start_date + timedelta(minutes=5))]},
+        )
+
+        with pytest.raises(RuntimeError):
+            await connector.get_trellix_epo_events()
+
+    assert connector.last_event_date == start_date
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_does_not_push_boundary_events_twice(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """
+    The API filter is `GT` truncated to the second, so events of the checkpoint second are returned again.
+
+    They must not be forwarded twice, while new events of that same second must still be forwarded.
+    """
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    with connector.context as cache:
+        cache["last_event_date"] = start_date.isoformat()
+
+    boundary = start_date + timedelta(minutes=10, milliseconds=500)
+    already_pushed = _epo_event(epo_event_response, "event-1", boundary)
+    same_second_new = _epo_event(epo_event_response, "event-2", boundary + timedelta(milliseconds=100))
+    limit = connector.configuration.records_per_request
+
+    with aioresponses() as mocked_responses:
+        http_client = connector.trellix_client
+        token_refresher = await http_client._get_token_refresher(Scope.complete_set_of_scopes())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump(), repeat=True)
+
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=limit),
+            status=200,
+            payload={"data": [already_pushed]},
+        )
+        assert len(await connector.get_trellix_epo_events()) > 0
+
+        mocked_responses.get(
+            http_client.epo_events_url(_window(boundary), limit=limit),
+            status=200,
+            payload={"data": [already_pushed, same_second_new]},
+        )
+        await connector.get_trellix_epo_events()
+
+        mocked_responses.get(
+            http_client.epo_events_url(_window(boundary), limit=limit),
+            status=200,
+            payload={"data": [already_pushed, same_second_new]},
+        )
+        assert await connector.get_trellix_epo_events() == []
+
+    pushed = [
+        [orjson.loads(e)["timestamp"] for e in call.args[0]] for call in connector.push_data_to_intakes.call_args_list
+    ]
+    assert pushed == [[already_pushed["attributes"]["timestamp"]], [same_second_new["attributes"]["timestamp"]]]
+    assert connector.last_event_date == boundary + timedelta(milliseconds=100)
+
+
+PAGE_SIZE = 2
+
+
+def _paginated_connector(connector: TrellixEpoConnector, start_date: datetime) -> TrellixEpoConnector:
+    """Use a small fixed page size, a push mock that returns its input and a checkpoint at `start_date`."""
+    connector.configuration = {
+        **connector.configuration.model_dump(),
+        "records_per_request": PAGE_SIZE,
+    }
+    connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
+    with connector.context as cache:
+        cache["last_event_date"] = start_date.isoformat()
+        cache["last_event_ids"] = []
+
+    return connector
+
+
+async def _mock_auth(mocked_responses: aioresponses, connector: TrellixEpoConnector, http_token: HttpToken) -> None:
+    token_refresher = await connector.trellix_client._get_token_refresher(Scope.complete_set_of_scopes())
+    mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump(), repeat=True)
+
+
+def _pushed_ids(connector: TrellixEpoConnector) -> list[list[str]]:
+    return [
+        [orjson.loads(e)["autoguid"] for e in call.args[0]] for call in connector.push_data_to_intakes.call_args_list
+    ]
+
+
+def _event(epo_event_response: TrellixResponse[EpoEventAttributes], event_id: str, timestamp: datetime) -> dict:
+    event = _epo_event(epo_event_response, event_id, timestamp)
+    event["attributes"]["autoguid"] = event_id
+
+    return event
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_drains_several_pages_in_one_run(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """Without `links`, pages are read with `page[offset]` until a page is not full; one push per page."""
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+    events = [_event(epo_event_response, f"event-{i}", start_date + timedelta(minutes=i)) for i in range(1, 6)]
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        for offset in (0, 2, 4):
+            mocked_responses.get(
+                http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE, offset=offset),
+                status=200,
+                payload={"data": events[offset : offset + PAGE_SIZE]},
+            )
+
+        result = await connector.get_trellix_epo_events()
+
+    assert len(result) == 5
+    assert _pushed_ids(connector) == [["event-1", "event-2"], ["event-3", "event-4"], ["event-5"]]
+
+    # Checkpoint after the multi-page run: newest event of the last page
+    assert connector.last_event_date == start_date + timedelta(minutes=5)
+    with connector.context as cache:
+        assert cache["last_event_ids"] == ["event-5"]
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_reads_exact_multiple_of_page_size(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """When the last page is full, the next (empty) page ends the run without any push."""
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+    events = [_event(epo_event_response, f"event-{i}", start_date + timedelta(minutes=i)) for i in range(1, 3)]
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE), status=200, payload={"data": events}
+        )
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE, offset=2),
+            status=200,
+            payload={"data": []},
+        )
+
+        assert len(await connector.get_trellix_epo_events()) == 2
+
+    assert connector.push_data_to_intakes.await_count == 1
+    assert connector.last_event_date == start_date + timedelta(minutes=2)
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_empty_page(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+):
+    """An empty first page: nothing pushed, checkpoint unchanged."""
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        mocked_responses.get(
+            connector.trellix_client.epo_events_url(_window(start_date), limit=PAGE_SIZE),
+            status=200,
+            payload={"data": [], "links": {"self": "/epo/v2/events", "next": None}},
+        )
+
+        assert await connector.get_trellix_epo_events() == []
+
+    connector.push_data_to_intakes.assert_not_awaited()
+    assert connector.last_event_date == start_date
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_follows_links_next(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """When the API returns JSON:API `links`, `links.next` (absolute or relative) is followed and its absence ends."""
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+    events = [_event(epo_event_response, f"event-{i}", start_date + timedelta(minutes=i)) for i in range(1, 7)]
+    http_client = connector.trellix_client
+    base_url = http_client.base_url
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE),
+            status=200,
+            payload={"data": events[0:2], "links": {"next": f"{base_url}/epo/v2/events?page%5Bcursor%5D=abc"}},
+        )
+        mocked_responses.get(
+            f"{base_url}/epo/v2/events?page%5Bcursor%5D=abc",
+            status=200,
+            payload={"data": events[2:4], "links": {"next": "/epo/v2/events?page%5Bcursor%5D=def"}},
+        )
+        mocked_responses.get(
+            # A relative link is resolved against the host of base_url
+            f"{URL(base_url).origin()}/epo/v2/events?page%5Bcursor%5D=def",
+            status=200,
+            # Full page, but no `next` link: this is the last page
+            payload={"data": events[4:6], "links": {"self": "/epo/v2/events", "next": None}},
+        )
+
+        assert len(await connector.get_trellix_epo_events()) == 6
+
+    assert _pushed_ids(connector) == [["event-1", "event-2"], ["event-3", "event-4"], ["event-5", "event-6"]]
+    assert connector.last_event_date == start_date + timedelta(minutes=6)
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_ignores_next_link_to_another_host(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """A `links.next` to another host is never requested (it would receive the credentials)."""
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+    events = [_event(epo_event_response, f"event-{i}", start_date + timedelta(minutes=i)) for i in range(1, 3)]
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        mocked_responses.get(
+            connector.trellix_client.epo_events_url(_window(start_date), limit=PAGE_SIZE),
+            status=200,
+            payload={"data": events, "links": {"next": "https://evil.example.com/epo/v2/events?page%5Boffset%5D=2"}},
+        )
+
+        assert len(await connector.get_trellix_epo_events()) == 2
+
+    assert connector.push_data_to_intakes.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_checkpoint_saved_before_next_page(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """The checkpoint of page 1 is persisted before page 2 is requested."""
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+    events = [_event(epo_event_response, f"event-{i}", start_date + timedelta(minutes=i)) for i in range(1, 4)]
+    checkpoints_seen: list[datetime] = []
+
+    def page_2_callback(url: Any, **kwargs: Any) -> CallbackResult:
+        checkpoints_seen.append(connector.last_event_date)
+        return CallbackResult(status=200, payload={"data": events[2:]})
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE), status=200, payload={"data": events[:2]}
+        )
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE, offset=2), callback=page_2_callback
+        )
+
+        await connector.get_trellix_epo_events()
+
+    assert checkpoints_seen == [start_date + timedelta(minutes=2)]
+    assert connector.last_event_date == start_date + timedelta(minutes=3)
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_more_events_than_page_size_in_one_second(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """
+    More than `records_per_request` events share one second: the run pages through that second instead of
+    being stuck on it, and a later run that reads the second again does not forward its events twice.
+    """
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+    busy_second = start_date + timedelta(minutes=10)
+    same_second = [
+        _event(epo_event_response, f"event-{i}", busy_second + timedelta(milliseconds=100 * i)) for i in range(1, 6)
+    ]
+    later = _event(epo_event_response, "event-later", busy_second + timedelta(seconds=1))
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        for offset in (0, 2, 4):
+            mocked_responses.get(
+                http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE, offset=offset),
+                status=200,
+                payload={"data": same_second[offset : offset + PAGE_SIZE]},
+            )
+        await connector.get_trellix_epo_events()
+
+        assert connector.last_event_date == busy_second + timedelta(milliseconds=500)
+        with connector.context as cache:
+            assert cache["last_event_ids"] == ["event-5"]
+
+        # Next run: `GT <busy second>` returns the busy second again, then the newer event
+        window = [*same_second, later]
+        for offset in (0, 2, 4):
+            mocked_responses.get(
+                http_client.epo_events_url(_window(busy_second), limit=PAGE_SIZE, offset=offset),
+                status=200,
+                payload={"data": window[offset : offset + PAGE_SIZE]},
+            )
+        mocked_responses.get(
+            http_client.epo_events_url(_window(busy_second), limit=PAGE_SIZE, offset=6),
+            status=200,
+            payload={"data": []},
+        )
+        await connector.get_trellix_epo_events()
+
+    assert _pushed_ids(connector) == [
+        ["event-1", "event-2"],
+        ["event-3", "event-4"],
+        ["event-5"],
+        ["event-later"],
+    ]
+    assert connector.last_event_date == busy_second + timedelta(seconds=1)
+    with connector.context as cache:
+        assert cache["last_event_ids"] == ["event-later"]
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_page_bound_does_not_stop_inside_start_second(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """The per-run page bound only applies once the checkpoint has left the second the run started from."""
+    monkeypatch.setattr("connectors.trellix_epo_connector.MAX_PAGES_PER_RUN", 1)
+    busy_second = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, busy_second + timedelta(milliseconds=50))
+    events = [
+        _event(epo_event_response, f"event-{i}", busy_second + timedelta(milliseconds=100 * i)) for i in range(1, 5)
+    ] + [
+        _event(epo_event_response, "event-5", busy_second + timedelta(seconds=1)),
+        _event(epo_event_response, "event-6", busy_second + timedelta(seconds=2)),
+    ]
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        for offset in (0, 2, 4):
+            mocked_responses.get(
+                http_client.epo_events_url(_window(busy_second), limit=PAGE_SIZE, offset=offset),
+                status=200,
+                payload={"data": events[offset : offset + PAGE_SIZE]},
+            )
+
+        await connector.get_trellix_epo_events()
+
+    # Pages 1 and 2 stay in the start second; page 3 moves the checkpoint forward, then the bound applies
+    assert connector.push_data_to_intakes.await_count == 3
+    assert connector.last_event_date == busy_second + timedelta(seconds=2)
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_page_bound_per_run(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """A run reads at most MAX_PAGES_PER_RUN pages; the next run continues from the checkpoint."""
+    monkeypatch.setattr("connectors.trellix_epo_connector.MAX_PAGES_PER_RUN", 2)
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+    events = [_event(epo_event_response, f"event-{i}", start_date + timedelta(minutes=i)) for i in range(1, 7)]
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        for offset in (0, 2):
+            mocked_responses.get(
+                http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE, offset=offset),
+                status=200,
+                payload={"data": events[offset : offset + PAGE_SIZE]},
+            )
+
+        # Page 3 is not mocked: requesting it would raise
+        assert len(await connector.get_trellix_epo_events()) == 4
+
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date + timedelta(minutes=4)), limit=PAGE_SIZE),
+            status=200,
+            payload={"data": events[4:]},
+        )
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date + timedelta(minutes=4)), limit=PAGE_SIZE, offset=2),
+            status=200,
+            payload={"data": []},
+        )
+        assert len(await connector.get_trellix_epo_events()) == 2
+
+    assert connector.log.call_count >= 1
+    assert connector.last_event_date == start_date + timedelta(minutes=6)
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_push_failure_during_pagination(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """
+    The push of page 2 fails: the checkpoint stays at the last event of page 1, and the next run resumes
+    from there without forwarding page 1 again.
+    """
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+    second = start_date + timedelta(minutes=1)
+    # event-2 and event-3 share a second across the page boundary
+    events = [
+        _event(epo_event_response, "event-1", second),
+        _event(epo_event_response, "event-2", second + timedelta(milliseconds=500)),
+        _event(epo_event_response, "event-3", second + timedelta(milliseconds=700)),
+        _event(epo_event_response, "event-4", second + timedelta(minutes=1)),
+    ]
+    connector.push_data_to_intakes = AsyncMock(side_effect=[["id-1", "id-2"], RuntimeError("intake unavailable")])
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE), status=200, payload={"data": events[:2]}
+        )
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE, offset=2),
+            status=200,
+            payload={"data": events[2:]},
+        )
+
+        with pytest.raises(RuntimeError):
+            await connector.get_trellix_epo_events()
+
+        assert connector.last_event_date == second + timedelta(milliseconds=500)
+        with connector.context as cache:
+            assert cache["last_event_ids"] == ["event-2"]
+
+        # Next run: `GT <second>` returns events 1 to 4 again, only 3 and 4 are forwarded
+        connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
+        mocked_responses.get(
+            http_client.epo_events_url(_window(second), limit=PAGE_SIZE), status=200, payload={"data": events[:2]}
+        )
+        mocked_responses.get(
+            http_client.epo_events_url(_window(second), limit=PAGE_SIZE, offset=2),
+            status=200,
+            payload={"data": events[2:]},
+        )
+        mocked_responses.get(
+            http_client.epo_events_url(_window(second), limit=PAGE_SIZE, offset=4), status=200, payload={"data": []}
+        )
+        await connector.get_trellix_epo_events()
+
+    assert _pushed_ids(connector) == [["event-3", "event-4"]]
+    assert connector.last_event_date == second + timedelta(minutes=1)
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_stops_paginating_when_stopped(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """When the connector is stopped during a run, no further page is requested."""
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+    events = [_event(epo_event_response, f"event-{i}", start_date + timedelta(minutes=i)) for i in range(1, 5)]
+
+    def push_then_stop(batch: list[str]) -> list[str]:
+        connector._stop_event.set()
+        return batch
+
+    connector.push_data_to_intakes = AsyncMock(side_effect=push_then_stop)
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        # Page 2 is not mocked: requesting it would raise
+        mocked_responses.get(
+            connector.trellix_client.epo_events_url(_window(start_date), limit=PAGE_SIZE),
+            status=200,
+            payload={"data": events[:2]},
+        )
+
+        assert len(await connector.get_trellix_epo_events()) == 2
+
+    assert connector.last_event_date == start_date + timedelta(minutes=2)
+
+
+def test_trellix_epo_connector_rate_limiters(connector: TrellixEpoConnector):
+    """The per-minute and per-day limiters use the configured values over 60 s and 86400 s windows."""
+    connector.configuration = {
+        **connector.configuration.model_dump(),
+        "ratelimit_per_minute": 42,
+        "ratelimit_per_day": 1234,
+    }
+    connector._trellix_client = None
+
+    http_client = connector.trellix_client
+
+    assert http_client._rate_limiter is not None
+    assert http_client._rate_limiter.max_rate == 42
+    assert http_client._rate_limiter.time_period == 60
+    assert http_client._rate_limiter_per_day is not None
+    assert http_client._rate_limiter_per_day.max_rate == 1234
+    assert http_client._rate_limiter_per_day.time_period == 86400
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_follows_query_only_next_link(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """A relative `links.next` like `?page[offset]=2` is resolved against the request URL, keeping its path."""
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+    events = [_event(epo_event_response, f"event-{i}", start_date + timedelta(minutes=i)) for i in range(1, 4)]
+    http_client = connector.trellix_client
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE),
+            status=200,
+            payload={"data": events[:2], "links": {"next": "?page%5Boffset%5D=2"}},
+        )
+        mocked_responses.get(
+            f"{http_client.base_url}/epo/v2/events?page%5Boffset%5D=2",
+            status=200,
+            payload={"data": events[2:], "links": {"next": None}},
+        )
+
+        assert len(await connector.get_trellix_epo_events()) == 3
+
+    assert _pushed_ids(connector) == [["event-1", "event-2"], ["event-3"]]
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_stops_when_offset_is_ignored(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """
+    If the API ignores `page[offset]` and returns the same full page again, the run stops after that repeated
+    page, even inside the start second where the per-run page bound does not apply.
+    """
+    second = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, second)
+    same_page = [
+        _event(epo_event_response, f"event-{i}", second + timedelta(milliseconds=100 * i)) for i in range(1, 3)
+    ]
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        for offset in (0, 2):
+            mocked_responses.get(
+                http_client.epo_events_url(_window(second), limit=PAGE_SIZE, offset=offset),
+                status=200,
+                payload={"data": same_page},
+            )
+
+        # Offset 4 is not mocked: requesting it would raise
+        assert len(await connector.get_trellix_epo_events()) == 2
+
+    assert connector.push_data_to_intakes.await_count == 1
+    assert [call.kwargs["level"] for call in connector.log.call_args_list] == ["warning"]
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_recovers_whole_second_events_across_page_boundary(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """
+    Events at exactly `T.000` are split across two pages and the push of page 2 fails. The checkpoint is `T`:
+    the next run queries `GT T-1s`, so the events at exactly `T` of page 2 are still read and forwarded once.
+    """
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+    second = start_date + timedelta(minutes=10)
+    events = [
+        _event(epo_event_response, "event-a", second),
+        _event(epo_event_response, "event-b", second),
+        _event(epo_event_response, "event-c", second),
+        _event(epo_event_response, "event-d", second + timedelta(seconds=1)),
+    ]
+    connector.push_data_to_intakes = AsyncMock(side_effect=[["id-a", "id-b"], RuntimeError("intake unavailable")])
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE), status=200, payload={"data": events[:2]}
+        )
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE, offset=2),
+            status=200,
+            payload={"data": events[2:]},
+        )
+        with pytest.raises(RuntimeError):
+            await connector.get_trellix_epo_events()
+
+        assert connector.last_event_date == second
+        with connector.context as cache:
+            assert cache["last_event_ids"] == ["event-a", "event-b"]
+
+        # Next run: the filter starts one second before the checkpoint second
+        connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
+        resume_from = second - timedelta(seconds=1)
+        mocked_responses.get(
+            http_client.epo_events_url(resume_from, limit=PAGE_SIZE), status=200, payload={"data": events[:2]}
+        )
+        mocked_responses.get(
+            http_client.epo_events_url(resume_from, limit=PAGE_SIZE, offset=2),
+            status=200,
+            payload={"data": events[2:]},
+        )
+        mocked_responses.get(
+            http_client.epo_events_url(resume_from, limit=PAGE_SIZE, offset=4), status=200, payload={"data": []}
+        )
+        await connector.get_trellix_epo_events()
+
+    assert _pushed_ids(connector) == [["event-c", "event-d"]]
+    assert connector.last_event_date == second + timedelta(seconds=1)
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_run_after_more_than_10k_events_at_one_timestamp(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+):
+    """
+    More than 10,000 events share the checkpoint timestamp (the former cap on `last_event_ids`) and the run
+    fails before reading them all: no id is evicted, so the next run forwards only the remaining events.
+    """
+    page_size = 5001
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+    connector.configuration = {**connector.configuration.model_dump(), "records_per_request": page_size}
+    second = start_date + timedelta(minutes=10)
+
+    def event(event_id: str, timestamp: datetime) -> dict[str, Any]:
+        return {
+            "id": event_id,
+            "type": "events",
+            "attributes": {"timestamp": timestamp.isoformat(), "autoguid": event_id},
+        }
+
+    events = [event(f"event-{i}", second) for i in range(10_003)] + [
+        event("event-later", second + timedelta(seconds=1))
+    ]
+    pages = [events[offset : offset + page_size] for offset in range(0, len(events), page_size)]
+    assert [len(page) for page in pages] == [5001, 5001, 2]
+
+    connector.push_data_to_intakes = AsyncMock(side_effect=[pages[0], pages[1], RuntimeError("intake unavailable")])
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        for index, page in enumerate(pages):
+            mocked_responses.get(
+                http_client.epo_events_url(_window(start_date), limit=page_size, offset=index * page_size),
+                status=200,
+                payload={"data": page},
+            )
+        with pytest.raises(RuntimeError):
+            await connector.get_trellix_epo_events()
+
+        assert connector.last_event_date == second
+        with connector.context as cache:
+            assert len(cache["last_event_ids"]) == 10_002
+
+        connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
+        for index, page in enumerate(pages):
+            mocked_responses.get(
+                http_client.epo_events_url(_window(second), limit=page_size, offset=index * page_size),
+                status=200,
+                payload={"data": page},
+            )
+        await connector.get_trellix_epo_events()
+
+    assert _pushed_ids(connector) == [["event-10002", "event-later"]]
+    assert connector.last_event_date == second + timedelta(seconds=1)
+    with connector.context as cache:
+        assert cache["last_event_ids"] == ["event-later"]
+
+
+PARIS_SUMMER = timezone(timedelta(hours=2))
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_non_utc_event_timestamp(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """
+    An event timestamp with a +02:00 offset is saved in UTC, and the next run filters on the UTC second
+    (`GT 09:59:59Z` for `12:00:00.500+02:00`), not on the local time with a `Z` suffix.
+    """
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=4)
+    connector = _paginated_connector(connector, start_date)
+    second_utc = start_date + timedelta(hours=1)
+    event = _event(epo_event_response, "event-1", second_utc + timedelta(milliseconds=500))
+    event["attributes"]["timestamp"] = (second_utc + timedelta(milliseconds=500)).astimezone(PARIS_SUMMER).isoformat()
+    newer = _event(epo_event_response, "event-2", second_utc + timedelta(minutes=1))
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE), status=200, payload={"data": [event]}
+        )
+        await connector.get_trellix_epo_events()
+
+        with connector.context as cache:
+            assert cache["last_event_date"] == (second_utc + timedelta(milliseconds=500)).isoformat()
+            assert cache["last_event_date"].endswith("+00:00")
+
+        # The filter is the UTC second before the checkpoint second, written explicitly
+        utc_filter = (second_utc - timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        mocked_responses.get(
+            URL(f"{http_client.base_url}/epo/v2/events").with_query(
+                {"sort": "timestamp", "filter": '{"GT": {"timestamp": "' + utc_filter + '"}}', "page[limit]": "2"}
+            ),
+            status=200,
+            payload={"data": [event, newer]},
+        )
+        mocked_responses.get(
+            http_client.epo_events_url(_window(second_utc), limit=PAGE_SIZE, offset=2),
+            status=200,
+            payload={"data": []},
+        )
+        await connector.get_trellix_epo_events()
+
+    assert _pushed_ids(connector) == [["event-1"], ["event-2"]]
+
+
+def test_trellix_connector_legacy_checkpoint_values_are_utc(connector: TrellixEpoConnector):
+    """`last_event_date` is aware UTC for a checkpoint saved with an offset and for a legacy naive value."""
+    utc_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+
+    with connector.context as cache:
+        cache["last_event_date"] = utc_date.astimezone(PARIS_SUMMER).isoformat()
+    assert connector.last_event_date == utc_date
+    assert connector.last_event_date.utcoffset() == timedelta(0)
+    assert TrellixEpoConnector.query_start(connector.last_event_date) == utc_date - timedelta(seconds=1)
+
+    with connector.context as cache:
+        cache["last_event_date"] = utc_date.replace(tzinfo=None).isoformat()
+    assert connector.last_event_date == utc_date
+    assert connector.last_event_date.utcoffset() == timedelta(0)
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_events_without_id_not_forwarded_twice(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """
+    Events without `id` nor `autoguid` at the checkpoint timestamp are saved by a content digest, so the next
+    runs, which read them again, do not forward them again.
+    """
+    start_date = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _paginated_connector(connector, start_date)
+    newest = start_date + timedelta(minutes=10, milliseconds=250)
+
+    def anonymous_event(name: str) -> dict[str, Any]:
+        event = _epo_event(epo_event_response, "unused", newest)
+        event["id"] = None
+        event["attributes"]["autoguid"] = None
+        event["attributes"]["threatname"] = name
+        return event
+
+    events = [anonymous_event("threat-1"), anonymous_event("threat-2")]
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE), status=200, payload={"data": events}
+        )
+        mocked_responses.get(
+            http_client.epo_events_url(_window(start_date), limit=PAGE_SIZE, offset=2),
+            status=200,
+            payload={"data": []},
+        )
+        assert len(await connector.get_trellix_epo_events()) == 2
+
+        with connector.context as cache:
+            saved_keys = cache["last_event_ids"]
+        assert len(saved_keys) == 2
+        assert all(key.startswith("sha256:") for key in saved_keys)
+
+        # Two more runs, with a new connector instance (restart) for the last one
+        for _ in range(2):
+            mocked_responses.get(
+                http_client.epo_events_url(_window(newest), limit=PAGE_SIZE), status=200, payload={"data": events}
+            )
+            mocked_responses.get(
+                http_client.epo_events_url(_window(newest), limit=PAGE_SIZE, offset=2),
+                status=200,
+                payload={"data": []},
+            )
+        assert await connector.get_trellix_epo_events() == []
+
+        restarted = TrellixEpoConnector(module=connector.module, data_path=connector._data_path)
+        restarted.configuration = connector.configuration
+        restarted.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
+        restarted._trellix_client = http_client
+        assert await restarted.get_trellix_epo_events() == []
+
+    assert connector.push_data_to_intakes.await_count == 1
+    restarted.push_data_to_intakes.assert_not_awaited()

@@ -22,8 +22,8 @@ async def test_epo_events(session_faker: Faker):
         "attributes": {
             "timestamp": session_faker.date_time(),
             "autoguid": session_faker.word(),
-            "detectedutc": "{0}".format(session_faker.date_time().timestamp()),
-            "receivedutc": "{0}".format(session_faker.date_time().timestamp()),
+            "detectedutc": f"{session_faker.date_time().timestamp()}",
+            "receivedutc": f"{session_faker.date_time().timestamp()}",
             "agentguid": session_faker.word(),
             "analyzer": session_faker.word(),
             "analyzername": session_faker.word(),
@@ -47,7 +47,7 @@ async def test_epo_events(session_faker: Faker):
             "targetipv6": session_faker.ipv6(),
             "targetmac": session_faker.word(),
             "targetusername": session_faker.word(),
-            "targetport": "{0}".format(session_faker.pyint()),
+            "targetport": f"{session_faker.pyint()}",
             "targetprotocol": session_faker.word(),
             "targetprocessname": session_faker.word(),
             "targetfilename": session_faker.word(),
@@ -71,4 +71,4 @@ async def test_epo_events(session_faker: Faker):
 
     assert isinstance(response, TrellixResponse)
     assert isinstance(response.attributes, EpoEventAttributes)
-    assert response.dict() == expected_response
+    assert response.model_dump() == expected_response

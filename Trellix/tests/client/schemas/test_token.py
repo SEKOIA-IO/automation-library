@@ -1,7 +1,6 @@
 """Tests for trellix token and scopes."""
 
 from time import time
-from typing import List
 
 import pytest
 
@@ -28,7 +27,7 @@ def sample_token(session_faker) -> HttpToken:
 
 
 @pytest.fixture
-def sample_scopes() -> List[Scope]:
+def sample_scopes() -> list[Scope]:
     """
     Creates sample list of scopes for testing
 
