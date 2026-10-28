@@ -48,6 +48,12 @@ class Dependency(NamedTuple):
 
 
 UNBOUNDED = "unbounded, left to the lock refresh"
+# names end up as command arguments: refuse anything an option parser could read as a flag
+VALID_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+
+
+def invalid_name(dependency: "Dependency") -> bool:
+    return not all(VALID_NAME.fullmatch(name) for name in (dependency.name, dependency.group or "x"))
 
 
 def from_requirement(group: str | None, requirement: Requirement) -> Dependency:
@@ -192,6 +198,7 @@ def run(module: Path, *args: str) -> str:
         env["PATH"] = os.pathsep.join(p for p in env["PATH"].split(os.pathsep) if p != venv_bin)
     # poetry resolutions can take minutes: show what is running
     typer.echo(f"$ {' '.join(args)}")
+    # nosemgrep: dangerous-subprocess-use-audit -- fixed executable, argument list without a shell, names validated by the caller
     return subprocess.run(args, cwd=module, env=env, check=True, text=True, capture_output=True).stdout
 
 
@@ -214,8 +221,8 @@ def upgrade(module: Path, tool: str) -> list[str]:
         version = latest.get(canonicalize_name(dependency.name))
         if version is None:
             continue
-        if dependency.skip:
-            typer.echo(f"Skip {dependency.name} ({dependency.skip}), latest is {version}")
+        if dependency.skip or invalid_name(dependency):
+            typer.echo(f"Skip {dependency.name} ({dependency.skip or 'invalid name'}), latest is {version}")
             continue
 
         group = ["--group", dependency.group] if dependency.group else []

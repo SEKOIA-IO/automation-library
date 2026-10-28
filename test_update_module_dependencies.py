@@ -5,6 +5,7 @@ import pytest
 from update_module_dependencies import (
     Dependency,
     declaration_count,
+    invalid_name,
     migrate_legacy_dev_dependencies,
     bump_manifest_version,
     parse_poetry_outdated,
@@ -172,3 +173,10 @@ def test_declaration_count():
     assert declaration_count(pyproject, "mypy") == 2
     assert declaration_count(pyproject, "pytest") == 1
     assert declaration_count(pyproject, "absent") == 0
+
+
+def test_invalid_names_are_refused():
+    assert not invalid_name(Dependency(None, "orjson", (), None, None))
+    assert not invalid_name(Dependency("dev", "ruamel.yaml", (), None, None))
+    assert invalid_name(Dependency(None, "--source=x", (), None, None))
+    assert invalid_name(Dependency("-v", "orjson", (), None, None))
