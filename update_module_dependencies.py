@@ -2,6 +2,7 @@
 # requires-python = ">=3.13"
 # dependencies = [
 #     "packaging",
+#     "tomlkit",
 #     "typer",
 # ]
 # ///
@@ -23,6 +24,7 @@ from datetime import date
 from pathlib import Path
 from typing import NamedTuple
 
+import tomlkit
 import typer
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
@@ -106,6 +108,52 @@ def poetry_dependencies(pyproject: dict) -> list[Dependency]:
     return dependencies
 
 
+def migrate_legacy_dev_dependencies(text: str) -> str:
+    """Merge `[tool.poetry.dev-dependencies]` into `[tool.poetry.group.dev.dependencies]`.
+
+    `poetry add --group dev` would otherwise declare the package a second time,
+    leaving the legacy constraint in place.
+    """
+    doc = tomlkit.parse(text)
+    poetry = doc.get("tool", {}).get("poetry", {})
+    if "dev-dependencies" not in poetry:
+        return text
+    resolved = tomllib.loads(text)["tool"]["poetry"]
+    legacy = resolved["dev-dependencies"]
+    group = resolved.get("group", {}).get("dev", {}).get("dependencies", {})
+    if overlap := legacy.keys() & group.keys():
+        raise ValueError(f"declared in both dev dependency tables: {', '.join(sorted(overlap))}")
+
+    merged = tomlkit.table()
+    for name, spec in {**group, **legacy}.items():
+        if isinstance(spec, dict):
+            inline = tomlkit.inline_table()
+            inline.update(spec)
+            spec = inline
+        merged[name] = spec
+    del poetry["dev-dependencies"]
+    if "dev" in poetry.get("group", {}):
+        del poetry["group"]["dev"]["dependencies"]
+    groups = poetry.setdefault("group", tomlkit.table(is_super_table=True))
+    groups.setdefault("dev", tomlkit.table(is_super_table=True))["dependencies"] = merged
+
+    new_text = tomlkit.dumps(doc)
+    if tomllib.loads(new_text)["tool"]["poetry"]["group"]["dev"]["dependencies"] != {**group, **legacy}:
+        raise ValueError("dev dependencies changed by the migration")
+    return new_text
+
+
+def declaration_count(pyproject: dict, name: str) -> int:
+    """Number of places declaring `name` in a pyproject.toml."""
+    poetry = pyproject.get("tool", {}).get("poetry", {})
+    tables = [poetry.get("dependencies", {}), poetry.get("dev-dependencies", {})]
+    tables += [group.get("dependencies", {}) for group in poetry.get("group", {}).values()]
+    count = sum(canonicalize_name(key) == canonicalize_name(name) for table in tables for key in table)
+    requirements = list(pyproject.get("project", {}).get("dependencies", []))
+    requirements += [r for reqs in pyproject.get("dependency-groups", {}).values() for r in reqs if isinstance(r, str)]
+    return count + sum(canonicalize_name(Requirement(r).name) == canonicalize_name(name) for r in requirements)
+
+
 def parse_uv_outdated(output: str) -> dict[str, str]:
     """Parse `uv tree --outdated --depth 1` into {canonical name: latest version}."""
     # shortcut: text parsing, switch to `--format json` once uv no longer flags it as preview
@@ -148,7 +196,10 @@ def run(module: Path, *args: str) -> str:
 
 
 def upgrade(module: Path, tool: str) -> list[str]:
-    pyproject = tomllib.loads((module / "pyproject.toml").read_text())
+    pyproject_path = module / "pyproject.toml"
+    if tool == "poetry":
+        pyproject_path.write_text(migrate_legacy_dev_dependencies(pyproject_path.read_text()))
+    pyproject = tomllib.loads(pyproject_path.read_text())
     if tool == "uv":
         latest = parse_uv_outdated(run(module, "uv", "tree", "--outdated", "--depth", "1", "--all-groups"))
         dependencies = uv_dependencies(pyproject)
@@ -174,14 +225,21 @@ def upgrade(module: Path, tool: str) -> list[str]:
             command = ["poetry", "add", "--lock", *group, f"{dependency.name_with_extras}@latest"]
 
         # a failed resolution leaves pyproject.toml untouched, so carry on with the other dependencies
+        before = pyproject_path.read_bytes()
         try:
             run(module, *command)
+            if tool == "poetry" and declaration_count(tomllib.loads(pyproject_path.read_text()), dependency.name) != 1:
+                pyproject_path.write_bytes(before)
+                raise ValueError("poetry wrote a duplicate declaration")
             bumped.append(f"{dependency.name} -> {version}")
         except subprocess.CalledProcessError as error:
             # resolver errors are verbose: keep only the explaining line
             lines = error.stderr.strip().splitlines() or [""]
             reason = next((line.strip() for line in lines if "Because" in line), lines[-1].strip())
             typer.echo(f"Could not bump {dependency.name} to {version}: {reason}", err=True)
+        except (ValueError, tomllib.TOMLDecodeError) as error:
+            pyproject_path.write_bytes(before)
+            typer.echo(f"Could not bump {dependency.name} to {version}: {error}", err=True)
 
     # refresh transitive dependencies
     run(module, *refresh_lock)
@@ -217,6 +275,9 @@ def main(module: Path = typer.Argument(..., help="Directory of the module, e.g. 
             raise typer.Exit(1)
         raise
 
+    # a migration of the pyproject.toml alone is not worth a release
+    if not bumped and lock.read_bytes() == snapshot[lock]:
+        pyproject.write_bytes(snapshot[pyproject])
     if all(path.read_bytes() == content for path, content in snapshot.items()):
         typer.echo(f"{module} dependencies are already up to date")
         return
