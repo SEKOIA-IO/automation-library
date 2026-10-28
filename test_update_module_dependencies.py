@@ -1,6 +1,7 @@
 import tomllib
 
 import pytest
+import typer
 
 from update_module_dependencies import (
     Dependency,
@@ -180,3 +181,83 @@ def test_invalid_names_are_refused():
     assert not invalid_name(Dependency("dev", "ruamel.yaml", (), None, None))
     assert invalid_name(Dependency(None, "--source=x", (), None, None))
     assert invalid_name(Dependency("-v", "orjson", (), None, None))
+
+
+def test_poetry_list_spec_is_complex():
+    pyproject = tomllib.loads(
+        '[tool.poetry.dependencies]\nnumpy = [{version = "^1.0", python = "<3.10"}, {version = "^2.0", python = ">=3.10"}]\n'
+    )
+    assert poetry_dependencies(pyproject)[0].skip == "complex specification"
+
+
+def test_parse_uv_outdated_strips_extras():
+    assert parse_uv_outdated("├── gql[aiohttp] v3.5.3 (latest: v4.4.0)\n") == {"gql": "4.4.0"}
+
+
+def test_declaration_count_allows_two_groups():
+    pyproject = tomllib.loads('[tool.poetry.dependencies]\npytest = "*"\n[tool.poetry.group.dev.dependencies]\npytest = "*"\n')
+    assert declaration_count(pyproject, "pytest") == 2
+
+
+def test_failed_changelog_rolls_back_everything(tmp_path, monkeypatch):
+    import update_module_dependencies as mod
+
+    module = tmp_path / "Mod"
+    module.mkdir()
+    files = {
+        "manifest.json": '{\n  "version": "1.0.0"\n}\n',
+        "pyproject.toml": "[project]\n",
+        "uv.lock": "old\n",
+        "CHANGELOG.md": "# Changelog\n",
+    }
+    for name, text in files.items():
+        (module / name).write_text(text)
+
+    def fake_upgrade(path, tool):
+        (path / "uv.lock").write_text("new\n")
+        return ["x -> 2"]
+
+    def failing_insert(*args):
+        raise ValueError("boom")
+
+    monkeypatch.setattr(mod, "upgrade", fake_upgrade)
+    monkeypatch.setattr(mod, "insert_new_version_entry", failing_insert)
+    with pytest.raises(typer.Exit):
+        mod.main(module)
+    for name, text in files.items():
+        assert (module / name).read_text() == text
+
+
+def poetry_module(tmp_path, monkeypatch, added_text):
+    """A module whose `poetry add` rewrites pyproject.toml and the lock to `added_text`."""
+    import update_module_dependencies as mod
+
+    pyproject = '[tool.poetry.dependencies]\npython = "^3.11"\npytest = "^7"\n'
+    module = tmp_path / "Mod"
+    module.mkdir()
+    (module / "pyproject.toml").write_text(pyproject)
+    (module / "poetry.lock").write_text("old lock\n")
+
+    def fake_run(path, *args):
+        if args[:2] == ("poetry", "show"):
+            return '[{"name": "pytest", "latest_version": "9.0.0"}]'
+        if args[:2] == ("poetry", "add"):
+            (path / "pyproject.toml").write_text(added_text)
+            (path / "poetry.lock").write_text("new lock\n")
+        return ""
+
+    monkeypatch.setattr(mod, "run", fake_run)
+    return mod, module, pyproject
+
+
+def test_duplicate_declaration_is_rolled_back(tmp_path, monkeypatch):
+    duplicate = '[tool.poetry.dependencies]\npython = "^3.11"\npytest = "^7"\n[tool.poetry.group.dev.dependencies]\npytest = "^9"\n'
+    mod, module, pyproject = poetry_module(tmp_path, monkeypatch, duplicate)
+    assert mod.upgrade(module, "poetry") == []
+    assert (module / "pyproject.toml").read_text() == pyproject
+    assert (module / "poetry.lock").read_text() == "old lock\n"
+
+
+def test_bump_is_kept_when_declaration_count_is_unchanged(tmp_path, monkeypatch):
+    mod, module, _ = poetry_module(tmp_path, monkeypatch, '[tool.poetry.dependencies]\npython = "^3.11"\npytest = "^9"\n')
+    assert mod.upgrade(module, "poetry") == ["pytest -> 9.0.0"]

@@ -52,8 +52,9 @@ UNBOUNDED = "unbounded, left to the lock refresh"
 VALID_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
 
-def invalid_name(dependency: "Dependency") -> bool:
-    return not all(VALID_NAME.fullmatch(name) for name in (dependency.name, dependency.group or "x"))
+def invalid_name(dependency: Dependency) -> bool:
+    names = [dependency.name] + ([dependency.group] if dependency.group else [])
+    return not all(VALID_NAME.fullmatch(name) for name in names)
 
 
 def from_requirement(group: str | None, requirement: Requirement) -> Dependency:
@@ -82,6 +83,8 @@ def poetry_spec_skip(spec: str | dict) -> str | None:
         if "version" not in spec or set(spec) - {"version", "extras"}:
             return "complex specification"
         spec = spec["version"]
+    elif not isinstance(spec, str):
+        return "complex specification"  # e.g. a list of constraints per Python version
     if spec.strip() == "*":
         return UNBOUNDED
     if spec.startswith("==") or spec[:1].isdigit():
@@ -164,7 +167,9 @@ def parse_uv_outdated(output: str) -> dict[str, str]:
     """Parse `uv tree --outdated --depth 1` into {canonical name: latest version}."""
     # shortcut: text parsing, switch to `--format json` once uv no longer flags it as preview
     return {
-        canonicalize_name(name): latest for name, latest in re.findall(r"── (\S+) v\S+ .*\(latest: v(\S+)\)", output)
+        # uv prints `name[extra]` for dependencies with extras
+        canonicalize_name(name.split("[")[0]): latest
+        for name, latest in re.findall(r"── (\S+) v\S+ .*\(latest: v(\S+)\)", output)
     }
 
 
@@ -204,6 +209,7 @@ def run(module: Path, *args: str) -> str:
 
 def upgrade(module: Path, tool: str) -> list[str]:
     pyproject_path = module / "pyproject.toml"
+    lock_path = module / f"{tool}.lock"
     if tool == "poetry":
         pyproject_path.write_text(migrate_legacy_dev_dependencies(pyproject_path.read_text()))
     pyproject = tomllib.loads(pyproject_path.read_text())
@@ -226,17 +232,18 @@ def upgrade(module: Path, tool: str) -> list[str]:
             continue
 
         group = ["--group", dependency.group] if dependency.group else []
-        if tool == "uv":
-            command = ["uv", "add", "--no-sync", *group, uv_requirement(dependency, version)]
-        else:
-            command = ["poetry", "add", "--lock", *group, f"{dependency.name_with_extras}@latest"]
 
         # a failed resolution leaves pyproject.toml untouched, so carry on with the other dependencies
-        before = pyproject_path.read_bytes()
+        before, lock_before = pyproject_path.read_bytes(), lock_path.read_bytes()
         try:
+            if tool == "uv":
+                command = ["uv", "add", "--no-sync", *group, uv_requirement(dependency, version)]
+            else:
+                command = ["poetry", "add", "--lock", *group, f"{dependency.name_with_extras}@latest"]
             run(module, *command)
-            if tool == "poetry" and declaration_count(tomllib.loads(pyproject_path.read_text()), dependency.name) != 1:
-                pyproject_path.write_bytes(before)
+            if tool == "poetry" and declaration_count(
+                tomllib.loads(pyproject_path.read_text()), dependency.name
+            ) > declaration_count(tomllib.loads(before.decode()), dependency.name):
                 raise ValueError("poetry wrote a duplicate declaration")
             bumped.append(f"{dependency.name} -> {version}")
         except subprocess.CalledProcessError as error:
@@ -246,6 +253,7 @@ def upgrade(module: Path, tool: str) -> list[str]:
             typer.echo(f"Could not bump {dependency.name} to {version}: {reason}", err=True)
         except (ValueError, tomllib.TOMLDecodeError) as error:
             pyproject_path.write_bytes(before)
+            lock_path.write_bytes(lock_before)
             typer.echo(f"Could not bump {dependency.name} to {version}: {error}", err=True)
 
     # refresh transitive dependencies
@@ -262,17 +270,33 @@ def main(module: Path = typer.Argument(..., help="Directory of the module, e.g. 
             typer.echo(f"Error: {path} not found", err=True)
             raise typer.Exit(1)
 
-    lock = next((path for path in (module / "uv.lock", module / "poetry.lock") if path.is_file()), None)
-    if lock is None:
-        typer.echo(f"Error: no uv.lock or poetry.lock in {module}", err=True)
+    locks = [path for path in (module / "uv.lock", module / "poetry.lock") if path.is_file()]
+    if len(locks) != 1:
+        typer.echo(f"Error: expected exactly one of uv.lock and poetry.lock in {module}, found {len(locks)}", err=True)
         raise typer.Exit(1)
+    lock = locks[0]
     tool = lock.stem
 
     # turn `timeout`'s SIGTERM into SystemExit so the snapshot below gets restored
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
-    snapshot = {path: path.read_bytes() for path in (pyproject, lock)}
+    snapshot = {path: path.read_bytes() for path in (pyproject, lock, manifest, changelog)}
     try:
         bumped = upgrade(module, tool)
+
+        # a migration of the pyproject.toml alone is not worth a release
+        if not bumped and lock.read_bytes() == snapshot[lock]:
+            pyproject.write_bytes(snapshot[pyproject])
+        if all(path.read_bytes() == content for path, content in snapshot.items()):
+            typer.echo(f"{module} dependencies are already up to date")
+            return
+
+        # compute both texts before writing either
+        manifest_text, new_version = bump_manifest_version(manifest.read_text())
+        changelog_lines = insert_new_version_entry(
+            read_changelog(changelog), new_version, date.today().isoformat(), "Changed", "Update dependencies"
+        )
+        manifest.write_text(manifest_text)
+        write_changelog(changelog, changelog_lines)
     except BaseException as error:
         # leave no half-updated module behind
         for path, content in snapshot.items():
@@ -280,21 +304,10 @@ def main(module: Path = typer.Argument(..., help="Directory of the module, e.g. 
         if isinstance(error, subprocess.CalledProcessError):
             typer.echo(f"Error: `{' '.join(error.cmd)}` failed:\n{error.stderr}", err=True)
             raise typer.Exit(1)
+        if isinstance(error, (ValueError, tomllib.TOMLDecodeError)):
+            typer.echo(f"Error: {module} not updated: {error}", err=True)
+            raise typer.Exit(1)
         raise
-
-    # a migration of the pyproject.toml alone is not worth a release
-    if not bumped and lock.read_bytes() == snapshot[lock]:
-        pyproject.write_bytes(snapshot[pyproject])
-    if all(path.read_bytes() == content for path, content in snapshot.items()):
-        typer.echo(f"{module} dependencies are already up to date")
-        return
-
-    manifest_text, new_version = bump_manifest_version(manifest.read_text())
-    changelog_lines = insert_new_version_entry(
-        read_changelog(changelog), new_version, date.today().isoformat(), "Changed", "Update dependencies"
-    )
-    manifest.write_text(manifest_text)
-    write_changelog(changelog, changelog_lines)
 
     typer.echo(f"✓ {module} ({tool}) updated to {new_version}")
     for line in bumped:
