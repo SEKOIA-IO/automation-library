@@ -47,6 +47,14 @@ def read_changelog(filepath: Path) -> List[str]:
         return f.readlines()
 
 
+# `## 2026-01-01 - 1.2.3`, `## 1.2.3 - 2026-01-01` and `## [1.2.3] - 2026-01-01`
+RELEASE_HEADING = re.compile(r"^## \[?([^\]\s]+)\]? - \[?([^\]\s]+)\]?$")
+
+
+def is_release_heading(line: str) -> bool:
+    return line.startswith("## ")
+
+
 def find_unreleased_section(lines: List[str]) -> Optional[int]:
     """Find the line index of the ## Unreleased section."""
     for i, line in enumerate(lines):
@@ -55,13 +63,23 @@ def find_unreleased_section(lines: List[str]) -> Optional[int]:
     return None
 
 
+def find_version(lines: List[str], version: str, date: str) -> Optional[int]:
+    """Find the line index of the heading of a version, whatever the order of version and date."""
+    for i, line in enumerate(lines):
+        match = RELEASE_HEADING.match(line.strip())
+        if match and set(match.groups()) == {version, date}:
+            return i
+    return None
+
+
 def version_exists(lines: List[str], version: str, date: str) -> bool:
     """Check if a version entry already exists."""
-    version_header = f"## {date} - {version}"
-    for line in lines:
-        if line.strip() == version_header:
-            return True
-    return False
+    return find_version(lines, version, date) is not None
+
+
+def section_end(lines: List[str], start: int) -> int:
+    """Index of the next release heading after `start`, or the end of the file."""
+    return next((i for i in range(start + 1, len(lines)) if is_release_heading(lines[i])), len(lines))
 
 
 def insert_new_version_entry(
@@ -71,26 +89,19 @@ def insert_new_version_entry(
     category: str,
     message: str
 ) -> List[str]:
-    """Insert a new version entry into the changelog."""
-    unreleased_idx = find_unreleased_section(lines)
-    
-    if unreleased_idx is None:
-        typer.echo("Error: Could not find '## Unreleased' section in changelog")
-        raise typer.Exit(1)
-    
-    # Check if version already exists
+    """Insert a new version entry into the changelog, below the content of the Unreleased section."""
     if version_exists(lines, version, date):
         typer.echo(f"Error: Version {version} with date {date} already exists in changelog")
         raise typer.Exit(1)
-    
-    # Find insertion point (after ## Unreleased and its blank line)
-    insert_idx = unreleased_idx + 1
-    
-    # Skip blank lines after Unreleased
-    while insert_idx < len(lines) and lines[insert_idx].strip() == "":
-        insert_idx += 1
-    
-    # Create new version entry
+
+    unreleased_idx = find_unreleased_section(lines)
+    if unreleased_idx is None:
+        # some changelogs have releases only: add the section before the first one
+        unreleased_idx = next((i for i, line in enumerate(lines) if is_release_heading(line)), len(lines))
+        lines = lines[:unreleased_idx] + ["## Unreleased\n", "\n"] + lines[unreleased_idx:]
+
+    # the release goes after whatever is pending under Unreleased
+    insert_idx = section_end(lines, unreleased_idx)
     new_entry = [
         f"## {date} - {version}\n",
         "\n",
@@ -98,11 +109,9 @@ def insert_new_version_entry(
         "\n",
         f"- {message}\n\n",
     ]
-    
-    # Insert the new entry
-    result = lines[:insert_idx] + new_entry + lines[insert_idx:]
-    
-    return result
+    if insert_idx > 0 and lines[insert_idx - 1].strip():
+        new_entry.insert(0, "\n")
+    return lines[:insert_idx] + new_entry + lines[insert_idx:]
 
 
 def add_to_existing_version(
@@ -113,75 +122,37 @@ def add_to_existing_version(
     message: str
 ) -> List[str]:
     """Add an entry to an existing version section."""
-    version_header = f"## {date} - {version}"
-    version_idx = None
-    
-    # Find the version header
-    for i, line in enumerate(lines):
-        if line.strip() == version_header:
-            version_idx = i
-            break
-    
+    version_idx = find_version(lines, version, date)
     if version_idx is None:
         typer.echo(f"Error: Version {version} with date {date} not found")
         raise typer.Exit(1)
-    
-    # Look for the category section within this version
-    category_header = f"### {category}"
-    category_idx = None
-    next_version_idx = len(lines)
-    
-    # Find the next version header to limit our search
-    for i in range(version_idx + 1, len(lines)):
-        if lines[i].startswith("## ") and not lines[i].startswith("###"):
-            next_version_idx = i
-            break
-    
-    # Look for category within this version
-    for i in range(version_idx + 1, next_version_idx):
-        if lines[i].strip() == category_header:
-            category_idx = i
-            break
-    
-    if category_idx is not None:
-        # Category exists, add message to it
-        # Find the last bullet point in this category
-        insert_idx = category_idx + 1
-        
-        # Skip blank line after category header
-        if insert_idx < len(lines) and lines[insert_idx].strip() == "":
-            insert_idx += 1
-        
-        # Find the end of this category section
-        while insert_idx < next_version_idx:
-            if lines[insert_idx].startswith("### "):
-                # Found next category
-                break
-            if lines[insert_idx].startswith("- "):
-                insert_idx += 1
-            else:
-                break
-        
-        # Insert new message
-        result = lines[:insert_idx] + [f"- {message}\n"] + lines[insert_idx:]
-    else:
-        # Category doesn't exist, create it
-        # Find where to insert the new category (after version header)
-        insert_idx = version_idx + 1
-        
-        # Skip blank lines
-        while insert_idx < next_version_idx and lines[insert_idx].strip() == "":
-            insert_idx += 1
-        
-        # Insert new category with message
-        new_category = [
-            f"### {category}\n",
-            "\n",
-            f"- {message}\n\n",
-        ]
-        result = lines[:insert_idx] + new_category + lines[insert_idx:]
-    
-    return result
+
+    version_end = section_end(lines, version_idx)
+    headings = [i for i in range(version_idx + 1, version_end) if lines[i].startswith("### ")]
+
+    def last_content(start: int, end: int) -> int:
+        """Index after the last non-blank line of lines[start:end]."""
+        while end > start and not lines[end - 1].strip():
+            end -= 1
+        return end
+
+    for n, idx in enumerate(headings):
+        if lines[idx].strip() == f"### {category}":
+            # the category runs to the next heading: wrapped lines and nested bullets stay attached
+            end = last_content(idx + 1, headings[n + 1] if n + 1 < len(headings) else version_end)
+            if end == idx + 1:
+                return lines[:end] + ["\n", f"- {message}\n"] + lines[end:]
+            return lines[:end] + [f"- {message}\n"] + lines[end:]
+
+    # missing category: keep the conventional order
+    rank = {name: i for i, name in enumerate(VALID_CATEGORIES)}
+    later = next(
+        (idx for idx in headings if rank.get(lines[idx][4:].strip(), len(rank)) > rank[category]), None
+    )
+    if later is not None:
+        return lines[:later] + [f"### {category}\n", "\n", f"- {message}\n", "\n"] + lines[later:]
+    end = last_content(version_idx + 1, version_end)
+    return lines[:end] + ["\n", f"### {category}\n", "\n", f"- {message}\n"] + lines[end:]
 
 
 def write_changelog(filepath: Path, lines: List[str]):
@@ -228,7 +199,6 @@ def main(
     lines = read_changelog(changelog_path)
     
     # Check if version already exists
-    version_header = f"## {date_str} - {version}"
     if version_exists(lines, version, date_str):
         # Add to existing version
         updated_lines = add_to_existing_version(
@@ -252,14 +222,10 @@ def main(
         typer.echo(f"Message: {message}")
         typer.echo("\n=== Preview of new entry ===")
         
-        # Find and display the relevant section
-        for i, line in enumerate(updated_lines):
-            if version_header in line:
-                # Show context around the change
-                start = max(0, i - 2)
-                end = min(len(updated_lines), i + 15)
-                typer.echo("".join(updated_lines[start:end]))
-                break
+        # Show context around the change
+        i = find_version(updated_lines, version, date_str)
+        if i is not None:
+            typer.echo("".join(updated_lines[max(0, i - 2) : i + 15]))
     else:
         write_changelog(changelog_path, updated_lines)
         typer.echo(f"✓ {action}")
