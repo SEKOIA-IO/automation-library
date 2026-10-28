@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-28 - 1.2.1
+
+### Fixed
+
+- Enable the account validation in the manifest (`supports_validation`)
+- Report the cause of account validation failures (client/server error, timeout, network error)
+
 ## 2026-09-16 - 1.2.0
 
 ### Added
