@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-26 - 1.1.0
+
+### Fixed
+
+- Device IP, OS, hostnames, network interfaces, cloud region and timestamps are filled again for assets read from the asset export
+- Fix duplicate vulnerabilities on every run
+- State changes (fixed, reopened) of an already sent vulnerability are always sent
+- The checkpoint is saved only after a complete export and once every batch is accepted by Sekoia.io (only a batch rejected as invalid, HTTP 400 or 422, is dropped and logged; other refusals are retried), so an interrupted cycle no longer skips findings
+- First run collects all open and reopened vulnerabilities; an old checkpoint is no longer moved forward
+- Same device hostname fallback (hostname, name, FQDN) whatever the asset source
+- A failed asset export no longer triggers a new export for every vulnerability
+- A temporary error on the asset details endpoint no longer loses the finding: the checkpoint stops at that finding so it is fetched again on the next cycle
+- An incomplete cycle (asset API error, refused batch) is retried after a delay instead of immediately
+- Findings with an unknown state are sent as Create instead of being skipped
+
+### Changed
+
+- The existing checkpoint is reused: no full re-fetch on upgrade
+- Asset cache refreshed every 6 hours from a full asset export (no longer limited to the assets updated since the vulnerability checkpoint), up to 20000 assets
+- `device.name` falls back to the hostname, then the FQDN
+- REOPENED findings are sent with the OCSF activity name `Update`
+- Descriptions and references are capped to the platform limits
+- Tenable API payloads with explicit `null` values are accepted
+- The event `time` is when the current state was observed (latest of `last_found` and `last_fixed`), no longer `first_found`
+- The cloud region of the asset is sent in `device.region` instead of `device.location.city`
+- The Tenable severity is also sent as the OCSF event `severity` and `severity_id`
+- Mapping code split into `TenableVulnerabilityMapper`, `TenableDeviceMapper` and helper functions; mapping documentation updated
+
 ## 2026-08-28 - 1.0.19
 
 ### Changed
