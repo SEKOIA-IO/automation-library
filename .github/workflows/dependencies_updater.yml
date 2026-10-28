@@ -36,8 +36,11 @@ jobs:
           modules=$(
             for dir in */; do
               dir=${dir%/}
-              [ -f "$dir/manifest.json" ] && [ -f "$dir/pyproject.toml" ] && [ -f "$dir/CHANGELOG.md" ] \
-                && { [ -f "$dir/uv.lock" ] || [ -f "$dir/poetry.lock" ]; } && echo "$dir"
+              # an `if`, not `&&`: a failed test on the last directory would fail the loop under `bash -e`
+              if [ -f "$dir/manifest.json" ] && [ -f "$dir/pyproject.toml" ] && [ -f "$dir/CHANGELOG.md" ] \
+                && { [ -f "$dir/uv.lock" ] || [ -f "$dir/poetry.lock" ]; }; then
+                echo "$dir"
+              fi
             done | jq -R . | jq -sc .
           )
           if [ -n "$INPUT_MODULE" ]; then
@@ -95,7 +98,7 @@ jobs:
           {
             echo "changed=true"
             echo "package_manager=${lock%.lock}"
-            echo "branch=dependencies/$(tr ' A-Z' '-a-z' <<< "$MODULE")"
+            echo "branch=dependencies/$(jq -er .slug "$MODULE/manifest.json")"
             echo "add_paths<<EOF"
             printf '%s\n' "$MODULE/pyproject.toml" "$MODULE/$lock" "$MODULE/manifest.json" "$MODULE/CHANGELOG.md"
             echo "EOF"
