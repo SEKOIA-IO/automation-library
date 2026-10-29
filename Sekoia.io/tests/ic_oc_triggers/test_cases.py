@@ -633,3 +633,22 @@ def test_triggers_log_exception_when_case_api_fails(request, trigger_fixture, me
 
     trigger.send_event.assert_not_called()
     trigger.log_exception.assert_called_once()
+
+
+def test_case_created_trigger_outputs_the_assignees(case_created_trigger, samplenotif_case_created, sample_siccaseapi):
+    case_created_trigger.send_event = MagicMock()
+    case = {
+        **sample_siccaseapi,
+        "subscribers": [
+            {"avatar_uuid": "bed24c33-9044-41b5-96c5-024eb9b0c439", "type": "assignee"},
+            {"avatar_uuid": "3c1a9a40-5b25-4c8e-9a54-0f3f0f2b6c11", "type": "watcher"},
+            {"avatar_uuid": None, "type": "assignee"},
+        ],
+    }
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"http://fake.url/api/v1/sic/cases/{case['uuid']}", json=case)
+        case_created_trigger.handle_event(samplenotif_case_created)
+
+    event = case_created_trigger.send_event.call_args.kwargs["event"]
+    assert event["assignees"] == ["bed24c33-9044-41b5-96c5-024eb9b0c439"]
