@@ -13,10 +13,11 @@ from urllib.parse import urljoin
 from uuid import UUID
 
 import requests
-from sekoia_automation.action import GenericAPIAction
+from sekoia_automation.action import Action, GenericAPIAction
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from sekoiaio.operation_center.constants import base_url
+from sekoiaio.utils import user_agent
 
 ASSIGNEE = "assignee"
 
@@ -54,7 +55,9 @@ def _error_detail(response: requests.Response) -> str:
     return str(content)
 
 
-class _CaseAction(GenericAPIAction):
+class CaseAPIClient(Action):
+    """Calls to the Cases API shared by the case actions."""
+
     timeout = 60
 
     # argument -> (listing route, query parameters, name of the object in error messages)
@@ -72,7 +75,12 @@ class _CaseAction(GenericAPIAction):
     )
     def _call_api(self, verb: str, path: str, **kwargs: Any) -> Any:
         url = urljoin(self.module.configuration["base_url"], base_url + path)
-        response = requests.request(verb, url, headers=self.get_headers(), timeout=self.timeout, **kwargs)
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {self.module.configuration['api_key']}",
+            "User-Agent": user_agent(),
+        }
+        response = requests.request(verb, url, headers=headers, timeout=self.timeout, **kwargs)
         if 400 <= response.status_code < 500:
             raise CaseActionError(
                 f"{verb.upper()} {base_url}{path} failed with status {response.status_code}: {_error_detail(response)}"
@@ -118,6 +126,24 @@ class _CaseAction(GenericAPIAction):
         )
         arguments["subscribers"] = subscribers
 
+    def _apply_template(self, case: dict, template_uuid: str) -> dict:
+        """Apply a case template to a case just created, and return the case read again."""
+        try:
+            self._call_api("post", f"case-templates/{template_uuid}/apply", json={"uuids": [case["uuid"]]})
+        except (CaseActionError, requests.RequestException) as exc:
+            # The case exists: return it so the playbook can still use it, but flag the run as failed
+            self.error(f"Case {case.get('short_id')} was created, but the template could not be applied: {exc}")
+            return case
+
+        # Read the case again to return the custom fields set by the template
+        try:
+            return self._call_api("get", f"cases/{case['uuid']}")
+        except (CaseActionError, requests.RequestException) as exc:
+            self.log(f"Template applied, but the case could not be read again: {exc}", level="warning")
+            return case
+
+
+class _CaseAction(CaseAPIClient, GenericAPIAction):
     def _prepare(self, arguments: dict) -> None:
         """Rewrite the arguments in place before they are sent to the API."""
         self._resolve_named_references(arguments)
@@ -154,19 +180,7 @@ class CreateCase(_CaseAction):
         if not _is_set(self._template_uuid):
             return case
 
-        try:
-            self._call_api("post", f"case-templates/{self._template_uuid}/apply", json={"uuids": [case["uuid"]]})
-        except (CaseActionError, requests.RequestException) as exc:
-            # The case exists: return it so the playbook can still use it, but flag the run as failed
-            self.error(f"Case {case.get('short_id')} was created, but the template could not be applied: {exc}")
-            return case
-
-        # Read the case again to return the custom fields set by the template
-        try:
-            return self._call_api("get", f"cases/{case['uuid']}")
-        except (CaseActionError, requests.RequestException) as exc:
-            self.log(f"Template applied, but the case could not be read again: {exc}", level="warning")
-            return case
+        return self._apply_template(case, self._template_uuid)
 
 
 class UpdateCase(_CaseAction):
