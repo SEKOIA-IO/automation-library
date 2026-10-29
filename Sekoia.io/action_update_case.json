@@ -33,9 +33,23 @@
         ]
       },
       "tags": {
-        "description": "tags to associate to the case",
+        "description": "Tags of the case. Replaces all the current tags",
         "type": "array",
         "in": "body",
+        "items": {
+          "type": "string"
+        }
+      },
+      "add_tags": {
+        "description": "Tags to add to the current tags of the case",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "remove_tags": {
+        "description": "Tags to remove from the current tags of the case",
+        "type": "array",
         "items": {
           "type": "string"
         }
@@ -59,6 +73,18 @@
       "verdict_uuid": {
         "description": "Verdict of the case: its name (e.g. Confirmed attack) or its UUID",
         "type": "string",
+        "in": "body"
+      },
+      "verdict_analysis": {
+        "description": "Analysis that explains the verdict. The case must have a verdict",
+        "type": "string",
+        "in": "body"
+      },
+      "verdict_confidence": {
+        "description": "Confidence in the verdict, from 0 to 100. The case must have a verdict",
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100,
         "in": "body"
       },
       "custom_status_uuid": {

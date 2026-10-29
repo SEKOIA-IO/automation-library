@@ -5,6 +5,7 @@
 - names accepted for the custom status, the custom priority and the verdict, resolved to their UUIDs
 - `assignees` on `Create case`, turned into subscribers of type `assignee`
 - `template_uuid` on `Create case`, applied once the case exists
+- `add_tags` and `remove_tags` on `Edit case`, applied to the current tags of the case
 """
 
 from typing import Any, ClassVar
@@ -174,5 +175,24 @@ class UpdateCase(_CaseAction):
     query_parameters: ClassVar[list[str]] = []
 
     def _prepare(self, arguments: dict) -> None:
+        add_tags = arguments.pop("add_tags", None) or []
+        remove_tags = arguments.pop("remove_tags", None) or []
+        if add_tags or remove_tags:
+            arguments["tags"] = self._merge_tags(arguments, add_tags, remove_tags)
+
+        # The API rejects a verdict analysis or confidence on a case without verdict, even an empty one
+        for argument in ("verdict_analysis", "verdict_confidence"):
+            if argument in arguments and not _is_set(arguments[argument]):
+                del arguments[argument]
+
         self._complete_subscribers(arguments)
         super()._prepare(arguments)
+
+    def _merge_tags(self, arguments: dict, add_tags: list[str], remove_tags: list[str]) -> list[str]:
+        """Apply the added and removed tags to `tags` if given, otherwise to the current tags of the case."""
+        tags: list[str] = arguments.get("tags") or []
+        if not tags:
+            tags = (self._call_api("get", f"cases/{arguments['uuid']}") or {}).get("tags") or []
+
+        removed = set(remove_tags)
+        return [tag for tag in dict.fromkeys([*tags, *add_tags]) if tag not in removed]

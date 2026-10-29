@@ -183,3 +183,74 @@ def test_update_case_resolves_the_status_name(requests_mock):
     action.run({"uuid": CASE_UUID, "custom_status_uuid": "Closed"})
 
     assert update.last_request.json() == {"custom_status_uuid": CLOSED_STATUS_UUID}
+
+
+def test_update_case_adds_and_removes_tags(requests_mock):
+    action = make_action(UpdateCase)
+    requests_mock.get(f"{base_url}cases/{CASE_UUID}", json=CASE)
+    update = requests_mock.patch(f"{base_url}cases/{CASE_UUID}", json=CASE)
+
+    action.run({"uuid": CASE_UUID, "add_tags": ["grouped", "phishing"], "remove_tags": ["ext:INC001"]})
+
+    assert update.last_request.json() == {"tags": ["phishing", "grouped"]}
+
+
+def test_update_case_applies_tag_changes_to_the_given_tags(requests_mock):
+    action = make_action(UpdateCase)
+    update = requests_mock.patch(f"{base_url}cases/{CASE_UUID}", json=CASE)
+
+    action.run({"uuid": CASE_UUID, "tags": ["a", "b"], "add_tags": ["c"], "remove_tags": ["a"]})
+
+    assert requests_mock.call_count == 1
+    assert update.last_request.json() == {"tags": ["b", "c"]}
+
+
+def test_update_case_keeps_the_tags_without_tag_changes(requests_mock):
+    action = make_action(UpdateCase)
+    update = requests_mock.patch(f"{base_url}cases/{CASE_UUID}", json=CASE)
+
+    action.run({"uuid": CASE_UUID, "title": "new title", "add_tags": [], "remove_tags": None})
+
+    assert requests_mock.call_count == 1
+    assert update.last_request.json() == {"title": "new title"}
+
+
+def test_update_case_sends_the_verdict_details(requests_mock):
+    action = make_action(UpdateCase)
+    requests_mock.get(
+        f"{base_url}custom_verdicts",
+        json={"items": [{"uuid": TRUE_POSITIVE_UUID, "label": "Confirmed attack"}], "total": 1},
+    )
+    update = requests_mock.patch(f"{base_url}cases/{CASE_UUID}", json=CASE)
+
+    action.run(
+        {
+            "uuid": CASE_UUID,
+            "verdict_uuid": "confirmed attack",
+            "verdict_analysis": "Confirmed by the EDR",
+            "verdict_confidence": 0,
+        }
+    )
+
+    assert update.last_request.json() == {
+        "verdict_uuid": TRUE_POSITIVE_UUID,
+        "verdict_analysis": "Confirmed by the EDR",
+        "verdict_confidence": 0,
+    }
+
+
+def test_update_case_drops_empty_verdict_details(requests_mock):
+    action = make_action(UpdateCase)
+    update = requests_mock.patch(f"{base_url}cases/{CASE_UUID}", json=CASE)
+
+    action.run({"uuid": CASE_UUID, "title": "title", "verdict_analysis": "", "verdict_confidence": None})
+
+    assert update.last_request.json() == {"title": "title"}
+
+
+def test_update_case_returns_none_on_api_error(requests_mock):
+    action = make_action(UpdateCase)
+    requests_mock.patch(f"{base_url}cases/{CASE_UUID}", status_code=400, json={"message": "Invalid verdict"})
+
+    assert action.run({"uuid": CASE_UUID, "verdict_analysis": "analysis"}) is None
+    assert action.error_message.startswith("Invalid verdict")
