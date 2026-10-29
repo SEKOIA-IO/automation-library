@@ -1,7 +1,10 @@
 """Case actions that prepare their request before forwarding it to the Cases API.
 
-`Create case` and `Edit case` still send their arguments as they come, like any generic API action, and only add
-names accepted for the custom status, the custom priority and the verdict, resolved to their UUIDs.
+`Create case` and `Edit case` still send their arguments as they come, like any generic API action, and only add:
+
+- names accepted for the custom status, the custom priority and the verdict, resolved to their UUIDs
+- `assignees` on `Create case`, turned into subscribers of type `assignee`
+- `template_uuid` on `Create case`, applied once the case exists
 """
 
 from typing import Any, ClassVar
@@ -95,17 +98,24 @@ class _CaseAction(GenericAPIAction):
             arguments[argument] = str(matches[0]["uuid"])
 
     @staticmethod
-    def _complete_subscribers(arguments: dict) -> None:
-        """Default the subscription type, which can only be `assignee`."""
-        if not _is_set(arguments.get("subscribers")):
+    def _complete_subscribers(arguments: dict, assignees: list[str] | None = None) -> None:
+        """Default the subscription type, which can only be `assignee`, and append the assignees."""
+        if not _is_set(arguments.get("subscribers")) and not assignees:
             return
 
-        arguments["subscribers"] = [
+        subscribers = [
             {"avatar_uuid": subscriber, "type": ASSIGNEE}
             if isinstance(subscriber, str)
             else {**subscriber, "type": subscriber.get("type") or ASSIGNEE}
-            for subscriber in arguments["subscribers"]
+            for subscriber in arguments.get("subscribers") or []
         ]
+        known = {subscriber.get("avatar_uuid") for subscriber in subscribers}
+        subscribers.extend(
+            {"avatar_uuid": avatar_uuid, "type": ASSIGNEE}
+            for avatar_uuid in dict.fromkeys(assignees or [])
+            if avatar_uuid not in known
+        )
+        arguments["subscribers"] = subscribers
 
     def _prepare(self, arguments: dict) -> None:
         """Rewrite the arguments in place before they are sent to the API."""
@@ -135,8 +145,27 @@ class CreateCase(_CaseAction):
     query_parameters: ClassVar[list[str]] = []
 
     def _prepare(self, arguments: dict) -> None:
-        self._complete_subscribers(arguments)
+        self._template_uuid = arguments.pop("template_uuid", None)
+        self._complete_subscribers(arguments, arguments.pop("assignees", None))
         super()._prepare(arguments)
+
+    def _finalize(self, arguments: dict, case: dict) -> dict:
+        if not _is_set(self._template_uuid):
+            return case
+
+        try:
+            self._call_api("post", f"case-templates/{self._template_uuid}/apply", json={"uuids": [case["uuid"]]})
+        except (CaseActionError, requests.RequestException) as exc:
+            # The case exists: return it so the playbook can still use it, but flag the run as failed
+            self.error(f"Case {case.get('short_id')} was created, but the template could not be applied: {exc}")
+            return case
+
+        # Read the case again to return the custom fields set by the template
+        try:
+            return self._call_api("get", f"cases/{case['uuid']}")
+        except (CaseActionError, requests.RequestException) as exc:
+            self.log(f"Template applied, but the case could not be read again: {exc}", level="warning")
+            return case
 
 
 class UpdateCase(_CaseAction):

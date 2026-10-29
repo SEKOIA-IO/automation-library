@@ -51,6 +51,13 @@
           }
         }
       },
+      "assignees": {
+        "description": "UUIDs of the avatars to assign to the case",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
       "community_uuid": {
         "description": "the identifier of the community to which the case is associated",
         "type": "string",
@@ -70,6 +77,10 @@
         "description": "Custom priority of the case: its name (e.g. High) or its UUID",
         "type": "string",
         "in": "body"
+      },
+      "template_uuid": {
+        "description": "UUID of a case template to apply once the case is created (custom fields, tasks and notebooks)",
+        "type": "string"
       }
     },
     "required": [

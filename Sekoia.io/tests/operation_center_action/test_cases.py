@@ -1,3 +1,5 @@
+import pytest
+
 from sekoiaio.operation_center import CreateCase, UpdateCase
 
 module_base_url = "https://app.sekoia.fake/"
@@ -7,6 +9,7 @@ apikey = "fake_api_key"
 CASE_UUID = "095be615-a8ad-4c33-8e9c-c7612fbf6c9f"
 AVATAR_UUID = "bed24c33-9044-41b5-96c5-024eb9b0c439"
 OTHER_AVATAR_UUID = "3c1a9a40-5b25-4c8e-9a54-0f3f0f2b6c11"
+TEMPLATE_UUID = "7d7ad2a8-9a3e-4fd6-8a43-5d0b3b5a9a20"
 CLOSED_STATUS_UUID = "c1ccc455-a896-4e7c-8f4d-b99df293a381"
 HIGH_PRIORITY_UUID = "f47455f5-1211-4723-9c4e-63d8752ec65f"
 TRUE_POSITIVE_UUID = "6108af3c-010d-4cae-915e-70c748f0e58e"
@@ -36,6 +39,39 @@ def test_create_case_forwards_the_arguments_without_extra_calls(requests_mock):
     assert results == CASE
     assert requests_mock.call_count == 1
     assert requests_mock.last_request.json() == {"title": "title", "custom_status_uuid": CLOSED_STATUS_UUID}
+
+
+def test_create_case_assigns_the_assignees(requests_mock):
+    action = make_action(CreateCase)
+    requests_mock.post(f"{base_url}cases", json=CASE)
+
+    action.run(
+        {
+            "title": "title",
+            "subscribers": [{"avatar_uuid": AVATAR_UUID}],
+            "assignees": [AVATAR_UUID, OTHER_AVATAR_UUID, OTHER_AVATAR_UUID],
+        }
+    )
+
+    assert requests_mock.last_request.json() == {
+        "title": "title",
+        "subscribers": [
+            {"avatar_uuid": AVATAR_UUID, "type": "assignee"},
+            {"avatar_uuid": OTHER_AVATAR_UUID, "type": "assignee"},
+        ],
+    }
+
+
+def test_create_case_defaults_the_subscription_type(requests_mock):
+    action = make_action(CreateCase)
+    requests_mock.post(f"{base_url}cases", json=CASE)
+
+    action.run({"title": "title", "subscribers": [{"avatar_uuid": AVATAR_UUID, "type": ""}, OTHER_AVATAR_UUID]})
+
+    assert requests_mock.last_request.json()["subscribers"] == [
+        {"avatar_uuid": AVATAR_UUID, "type": "assignee"},
+        {"avatar_uuid": OTHER_AVATAR_UUID, "type": "assignee"},
+    ]
 
 
 def test_create_case_resolves_the_names(requests_mock):
@@ -102,16 +138,41 @@ def test_create_case_reports_a_lookup_error(requests_mock):
     assert action.error_message == "GET api/v1/sic/custom_verdicts failed with status 403: Permission denied"
 
 
-def test_create_case_defaults_the_subscription_type(requests_mock):
+def test_create_case_applies_the_template(requests_mock):
+    action = make_action(CreateCase)
+    case_with_template = {**CASE, "custom_fields": [{"uuid": "field", "value": "value"}]}
+    requests_mock.post(f"{base_url}cases", json=CASE)
+    apply = requests_mock.post(f"{base_url}case-templates/{TEMPLATE_UUID}/apply", status_code=204)
+    requests_mock.get(f"{base_url}cases/{CASE_UUID}", json=case_with_template)
+
+    results = action.run({"title": "title", "template_uuid": TEMPLATE_UUID})
+
+    assert results == case_with_template
+    assert apply.last_request.json() == {"uuids": [CASE_UUID]}
+    assert "template_uuid" not in requests_mock.request_history[0].json()
+    assert action.error_message is None
+
+
+def test_create_case_returns_the_case_when_the_template_fails(requests_mock):
+    action = make_action(CreateCase)
+    requests_mock.post(f"{base_url}cases", json=CASE)
+    requests_mock.post(
+        f"{base_url}case-templates/{TEMPLATE_UUID}/apply", status_code=404, json={"message": "Unknown case template"}
+    )
+
+    results = action.run({"title": "title", "template_uuid": TEMPLATE_UUID})
+
+    assert results == CASE
+    assert action.error_message.startswith("Case CAfake was created, but the template could not be applied")
+
+
+@pytest.mark.parametrize("template_uuid", [None, ""])
+def test_create_case_ignores_an_empty_template(requests_mock, template_uuid):
     action = make_action(CreateCase)
     requests_mock.post(f"{base_url}cases", json=CASE)
 
-    action.run({"title": "title", "subscribers": [{"avatar_uuid": AVATAR_UUID, "type": ""}, OTHER_AVATAR_UUID]})
-
-    assert requests_mock.last_request.json()["subscribers"] == [
-        {"avatar_uuid": AVATAR_UUID, "type": "assignee"},
-        {"avatar_uuid": OTHER_AVATAR_UUID, "type": "assignee"},
-    ]
+    assert action.run({"title": "title", "template_uuid": template_uuid}) == CASE
+    assert requests_mock.call_count == 1
 
 
 def test_update_case_resolves_the_status_name(requests_mock):
