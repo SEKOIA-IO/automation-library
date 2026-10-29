@@ -39,7 +39,7 @@ jobs:
       releases: ${{ steps.detect.outputs.releases }}
     steps:
       - name: Check-out the repo under $GITHUB_WORKSPACE
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
           persist-credentials: false
@@ -153,10 +153,10 @@ jobs:
       fail-fast: false
     steps:
       - name: Check-out the repo under $GITHUB_WORKSPACE
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         id: setup-python
         with:
           python-version: "3.11"
@@ -187,14 +187,14 @@ jobs:
           module: ${{ matrix.module }}
 
       - name: Upload Event
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Event File (${{ matrix.module }})
           path: ${{ github.event_path }}
 
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Unit Test Results (${{ matrix.module }})
           path: "${{ matrix.module }}/junit.xml"
@@ -208,7 +208,7 @@ jobs:
           MATRIX_MODULE: ${{ matrix.module }}
 
       - name: Code Coverage
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ matrix.module }}/coverage.xml
@@ -231,15 +231,15 @@ jobs:
       fail-fast: false
     steps:
       - name: Check-out the repo under $GITHUB_WORKSPACE
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Build Docker image
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           push: false
           context: ${{ matrix.module }}
@@ -283,7 +283,7 @@ jobs:
       REPOSITORY: ${{ github.repository }}
     steps:
       - name: Check-out the repo under $GITHUB_WORKSPACE
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.detect.outputs.sha }}
           persist-credentials: false
@@ -314,7 +314,7 @@ jobs:
 
       - name: Log in to the Container registry
         if: steps.existing.outputs.published == 'false'
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -322,7 +322,7 @@ jobs:
 
       - name: Log in to the secondary Container registry
         if: steps.existing.outputs.published == 'false'
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.SECONDARY_REGISTRY }}
           username: ${{ secrets.SECONDARY_REGISTRY_USERNAME }}
@@ -331,7 +331,7 @@ jobs:
       - name: Extract metadata (tags, labels) for Docker
         if: steps.existing.outputs.published == 'false'
         id: meta
-        uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6.1.0
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX_NAME }}/automation-module-${{ matrix.module.slug }}
@@ -345,11 +345,11 @@ jobs:
 
       - name: Set up Docker Buildx
         if: steps.existing.outputs.published == 'false'
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Build and push Docker image
         if: steps.existing.outputs.published == 'false'
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           push: true
           context: ${{ matrix.module.dir }}
@@ -358,7 +358,7 @@ jobs:
 
       - name: Install uv
         if: steps.existing.outputs.published == 'false' && matrix.module.fission
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: false  # never restore a cache in a job publishing artifacts
 
