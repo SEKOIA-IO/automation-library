@@ -30,6 +30,23 @@
           "type": "string"
         },
         "description": "Create a run only for cases matching a list of case uuids/short ids"
+      },
+      "changed_fields_filter": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "title",
+            "description",
+            "status",
+            "priority",
+            "verdict",
+            "assignees",
+            "tags",
+            "custom_fields"
+          ]
+        },
+        "description": "Create a run only when one of these fields changed. Leave empty to create a run for every update"
       }
     },
     "type": "object",
@@ -186,6 +203,13 @@
               }
             }
           }
+        }
+      },
+      "changed_fields": {
+        "description": "Fields changed by this update, among title, description, status, priority, verdict, assignees, tags and custom_fields.",
+        "type": "array",
+        "items": {
+          "type": "string"
         }
       }
     },

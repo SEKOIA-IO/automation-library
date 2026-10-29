@@ -200,6 +200,23 @@ class CaseCreatedTrigger(SecurityCasesTrigger):
 class CaseUpdatedTrigger(SecurityCasesTrigger):
     HANDLED_EVENT_SUB_TYPES: ClassVar[list[tuple[str, str]]] = [("case", "updated")]
 
+    # Field of the `changed_fields` output -> keys of `updated` in the notification that announce its change
+    CHANGED_FIELDS: ClassVar[dict[str, tuple[str, ...]]] = {
+        "title": ("title",),
+        "description": ("description",),
+        "status": ("custom_status_uuid", "custom_status_stage"),
+        "priority": ("custom_priority_uuid",),
+        "verdict": ("verdict_uuid", "verdict_stage", "verdict_analysis", "verdict_confidence"),
+        "assignees": ("assignees",),
+        "tags": ("tags",),
+    }
+
+    def _get_changed_fields(self, updated: dict, custom_fields_changes: dict | None) -> list[str]:
+        changed_fields = [field for field, keys in self.CHANGED_FIELDS.items() if any(key in updated for key in keys)]
+        if custom_fields_changes:
+            changed_fields.append("custom_fields")
+        return changed_fields
+
     def handle_event(self, message):
         """Handle case updated messages with filters."""
         case_attrs = message.get("attributes", {})
@@ -217,6 +234,12 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
         updated: dict = case_attrs.get("updated") or {}
         # Changes of custom fields come in a notification of their own, with the changed fields but not their values
         custom_fields_changes = case_attrs.get("custom_fields")
+
+        # Filter on the changed fields first, to skip the call to the Case API
+        changed_fields = self._get_changed_fields(updated, custom_fields_changes)
+        changed_fields_filter = self.configuration.get("changed_fields_filter")
+        if changed_fields_filter and not set(changed_fields) & set(changed_fields_filter):
+            return
 
         try:
             case = self._retrieve_case_from_caseapi(case_uuid)
@@ -271,6 +294,8 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
 
         if custom_fields_changes:
             event["custom_fields_changes"] = custom_fields_changes
+
+        event["changed_fields"] = changed_fields
 
         self.send_event(
             event_name=f"Sekoia.io case: {case_short_id}",

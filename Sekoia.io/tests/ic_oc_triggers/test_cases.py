@@ -413,6 +413,7 @@ def test_case_updated_trigger_keeps_the_current_outputs(
         "updated_by": sample_siccaseapi["updated_by"],
         "tags": ["tag1", "tag2"],
         "description": "I've updated my case",
+        "changed_fields": ["description", "tags"],
     }
 
 
@@ -476,6 +477,87 @@ def test_case_updated_trigger_outputs_the_custom_fields_changes(case_updated_tri
     event = run_case_updated(case_updated_trigger, sample_siccaseapi, notification)
 
     assert event["custom_fields_changes"] == changes
+
+
+@pytest.mark.parametrize(
+    "attributes,changed_fields",
+    [
+        (
+            {
+                "updated": {
+                    "custom_status_uuid": "6982f541-484e-4676-9a03-c2d18e66b53b",
+                    "custom_status_stage": "closed",
+                }
+            },
+            ["status"],
+        ),
+        ({"updated": {"custom_priority_uuid": "f47455f5-1211-4723-9c4e-63d8752ec65f"}}, ["priority"]),
+        ({"updated": {"verdict_uuid": None, "verdict_stage": None}}, ["verdict"]),
+        ({"updated": {"assignees": [], "title": "New title"}}, ["title", "assignees"]),
+        (
+            {
+                "custom_fields": {
+                    "added": [],
+                    "updated": [{"uuid": "f", "name": "External ID", "type": "text"}],
+                    "removed": [],
+                }
+            },
+            ["custom_fields"],
+        ),
+        ({}, []),
+    ],
+)
+def test_case_updated_trigger_outputs_the_changed_fields(
+    case_updated_trigger, sample_siccaseapi, attributes, changed_fields
+):
+    notification = case_updated_notification(sample_siccaseapi, **attributes)
+
+    event = run_case_updated(case_updated_trigger, sample_siccaseapi, notification)
+
+    assert event["changed_fields"] == changed_fields
+
+
+def test_case_updated_trigger_filters_on_the_changed_fields(case_updated_trigger, sample_siccaseapi):
+    # Closing a case with a verdict sends one notification for the status and one for the verdict
+    status_notification = case_updated_notification(
+        sample_siccaseapi,
+        updated={"custom_status_uuid": "6982f541-484e-4676-9a03-c2d18e66b53b", "custom_status_stage": "closed"},
+    )
+    verdict_notification = case_updated_notification(
+        sample_siccaseapi,
+        updated={"verdict_uuid": "6108af3c-010d-4cae-915e-70c748f0e58e", "verdict_stage": "true_positive"},
+    )
+    case_updated_trigger.configuration = {"changed_fields_filter": ["status"]}
+    case_updated_trigger.send_event = MagicMock()
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"http://fake.url/api/v1/sic/cases/{sample_siccaseapi['uuid']}", json=sample_siccaseapi)
+        case_updated_trigger.handle_event(status_notification)
+        case_updated_trigger.handle_event(verdict_notification)
+
+        # The verdict notification is skipped before reading the case
+        assert mock.call_count == 1
+
+    case_updated_trigger.send_event.assert_called_once()
+    assert case_updated_trigger.send_event.call_args.kwargs["event"]["custom_status_stage"] == "closed"
+
+
+def test_case_updated_trigger_without_filter_creates_a_run_per_update(case_updated_trigger, sample_siccaseapi):
+    case_updated_trigger.configuration = {"changed_fields_filter": []}
+    notifications = [
+        case_updated_notification(sample_siccaseapi, updated={"custom_status_stage": "closed"}),
+        case_updated_notification(sample_siccaseapi, updated={"verdict_stage": "true_positive"}),
+        # An update without any known change still creates a run, as before
+        case_updated_notification(sample_siccaseapi),
+    ]
+    case_updated_trigger.send_event = MagicMock()
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"http://fake.url/api/v1/sic/cases/{sample_siccaseapi['uuid']}", json=sample_siccaseapi)
+        for notification in notifications:
+            case_updated_trigger.handle_event(notification)
+
+    assert case_updated_trigger.send_event.call_count == 3
 
 
 def test_single_event_triggers_case_comments_added(
