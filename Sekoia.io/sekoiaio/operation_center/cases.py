@@ -45,6 +45,50 @@ def _is_uuid(value: str) -> bool:
         return False
 
 
+def _custom_field_value(definition: dict, value: Any) -> Any:
+    """Convert a value to the type of the custom field, with the options of the select fields given by label."""
+    name, field_type = definition.get("name"), definition.get("type")
+    if value is None:
+        return None
+
+    if field_type in ("single_select", "multi_select"):
+        options = {str(option["uuid"]): str(option["value"]) for option in definition.get("options") or []}
+        by_label = {label.casefold(): option_uuid for option_uuid, label in options.items()}
+        selected = []
+        for label in value if isinstance(value, list) else [value]:
+            label = str(label).strip()
+            if label in options:
+                selected.append(label)
+            elif label.casefold() in by_label:
+                selected.append(by_label[label.casefold()])
+            else:
+                valid = ", ".join(sorted(options.values())) or "none"
+                raise CaseActionError(
+                    f"Unknown option '{label}' for the custom field '{name}'. Valid options: {valid}"
+                )
+        if field_type == "single_select" and len(selected) != 1:
+            raise CaseActionError(f"The custom field '{name}' takes a single option")
+        return selected
+
+    if field_type == "integer":
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+        if isinstance(value, str) and value.strip().lstrip("-").isdigit():
+            return int(value)
+        raise CaseActionError(f"The custom field '{name}' expects an integer, not '{value}'")
+
+    if field_type == "boolean":
+        if isinstance(value, bool):
+            return value
+        if str(value).strip().lower() in ("true", "false"):
+            return str(value).strip().lower() == "true"
+        raise CaseActionError(f"The custom field '{name}' expects true or false, not '{value}'")
+
+    if field_type == "text":
+        return str(value)
+    return value
+
+
 def _error_detail(response: requests.Response) -> str:
     try:
         content = response.json()
@@ -105,6 +149,44 @@ class CaseAPIClient(Action):
                 raise CaseActionError(f"Unknown case {kind} '{name}'. Valid names: {valid}")
 
             arguments[argument] = str(matches[0]["uuid"])
+
+    def _list_custom_fields(self) -> list[dict]:
+        """Definitions of the custom fields, with their name, type and options."""
+        definitions: list[dict] = []
+        while True:
+            page = self._call_api("get", "custom-fields", params={"limit": 100, "offset": len(definitions)}) or {}
+            items = page.get("items") or []
+            definitions.extend(items)
+            if not items or len(definitions) >= page.get("total", 0):
+                return definitions
+
+    def _resolve_custom_fields(self, custom_fields: dict[str, Any]) -> list[dict[str, Any]]:
+        """Turn custom fields given as `{name: value}` into the `[{uuid, value}]` the API expects.
+
+        A field can also be given by its UUID. The options of the select fields are given by their label, and
+        integers and booleans can come as text, as playbooks often send them.
+        """
+        if not custom_fields:
+            return []
+
+        definitions = self._list_custom_fields()
+        resolved = []
+        for key, value in custom_fields.items():
+            matches = [
+                definition
+                for definition in definitions
+                if str(definition.get("uuid")) == key
+                or str(definition.get("name", "")).casefold() == key.strip().casefold()
+            ]
+            if len(matches) > 1:
+                candidates = ", ".join(f"{item['name']} ({item['uuid']})" for item in matches)
+                raise CaseActionError(f"Several custom fields are named '{key}': {candidates}. Use the UUID")
+            if not matches:
+                valid = ", ".join(sorted(str(item.get("name")) for item in definitions)) or "none"
+                raise CaseActionError(f"Unknown custom field '{key}'. Valid names: {valid}")
+
+            resolved.append({"uuid": str(matches[0]["uuid"]), "value": _custom_field_value(matches[0], value)})
+        return resolved
 
     @staticmethod
     def _complete_subscribers(arguments: dict, assignees: list[str] | None = None) -> None:
