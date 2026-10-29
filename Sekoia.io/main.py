@@ -65,6 +65,7 @@ from sekoiaio.operation_center import (
 )
 from sekoiaio.operation_center.assets_merge import MergeAssets
 from sekoiaio.operation_center.create_dataset import CreateDataset
+from sekoiaio.operation_center.create_or_update_case import CreateOrUpdateCase
 from sekoiaio.operation_center.delete_dataset import DeleteDataset
 from sekoiaio.operation_center.execute_a_query import ExecuteAQuery
 from sekoiaio.operation_center.get_aggregation_query import GetAggregationQuery
@@ -148,6 +149,7 @@ def main():
     module.register(GetCommunity, "get-communities/{uuid}")
     module.register(AddEventsToACase, "add_events_to_a_case")
     module.register(CreateCase, "create_case")
+    module.register(CreateOrUpdateCase, "create_or_update_case")
     module.register(UpdateAsset, "update-asset")
     module.register(UpdateCase, "update_case")
     module.register(GetCase, "get_case")
