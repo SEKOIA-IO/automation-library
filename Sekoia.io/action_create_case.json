@@ -57,17 +57,17 @@
         "in": "body"
       },
       "verdict_uuid": {
-        "description": "Verdict of the case",
+        "description": "Verdict of the case: its name (e.g. Confirmed attack) or its UUID",
         "type": "string",
         "in": "body"
       },
       "custom_status_uuid": {
-        "description": "Custom status of the case",
+        "description": "Custom status of the case: its name (e.g. In progress) or its UUID",
         "type": "string",
         "in": "body"
       },
       "custom_priority_uuid": {
-        "description": "Custom priority of the case",
+        "description": "Custom priority of the case: its name (e.g. High) or its UUID",
         "type": "string",
         "in": "body"
       }
