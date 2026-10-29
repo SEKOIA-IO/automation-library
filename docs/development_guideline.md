@@ -32,7 +32,7 @@ Understanding configuration scopes is critical:
 #### Command
 
 ```bash
-uv add --dev mypy
+uv add --dev mypy pip
 uv run mypy --install-types --non-interactive --ignore-missing-imports --show-column-numbers --hide-error-context .
 ```
 
