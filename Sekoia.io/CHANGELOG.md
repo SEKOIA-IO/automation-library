@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-29 - 2.83.0
+
+### Fixed
+
+- Case Updated: output the custom status of the case (`custom_status_uuid` and `custom_status_stage`), the priority under its declared name `priority_uuid`, and the verdict details sent with the update. A status change used to come out without any status
+
+### Added
+
+- Case Updated: add the `changed_fields` output and the `changed_fields_filter` argument, to create a run only when one of the given fields changed
+- Case Updated: add the `custom_fields_changes` output, with the custom fields added, updated or removed
+
 ## 2026-10-22 - 2.79.1
 
 ### Changed
