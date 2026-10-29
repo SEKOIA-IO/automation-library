@@ -365,6 +365,119 @@ def test_case_combined_filters(
         assert case_updated_trigger.send_event.call_count == 4
 
 
+def case_updated_notification(case: dict, **attributes: Any) -> dict:
+    """Notification sent by the Cases API when a case is updated."""
+    return {
+        "metadata": {
+            "version": 2,
+            "uuid": "927b628a-7099-4ee4-bccb-8efdb694882d",
+            "created_at": "2026-10-29T10:00:00.000000+00:00",
+            "community_uuid": case["community_uuid"],
+        },
+        "type": "case",
+        "action": "updated",
+        "attributes": {
+            "uuid": case["uuid"],
+            "short_id": case["short_id"],
+            "manual": True,
+            "title": case["title"],
+            "priority": "medium",
+            "created_at": case["created_at"],
+            "custom_priority_uuid": case["custom_priority_uuid"],
+            **attributes,
+        },
+    }
+
+
+def run_case_updated(trigger, sample_siccaseapi, notification) -> dict | None:
+    trigger.send_event = MagicMock()
+    with requests_mock.Mocker() as mock:
+        mock.get(f"http://fake.url/api/v1/sic/cases/{sample_siccaseapi['uuid']}", json=sample_siccaseapi)
+        trigger.handle_event(notification)
+
+    if not trigger.send_event.called:
+        return None
+    return trigger.send_event.call_args.kwargs["event"]
+
+
+def test_case_updated_trigger_keeps_the_current_outputs(
+    case_updated_trigger, sample_siccaseapi, samplenotif_case_updated
+):
+    event = run_case_updated(case_updated_trigger, sample_siccaseapi, samplenotif_case_updated)
+
+    assert event == {
+        "uuid": sample_siccaseapi["uuid"],
+        "short_id": sample_siccaseapi["short_id"],
+        "created_at": sample_siccaseapi["created_at"],
+        "updated_at": sample_siccaseapi["updated_at"],
+        "updated_by": sample_siccaseapi["updated_by"],
+        "tags": ["tag1", "tag2"],
+        "description": "I've updated my case",
+    }
+
+
+def test_case_updated_trigger_outputs_the_custom_status(case_updated_trigger, sample_siccaseapi):
+    notification = case_updated_notification(
+        sample_siccaseapi,
+        updated={"custom_status_uuid": "6982f541-484e-4676-9a03-c2d18e66b53b", "custom_status_stage": "closed"},
+        # Sent with every status change: the current verdict, which did not change
+        verdict_uuid="6108af3c-010d-4cae-915e-70c748f0e58e",
+        verdict_stage="true_positive",
+        verdict_source="explicit",
+        verdict_updated_by="a5fe93d8-e910-494b-ab83-8565fa2e5916",
+    )
+
+    event = run_case_updated(case_updated_trigger, sample_siccaseapi, notification)
+
+    assert event["custom_status_uuid"] == "6982f541-484e-4676-9a03-c2d18e66b53b"
+    assert event["custom_status_stage"] == "closed"
+    # The legacy status and the unchanged verdict are not output
+    assert "status_uuid" not in event
+    assert "verdict_uuid" not in event
+
+
+def test_case_updated_trigger_outputs_the_priority_under_both_names(case_updated_trigger, sample_siccaseapi):
+    priority_uuid = "f47455f5-1211-4723-9c4e-63d8752ec65f"
+    notification = case_updated_notification(sample_siccaseapi, updated={"custom_priority_uuid": priority_uuid})
+
+    event = run_case_updated(case_updated_trigger, sample_siccaseapi, notification)
+
+    assert event["priority_uuid"] == priority_uuid
+    assert event["custom_priority_uuid"] == priority_uuid
+
+
+def test_case_updated_trigger_outputs_the_verdict_details(case_updated_trigger, sample_siccaseapi):
+    notification = case_updated_notification(
+        sample_siccaseapi,
+        updated={
+            "verdict_uuid": "6108af3c-010d-4cae-915e-70c748f0e58e",
+            "verdict_stage": "true_positive",
+            "verdict_analysis": "Confirmed by the EDR",
+            "verdict_confidence": 90,
+        },
+    )
+
+    event = run_case_updated(case_updated_trigger, sample_siccaseapi, notification)
+
+    assert event["verdict_uuid"] == "6108af3c-010d-4cae-915e-70c748f0e58e"
+    assert event["verdict_stage"] == "true_positive"
+    assert event["verdict_analysis"] == "Confirmed by the EDR"
+    assert event["verdict_confidence"] == 90
+
+
+def test_case_updated_trigger_outputs_the_custom_fields_changes(case_updated_trigger, sample_siccaseapi):
+    changes = {
+        "added": [{"uuid": "7d7ad2a8-9a3e-4fd6-8a43-5d0b3b5a9a20", "name": "External ID", "type": "text"}],
+        "updated": [],
+        "removed": [],
+    }
+    notification = case_updated_notification(sample_siccaseapi, custom_fields=changes)
+
+    event = run_case_updated(case_updated_trigger, sample_siccaseapi, notification)
+
+    assert event["custom_fields_changes"] == changes
+
+
 def test_single_event_triggers_case_comments_added(
     module_configuration,
     symphony_storage,

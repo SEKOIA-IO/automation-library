@@ -214,6 +214,10 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
         if not case_uuid:
             return
 
+        updated: dict = case_attrs.get("updated") or {}
+        # Changes of custom fields come in a notification of their own, with the changed fields but not their values
+        custom_fields_changes = case_attrs.get("custom_fields")
+
         try:
             case = self._retrieve_case_from_caseapi(case_uuid)
         except Exception as exp:
@@ -239,6 +243,9 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
             "updated_by": case.get("updated_by"),
         }
 
+        # The values come from the notification, so that two updates in a row each output their own change.
+        # `status_uuid` is the legacy status (opened or closed): the notification never carries it, and the custom
+        # status comes in `custom_status_uuid` and `custom_status_stage`.
         for key in [
             "title",
             "description",
@@ -248,9 +255,22 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
             "custom_priority_uuid",
             "status_uuid",
             "verdict_uuid",
+            "custom_status_uuid",
+            "custom_status_stage",
+            "verdict_stage",
+            "verdict_analysis",
+            "verdict_confidence",
         ]:
-            if key in case_attrs.get("updated", {}):
-                event[key] = case_attrs.get("updated", {}).get(key)
+            if key in updated:
+                event[key] = updated[key]
+
+        # `priority_uuid` is the name declared by the manifest and output by the other case triggers.
+        # `custom_priority_uuid` stays for the playbooks that already read it.
+        if "custom_priority_uuid" in updated:
+            event["priority_uuid"] = updated["custom_priority_uuid"]
+
+        if custom_fields_changes:
+            event["custom_fields_changes"] = custom_fields_changes
 
         self.send_event(
             event_name=f"Sekoia.io case: {case_short_id}",
