@@ -357,6 +357,7 @@ class CaseCommentCreatedTrigger(SecurityCasesTrigger):
                 "uuid": comment.get("uuid"),
                 "content": comment.get("content"),
                 "author": comment.get("created_by"),
+                "created_by_type": comment.get("created_by_type"),
                 "date": comment.get("created_at"),
             },
             "uuid": case_uuid,
@@ -368,6 +369,7 @@ class CaseCommentCreatedTrigger(SecurityCasesTrigger):
             "updated_at": case.get("updated_at"),
             "title": case.get("title"),
             "description": case.get("description"),
+            "tags": case.get("tags") or [],
         }
 
         self.send_event(
