@@ -104,9 +104,6 @@
         "type": "integer",
         "format": "int32"
       },
-      "has_more": {
-        "type": "boolean"
-      },
       "items": {
         "type": "array",
         "items": {

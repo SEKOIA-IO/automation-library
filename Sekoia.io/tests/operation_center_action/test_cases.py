@@ -5,6 +5,8 @@ base_url = module_base_url + "api/v1/sic/"
 apikey = "fake_api_key"
 
 CASE_UUID = "095be615-a8ad-4c33-8e9c-c7612fbf6c9f"
+AVATAR_UUID = "bed24c33-9044-41b5-96c5-024eb9b0c439"
+OTHER_AVATAR_UUID = "3c1a9a40-5b25-4c8e-9a54-0f3f0f2b6c11"
 CLOSED_STATUS_UUID = "c1ccc455-a896-4e7c-8f4d-b99df293a381"
 HIGH_PRIORITY_UUID = "f47455f5-1211-4723-9c4e-63d8752ec65f"
 TRUE_POSITIVE_UUID = "6108af3c-010d-4cae-915e-70c748f0e58e"
@@ -98,6 +100,18 @@ def test_create_case_reports_a_lookup_error(requests_mock):
     assert action.run({"title": "title", "verdict_uuid": "Confirmed attack"}) is None
 
     assert action.error_message == "GET api/v1/sic/custom_verdicts failed with status 403: Permission denied"
+
+
+def test_create_case_defaults_the_subscription_type(requests_mock):
+    action = make_action(CreateCase)
+    requests_mock.post(f"{base_url}cases", json=CASE)
+
+    action.run({"title": "title", "subscribers": [{"avatar_uuid": AVATAR_UUID, "type": ""}, OTHER_AVATAR_UUID]})
+
+    assert requests_mock.last_request.json()["subscribers"] == [
+        {"avatar_uuid": AVATAR_UUID, "type": "assignee"},
+        {"avatar_uuid": OTHER_AVATAR_UUID, "type": "assignee"},
+    ]
 
 
 def test_update_case_resolves_the_status_name(requests_mock):

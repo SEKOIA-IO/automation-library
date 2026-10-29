@@ -36,7 +36,7 @@
         }
       },
       "subscribers": {
-        "description": "avatars to associate to the case",
+        "description": "Avatars to associate to the case. The type can only be `assignee`, which is the default",
         "type": "array",
         "in": "body",
         "items": {

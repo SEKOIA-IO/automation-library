@@ -14,6 +14,8 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 
 from sekoiaio.operation_center.constants import base_url
 
+ASSIGNEE = "assignee"
+
 
 class CaseActionError(Exception):
     """Raised when a case action cannot prepare its request. The message is shown to the playbook user."""
@@ -92,6 +94,19 @@ class _CaseAction(GenericAPIAction):
 
             arguments[argument] = str(matches[0]["uuid"])
 
+    @staticmethod
+    def _complete_subscribers(arguments: dict) -> None:
+        """Default the subscription type, which can only be `assignee`."""
+        if not _is_set(arguments.get("subscribers")):
+            return
+
+        arguments["subscribers"] = [
+            {"avatar_uuid": subscriber, "type": ASSIGNEE}
+            if isinstance(subscriber, str)
+            else {**subscriber, "type": subscriber.get("type") or ASSIGNEE}
+            for subscriber in arguments["subscribers"]
+        ]
+
     def _prepare(self, arguments: dict) -> None:
         """Rewrite the arguments in place before they are sent to the API."""
         self._resolve_named_references(arguments)
@@ -119,8 +134,16 @@ class CreateCase(_CaseAction):
     endpoint = base_url + "cases"
     query_parameters: ClassVar[list[str]] = []
 
+    def _prepare(self, arguments: dict) -> None:
+        self._complete_subscribers(arguments)
+        super()._prepare(arguments)
+
 
 class UpdateCase(_CaseAction):
     verb = "patch"
     endpoint = base_url + "cases/{uuid}"
     query_parameters: ClassVar[list[str]] = []
+
+    def _prepare(self, arguments: dict) -> None:
+        self._complete_subscribers(arguments)
+        super()._prepare(arguments)
