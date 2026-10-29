@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-29 - 2.82.0
+
+### Added
+
+- Create case: add `assignees` to assign avatars without building the subscribers, and `template_uuid` to apply a case template once the case is created
+- Edit case: add `add_tags` and `remove_tags` to change the current tags without reading the case first, and `verdict_analysis` and `verdict_confidence`
+- Create case and Edit case: accept the name of the custom status, the custom priority and the verdict, as well as their UUID
+- Search Cases: filter on the title, short ID, priority, custom priority, custom status, verdict, custom field and update date
+- Case Comment Created: output the author type of the comment (`created_by_type`), to skip the comments posted by playbooks, and the tags of the case
+
+### Fixed
+
+- Case Created: output the assignees of the case, read from its subscribers, instead of an empty list
+- Create case and Edit case: default the subscription type to `assignee`, the only type the API accepts
+- Search Cases: remove `has_more` from the results, the API does not return it
+
 ## 2026-10-22 - 2.79.1
 
 ### Changed

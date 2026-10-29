@@ -42,7 +42,7 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "comment": {
-        "description": "Case comment (object containing comment uuid, content, author, date).",
+        "description": "Case comment (object containing comment uuid, content, author, author type, date).",
         "type": "object",
         "properties": {
           "uuid": {
@@ -52,6 +52,10 @@
             "type": "string"
           },
           "author": {
+            "type": "string"
+          },
+          "created_by_type": {
+            "description": "Type of the author: user, apikey or application. Use it to skip the comments posted by playbooks.",
             "type": "string"
           },
           "date": {
@@ -100,6 +104,13 @@
       "description": {
         "description": "Description of the Case.",
         "type": "string"
+      },
+      "tags": {
+        "description": "List of tags of the Case.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
       }
     },
     "required": [

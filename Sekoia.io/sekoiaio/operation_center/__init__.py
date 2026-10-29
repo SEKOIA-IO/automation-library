@@ -2,6 +2,8 @@ from typing import ClassVar
 
 from sekoia_automation.action import GenericAPIAction
 
+from sekoiaio.operation_center.cases import CreateCase as CreateCase
+from sekoiaio.operation_center.cases import UpdateCase as UpdateCase
 from sekoiaio.operation_center.constants import base_url
 from sekoiaio.operation_center.get_alert import GetAlert as GetAlert
 from sekoiaio.utils import FilteredQueryParametersAction
@@ -170,16 +172,6 @@ CreateNewBlock = type(
     },
 )
 
-CreateCase = type(
-    "CreateCase",
-    (GenericAPIAction,),
-    {
-        "verb": "post",
-        "endpoint": base_url + "cases",
-        "query_parameters": [],
-    },
-)
-
 ListsCases = type(
     "ListsCases",
     (FilteredQueryParametersAction,),
@@ -190,12 +182,20 @@ ListsCases = type(
             "limit",
             "offset",
             "date[created_at]",
+            "date[updated_at]",
             "match[status_uuid]",
             "match[status_name]",
             "match[tags]",
             "match[assignees]",
             "match[created_by]",
             "match[community_uuid]",
+            "match[title]",
+            "match[short_id]",
+            "match[priority]",
+            "match[custom_priority]",
+            "match[custom_status]",
+            "match[verdict]",
+            "match[custom_field]",
             "sort",
             "direction",
         ],
@@ -219,17 +219,6 @@ GetCase = type(
         "verb": "get",
         "endpoint": base_url + "cases/{uuid}",
         "query_parameters": ["community_uuid", "render"],
-    },
-)
-
-UpdateCase = type(
-    "UpdateCase",
-    (GenericAPIAction,),
-    {
-        "verb": "patch",
-        "endpoint": base_url + "cases/{uuid}",
-        "query_parameters": [],
-        "timeout": 60,
     },
 )
 

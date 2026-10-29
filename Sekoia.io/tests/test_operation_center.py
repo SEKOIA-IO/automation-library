@@ -1,4 +1,5 @@
 import uuid
+from urllib.parse import parse_qs, urlparse
 from urllib.parse import unquote as url_decoder
 
 import pytest
@@ -534,3 +535,36 @@ def test_list_cases_drops_empty_parameters():
         assert sent["match[created_by]"] == ["analyst"]
         assert sent["limit"] == ["20"]
         assert sent["offset"] == ["0"]
+
+
+def test_list_cases_forwards_the_new_filters():
+    action: ListsCases = ListsCases()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    status_uuid = "c1ccc455-a896-4e7c-8f4d-b99df293a381"
+    field_uuid = "7d7ad2a8-9a3e-4fd6-8a43-5d0b3b5a9a20"
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{base_url}cases", json={"items": [], "total": 0})
+
+        action.run(
+            {
+                "match[title]": "Phishing*",
+                "match[short_id]": "CAfake",
+                "match[priority]": "high",
+                "match[custom_status]": status_uuid,
+                "match[custom_field]": f"{field_uuid}:INC001",
+                "date[updated_at]": "2026-10-01T00:00:00Z,2026-10-31T23:59:59Z",
+                "match[verdict]": "",  # unset filter -> must be dropped
+            }
+        )
+
+        # `qs` of requests_mock lowercases the values
+        sent = parse_qs(urlparse(mock.last_request.url).query)
+        assert sent == {
+            "match[title]": ["Phishing*"],
+            "match[short_id]": ["CAfake"],
+            "match[priority]": ["high"],
+            "match[custom_status]": [status_uuid],
+            "match[custom_field]": [f"{field_uuid}:INC001"],
+            "date[updated_at]": ["2026-10-01T00:00:00Z,2026-10-31T23:59:59Z"],
+        }

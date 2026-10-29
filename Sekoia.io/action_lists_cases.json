@@ -24,6 +24,11 @@
         "in": "query",
         "type": "string"
       },
+      "date[updated_at]": {
+        "in": "query",
+        "type": "string",
+        "description": "Update date of the cases, as a range (e.g. 2026-10-01T00:00:00Z,2026-10-31T23:59:59Z)"
+      },
       "match[created_by]": {
         "in": "query",
         "type": "string"
@@ -35,6 +40,41 @@
       "match[assignees]": {
         "in": "query",
         "type": "string"
+      },
+      "match[title]": {
+        "in": "query",
+        "type": "string",
+        "description": "Titles of the cases, separated by commas. Case insensitive, `*` matches any text"
+      },
+      "match[short_id]": {
+        "in": "query",
+        "type": "string",
+        "description": "Short IDs of the cases, separated by commas"
+      },
+      "match[priority]": {
+        "in": "query",
+        "type": "string",
+        "description": "Priorities of the cases (low, medium, high), separated by commas"
+      },
+      "match[custom_priority]": {
+        "in": "query",
+        "type": "string",
+        "description": "UUIDs of the custom priorities, separated by commas"
+      },
+      "match[custom_status]": {
+        "in": "query",
+        "type": "string",
+        "description": "UUIDs of the custom statuses, separated by commas"
+      },
+      "match[verdict]": {
+        "in": "query",
+        "type": "string",
+        "description": "UUIDs of the verdicts, separated by commas"
+      },
+      "match[custom_field]": {
+        "in": "query",
+        "type": "string",
+        "description": "Custom field values, as `field_uuid:value` (e.g. 123e4567-e89b-12d3-a456-426614174000:INC0012345), or a field UUID alone to match the cases where the field is set. Separated by commas"
       },
       "limit": {
         "in": "query",
@@ -63,9 +103,6 @@
       "total": {
         "type": "integer",
         "format": "int32"
-      },
-      "has_more": {
-        "type": "boolean"
       },
       "items": {
         "type": "array",
