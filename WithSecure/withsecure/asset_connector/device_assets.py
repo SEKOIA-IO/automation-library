@@ -1,4 +1,5 @@
 import ipaddress
+from collections import Counter
 from collections.abc import Generator
 from datetime import UTC, datetime
 from functools import cached_property
@@ -42,7 +43,7 @@ class WithSecureDeviceAssetConnector(AssetConnector):
 
     PRODUCT_NAME: str = "WithSecure Elements"
     PRODUCT_VENDOR: str = "WithSecure"
-    OCSF_VERSION: str = "1.6.0"
+    OCSF_VERSION: str = "1.5.0"
 
     # OCSF constants
     ACTIVITY_ID: int = 2
@@ -96,6 +97,8 @@ class WithSecureDeviceAssetConnector(AssetConnector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("device_context.json", self._data_path)
         self._latest_time: str | None = None
+        self._skipped: Counter[str] = Counter()
+        self._listing_complete = False
 
     @property
     def most_recent_date_seen(self) -> str | None:
@@ -166,36 +169,35 @@ class WithSecureDeviceAssetConnector(AssetConnector):
             except ValueError:
                 self.log(f"Device {device.id}: ignoring invalid IP address '{entry}'", level="debug")
                 continue
+            if interface.ip.is_link_local:
+                continue
             if subnet is None and interface.version == 4 and "/" in entry:
                 subnet = str(interface.network)
             interfaces.append(interface)
         return interfaces, subnet
 
+    @classmethod
     def _get_network_interfaces(
-        self, device: WithSecureDevice, ips: list[IPInterface]
+        cls, device: WithSecureDevice, ips: list[IPInterface]
     ) -> list[NetworkInterface] | None:
-        # The API returns IP and MAC addresses as independent lists: they are paired by position.
-        macs = [self._normalize_mac(mac) for mac in self._split(device.macAddresses)]
-        network_interfaces = [
-            NetworkInterface(
-                hostname=device.name if index == 0 else None,
-                ip=str(interface.ip),
-                mac=macs[index] if index < len(macs) else None,
-            )
-            for index, interface in enumerate(ips)
-        ]
-        network_interfaces.extend(NetworkInterface(mac=mac) for mac in macs[len(ips) :])
+        # The API returns IP and MAC addresses as independent lists: they are paired only when
+        # there is one of each.
+        macs = [cls._normalize_mac(mac) for mac in cls._split(device.macAddresses)]
+        if len(ips) == 1 and len(macs) == 1:
+            return [NetworkInterface(hostname=device.name, ip=str(ips[0].ip), mac=macs[0])]
 
-        if device.publicIpAddress:
-            network_interfaces.append(NetworkInterface(ip=device.publicIpAddress))
-
+        network_interfaces = [NetworkInterface(ip=str(interface.ip)) for interface in ips]
+        network_interfaces.extend(NetworkInterface(mac=mac) for mac in macs)
+        if network_interfaces:
+            network_interfaces[0].hostname = device.name
         return network_interfaces or None
 
-    def _get_storage_encryption(self, device: WithSecureDevice) -> EncryptionObject | None:
+    @staticmethod
+    def _get_storage_encryption(device: WithSecureDevice) -> EncryptionObject | None:
         partitions: dict[str, Literal["Enabled", "Disabled"]] = {
             drive.drive: "Enabled" if drive.protectionStatus else "Disabled"
             for drive in device.encryptedDrives
-            if drive.drive
+            if drive.drive and drive.protectionStatus is not None
         }
         if not partitions and device.discEncryptionEnabled is not None:
             partitions = {"system": "Enabled" if device.discEncryptionEnabled else "Disabled"}
@@ -248,7 +250,7 @@ class WithSecureDeviceAssetConnector(AssetConnector):
             groups=groups or None,
             is_managed=True,
             is_compliant=self.COMPLIANCE_STATES.get(device.protectionStatusOverview or ""),
-            risk_score=device.vmRiskScore,
+            risk_score=round(device.vmRiskScore) if device.vmRiskScore is not None else None,
         )
 
         return DeviceOCSFModel(
@@ -274,23 +276,26 @@ class WithSecureDeviceAssetConnector(AssetConnector):
         """
         params: dict[str, str | int] = {"limit": API_LIST_DEVICES_PAGE_SIZE}
         headers = {"Accept": "application/json"}
+        self._listing_complete = False
 
         while self.running:
             response = self.client.get(API_LIST_DEVICES_URL, params=params, headers=headers, timeout=API_TIMEOUT)
             response.raise_for_status()
             payload = response.json()
 
-            for item in payload.get("items", []):
+            for item in payload.get("items") or []:
                 # the API may return empty objects
                 if not item:
                     continue
                 try:
                     yield WithSecureDevice.model_validate(item)
                 except ValidationError as error:
+                    self._skipped["invalid"] += 1
                     self.log(f"Skipping invalid device {item.get('id')}: {error}", level="warning")
 
             next_anchor = payload.get("nextAnchor")
             if not next_anchor:
+                self._listing_complete = True
                 return
             params["anchor"] = next_anchor
 
@@ -299,36 +304,44 @@ class WithSecureDeviceAssetConnector(AssetConnector):
         Yield the devices updated since the checkpoint.
         The new checkpoint is computed only once the whole listing is read: the listing is not
         ordered, so an intermediate checkpoint would skip the devices of the next pages.
+        The last device is held back until the checkpoint is set: the SDK saves the checkpoint
+        after each pushed batch, and the last batch may be pushed before this generator ends.
         """
         checkpoint = datetime.fromisoformat(self.most_recent_date_seen) if self.most_recent_date_seen else None
         max_date = checkpoint
+        pending: WithSecureDevice | None = None
 
         for device in self._fetch_devices():
             updated_at = device.statusUpdateTimestamp
             if updated_at:
                 if max_date is None or updated_at > max_date:
                     max_date = updated_at
-                if checkpoint and updated_at <= checkpoint:
+                if checkpoint and updated_at < checkpoint:
+                    self._skipped["not_updated"] += 1
                     continue
-            yield device
+            if pending is not None:
+                yield pending
+            pending = device
 
-        if max_date and max_date != checkpoint:
+        if self._listing_complete and max_date and max_date != checkpoint:
             self._latest_time = max_date.isoformat()
+
+        if pending is not None:
+            yield pending
 
     def get_mapped_fields(self) -> dict[str, str]:
         """Return the WithSecure -> OCSF field mapping, mirroring device_mapping.yml."""
         return {
             "id": "device.uid",
-            "name": "device.hostname",
+            "name": "device.name",
             "dnsAddress": "enrichments.data.Full_qualified_domain_name",
-            "type": "device.type",
-            "subscription.productVariant": "device.type",
-            "os.name": "device.os",
+            "type": "device.type_id",
+            "subscription.productVariant": "device.type_id",
+            "os.name": "device.os.name",
             "os.version": "device.os.name",
             "ipAddresses": "device.ip",
-            "ipv6Addresses": "device.network_interfaces.ip",
-            "macAddresses": "device.network_interfaces.mac",
-            "publicIpAddress": "device.network_interfaces",
+            "ipv6Addresses": "device.network_interfaces",
+            "macAddresses": "device.network_interfaces",
             "computerModel": "device.model",
             "serialNumber": "device.uid_alt",
             "registrationTimestamp": "device.created_time",
@@ -362,6 +375,7 @@ class WithSecureDeviceAssetConnector(AssetConnector):
     def get_assets(self) -> Generator[DeviceOCSFModel]:
         self.log("Starting WithSecure device asset collection", level="info")
         self._latest_time = None
+        self._skipped.clear()
         total = 0
 
         try:
@@ -369,6 +383,7 @@ class WithSecureDeviceAssetConnector(AssetConnector):
                 try:
                     asset = self.map_fields(device)
                 except ValidationError as error:
+                    self._skipped["unmappable"] += 1
                     self.log(f"Skipping device {device.id}: {error}", level="warning")
                     continue
                 total += 1
@@ -377,4 +392,9 @@ class WithSecureDeviceAssetConnector(AssetConnector):
             self.log(f"Failed to collect WithSecure devices: {human_readable_api_exception(error)}", level="error")
             raise
 
-        self.log(f"WithSecure device asset collection complete - {total} devices", level="info")
+        self.log(
+            f"WithSecure device asset collection complete - {total} devices collected, skipped: "
+            f"{self._skipped['invalid']} invalid, {self._skipped['unmappable']} unmappable, "
+            f"{self._skipped['not_updated']} not updated since the checkpoint",
+            level="info",
+        )

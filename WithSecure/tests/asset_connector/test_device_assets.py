@@ -1,9 +1,11 @@
 import json
+from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 import requests
 import requests_mock
+import yaml
 from pydantic import ValidationError
 from sekoia_automation.asset_connector.models.ocsf.device import DeviceTypeId, OSTypeId
 
@@ -15,10 +17,10 @@ from withsecure.constants import API_LIST_DEVICES_URL
 
 SERVER_DEVICE = {
     "id": "e297cbf5-ba53-4e66-909c-000000000000",
-    "name": "EC2AMAZ-BOG9C6F",
+    "name": "SRV-WEB-01",
     "type": "computer",
     "state": "active",
-    "company": {"name": "Sekoia.io", "id": "00000000-0000-0000-0000-000000000000"},
+    "company": {"name": "Example company", "id": "00000000-0000-0000-0000-000000000000"},
     "assetGroups": [{"id": "11111111-1111-1111-1111-111111111111", "name": "Servers"}],
     "subscription": {
         "productVariant": "serverprotection_premium_rdr",
@@ -26,14 +28,14 @@ SERVER_DEVICE = {
         "key": "0000-0000-0000-0000-0000",
     },
     "os": {"name": "Windows Server 2022", "version": "21H2", "endOfLife": False},
-    "lastUser": "EC2AMAZ-BOG9C6F\\Administrator",
+    "lastUser": "SRV-WEB-01\\Administrator",
     "userPrincipalName": "",
-    "dnsAddress": "EC2AMAZ-BOG9C6F",
+    "dnsAddress": "SRV-WEB-01",
     "firewallState": "disabledByGpoOk",
     "protectionStatusOverview": "allOk",
     "macAddresses": "0E-E3-1C-E3-00-00",
     "ipAddresses": "172.31.40.211/20",
-    "publicIpAddress": "15.188.57.73",
+    "publicIpAddress": "203.0.113.73",
     "computerModel": "t3.large",
     "serialNumber": "ec298270-651b-f728-d6be-000000000000",
     "discEncryptionEnabled": False,
@@ -61,6 +63,7 @@ DESKTOP_DEVICE = {
     "encryptedDrives": [
         {"drive": "C:", "protectionStatus": True},
         {"drive": "D:", "protectionStatus": False},
+        {"drive": "E:", "protectionStatus": None},
     ],
     "discEncryptionEnabled": True,
     "statusUpdateTimestamp": "2023-05-21T10:00:00Z",
@@ -121,15 +124,14 @@ def test_map_server(connector):
     assert asset.metadata.product.name == "WithSecure Elements"
     assert asset.time == device.last_seen_time
     assert device.uid == SERVER_DEVICE["id"]
-    assert device.hostname == device.name == "EC2AMAZ-BOG9C6F"
+    assert device.hostname == device.name == "SRV-WEB-01"
     assert device.type_id == DeviceTypeId.SERVER
     assert device.os.name == "Windows Server 2022 21H2"
     assert device.os.type_id == OSTypeId.WINDOWS
     assert device.ip == "172.31.40.211"
     assert device.subnet == "172.31.32.0/20"
     assert [(i.ip, i.mac, i.hostname) for i in device.network_interfaces] == [
-        ("172.31.40.211", "0E:E3:1C:E3:00:00", "EC2AMAZ-BOG9C6F"),
-        ("15.188.57.73", None, None),
+        ("172.31.40.211", "0E:E3:1C:E3:00:00", "SRV-WEB-01"),
     ]
     assert device.model == "t3.large"
     assert device.vendor_name is None
@@ -137,7 +139,7 @@ def test_map_server(connector):
     assert device.created_time == device.first_seen_time == 1684305723.062
     assert device.last_seen_time == 1684588516.55
     assert device.boot_time == 1684483200.0
-    assert (device.org.uid, device.org.name) == (SERVER_DEVICE["company"]["id"], "Sekoia.io")
+    assert (device.org.uid, device.org.name) == (SERVER_DEVICE["company"]["id"], "Example company")
     assert [(g.uid, g.name) for g in device.groups] == [("11111111-1111-1111-1111-111111111111", "Servers")]
     assert device.is_managed is True
     assert device.is_compliant is True
@@ -147,7 +149,7 @@ def test_map_server(connector):
     assert (asset.enrichments[0].name, asset.enrichments[0].value) == ("compliance", "hygiene")
     assert data.Firewall_status is None
     assert data.Storage_encryption.partitions == {"system": "Disabled"}
-    assert data.Users == ["EC2AMAZ-BOG9C6F\\Administrator"]
+    assert data.Users == ["SRV-WEB-01\\Administrator"]
     assert data.Full_qualified_domain_name is None
 
     assert json.dumps(asset.model_dump(exclude_none=True))
@@ -162,11 +164,14 @@ def test_map_desktop(connector):
     assert device.ip == "192.0.2.10"
     assert device.subnet == "192.0.2.0/24"
     assert device.is_compliant is False
-    assert [(i.ip, i.mac) for i in device.network_interfaces] == [
-        ("192.0.2.10", "AA:BB:CC:DD:EE:01"),
-        ("198.51.100.4", "AA:BB:CC:DD:EE:02"),
-        ("fe80::1", "AA:BB:CC:DD:EE:03"),
-        (None, "AA:BB:CC:DD:EE:04"),
+    # several IPs and MACs are not paired; the link-local fe80::1 is dropped
+    assert [(i.ip, i.mac, i.hostname) for i in device.network_interfaces] == [
+        ("192.0.2.10", None, "LAPTOP-01"),
+        ("198.51.100.4", None, None),
+        (None, "AA:BB:CC:DD:EE:01", None),
+        (None, "AA:BB:CC:DD:EE:02", None),
+        (None, "AA:BB:CC:DD:EE:03", None),
+        (None, "AA:BB:CC:DD:EE:04", None),
     ]
 
     data = device_asset.enrichments[0].data
@@ -192,6 +197,32 @@ def test_map_relay(connector):
     assert asset.device.type_id == DeviceTypeId.SERVER
     assert asset.device.os is None
     assert asset.enrichments is None
+
+
+def test_get_storage_encryption_skips_unknown_status():
+    device = WithSecureDevice.model_validate(
+        {"id": "x", "encryptedDrives": [{"drive": "C:"}], "discEncryptionEnabled": True}
+    )
+    assert WithSecureDeviceAssetConnector._get_storage_encryption(device).partitions == {"system": "Enabled"}
+
+
+def test_map_tolerates_nulls_and_float_risk_score(connector):
+    asset = map_device(
+        connector,
+        {
+            "id": "x",
+            "name": None,
+            "assetGroups": None,
+            "encryptedDrives": None,
+            "company": None,
+            "os": {"name": None},
+            "vmRiskScore": 41.6,
+        },
+    )
+
+    assert asset.device.hostname == "x"
+    assert asset.device.groups is None
+    assert asset.device.risk_score == 42
 
 
 def test_map_minimal_device(connector):
@@ -254,6 +285,37 @@ def test_get_assets_paginates_and_skips_invalid_items(connector, api):
     assert devices_requests[1].qs == {"limit": ["200"], "anchor": ["page-2"]}
     assert devices_requests[0].headers["Authorization"] == "Bearer token"
     assert connector._latest_time == "2023-05-21T10:00:00+00:00"
+    connector.log.assert_any_call(
+        "WithSecure device asset collection complete - 4 devices collected, skipped: "
+        "1 invalid, 0 unmappable, 0 not updated since the checkpoint",
+        level="info",
+    )
+
+
+def test_get_assets_null_items(connector, api):
+    api.get(API_LIST_DEVICES_URL, json={"items": None})
+    assert list(connector.get_assets()) == []
+
+
+def test_checkpoint_set_before_last_device(connector, api):
+    # the SDK may push the last batch, and save the checkpoint, before the generator ends
+    api.get(API_LIST_DEVICES_URL, json={"items": [SERVER_DEVICE, DESKTOP_DEVICE]})
+
+    latest_times = [connector._latest_time for _ in connector.get_assets()]
+
+    assert latest_times == [None, "2023-05-21T10:00:00+00:00"]
+
+
+def test_checkpoint_not_moved_when_stopped(connector, api, mocker):
+    mocker.patch.object(
+        WithSecureDeviceAssetConnector, "running", new_callable=PropertyMock, side_effect=[True, False]
+    )
+    api.get(API_LIST_DEVICES_URL, json={"items": [DESKTOP_DEVICE], "nextAnchor": "page-2"})
+
+    assets = list(connector.get_assets())
+
+    assert [asset.device.uid for asset in assets] == [DESKTOP_DEVICE["id"]]
+    assert connector._latest_time is None
 
 
 def test_checkpoint_skips_devices_not_updated(connector, api):
@@ -263,8 +325,8 @@ def test_checkpoint_skips_devices_not_updated(connector, api):
 
     assets = list(connector.get_assets())
 
-    # SERVER and MOBILE are not newer than the checkpoint; RELAY has no timestamp
-    assert [asset.device.uid for asset in assets] == [DESKTOP_DEVICE["id"], RELAY_DEVICE["id"]]
+    # MOBILE is older than the checkpoint; SERVER is at the checkpoint; RELAY has no timestamp
+    assert [asset.device.uid for asset in assets] == [SERVER_DEVICE["id"], DESKTOP_DEVICE["id"], RELAY_DEVICE["id"]]
 
     connector.update_checkpoint()
     assert connector.most_recent_date_seen == "2023-05-21T10:00:00+00:00"
@@ -275,7 +337,8 @@ def test_checkpoint_unchanged_without_newer_device(connector, api):
         cache["most_recent_date_seen"] = "2023-05-21T10:00:00+00:00"
     api.get(API_LIST_DEVICES_URL, json={"items": [SERVER_DEVICE, DESKTOP_DEVICE]})
 
-    assert list(connector.get_assets()) == []
+    # DESKTOP is at the checkpoint and re-sent
+    assert [asset.device.uid for asset in connector.get_assets()] == [DESKTOP_DEVICE["id"]]
     assert connector._latest_time is None
 
 
@@ -310,10 +373,19 @@ def test_reset_checkpoint(connector):
     assert connector._latest_time is None
 
 
-def test_get_mapped_fields(connector):
+def test_get_mapped_fields_mirrors_mapping_doc(connector):
+    mapping = Path(__file__).parents[2] / "withsecure/asset_connector/device_mapping.yml"
+    documented = {
+        (source, field["target"])
+        for field in yaml.safe_load(mapping.read_text())["mapping"]["fields"]
+        if not field["source"].startswith("static:")
+        for source in field["source"].split(", ")
+    }
+
     fields = connector.get_mapped_fields()
-    assert fields["id"] == "device.uid"
-    assert fields["statusUpdateTimestamp"] == "device.last_seen_time"
+
+    assert set(fields.items()) <= documented
+    assert set(fields) == {source for source, _ in documented}
 
 
 def test_get_assets_skips_unmappable_device(connector, api, mocker):

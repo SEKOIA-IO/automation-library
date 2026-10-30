@@ -1,10 +1,30 @@
 from datetime import datetime
+from typing import Any, cast
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic.fields import FieldInfo
 
 
 class WithSecureModel(BaseModel):
     model_config = ConfigDict(extra="allow")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _null_to_default(cls, data: Any) -> Any:
+        """
+        Drop the explicit nulls of optional fields so their default applies:
+        a pydantic default only replaces an absent key, and `"assetGroups": null` fails a list field.
+        """
+        if not isinstance(data, dict):
+            return data
+
+        # `cls.model_fields` is typed as an instance property, hence the cast.
+        fields = cast(dict[str, FieldInfo], cls.model_fields)
+        return {
+            key: value
+            for key, value in data.items()
+            if value is not None or key not in fields or fields[key].is_required()
+        }
 
 
 class WithSecureCompany(WithSecureModel):
@@ -57,9 +77,8 @@ class WithSecureDevice(WithSecureModel):
     ipAddresses: str | None = None
     ipv6Addresses: str | None = None
     macAddresses: str | None = None
-    publicIpAddress: str | None = None
     dnsAddress: str | None = None
     firewallState: str | None = None
     discEncryptionEnabled: bool | None = None
     encryptedDrives: list[WithSecureEncryptedDrive] = []
-    vmRiskScore: int | None = None
+    vmRiskScore: float | None = None

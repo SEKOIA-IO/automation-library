@@ -1,7 +1,7 @@
 mapping:
   ocsf_class: "Device Inventory Info"
   class_uid: 5001
-  ocsf_version: "1.6.0"
+  ocsf_version: "1.5.0"
 
   samples:
     - name: "WithSecure Elements computer sample"
@@ -9,7 +9,7 @@ mapping:
       data: |
         {
           "id": "e297cbf5-ba53-4e66-909c-000000000000",
-          "name": "EC2AMAZ-BOG9C6F",
+          "name": "SRV-WEB-01",
           "type": "computer",
           "state": "active",
           "company": {
@@ -32,9 +32,9 @@ mapping:
             "version": "21H2",
             "endOfLife": false
           },
-          "lastUser": "EC2AMAZ-BOG9C6F\\Administrator",
+          "lastUser": "SRV-WEB-01\\Administrator",
           "userPrincipalName": "",
-          "dnsAddress": "EC2AMAZ-BOG9C6F",
+          "dnsAddress": "SRV-WEB-01",
           "firewallState": "enabled",
           "protectionStatusOverview": "allOk",
           "macAddresses": "0E-E3-1C-E3-00-00",
@@ -119,7 +119,7 @@ mapping:
       type: "string"
       description: "Product vendor"
 
-    - source: "static: 1.6.0"
+    - source: "static: 1.5.0"
       target: "metadata.version"
       type: "string"
       description: "OCSF schema version"
@@ -168,7 +168,7 @@ mapping:
       description: "Device model"
 
     # OPERATING SYSTEM
-    - source: "os.name + os.version"
+    - source: "os.name, os.version"
       target: "device.os.name"
       type: "string"
       logic: "OS name followed by its version when present"
@@ -202,14 +202,8 @@ mapping:
     - source: "ipAddresses, ipv6Addresses, macAddresses"
       target: "device.network_interfaces"
       type: "array"
-      logic: "One interface per IP address (IPv4 then IPv6), paired by position with the MAC addresses (normalized to AA:BB:CC:DD:EE:FF); remaining MAC addresses become interfaces without IP. The first interface carries the device name as hostname"
+      logic: "A single interface holding both addresses when the device has exactly one IP and one MAC address; otherwise one interface per IP address (IPv4 then IPv6) and one per MAC address. MAC addresses normalized to AA:BB:CC:DD:EE:FF, link-local IP addresses dropped. The first interface carries the device name as hostname"
       description: "Network interfaces"
-
-    - source: "publicIpAddress"
-      target: "device.network_interfaces.ip"
-      type: "string"
-      logic: "Extra interface holding the public IP address"
-      description: "Public IP address"
 
     # TIMESTAMPS
     - source: "registrationTimestamp"
@@ -249,10 +243,10 @@ mapping:
       logic: "Direct mapping"
       description: "Organization name"
 
-    - source: "assetGroups[].id, assetGroups[].name"
+    - source: "assetGroups"
       target: "device.groups"
       type: "array"
-      logic: "One group per asset group with a name"
+      logic: "One group (uid from id, name from name) per asset group with a name"
       description: "Device groups"
 
     # SECURITY POSTURE
@@ -270,7 +264,7 @@ mapping:
     - source: "vmRiskScore"
       target: "device.risk_score"
       type: "integer"
-      logic: "Direct mapping"
+      logic: "Rounded to an integer"
       description: "Vulnerability management risk score"
 
     # ENRICHMENTS
@@ -290,10 +284,10 @@ mapping:
       logic: "enabled → Enabled; disabled, disabledByGpo → Disabled; other states not set"
       description: "Firewall status"
 
-    - source: "encryptedDrives[].drive, encryptedDrives[].protectionStatus, discEncryptionEnabled"
-      target: "enrichments.data.Storage_encryption.partitions"
+    - source: "encryptedDrives, discEncryptionEnabled"
+      target: "enrichments.data.Storage_encryption"
       type: "object"
-      logic: "One partition per encrypted drive, Enabled when protected; otherwise a single 'system' partition from discEncryptionEnabled"
+      logic: "One partition per encrypted drive named by drive, Enabled or Disabled from protectionStatus (drives without protectionStatus skipped); otherwise a single 'system' partition from discEncryptionEnabled"
       description: "Storage encryption"
 
     - source: "lastUser, userPrincipalName, email"
@@ -309,6 +303,8 @@ mapping:
       description: "Fully qualified domain name"
 
   not_mapped:
+    - field: "publicIpAddress"
+      reason: "NAT egress address shared by every device behind the same gateway: not an interface of the device"
     - field: "vendor_name"
       reason: "WithSecure does not expose the hardware manufacturer"
     - field: "domain"
@@ -343,7 +339,7 @@ mapping:
               "name": "WithSecure Elements",
               "vendor_name": "WithSecure"
             },
-            "version": "1.6.0"
+            "version": "1.5.0"
           },
           "device": {
             "type_id": 1,
@@ -354,7 +350,7 @@ mapping:
               "type": "windows",
               "type_id": 100
             },
-            "hostname": "EC2AMAZ-BOG9C6F",
+            "hostname": "SRV-WEB-01",
             "boot_time": 1684483200.0,
             "created_time": 1684305723.062,
             "first_seen_time": 1684305723.062,
@@ -369,15 +365,12 @@ mapping:
             "is_managed": true,
             "last_seen_time": 1684588516.55,
             "model": "t3.large",
-            "name": "EC2AMAZ-BOG9C6F",
+            "name": "SRV-WEB-01",
             "network_interfaces": [
               {
-                "hostname": "EC2AMAZ-BOG9C6F",
+                "hostname": "SRV-WEB-01",
                 "ip": "172.31.40.211",
                 "mac": "0E:E3:1C:E3:00:00"
-              },
-              {
-                "ip": "203.0.113.73"
               }
             ],
             "org": {
@@ -400,7 +393,7 @@ mapping:
                   }
                 },
                 "Users": [
-                  "EC2AMAZ-BOG9C6F\\Administrator"
+                  "SRV-WEB-01\\Administrator"
                 ]
               }
             }
