@@ -31,31 +31,31 @@ ModuleName/
 ### Execute All Tests
 
 ```bash
-poetry run pytest tests/
+uv run pytest tests/
 ```
 
 ### Execute Specific Test File
 
 ```bash
-poetry run pytest tests/test_actions.py
+uv run pytest tests/test_actions.py
 ```
 
 ### Execute Specific Test Function
 
 ```bash
-poetry run pytest tests/test_actions.py::test_enable_user
+uv run pytest tests/test_actions.py::test_enable_user
 ```
 
 ### Run with Verbose Output
 
 ```bash
-poetry run pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 ### Run with Coverage Report
 
 ```bash
-poetry run pytest tests/ --cov=module_name_module --cov-report=html
+uv run pytest tests/ --cov=module_name_module --cov-report=html
 ```
 
 ## Writing Tests

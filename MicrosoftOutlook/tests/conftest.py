@@ -22,7 +22,9 @@ def data_storage():
 
 @pytest.fixture
 def configured_action() -> Callable[[type[MicrosoftGraphActionBase]], MicrosoftGraphActionBase]:
-    def _configured_action(action_cls: type[MicrosoftGraphActionBase]) -> MicrosoftGraphActionBase:
+    def _configured_action(
+        action_cls: type[MicrosoftGraphActionBase],
+    ) -> MicrosoftGraphActionBase:
         module = MicrosoftOutlookModule()
         module.configuration = {  # type: ignore[assignment]
             "tenant_id": "test_tenant_id",
@@ -61,11 +63,23 @@ def get_message_1():
         "inferenceClassification": "focused",
         "body": {
             "contentType": "html",
-            "content": '<html>\r\n<head>\r\n<meta http-equiv="Content-Type" content="text/html; charset=utf-8">\r\n<meta content="text/html; charset=us-ascii">\r\n</head>\r\n<body>\r\nThe group represents Nevada.\r\n</body>\r\n</html>\r\n',
+            "content": (
+                "<html>\r\n<head>\r\n"
+                '<meta http-equiv="Content-Type" content="text/html; charset=utf-8">\r\n'
+                '<meta content="text/html; charset=us-ascii">\r\n'
+                "</head>\r\n<body>\r\nThe group represents Nevada.\r\n</body>\r\n</html>\r\n"
+            ),
         },
         "sender": {"emailAddress": {"name": "Example Sender", "address": "sender@example.com"}},
         "from": {"emailAddress": {"name": "Example Sender", "address": "sender@example.com"}},
-        "toRecipients": [{"emailAddress": {"name": "Example Recipient", "address": "recipient@example.com"}}],
+        "toRecipients": [
+            {
+                "emailAddress": {
+                    "name": "Example Recipient",
+                    "address": "recipient@example.com",
+                }
+            }
+        ],
         "ccRecipients": [],
         "bccRecipients": [],
         "replyTo": [],
@@ -100,11 +114,23 @@ def message_2():
         "inferenceClassification": "focused",
         "body": {
             "contentType": "html",
-            "content": '<html>\r\n<head>\r\n<meta http-equiv="Content-Type" content="text/html; charset=utf-8">\r\n<meta content="text/html; charset=us-ascii">\r\n</head>\r\n<body>\r\nThe group represents Nevada.\r\n</body>\r\n</html>\r\n',
+            "content": (
+                "<html>\r\n<head>\r\n"
+                '<meta http-equiv="Content-Type" content="text/html; charset=utf-8">\r\n'
+                '<meta content="text/html; charset=us-ascii">\r\n'
+                "</head>\r\n<body>\r\nThe group represents Nevada.\r\n</body>\r\n</html>\r\n"
+            ),
         },
         "sender": {"emailAddress": {"name": "Example Sender", "address": "sender@example.com"}},
         "from": {"emailAddress": {"name": "Example Sender", "address": "sender@example.com"}},
-        "toRecipients": [{"emailAddress": {"name": "Example Recipient", "address": "recipient@example.com"}}],
+        "toRecipients": [
+            {
+                "emailAddress": {
+                    "name": "Example Recipient",
+                    "address": "recipient@example.com",
+                }
+            }
+        ],
         "ccRecipients": [],
         "bccRecipients": [],
         "replyTo": [],

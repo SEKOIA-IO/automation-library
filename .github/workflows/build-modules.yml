@@ -1,13 +1,24 @@
 name: Build Modules
 
+# Test and build every changed module. On develop, every module whose manifest
+# version was increased is released: its Docker image is pushed, a
+# {slug}-{version} tag and GitHub Release are created (with one fission
+# package per Python version listed in the `fission.python-version` entry of
+# its manifest), and only then is the module deployed. Existing tags and
+# releases are never replaced.
+
 on:
   pull_request:
     types: [opened, synchronize, reopened]
   push:
     branches:
-      - main
       - develop
   workflow_dispatch:
+    inputs:
+      module:
+        description: "Module directory to release and deploy (e.g. Sekoia.io). Leave empty to test and build every module."
+        required: false
+        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -17,44 +28,128 @@ env:
 permissions: {}
 
 jobs:
-  find-modules:
+  detect:
     permissions:
-      contents: read  # for actions/checkout to fetch code
+      contents: read  # for actions/checkout to fetch code and tags
     name: Find modules in repo
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.list-modules.outputs.matrix }}
+      sha: ${{ steps.detect.outputs.sha }}
+      modules: ${{ steps.detect.outputs.modules }}
+      releases: ${{ steps.detect.outputs.releases }}
     steps:
       - name: Check-out the repo under $GITHUB_WORKSPACE
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
-      - id: list-modules
-        name: List modules having changed files
+          persist-credentials: false
+
+      - id: detect
+        name: List changed modules and modules to release
         run: |
-          if ${{ github.event_name == 'workflow_dispatch' }}; then
-            echo "matrix=$(cut -d "/" -f1 <<< "$(ls -a -- */manifest.json)" | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if ${{ github.event_name == 'pull_request' }}; then
-            start="HEAD^1"
-            end="HEAD"
+          set -euo pipefail
+
+          sha=$(git rev-parse HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+          list_modules() {
+            git ls-files -z -- ':(glob)*/manifest.json' | tr '\0' '\n' | cut -d/ -f1 | LC_ALL=C sort -u
+          }
+
+          # Modules having changed files
+          base=""
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ -z "$INPUT_MODULE" ]; then
+              mapfile -t modules < <(list_modules)
+            elif [ -f "$INPUT_MODULE/manifest.json" ]; then
+              modules=("$INPUT_MODULE")
+            else
+              echo "::error::$INPUT_MODULE is not a module"
+              exit 1
+            fi
           else
-            start=${{ github.event.before }}
-            end=${{ github.event.after }}
+            if [ "$EVENT_NAME" = "pull_request" ]; then
+              base=$(git rev-parse "$sha^1")
+            else
+              base="$BEFORE_SHA"
+              if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+                base=$(git rev-parse "$sha^1")
+              fi
+            fi
+            mapfile -t modules < <(
+              LC_ALL=C comm -12 \
+                <(git diff -z --name-only "$base" "$sha" | tr '\0' '\n' | cut -d/ -f1 | LC_ALL=C sort -u) \
+                <(list_modules)
+            )
           fi
-          echo "matrix=$(comm -12  <(cut -d "/" -f1 <<< "$(git diff --name-only -r "$start" "$end")" | sort | uniq) <(cut -d "/" -f1 <<< "$(ls -a -- */manifest.json)") | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
+          echo "modules=$(printf '%s\n' "${modules[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
+
+          # Modules to release: those with an increased version on develop, or
+          # the module given to a manual run
+          release=false
+          if [ "$REF" = "refs/heads/develop" ] && [ "$ACTOR" != "dependabot[bot]" ]; then
+            if [ "$EVENT_NAME" = "push" ] || { [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$INPUT_MODULE" ]; }; then
+              release=true
+            fi
+          fi
+
+          releases='[]'
+          if [ "$release" = "true" ]; then
+            for dir in "${modules[@]}"; do
+              [ -n "$dir" ] || continue
+              manifest="$dir/manifest.json"
+              slug=$(jq -r '.slug // empty' "$manifest")
+              version=$(jq -r '.version // empty' "$manifest")
+              if [ -z "$slug" ] || [ -z "$version" ]; then
+                echo "::warning::$manifest has no slug or version, skipping"
+                continue
+              fi
+              tag="$slug-$version"
+
+              if [ -n "$base" ]; then
+                old_version=$(git show "$base:$manifest" 2>/dev/null | jq -r '.version // empty' 2>/dev/null || true)
+                if [ -n "$old_version" ]; then
+                  highest=$(printf '%s\n%s\n' "$old_version" "$version" | sort -V | tail -n1)
+                  if [ "$old_version" = "$version" ] || [ "$highest" != "$version" ]; then
+                    echo "$dir: version not increased ($old_version -> $version), skipping"
+                    continue
+                  fi
+                fi
+
+                if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+                  echo "::notice::$dir: tag $tag already exists, skipping"
+                  continue
+                fi
+              fi
+
+              # Modules listing Python versions in fission.python-version support fission
+              fission=$(jq '((.fission // {})["python-version"] // []) | length > 0' "$manifest")
+
+              echo "$dir: releasing $tag (fission packages: $fission)"
+              releases=$(jq -c \
+                --arg dir "$dir" --arg slug "$slug" --arg version "$version" --arg tag "$tag" \
+                --argjson fission "$fission" \
+                '. + [{dir: $dir, slug: $slug, version: $version, tag: $tag, fission: $fission}]' <<< "$releases")
+            done
+          fi
+          echo "releases=$releases" >> "$GITHUB_OUTPUT"
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          ACTOR: ${{ github.actor }}
+          BEFORE_SHA: ${{ github.event.before }}
+          INPUT_MODULE: ${{ inputs.module }}
 
   test:
     permissions:
       contents: read  # for actions/checkout to fetch code
     name: Test module ${{ matrix.module }}
     runs-on: ubuntu-latest
-    needs: find-modules
-    if: needs.find-modules.outputs.matrix != '[]'
+    needs: detect
+    if: needs.detect.outputs.modules != '[]'
     strategy:
       matrix:
-        module: ${{fromJSON(needs.find-modules.outputs.matrix)}}
+        module: ${{fromJSON(needs.detect.outputs.modules)}}
       fail-fast: false
     steps:
       - name: Check-out the repo under $GITHUB_WORKSPACE
@@ -120,37 +215,105 @@ jobs:
           flags: ${{ env.FLAG }}
           fail_ci_if_error: true
 
+  # Images are only pushed by the release job, this one checks that they build
   build-docker:
     permissions:
-      contents: read  # for docker/build-push-action to access repository contents
-      packages: write  # for docker/login-action to push images to GHCR
+      contents: read  # for actions/checkout to fetch code
     name: Build ${{ matrix.module }} docker image
     runs-on: ubuntu-latest
-    needs: find-modules
-    if: needs.find-modules.outputs.matrix != '[]' && github.actor != 'dependabot[bot]'
+    needs: detect
+    if: >-
+      needs.detect.outputs.modules != '[]' && github.actor != 'dependabot[bot]'
+      && (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.module == ''))
     strategy:
       matrix:
-        module: ${{fromJSON(needs.find-modules.outputs.matrix)}}
+        module: ${{fromJSON(needs.detect.outputs.modules)}}
       fail-fast: false
     steps:
       - name: Check-out the repo under $GITHUB_WORKSPACE
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
-      - name: Read Module Manifest
-        id: read-module-manifest
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Build Docker image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          push: false
+          context: ${{ matrix.module }}
+
+  test-gate:
+    name: Build & Test Gate
+    runs-on: ubuntu-latest
+    needs: [detect, test, build-docker]
+    if: always()
+
+    steps:
+      - name: Success
+        if: ${{ !(contains(needs.*.result, 'failure')) || needs.detect.outputs.modules == '[]' }}
+        run: exit 0
+      - name: Failure
+        if: ${{ contains(needs.*.result, 'failure') && needs.detect.outputs.modules != '[]' }}
         run: |
-          content=$(cat "${MATRIX_MODULE}/manifest.json")
-          # the following lines are only required for multi line json
-          content="${content//$'\n'/''}"
-          content="${content//$'\r'/''}"
-          # end of optional handling for multi line json
-          echo "$content"
-          echo "manifest=$content" >> "$GITHUB_OUTPUT"
+          exit 1
+
+  # Push the image, create the release, then deploy: a module is only deployed
+  # once both its image and its release exist
+  release:
+    permissions:
+      contents: write  # to push tags and create releases
+      packages: write  # for docker/login-action to push images to GHCR
+      pull-requests: read  # to find the pull request of the released commit
+    name: Release ${{ matrix.module.tag }}
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.releases != '[]' && needs.detect.outputs.releases != ''
+    strategy:
+      matrix:
+        module: ${{ fromJSON(needs.detect.outputs.releases) }}
+      fail-fast: false
+    env:
+      DIR: ${{ matrix.module.dir }}
+      VERSION: ${{ matrix.module.version }}
+      TAG: ${{ matrix.module.tag }}
+      FISSION: ${{ matrix.module.fission }}
+      SHA: ${{ needs.detect.outputs.sha }}
+      REPOSITORY: ${{ github.repository }}
+    steps:
+      - name: Check-out the repo under $GITHUB_WORKSPACE
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.detect.outputs.sha }}
+          persist-credentials: false
+
+      # A published release is only deployed again. Never replace an existing
+      # tag or release: leftovers of a failed run must be deleted by hand.
+      - id: existing
+        name: Check existing release
+        run: |
+          set -euo pipefail
+
+          if release=$(gh release view "$TAG" --repo "$REPOSITORY" --json isDraft 2>/dev/null); then
+            if [ "$(jq -r '.isDraft' <<< "$release")" = "false" ]; then
+              echo "::notice::Release $TAG is already published, only deploying it"
+              echo "published=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::error::Release $TAG is a draft, delete it to release $DIR again"
+            exit 1
+          fi
+          if gh api "repos/$REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG exists without a release, delete it to release $DIR again"
+            exit 1
+          fi
+          echo "published=false" >> "$GITHUB_OUTPUT"
         env:
-          MATRIX_MODULE: ${{ matrix.module }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to the Container registry
-        if: ${{ github.event_name == 'push' }}
+        if: steps.existing.outputs.published == 'false'
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           registry: ${{ env.REGISTRY }}
@@ -158,7 +321,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to the secondary Container registry
-        if: ${{ github.event_name == 'push' }}
+        if: steps.existing.outputs.published == 'false'
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           registry: ${{ env.SECONDARY_REGISTRY }}
@@ -166,56 +329,68 @@ jobs:
           password: ${{ secrets.SECONDARY_REGISTRY_PASSWORD }}
 
       - name: Extract metadata (tags, labels) for Docker
-        if: ${{ github.event_name == 'push' }}
+        if: steps.existing.outputs.published == 'false'
         id: meta
         uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6.1.0
         with:
           images: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX_NAME }}/automation-module-${{fromJson(steps.read-module-manifest.outputs.manifest).slug}}
-            ${{ env.SECONDARY_REGISTRY }}/${{ env.IMAGE_PREFIX_NAME }}/automation-module-${{fromJson(steps.read-module-manifest.outputs.manifest).slug}}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX_NAME }}/automation-module-${{ matrix.module.slug }}
+            ${{ env.SECONDARY_REGISTRY }}/${{ env.IMAGE_PREFIX_NAME }}/automation-module-${{ matrix.module.slug }}
           flavor: |
             latest=auto
             prefix=
             suffix=
           tags: |
-            type=pep440,pattern={{version}},value=${{fromJson(steps.read-module-manifest.outputs.manifest).version}}
+            type=pep440,pattern={{version}},value=${{ matrix.module.version }}
 
       - name: Set up Docker Buildx
+        if: steps.existing.outputs.published == 'false'
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
       - name: Build and push Docker image
+        if: steps.existing.outputs.published == 'false'
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
-          push: ${{ github.event_name == 'push' }}
-          context: ${{ matrix.Module }}
+          push: true
+          context: ${{ matrix.module.dir }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  test-gate:
-    name: Build & Test Gate
-    runs-on: ubuntu-latest
-    needs: [find-modules, test, build-docker]
-    if: always()
+      - name: Install uv
+        if: steps.existing.outputs.published == 'false' && matrix.module.fission
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: false  # never restore a cache in a job publishing artifacts
 
-    steps:
-      - name: Success
-        if: ${{ !(contains(needs.*.result, 'failure')) || needs.find-modules.outputs.matrix == '[]' }}
-        run: exit 0
-      - name: Failure
-        if: ${{ contains(needs.*.result, 'failure') && needs.find-modules.outputs.matrix != '[]' }}
+      - name: Build fission packages
+        if: steps.existing.outputs.published == 'false' && matrix.module.fission
+        run: .github/scripts/package-fission.sh "$DIR" "$RUNNER_TEMP/fission"
+
+      - name: Create release
+        if: steps.existing.outputs.published == 'false'
         run: |
-          exit 1
+          set -euo pipefail
 
-  deploy-module:
-    name: Deploy modules
-    runs-on: ubuntu-latest
-    needs: [find-modules, build-docker]
-    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.find-modules.outputs.matrix != '[]' }}
-    strategy:
-      matrix:
-        module: ${{fromJSON(needs.find-modules.outputs.matrix)}}
+          pr=$(gh api "repos/$REPOSITORY/commits/$SHA/pulls" --jq '.[0].number // empty' || true)
+          changelog="$SERVER_URL/$REPOSITORY/blob/$TAG/${DIR// /%20}/CHANGELOG.md"
+          if [ -n "$pr" ]; then
+            notes="Released from #$pr. See the [changelog]($changelog)."
+          else
+            notes="Released from $SHA. See the [changelog]($changelog)."
+          fi
 
-    steps:
+          # Creating a ref fails if it already exists, so a tag is never moved
+          gh api "repos/$REPOSITORY/git/refs" -f "ref=refs/tags/$TAG" -f "sha=$SHA" >/dev/null
+
+          gh release create "$TAG" --repo "$REPOSITORY" --draft --verify-tag --title "$DIR $VERSION" --notes "$notes"
+          if [ "$FISSION" = "true" ]; then
+            gh release upload "$TAG" "$RUNNER_TEMP"/fission/*.zip --repo "$REPOSITORY"
+          fi
+          gh release edit "$TAG" --repo "$REPOSITORY" --draft=false --latest=false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SERVER_URL: ${{ github.server_url }}
+
       - name: my-app-install token
         id: my-app
         uses: getsentry/action-github-app-token@5c1e90706fe007857338ac1bfbd7a4177db2f789 # v4.0.0
@@ -223,10 +398,10 @@ jobs:
           app_id: ${{ secrets.APP_ID }}
           private_key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Repository Dispatch
+      - name: Deploy module
         uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4.0.1
         with:
           token: ${{ steps.my-app.outputs.token }}
           event-type: publish-automation-modules
           repository: SekoiaLab/platform
-          client-payload: '{"module": "${{ matrix.module }}"}'
+          client-payload: '{"module": ${{ toJSON(matrix.module.dir) }}}'

@@ -3,7 +3,6 @@ import requests_mock
 
 from microsoft_outlook_modules.action_delete_message import DeleteMessageAction
 from microsoft_outlook_modules.action_get_message import GetMessageAction
-from microsoft_outlook_modules.action_resolve_message import ResolveMessageAction
 from microsoft_outlook_modules.action_search_messages import SearchMessagesAction
 
 
@@ -14,7 +13,7 @@ from microsoft_outlook_modules.action_search_messages import SearchMessagesActio
         {"email_local_id": "00000000-0000-4000-8000-000000000123"},
     ],
 )
-def test_playbook_workflow_detect_confirm_resolve_delete(configured_action, message_identifier):
+def test_playbook_workflow_detect_confirm_search_delete(configured_action, message_identifier):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
@@ -64,9 +63,8 @@ def test_playbook_workflow_detect_confirm_resolve_delete(configured_action, mess
         assert len(search_result["messages"]) == 1
         assert "urgent" in search_result["messages"][0]["subject"].lower()
 
-        resolve_action = configured_action(ResolveMessageAction)
-        resolve_result = resolve_action.run(arguments={"user": "1111", **message_identifier})
-        message_id = resolve_result["message_id"]
+        assert search_result["message_ids"]
+        message_id = search_result["message_ids"][0]
         assert message_id == "graph-item-id-1"
 
         get_action = configured_action(GetMessageAction)
@@ -78,7 +76,7 @@ def test_playbook_workflow_detect_confirm_resolve_delete(configured_action, mess
         delete_action.run(arguments={"user": "1111", "message_id": message_id})
 
 
-def test_resolve_message_item_index_out_of_range(configured_action):
+def test_search_message_item_index_is_rejected(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
@@ -96,9 +94,9 @@ def test_resolve_message_item_index_out_of_range(configured_action):
             json={"value": [{"id": "graph-item-id-1"}]},
         )
 
-        resolve_action = configured_action(ResolveMessageAction)
-        with pytest.raises(ValueError, match="out of range"):
-            resolve_action.run(
+        search_action = configured_action(SearchMessagesAction)
+        with pytest.raises(ValueError, match="Extra inputs are not permitted"):
+            search_action.run(
                 arguments={
                     "user": "1111",
                     "email_message_id": "<malicious-message-id@example.com>",

@@ -54,7 +54,7 @@ class FlareEventsConnector(Connector):
 
         if not self.cursor.offset:
             start = datetime.now(tz=UTC) - timedelta(hours=self.configuration.initial_hours_lookback)
-            payload["filters"] = {"estimated_created_at": {"gte": start.isoformat()}}
+            payload["filters"] = {"matched_at": {"gte": start.isoformat()}}
 
         return payload
 

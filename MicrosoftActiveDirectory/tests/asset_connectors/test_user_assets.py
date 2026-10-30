@@ -197,6 +197,55 @@ def test_user_ocsf_object(connector):
     assert user_ocsf.email_addr == "john.doe@example.com"
 
 
+@pytest.mark.parametrize("sam_account_name", ["Guest", "krbtgt"])
+def test_user_ocsf_object_without_names_or_upn(connector, sam_account_name):
+    # Built-in accounts must not share a placeholder name, or they are merged into one asset
+    user_attr = LDAPUserAttributes(sAMAccountName=sam_account_name, objectSid="S-1-5-21-501")
+
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.name == sam_account_name
+    assert user_ocsf.account.name == sam_account_name
+
+
+def test_user_ocsf_object_without_names_with_upn(connector):
+    user_attr = LDAPUserAttributes(
+        sAMAccountName="svc-backup", userPrincipalName="svc-backup@example.com", objectSid="S-1-5-21-1001"
+    )
+
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.name == "svc-backup"
+    assert user_ocsf.account.name == "svc-backup@example.com"
+
+
+def test_user_ocsf_object_keeps_inner_spaces_of_names(connector):
+    # The name is the asset atom: an existing user must keep the same one
+    user_attr = LDAPUserAttributes(givenName="John ", sn="Doe", objectSid="S-1-5-21-1002")
+
+    assert connector.user_ocsf_object(user_attr).name == "John  Doe"
+
+
+def test_user_ocsf_object_with_blank_names(connector):
+    user_attr = LDAPUserAttributes(
+        givenName=" ", sn="", userPrincipalName="  ", sAMAccountName="Guest", objectSid="S-1-5-21-501"
+    )
+
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.name == "Guest"
+    assert user_ocsf.account.name == "Guest"
+
+
+def test_user_ocsf_object_without_any_name(connector):
+    user_attr = LDAPUserAttributes(objectSid="S-1-5-21-999")
+
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.name == "Unknown"
+    assert user_ocsf.account.name == "Unknown"
+
+
 def test_user_ocsf_object_machine_account_email_not_set(connector):
     # AD UPN-style mail values (local part ends with '$') must not be stored as email_addr
     user_attr = LDAPUserAttributes(
@@ -286,6 +335,7 @@ def test_get_assets_handles_exception(connector):
     assets = list(connector.get_assets())
 
     assert len(assets) == 0
+    assert connector.skipped_users == 1
 
 
 @pytest.fixture

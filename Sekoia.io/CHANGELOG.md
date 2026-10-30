@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-22 - 2.79.1
+
+### Changed
+
+- Execute a query: relabel the `parameters` argument as "Parameters (SOL filters)" and describe how it maps to the SOL filters of the saved query
+
+## 2026-10-02 - 2.79.0
+
+### Added
+
+- Edit Alert: add the `assignee` argument to assign the alert to a user
+
+## 2026-09-30 - 2.78.1
+
+### Fixed
+
+- Do not crash the alert triggers when the Alert API returns a `null` verdict, which happens for verdicts set by Roy when the API key cannot read AI investigations
+
 ## 2026-09-18 - 2.78.0
 
 ### Added

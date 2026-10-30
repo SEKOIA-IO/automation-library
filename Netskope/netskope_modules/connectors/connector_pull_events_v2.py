@@ -1,7 +1,7 @@
 import time
 from functools import cached_property
 from json.decoder import JSONDecodeError
-from threading import Event, Thread
+from threading import Event, Lock, Thread
 
 import orjson
 from netskope_api.iterator.const import Const
@@ -10,6 +10,7 @@ from pydantic import Field
 from requests.exceptions import ConnectionError
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.exceptions import ModuleConfigurationError
+from sekoia_automation.storage import PersistentJSON
 
 from netskope_modules import NetskopeModule
 from netskope_modules.constants import MESSAGE_CANNOT_CONSUME_SERVICE
@@ -26,16 +27,31 @@ SECURITY_CHECK_DATAEXPORTS: list[tuple[NetskopeEventType, NetskopeAlertType | No
 
 class NetskopeEventConnectorConfiguration(DefaultConnectorConfiguration):
     api_token: str = Field(..., description="The API token")
-    consumer_group: str | None = Field(None, description="A unique name to track events consumption")
+    consumer_group: str | None = Field(
+        None, description="A unique name to track events consumption. Must not be shared with another connector"
+    )
+    start_timestamp: int | None = Field(
+        None,
+        description="Epoch timestamp (in seconds) from which to start the collection, applied once per value",
+    )
     security_check_only: bool = Field(False, description="Collect only security-check alerts (malware, malsite, DLP)")
 
 
 class NetskopeEventConsumer(Thread):
-    def __init__(self, connector: "NetskopeEventConnector", name: str, iterator: NetskopeIterator):
+    def __init__(
+        self,
+        connector: NetskopeEventConnector,
+        name: str,
+        iterator: NetskopeIterator,
+        index_name: str | None = None,
+        start_timestamp: int | None = None,
+    ):
         super().__init__()
         self.connector = connector
         self.name = name
         self.iterator = iterator
+        self.index_name = index_name
+        self.start_timestamp = start_timestamp
         self._stop_event = Event()
 
     def stop(self):
@@ -49,15 +65,23 @@ class NetskopeEventConsumer(Thread):
         # save the starting time
         batch_start_time = time.time()
 
-        # Fetch next events
+        # Fetch next events.
+        # On the first call of a new iterator, position it at the starting timestamp if one is defined
         try:
-            response = self.iterator.next()
+            if self.start_timestamp is not None:
+                self.connector.log(
+                    message=f"Start consuming {self.name} from timestamp {self.start_timestamp}",
+                    level="info",
+                )
+                response = self.iterator.download(self.start_timestamp)
+            else:
+                response = self.iterator.next()
 
         except ConnectionError as error:
             if "connection aborted" in str(error).lower():
                 return
 
-            raise error
+            raise
 
         except ValueError as error:
             if "invalid api token" in str(error).lower():
@@ -92,11 +116,26 @@ class NetskopeEventConsumer(Thread):
                     message=f"Cannot consume the service {self.name}. Error={response.text}",
                     level="error",
                 )
+        elif response.status_code == 409:
+            self.connector.log(
+                message=(
+                    f"Concurrency conflict for {self.name} on the index {self.index_name}: "
+                    "another consumer is using the same consumer group. "
+                    "Each connector must use its own consumer group."
+                ),
+                level="warning",
+            )
         elif response.status_code > 299:
             self.connector.log(
                 message=f"Failed to fetch events for {self.name}: {response.status_code} {response.text}",
                 level="error",
             )
+
+        # The iterator is positioned: the next calls must continue from it
+        if self.start_timestamp is not None and response.status_code in (200, 204):
+            if self.index_name is not None:
+                self.connector.mark_index_as_initialized(self.index_name, self.start_timestamp)
+            self.start_timestamp = None
 
         content = response.json() if response.status_code == 200 else {}
 
@@ -162,6 +201,8 @@ class NetskopeEventConnector(Connector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.context = PersistentJSON("context.json", self._data_path)
+        self._context_lock = Lock()
 
     @cached_property
     def tenant_hostname(self):
@@ -204,7 +245,10 @@ class NetskopeEventConnector(Connector):
         if self.module.connector_configuration_uuid is not None:
             return self.module.connector_configuration_uuid
 
-        return self.module.trigger_configuration_uuid
+        if self.module.trigger_configuration_uuid is not None:
+            return self.module.trigger_configuration_uuid
+
+        raise ValueError("Neither connector nor trigger configuration UUID is defined")
 
     def get_index_name(self, event_type: NetskopeEventType, alert_type: NetskopeAlertType | None) -> str:
         """
@@ -213,9 +257,11 @@ class NetskopeEventConnector(Connector):
         :param NetskopeEventType event_type: the type of the event
         :param NetskopeAlertType or None alert_type: the type of alert
         """
-        # if a global consumer group is defined, return it
+        # if a consumer group is defined, derive a dedicated index from it for each data export.
+        # Netskope tracks the position of the iterator per index, so the index must not be shared between
+        # data exports consumed concurrently
         if self.configuration.consumer_group and len(self.configuration.consumer_group) > 0:
-            return self.configuration.consumer_group
+            return f"{self.configuration.consumer_group}-{get_iterator_name(event_type, alert_type)}"
 
         return get_index_name(self.configuration_uuid, event_type, alert_type)
 
@@ -258,6 +304,43 @@ class NetskopeEventConnector(Connector):
 
         return iterators
 
+    def get_start_timestamp(self, index_name: str) -> int | None:
+        """
+        Return the timestamp from which the index must be consumed,
+        or None if the index was already positioned at the configured timestamp
+
+        :param str index_name: The name of the index
+        """
+        start_timestamp = self.configuration.start_timestamp
+        if start_timestamp is None:
+            return None
+
+        with self._context_lock, self.context as cache:
+            initialized_indexes = cache.get("initialized_indexes")
+            # a changed starting timestamp repositions the index
+            if isinstance(initialized_indexes, dict) and initialized_indexes.get(index_name) == start_timestamp:
+                return None
+
+        return start_timestamp
+
+    def mark_index_as_initialized(self, index_name: str, start_timestamp: int) -> None:
+        """
+        Remember the starting timestamp at which the index was positioned
+
+        :param str index_name: The name of the index
+        :param int start_timestamp: The timestamp at which the index was positioned
+        """
+        with self._context_lock, self.context as cache:
+            initialized_indexes = cache.get("initialized_indexes")
+            if not isinstance(initialized_indexes, dict):
+                initialized_indexes = {}
+            cache["initialized_indexes"] = {**initialized_indexes, index_name: start_timestamp}
+
+    def create_consumer(self, name: str, iterator: NetskopeIterator) -> NetskopeEventConsumer:
+        index_name = iterator.client.configs.get("iterator_name")
+        start_timestamp = self.get_start_timestamp(index_name) if index_name else None
+        return NetskopeEventConsumer(self, name, iterator, index_name=index_name, start_timestamp=start_timestamp)
+
     def start_consumers(self, iterators: dict[str, NetskopeIterator]) -> dict[str, NetskopeEventConsumer]:
         """
         Start the consumers from the list of iterators
@@ -266,14 +349,14 @@ class NetskopeEventConnector(Connector):
         :rtype: dict[str, NetskopeDataConsumer]
         :return: The list of consumers as dict
         """
-        consumers: dict[str, NetskopeEventConsumer] = dict()
+        consumers: dict[str, NetskopeEventConsumer] = {}
 
         # for each iterator
         for name, iterator in iterators.items():
             self.log(message=f"Start {name} consumer", level="info")
 
             # create the consumer
-            consumers[name] = NetskopeEventConsumer(self, name, iterator)
+            consumers[name] = self.create_consumer(name, iterator)
             consumers[name].start()
 
         return consumers
@@ -300,7 +383,7 @@ class NetskopeEventConnector(Connector):
                 self.log(message=f"Restart {name} consumer", level="info")
 
                 # (re-)create the consumer
-                consumers[name] = NetskopeEventConsumer(self, name, iterator)
+                consumers[name] = self.create_consumer(name, iterator)
                 consumers[name].start()
 
     def stop_consumers(
@@ -315,7 +398,7 @@ class NetskopeEventConnector(Connector):
         :param dict iterators: The list of iterators
         """
         # for each iterator
-        for name in iterators.keys():
+        for name in iterators:
             # get the consumer
             consumer = consumers.get(name)
 

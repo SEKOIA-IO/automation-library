@@ -1,5 +1,7 @@
 """Tests related to github api client."""
 
+from unittest.mock import patch
+
 import pytest
 from aioresponses import aioresponses
 
@@ -451,3 +453,32 @@ async def test_github_client_get_audit_logs_retry_after_401(
 
         audit_logs = await github_client.get_audit_logs(last_timestamp)
         assert audit_logs == github_response
+
+
+@pytest.mark.asyncio
+async def test_github_client_proxy_support(
+    session_faker,
+    pem_content,
+):
+    """
+    Test GithubClient proxy support.
+
+    Args:
+        session_faker: Faker
+        pem_content: str
+    """
+    organization = session_faker.word()
+    proxy_url = session_faker.uri()
+
+    with patch.dict("os.environ", {"HTTP_PROXY": proxy_url}):
+        # Setup the client
+        github_client = AsyncGithubClient(
+            "https://api.github.com",
+            organization,
+            session_faker.word(),
+            pem_content,
+            session_faker.pyint(),
+        )
+
+        async with github_client.session() as session:
+            assert session.trust_env is True

@@ -109,7 +109,9 @@ See component-specific documentation:
 
 ## Dependencies
 
-The `pyproject.toml` file specifies Python dependencies using Poetry format. This file defines all packages required by the module's actions, triggers, and connectors.
+The `pyproject.toml` file specifies Python dependencies using the standard `[project]` table, managed with [uv](https://docs.astral.sh/uv/) (`uv.lock` is committed alongside it). This file defines all packages required by the module's actions, triggers, and connectors. Development tools (pytest, mypy, ruff) go in the `[dependency-groups]` `dev` group, and modules set `[tool.uv] package = false`.
+
+Some older modules still use Poetry; CI supports both, but new modules should use uv.
 
 ## Example Module
 

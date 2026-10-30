@@ -19,9 +19,9 @@
         "description": "UUID of the saved query to execute. Either 'query_uuid' or 'query_name' must be provided."
       },
       "parameters": {
-        "title": "Parameters",
+        "title": "Parameters (SOL filters)",
         "type": "object",
-        "description": "Query parameters for the query execution."
+        "description": "Values for the SOL filters referenced in the saved query using the `?filter_name` syntax. Passed as query parameters when executing the query."
       },
       "result_format": {
         "title": "Result Format",

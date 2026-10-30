@@ -8,17 +8,17 @@ Docs: https://developer.tenable.com/reference/exports-vulns-download-chunk
 from typing import Any, Dict, List, Optional, Union
 from enum import StrEnum
 
-from pydantic import BaseModel
+from tenable_conn.asset_connector.models.base import TenableBaseModel
 
 
-class CvssTemporalVector(BaseModel):
+class CvssTemporalVector(TenableBaseModel):
     exploitability: Optional[str] = None
     remediation_level: Optional[str] = None
     report_confidence: Optional[str] = None
     raw: Optional[str] = None
 
 
-class CvssVector(BaseModel):
+class CvssVector(TenableBaseModel):
     access_vector: Optional[str] = None
     access_complexity: Optional[str] = None
     authentication: Optional[str] = None
@@ -28,14 +28,14 @@ class CvssVector(BaseModel):
     raw: Optional[str] = None
 
 
-class Cvss3TemporalVector(BaseModel):
+class Cvss3TemporalVector(TenableBaseModel):
     exploitability: Optional[str] = None
     remediation_level: Optional[str] = None
     report_confidence: Optional[str] = None
     raw: Optional[str] = None
 
 
-class Cvss3Vector(BaseModel):
+class Cvss3Vector(TenableBaseModel):
     access_vector: Optional[str] = None
     access_complexity: Optional[str] = None
     authentication: Optional[str] = None
@@ -87,7 +87,7 @@ class ExploitMaturity(StrEnum):
     UNREPORTED = "Unreported"
 
 
-class Cvss4Vector(BaseModel):
+class Cvss4Vector(TenableBaseModel):
     attack_vector: Optional[AttackVector] = None
     attack_complexity: Optional[AttackComplexity] = None
     attack_requirements: Optional[AttackRequirements] = None
@@ -102,23 +102,23 @@ class Cvss4Vector(BaseModel):
     raw: Optional[str] = None
 
 
-class Cvss4ThreatVector(BaseModel):
+class Cvss4ThreatVector(TenableBaseModel):
     threat_score: Optional[float] = None
     exploit_maturity: Optional[ExploitMaturity] = None
     raw: Optional[str] = None
 
 
-class VprAgeOfVuln(BaseModel):
+class VprAgeOfVuln(TenableBaseModel):
     lower_bound: Optional[int] = None
     upper_bound: Optional[int] = None
 
 
-class VprThreatRecency(BaseModel):
+class VprThreatRecency(TenableBaseModel):
     lower_bound: Optional[int] = None
     upper_bound: Optional[int] = None
 
 
-class VprDrivers(BaseModel):
+class VprDrivers(TenableBaseModel):
     age_of_vuln: Optional[VprAgeOfVuln] = None
     exploit_code_maturity: Optional[str] = None
     cvss_impact_score_predicted: Optional[bool] = None
@@ -129,13 +129,13 @@ class VprDrivers(BaseModel):
     threat_recency: Optional[VprThreatRecency] = None
 
 
-class Vpr(BaseModel):
+class Vpr(TenableBaseModel):
     score: Optional[float] = None
     drivers: Optional[VprDrivers] = None
     updated: Optional[str] = None
 
 
-class VprV2(BaseModel):
+class VprV2(TenableBaseModel):
     score: Optional[float] = None
     vpr_percentile: Optional[float] = None
     vpr_severity: Optional[str] = None
@@ -155,12 +155,12 @@ class VprV2(BaseModel):
     remediation: Optional[Dict[str, Any]] = None
 
 
-class Xref(BaseModel):
+class Xref(TenableBaseModel):
     type: str
     id: str
 
 
-class Plugin(BaseModel):
+class Plugin(TenableBaseModel):
     id: int
     name: Optional[str] = None
     bid: List[int] = []
@@ -225,7 +225,7 @@ class Plugin(BaseModel):
     model_config = {"extra": "allow"}
 
 
-class VulnAsset(BaseModel):
+class VulnAsset(TenableBaseModel):
     uuid: str
     agent_uuid: Optional[str] = None
     bios_uuid: Optional[str] = None
@@ -245,25 +245,25 @@ class VulnAsset(BaseModel):
     tracked: Optional[bool] = None
 
 
-class Port(BaseModel):
+class Port(TenableBaseModel):
     port: Optional[int] = None
     protocol: Optional[str] = None
     service: Optional[str] = None
 
 
-class Scan(BaseModel):
+class Scan(TenableBaseModel):
     uuid: Optional[str] = None
     schedule_uuid: Optional[str] = None
     started_at: Optional[str] = None
     last_scan_target: Optional[str] = None
 
 
-class SoftwareVulnFix(BaseModel):
+class SoftwareVulnFix(TenableBaseModel):
     fix_type: Optional[str] = None
     value: Optional[str] = None
 
 
-class SoftwareVulnItem(BaseModel):
+class SoftwareVulnItem(TenableBaseModel):
     fix_available: Optional[bool] = None
     identifier: Optional[str] = None
     path: Optional[str] = None
@@ -278,7 +278,7 @@ class SoftwareVulnItem(BaseModel):
     potential_reasons: Optional[List[str]] = None
 
 
-class Vulnerability(BaseModel):
+class Vulnerability(TenableBaseModel):
     asset: VulnAsset
     plugin: Plugin
     output: Optional[str] = None

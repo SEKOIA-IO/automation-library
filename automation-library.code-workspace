@@ -109,6 +109,14 @@
 			"path": "Okta"
 		},
 		{
+			"name": "Netskope",
+			"path": "Netskope"
+		},
+		{
+			"name": "CatoNetwork",
+			"path": "CatoNetwork"
+		},
+		{
 			"name": "PolySwarm",
 			"path": "PolySwarm"
 		}

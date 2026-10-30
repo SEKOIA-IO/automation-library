@@ -31,7 +31,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId, RiskLevelStr
 from sekoia_automation.storage import PersistentJSON
 
-from asset_connector.models import DefenderMachine, DefenderMachineListResponse
+from asset_connector.models import DefenderMachine, DefenderMachineListResponse, resolve_hostname
 from microsoftdefender_modules import MicrosoftDefenderModule
 from microsoftdefender_modules.client import ApiClient
 from microsoftdefender_modules.logging import get_logger
@@ -245,12 +245,15 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
             if interfaces:
                 network_interfaces = interfaces
 
+        hostname, domain = resolve_hostname(machine.computerDnsName)
+
         return Device(
             type_id=device_type_id,
             type=device_type_str,
             uid=machine.id,
             uid_alt=uid_alt,
-            hostname=machine.computerDnsName or "",
+            hostname=hostname,
+            domain=domain,
             ip=machine.lastIpAddress,
             os=OperatingSystem(
                 name=os_name,

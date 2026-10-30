@@ -181,7 +181,7 @@ class SalesforceConnector(AsyncConnector):
         self._salesforce_client = SalesforceHttpClient(
             client_id=self.module.configuration.client_id,
             client_secret=self.module.configuration.client_secret,
-            base_url=self.module.configuration.base_url,
+            base_url=str(self.module.configuration.base_url),
             rate_limiter=self.module.configuration.rate_limiter,
         )
 
