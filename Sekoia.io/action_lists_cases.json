@@ -36,6 +36,17 @@
         "in": "query",
         "type": "string"
       },
+      "match[type]": {
+        "default": "manual",
+        "enum": [
+          "manual",
+          "automatic",
+          "manual,automatic"
+        ],
+        "in": "query",
+        "type": "string",
+        "description": "Creation mode of the cases to return: manual, automatic, or manual,automatic for both"
+      },
       "limit": {
         "in": "query",
         "type": "integer",
