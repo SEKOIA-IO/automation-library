@@ -1,6 +1,6 @@
 import time
 from typing import Any
-from unittest.mock import MagicMock, Mock, patch, call
+from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
 import requests.exceptions
@@ -22,7 +22,7 @@ def trigger(symphony_storage):
 
     trigger.push_events_to_intakes = MagicMock()
     trigger.module.configuration = {
-        "login": "demo_1@demovade.com",
+        "login": "john.doe@example.com",
         "password": "pass",
         "hostname": "https://cloud-preview.vadesecure.com",
     }
@@ -42,13 +42,13 @@ def auth_message():
     return {
         "accounts": [
             {
-                "accountId": 2882,
+                "accountId": 1001,
                 "accountState": "VALID",
                 "accountType": "USER",
-                "accountLogin": "VSC002984",
-                "accountEmail": "demo_1@demovade.com",
+                "accountLogin": "VSC000000",
+                "accountEmail": "john.doe@example.com",
                 "oemId": 2,
-                "oemLogin": "OEM0002",
+                "oemLogin": "OEM0000",
                 "accountDefaultLanguage": {
                     "id": 2,
                     "label": "French",
@@ -59,15 +59,15 @@ def auth_message():
                     "timeFormat": "HH:mm",
                     "onlyForQuarantine": False,
                 },
-                "accountFirstName": "Vade",
-                "accountLastName": "Demo",
+                "accountFirstName": "John",
+                "accountLastName": "Doe",
                 "timezone": "Europe/Paris",
                 "commercialUrl": "https://www.vadesecure.com/en/company/contact",
                 "commercialLabel": "Service Commercial",
                 "supportUrl": "https://www.vadesecure.com/en/support/",
                 "supportLabel": "Support Technique",
                 "brandUrl": "http://www.vadesecure.com",
-                "brandLabel": "Demo partner",
+                "brandLabel": "Example partner",
                 "onlineHelp": "",
             }
         ],
@@ -80,14 +80,14 @@ def auth_message_admin():
     return {
         "accounts": [
             {
-                "accountId": 30303,
+                "accountId": 1002,
                 "accountState": "VALID",
                 "accountType": "ADMINISTRATOR",
-                "accountLogin": "VSC002984",
-                "accountEmail": "demo_1@demovade.com",
-                "userId": 222,
+                "accountLogin": "VSC000000",
+                "accountEmail": "john.doe@example.com",
+                "userId": 2002,
                 "oemId": 2,
-                "oemLogin": "OEM0002",
+                "oemLogin": "OEM0000",
                 "accountDefaultLanguage": {
                     "id": 2,
                     "label": "French",
@@ -98,15 +98,15 @@ def auth_message_admin():
                     "timeFormat": "HH:mm",
                     "onlyForQuarantine": False,
                 },
-                "accountFirstName": "Vade",
-                "accountLastName": "Demo",
+                "accountFirstName": "John",
+                "accountLastName": "Doe",
                 "timezone": "Europe/Paris",
                 "commercialUrl": "https://www.vadesecure.com/en/company/contact",
                 "commercialLabel": "Service Commercial",
                 "supportUrl": "https://www.vadesecure.com/en/support/",
                 "supportLabel": "Support Technique",
                 "brandUrl": "http://www.vadesecure.com",
-                "brandLabel": "Demo partner",
+                "brandLabel": "Example partner",
                 "onlineHelp": "",
             }
         ],
@@ -119,14 +119,14 @@ def auth_message_quarantine():
     return {
         "accounts": [
             {
-                "accountId": 5453,
+                "accountId": 1003,
                 "accountState": "VALID",
                 "accountType": "QUARANTINE",
-                "accountLogin": "VSC002984",
-                "accountEmail": "demo_1@demovade.com",
-                "userId": 7676,
+                "accountLogin": "VSC000000",
+                "accountEmail": "john.doe@example.com",
+                "userId": 2003,
                 "oemId": 2,
-                "oemLogin": "OEM0002",
+                "oemLogin": "OEM0000",
                 "accountDefaultLanguage": {
                     "id": 2,
                     "label": "French",
@@ -137,15 +137,15 @@ def auth_message_quarantine():
                     "timeFormat": "HH:mm",
                     "onlyForQuarantine": False,
                 },
-                "accountFirstName": "Vade",
-                "accountLastName": "Demo",
+                "accountFirstName": "John",
+                "accountLastName": "Doe",
                 "timezone": "Europe/Paris",
                 "commercialUrl": "https://www.vadesecure.com/en/company/contact",
                 "commercialLabel": "Service Commercial",
                 "supportUrl": "https://www.vadesecure.com/en/support/",
                 "supportLabel": "Support Technique",
                 "brandUrl": "http://www.vadesecure.com",
-                "brandLabel": "Demo partner",
+                "brandLabel": "Example partner",
                 "onlineHelp": "",
             }
         ],
@@ -158,10 +158,10 @@ def response_message():
     return {
         "logs": [
             {
-                "message": '2023-07-20T09:15:02+00:00 localhost ulog[568]: [0000F4E4] qid=aaa1bbb2cc3,ip=1.2.3.4,sender=test@test.com,site=VSC000001,domain=maildomain.com,recipient=demo_1@maildomain.com: action=drop,status=virus,spamlevel=unknwon,tag=[VIRUS],stop=nil,reply=2,subject="Some subject"',
+                "message": '2023-07-20T09:15:02+00:00 localhost ulog[568]: [0000F4E4] qid=aaa1bbb2cc3,ip=192.0.2.1,sender=sender@example.net,site=VSC000001,domain=example.org,recipient=jane.doe@example.org: action=drop,status=virus,spamlevel=unknwon,tag=[VIRUS],stop=nil,reply=2,subject="Some subject"',
                 "site": "VSC000001",
-                "from": "test@test.com",
-                "to": "demo_1@maildomain.com",
+                "from": "sender@example.net",
+                "to": "jane.doe@example.org",
                 "subject": "Some subject",
                 "date": 1689844502000,
                 "operationType": "DROP",
@@ -171,8 +171,8 @@ def response_message():
                 "filterType": "UNKNOWN",
                 "filterReason": "2",
                 "spamLevel": "UNKNWON",
-                "domain": "maildomain.com",
-                "ip": "1.2.3.4",
+                "domain": "example.org",
+                "ip": "192.0.2.1",
                 "tag": "[VIRUS]",
             }
         ]
@@ -253,7 +253,7 @@ def test_request_with_account_id_administrator(
             connector=trigger, name="inbound", client=api_client, params={"stream": "Inbound"}
         )
 
-        assert consumer.client.account_id == 222
+        assert consumer.client.account_id == 2002
 
 
 def test_request_with_account_id_quarantine(
@@ -271,7 +271,7 @@ def test_request_with_account_id_quarantine(
             connector=trigger, name="inbound", client=api_client, params={"stream": "Inbound"}
         )
 
-        assert consumer.client.account_id == 7676
+        assert consumer.client.account_id == 2003
 
 
 def test_request_error(trigger: VadeCloudLogsConnector, auth_message):
@@ -559,3 +559,40 @@ def test_last_timestamp(trigger: VadeCloudLogsConnector, api_client):
     result = consumer.get_last_timestamp()
 
     assert result == ts
+
+
+def test_last_timestamp_per_stream(trigger: VadeCloudLogsConnector, api_client):
+    inbound = VadeCloudConsumer(connector=trigger, name="inbound", client=api_client, params={})
+    outbound = VadeCloudConsumer(connector=trigger, name="outbound", client=api_client, params={})
+
+    now = int(time.time() * 1000)
+    inbound.set_last_timestamp(last_timestamp=now - 10_000)
+    outbound.set_last_timestamp(last_timestamp=now - 20_000)
+    inbound.set_last_timestamp(last_timestamp=now - 5_000)
+
+    assert inbound.get_last_timestamp() == now - 5_000
+    assert outbound.get_last_timestamp() == now - 20_000
+
+
+def test_last_timestamp_migrates_shared_checkpoint(trigger: VadeCloudLogsConnector, api_client):
+    inbound = VadeCloudConsumer(connector=trigger, name="inbound", client=api_client, params={})
+    outbound = VadeCloudConsumer(connector=trigger, name="outbound", client=api_client, params={})
+
+    legacy_ts = int(time.time() * 1000) - 10_000
+    with trigger.context as cache:
+        cache["last_ts"] = legacy_ts
+
+    assert inbound.get_last_timestamp() == legacy_ts
+    assert outbound.get_last_timestamp() == legacy_ts
+
+    inbound.set_last_timestamp(last_timestamp=legacy_ts + 5_000)
+
+    assert inbound.get_last_timestamp() == legacy_ts + 5_000
+    assert outbound.get_last_timestamp() == legacy_ts
+
+
+def test_last_timestamp_first_run(trigger: VadeCloudLogsConnector, api_client):
+    consumer = VadeCloudConsumer(connector=trigger, name="inbound", client=api_client, params={})
+
+    with patch("vadecloud_modules.trigger_vade_cloud_logs.time.time", return_value=1_700_000_000.0):
+        assert consumer.get_last_timestamp() == 1_700_000_000_000 - 5 * 60 * 1000
