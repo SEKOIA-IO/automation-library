@@ -115,6 +115,30 @@ async def test_handle_messages_with_filtering(trigger):
 
 
 @pytest.mark.asyncio
+async def test_forward_events_logs_skipped_records_once_per_batch(trigger):
+    # arrange
+    events: list[str] = [
+        '[{"name": "record1", "category": "test1"}, {"name": "record2", "category": "test3"}]',
+        '[{"name": "record3", "category": "test3"}, {"name": "record4", "category": "test4"}, {"name": "record5"}]',
+    ]
+    messages: list[EventData] = [EventData(event) for event in events]
+    trigger.configuration.categories = ["test1"]
+
+    # act
+    await trigger.forward_events(messages)
+
+    # assert
+    skip_logs = [call for call in trigger.log.call_args_list if "Skip" in call.kwargs.get("message", "")]
+    assert len(skip_logs) == 1
+    assert skip_logs[0].kwargs["message"] == (
+        "Skip 4 records as their categories are not in allowed categories ['test1']: "
+        "{'test3': 2, 'test4': 1, None: 1}"
+    )
+    calls = [record for call in trigger.push_data_to_intakes.await_args_list for record in call.kwargs["events"]]
+    assert len(calls) == 1
+
+
+@pytest.mark.asyncio
 async def test_client_receive_batch():
     client = Client(
         AzureEventsHubConfiguration.parse_obj(
