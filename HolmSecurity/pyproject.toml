@@ -30,6 +30,7 @@ exclude = ["tests/*", "main.py"]
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 python-dateutil = "^2.8.2"
+sekoia-automation-models = "^1.5.0"
 
 [tool.poetry.dependencies.sekoia-automation-sdk]
 extras = ["all"]

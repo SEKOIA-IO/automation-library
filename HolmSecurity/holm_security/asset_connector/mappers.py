@@ -18,6 +18,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
 )
 from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId, RiskLevelStr
+from sekoia_automation_models.hostname import split_hostname
 
 from holm_security.asset_connector.models import HolmNetwork, HolmSeverityBreakdown
 
@@ -158,6 +159,15 @@ def map_severity_breakdown(
         if getattr(severity, bucket, 0):
             return risk_level
 
+    return None, None
+
+
+def pick_hostname(*candidates: str | None) -> tuple[str | None, str | None]:
+    """Return the ``(hostname, domain)`` of the first candidate the asset management API accepts."""
+    for candidate in candidates:
+        hostname, domain = split_hostname(candidate)
+        if hostname:
+            return hostname, domain
     return None, None
 
 

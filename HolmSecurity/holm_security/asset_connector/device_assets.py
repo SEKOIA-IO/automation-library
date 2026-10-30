@@ -123,9 +123,9 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
         """Map the Holm OS fields to an OCSF ``OperatingSystem`` object."""
         return mappers.build_operating_system(device.os_name, device.os_family)
 
-    def build_network_interfaces(self, device: HolmDevice) -> list[NetworkInterface] | None:
+    def build_network_interfaces(self, device: HolmDevice, hostname: str | None) -> list[NetworkInterface] | None:
         """Build the primary IPv4 and secondary IPv6 network interfaces."""
-        return mappers.build_network_interfaces(device.network, device.hostname)
+        return mappers.build_network_interfaces(device.network, hostname)
 
     def build_risk_level(self, max_severity: int | str | None) -> tuple[RiskLevelStr | None, RiskLevelId | None]:
         """Map the Holm ``max_severity`` of a device agent to an OCSF risk level."""
@@ -138,16 +138,18 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
         device_type, device_type_id = self.build_device_type(device.os_is_server)
         network = device.network
         risk_level, risk_level_id = self.build_risk_level(device.max_severity)
+        hostname, domain = mappers.pick_hostname(device.hostname, device.device_name)
 
         return Device(
             type=device_type,
             type_id=device_type_id,
             uid=device.uid,
             name=device.device_name,
-            hostname=device.hostname or "",
+            hostname=hostname,
+            domain=domain,
             os=self.build_operating_system(device),
             ip=network.ip_address if network else None,
-            network_interfaces=self.build_network_interfaces(device),
+            network_interfaces=self.build_network_interfaces(device, hostname),
             created_time=self._to_epoch(device.created),
             last_seen_time=self._to_epoch(device.last_sync),
             is_managed=True,
@@ -164,13 +166,15 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
         """
         device_type, device_type_id = mappers.map_net_asset_type(asset.type)
         risk_level, risk_level_id = mappers.map_severity_breakdown(asset.severity)
+        hostname, domain = mappers.pick_hostname(asset.hostname, asset.name)
 
         return Device(
             type=device_type,
             type_id=device_type_id,
             uid=asset.uuid,
             name=asset.name,
-            hostname=asset.hostname or "",
+            hostname=hostname,
+            domain=domain,
             os=mappers.build_operating_system_from_name(asset.operating_system),
             ip=asset.ip,
             desc=asset.details or None,
@@ -378,8 +382,8 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
         """
         return {
             "uid": "device.uid",
-            "device_name": "device.name",
-            "hostname": "device.hostname",
+            "device_name": "device.name,device.hostname,device.domain",
+            "hostname": "device.hostname,device.domain",
             "os_is_server": "device.type",
             "os_name": "device.os.name",
             "os_family": "device.os.type",
@@ -391,8 +395,8 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
             "max_severity": "device.risk_level",
             "risk_score": "device.risk_score",
             "net_assets.uuid": "device.uid",
-            "net_assets.name": "device.name",
-            "net_assets.hostname": "device.hostname",
+            "net_assets.name": "device.name,device.hostname,device.domain",
+            "net_assets.hostname": "device.hostname,device.domain",
             "net_assets.ip": "device.ip",
             "net_assets.type": "device.type",
             "net_assets.operating_system": "device.os.name",
