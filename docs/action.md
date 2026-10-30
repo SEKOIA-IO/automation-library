@@ -111,3 +111,12 @@ if __name__ == "__main__":
 - Nested structures must match
 
 Mismatches will cause runtime validation errors.
+
+## HWL Actions
+
+An action can also be described by an HWL workflow (see `sekoia-hwl`) instead of Python code:
+
+- The action is a single `action_<name>.yml` file at the module root. The YAML is its only descriptor: there is no `action_*.json`.
+- Its `docker_parameter` is the YAML file name (e.g. `action_<name>.yml`), passed to the `hwl-automation-run` entrypoint.
+- A module can mix Python and HWL actions. If it has `action_*.yml` files, CI builds a second image, `automation-module-<slug>-hwl`, based on the `symphony-hwl-automation` runner image and embedding only `manifest.json` and the `action_*.yml` files (see `.github/docker/hwl.Dockerfile`).
+- A module with only HWL actions needs no `Dockerfile`, `main.py` or `pyproject.toml`.
