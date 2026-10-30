@@ -4,10 +4,12 @@ from functools import cached_property
 from typing import Any
 
 from dateutil.parser import isoparse
+from google.auth.exceptions import RefreshError
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from sekoia_automation.asset_connector import AssetConnector
-from sekoia_automation.asset_connector.models.connector import DefaultAssetConnectorConfiguration
+from sekoia_automation.asset_connector.models.connector import AssetList, DefaultAssetConnectorConfiguration
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
@@ -32,6 +34,23 @@ NEVER_LOGGED_IN_PREFIX = "1970-01-01"
 EVERY_USER = "*"
 # Retries of 429, 5xx and rate limit 403 answers, with exponential backoff
 NUM_RETRIES = 5
+RATE_LIMIT_REASONS = {"userRateLimitExceeded", "rateLimitExceeded"}
+USER_SCOPE = "https://www.googleapis.com/auth/admin.directory.user.readonly"
+GROUP_SCOPE = "https://www.googleapis.com/auth/admin.directory.group.readonly"
+ACCESS_HINT = (
+    "In the Admin console, under Security > API controls > Domain-wide delegation, authorize the service account "
+    f"client ID for {USER_SCOPE} and {GROUP_SCOPE}, and set admin_mail to a Google Workspace administrator"
+)
+
+
+def is_access_denied(error: Exception) -> bool:
+    """True for a missing delegation scope or administrator privilege, False for a transient error."""
+    if isinstance(error, RefreshError):
+        return not error.retryable
+    if isinstance(error, HttpError) and error.status_code in (401, 403):
+        reasons = {detail.get("reason") for detail in error.error_details or [] if isinstance(detail, dict)}
+        return not reasons & RATE_LIMIT_REASONS
+    return False
 
 
 class GoogleWorkspaceUserAssetConnectorConfiguration(DefaultAssetConnectorConfiguration):
@@ -49,10 +68,6 @@ class GoogleWorkspaceUserAssetConnector(AssetConnector):
 
     configuration: GoogleWorkspaceUserAssetConnectorConfiguration
 
-    SCOPES = [
-        "https://www.googleapis.com/auth/admin.directory.user.readonly",
-        "https://www.googleapis.com/auth/admin.directory.group.readonly",
-    ]
     CUSTOMER = "my_customer"
     OCSF_VERSION = "1.6.0"
 
@@ -63,11 +78,9 @@ class GoogleWorkspaceUserAssetConnector(AssetConnector):
         self._listing_complete = False
         self._pending = False
 
-    @cached_property
-    def directory(self) -> Any:
-        """Directory API client acting as the configured Google Workspace administrator."""
+    def _build_directory(self, scope: str) -> Any:
         credentials = service_account.Credentials.from_service_account_info(
-            self.module.configuration["credentials"], scopes=self.SCOPES
+            self.module.configuration["credentials"], scopes=[scope]
         )
         return build(
             "admin",
@@ -75,6 +88,16 @@ class GoogleWorkspaceUserAssetConnector(AssetConnector):
             credentials=credentials.with_subject(self.configuration.admin_mail),
             cache_discovery=False,
         )
+
+    @cached_property
+    def directory(self) -> Any:
+        """Directory API client for users, acting as the configured Google Workspace administrator."""
+        return self._build_directory(USER_SCOPE)
+
+    @cached_property
+    def groups_directory(self) -> Any:
+        """Directory API client for groups, with its own scope so a missing group scope does not block users."""
+        return self._build_directory(GROUP_SCOPE)
 
     def _list(self, resource: Any, key: str, **params: Any) -> Generator[dict[str, Any], None, None]:
         page_token = None
@@ -88,16 +111,35 @@ class GoogleWorkspaceUserAssetConnector(AssetConnector):
     def _groups_by_user(self) -> dict[str, list[Group]]:
         """Return the groups each user is a direct member of, groups of every user under `EVERY_USER`."""
         groups_by_user: dict[str, list[Group]] = {}
-        for group in self._list(self.directory.groups(), "groups", customer=self.CUSTOMER, maxResults=200):
+        directory = self.groups_directory
+        for group in self._list(directory.groups(), "groups", customer=self.CUSTOMER, maxResults=200):
+            if group.get("directMembersCount") == "0":
+                continue
             ocsf_group = Group(
                 uid=group["id"], name=group.get("name") or group["email"], desc=group.get("description") or None
             )
-            for member in self._list(self.directory.members(), "members", groupKey=group["id"], maxResults=200):
-                if member.get("type") == "USER":
-                    groups_by_user.setdefault(member["id"], []).append(ocsf_group)
-                elif member.get("type") == "CUSTOMER":
-                    groups_by_user.setdefault(EVERY_USER, []).append(ocsf_group)
+            try:
+                for member in self._list(directory.members(), "members", groupKey=group["id"], maxResults=200):
+                    if member.get("type") == "USER":
+                        groups_by_user.setdefault(member["id"], []).append(ocsf_group)
+                    elif member.get("type") == "CUSTOMER":
+                        groups_by_user.setdefault(EVERY_USER, []).append(ocsf_group)
+            except HttpError as error:
+                # Group deleted between groups.list and members.list
+                if error.status_code != 404:
+                    raise
+                self.log(f"Skipping Google Workspace group {group['id']}: not found", level="warning")
         return groups_by_user
+
+    def _groups_or_none(self) -> dict[str, list[Group]]:
+        """Groups by user, empty when access to groups is denied so users are still collected."""
+        try:
+            return self._groups_by_user()
+        except Exception as error:
+            if not is_access_denied(error):
+                raise
+            self.log(f"Collecting users without groups, groups access denied: {error!r}. {ACCESS_HINT}", level="error")
+            return {}
 
     def map_fields(self, user: dict[str, Any], groups: list[Group]) -> UserOCSFModel:
         """Map a Directory API user and its groups to the OCSF user inventory model."""
@@ -186,7 +228,7 @@ class GoogleWorkspaceUserAssetConnector(AssetConnector):
         changed = 0
 
         try:
-            groups_by_user = self._groups_by_user()
+            groups_by_user = self._groups_or_none()
             every_user_groups = groups_by_user.get(EVERY_USER, [])
             for user in self._list(self.directory.users(), "users", customer=self.CUSTOMER, maxResults=500):
                 try:
@@ -204,12 +246,23 @@ class GoogleWorkspaceUserAssetConnector(AssetConnector):
                     yield asset
             self._listing_complete = self.running
         except Exception as error:
-            self.log_exception(error, message="Failed to list Google Workspace users")
+            if is_access_denied(error):
+                self.log(f"Google Workspace users access denied: {error!r}. {ACCESS_HINT}", level="error")
+            else:
+                self.log_exception(error, message="Failed to list Google Workspace users")
 
         # No push follows when every yielded user was already checkpointed: save the snapshot here
         if self._listing_complete and not self._pending:
             self.update_checkpoint()
         self.log(f"{changed} new or changed users out of {len(self._fingerprints)} listed", level="info")
+
+    def post_assets_to_api(self, assets: AssetList, asset_connector_api_url: str) -> dict[str, str] | None:
+        """Push a batch; on failure forget its fingerprints so a later checkpoint does not mark its users known."""
+        response = super().post_assets_to_api(assets, asset_connector_api_url)
+        if response is None:
+            for asset in assets.items:
+                self._fingerprints.pop(asset.user.uid, None)  # type: ignore[union-attr]
+        return response
 
     def update_checkpoint(self) -> None:
         """Save the fingerprints of the users listed so far."""
@@ -226,5 +279,26 @@ class GoogleWorkspaceUserAssetConnector(AssetConnector):
         self._fingerprints = {}
 
     def get_mapped_fields(self) -> dict[str, str]:
-        """Empty: fingerprints cover the OCSF output, so a mapping change re-pushes affected users on its own."""
-        return {}
+        """Return the Directory API -> OCSF field mapping used for schema-change fingerprinting."""
+        return {
+            "creationTime": "time",
+            "id": "user.uid, user.account.uid",
+            "primaryEmail": "user.name, user.email_addr, user.domain, user.account.name",
+            "name.fullName": "user.full_name",
+            "name.displayName": "user.display_name",
+            "isEnrolledIn2Sv": "user.has_mfa",
+            "isAdmin": "user.type",
+            "isDelegatedAdmin": "user.type",
+            "members.list.id": "user.groups",
+            "organizations.name": "user.org.name",
+            "orgUnitPath": "user.org.ou_name",
+            "name.givenName": "user.ldap_person.given_name",
+            "name.familyName": "user.ldap_person.surname",
+            "organizations.title": "user.ldap_person.job_title",
+            "organizations.department": "user.ldap_person.department",
+            "organizations.location": "user.ldap_person.office_location",
+            "externalIds.value": "user.ldap_person.employee_uid",
+            "suspended": "enrichments.access_control.data.is_enabled",
+            "archived": "enrichments.access_control.data.is_enabled",
+            "lastLoginTime": "enrichments.access_control.data.last_logon",
+        }

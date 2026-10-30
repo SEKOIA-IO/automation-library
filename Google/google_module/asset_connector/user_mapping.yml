@@ -61,72 +61,86 @@ mapping:
     - source: "static: 2"
       target: "activity_id"
       type: "integer"
+      logic: "Static value"
       description: "OCSF activity ID – always 2 for Collect"
 
     - source: "static: Collect"
       target: "activity_name"
       type: "string"
+      logic: "Static value"
       description: "OCSF activity name"
 
     - source: "static: Discovery"
       target: "category_name"
       type: "string"
+      logic: "Static value"
       description: "OCSF category name"
 
     - source: "static: 5"
       target: "category_uid"
       type: "integer"
+      logic: "Static value"
       description: "OCSF category UID"
 
     - source: "static: User Inventory Info"
       target: "class_name"
       type: "string"
+      logic: "Static value"
       description: "OCSF class name"
 
     - source: "static: 5003"
       target: "class_uid"
       type: "integer"
+      logic: "Static value"
       description: "OCSF class UID"
 
     - source: "static: User Inventory Info: Collect"
       target: "type_name"
       type: "string"
+      logic: "Static value"
       description: "OCSF type name"
 
     - source: "static: 500302"
       target: "type_uid"
       type: "integer"
+      logic: "Static value"
       description: "OCSF type UID"
 
     - source: "static: Informational"
       target: "severity"
       type: "string"
+      logic: "Static value"
       description: "Event severity"
 
     - source: "static: 1"
       target: "severity_id"
       type: "integer"
+      logic: "Static value"
       description: "OCSF severity ID"
 
     # METADATA
     - source: "static: Google Workspace"
       target: "metadata.product.name"
       type: "string"
+      logic: "Static value"
       description: "Source product name"
 
     - source: "static: Google"
       target: "metadata.product.vendor_name"
       type: "string"
+      logic: "Static value"
       description: "Source product vendor"
 
     - source: "static: N/A"
       target: "metadata.product.version"
       type: "string"
+      logic: "Static value"
       description: "Product version"
 
     - source: "static: 1.6.0"
       target: "metadata.version"
       type: "string"
+      logic: "Static value"
       description: "OCSF schema version"
 
     # TIMESTAMPS
@@ -243,6 +257,7 @@ mapping:
     - source: "static: access_control / google_workspace"
       target: "enrichments[0].name / enrichments[0].value"
       type: "string"
+      logic: "Static value"
       description: "Enrichment describing the account state"
 
     - source: "suspended, archived"
@@ -257,12 +272,9 @@ mapping:
       logic: "Direct mapping; omitted when the user never logged in (1970-01-01T00:00:00.000Z)"
       description: "Date of the last login"
 
-    # CHECKPOINT
-    - source: "OCSF output per user"
-      target: "context.known_users[id]"
-      type: "string"
-      logic: "Every cycle lists all users. A fingerprint of each OCSF output is stored per user id; users whose fingerprint did not change since the previous cycle are not pushed. Users no longer listed are dropped from the cache once a cycle lists every user."
-      description: "Change detection: the Directory API has no modification date to filter on"
+    # Not an OCSF field. Change detection: every cycle lists all users and stores a fingerprint of each OCSF
+    # output per user id in user_context.json (known_users). Users whose fingerprint did not change since the
+    # previous cycle are not pushed. Users no longer listed are dropped from the cache once a cycle lists every user.
 
   not_mapped:
     - field: "isEnforcedIn2Sv"

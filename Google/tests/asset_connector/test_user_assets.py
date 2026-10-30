@@ -2,11 +2,17 @@ from unittest.mock import MagicMock, Mock, patch
 
 import httplib2
 import pytest
+from google.auth.exceptions import RefreshError
 from googleapiclient.errors import HttpError
 from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.module import Module
 
-from google_module.asset_connector.user_assets import KNOWN_USERS_KEY, GoogleWorkspaceUserAssetConnector
+from google_module.asset_connector.user_assets import (
+    GROUP_SCOPE,
+    KNOWN_USERS_KEY,
+    USER_SCOPE,
+    GoogleWorkspaceUserAssetConnector,
+)
 
 ADMIN_USER = {
     "id": "100000000000000000001",
@@ -55,7 +61,7 @@ def connector(tmp_path, credentials):
     }
     connector.log = Mock()
     connector.log_exception = Mock()
-    connector.directory = MagicMock()
+    connector.directory = connector.groups_directory = MagicMock()
     return connector
 
 
@@ -63,20 +69,31 @@ def serve(connector, user_pages, groups=(), members=None):
     directory = connector.directory
     directory.users.return_value.list.return_value.execute.side_effect = list(user_pages)
     directory.groups.return_value.list.return_value.execute.return_value = {"groups": list(groups)}
-    directory.members.return_value.list.side_effect = lambda groupKey, **_: Mock(
-        execute=Mock(return_value={"members": (members or {}).get(groupKey, [])})
-    )
+
+    def list_members(groupKey, **_):
+        group_members = (members or {}).get(groupKey, [])
+        if isinstance(group_members, Exception):
+            return Mock(execute=Mock(side_effect=group_members))
+        return Mock(execute=Mock(return_value={"members": group_members}))
+
+    directory.members.return_value.list.side_effect = list_members
 
 
-def test_directory_impersonates_admin(connector, credentials):
-    del connector.directory
+def http_error(status, reason=""):
+    content = b'{"error": {"code": %d, "message": "error", "errors": [{"reason": "%s"}]}}' % (status, reason.encode())
+    return HttpError(httplib2.Response({"status": status}), content)
+
+
+@pytest.mark.parametrize("attribute,scope", [("directory", USER_SCOPE), ("groups_directory", GROUP_SCOPE)])
+def test_directory_impersonates_admin(connector, credentials, attribute, scope):
+    delattr(connector, attribute)
     with (
         patch("google_module.asset_connector.user_assets.service_account.Credentials") as credentials_class,
         patch("google_module.asset_connector.user_assets.build") as build,
     ):
-        assert connector.directory is build.return_value
+        assert getattr(connector, attribute) is build.return_value
 
-    credentials_class.from_service_account_info.assert_called_once_with(credentials, scopes=connector.SCOPES)
+    credentials_class.from_service_account_info.assert_called_once_with(credentials, scopes=[scope])
     delegated = credentials_class.from_service_account_info.return_value.with_subject
     delegated.assert_called_once_with("admin@example.com")
     build.assert_called_once_with("admin", "directory_v1", credentials=delegated.return_value, cache_discovery=False)
@@ -290,7 +307,7 @@ def test_get_assets_api_error_keeps_known_users(connector):
         connector,
         [
             {"users": [ADMIN_USER], "nextPageToken": "page-2"},
-            HttpError(httplib2.Response({"status": 403}), b"forbidden"),
+            http_error(500),
         ],
     )
 
@@ -313,3 +330,107 @@ def test_fetch_cycle_pushes_changes_once(connector):
         serve(connector, [{"users": [ADMIN_USER, SUSPENDED_USER]}])
         connector.asset_fetch_cycle()
         assert connector._http_session.post.call_count == 2
+
+
+def test_group_without_name_falls_back_to_email(connector):
+    serve(
+        connector,
+        [{"users": [ADMIN_USER]}],
+        groups=[{"id": "group-1", "email": "engineering@example.com"}],
+        members={"group-1": [{"id": ADMIN_USER["id"], "type": "USER"}]},
+    )
+
+    (asset,) = connector.get_assets()
+
+    assert [group.name for group in asset.user.groups] == ["engineering@example.com"]
+
+
+def test_empty_groups_are_not_listed(connector):
+    serve(connector, [{"users": [ADMIN_USER]}], groups=[{**GROUP, "directMembersCount": "0"}])
+
+    list(connector.get_assets())
+
+    connector.directory.members.return_value.list.assert_not_called()
+
+
+def test_deleted_group_is_skipped(connector):
+    serve(
+        connector,
+        [{"users": [ADMIN_USER]}],
+        groups=[{**GROUP, "id": "deleted"}, GROUP],
+        members={"deleted": http_error(404), "group-1": [{"id": ADMIN_USER["id"], "type": "USER"}]},
+    )
+
+    (asset,) = connector.get_assets()
+
+    assert [group.uid for group in asset.user.groups] == ["group-1"]
+    connector.log.assert_any_call("Skipping Google Workspace group deleted: not found", level="warning")
+
+
+@pytest.mark.parametrize("error", [http_error(403, "forbidden"), RefreshError("unauthorized_client")])
+def test_groups_access_denied_collects_users_without_groups(connector, error):
+    serve(connector, [{"users": [ADMIN_USER]}])
+    connector.directory.groups.return_value.list.return_value.execute.side_effect = error
+
+    (asset,) = connector.get_assets()
+
+    assert asset.user.groups is None
+    message = connector.log.call_args_list[0].args[0]
+    assert "Collecting users without groups" in message and GROUP_SCOPE in message
+    connector.log_exception.assert_not_called()
+
+
+def test_groups_rate_limit_ends_the_cycle(connector):
+    serve(connector, [{"users": [ADMIN_USER]}])
+    connector.directory.groups.return_value.list.return_value.execute.side_effect = http_error(
+        403, "userRateLimitExceeded"
+    )
+
+    assert list(connector.get_assets()) == []
+    connector.log_exception.assert_called_once()
+
+
+def test_users_access_denied_logs_delegation_hint(connector):
+    serve(connector, [RefreshError("unauthorized_client")])
+
+    assert list(connector.get_assets()) == []
+    message = connector.log.call_args_list[0].args[0]
+    assert "access denied" in message and USER_SCOPE in message and "admin_mail" in message
+    connector.log_exception.assert_not_called()
+
+
+def test_stop_during_listing_merges_the_cache(connector):
+    with connector.context as cache:
+        cache[KNOWN_USERS_KEY] = {"known-user": "fingerprint"}
+    serve(connector, [{"users": [ADMIN_USER], "nextPageToken": "page-2"}, {"users": [SUSPENDED_USER]}])
+
+    assets = connector.get_assets()
+    next(assets)
+    connector.stop()
+    assert list(assets) == []
+    connector.update_checkpoint()
+
+    with connector.context as cache:
+        assert set(cache[KNOWN_USERS_KEY]) == {"known-user", ADMIN_USER["id"]}
+
+
+def test_users_of_a_failed_push_are_retried_next_cycle(connector):
+    serve(connector, [{"users": [ADMIN_USER, SUSPENDED_USER]}])
+    failed = Mock(status_code=500, json=Mock(return_value={"message": "error", "code": "error"}))
+    succeeded = Mock(status_code=200, json=Mock(return_value={}))
+    connector._http_session = Mock()
+    connector._http_session.post.side_effect = [failed, succeeded, succeeded]
+
+    with patch("sekoia_automation.asset_connector.connector.time.sleep"):
+        connector.asset_fetch_cycle()
+        serve(connector, [{"users": [ADMIN_USER, SUSPENDED_USER]}])
+        connector.asset_fetch_cycle()
+
+    pushed = [call.kwargs["json"]["items"][0]["user"]["uid"] for call in connector._http_session.post.call_args_list]
+    assert pushed == [ADMIN_USER["id"], SUSPENDED_USER["id"], ADMIN_USER["id"]]
+    with connector.context as cache:
+        assert set(cache[KNOWN_USERS_KEY]) == {ADMIN_USER["id"], SUSPENDED_USER["id"]}
+
+
+def test_get_mapped_fields_declares_the_mapping(connector):
+    assert connector.get_mapped_fields()["id"] == "user.uid, user.account.uid"
