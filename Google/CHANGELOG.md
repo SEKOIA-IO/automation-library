@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-29 - 1.23.0
+
+### Added
+
+- Add the Google Workspace user asset connector
+- Add an account validator checking the service account key
+
+### Changed
+
+- Upgrade `sekoia-automation-sdk` to 1.26.0
+
 ## 2026-06-17 - 1.22.2
 
 ### Changed
