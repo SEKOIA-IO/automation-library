@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgraded `sekoia-automation-sdk` to 1.27.0, which rate limits the logs sent to the API
 - Replaced black/isort by ruff and aligned the code with pydantic v2
 
+### Fixed
+
+- Event Hub: display the actual consumer wait time in the "No new messages received" log
+
 ## 2026-10-30 - 2.9.5
 
 ### Fixed

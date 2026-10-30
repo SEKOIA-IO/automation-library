@@ -137,7 +137,7 @@ class AzureEventsHubTrigger(AsyncConnector):
         else:  # pragma: no cover
             # We reached the max_wait_time, close the current client
             self.log(
-                message=(f"No new messages received from the last {self._frequency} seconds."),
+                message=(f"No new messages received from the last {self._consumption_max_wait_time} seconds."),
             )
 
             # reset the metrics
