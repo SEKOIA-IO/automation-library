@@ -2,10 +2,10 @@ import asyncio
 import os
 import time
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import cached_property
 from hashlib import sha1
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 
 import orjson
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
@@ -13,11 +13,19 @@ from azure.eventhub import EventData
 from azure.eventhub.aio import EventHubConsumerClient, PartitionContext
 from azure.eventhub.extensions.checkpointstoreblobaio import BlobCheckpointStore
 from azure.storage.blob.aio import BlobServiceClient
+from pydantic import Field
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from .logger import get_logger
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, MESSAGES_AGE, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    MESSAGES_AGE,
+    OUTCOMING_EVENTS,
+    SKIPPED_RECORDS,
+)
 
 logger = get_logger()
 
@@ -28,10 +36,10 @@ class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
     hub_consumer_group: str
     storage_connection_string: str
     storage_container_name: str
-    categories: list[str] = []
+    categories: list[str] = Field(default_factory=list)
 
 
-class Client(object):
+class Client:
     _client: EventHubConsumerClient | None = None
 
     def __init__(self, configuration: AzureEventsHubConfiguration) -> None:
@@ -56,7 +64,7 @@ class Client(object):
 
         return self._client
 
-    async def receive_batch(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    async def receive_batch(self, *args: Any, **kwargs: Any | None) -> None:
         try:
             # Default value for max batch size is 300 if not provided.
             await self.client().receive_batch(*args, **kwargs)  # type: ignore
@@ -77,7 +85,7 @@ class AzureEventsHubTrigger(AsyncConnector):
 
     configuration: AzureEventsHubConfiguration
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         super().__init__(*args, **kwargs)
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "10"), 10)  # 10 seconds default
         self._frequency = int(os.environ.get("FREQUENCY_MAX_TIME", "10"), 10)
@@ -141,7 +149,7 @@ class AzureEventsHubTrigger(AsyncConnector):
         """
         Return the records according to the body of the message
         """
-        body: Union[str, dict[str, Any]]
+        body: str | dict[str, Any]
 
         try:
             body = message.body_as_json()
@@ -153,11 +161,11 @@ class AzureEventsHubTrigger(AsyncConnector):
                 return [], "json"
             else:
                 return [body], "json"
-        except:
+        except Exception:
             body = message.body_as_str()
             return [body], "str"
 
-    async def forward_events(self, messages: list[EventData]) -> None:
+    async def forward_events(self, messages: list[EventData]) -> None:  # type: ignore[override]
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(messages))
         start = time.time()
 
@@ -202,6 +210,7 @@ class AzureEventsHubTrigger(AsyncConnector):
                         records.append(record)
 
         if skipped_categories:
+            SKIPPED_RECORDS.labels(intake_key=self.configuration.intake_key).inc(skipped_categories.total())
             self.log(
                 message=(
                     f"Skip {skipped_categories.total()} records as their categories are not in allowed categories "
@@ -223,7 +232,7 @@ class AzureEventsHubTrigger(AsyncConnector):
 
         enqueued_times = [message.enqueued_time for message in messages if message.enqueued_time is not None]
         if len(enqueued_times) > 0:  # pragma: no cover
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             messages_age = [int((now - enqueued_time).total_seconds()) for enqueued_time in enqueued_times]
 
             # Compute the distance from the most recent message consumed
@@ -234,7 +243,7 @@ class AzureEventsHubTrigger(AsyncConnector):
             for age in messages_age:
                 MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).set(age)
 
-    async def handle_exception(self, partition_context: PartitionContext, exception: Exception) -> None:
+    async def handle_exception(self, partition_context: PartitionContext, exception: Exception) -> None:  # noqa: ARG002
         self.log_exception(
             exception,
             message="Error raised when consuming messages",
@@ -252,7 +261,7 @@ class AzureEventsHubTrigger(AsyncConnector):
         except ResourceNotFoundError as e:  # pragma: no cover
             self.log(str(e), level="warning")
 
-    def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:  # pragma: no cover
+    def stop(self, *args: Any, **kwargs: Any | None) -> None:  # pragma: no cover
         """
         Stop the connector
         """
@@ -274,7 +283,8 @@ class AzureEventsHubTrigger(AsyncConnector):
             if not self._has_more_events:
                 await asyncio.sleep(self._frequency)
 
-        await self._session.close()
+        if self._session is not None:
+            await self._session.close()
 
     def run(self) -> None:  # pragma: no cover
         self.log("Azure EventHub Trigger has started")

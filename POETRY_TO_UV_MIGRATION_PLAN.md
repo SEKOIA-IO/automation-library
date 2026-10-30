@@ -41,9 +41,12 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 ### Wave 4 first batch completed in this session
 - CatoNetwork
 
+### Wave 5 first batch completed in this session
+- Azure (kept on Python 3.13: `uamqp` has no Python 3.14 wheel)
+
 ### Remaining scope
-- Remaining modules to migrate: 85
-- Remaining planned effort: about 385.0 hours
+- Remaining modules to migrate: 84
+- Remaining planned effort: about 379.0 hours
 - Criticity scale: 1 (easiest) to 10 (hardest)
 
 ## Incremental Delivery Strategy
@@ -161,7 +164,6 @@ Estimated wave effort: 96h
 Estimated wave effort: 108h
 
 ### Wave 5: Criticity 8 (estimated 6h each)
-- Azure
 - CrowdStrikeFalcon
 - CyberArk
 - ElasticSearch
