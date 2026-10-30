@@ -91,7 +91,22 @@ def usta_client(symphony_storage: Path) -> UstaClient:
 
 
 @pytest.fixture
-def atp_connector(symphony_storage: Path) -> UstaAtpConnector:
+def data_storage(tmp_path: Path) -> Path:
+    """Creates a temporary data path where the connector persists its checkpoint.
+
+    Args:
+        tmp_path (Path): Pytest fixture for temporary directories.
+
+    Returns:
+        Path: The data path of the connector.
+    """
+    path = tmp_path / "data"
+    path.mkdir()
+    return path
+
+
+@pytest.fixture
+def atp_connector(symphony_storage: Path, data_storage: Path) -> UstaAtpConnector:
     """Creates a configured UstaAtpConnector instance with mocked IO methods.
 
     This fixture initializes the connector, sets up a mock configuration,
@@ -100,11 +115,12 @@ def atp_connector(symphony_storage: Path) -> UstaAtpConnector:
 
     Args:
         symphony_storage (Path): The temporary storage path for the connector context.
+        data_storage (Path): The data path where the connector persists its checkpoint.
 
     Returns:
         UstaAtpConnector: A ready-to-test connector instance.
     """
-    connector = UstaAtpConnector()
+    connector = UstaAtpConnector(data_path=data_storage)
     connector.module = UstaModule()
     connector.module.configuration = {"api_key": "test_api_key"}
 

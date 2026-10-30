@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-26 - 1.1.2
+
+### Fixed
+
+- Persist the ATP connector checkpoint so a restart no longer re-collects up to `max_historical_days` of events
+- Move the ATP connector checkpoint to the most recent `created` date of the forwarded events, only once they are forwarded, and skip events already forwarded at the checkpoint boundary
+
 ## 2026-07-30 - 1.1.1
 
 ### Changed
