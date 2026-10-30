@@ -2,37 +2,30 @@ from functools import cached_property
 from typing import Any
 
 from requests import Response
-from requests.exceptions import ConnectionError, RequestException, SSLError, Timeout
+from requests.exceptions import ConnectionError, RequestException, Timeout
 from sekoia_automation.account_validator import AccountValidator
 
 from rapid7_insightvm.client import ApiClient
 
 
 class Rapid7InsightVMAccountValidator(AccountValidator):
-    """Validate the InsightVM credentials against every endpoint used by the connectors.
+    """Validate the Insight Platform API key, its region and its access to InsightVM.
 
-    InsightVM answers 404 (not 403) to an authenticated account lacking the permission
-    to view a collection, so a 404 is reported as a missing permission.
+    Every endpoint used by the connectors is probed with a one-item page.
     """
 
-    # (HTTP method, endpoint, JSON body) probes that must each return 200, with one item per page.
+    # (HTTP method, endpoint, JSON body) probes that must each return 200.
     VALIDATION_ENDPOINTS: list[tuple[str, str, dict[str, Any] | None]] = [
-        ("GET", "/api/3/assets", None),
-        ("GET", "/api/3/vulnerabilities", None),
-        (
-            "POST",
-            "/api/3/assets/search",
-            {"match": "all", "filters": [{"field": "last-scan-date", "operator": "is-within-the-last", "value": 1}]},
-        ),
+        ("POST", "/assets", {}),
+        ("POST", "/vulnerabilities", {}),
     ]
-    PROBE_PARAMS: dict[str, int] = {"page": 0, "size": 1}
+    PROBE_PARAMS: dict[str, int] = {"size": 1}
 
     @cached_property
     def client(self) -> ApiClient:
         return ApiClient.from_configuration(self.module.configuration)
 
-    @staticmethod
-    def _describe_error(url: str, response: Response) -> str:
+    def _describe_error(self, url: str, response: Response) -> str:
         code = response.status_code
         try:
             body = response.json()
@@ -41,17 +34,20 @@ class Rapid7InsightVMAccountValidator(AccountValidator):
             detail = response.text
 
         if code == 401:
-            return f"Invalid InsightVM credentials (401) at {url}: check the username and the password: {detail}"
-        if code == 404:
             return (
-                f"The InsightVM account is authenticated but not allowed to read {url} (404): grant it the "
-                f"'View Site Asset Data' or 'View Group Asset Data' permission on the sites in scope: {detail}"
+                f"Invalid API key, or API key from another region: check `api_key` and `region` "
+                f"({self.client.region}) (401 at {url}): {detail}"
+            )
+        if code in (403, 404):
+            return (
+                "The API key is valid but has no access to InsightVM: use an Organization key or a User key "
+                f"with an InsightVM role ({code} at {url}): {detail}"
             )
         if 400 <= code < 500:
-            return f"Client error ({code}) while validating InsightVM credentials at {url}: {detail}"
+            return f"Client error ({code}) while validating the Rapid7 InsightVM API key at {url}: {detail}"
         if 500 <= code < 600:
-            return f"Server error ({code}) while validating InsightVM credentials at {url}: {detail}"
-        return f"Unexpected status ({code}) while validating InsightVM credentials at {url}: {detail}"
+            return f"Server error ({code}) while validating the Rapid7 InsightVM API key at {url}: {detail}"
+        return f"Unexpected status ({code}) while validating the Rapid7 InsightVM API key at {url}: {detail}"
 
     def _fail(self, message: str) -> bool:
         self.log(message=message, level="error")
@@ -65,22 +61,16 @@ class Rapid7InsightVMAccountValidator(AccountValidator):
             response = self.client.request(
                 method, url, params=self.PROBE_PARAMS, json=body, timeout=self.client.TIMEOUT
             )
-        except SSLError as error:
-            return self._fail(
-                f"TLS error while connecting to {url}: {error}. If the Security Console uses a self-signed "
-                "certificate, disable 'verify_certificate' in the module configuration"
-            )
         except Timeout:
-            return self._fail(f"Timeout while validating InsightVM credentials at {url}")
+            return self._fail(f"Timeout while validating the Rapid7 InsightVM API key at {url}")
         except ConnectionError as error:
             return self._fail(
-                f"Unable to reach the Security Console at {url}: check the host and the port (3780 by default): "
-                f"{error}"
+                f"Unable to reach the Insight Platform at {url}: check the region ({self.client.region}): {error}"
             )
         except RequestException as error:
-            return self._fail(f"Network error while validating InsightVM credentials at {url}: {error}")
+            return self._fail(f"Network error while validating the Rapid7 InsightVM API key at {url}: {error}")
         except Exception as error:
-            return self._fail(f"Unexpected error while validating InsightVM credentials at {url}: {error}")
+            return self._fail(f"Unexpected error while validating the Rapid7 InsightVM API key at {url}: {error}")
 
         if response.status_code == 200:
             return True

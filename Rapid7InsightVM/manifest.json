@@ -2,34 +2,34 @@
   "configuration": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "base_url": {
-        "description": "Base URL of the InsightVM Security Console, including the port (e.g. https://insightvm.example.com:3780)",
+      "region": {
+        "description": "Region of the Insight Platform (the prefix of https://<region>.api.insight.rapid7.com)",
         "type": "string",
-        "format": "uri"
+        "enum": [
+          "us",
+          "us2",
+          "us3",
+          "eu",
+          "ca",
+          "au",
+          "ap",
+          "aps2",
+          "me1"
+        ]
       },
-      "username": {
-        "description": "Username of the Security Console account used to query the API (the account must not use two-factor authentication)",
+      "api_key": {
+        "description": "Insight Platform API key (Organization key or User key with access to InsightVM)",
         "type": "string"
-      },
-      "password": {
-        "description": "Password of the Security Console account",
-        "type": "string"
-      },
-      "verify_certificate": {
-        "description": "Verify the TLS certificate of the Security Console. Disable it only for a console using a self-signed certificate",
-        "type": "boolean",
-        "default": true
       }
     },
     "required": [
-      "base_url",
-      "username",
-      "password"
+      "region",
+      "api_key"
     ],
     "title": "Arguments",
     "type": "object",
     "secrets": [
-      "password"
+      "api_key"
     ]
   },
   "description": "Rapid7 InsightVM is a vulnerability management platform that discovers assets, assesses them for vulnerabilities and prioritises remediation.",
