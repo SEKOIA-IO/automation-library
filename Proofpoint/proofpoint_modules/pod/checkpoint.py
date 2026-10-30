@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from dateutil.parser import isoparse
@@ -22,7 +22,7 @@ class Checkpoint:
                 most_recent_date_seen = isoparse(most_recent_date_seen_str)
 
                 # check if the date is older than the 30 days ago
-                thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+                thirty_days_ago = datetime.now(UTC) - timedelta(days=30)
                 if most_recent_date_seen < thirty_days_ago:
                     most_recent_date_seen = thirty_days_ago
 
