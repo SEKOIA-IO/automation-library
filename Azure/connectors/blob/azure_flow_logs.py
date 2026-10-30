@@ -1,6 +1,6 @@
 """Default Azure Key Vault connector."""
 
-from datetime import timezone
+from datetime import UTC
 
 import orjson
 from dateutil.parser import isoparse
@@ -31,7 +31,7 @@ class AzureFlowLogsConnector(AbstractAzureBlobConnector):
         time_filter = self.last_event_date
 
         for record in orjson.loads(data).get("records", []):
-            record_time = isoparse(record["time"]).astimezone(timezone.utc)
+            record_time = isoparse(record["time"]).astimezone(UTC)
 
             # If the record is too old, ignore it.
             if time_filter and record_time < time_filter:

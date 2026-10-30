@@ -40,3 +40,10 @@ MESSAGES_AGE = Gauge(
     namespace=prom_azure_namespace,
     labelnames=["intake_key"],
 )
+
+SKIPPED_RECORDS = Counter(
+    name="skipped_records",
+    documentation="Number of records skipped because their category is not in the configured categories",
+    namespace=prom_azure_namespace,
+    labelnames=["intake_key"],
+)

@@ -4,9 +4,10 @@ import asyncio
 import os
 import time
 from abc import ABCMeta
-from datetime import datetime, timedelta, timezone
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime, timedelta
 from gzip import decompress
-from typing import Any, AsyncGenerator, Optional
+from typing import Any
 
 import aiofiles
 from azure.storage.blob import BlobProperties
@@ -29,7 +30,7 @@ class AzureBlobConnectorConfig(DefaultConnectorConfiguration):
 
     container_name: str
     account_name: str
-    account_key: str = Field(secret=True)
+    account_key: str = Field(json_schema_extra={"secret": True})
     frequency: int = 60
 
 
@@ -41,7 +42,7 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
 
     _azure_blob_storage_wrapper: AzureBlobStorageWrapper | None = None
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         """Init AzureBlobConnector."""
 
         super().__init__(*args, **kwargs)
@@ -81,7 +82,7 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
         Returns:
             datetime:
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         one_hour_ago = (now - timedelta(hours=1)).replace(microsecond=0)
 
         with self.context as cache:
@@ -100,7 +101,7 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
 
             return last_event_date
 
-    async def get_most_recent_blobs(self, lower_bound: datetime) -> AsyncGenerator[BlobProperties, None]:
+    async def get_most_recent_blobs(self, lower_bound: datetime) -> AsyncGenerator[BlobProperties]:
         """
         Return the list of blobs, more recent than lower_bound.
 
@@ -212,7 +213,7 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
                     previous_processing_end = processing_end
 
                     if len(message_ids) > 0:
-                        self.log(message="Pushed {0} records".format(len(message_ids)), level="info")
+                        self.log(message=f"Pushed {len(message_ids)} records", level="info")
                     else:
                         self.log(message="No records to forward", level="info")
                         time.sleep(self.configuration.frequency)

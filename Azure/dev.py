@@ -4,7 +4,6 @@ This script is for a local debug only
 
 import argparse
 import logging
-from pathlib import Path
 
 from connectors.azure_eventhub import AzureEventsHubConfiguration, AzureEventsHubTrigger
 

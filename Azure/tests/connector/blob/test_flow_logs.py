@@ -1,6 +1,6 @@
 """Tests related to connector."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from gzip import GzipFile
 from tempfile import NamedTemporaryFile
 from unittest.mock import AsyncMock, MagicMock
@@ -53,7 +53,7 @@ async def test_flow_logs_last_event_date(connector):
     with connector.context as cache:
         cache["last_event_date"] = None
 
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
     one_hour_ago = current_date - timedelta(hours=1)
 
     assert connector.last_event_date == one_hour_ago
@@ -81,7 +81,7 @@ async def test_flow_logs_get_network_watcher_data_1(
         session_faker: Faker
         flow_logs_content: bytes
     """
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
 
     # Try to put last event date higher to be 1 day ahead of the log file date
     with connector.context as cache:
@@ -126,7 +126,7 @@ async def test_flow_logs_get_network_watcher_data_2(
         flow_logs_content: bytes
         pushed_events_ids: list[str]
     """
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
 
     # Try to put last event date higher to be 1 day ahead of the log file date
     with connector.context as cache:
@@ -174,7 +174,7 @@ async def test_flow_logs_get_network_watcher_data_3(
         symphony_storage: str
         flow_logs_content: bytes
     """
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
 
     # Try to put last event date higher to be 1 day ahead of the log file date
     with connector.context as cache:

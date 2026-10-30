@@ -1,6 +1,6 @@
 """Default Azure Key Vault connector."""
 
-from datetime import timezone
+from datetime import UTC
 
 import orjson
 from dateutil.parser import isoparse
@@ -30,7 +30,7 @@ class AzureNetworkWatcherConnector(AbstractAzureBlobConnector):
         modified_result = []
         time_filter = self.last_event_date
         for line in orjson.loads(data).get("records", []):
-            line_time = isoparse(line["time"]).astimezone(timezone.utc)
+            line_time = isoparse(line["time"]).astimezone(UTC)
 
             # If the record is too old, ignore it.
             if time_filter and line_time < time_filter:

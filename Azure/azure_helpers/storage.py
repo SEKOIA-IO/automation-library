@@ -1,7 +1,5 @@
 """Configs and wrapper to work with Azure Blob Storage."""
 
-from typing import Tuple
-
 import aiofiles
 from azure.core.async_paging import AsyncItemPaged
 from azure.storage.blob import BlobProperties
@@ -23,13 +21,13 @@ class AzureBlobStorageConfig(BaseModel):
         Returns:
             str:
         """
-        return "DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net".format(
-            self.account_name,
-            self.account_key,
+        return (
+            f"DefaultEndpointsProtocol=https;AccountName={self.account_name};"
+            f"AccountKey={self.account_key};EndpointSuffix=core.windows.net"
         )
 
 
-class AzureBlobStorageWrapper(object):
+class AzureBlobStorageWrapper:
     """Azure blob storage wrapper."""
 
     _client: ContainerClient | None = None
@@ -69,7 +67,7 @@ class AzureBlobStorageWrapper(object):
 
     async def download_blob(
         self, blob_name: str, download: bool = True, tmp_dir: str = "/tmp"
-    ) -> Tuple[str | None, bytes | None]:
+    ) -> tuple[str | None, bytes | None]:
         """
         Download blob content from Azure Blob Storage.
 

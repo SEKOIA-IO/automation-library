@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-30 - 2.10.0
+
+### Added
+
+- Event Hub: add the `symphony_module_azure_skipped_records` metric counting the records skipped by the categories filter
+
+### Changed
+
+- Migrated module from Poetry to uv (Python 3.13: `uamqp` does not provide Python 3.14 wheels yet)
+- Upgraded `sekoia-automation-sdk` to 1.27.0, which rate limits the logs sent to the API
+- Replaced black/isort by ruff and aligned the code with pydantic v2
+
+### Fixed
+
+- Event Hub: display the actual consumer wait time in the "No new messages received" log
+
 ## 2026-10-30 - 2.9.5
 
 ### Fixed
