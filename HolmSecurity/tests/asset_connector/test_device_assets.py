@@ -180,7 +180,27 @@ def test_network_absent(connector):
 
 def test_hostname_fallback(connector):
     device = connector.build_device(HolmDevice.model_validate(make_device(hostname=None)))
-    assert device.hostname == ""
+    assert device.hostname == "desktop-example01"
+
+
+def test_fqdn_hostname_is_split(connector):
+    device = connector.build_device(
+        HolmDevice.model_validate(make_device(hostname="ec2-63-35-154-82.eu-west-1.compute.amazonaws.com"))
+    )
+
+    assert device.hostname == "ec2-63-35-154-82"
+    assert device.domain == "eu-west-1.compute.amazonaws.com"
+    assert device.network_interfaces[0].hostname == "ec2-63-35-154-82"
+
+
+def test_unusable_hostname_is_not_sent(connector):
+    device = connector.build_device(
+        HolmDevice.model_validate(make_device(hostname="", device_name="BMXP342020 Modicon M340 Processor Module"))
+    )
+
+    assert device.hostname is None
+    assert device.domain is None
+    assert device.name == "BMXP342020 Modicon M340 Processor Module"
 
 
 def test_map_fields_without_timestamps_raises(connector):
@@ -303,7 +323,8 @@ def test_get_mapped_fields_declares_mapping(connector):
     fields = connector.get_mapped_fields()
 
     assert fields["uid"] == "device.uid"
-    assert fields["hostname"] == "device.hostname"
+    assert fields["hostname"] == "device.hostname,device.domain"
+    assert fields["device_name"] == "device.name,device.hostname,device.domain"
     assert fields["os_family"] == "device.os.type"
     assert fields["last_sync"] == "device.last_seen_time"
     assert fields["max_severity"] == "device.risk_level"
@@ -375,7 +396,8 @@ def test_map_net_asset_fields(connector):
 
     device = asset.device
     assert device.uid == NET_ASSET_UUID
-    assert device.hostname == "host-example01.example.com"
+    assert device.hostname == "host-example01"
+    assert device.domain == "example.com"
     assert device.name == "host-example01.example.com"
     assert device.ip == "192.0.2.20"
     assert device.is_managed is False
@@ -504,7 +526,8 @@ def test_get_mapped_fields_declares_the_net_asset_mapping(connector):
     fields = connector.get_mapped_fields()
 
     assert fields["net_assets.uuid"] == "device.uid"
-    assert fields["net_assets.hostname"] == "device.hostname"
+    assert fields["net_assets.hostname"] == "device.hostname,device.domain"
+    assert fields["net_assets.name"] == "device.name,device.hostname,device.domain"
     assert fields["net_assets.last_detected"] == "device.last_seen_time"
 
 

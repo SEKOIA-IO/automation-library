@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-10-30
+
+### Fixed
+
+- Send a hostname the asset management API accepts: split a fully qualified name into `hostname` and `domain`, fall back on the device name, and send no hostname instead of an empty one
+
 ## [1.3.4] - 2026-10-09
 
 ### Fixed
