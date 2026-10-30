@@ -37,5 +37,9 @@
     "title": "Bitsight findings",
     "type": "object"
   },
-  "uuid": "1b7e8b57-71b0-49b1-8d04-d936b984b91c"
+  "uuid": "1b7e8b57-71b0-49b1-8d04-d936b984b91c",
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": false
+  }
 }
