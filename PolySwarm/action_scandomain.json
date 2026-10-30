@@ -1,0 +1,126 @@
+{
+  "name": "Scan Domain",
+  "description": "Submit a domain to PolySwarm's engine marketplace for a fresh multi-engine verdict, via the URL scanning endpoint since PolySwarm has no separate domain endpoint. Spends a scan and creates account activity; reuses an existing result unless force_rescan is set. Use ScanIp for IP addresses.",
+  "uuid": "81a00bd7-036a-460b-abd6-303ae3685dd2",
+  "docker_parameters": "ScanDomain",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "scan_config": {
+        "type": "string",
+        "description": "How long PolySwarm waits for engines to answer before returning a verdict: 'default' is fastest; 'more-time' and 'most-time' wait longer so more engines can finish, at the cost of a slower playbook run.",
+        "default": "more-time",
+        "enum": [
+          "default",
+          "more-time",
+          "most-time"
+        ]
+      },
+      "domain": {
+        "type": "string",
+        "description": "The domain to scan, for example example.com. Submitted to PolySwarm's engine marketplace as a URL artifact, which spends a scan unless a matching result already exists."
+      },
+      "detect_threshold": {
+        "type": "integer",
+        "default": 1,
+        "minimum": 1,
+        "description": "How many malicious engine detections activate the detected branch. Default of 1 flags on any single detection."
+      },
+      "force_rescan": {
+        "type": "boolean",
+        "default": false,
+        "description": "Skip the check for an existing result and submit a new scan. This spends a scan even when PolySwarm already has a result for this domain, so leave it off unless you need a fresh verdict."
+      },
+      "max_wait_seconds": {
+        "type": "integer",
+        "default": 300,
+        "minimum": 30,
+        "maximum": 600,
+        "description": "How long to wait for the engines to finish a new scan, in seconds, from 30 to 600. A larger value is rejected with a validation error. Only applies when a new scan is submitted. If the engines have not finished by then the action stops with an error and the scan keeps running at PolySwarm, so look the result up again later."
+      }
+    },
+    "required": [
+      "domain"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "sha256": {
+        "type": "string",
+        "description": "SHA256 hash of the scan artifact"
+      },
+      "permalink": {
+        "type": "string",
+        "description": "Link to the PolySwarm scan result"
+      },
+      "polyscore": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "description": "PolySwarm threat score (0.0 - 1.0). The score is built around file artifacts. For a URL, a domain or an address, branch on the detection counts rather than on this score. Null when PolySwarm returned no score."
+      },
+      "extended_type": {
+        "type": "string",
+        "description": "Artifact type classification"
+      },
+      "malicious_count": {
+        "type": "integer",
+        "description": "Number of engines that flagged the domain as malicious"
+      },
+      "benign_count": {
+        "type": "integer",
+        "description": "Number of engines that flagged the domain as benign"
+      },
+      "total_count": {
+        "type": "integer",
+        "description": "Total number of engines that responded"
+      },
+      "failed": {
+        "type": "boolean",
+        "description": "Whether the scan failed"
+      },
+      "cached": {
+        "type": "boolean",
+        "description": "Whether the result came from an existing scan instead of a new submission"
+      },
+      "assertions": {
+        "type": "array",
+        "description": "Individual engine verdicts",
+        "items": {
+          "type": "object",
+          "properties": {
+            "engine_name": {
+              "type": "string",
+              "description": "Name of the engine that returned this verdict"
+            },
+            "author_name": {
+              "type": "string",
+              "description": "Name of the party that authored the engine"
+            },
+            "verdict": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "What the engine answered: true for malicious, false for benign, null when the engine abstained, which counts as neither"
+            }
+          }
+        }
+      },
+      "domain": {
+        "type": "string",
+        "description": "The domain that was scanned"
+      }
+    }
+  },
+  "slug": "scan_domain",
+  "outputs": {
+    "detected": "PolySwarm engines detected this artifact",
+    "not detected": "PolySwarm has scanned this artifact and no engine detected it",
+    "unknown": "The scan finished but no engine gave a malicious or benign answer, so there is no verdict. Do not treat this as clean"
+  }
+}
