@@ -56,15 +56,15 @@ class VadeCloudConsumer(Thread):
     def get_last_timestamp(self) -> int:
         now = int(time.time() * 1000)  # in milliseconds
 
-        self.connector.context_lock.acquire()
-        with self.connector.context as cache:
-            most_recent_ts_seen = int(cache.get("last_ts", 0))
-
-        self.connector.context_lock.release()
+        with self.connector.context_lock, self.connector.context as cache:
+            # fall back on the checkpoint shared by all streams in previous versions
+            last_ts = cache.get(self.name, {}).get("last_ts", cache.get("last_ts"))
 
         # if undefined, retrieve events from the last 5 minutes
-        if most_recent_ts_seen is None:
+        if last_ts is None:
             return now - 5 * 60 * 1000
+
+        most_recent_ts_seen = int(last_ts)
 
         # We don't retrieve messages older than one week
         one_week_ago = now - 7 * 24 * 60 * 60 * 1000
@@ -74,12 +74,8 @@ class VadeCloudConsumer(Thread):
         return most_recent_ts_seen
 
     def set_last_timestamp(self, last_timestamp: int) -> None:
-        self.connector.context_lock.acquire()
-
-        with self.connector.context as cache:
-            cache["last_ts"] = last_timestamp
-
-        self.connector.context_lock.release()
+        with self.connector.context_lock, self.connector.context as cache:
+            cache.setdefault(self.name, {})["last_ts"] = last_timestamp
 
     def request_logs_page(self, start_date: int, period: str, page: int = 0) -> Response:
         params = {
