@@ -404,6 +404,41 @@ def test_alert_trigger_filter_by_rule(
         assert alert_trigger.send_event.called
 
 
+@pytest.mark.parametrize(
+    "configuration",
+    [
+        {"rule_filter": " {name}"},
+        {"rule_filter": "{name}  "},
+        {"rule_filter": " {uuid}\n"},
+        {"rule_names_filter": [" {name} "]},
+    ],
+)
+def test_alert_trigger_filter_by_rule_ignores_surrounding_whitespace(
+    alert_trigger, samplenotif_alert_created, sample_sicalertapi_mock, sample_sicalertapi, configuration
+):
+    rule = sample_sicalertapi["rule"]
+    alert_trigger.configuration = {
+        key: [v.format(**rule) for v in value] if isinstance(value, list) else value.format(**rule)
+        for key, value in configuration.items()
+    }
+    alert_trigger.send_event = MagicMock()
+    with sample_sicalertapi_mock:
+        alert_trigger.handle_event(samplenotif_alert_created)
+
+    alert_trigger.send_event.assert_called_once()
+
+
+def test_alert_trigger_blank_rule_filter_does_not_filter(
+    alert_trigger, samplenotif_alert_created, sample_sicalertapi_mock
+):
+    alert_trigger.configuration = {"rule_filter": "  ", "rule_names_filter": [" "]}
+    alert_trigger.send_event = MagicMock()
+    with sample_sicalertapi_mock:
+        alert_trigger.handle_event(samplenotif_alert_created)
+
+    alert_trigger.send_event.assert_called_once()
+
+
 def test_comment_trigger_filter_by_rule(
     alert_created_trigger,
     sample_sicalertapi,
@@ -699,6 +734,18 @@ class TestAlertEventsThresholdTrigger:
 
         matches = threshold_trigger._should_process_alert(sample_threshold_alert)
         assert matches is True
+
+    def test_rule_filter_ignores_surrounding_whitespace(self, threshold_trigger, sample_threshold_alert):
+        """Test that a rule filter pasted with spaces still matches."""
+        threshold_trigger.configuration["rule_filter"] = " Suspicious PowerShell Activity "
+
+        assert threshold_trigger._should_process_alert(sample_threshold_alert) is True
+
+    def test_rule_names_filter_ignores_surrounding_whitespace(self, threshold_trigger, sample_threshold_alert):
+        """Test that rule names pasted with spaces still match."""
+        threshold_trigger.configuration["rule_names_filter"] = [" Suspicious PowerShell Activity"]
+
+        assert threshold_trigger._should_process_alert(sample_threshold_alert) is True
 
     def test_rule_filter_blocks_non_matching(self, threshold_trigger, sample_threshold_alert):
         """Test that rule filter blocks non-matching alerts."""
