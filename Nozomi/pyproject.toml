@@ -32,7 +32,8 @@ exclude = ["tests/*"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-sekoia-automation-sdk = "~1.22.5"
+sekoia-automation-sdk = "^1.24.0"
+sekoia-automation-models = "^1.5.0"
 aiolimiter = "^1.2.1"
 aiohttp = "^3.12.12"
 loguru = "^0.7.3"

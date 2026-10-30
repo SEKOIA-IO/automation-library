@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-30 - 1.2.2
+
+### Fixed
+
+- Send the asset name as hostname only when the asset management API accepts it, split into `hostname` and `domain` when fully qualified; never fall back on the asset id
+- Declare the field mapping so a mapping change re-fetches every asset
+
+### Changed
+
+- Upgrade to sekoia-automation-sdk 1.24 and move the module configuration to pydantic v2
+
 ## 2026-10-21 - 1.2.1
 
 ### Added
