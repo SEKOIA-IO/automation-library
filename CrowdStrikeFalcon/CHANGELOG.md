@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-27 - 1.25.21
+
+### Fixed
+
+- Asset connectors: retry pushes rejected by the rate limit (HTTP 429)
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.27.0
+- Asset connectors: limit pushes to one per second
+- Devices asset connector: set the default frequency to 3 hours
+
 ## 2026-09-01 - 1.25.20
 
 ### Fixed

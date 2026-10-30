@@ -19,6 +19,7 @@ from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId
 from sekoia_automation.storage import PersistentJSON
 
 from crowdstrike_falcon.asset_connectors.crowdstrike_user_model import CrowdStrikeUser, CrowdStrikeUserAccount
+from crowdstrike_falcon.asset_connectors.rate_limit import RateLimitedPushMixin
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
 
 IDENTITY_ENTITIES_QUERY = """
@@ -64,7 +65,7 @@ IDENTITY_ENTITIES_QUERY = """
 """
 
 
-class CrowdstrikeUserAssetConnector(AssetConnector):
+class CrowdstrikeUserAssetConnector(RateLimitedPushMixin, AssetConnector):
     PRODUCT_NAME: str = "Crowdstrike Falcon"
     PRODUCT_VERSION = "N/A"
     LIMIT: int = 100
@@ -73,11 +74,44 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+        self._latest_time: str | None = None
 
     @property
     def most_recent_user_date(self) -> str | None:
         with self.context as cache:
             return cache.get(self.CHECKPOINT_KEY, None)
+
+    def get_mapped_fields(self) -> dict[str, str]:
+        """
+        Return the Identity Protection -> OCSF field mapping used for schema-change
+        fingerprinting.
+
+        Static OCSF constants are excluded: they never depend on the CrowdStrike payload,
+        so they cannot invalidate a checkpoint.
+        """
+        return {
+            "entityId": "user.uid",
+            "primaryDisplayName": "user.name",
+            "secondaryDisplayName": "user.full_name",
+            "emailAddresses": "user.email_addr",
+            "creationTime": "time",
+            "riskScore": "user.risk_score",
+            "riskScoreSeverity": "user.risk_level",
+            "roles.type": "user.type",
+            "accounts.dataSource": "user.account.type",
+            "accounts.domain": "user.domain",
+            "accounts.samAccountName": "user.account.name",
+            "accounts.objectSid": "user.account.uid",
+            "accounts.objectGuid": "user.account.uid",
+            "accounts.enabled": "enrichments.data.is_enabled",
+        }
+
+    def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so every user is collected again on the next cycle."""
+        with self.context as cache:
+            cache.pop(self.CHECKPOINT_KEY, None)
+        self._latest_time = None
+        self.log("Checkpoint reset - a full user re-collection will occur on the next cycle", level="info")
 
     def update_checkpoint(self) -> None:
         """
