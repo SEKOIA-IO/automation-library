@@ -26,11 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   still running when it falls off the newest page of tasks is followed by its own
   identifier until it finishes, and a fresh start records what has already
   finished without replaying it.
-- PolySwarm Intel Feed connector: checkpointed ingestion of new results into a
-  Sekoia intake, filtered by malware family, tag and PolySwarm score. The
-  checkpoint only advances over events the intake confirmed, so delivery is at
-  least once rather than silently lossy, and the connector reports the usual
-  outgoing events, forward duration and events lag metrics.
 - Account key validation when the configuration is saved, so a bad or expired
   key is caught then instead of by the first failing playbook.
 - Indicators are validated before an API request is spent, and every action
