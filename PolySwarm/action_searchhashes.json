@@ -1,7 +1,7 @@
 {
   "name": "Search Multiple Hashes",
-  "description": "Look up a list of hashes against what PolySwarm already knows: a read-only search that submits nothing, one API request per distinct hash. PolySwarm has no batch endpoint, so a list of fifty hashes costs fifty requests; duplicates are only paid for once, lookups run sequentially, and a usage limit stops the run and returns what was already gathered. A hash that could not be checked, for any reason, routes the run to partial rather than to a clean answer.",
-  "uuid": "e9ee0708-c8a1-5510-a3bf-4918f9292dc4",
+  "description": "Look up a list of hashes against what PolySwarm already knows: a read-only search that submits nothing, one API request per distinct hash. PolySwarm has no batch endpoint, so a list of fifty hashes costs fifty requests; duplicates are only paid for once, lookups run sequentially, and a usage limit, a refused key, an unreachable platform, three failures in a row or a ten minute time bound stops the run and returns what was already gathered. The run branches on a malicious count above zero with no detection threshold, unlike Search Hash. A hash that could not be checked, for any reason, routes the run to partial rather than to a clean answer.",
+  "uuid": "fe81a970-c4b9-437a-9a65-05e266cc0844",
   "docker_parameters": "SearchHashes",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -139,6 +139,6 @@
   "outputs": {
     "detected": "At least one of the looked up hashes was detected by PolySwarm, and every hash that was queried was checked",
     "not detected": "PolySwarm returned a verdict for every hash that was queried and none was detected",
-    "partial": "At least one hash could not be checked, because a usage limit stopped the run, a lookup failed, a hash was malformed, or a scan has no final verdict yet. The results are incomplete and must not be read as a clean answer. Any detection found before the run went incomplete is still reported in results."
+    "partial": "At least one hash could not be checked, because a usage limit stopped the run, a lookup failed, a hash was malformed, the run was stopped early, or a scan has no final verdict yet. The results are incomplete and must not be read as a clean answer. A run that found a detection can still take this branch when another lookup failed, so read results on this branch too. A scan that closed with no engine verdict is also reported here, as an error, never as not detected."
   }
 }

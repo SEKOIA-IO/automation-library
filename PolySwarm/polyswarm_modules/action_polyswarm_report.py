@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -49,7 +50,8 @@ class ReportArguments(BaseModel):
         le=MAX_WAIT_SECONDS_CEILING,
         description=(
             "How long to wait for a detonation that is already running elsewhere to finish, in seconds, "
-            f"capped at {MAX_WAIT_SECONDS_CEILING}. "
+            f"from 0 to {MAX_WAIT_SECONDS_CEILING}. A larger value is rejected with a validation error. "
+            "The wait can run past this by one status check, about a minute at worst. "
             "0, the default, does not wait: this reads the task's current status and returns immediately, "
             "which is why the SandboxCompleted trigger exists, so nobody has to sit here waiting. Polling "
             "backs off from a short first check up to a 60 second ceiling. This action never starts a "
@@ -57,13 +59,14 @@ class ReportArguments(BaseModel):
         ),
     )
     include_raw_report: bool = Field(
-        default=True,
+        default=False,
         description=(
-            "Whether to return the raw sandbox report in the report field. True, the default, returns it "
-            "unmodified, as this action always has. Set it to false to get report back as null: a CAPE or "
-            "Triage report commonly runs to several megabytes, so turn it off when a playbook only needs "
-            "the verdict and the typed behavior fields, which are unchanged either way. The report is never "
-            "truncated: it is returned whole or not at all."
+            "Whether to return the raw sandbox report in the report field. False, the default, returns "
+            "report as null, which keeps the response small: the verdict and the typed behavior fields are "
+            "the same either way. Set it to true to get the report back unmodified, for a playbook that "
+            "needs a field the typed behavior does not carry. A CAPE or Triage report commonly runs to "
+            "several megabytes, so expect a much larger response. The report is never truncated: it is "
+            "returned whole or not at all."
         ),
     )
 
@@ -110,11 +113,62 @@ class ReportResponse(BaseModel):
     # verdict on. malicious is None in that case and the "no report
     # available" branch fires: an unscored report is not a clean one.
     unscored: bool = False
+    # True when the report could not be read into the typed behavior, so
+    # behavior is empty because of its shape and not because the sandbox saw
+    # nothing. Independent of unscored, which is about the verdict only.
+    behavior_unreadable: bool = False
     behavior: SandboxBehavior
     # None when the caller turned include_raw_report off. The verdict and the
     # behavior fields are computed from the report before it is dropped.
     report: Any
     sandbox_artifacts: list[dict[str, Any]]
+
+
+class _UnreadableReportError(ValueError):
+    """The vendor report is not shaped the way its provider documents."""
+
+
+def _dict(value: Any, where: str) -> dict[str, Any]:
+    """The value as a dict, empty when absent, an error when it is anything else."""
+    if value is None or value == "" or value == []:
+        return {}
+    if not isinstance(value, dict):
+        raise _UnreadableReportError(f"{where} is {type(value).__name__}, expected an object")
+    return value
+
+
+def _entries(value: Any, where: str) -> list[dict[str, Any]]:
+    """A list of objects, empty when absent. A non-list, or a non-object element, is an error."""
+    if value is None or value == "" or value == {}:
+        return []
+    if not isinstance(value, list):
+        raise _UnreadableReportError(f"{where} is {type(value).__name__}, expected a list")
+    for entry in value:
+        if not isinstance(entry, dict):
+            raise _UnreadableReportError(f"{where} holds a {type(entry).__name__}, expected an object")
+    return value
+
+
+def _strings(value: Any, where: str) -> list[str]:
+    """A list of non-empty strings, empty when absent. Anything unhashable or non-text is an error."""
+    if value is None or value == "" or value == {}:
+        return []
+    if not isinstance(value, list):
+        raise _UnreadableReportError(f"{where} is {type(value).__name__}, expected a list")
+    for entry in value:
+        if entry and not isinstance(entry, str):
+            raise _UnreadableReportError(f"{where} holds a {type(entry).__name__}, expected text")
+    return [entry for entry in value if entry]
+
+
+def _text(entry: dict[str, Any], key: str, where: str) -> str:
+    """A string field, empty when absent or null. Any other type is an error."""
+    value = entry.get(key)
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise _UnreadableReportError(f"{where}.{key} is {type(value).__name__}, expected text")
+    return value
 
 
 def _unique(values: list[str]) -> list[str]:
@@ -138,17 +192,17 @@ def _signature_names(provider: str, report: dict[str, Any]) -> list[str]:
     to land in the same shape CAPE gives for free.
     """
     if provider == "cape":
-        return _unique([n for n in (report.get("signature_names") or []) if n])
+        return _unique(_strings(report.get("signature_names"), "signature_names"))
 
     names: list[str] = []
-    static = report.get("static") or {}
-    for signature in static.get("signatures") or []:
-        name = signature.get("name")
+    static = _dict(report.get("static"), "static")
+    for signature in _entries(static.get("signatures"), "static.signatures"):
+        name = _text(signature, "name", "static.signatures")
         if name:
             names.append(name)
-    for target in report.get("targets") or []:
-        for signature in target.get("signatures") or []:
-            name = signature.get("name")
+    for target in _entries(report.get("targets"), "targets"):
+        for signature in _entries(target.get("signatures"), "targets.signatures"):
+            name = _text(signature, "name", "targets.signatures")
             if name:
                 names.append(name)
     return _unique(names)
@@ -161,7 +215,7 @@ def _mitre_techniques(report: dict[str, Any]) -> list[str]:
     repeats an identifier once per signature that raised it, so a plain read
     would double count a single technique seen on several signatures.
     """
-    return _unique([t for t in (report.get("ttp") or []) if t])
+    return _unique(_strings(report.get("ttp"), "ttp"))
 
 
 def _network_indicators(provider: str, report: dict[str, Any]) -> tuple[list[str], list[str], list[str]]:
@@ -177,40 +231,42 @@ def _network_indicators(provider: str, report: dict[str, Any]) -> tuple[list[str
     hosts: list[str] = []
     domains: list[str] = []
     urls: list[str] = []
-    network = report.get("network") or {}
+    network = _dict(report.get("network"), "network")
 
     if provider == "cape":
-        for host in network.get("hosts") or []:
-            ip = host.get("ip")
+        for host in _entries(network.get("hosts"), "network.hosts"):
+            ip = _text(host, "ip", "network.hosts")
             if ip:
                 hosts.append(ip)
-        for domain in network.get("domains") or []:
-            name = domain.get("domain")
+        for domain_entry in _entries(network.get("domains"), "network.domains"):
+            name = _text(domain_entry, "domain", "network.domains")
             if name:
                 domains.append(name)
-        for entry in network.get("dns") or []:
-            request = entry.get("request")
+        for entry in _entries(network.get("dns"), "network.dns"):
+            request = _text(entry, "request", "network.dns")
             if request:
                 domains.append(request)
-        for entry in network.get("http") or []:
-            uri = entry.get("uri") or entry.get("url")
+        for entry in _entries(network.get("http"), "network.http"):
+            uri = _text(entry, "uri", "network.http") or _text(entry, "url", "network.http")
             if uri:
                 urls.append(uri)
     else:
-        for ip_entry in network.get("ips") or []:
-            ip = ip_entry.get("ip")
+        for ip_entry in _entries(network.get("ips"), "network.ips"):
+            ip = _text(ip_entry, "ip", "network.ips")
             if ip:
                 hosts.append(ip)
-        for flow in network.get("flows") or []:
-            domain = flow.get("domain") or flow.get("tls_sni")
+        for flow in _entries(network.get("flows"), "network.flows"):
+            domain = _text(flow, "domain", "network.flows") or _text(flow, "tls_sni", "network.flows")
             if domain:
                 domains.append(domain)
-        for entry in report.get("requests") or []:
-            domain = entry.get("domain")
+        for entry in _entries(report.get("requests"), "requests"):
+            domain = _text(entry, "domain", "requests")
             if domain:
                 domains.append(domain)
-            for http_entry in entry.get("http_request") or []:
-                url = http_entry.get("url") or http_entry.get("uri")
+            for http_entry in _entries(entry.get("http_request"), "requests.http_request"):
+                url = _text(http_entry, "url", "requests.http_request") or _text(
+                    http_entry, "uri", "requests.http_request"
+                )
                 if url:
                     urls.append(url)
 
@@ -228,8 +284,17 @@ def _dropped_file_hashes(provider: str, report: dict[str, Any]) -> list[str]:
     are malicious.
     """
     key = "dropped" if provider == "cape" else "dumped"
-    hashes = [entry.get("sha256") for entry in (report.get(key) or []) if entry.get("sha256")]
-    return _unique(hashes)
+    hashes = [_text(entry, "sha256", key) for entry in _entries(report.get(key), key)]
+    return _unique([h for h in hashes if h])
+
+
+def _int_or_none(entry: dict[str, Any], key: str, where: str) -> int | None:
+    value = entry.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise _UnreadableReportError(f"{where}.{key} is {type(value).__name__}, expected an integer")
+    return value
 
 
 def _processes(provider: str, report: dict[str, Any]) -> list[ProcessEvidence]:
@@ -243,42 +308,62 @@ def _processes(provider: str, report: dict[str, Any]) -> list[ProcessEvidence]:
     processes: list[ProcessEvidence] = []
 
     if provider == "cape":
-        behavior = report.get("behavior") or {}
-        for proc in behavior.get("processes") or []:
-            environ = proc.get("environ") or {}
+        behavior = _dict(report.get("behavior"), "behavior")
+        where = "behavior.processes"
+        for proc in _entries(behavior.get("processes"), where):
+            environ = _dict(proc.get("environ"), f"{where}.environ")
             processes.append(
                 ProcessEvidence(
-                    pid=proc.get("process_id"),
-                    parent_pid=proc.get("parent_id"),
-                    image=proc.get("module_path") or "",
-                    command_line=environ.get("CommandLine") or "",
+                    pid=_int_or_none(proc, "process_id", where),
+                    parent_pid=_int_or_none(proc, "parent_id", where),
+                    image=_text(proc, "module_path", where),
+                    command_line=_text(environ, "CommandLine", f"{where}.environ"),
                 )
             )
     else:
-        for proc in report.get("processes") or []:
+        for proc in _entries(report.get("processes"), "processes"):
             processes.append(
                 ProcessEvidence(
-                    pid=proc.get("pid"),
-                    parent_pid=proc.get("ppid"),
-                    image=proc.get("image") or "",
-                    command_line=proc.get("cmd") or "",
+                    pid=_int_or_none(proc, "pid", "processes"),
+                    parent_pid=_int_or_none(proc, "ppid", "processes"),
+                    image=_text(proc, "image", "processes"),
+                    command_line=_text(proc, "cmd", "processes"),
                 )
             )
 
     return processes
 
 
-def _typed_behavior(provider: str, report: dict[str, Any]) -> SandboxBehavior:
-    hosts, domains, urls = _network_indicators(provider, report)
-    return SandboxBehavior(
-        behavior_signatures=_signature_names(provider, report),
-        mitre_techniques=_mitre_techniques(report),
-        contacted_hosts=hosts,
-        contacted_domains=domains,
-        contacted_urls=urls,
-        dropped_file_hashes=_dropped_file_hashes(provider, report),
-        processes=_processes(provider, report),
-    )
+def _typed_behavior(provider: str, report: Any, log: Callable[..., Any] | None = None) -> tuple[SandboxBehavior, bool]:
+    """The typed behaviour and whether the report could be read.
+
+    A report that is not shaped the way its provider documents yields an
+    empty behaviour and False, never an exception: the lookup succeeded, and
+    the verdict must not be lost to a field this module cannot read. The
+    reason is logged, never the report content.
+    """
+    try:
+        if not isinstance(report, dict):
+            raise _UnreadableReportError(f"the report is {type(report).__name__}, expected an object")
+        hosts, domains, urls = _network_indicators(provider, report)
+        return (
+            SandboxBehavior(
+                behavior_signatures=_signature_names(provider, report),
+                mitre_techniques=_mitre_techniques(report),
+                contacted_hosts=hosts,
+                contacted_domains=domains,
+                contacted_urls=urls,
+                dropped_file_hashes=_dropped_file_hashes(provider, report),
+                processes=_processes(provider, report),
+            ),
+            True,
+        )
+    except ValueError as exc:  # includes _UnreadableReportError and pydantic ValidationError
+        if log is not None:
+            kind = "unexpected shape" if isinstance(exc, _UnreadableReportError) else "failed validation"
+            detail = str(exc) if isinstance(exc, _UnreadableReportError) else type(exc).__name__
+            log(f"The {provider or 'sandbox'} report has an {kind} ({detail}); behavior left empty", level="warning")
+        return SandboxBehavior(), False
 
 
 def _is_malicious(provider: str, report: dict[str, Any], config: dict[str, Any] | None) -> bool | None:
@@ -395,7 +480,7 @@ class Report(PolyswarmAction):
             sandbox_artifacts=[],
         ).model_dump()
 
-    def _respond(self, task: Any, include_raw_report: bool = True) -> dict[str, Any] | None:
+    def _respond(self, task: Any, include_raw_report: bool = False) -> dict[str, Any] | None:
         provider = (getattr(task, "sandbox", "") or "").lower()
 
         if task.status != "SUCCEEDED" or not task.report:
@@ -421,7 +506,11 @@ class Report(PolyswarmAction):
                 sandbox_artifacts=[],
             ).model_dump()
 
-        malicious = _is_malicious(provider, task.report, getattr(task, "config", None))
+        report = task.report
+        malicious = (
+            _is_malicious(provider, report, getattr(task, "config", None)) if isinstance(report, dict) else None
+        )
+        behavior, readable = _typed_behavior(provider, report, self.log)
         if malicious is None:
             self.log(
                 f"Sandbox task {task.id} for {task.sha256} succeeded with a report but no readable score "
@@ -439,7 +528,8 @@ class Report(PolyswarmAction):
             status=task.status,
             malicious=malicious,
             unscored=malicious is None,
-            behavior=_typed_behavior(provider, task.report),
+            behavior_unreadable=not readable,
+            behavior=behavior,
             report=task.report if include_raw_report else None,
             sandbox_artifacts=[
                 {

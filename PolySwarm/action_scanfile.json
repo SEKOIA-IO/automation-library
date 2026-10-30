@@ -1,7 +1,7 @@
 {
   "name": "Scan File",
   "description": "Submit a file to PolySwarm's engine marketplace for a fresh multi-engine verdict. Spends a scan and creates account activity; reuses an existing result unless force_rescan is set. Use SearchHash for a free, read-only lookup instead.",
-  "uuid": "a4d91450-904d-5d5c-8ae5-f6012892be8f",
+  "uuid": "c8ce773f-e71b-4f9b-95a0-4b43a1b9be23",
   "docker_parameters": "ScanFile",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -124,6 +124,7 @@
   "slug": "scan_file",
   "outputs": {
     "detected": "PolySwarm engines detected this artifact",
-    "not detected": "PolySwarm has scanned this artifact and no engine detected it"
+    "not detected": "PolySwarm has scanned this artifact and no engine detected it",
+    "unknown": "The scan finished but no engine gave a malicious or benign answer, so there is no verdict. Do not treat this as clean"
   }
 }

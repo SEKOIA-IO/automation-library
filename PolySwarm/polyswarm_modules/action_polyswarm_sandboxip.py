@@ -64,7 +64,8 @@ class SandboxIpArguments(BaseModel):
         ge=1,
         le=MAX_WAIT_SECONDS_CEILING,
         description="Only used when wait is enabled. Upper bound on how long to block for a terminal status, "
-        "in seconds, capped at 300 regardless of the value supplied",
+        "in seconds, from 1 to 300. A larger value is rejected with a validation error. "
+        "The wait can run past this by one status check, about a minute at worst",
     )
 
 

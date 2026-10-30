@@ -3,7 +3,7 @@ name = "polyswarm-automation-module"
 version = "1.0.0"
 description = ""
 authors = []
-requires-python = ">=3.12,<3.15"
+requires-python = ">=3.14,<3.15"
 
 dependencies = [
     "sekoia-automation-sdk>=1.27.0,<2",
@@ -16,6 +16,8 @@ dev = [
     "pytest",
     "pytest-cov",
     "requests-mock",
+]
+lint = [
     "ruff>=0.14",
     "mypy",
 ]
@@ -23,10 +25,11 @@ dev = [
 
 [tool.uv]
 package = false
+default-groups = ["dev", "lint"]
 
 [tool.ruff]
 line-length = 119
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
@@ -35,7 +38,7 @@ select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
 "tests/*" = ["ARG"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 files = ["."]
 install_types = true
 non_interactive = true

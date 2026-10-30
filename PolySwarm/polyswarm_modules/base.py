@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from sekoia_automation.action import Action
 
 from polyswarm_modules import PolyswarmModule
+from polyswarm_modules.verdict import has_verdict
 
 # Every action names its argument model <Action>Arguments. A ValidationError
 # from any other model is a payload problem, not a playbook input problem.
@@ -80,14 +81,22 @@ class PolyswarmAction(Action):
 
     @staticmethod
     def is_complete(result: object) -> bool:
-        """True when a scan carries a verdict that can be reported.
+        """True when a result carries a verdict that can be reported.
 
-        A result whose assertion window is still open has no verdict yet: the
-        engines have not all answered, so its counts are zero and its polyscore
-        is empty. Reporting that as a finished scan tells a playbook the sample
-        is clean when nobody has looked at it.
+        Three things keep a result from being reportable, and each one would
+        otherwise read as a clean artifact. An assertion window that is still
+        open means the engines have not all answered, so counts are zero and the
+        polyscore is empty. A failed scan has no verdict by definition. A closed
+        window with no malicious or benign answer inside the mask (no engine
+        covers this artifact type, or every engine abstained) means nobody
+        looked. This method returns False for all three, so a caller can send
+        them to its unknown branch instead of "not detected".
         """
-        return bool(getattr(result, "window_closed", False)) and not getattr(result, "failed", False)
+        return (
+            bool(getattr(result, "window_closed", False))
+            and not getattr(result, "failed", False)
+            and has_verdict(result)
+        )
 
     def resolve_data_file(self, value: str) -> Path | None:
         """Resolve a file reference from a playbook, confined to the run data directory.
@@ -113,9 +122,14 @@ class PolyswarmAction(Action):
         data_path = self.data_path
         if isinstance(data_path, str):
             data_path = Path(data_path)
-        base = data_path.resolve() if hasattr(data_path, "resolve") else data_path
-        joined = base / candidate
-        resolved = joined.resolve() if hasattr(joined, "resolve") else joined
+        try:
+            base = data_path.resolve() if hasattr(data_path, "resolve") else data_path
+            joined = base / candidate
+            resolved = joined.resolve() if hasattr(joined, "resolve") else joined
+        except (OSError, ValueError):
+            # A name with a NUL byte makes resolve() raise ValueError, and a symlink loop raises OSError.
+            self.error("File path could not be resolved in the run data directory")
+            return None
         if base not in resolved.parents:
             self.error("File path resolves outside the run data directory")
             return None

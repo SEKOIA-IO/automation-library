@@ -29,7 +29,7 @@ skip_no_key = pytest.mark.skipif(not api_key, reason="POLYSWARM_API_KEY not set"
 def module() -> PolyswarmModule:
     """Override the unit-test fixture with the live API key."""
     module = PolyswarmModule()
-    module.configuration = PolyswarmModuleConfiguration(apikey=api_key, community="default")
+    module.configuration = PolyswarmModuleConfiguration(API_Key=api_key, community="default")
     return module
 
 

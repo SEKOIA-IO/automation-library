@@ -229,7 +229,7 @@ def test_multiple_hits_are_all_returned(mock_build_client: MagicMock, action: Se
 def test_invalid_indicator_error_does_not_quote_the_client_exception(
     mock_build_client: MagicMock, action: SearchIoc
 ) -> None:
-    secret_bearing_message = "GET /ioc/search?apikey=SECRET&domain=evil.example.com"
+    secret_bearing_message = "GET /ioc/search?API_Key=SECRET&domain=evil.example.com"
     mock_build_client.return_value.search_by_ioc.side_effect = ps_exceptions.InvalidValueException(
         secret_bearing_message
     )

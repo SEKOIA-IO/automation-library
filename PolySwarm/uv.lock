@@ -1,6 +1,6 @@
 version = 1
 revision = 3
-requires-python = ">=3.12, <3.15"
+requires-python = ">=3.14, <3.15"
 
 [[package]]
 name = "aiocsv"
@@ -1163,10 +1163,12 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "requests-mock" },
+]
+lint = [
+    { name = "mypy" },
     { name = "ruff" },
 ]
 
@@ -1179,10 +1181,12 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "requests-mock" },
+]
+lint = [
+    { name = "mypy" },
     { name = "ruff", specifier = ">=0.14" },
 ]
 

@@ -24,7 +24,12 @@ def _as_int(value: Any) -> int | None:
 
 
 def _as_text(value: Any) -> str:
-    """Render a scalar field as text, with None becoming an empty string."""
+    """Render a scalar field as text, with None becoming an empty string.
+
+    Deliberately not coerce.as_optional_text: that keeps None as None, while the
+    response fields filled from this are plain str and the feature loop calls
+    .strip() on the result, so an absent value has to come out as "" here.
+    """
     if value is None:
         return ""
     return str(value)

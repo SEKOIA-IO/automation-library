@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,7 +10,9 @@ from polyswarm_modules import PolyswarmModule
 from polyswarm_modules.action_polyswarm_report import Report
 from tests.helpers import autospec_build_client
 
-# Real report bodies, trimmed for size, captured live from PolySwarm for a
+FIXTURES = Path(__file__).parent / "fixtures"
+
+# Report bodies, kept as fixture files under tests/fixtures, trimmed for size, captured live from PolySwarm for a
 # current malicious artifact (a cryptominer dropped by a fake WinZip
 # installer, contacting auto.alphapool.tech) through both sandbox providers.
 # Field names, nesting and values below are exactly what the API returned;
@@ -17,174 +20,9 @@ from tests.helpers import autospec_build_client
 # are the CAPE and Triage sandbox reports for sha256
 # 6e774dc769bcf252fdba22a45fe3f55b701e8d53fa61525a26c255b10cfa2aa9.
 
-CAPE_REPORT = json.loads(r"""
-{
-  "malware_family": [],
-  "ttp": [],
-  "signature_names": [
-    "antivm_checks_available_memory",
-    "queries_computer_name",
-    "queries_user_name",
-    "queries_keyboard_layout",
-    "antidebug_setunhandledexceptionfilter",
-    "stealth_timeout"
-  ],
-  "network": {
-    "hosts": [
-      {
-        "asn": "",
-        "asn_name": "",
-        "country_name": "unknown",
-        "hostname": "doxbin.cy",
-        "inaddrarpa": "",
-        "ip": "172.67.173.197",
-        "ports": []
-      }
-    ],
-    "domains": [
-      {
-        "domain": "doxbin.cy",
-        "ip": "172.67.173.197"
-      }
-    ],
-    "dns": [
-      {
-        "answers": [
-          {"data": "172.67.173.197", "type": "A"},
-          {"data": "104.21.55.221", "type": "A"}
-        ],
-        "first_seen": 1790043674.579611,
-        "request": "doxbin.cy",
-        "type": "A"
-      }
-    ],
-    "http": []
-  },
-  "dropped": [],
-  "behavior": {
-    "processes": [
-      {
-        "environ": {
-          "CommandLine": "\"C:\\Users\\maxine\\AppData\\Local\\Temp\\winzip.exe\" ",
-          "UserName": "maxine"
-        },
-        "module_path": "C:\\Users\\maxine\\AppData\\Local\\Temp\\winzip.exe",
-        "parent_id": 2148,
-        "process_id": 3320,
-        "process_name": "winzip.exe"
-      },
-      {
-        "environ": {
-          "CommandLine": "\"C:\\Users\\maxine\\AppData\\Roaming\\WindowsFramehost\\RuntimeBroker.exe\"",
-          "UserName": "maxine"
-        },
-        "module_path": "C:\\Users\\maxine\\AppData\\Roaming\\WindowsFramehost\\RuntimeBroker.exe",
-        "parent_id": 3320,
-        "process_id": 6316,
-        "process_name": "RuntimeBroker.exe"
-      }
-    ]
-  }
-}
-""")
+CAPE_REPORT = json.loads((FIXTURES / "cape_report.json").read_text())
 
-TRIAGE_REPORT = json.loads(r"""
-{
-  "malware_family": [],
-  "ttp": ["T1012", "T1497", "T1012", "T1497", "T1012", "T1082", "T1547.001", "T1112", "T1012", "T1082"],
-  "static": {
-    "signatures": [
-      {
-        "desc": "Checks for missing Authenticode signature.",
-        "indicators": [{"resource": "acrord32.exe"}],
-        "label": "unsigned_pe",
-        "name": "Unsigned PE",
-        "score": 3
-      }
-    ]
-  },
-  "targets": [
-    {
-      "signatures": [
-        {
-          "indicators": [
-            {
-              "description": "Key opened",
-              "ioc": "\\REGISTRY\\MACHINE\\SOFTWARE\\Oracle\\VirtualBox Guest Additions",
-              "procid": 76
-            }
-          ],
-          "label": "identifies_vbox_guestadditions_reg",
-          "name": "Looks for VirtualBox Guest Additions in registry",
-          "score": 9,
-          "tags": ["defense_evasion"],
-          "ttp": ["T1012", "T1497"]
-        },
-        {
-          "indicators": [
-            {
-              "description": "Key opened",
-              "ioc": "\\REGISTRY\\MACHINE\\SOFTWARE\\VMware, Inc.\\VMware Tools",
-              "procid": 76
-            }
-          ],
-          "label": "identifies_vmware_tools_reg",
-          "name": "Looks for VMWare Tools registry key",
-          "score": 8,
-          "tags": ["defense_evasion"],
-          "ttp": ["T1012", "T1497"]
-        }
-      ]
-    }
-  ],
-  "network": {
-    "flows": [
-      {"domain": "doxbin.cy", "dst": "188.114.97.0:2083", "id": 3, "proto": "tcp", "tls_sni": "doxbin.cy"},
-      {"domain": "doxbin.cy", "dst": "188.114.97.0:2083", "id": 4, "proto": "tcp", "tls_sni": "doxbin.cy"}
-    ],
-    "ips": [
-      {"asn": "AS8075", "cc": "US", "ip": "150.171.110.147"},
-      {"asn": "AS13335", "cc": "US", "ip": "188.114.97.0"},
-      {"asn": "AS8075", "cc": "US", "ip": "4.150.223.106"},
-      {"asn": "AS15169", "cc": "US", "ip": "8.8.8.8"},
-      {"asn": "AS199524", "cc": "NL", "ip": "93.123.17.252"}
-    ]
-  },
-  "requests": [
-    {"dns_request": [], "dns_response": [], "domain": "doxbin.cy", "http_request": [], "http_response": []}
-  ],
-  "processes": [
-    {
-      "cmd": "\"C:\\Users\\Admin\\AppData\\Local\\Temp\\acrord32.exe\"",
-      "image": "C:\\Users\\Admin\\AppData\\Local\\Temp\\acrord32.exe",
-      "pid": 2580,
-      "ppid": 2448
-    },
-    {
-      "cmd": "\"C:\\Users\\Admin\\AppData\\Roaming\\WindowsFramehost\\RuntimeBroker.exe\"",
-      "image": "C:\\Users\\Admin\\AppData\\Roaming\\WindowsFramehost\\RuntimeBroker.exe",
-      "pid": 1388,
-      "ppid": 2580
-    }
-  ],
-  "dumped": [
-    {
-      "kind": "martian",
-      "name": "files/0x000100000002992d-18.dat",
-      "origin": "imgload",
-      "path": "C:\\Users\\Admin\\AppData\\Roaming\\WindowsFramehost\\RuntimeBroker.exe",
-      "sha256": "a861267f02af6a092d543f0334767a1a438943835dd3a62e92a346430c5284d3"
-    },
-    {
-      "kind": "martian",
-      "name": "files/0x0001000000029929-20.dat",
-      "origin": "imgload",
-      "path": "C:\\Users\\Admin\\AppData\\Local\\WindowsRecovery\\Update.exe",
-      "sha256": "6e774dc769bcf252fdba22a45fe3f55b701e8d53fa61525a26c255b10cfa2aa9"
-    }
-  ]
-}
-""")
+TRIAGE_REPORT = json.loads((FIXTURES / "triage_report.json").read_text())
 
 
 @pytest.fixture
@@ -340,7 +178,7 @@ def test_returns_existing_report(mock_build_client: MagicMock, action: Report) -
     existing_task = _make_sandbox_task(config={"cape_malscore": 6.0}, report=CAPE_REPORT)
     mock_build_client.return_value.sandbox_task_latest.return_value = existing_task
 
-    response = action.run({"sha256": "aa" * 32})
+    response = action.run({"sha256": "aa" * 32, "include_raw_report": True})
     assert response is not None
 
     mock_build_client.return_value.sandbox_task_latest.assert_called_once_with("aa" * 32, sandbox="cape")
@@ -358,7 +196,7 @@ def test_file_argument_is_ignored_and_never_triggers_submission(mock_build_clien
     mock_api = mock_build_client.return_value
     mock_api.sandbox_task_latest.return_value = task
 
-    response = action.run({"sha256": "aa" * 32, "file": "sample.exe"})
+    response = action.run({"sha256": "aa" * 32, "file": "sample.exe", "include_raw_report": True})
     assert response is not None
     assert response["report"] == CAPE_REPORT
     mock_api.sandbox_file.assert_not_called()
@@ -751,8 +589,8 @@ def _assert_unscored(response: dict, action: Report) -> None:
     assert response["unscored"] is True
     assert action._outputs == {"no report available": True}
     assert "not malicious" not in action._outputs
-    # The evidence is still handed over for an analyst.
-    assert response["report"] == _NO_FAMILY_REPORT
+    # An unscored report is a readable one: the behavior was parsed, not skipped.
+    assert response["behavior_unreadable"] is False
 
 
 @patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
@@ -819,21 +657,25 @@ def _run_with_flag(mock_build_client: MagicMock, action: Report, task: MagicMock
 
 
 @patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
-def test_include_raw_report_defaults_to_returning_the_whole_report(
-    mock_build_client: MagicMock, action: Report
-) -> None:
+def test_include_raw_report_defaults_to_no_raw_report(mock_build_client: MagicMock, action: Report) -> None:
     task = _make_sandbox_task(config={"cape_malscore": 6.0}, report=CAPE_REPORT)
     response = _run_with_flag(mock_build_client, action, task)
-    assert response["report"] == CAPE_REPORT
+    assert response["report"] is None
+    assert response["malicious"] is True
+    assert response["behavior"]["behavior_signatures"]
 
-    explicit = _run_with_flag(mock_build_client, action, task, include_raw_report=True)
-    assert explicit == response
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_include_raw_report_true_returns_the_whole_report(mock_build_client: MagicMock, action: Report) -> None:
+    task = _make_sandbox_task(config={"cape_malscore": 6.0}, report=CAPE_REPORT)
+    response = _run_with_flag(mock_build_client, action, task, include_raw_report=True)
+    assert response["report"] == CAPE_REPORT
 
 
 @patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
 def test_include_raw_report_false_nulls_only_the_report(mock_build_client: MagicMock, action: Report) -> None:
     task = _make_sandbox_task(config={"cape_malscore": 6.0}, report=CAPE_REPORT)
-    full = _run_with_flag(mock_build_client, action, task)
+    full = _run_with_flag(mock_build_client, action, task, include_raw_report=True)
     slim = _run_with_flag(mock_build_client, action, task, include_raw_report=False)
 
     assert slim["report"] is None
@@ -865,3 +707,100 @@ def test_include_raw_report_false_keeps_the_unscored_flag(mock_build_client: Mag
     assert response["malicious"] is None
     assert response["unscored"] is True
     assert response["report"] is None
+
+
+# --- Report shapes the code has not seen ----------------------------------------
+
+
+def _run_malformed(mock_build_client: MagicMock, action: Report, sandbox: str, report: dict, score: dict) -> dict:
+    task = _make_sandbox_task(sandbox=sandbox, report=report, config=score)
+    return _run_with_flag(mock_build_client, action, task, include_raw_report=True)
+
+
+def _assert_unreadable_but_scored(response: dict, report: dict) -> None:
+    assert response["malicious"] is True
+    assert response["unscored"] is False
+    assert response["behavior_unreadable"] is True
+    assert response["behavior"] == {
+        "behavior_signatures": [],
+        "mitre_techniques": [],
+        "contacted_hosts": [],
+        "contacted_domains": [],
+        "contacted_urls": [],
+        "dropped_file_hashes": [],
+        "processes": [],
+    }
+    assert response["report"] == report
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_a_dict_ttp_entry_gives_empty_behavior_and_keeps_the_verdict(
+    mock_build_client: MagicMock, action: Report
+) -> None:
+    report = {**CAPE_REPORT, "ttp": [{"id": "T1012", "name": "Query Registry"}]}
+    response = _run_malformed(mock_build_client, action, "cape", report, {"cape_malscore": 7.0})
+    _assert_unreadable_but_scored(response, report)
+    assert action._outputs == {"malicious": True}
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_a_non_dict_process_entry_gives_empty_behavior_and_keeps_the_verdict(
+    mock_build_client: MagicMock, action: Report
+) -> None:
+    report = {**CAPE_REPORT, "behavior": {"processes": ["winzip.exe"]}}
+    response = _run_malformed(mock_build_client, action, "cape", report, {"cape_malscore": 7.0})
+    _assert_unreadable_but_scored(response, report)
+
+    triage = {**TRIAGE_REPORT, "processes": [4242]}
+    response = _run_malformed(mock_build_client, action, "triage", triage, {"traige_analysis_score": 9})
+    _assert_unreadable_but_scored(response, triage)
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_a_triage_cmd_given_as_a_list_gives_empty_behavior_and_keeps_the_verdict(
+    mock_build_client: MagicMock, action: Report
+) -> None:
+    report = {**TRIAGE_REPORT, "processes": [{"pid": 1, "ppid": 0, "image": "a.exe", "cmd": ["a.exe", "-x"]}]}
+    response = _run_malformed(mock_build_client, action, "triage", report, {"traige_analysis_score": 9})
+    _assert_unreadable_but_scored(response, report)
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_an_unreadable_report_is_distinct_from_an_unscored_one(mock_build_client: MagicMock, action: Report) -> None:
+    report = {"malware_family": [], "ttp": [{"id": "T1012"}], "network": {}}
+    response = _run_malformed(mock_build_client, action, "cape", report, {})
+    assert response["malicious"] is None
+    assert response["unscored"] is True
+    assert response["behavior_unreadable"] is True
+    assert action._outputs == {"no report available": True}
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_a_report_that_is_not_an_object_still_returns_a_response(mock_build_client: MagicMock, action: Report) -> None:
+    response = _run_malformed(mock_build_client, action, "cape", ["not", "an", "object"], {"cape_malscore": 9.0})  # type: ignore[arg-type]
+    assert response["behavior_unreadable"] is True
+    assert response["unscored"] is True
+    assert response["malicious"] is None
+
+
+@patch("polyswarm_modules.action_polyswarm_report.build_client", new_callable=autospec_build_client)
+def test_an_unreadable_report_is_logged_without_its_content(mock_build_client: MagicMock, action: Report) -> None:
+    report = {**CAPE_REPORT, "ttp": [{"secret-looking-key": "value"}]}
+    with patch.object(action, "log") as log:
+        _run_malformed(mock_build_client, action, "cape", report, {"cape_malscore": 7.0})
+    messages = " ".join(str(c.args[0]) for c in log.call_args_list)
+    assert "unexpected shape" in messages
+    assert "secret-looking-key" not in messages
+
+
+# --- Fixture files ----------------------------------------------------------------
+
+
+def test_fixture_files_parse_into_typed_behavior_for_each_provider() -> None:
+    from polyswarm_modules.action_polyswarm_report import _typed_behavior
+
+    cape, cape_ok = _typed_behavior("cape", json.loads((FIXTURES / "cape_report.json").read_text()))
+    triage, triage_ok = _typed_behavior("triage", json.loads((FIXTURES / "triage_report.json").read_text()))
+    assert cape_ok and triage_ok
+    assert cape.behavior_signatures and cape.processes
+    assert triage.behavior_signatures and triage.mitre_techniques and triage.processes

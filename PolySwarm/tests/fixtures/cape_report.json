@@ -1,0 +1,74 @@
+{
+  "malware_family": [],
+  "ttp": [],
+  "signature_names": [
+    "antivm_checks_available_memory",
+    "queries_computer_name",
+    "queries_user_name",
+    "queries_keyboard_layout",
+    "antidebug_setunhandledexceptionfilter",
+    "stealth_timeout"
+  ],
+  "network": {
+    "hosts": [
+      {
+        "asn": "",
+        "asn_name": "",
+        "country_name": "unknown",
+        "hostname": "doxbin.cy",
+        "inaddrarpa": "",
+        "ip": "172.67.173.197",
+        "ports": []
+      }
+    ],
+    "domains": [
+      {
+        "domain": "doxbin.cy",
+        "ip": "172.67.173.197"
+      }
+    ],
+    "dns": [
+      {
+        "answers": [
+          {
+            "data": "172.67.173.197",
+            "type": "A"
+          },
+          {
+            "data": "104.21.55.221",
+            "type": "A"
+          }
+        ],
+        "first_seen": 1790043674.579611,
+        "request": "doxbin.cy",
+        "type": "A"
+      }
+    ],
+    "http": []
+  },
+  "dropped": [],
+  "behavior": {
+    "processes": [
+      {
+        "environ": {
+          "CommandLine": "\"C:\\Users\\maxine\\AppData\\Local\\Temp\\winzip.exe\" ",
+          "UserName": "maxine"
+        },
+        "module_path": "C:\\Users\\maxine\\AppData\\Local\\Temp\\winzip.exe",
+        "parent_id": 2148,
+        "process_id": 3320,
+        "process_name": "winzip.exe"
+      },
+      {
+        "environ": {
+          "CommandLine": "\"C:\\Users\\maxine\\AppData\\Roaming\\WindowsFramehost\\RuntimeBroker.exe\"",
+          "UserName": "maxine"
+        },
+        "module_path": "C:\\Users\\maxine\\AppData\\Roaming\\WindowsFramehost\\RuntimeBroker.exe",
+        "parent_id": 3320,
+        "process_id": 6316,
+        "process_name": "RuntimeBroker.exe"
+      }
+    ]
+  }
+}

@@ -22,5 +22,5 @@ def data_storage():
 @pytest.fixture
 def module() -> PolyswarmModule:
     module = PolyswarmModule()
-    module.configuration = PolyswarmModuleConfiguration(apikey="test-api-key", community="default")
+    module.configuration = PolyswarmModuleConfiguration(API_Key="test-api-key", community="default")
     return module

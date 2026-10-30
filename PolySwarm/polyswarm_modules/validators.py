@@ -80,11 +80,26 @@ def invalid_url_reason(value: str) -> str | None:
     if parts.scheme.lower() not in ALLOWED_SCHEMES:
         return f"'{without_credentials(value)}' does not use the http or https scheme"
 
+    if "\\" in _authority(value):
+        return (
+            f"'{without_credentials(value)}' has a backslash in its host part, which parsers read differently, "
+            f"and will not be sent to {_PUBLIC}"
+        )
+
     # Report the host, not the URL, wherever there is one: a URL can carry a
     # username and password, and a refusal is written to the playbook log.
     if not host:
         return f"'{without_credentials(value)}' has no host"
     host = host.rstrip(".").lower()
+
+    # A browser style parser may read a different host than urlsplit does. Work
+    # it out the WHATWG way and refuse the URL when the two disagree, so the
+    # host we check is the host the engine fetches.
+    if _whatwg_host(value) != host:
+        return (
+            f"'{without_credentials(value)}' is read as a different host by different parsers "
+            f"and will not be sent to {_PUBLIC}"
+        )
 
     try:
         ipaddress.ip_address(host)
@@ -107,6 +122,22 @@ def invalid_url_reason(value: str) -> str | None:
         return f"The host '{host}' only exists inside a network and will not be sent to {_PUBLIC}"
 
     return None
+
+
+def _authority(value: str) -> str:
+    """The text between '//' and the first slash, backslash, question mark or hash."""
+    rest = value.strip().partition("//")[2]
+    return re.split(r"[/\\?#]", rest, maxsplit=1)[0]
+
+
+def _whatwg_host(value: str) -> str:
+    """The host a WHATWG parser takes from a URL: after the last '@', before any port."""
+    hostport = _authority(value).rpartition("@")[2]
+    if hostport.startswith("["):
+        host = hostport[1:].partition("]")[0]
+    else:
+        host = hostport.partition(":")[0]
+    return host.rstrip(".").lower()
 
 
 def _is_internal_name(host: str) -> bool:
@@ -152,6 +183,18 @@ def invalid_domain_reason(value: str, ip_action: str = "ScanIp") -> str | None:
         return f"'{value}' is not a plausible hostname"
     if not all(LABEL.match(label) for label in candidate.split(".")):
         return f"'{value}' is not a plausible hostname"
+    # Same check as the URL path: 127.1, 10.1.1, 0x7f.1 and 192.168.001.001 are
+    # not literals to ipaddress but connect to the address they spell. A name
+    # with any non-numeric label, such as 123.example.com, is not affected.
+    try:
+        socket.inet_aton(candidate)
+    except OSError:
+        pass
+    else:
+        return (
+            f"'{value}' is an IP address written in an unusual form, not a domain. "
+            f"Use the {ip_action} action for an address"
+        )
     if _is_internal_name(candidate.lower()):
         return f"'{candidate}' is a name that only exists inside a network and will not be sent to {_PUBLIC}"
 

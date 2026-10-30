@@ -6,22 +6,38 @@ so this action loops on the client side and spends one request per distinct
 hash, exactly as the PolySwarm app for Splunk does. A list of fifty hashes
 costs fifty requests against the configured plan, not one. The input list is
 deduplicated first so a repeated hash is never paid for twice, the lookups run
-sequentially, and a rate limit stops the loop immediately and returns whatever
-was already gathered instead of hammering the API. Any hash that could not be
+sequentially, and the loop stops and returns whatever was already gathered, as
+a partial run, on a rate limit, a refused key (401 or 403), a transport error,
+three failures in a row, or when the overall time bound is spent, instead of
+hammering an API that is not answering. Any hash that could not be
 checked sends the run to the partial branch, never to not detected.
 """
 
+import time
 from typing import Any
 
 from polyswarm_api import exceptions as ps_exceptions
 from pydantic import BaseModel, Field
+from requests import RequestException
 
 from polyswarm_modules.base import PolyswarmAction
-from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind, status_of
+from polyswarm_modules.scan import MAX_WAIT_SECONDS_CEILING
 from polyswarm_modules.validators import hash_kind
 from polyswarm_modules.verdict import AssertionResult, tally_assertions
 
 MAX_HASHES_PER_CALL = 100
+# A bad key, an outage or a slow platform must not let a hundred lookups run for
+# hours. The longest any action here tells a playbook it may wait is the scan
+# wait ceiling, so the whole loop is held to the same bound.
+DEADLINE_SECONDS: int = MAX_WAIT_SECONDS_CEILING
+# Consecutive lookups that fail for any reason other than "no such hash". A
+# healthy answer in between resets the count, so a single bad hash never stops a run.
+MAX_CONSECUTIVE_FAILURES: int = 3
+# The key is refused, so every further request would be refused as well.
+AUTH_STATUSES: frozenset[int] = frozenset({401, 403})
+# Failures that say the platform or the network is unreachable, not that one hash is bad.
+TRANSPORT_ERRORS: tuple[type[Exception], ...] = (RequestException, ps_exceptions.TimeoutException)
 
 
 class SearchHashesArguments(BaseModel):
@@ -94,9 +110,20 @@ class SearchHashes(PolyswarmAction):
         errors: list[HashLookupError] = []
         queried = 0
         rate_limited = False
+        stopped_early = False
+        consecutive_failures = 0
+        deadline = time.monotonic() + DEADLINE_SECONDS
 
         # One request per distinct hash. There is no batch route to use instead.
         for query_hash in wanted:
+            if time.monotonic() >= deadline:
+                stopped_early = True
+                self.log(
+                    f"The {DEADLINE_SECONDS} second time bound for this action was reached after {queried} of "
+                    f"{len(wanted)} lookups. The results gathered so far are returned.",
+                    level="warning",
+                )
+                break
             if hash_kind(query_hash) is None:
                 # Rejected locally: the server would refuse this anyway, and an
                 # API request is not spent finding that out.
@@ -132,9 +159,11 @@ class SearchHashes(PolyswarmAction):
                 # most common thing an analyst asks about. It is an answer, not
                 # a failure, so it does not stop the rest of the list.
                 not_found.append(query_hash)
+                consecutive_failures = 0
                 continue
             except ps_exceptions.InvalidValueException:
                 errors.append(HashLookupError(hash=query_hash, reason="Not a valid SHA256, SHA1 or MD5 hash"))
+                consecutive_failures = 0
                 continue
             except CLIENT_ERRORS as exc:
                 # Never quote the client's own message: on some failures it
@@ -147,7 +176,19 @@ class SearchHashes(PolyswarmAction):
                         reason=f"PolySwarm did not return a result for this hash ({failure_kind(exc)})",
                     )
                 )
+                consecutive_failures += 1
+                stop_reason = self._stop_reason(exc, consecutive_failures)
+                if stop_reason is not None:
+                    stopped_early = True
+                    self.log(
+                        f"{stop_reason} on request {queried} of {len(wanted)} ({failure_kind(exc)}). "
+                        f"{len(wanted) - queried} hashes were not looked up, and the results gathered "
+                        "so far are returned.",
+                        level="warning",
+                    )
+                    break
                 continue
+            consecutive_failures = 0
 
             if found is None:
                 not_found.append(query_hash)
@@ -167,7 +208,8 @@ class SearchHashes(PolyswarmAction):
                     HashLookupError(
                         hash=query_hash,
                         reason=(
-                            "The assertion window on the most recent scan is still open, so there is no verdict yet"
+                            "The most recent scan has no verdict: its assertion window is still open, "
+                            "or it closed without any engine returning a malicious or benign answer"
                         ),
                     )
                 )
@@ -177,6 +219,8 @@ class SearchHashes(PolyswarmAction):
 
         if not results and not not_found:
             reason = " PolySwarm rejected a lookup for usage limits." if rate_limited else ""
+            if stopped_early:
+                reason += " The run was stopped early because PolySwarm was not answering or refused the key."
             self.error(f"None of the supplied hashes could be looked up in PolySwarm.{reason}")
             return None
 
@@ -194,7 +238,7 @@ class SearchHashes(PolyswarmAction):
         # per-hash failure (server error, malformed hash, failed or still open
         # scan). Either one takes priority over detected/not detected, so a
         # non-empty errors list can never produce a clean verdict.
-        if response.rate_limited or response.errors:
+        if response.rate_limited or stopped_early or response.errors:
             self.set_output("partial", True)
         elif any(row.malicious_count > 0 for row in results):
             self.set_output("detected", True)
@@ -202,6 +246,17 @@ class SearchHashes(PolyswarmAction):
             self.set_output("not detected", True)
 
         return response.model_dump()
+
+    @staticmethod
+    def _stop_reason(exc: Exception, consecutive_failures: int) -> str | None:
+        """Why a failed lookup should end the whole run, or None when only that hash is affected."""
+        if status_of(exc) in AUTH_STATUSES:
+            return "PolySwarm refused the API key"
+        if isinstance(exc, TRANSPORT_ERRORS):
+            return "PolySwarm could not be reached"
+        if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+            return f"{consecutive_failures} lookups in a row failed"
+        return None
 
     @staticmethod
     def _normalize(hashes: list[str]) -> list[str]:

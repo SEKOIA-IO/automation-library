@@ -249,17 +249,17 @@ def test_a_successful_cycle_resets_the_back_off(trigger: SandboxCompleted) -> No
 
 
 def test_the_api_key_never_reaches_a_log_line_or_an_event(trigger: SandboxCompleted) -> None:
-    apikey = trigger.module.configuration.apikey
+    api_key = trigger.module.configuration.API_Key
     api = _with_tasks(trigger, _make_sandbox_task())
     api.sandbox_my_tasks_list.side_effect = ps_exceptions.RequestException(
-        autospec_request(), f"Authorization: {apikey} was rejected"
+        autospec_request(), f"Authorization: {api_key} was rejected"
     )
 
     with patch.object(SandboxCompleted, "running", new=property(lambda self: self._consecutive_failures == 0)):
         trigger.run()
 
     logged = " ".join(str(call) for call in trigger.log.call_args_list)
-    assert apikey not in logged
+    assert api_key not in logged
     assert "[REDACTED]" in logged
 
 
@@ -467,6 +467,58 @@ def test_a_task_is_dropped_after_too_many_failed_lookups(trigger: SandboxComplet
         trigger.poll_once()
         assert "bad" in trigger._in_flight()
     trigger.poll_once()
+
+    assert "bad" not in trigger._in_flight()
+    assert "ok" in trigger._in_flight()
+    warned = " ".join(str(call) for call in trigger.log.call_args_list)
+    assert "Stopped following sandbox task bad" in warned
+
+
+def test_a_task_with_a_payload_missing_a_field_is_charged_to_it_and_the_others_complete(
+    trigger: SandboxCompleted,
+) -> None:
+    """The client indexes payload fields directly, so a missing one raises KeyError."""
+    _track(trigger, "bad", "good1", "good2")
+
+    def lookup(task_id: str) -> MagicMock:
+        if task_id == "bad":
+            raise KeyError("expiration")
+        return _make_sandbox_task(task_id=task_id, status="SUCCEEDED")
+
+    api = _with_tasks(trigger)
+    api.sandbox_task_status.side_effect = lookup
+
+    # No exception escapes, so the run loop does not back off.
+    assert trigger.poll_once() == 2
+    assert trigger._in_flight()["bad"]["failures"] == 1
+    warned = " ".join(str(call) for call in trigger.log.call_args_list)
+    assert "bad" in warned
+    assert "KeyError" in warned
+
+
+def test_two_tasks_with_unparseable_payloads_are_not_an_outage(trigger: SandboxCompleted) -> None:
+    _track(trigger, "bad1", "bad2")
+    api = _with_tasks(trigger)
+    api.sandbox_task_status.side_effect = [TypeError("x"), ValueError("y")]
+
+    assert trigger.poll_once() == 0
+    assert trigger._in_flight()["bad1"]["failures"] == 1
+    assert trigger._in_flight()["bad2"]["failures"] == 1
+
+
+def test_a_task_that_keeps_failing_to_parse_is_given_up(trigger: SandboxCompleted) -> None:
+    _track(trigger, "bad", "ok")
+
+    def lookup(task_id: str) -> MagicMock:
+        if task_id == "bad":
+            raise KeyError("account_number")
+        return _make_sandbox_task(task_id=task_id, status="RUNNING")
+
+    api = _with_tasks(trigger)
+    api.sandbox_task_status.side_effect = lookup
+
+    for _ in range(MAX_LOOKUP_FAILURES):
+        trigger.poll_once()
 
     assert "bad" not in trigger._in_flight()
     assert "ok" in trigger._in_flight()
@@ -821,6 +873,34 @@ def test_a_page_that_overlaps_what_was_seen_does_not_warn(trigger: SandboxComple
     trigger.poll_once()
 
     assert _warnings(trigger) == []
+
+
+def test_a_page_of_only_other_provider_tasks_does_not_warn(trigger: SandboxCompleted) -> None:
+    trigger.configuration = {"frequency": 10, "sandbox": "cape"}
+    _with_tasks(trigger, _make_sandbox_task(task_id="a"))
+    trigger.poll_once()
+    trigger.log.reset_mock()
+
+    for _ in range(3):
+        _with_tasks(
+            trigger,
+            *[_make_sandbox_task(task_id=f"o{i}", sandbox="triage", status="RUNNING") for i in range(4)],
+        )
+        trigger.poll_once()
+
+    assert _warnings(trigger) == []
+
+
+def test_a_page_of_new_tasks_of_the_configured_sandbox_still_warns(trigger: SandboxCompleted) -> None:
+    trigger.configuration = {"frequency": 10, "sandbox": "cape"}
+    _with_tasks(trigger, _make_sandbox_task(task_id="a"))
+    trigger.poll_once()
+    trigger.log.reset_mock()
+
+    _with_tasks(trigger, _make_sandbox_task(task_id="n1"), _make_sandbox_task(task_id="o1", sandbox="triage"))
+    trigger.poll_once()
+
+    assert any("may have moved past" in message for message in _warnings(trigger))
 
 
 def test_an_empty_page_and_the_first_poll_do_not_warn(data_storage: str, module: PolyswarmModule) -> None:

@@ -106,6 +106,10 @@ MAX_BACKOFF_SECONDS: int = 1800
 # it. A task whose lookup fails every time is a problem with that task, not with
 # the account, and polling it for six hours would spend lookups other tasks need.
 MAX_LOOKUP_FAILURES: int = 5
+# What the client raises when a task payload lacks a field it indexes directly
+# (SandboxTask.__init__ reads content['expiration'] and others without get), or
+# carries a value of the wrong type. These are about one task, not the service.
+LOOKUP_PARSE_ERRORS: tuple[type[Exception], ...] = (KeyError, TypeError, ValueError)
 
 # How many failed sends a single task gets before we stop retrying its event.
 # Counted apart from lookup failures, since a lookup that succeeds resets those.
@@ -342,10 +346,20 @@ class SandboxCompleted(Trigger):
         sign of that this trigger can observe: it may have rolled past work it
         never saw. It also fires for a page of ten tasks that all started since
         the last poll and are still running, which is harmless, hence "may".
+        A page with no task of the configured sandbox on it is not judged: it
+        was read in full and holds nothing this trigger would have followed.
         """
         if first_run or not page:
             return
-        ids = [task_id for task_id in (self._task_id(task) for task in page) if task_id]
+        # Only tasks of the configured sandbox count. Others are never recorded
+        # in known_before, so a page made of them would always look unfamiliar,
+        # when it is a page that was read and understood and simply holds
+        # nothing for this trigger.
+        ids = [
+            task_id
+            for task, task_id in ((task, self._task_id(task)) for task in page)
+            if task_id and self._matches_sandbox(task)
+        ]
         if ids and known_before.isdisjoint(ids):
             self.log(
                 f"None of the {len(ids)} tasks on the newest page was seen on an earlier poll, so the page "
@@ -468,6 +482,12 @@ class SandboxCompleted(Trigger):
                     raise
                 failed.append((task_id, error))
                 continue
+            except LOOKUP_PARSE_ERRORS as error:
+                # The client could not build the task from its payload. That is
+                # this task's problem, so it is charged to it like any other
+                # lookup failure rather than escaping into the generic back off.
+                failed.append((task_id, error))
+                continue
             self._clear_lookup_failures(task_id)
             if not self._is_terminal(task):
                 continue
@@ -475,10 +495,13 @@ class SandboxCompleted(Trigger):
                 emitted += 1
             already_emitted.add(task_id)
 
-        if failed and len(failed) == checked and checked >= OUTAGE_MIN_LOOKUPS:
+        # A payload the client could not parse did come back, so it says nothing
+        # about the service and does not count towards an outage.
+        unanswered = [item for item in failed if not isinstance(item[1], LOOKUP_PARSE_ERRORS)]
+        if unanswered and len(unanswered) == checked and checked >= OUTAGE_MIN_LOOKUPS:
             # Nothing came back at all, which points at the service and not at
             # the tasks. Do not spend the tasks' failure budget on it.
-            raise failed[-1][1]
+            raise unanswered[-1][1]
         for task_id, lookup_error in failed:
             self._charge_lookup_failure(task_id, lookup_error)
         return emitted
@@ -750,7 +773,7 @@ class SandboxCompleted(Trigger):
 
     def _redact(self, error: Exception) -> str:
         """Strip the API key out of anything headed for a log line."""
-        return redact_key(error, self.module.configuration.apikey)
+        return redact_key(error, self.module.configuration.API_Key)
 
     def _wait(self, seconds: float) -> None:
         """Sleep, but wake up at once when Sekoia asks the trigger to stop."""

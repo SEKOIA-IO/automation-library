@@ -10,7 +10,7 @@ from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client
 from polyswarm_modules.coerce import as_text
 from polyswarm_modules.scan import DEFAULT_MAX_WAIT_SECONDS, MAX_WAIT_SECONDS_CEILING, MIN_WAIT_SECONDS, wait_for_scan
 from polyswarm_modules.validators import invalid_ip_reason
-from polyswarm_modules.verdict import AssertionResult, tally_assertions
+from polyswarm_modules.verdict import AssertionResult, has_verdict, tally_assertions
 
 
 class ScanIpArguments(BaseModel):
@@ -52,10 +52,11 @@ class ScanIpArguments(BaseModel):
         ge=MIN_WAIT_SECONDS,
         le=MAX_WAIT_SECONDS_CEILING,
         description=(
-            "How long to wait for the engines to finish a new scan, in seconds, capped at "
-            f"{MAX_WAIT_SECONDS_CEILING}. Only applies when a new scan is submitted. If the engines have "
-            "not finished by then the action stops with an error and the scan keeps running at "
-            "PolySwarm, so look the result up again later."
+            "How long to wait for the engines to finish a new scan, in seconds, from "
+            f"{MIN_WAIT_SECONDS} to {MAX_WAIT_SECONDS_CEILING}. A larger or smaller value is rejected with a "
+            "validation error. Only applies when a new scan is submitted. The wait can run past this by one "
+            "status check, about a minute at worst. If the engines have not finished by then the action stops "
+            "with an error and the scan keeps running at PolySwarm, so look the result up again later."
         ),
     )
 
@@ -134,6 +135,11 @@ class ScanIp(PolyswarmAction):
                 return None
 
         response = self._build_response(result, args.ip, cached)
+        if not has_verdict(result):
+            # The window closed but no engine gave a malicious or benign answer, so nobody looked at this
+            # artifact. The body is still returned for the playbook, on a branch that is not "not detected".
+            self.set_output("unknown", True)
+            return response.model_dump()
         self.set_output("detected" if response.malicious_count >= args.detect_threshold else "not detected", True)
 
         return response.model_dump()

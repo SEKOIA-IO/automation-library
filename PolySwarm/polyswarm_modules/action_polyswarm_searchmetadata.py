@@ -2,39 +2,39 @@
 
 api.search_by_metadata takes a Lucene style query string and returns every
 artifact document that matches it: the same endpoint and the same query
-language polyswarm_modules/connector_polyswarm_intel_feed.py drives on a
-schedule (see that file for how a query is assembled and what the index
-actually accepts). This action exposes the endpoint directly instead, so a
-playbook author can hand it any query rather than only the family, tag and
-polyscore filters the connector builds.
+language that a scheduled feed of new results can drive with a query it
+assembles itself from a malware family, a tag, a polyscore threshold and a
+time window. This action exposes the endpoint directly instead, so a
+playbook author can hand it any query rather than only those family, tag and
+polyscore filters.
 
 This action only reads. It never submits, never waits for a scan and never
 touches the sandbox, and it spends no scanning quota.
 
 WHAT THE QUERY LANGUAGE CAN AND CANNOT DO, AND HOW THAT WAS VERIFIED
 
-The connector's own comments state the ground truth for this client version:
-every operator filter it builds (malware family, tag, polyscore, a time
-window on artifact.created) is a server side Lucene term against documented
-fields, sent straight to the search/metadata/query endpoint. That confirms
-the endpoint accepts arbitrary Lucene terms against artifact document fields,
-not just the handful the connector happens to filter on.
+The ground truth for this client version is that every filter an operator can
+put on a feed of new results (malware family, tag, polyscore, a time window on
+artifact.created) is a server side Lucene term against documented fields, sent
+straight to the search/metadata/query endpoint. That confirms the endpoint
+accepts arbitrary Lucene terms against artifact document fields, not just the
+handful those filters happen to use.
 
 What this action does NOT claim, because it was not found anywhere in the
 installed client (polyswarm_api 3.21.0) or its comments:
 
-  - No documented list of every queryable field. The connector only proves
-    the fields it itself queries (artifact.created, scan.latest_scan.polyscore,
-    the family fields, tags). A query against a field not in that list may or
+  - No documented list of every queryable field. Only the fields already
+    queried in practice are proven (artifact.created,
+    scan.latest_scan.polyscore, the family fields, tags). A query against a field not in that list may or
     may not match anything; this action does not promise it will.
   - No page size or offset control. api.search_by_metadata takes no limit or
     offset argument (verified by reading its signature in
     polyswarm_api/api.py); pagination is internal to the client, driven by a
     lazily consumed generator. The limit argument below is enforced entirely
-    on this side, by not consuming the generator past it, exactly the
-    technique the connector itself uses to bound its own runs.
-  - No sort order control. The connector notes the endpoint answers newest
-    first with no sort argument, and this action does not expose one because
+    on this side, by not consuming the generator past it, the same technique
+    that bounds a scheduled feed's runs.
+  - No sort order control. The endpoint answers newest first with no sort
+    argument, and this action does not expose one because
     there is nothing to expose.
 
 include and exclude are real, separate arguments on api.search_by_metadata
@@ -156,8 +156,8 @@ class SearchMetadata(PolyswarmAction):
     This is the most direct way a playbook can reach api.search_by_metadata,
     the single most powerful read surface the PolySwarm API exposes: an
     arbitrary query against every artifact document PolySwarm holds, rather
-    than the fixed set of filters an individual action or the intel feed
-    connector applies. The action only reads and spends no scanning quota.
+    than the fixed set of filters an individual action or a scheduled
+    feed of new results applies. The action only reads and spends no scanning quota.
 
     Three branches: found (at least one match, and every match requested was
     returned), truncated (at least one match, but the limit cut the answer

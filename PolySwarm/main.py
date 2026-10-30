@@ -16,7 +16,6 @@ from polyswarm_modules.action_polyswarm_searchioc import SearchIoc
 from polyswarm_modules.action_polyswarm_searchip import SearchIp
 from polyswarm_modules.action_polyswarm_searchmetadata import SearchMetadata
 from polyswarm_modules.action_polyswarm_searchurl import SearchUrl
-from polyswarm_modules.connector_polyswarm_intel_feed import IntelFeed
 from polyswarm_modules.trigger_polyswarm_sandbox_completed import SandboxCompleted
 
 if __name__ == "__main__":
@@ -39,5 +38,4 @@ if __name__ == "__main__":
     module.register(AccountUsage, "AccountUsage")
     module.register(Report, "Report")
     module.register(SandboxCompleted, "SandboxCompleted")
-    module.register(IntelFeed, "polyswarm_intel_feed")
     module.run()

@@ -1,7 +1,7 @@
 {
   "name": "Extract IOCs",
   "description": "Extract hashes, IPs, domains, URLs and email addresses from text or a file, refanging defanged forms such as hxxp and [.]. Unlike every other action here, this never calls the PolySwarm API: local only, costs nothing, spends no quota.",
-  "uuid": "693a92e2-d6e0-5301-b209-5bd11f774e10",
+  "uuid": "ceaeef0f-58de-4188-9d5f-d3f58d245428",
   "docker_parameters": "ExtractIocs",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

@@ -1,7 +1,7 @@
 {
   "name": "Scan URL",
   "description": "Submit a URL to PolySwarm's engine marketplace for a fresh multi-engine verdict. Spends a scan and creates account activity; reuses an existing result unless force_rescan is set.",
-  "uuid": "c75531ef-eba1-54a8-8591-8466f15c6892",
+  "uuid": "d3ed3502-068f-4469-a124-8ec458497ea2",
   "docker_parameters": "ScanUrl",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -116,6 +116,7 @@
   "slug": "scan_url",
   "outputs": {
     "detected": "PolySwarm engines detected this artifact",
-    "not detected": "PolySwarm has scanned this artifact and no engine detected it"
+    "not detected": "PolySwarm has scanned this artifact and no engine detected it",
+    "unknown": "The scan finished but no engine gave a malicious or benign answer, so there is no verdict. Do not treat this as clean"
   }
 }

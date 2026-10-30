@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from polyswarm_api import exceptions as ps_exceptions
 
+from polyswarm_modules.sandbox import POLL_REQUEST_TIMEOUT, WAIT_OVERRUN_SECONDS
 from polyswarm_modules.scan import wait_for_scan
 from tests.helpers import autospec_api
 
@@ -89,3 +90,39 @@ def test_the_wait_never_sleeps_past_the_deadline(clock: _Clock) -> None:
         wait_for_scan(api, instance, 12)
 
     assert sum(clock.sleeps) == 12
+
+
+def test_scan_lookups_use_the_short_polling_timeout_and_the_client_timeout_is_restored(clock: _Clock) -> None:
+    api = autospec_api()
+    original = api.timeout
+    seen: list[float] = []
+
+    def lookup(_instance):
+        seen.append(api.timeout)
+        return _scan(closed=True)
+
+    api.lookup.side_effect = lookup
+
+    wait_for_scan(api, MagicMock(), 300)
+
+    assert seen == [POLL_REQUEST_TIMEOUT]
+    assert api.timeout == original
+
+
+def test_a_scan_wait_overruns_its_deadline_by_at_most_one_lookup(clock: _Clock) -> None:
+    """The documented bound: the deadline is checked between lookups, so one slow lookup is the overrun."""
+    api = autospec_api()
+    instance = MagicMock()
+    instance.__int__ = lambda self: 7
+
+    def slow_lookup(_instance):
+        clock.now += WAIT_OVERRUN_SECONDS  # a lookup that hangs through every retry
+        return _scan()
+
+    api.lookup.side_effect = slow_lookup
+
+    with pytest.raises(ps_exceptions.TimeoutException):
+        wait_for_scan(api, instance, 12)
+
+    assert clock.now <= 12 + WAIT_OVERRUN_SECONDS
+    assert api.lookup.call_count == 1

@@ -1,11 +1,12 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from polyswarm_api import exceptions as ps_exceptions
 
 from polyswarm_modules import PolyswarmModule
-from polyswarm_modules.action_polyswarm_searchhashes import SearchHashes
-from tests.helpers import autospec_build_client
+from polyswarm_modules.action_polyswarm_searchhashes import DEADLINE_SECONDS, MAX_CONSECUTIVE_FAILURES, SearchHashes
+from tests.helpers import autospec_build_client, autospec_request
 
 
 @pytest.fixture
@@ -505,3 +506,147 @@ def test_open_window_scan_plus_clean_result_is_partial(mock_build_client: MagicM
     action.run({"hashes": ["aa" * 32, "bb" * 32]})
 
     assert action._outputs == {"partial": True}
+
+
+def _hashes(count: int) -> list[str]:
+    return [f"{i:064x}" for i in range(count)]
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
+@pytest.mark.parametrize("status", [401, 403])
+def test_refused_key_partway_stops_the_run_as_partial(
+    mock_build_client: MagicMock, action: SearchHashes, status: int
+) -> None:
+    hashes = _hashes(6)
+
+    def _search(query_hash: str):
+        if query_hash == hashes[2]:
+            raise ps_exceptions.RequestException(autospec_request(status), "refused")
+        return iter([_make_result(sha256=query_hash, malicious_count=0)])
+
+    mock_build_client.return_value.search.side_effect = _search
+
+    response = action.run({"hashes": hashes})
+
+    assert response is not None
+    assert mock_build_client.return_value.search.call_count == 3
+    assert [row["hash"] for row in response["results"]] == hashes[:2]
+    assert len(response["errors"]) == 1
+    assert f"HTTP {status}" in response["errors"][0]["reason"]
+    assert action._outputs == {"partial": True}
+    assert action.error_message is None
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
+def test_transport_error_partway_stops_the_run_as_partial(mock_build_client: MagicMock, action: SearchHashes) -> None:
+    hashes = _hashes(6)
+
+    def _search(query_hash: str):
+        if query_hash == hashes[3]:
+            raise requests.ConnectionError("down")
+        return iter([_make_result(sha256=query_hash, malicious_count=0)])
+
+    mock_build_client.return_value.search.side_effect = _search
+
+    response = action.run({"hashes": hashes})
+
+    assert response is not None
+    assert mock_build_client.return_value.search.call_count == 4
+    assert [row["hash"] for row in response["results"]] == hashes[:3]
+    assert action._outputs == {"partial": True}
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
+def test_consecutive_failures_stop_the_run(mock_build_client: MagicMock, action: SearchHashes) -> None:
+    hashes = _hashes(10)
+
+    def _search(query_hash: str):
+        if query_hash in hashes[2:]:
+            raise ps_exceptions.RequestException(autospec_request(500), "server error")
+        return iter([_make_result(sha256=query_hash, malicious_count=0)])
+
+    mock_build_client.return_value.search.side_effect = _search
+
+    response = action.run({"hashes": hashes})
+
+    assert response is not None
+    assert mock_build_client.return_value.search.call_count == 2 + MAX_CONSECUTIVE_FAILURES
+    assert len(response["results"]) == 2
+    assert len(response["errors"]) == MAX_CONSECUTIVE_FAILURES
+    assert action._outputs == {"partial": True}
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
+def test_scattered_failures_do_not_stop_the_run(mock_build_client: MagicMock, action: SearchHashes) -> None:
+    hashes = _hashes(8)
+    bad = {hashes[1], hashes[3], hashes[5]}
+
+    def _search(query_hash: str):
+        if query_hash in bad:
+            raise ps_exceptions.RequestException(autospec_request(500), "server error")
+        return iter([_make_result(sha256=query_hash, malicious_count=0)])
+
+    mock_build_client.return_value.search.side_effect = _search
+
+    response = action.run({"hashes": hashes})
+
+    assert mock_build_client.return_value.search.call_count == 8
+    assert len(response["results"]) == 5
+    assert action._outputs == {"partial": True}
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhashes.time.monotonic")
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
+def test_deadline_stops_a_slow_run_as_partial(
+    mock_build_client: MagicMock, mock_clock: MagicMock, action: SearchHashes
+) -> None:
+    hashes = _hashes(5)
+    # One reading to set the deadline, then one per loop pass.
+    mock_clock.side_effect = [0.0, 1.0, 2.0, float(DEADLINE_SECONDS) + 1]
+    mock_build_client.return_value.search.side_effect = _search_returning(
+        {h: [_make_result(sha256=h, malicious_count=0)] for h in hashes}
+    )
+
+    response = action.run({"hashes": hashes})
+
+    assert response is not None
+    assert mock_build_client.return_value.search.call_count == 2
+    assert len(response["results"]) == 2
+    assert action._outputs == {"partial": True}
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
+def test_closed_window_with_no_scored_assertion_is_an_error_and_partial(
+    mock_build_client: MagicMock, action: SearchHashes
+) -> None:
+    good = "aa" * 32
+    silent = "bb" * 32
+    mock_build_client.return_value.search.side_effect = _search_returning(
+        {
+            good: [_make_result(sha256=good, malicious_count=0, benign_count=4)],
+            silent: [_make_result(sha256=silent, malicious_count=0, benign_count=0, abstained_count=3)],
+        }
+    )
+
+    response = action.run({"hashes": [good, silent]})
+
+    assert response is not None
+    assert [row["hash"] for row in response["results"]] == [good]
+    assert [row["hash"] for row in response["errors"]] == [silent]
+    assert "without any engine returning" in response["errors"][0]["reason"]
+    assert action._outputs == {"partial": True}
+
+
+@patch("polyswarm_modules.action_polyswarm_searchhashes.build_client", new_callable=autospec_build_client)
+def test_healthy_batch_is_unchanged(mock_build_client: MagicMock, action: SearchHashes) -> None:
+    hashes = _hashes(4)
+    mock_build_client.return_value.search.side_effect = _search_returning(
+        {h: [_make_result(sha256=h, malicious_count=0)] for h in hashes}
+    )
+
+    response = action.run({"hashes": hashes})
+
+    assert response is not None
+    assert response["errors"] == []
+    assert response["queried_count"] == 4
+    assert action._outputs == {"not detected": True}

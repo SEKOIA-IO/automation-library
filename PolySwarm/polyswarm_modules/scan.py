@@ -13,7 +13,12 @@ from typing import Any
 from polyswarm_api import exceptions as ps_exceptions
 from polyswarm_api.api import PolyswarmAPI
 
-from polyswarm_modules.sandbox import INITIAL_POLL_INTERVAL, POLL_BACKOFF_FACTOR, SUBMIT_POLL_INTERVAL_CEILING
+from polyswarm_modules.sandbox import (
+    INITIAL_POLL_INTERVAL,
+    POLL_BACKOFF_FACTOR,
+    SUBMIT_POLL_INTERVAL_CEILING,
+    polling_timeout,
+)
 
 # A scan waits on engines that can answer slowly, but the SDK's own default of
 # fifteen minutes is the kind of blocked playbook run the sandbox actions were
@@ -31,7 +36,16 @@ def wait_for_scan(api: PolyswarmAPI, instance: Any, timeout: float) -> Any:
     callers keep handling it exactly as they handled wait_for. The scan itself
     carries on at PolySwarm. The last lookup is made at the deadline, not
     before it, so a scan that finishes in the final interval is still returned.
+
+    The deadline is checked between lookups, so the wait can run past it by one
+    lookup, bounded by the shorter per request timeout used while polling (see
+    WAIT_OVERRUN_SECONDS in the sandbox module).
     """
+    with polling_timeout(api):
+        return _poll_scan(api, instance, timeout)
+
+
+def _poll_scan(api: PolyswarmAPI, instance: Any, timeout: float) -> Any:
     deadline = time.monotonic() + timeout
     interval = INITIAL_POLL_INTERVAL
 

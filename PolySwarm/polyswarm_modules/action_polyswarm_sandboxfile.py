@@ -56,7 +56,8 @@ class SandboxFileArguments(BaseModel):
         ge=1,
         le=MAX_WAIT_SECONDS_CEILING,
         description="Only used when wait is enabled. Upper bound on how long to block for a terminal status, "
-        "in seconds, capped at 300 regardless of the value supplied",
+        "in seconds, from 1 to 300. A larger value is rejected with a validation error. "
+        "The wait can run past this by one status check, about a minute at worst",
     )
 
 
@@ -101,8 +102,7 @@ class SandboxFile(PolyswarmAction):
             self.error(refusal)
             return None
 
-        # Resolved only after a reusable report has been looked for, so a provider list that
-        # cannot be read never costs the analyst a report that already exists.
+        # Resolved before the reusable report lookup, from the provider list already read above.
         args.vm_slug = args.vm_slug or pick_vm_slug(listing, args.sandbox, "FILE") or ""
 
         # Open through the path object rather than the built in open(): on the S3

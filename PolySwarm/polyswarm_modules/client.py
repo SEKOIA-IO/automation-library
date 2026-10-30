@@ -46,7 +46,7 @@ def build_client(configuration: Any, timeout: int = DEFAULT_TIMEOUT) -> Polyswar
     inside a playbook reads to an analyst as a broken integration.
     """
     api = PolyswarmAPI(
-        key=configuration.apikey,
+        key=configuration.API_Key,
         community=configuration.community,
         timeout=timeout,
     )
@@ -117,7 +117,8 @@ def redact_key(error: Exception, apikey: str | None) -> str:
     The PolySwarm client renders request parameters into some of its error
     messages, so a message is never trusted to be key free. Lives here rather
     than on the trigger because the client is what puts the key into them, and
-    the trigger and the connector both have to log through it.
+    anything that runs unattended, the trigger and any scheduled
+    ingestion alike, has to log through it.
     """
     message = str(error) or error.__class__.__name__
     if apikey:

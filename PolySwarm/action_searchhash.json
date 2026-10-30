@@ -1,7 +1,7 @@
 {
   "name": "Search Hash",
   "description": "Look up a hash against what PolySwarm already knows. Read-only: nothing is submitted, no scan quota is spent, and an unseen hash comes back as unknown rather than an error. Use ScanFile to submit a file for a fresh verdict instead.",
-  "uuid": "d4e6d0c8-5c5d-59bd-87ff-2be80c6efe58",
+  "uuid": "543edad2-e5dd-477a-94fd-8f000e36593d",
   "docker_parameters": "SearchHash",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -85,6 +85,6 @@
   "outputs": {
     "detected": "PolySwarm engines detected this artifact",
     "not detected": "PolySwarm has scanned this artifact and no engine detected it",
-    "unknown": "PolySwarm has never seen this artifact"
+    "unknown": "PolySwarm has never seen this artifact, or no engine has given a malicious or benign answer on it, so there is no verdict"
   }
 }

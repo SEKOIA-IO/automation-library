@@ -301,7 +301,7 @@ def test_truncation_boundary_is_exact(
 def test_invalid_query_error_does_not_quote_the_client_exception(
     mock_build_client: MagicMock, action: SearchMetadata
 ) -> None:
-    secret_bearing_message = "GET /search/metadata/query?apikey=SECRET&query=tags:ransomware"
+    secret_bearing_message = "GET /search/metadata/query?API_Key=SECRET&query=tags:ransomware"
     mock_build_client.return_value.search_by_metadata.side_effect = ps_exceptions.InvalidValueException(
         secret_bearing_message
     )

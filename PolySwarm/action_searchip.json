@@ -92,6 +92,6 @@
   "outputs": {
     "detected": "PolySwarm engines detected this artifact",
     "not detected": "PolySwarm has scanned this artifact and no engine detected it",
-    "unknown": "PolySwarm has never seen this artifact"
+    "unknown": "PolySwarm has never seen this artifact, or no engine has given a malicious or benign answer on it, so there is no verdict"
   }
 }

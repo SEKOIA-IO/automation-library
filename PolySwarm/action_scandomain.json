@@ -1,7 +1,7 @@
 {
   "name": "Scan Domain",
   "description": "Submit a domain to PolySwarm's engine marketplace for a fresh multi-engine verdict, via the URL scanning endpoint since PolySwarm has no separate domain endpoint. Spends a scan and creates account activity; reuses an existing result unless force_rescan is set. Use ScanIp for IP addresses.",
-  "uuid": "85d9c6df-5e7e-50d8-85dd-4a6e60d83643",
+  "uuid": "81a00bd7-036a-460b-abd6-303ae3685dd2",
   "docker_parameters": "ScanDomain",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -120,6 +120,7 @@
   "slug": "scan_domain",
   "outputs": {
     "detected": "PolySwarm engines detected this artifact",
-    "not detected": "PolySwarm has scanned this artifact and no engine detected it"
+    "not detected": "PolySwarm has scanned this artifact and no engine detected it",
+    "unknown": "The scan finished but no engine gave a malicious or benign answer, so there is no verdict. Do not treat this as clean"
   }
 }

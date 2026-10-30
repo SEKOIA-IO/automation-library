@@ -130,7 +130,7 @@ def test_account_usage_never_returns_the_api_key(mock_build_client: MagicMock, a
     response = action.run({})
 
     assert "test-api-key" not in str(response)
-    assert "apikey" not in response
+    assert "API_Key" not in response
 
 
 @patch("polyswarm_modules.action_polyswarm_accountusage.build_client", new_callable=autospec_build_client)

@@ -44,3 +44,14 @@ def tally_assertions(result: Any) -> AssertionTally:
             for a in scored
         ],
     )
+
+
+def has_verdict(result: Any) -> bool:
+    """True when at least one engine inside the mask gave a malicious or benign answer.
+
+    A result can be closed and not failed yet carry nothing to report: no engine
+    covers the artifact type, every engine abstained, or every assertion fell
+    outside the mask. Its counts are zero out of zero, and reading that as "not
+    detected" tells a playbook nobody found anything when nobody looked.
+    """
+    return any(a.mask and a.verdict is not None for a in result.assertions)
