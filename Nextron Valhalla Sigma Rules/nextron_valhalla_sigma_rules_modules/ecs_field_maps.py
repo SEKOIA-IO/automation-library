@@ -93,7 +93,7 @@ RAW_TO_ECS_SIGMAHQ_WINDOWS: dict[str, str] = {
     "SourceProcessId": "process.pid",
     "SourceThreadId": "process.thread.id",
     # TargetDomainName deviates from SigmaHQ upstream (`user.domain`).
-    # Empirically verified that Sekoia's Windows and Microsoft
+    # Empirically verified 2026-07-17 that Sekoia's Windows and Microsoft
     # Windows parsers extract Security-EventID `TargetDomainName` to
     # `user.target.domain` (alongside `TargetUserName → user.target.name`
     # and `TargetUserSid → user.target.id`), matching the ECS convention
@@ -237,8 +237,8 @@ RAW_TO_ECS_SIGMAHQ_ZEEK: dict[str, str] = {
     "uri": "url.original",
 }
 
-# SigmaHQ's kubernetes.py pipeline was removed after verifying against
-# SEKOIA-IO/intake-formats Kubernetes/audit-log/ingest/parser.yml
+# SigmaHQ's kubernetes.py pipeline was removed on 2026-07-16 after
+# verifying against SEKOIA-IO/intake-formats Kubernetes/audit-log/ingest/parser.yml
 # that every one of its targets was symbolic. Sekoia's K8s audit parser
 # emits flat `kubernetes.*` fields (e.g. `kubernetes.object.name`,
 # `kubernetes.namespace`, `kubernetes.resource`, `kubernetes.api.group`,
@@ -261,11 +261,11 @@ RAW_TO_ECS_CUSTOM: dict[str, str] = {
     "eventName": "event.action",
     "eventSource": "event.provider",
     "operationName": "event.action",
-    "OperationName": "event.action",     # PascalCase variant seen in some rules
-    "eventType": "event.action",         # CloudTrail eventType
-    "EventType": "event.action",         # PascalCase variant
+    "OperationName": "event.action",  # PascalCase variant seen in some rules
+    "eventType": "event.action",  # CloudTrail eventType
+    "EventType": "event.action",  # PascalCase variant
     # Sekoia's aws-cloudtrail parser writes `errorCode` to `event.code`
-    # (verified against SEKOIA-IO/intake-formats
+    # (verified 2026-07-16 against SEKOIA-IO/intake-formats
     # AWS/aws-cloudtrail/ingest/parser.yml).
     "errorCode": "event.code",
     # ``requestParameters.*`` fields aren't mapped. Sekoia's aws-cloudtrail
@@ -279,7 +279,7 @@ RAW_TO_ECS_CUSTOM: dict[str, str] = {
     # for the yield.
     # Azure sign-in logs — Sekoia's Azure/azure-ad parser exposes sign-in
     # events under the `azuread.properties.*` namespace (camelCase),
-    # verified against SEKOIA-IO/intake-formats
+    # verified 2026-07-16 against SEKOIA-IO/intake-formats
     # Azure/azure-ad/ingest/parser.yml.
     "riskEventType": "azuread.properties.riskEventType",
     "AuthenticationRequirement": "azuread.properties.authenticationRequirement",
@@ -300,9 +300,88 @@ RAW_TO_ECS_CUSTOM: dict[str, str] = {
     "a4": "auditd.data.a4",
     "exe": "process.executable",
     "cfgpath": "auditd.data.cfgpath",
+    # W3C ELF server-side URI fields. SigmaHQ Zeek covers only the
+    # client-side variants (``c-uri``, ``c-uri-stem``); the ``cs-`` prefix
+    # (server-log format) is common in IIS/proxy Sigma rules.
+    "cs-uri": "url.original",
+    "cs-uri-query": "url.query",
+    "cs-uri-stem": "url.original",
+    # W3C ELF variant (server-side ``userAgent`` camelCase — not
+    # covered by Zeek, which uses ``http_user_agent``/``c-useragent``).
+    "userAgent": "user_agent.original",
+    # ``cs-user-agent`` is the hyphenated W3C ELF form used in some
+    # IIS/proxy Sigma rules (e.g. exploit-webserver-* category); SigmaHQ
+    # Zeek maps only the abbreviated ``c-useragent``.
+    "cs-user-agent": "user_agent.original",
+    # ``user_agent`` (bare) shows up in Zeek HTTP Sigma rules; SigmaHQ
+    # Zeek maps the equivalent ``http_user_agent`` but not this variant.
+    "user_agent": "user_agent.original",
+    # Zeek file/TLS fingerprint fields — replace the SigmaHQ Zeek pipeline's
+    # symbolic ``zeek.files.*`` / ``zeek.ssl.*`` targets with the flat ECS
+    # forms Sekoia's Corelight parser actually emits (verified 2026-07-16
+    # against SEKOIA-IO/intake-formats Corelight/corelight/ingest/parser.yml).
+    "md5": "file.hash.md5",
+    "sha1": "file.hash.sha1",
+    "sha256": "file.hash.sha256",
+    "mime_type": "file.mime_type",
+    "ja3": "tls.client.ja3",
+    "ja3s": "tls.server.ja3s",
+    # Kubernetes audit — both the dotted ``objectRef.*`` form (as Sigma
+    # rules often write) and the bare short names (from SigmaHQ's
+    # kubernetes pipeline, which we no longer mirror because its targets
+    # were symbolic). Targets verified 2026-07-16 against
+    # SEKOIA-IO/intake-formats Kubernetes/audit-log/ingest/parser.yml:
+    # Sekoia's parser emits flat ``kubernetes.*`` fields plus
+    # ``event.action`` for `verb` and ``user.name`` for `user.username`.
+    "objectRef.name": "kubernetes.object.name",
+    "objectRef.namespace": "kubernetes.namespace",
+    "objectRef.resource": "kubernetes.resource",
+    "objectRef.apiGroup": "kubernetes.api.group",
+    "objectRef.subresource": "kubernetes.subresource",
+    "apiGroup": "kubernetes.api.group",
+    "verb": "event.action",
+    # Dropped (no ECS equivalent in Sekoia's parser — deep-nested paths
+    # like ``kubernetes.audit.requestObject.spec...`` are not exposed):
+    # ``capabilities``, ``hostPath``, ``privileged``. Rules using them
+    # will fall through to the honest ``skipped_unmapped`` counter.
+    # ``namespace``, ``resource``, ``subresource``, ``username`` (bare
+    # names) are also intentionally not mapped — they're context-ambiguous
+    # across logsources, and no rules in the current feed use them without
+    # the ``objectRef.`` prefix.
+    # Note: QueryName is intentionally NOT here — SigmaHQ Windows
+    # already maps it (dns.question.name).
+}
+
+
+# ---------------------------------------------------------------------------
+# Windows overrides — verified against Sekoia's Windows parser
+# ---------------------------------------------------------------------------
+# These win over the SigmaHQ Windows map. Verified against the
+# SEKOIA-IO/intake-formats ``Windows/windows`` parser and its Sysmon test
+# fixtures (sysmon_6, sysmon_7, sysmon_10): the parser keeps the access
+# *source* in ``process.*`` and leaves the target process and the
+# signature fields under ``action.properties.*``.
+RAW_TO_ECS_WINDOWS_OVERRIDES: dict[str, str] = {
+    # ProcessAccess (Sysmon 10): ``process.executable`` is the SourceImage.
+    "TargetImage": "action.properties.TargetImage",
+    "TargetProcessId": "action.properties.TargetProcessId",
+    "TargetProcessGUID": "action.properties.TargetProcessGUID",
+    # ImageLoad / DriverLoad (Sysmon 6/7): no ``*.code_signature.*`` fields.
+    "Signature": "action.properties.Signature",
+    "Signed": "action.properties.Signed",
+    "SignatureStatus": "action.properties.SignatureStatus",
+}
+
+# ---------------------------------------------------------------------------
+# Windows-only gap fillers (applied after the SigmaHQ Windows map)
+# ---------------------------------------------------------------------------
+# Gated on ``logsource.product: windows``: generic names such as ``Status``
+# or ``Path`` would otherwise be accepted for e.g. Okta rules, where they
+# never match.
+RAW_TO_ECS_CUSTOM_WINDOWS: dict[str, str] = {
     # Windows Security event_data — Sekoia's Winlogbeat/Windows parsers
     # route arbitrary event_data.<X> subfields to `action.properties.<X>`,
-    # verified by pushing a synthetic Winlogbeat event to a
+    # verified 2026-07-17 by pushing a synthetic Winlogbeat event to a
     # USA1 tenant with `winlog.event_data.AccessMask=0xDEADBEEF` and
     # confirming the value was queryable at `action.properties.AccessMask`
     # (and NOT at `winlog.event_data.AccessMask`). Same test verified
@@ -350,8 +429,8 @@ RAW_TO_ECS_CUSTOM: dict[str, str] = {
     "TaskContent": "action.properties.TaskContent",
     "TaskName": "action.properties.TaskName",
     "TicketEncryptionType": "action.properties.TicketEncryptionType",
-    # Users (Sigma canonical → ECS user.*). All three verified against
-    # Sekoia's Microsoft Windows parser (Security EventID 4624).
+    # Users (Sigma canonical → ECS user.*). All three verified 2026-07-17
+    # against Sekoia's Microsoft Windows parser (Security EventID 4624).
     "SubjectUserName": "user.name",
     "TargetUserName": "user.target.name",
     "TargetUserSid": "user.target.id",
@@ -359,64 +438,9 @@ RAW_TO_ECS_CUSTOM: dict[str, str] = {
     "EventLog": "winlog.channel",
     # Sysmon fields not in SigmaHQ's static Windows map
     "IntegrityLevel": "process.integrity_level",
-    "TargetImage": "process.executable",
     "ImagePath": "process.executable",
     "ServiceName": "service.name",
     "ServiceFileName": "service.executable",
-    # Signature — SigmaHQ makes this context-aware
-    # (driver_loaded / image_loaded only). Static fallback covers rules
-    # in other contexts that still reference the field.
-    "Signature": "file.code_signature.subject_name",
-    # W3C ELF server-side URI fields. SigmaHQ Zeek covers only the
-    # client-side variants (``c-uri``, ``c-uri-stem``); the ``cs-`` prefix
-    # (server-log format) is common in IIS/proxy Sigma rules.
-    "cs-uri": "url.original",
-    "cs-uri-query": "url.query",
-    "cs-uri-stem": "url.original",
-    # W3C ELF variant (server-side ``userAgent`` camelCase — not
-    # covered by Zeek, which uses ``http_user_agent``/``c-useragent``).
-    "userAgent": "user_agent.original",
-    # ``cs-user-agent`` is the hyphenated W3C ELF form used in some
-    # IIS/proxy Sigma rules (e.g. exploit-webserver-* category); SigmaHQ
-    # Zeek maps only the abbreviated ``c-useragent``.
-    "cs-user-agent": "user_agent.original",
-    # ``user_agent`` (bare) shows up in Zeek HTTP Sigma rules; SigmaHQ
-    # Zeek maps the equivalent ``http_user_agent`` but not this variant.
-    "user_agent": "user_agent.original",
-    # Zeek file/TLS fingerprint fields — replace the SigmaHQ Zeek pipeline's
-    # symbolic ``zeek.files.*`` / ``zeek.ssl.*`` targets with the flat ECS
-    # forms Sekoia's Corelight parser actually emits (verified against
-    # SEKOIA-IO/intake-formats Corelight/corelight/ingest/parser.yml).
-    "md5": "file.hash.md5",
-    "sha1": "file.hash.sha1",
-    "sha256": "file.hash.sha256",
-    "mime_type": "file.mime_type",
-    "ja3": "tls.client.ja3",
-    "ja3s": "tls.server.ja3s",
-    # Kubernetes audit — both the dotted ``objectRef.*`` form (as Sigma
-    # rules often write) and the bare short names (from SigmaHQ's
-    # kubernetes pipeline, which we no longer mirror because its targets
-    # were symbolic). Targets verified against
-    # SEKOIA-IO/intake-formats Kubernetes/audit-log/ingest/parser.yml:
-    # Sekoia's parser emits flat ``kubernetes.*`` fields plus
-    # ``event.action`` for `verb` and ``user.name`` for `user.username`.
-    "objectRef.name": "kubernetes.object.name",
-    "objectRef.namespace": "kubernetes.namespace",
-    "objectRef.resource": "kubernetes.resource",
-    "objectRef.apiGroup": "kubernetes.api.group",
-    "objectRef.subresource": "kubernetes.subresource",
-    "apiGroup": "kubernetes.api.group",
-    "verb": "event.action",
-    # Dropped (no ECS equivalent in Sekoia's parser — deep-nested paths
-    # like ``kubernetes.audit.requestObject.spec...`` are not exposed):
-    # ``capabilities``, ``hostPath``, ``privileged``. Rules using them
-    # will fall through to the honest ``skipped_unmapped`` counter.
-    # ``namespace``, ``resource``, ``subresource``, ``username`` (bare
-    # names) are also intentionally not mapped — they're context-ambiguous
-    # across logsources, and no rules in the current feed use them without
-    # the ``objectRef.`` prefix.
-    # Note: QueryName is intentionally NOT here — SigmaHQ Windows
-    # already maps it (dns.question.name).
 }
 
 
@@ -426,37 +450,72 @@ def _strip_caseless(target: str) -> str:
     return target[:-9] if target.endswith(".caseless") else target
 
 
-def _merge_sigmahq() -> dict[str, str]:
-    """Build the runtime map with ``setdefault`` — the first pipeline to
-    define a given source field wins. Order:
-
-    1. SigmaHQ Windows — authoritative for shared field names since the
-       Valhalla feed is majority Windows.
-    2. Custom — bespoke overrides for fields Windows doesn't cover
-       explicitly (e.g. ``TargetImage`` — pySigma macOS maps it to
-       ``target.process.executable``, which is wrong for Windows rules).
-    3. SigmaHQ macOS / Zeek — fill the remaining gaps
-       (macOS- and Zeek-specific field names). SigmaHQ Kubernetes
-       pipeline was removed (all targets symbolic against Sekoia's
-       parser); corrected K8s entries live in CUSTOM.
-
-    ``.caseless`` targets are stripped since Sekoia's ECS schema doesn't
-    expose those sub-fields.
-    """
+def _merge(*pipelines: dict[str, str]) -> dict[str, str]:
+    """Merge with ``setdefault`` — the first map to define a source field
+    wins. ``.caseless`` targets are stripped since Sekoia's ECS schema
+    doesn't expose those sub-fields."""
     merged: dict[str, str] = {}
-    for pipeline in (
-        RAW_TO_ECS_SIGMAHQ_WINDOWS,
-        RAW_TO_ECS_CUSTOM,
-        RAW_TO_ECS_SIGMAHQ_MACOS,
-        RAW_TO_ECS_SIGMAHQ_ZEEK,
-    ):
+    for pipeline in pipelines:
         for src, target in pipeline.items():
             merged.setdefault(src, _strip_caseless(target))
     return merged
 
 
-# Runtime map used by the converter. Do not edit — edit the source dicts.
-RAW_TO_ECS: dict[str, str] = _merge_sigmahq()
+# Runtime maps used by the converter, selected by ``logsource.product``.
+# Do not edit — edit the source dicts.
+#
+# Every map starts with its own product's SigmaHQ map, so shared names
+# resolve the way that product's parser emits them (macOS ``ProcessName`` →
+# ``process.name``, not the Windows ``process.executable``). The other
+# SigmaHQ maps follow as gap fillers for generic names: SigmaHQ's Windows
+# map, for instance, has no ``CommandLine`` entry.
+#
+# The Windows-only ``event_data`` catch-alls (``Status``, ``Path``, …) and
+# the parser-verified Windows overrides are only part of the Windows map.
+RAW_TO_ECS_BY_PRODUCT: dict[str, dict[str, str]] = {
+    "windows": _merge(
+        RAW_TO_ECS_WINDOWS_OVERRIDES,
+        RAW_TO_ECS_SIGMAHQ_WINDOWS,
+        RAW_TO_ECS_CUSTOM_WINDOWS,
+        RAW_TO_ECS_CUSTOM,
+        RAW_TO_ECS_SIGMAHQ_MACOS,
+        RAW_TO_ECS_SIGMAHQ_ZEEK,
+    ),
+    "macos": _merge(
+        RAW_TO_ECS_SIGMAHQ_MACOS,
+        RAW_TO_ECS_CUSTOM,
+        RAW_TO_ECS_SIGMAHQ_WINDOWS,
+        RAW_TO_ECS_SIGMAHQ_ZEEK,
+    ),
+    "zeek": _merge(
+        RAW_TO_ECS_SIGMAHQ_ZEEK,
+        RAW_TO_ECS_CUSTOM,
+        RAW_TO_ECS_SIGMAHQ_WINDOWS,
+        RAW_TO_ECS_SIGMAHQ_MACOS,
+    ),
+}
+# Fallback for every other product (linux, cloud, web, none).
+RAW_TO_ECS: dict[str, str] = _merge(
+    RAW_TO_ECS_SIGMAHQ_WINDOWS,
+    RAW_TO_ECS_CUSTOM,
+    RAW_TO_ECS_SIGMAHQ_MACOS,
+    RAW_TO_ECS_SIGMAHQ_ZEEK,
+)
+
+
+# Products whose events reach Sekoia through the Windows event-log parser
+# (RPC Firewall writes to a Windows event channel), so they share the
+# Windows map and its ``action.properties.*`` catch-alls.
+_PRODUCT_ALIASES: dict[str, str] = {"rpc_firewall": "windows"}
+
+
+def mapping_for_product(product: str | None) -> dict[str, str]:
+    """Field map for a Sigma ``logsource.product`` (case-insensitive);
+    :data:`RAW_TO_ECS` for unknown or missing products."""
+    if not isinstance(product, str):
+        return RAW_TO_ECS
+    key = product.strip().lower()
+    return RAW_TO_ECS_BY_PRODUCT.get(_PRODUCT_ALIASES.get(key, key), RAW_TO_ECS)
 
 
 # ---------------------------------------------------------------------------
@@ -471,6 +530,12 @@ RAW_TO_ECS: dict[str, str] = _merge_sigmahq()
 # FileVersion) and Signature/Initiated/Protocol come from
 # ``ecs_windows_variable_mappings`` in windows.py. TargetObject is our
 # original bespoke context-aware branch (Sigma convention).
+# Sysmon fields whose target depends on the event type. Verified against
+# the Sekoia Windows parser fixtures (sysmon_1/6/7): PE metadata stays in
+# ``action.properties.*``; the loaded image is ``dll.path`` for ImageLoad
+# but ``process.executable`` for DriverLoad.
+_PE_METADATA_CATEGORIES = ("process_creation", "image_load")
+
 CONTEXT_AWARE_FIELDS: dict[str, dict[str, str]] = {
     # Bespoke — Sigma convention rather than pySigma.
     "TargetObject": {
@@ -481,38 +546,52 @@ CONTEXT_AWARE_FIELDS: dict[str, dict[str, str]] = {
         "registry_event": "registry.path",
         "file_event": "file.path",
     },
-    # From SigmaHQ ecs_windows_variable_mappings:
-    "FileVersion": {
-        "process_creation": "process.pe.file_version",
-        "image_load": "file.pe.file_version",
+    **{
+        field: {category: f"action.properties.{field}" for category in _PE_METADATA_CATEGORIES}
+        for field in ("FileVersion", "Description", "Product", "Company", "OriginalFileName")
     },
-    "Description": {
-        "process_creation": "process.pe.description",
-        "image_load": "file.pe.description",
-        "sysmon_error": "action.properties.Description",
+    "ImageLoaded": {
+        "image_load": "dll.path",
+        "driver_load": "process.executable",
     },
-    "Product": {
-        "process_creation": "process.pe.product",
-        "image_load": "file.pe.product",
-    },
-    "Company": {
-        "process_creation": "process.pe.company",
-        "image_load": "file.pe.company",
-    },
-    "OriginalFileName": {
-        "process_creation": "process.pe.original_file_name",
-        "image_load": "file.pe.original_file_name",
+    "Imphash": {
+        "process_creation": "process.pe.imphash",
+        "driver_load": "process.pe.imphash",
+        "image_load": "dll.pe.imphash",
     },
     "Protocol": {
         "network_connection": "network.transport",
     },
-    "Initiated": {
-        "network_connection": "network.direction",
+    # ``Initiated`` is intentionally absent: the parser doesn't emit it
+    # (SigmaHQ's ``network.direction`` target holds ingress/egress, never
+    # ``'true'``), so rules using it are reported as unmapped.
+}
+CONTEXT_AWARE_FIELDS["Description"]["sysmon_error"] = "action.properties.Description"
+
+# Targets of the ``Hashes`` transform, by ``logsource.category``. The
+# parser fills ``process.hash.*`` for process events, ``dll.hash.*`` for
+# ImageLoad and ``file.hash.*`` for the file-hash events (Sysmon 15/23/26);
+# SHA1 only exists for process events, SHA512 nowhere.
+HASH_TARGETS_DEFAULT: dict[str, str] = {
+    "md5": "process.hash.md5",
+    "sha1": "process.hash.sha1",
+    "sha256": "process.hash.sha256",
+    "imphash": "process.pe.imphash",
+}
+_FILE_HASH_TARGETS: dict[str, str] = {
+    "md5": "file.hash.md5",
+    "sha256": "file.hash.sha256",
+    "imphash": "file.pe.imphash",
+}
+HASH_TARGETS_BY_CATEGORY: dict[str, dict[str, str]] = {
+    "image_load": {
+        "md5": "dll.hash.md5",
+        "sha256": "dll.hash.sha256",
+        "imphash": "dll.pe.imphash",
     },
-    # ``Signature`` is intentionally NOT here despite pySigma treating
-    # it as context-aware — both categories (driver_loaded, image_loaded)
-    # map to the same ECS target, so the static entry in
-    # ``RAW_TO_ECS_CUSTOM`` covers all uses without gating on category.
+    "create_stream_hash": _FILE_HASH_TARGETS,
+    "file_delete": _FILE_HASH_TARGETS,
+    "file_delete_detected": _FILE_HASH_TARGETS,
 }
 
 # Fields produced by our own Stage 2 transforms (Hashes value split,
@@ -521,11 +600,8 @@ CONTEXT_AWARE_FIELDS: dict[str, dict[str, str]] = {
 # field names some Sigma rules use directly (e.g. GCP audit fields).
 _ECS_PASSTHROUGH_FIELDS: frozenset[str] = frozenset(
     {
-        "process.hash.md5",
-        "process.hash.sha1",
-        "process.hash.sha256",
-        "process.hash.sha512",
-        "process.hash.imphash",
+        *HASH_TARGETS_DEFAULT.values(),
+        *(t for targets in HASH_TARGETS_BY_CATEGORY.values() for t in targets.values()),
         "registry.path",
         "file.path",
         # GCP audit — Sigma rules already write these in ECS form.

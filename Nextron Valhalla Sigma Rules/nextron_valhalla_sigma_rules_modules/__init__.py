@@ -9,7 +9,7 @@ from nextron_valhalla_sigma_rules_modules.triggers.sync_sigma_rules_catalog impo
 
 
 class NextronValhallaSigmaRulesModule(Module):
-    configuration: NextronValhallaSigmaRulesModuleConfiguration
+    configuration: NextronValhallaSigmaRulesModuleConfiguration  # type: ignore[override]
 
 
 __all__ = [

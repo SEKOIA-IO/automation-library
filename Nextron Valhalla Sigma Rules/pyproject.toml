@@ -1,35 +1,51 @@
 [project]
 name = "nextron-valhalla-sigma-rules"
-version = "1.1.0"
+version = "1.2.0"
 description = "Syncs the Nextron Valhalla Sigma feed into the Sekoia Rules Catalog"
 authors = []
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.14,<4"
 
 dependencies = [
-    "sekoia-automation-sdk>=1.23.1,<2",
+    "sekoia-automation-sdk>=1.27.0,<2",
     "requests>=2.34.2,<3",
     "PyYAML>=6.0,<7",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest",
+    "pytest>=7.0",
     "pytest-cov",
     "requests-mock",
-    "ruff",
+]
+lint = [
+    "ruff>=0.14",
     "mypy",
+    "types-PyYAML",
+    "types-requests",
 ]
 
 [tool.uv]
 package = false
+default-groups = ["dev", "lint"]
 
 [tool.ruff]
 line-length = 119
-target-version = "py311"
+target-version = "py314"
+fix = true
+
+[tool.ruff.lint]
+select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
+install_types = true
+non_interactive = true
 ignore_missing_imports = true
+show_column_numbers = true
+exclude = ["tests/"]
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]
@@ -43,7 +59,6 @@ addopts = '''
   --cov=nextron_valhalla_sigma_rules_modules
   --cov-branch
   --cache-clear
-  --cov-report=html
   --cov-report=term-missing:skip-covered
   --cov-fail-under=85
   --capture=sys

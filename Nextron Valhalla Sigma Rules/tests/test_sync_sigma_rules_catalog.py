@@ -5,12 +5,15 @@ from unittest.mock import MagicMock
 import pytest
 
 from nextron_valhalla_sigma_rules_modules.sekoia_client import (
+    SekoiaClient,
     SekoiaRuleNotFoundError,
 )
+from nextron_valhalla_sigma_rules_modules.sigma_mapper import SEVERITY_MAP
 from nextron_valhalla_sigma_rules_modules.triggers.sync_sigma_rules_catalog import (
+    FEED_STATE_FILE,
     UUID_MAP_FILE,
     SyncSigmaRulesCatalog,
-    _disable_body_from_server,
+    _attack_technique_ids,
     _normalize_names,
 )
 
@@ -28,33 +31,81 @@ def _rule_yaml(title: str, level: str = "medium", status: str = "stable") -> str
     )
 
 
+SEVERITY_HIGH = SEVERITY_MAP["high"]
+
 SAMPLE_RULES = [
     {"id": "valhalla-a", "filename": "a.yml", "content": _rule_yaml("A")},
     {"id": "valhalla-b", "filename": "b.yml", "content": _rule_yaml("B", "high")},
 ]
 
 
+class FakeCatalog:
+    """In-memory stand-in for the Sekoia Rules Catalog. Rules created by one
+    sync are returned by the next sync's scan, like on a real tenant."""
+
+    def __init__(self):
+        self.rules: dict[str, dict] = {}
+
+    def create(self, body):
+        uuid = f"sekoia-{body['name']}"
+        while uuid in self.rules:
+            uuid += "+"
+        self.rules[uuid] = {
+            "uuid": uuid,
+            "name": body["name"],
+            "enabled": body["enabled"],
+            "community_uuid": body.get("community_uuid", "c-1"),
+            "tags": [{"uuid": f"t-{t}", "name": t} for t in body.get("tags", [])],
+        }
+        return uuid
+
+    def update(self, uuid, body):
+        if uuid not in self.rules:
+            raise SekoiaRuleNotFoundError("gone", status_code=404)
+        self.rules[uuid].update(name=body["name"], enabled=body["enabled"])
+
+    def disable(self, uuid):
+        if uuid not in self.rules:
+            raise SekoiaRuleNotFoundError("gone", status_code=404)
+        self.rules[uuid]["enabled"] = False
+
+    def iter_rules(self, tag_name=None, community_uuid=None, **_):
+        for rule in list(self.rules.values()):
+            names = {t["name"] for t in rule["tags"]}
+            if tag_name and tag_name not in names:
+                continue
+            if community_uuid and rule.get("community_uuid") != community_uuid:
+                continue
+            yield dict(rule)
+
+
 @pytest.fixture
-def trigger(data_storage):
+def trigger(data_storage, monkeypatch):
+    from nextron_valhalla_sigma_rules_modules.triggers import sync_sigma_rules_catalog as sync_mod
+
+    # Ordinary tests drop rules from a 2-rule feed; switch the B2 shrink
+    # guard off here. The ``guarded`` fixture re-enables it.
+    monkeypatch.setattr(sync_mod, "MAX_FEED_SHRINK_RATIO", 1.0)
     t = SyncSigmaRulesCatalog(data_path=Path(data_storage))
     t._valhalla = MagicMock()
     t._valhalla.get_sigma_feed.return_value = list(SAMPLE_RULES)
-    t._sekoia = MagicMock()
-    t._sekoia.create_rule.side_effect = lambda body: f"sekoia-{body['name']}"
-    # Default server state for the PUT pre-flight GET: rule is enabled=False
-    # (matches _enabled=False default so update-path tests see the same
-    # body["enabled"] value the pre-get-rule code used to send).
-    t._sekoia.get_rule.return_value = {"enabled": False}
-    # Empty catalog scan by default: no server-side marker-tagged rules.
-    # Tests exercising the scan override this per-case.
-    t._sekoia.iter_rules.return_value = []
+    catalog = FakeCatalog()
+    t.catalog = catalog
+    # spec= makes a call to a method SekoiaClient doesn't define fail.
+    t._sekoia = MagicMock(spec=SekoiaClient)
+    t._sekoia.create_rule.side_effect = catalog.create
+    t._sekoia.update_rule.side_effect = catalog.update
+    t._sekoia.disable_rule.side_effect = catalog.disable
+    t._sekoia.iter_rules.side_effect = catalog.iter_rules
+    t._sekoia.find_attack_pattern.return_value = None
     t._enabled = False
     t._disable_removed = False
     t._preserve_rule_names = frozenset()
-    # Permissive defaults matching the new-user experience: every rule
-    # with status experimental+ and any Sigma level passes.
+    t._community_uuid = None
+    # Permissive defaults: every rule with status experimental+ and any
+    # Sigma level passes.
     t._min_severity = 10  # informational
-    t._max_status_effort = 3  # experimental
+    t._min_status_rank = 1  # experimental
     t.send_event = MagicMock()
     t._send_logs_to_api = MagicMock()
     return t
@@ -107,7 +158,7 @@ def test_second_sync_puts_existing_rules(trigger):
         "skipped_filter": 0,
         "total_rules": 2,
         "top_unmapped": {},
-        "server_marker_count": 0,
+        "server_marker_count": 2,
         "duplicate_markers": 0,
         "local_overridden": 0,
         "to_disable": 0,
@@ -115,6 +166,7 @@ def test_second_sync_puts_existing_rules(trigger):
         "already_disabled": 0,
         "already_gone": 0,
         "disable_failed": 0,
+        "disable_skipped_reason": "",
     }
 
 
@@ -147,10 +199,7 @@ def test_updated_content_reaches_put_body(trigger):
     assert trigger._sekoia.create_rule.call_count == 0
     assert trigger._sekoia.update_rule.call_count == 2
 
-    calls_by_uuid = {
-        call.args[0]: call.args[1]
-        for call in trigger._sekoia.update_rule.call_args_list
-    }
+    calls_by_uuid = {call.args[0]: call.args[1] for call in trigger._sekoia.update_rule.call_args_list}
     # Sekoia UUID is the one seeded on the first sync (from the id-map).
     assert "sekoia-A" in calls_by_uuid
     updated_body = calls_by_uuid["sekoia-A"]
@@ -165,7 +214,7 @@ def test_third_sync_only_posts_new_rule(trigger):
     trigger._sekoia.update_rule.reset_mock()
 
     new_rule = {"id": "valhalla-c", "filename": "c.yml", "content": _rule_yaml("C")}
-    trigger._valhalla.get_sigma_feed.return_value = SAMPLE_RULES + [new_rule]
+    trigger._valhalla.get_sigma_feed.return_value = [*SAMPLE_RULES, new_rule]
 
     trigger._sync_once()
 
@@ -263,49 +312,83 @@ def test_per_rule_errors_do_not_abort_sync(trigger):
     assert event["skipped_unmapped"] == 0
 
 
-def test_valhalla_feed_error_does_not_crash(trigger):
+def test_valhalla_feed_error_propagates_without_side_effects(trigger):
+    """The error is logged once by ``run()``; the sync itself touches nothing."""
     trigger._valhalla.get_sigma_feed.side_effect = RuntimeError("feed down")
 
-    trigger._sync_once()
+    with pytest.raises(RuntimeError, match="feed down"):
+        trigger._sync_once()
 
     assert trigger._sekoia.create_rule.call_count == 0
     trigger.send_event.assert_not_called()
 
 
-def test_stale_id_map_entry_triggers_repost(trigger, data_storage):
-    """When PUT returns 403/404 (rule was deleted server-side but our
-    id-map still points at it), the trigger drops the stale entry and
-    POSTs the rule as new."""
-    # First sync populates the map with fake UUIDs.
+def test_catalog_scan_error_aborts_sync(trigger):
+    """B1: a failing scan must abort — never continue on a partial map."""
+
+    def broken_scan(**_):
+        yield {"uuid": "x", "tags": [{"name": "nextron-valhalla"}]}
+        raise RuntimeError("HTTP 502 mid-scan")
+
+    trigger._sekoia.iter_rules.side_effect = broken_scan
+
+    with pytest.raises(RuntimeError, match="mid-scan"):
+        trigger._sync_once()
+
+    assert trigger._sekoia.create_rule.call_count == 0
+    assert trigger._sekoia.update_rule.call_count == 0
+    trigger.send_event.assert_not_called()
+
+
+def test_rule_deleted_in_catalog_is_recreated(trigger, data_storage):
+    """A mapped UUID absent from the catalog scan is stale (the rule was
+    deleted in Sekoia): drop it and create the rule again, no PUT."""
     trigger._sync_once()
+    trigger.catalog.rules.clear()  # user deleted both rules in the UI
     trigger._sekoia.create_rule.reset_mock()
     trigger._sekoia.update_rule.reset_mock()
-    trigger.send_event.reset_mock()
-
-    # Simulate server-side deletion: every PUT returns 403 AU202.
-    trigger._sekoia.update_rule.side_effect = SekoiaRuleNotFoundError(
-        "PUT ... returned HTTP 403: AU202", status_code=403
-    )
-    # POST succeeds with a new UUID per body.
-    trigger._sekoia.create_rule.side_effect = lambda body: f"sekoia-new-{body['name']}"
 
     trigger._sync_once()
 
-    # Both rules attempted PUT (failed, stale) then fell back to POST.
-    assert trigger._sekoia.update_rule.call_count == 2
+    assert trigger._sekoia.update_rule.call_count == 0
     assert trigger._sekoia.create_rule.call_count == 2
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["created"] == 2
+    assert event["failed"] == 0
+    id_map = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
+    assert set(id_map.values()) == set(trigger.catalog.rules)
+
+
+def test_update_404_race_falls_back_to_create(trigger):
+    """Rule present in the scan but deleted before the PUT: 404 → create."""
+    trigger._sync_once()
+    trigger._sekoia.create_rule.reset_mock()
+    trigger._sekoia.update_rule.side_effect = SekoiaRuleNotFoundError("gone", status_code=404)
+
+    trigger._sync_once()
 
     event = trigger.send_event.call_args.kwargs["event"]
     assert event["created"] == 2
     assert event["updated"] == 0
-    assert event["failed"] == 0
 
-    # New UUIDs persisted; stale ones dropped.
-    id_map = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
-    assert id_map == {
-        "valhalla-a": "sekoia-new-A",
-        "valhalla-b": "sekoia-new-B",
-    }
+
+def test_update_403_counts_as_failed_not_stale(trigger, data_storage):
+    """S1: a 403 on PUT is a failure — the mapping is kept and nothing is
+    re-created (that would duplicate the rule on every run)."""
+    from nextron_valhalla_sigma_rules_modules.sekoia_client import SekoiaAPIError
+
+    trigger._sync_once()
+    before = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
+    trigger._sekoia.create_rule.reset_mock()
+    trigger._sekoia.update_rule.side_effect = SekoiaAPIError("HTTP 403", status_code=403)
+
+    trigger._sync_once()
+
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["failed"] == 2
+    assert event["created"] == 0
+    assert trigger._sekoia.create_rule.call_count == 0
+    assert json.loads((Path(data_storage) / UUID_MAP_FILE).read_text()) == before
 
 
 def test_rules_missing_level_are_filtered_out(trigger):
@@ -361,36 +444,34 @@ def test_rules_below_min_level_are_filtered_out(trigger):
 
 
 def test_rules_below_min_status_are_filtered_out(trigger):
-    trigger._max_status_effort = 1  # stable
-    # Both sample rules are stable — nothing filtered by status.
-    # Now feed one with a lower status.
-    trigger._valhalla.get_sigma_feed.return_value = SAMPLE_RULES + [
-        {
-            "id": "valhalla-exp",
-            "filename": "exp.yml",
-            "content": _rule_yaml("Experimental", status="experimental"),
-        },
+    trigger._min_status_rank = 3  # stable
+    trigger._valhalla.get_sigma_feed.return_value = [
+        *SAMPLE_RULES,
+        {"id": "valhalla-exp", "filename": "exp.yml", "content": _rule_yaml("Experimental", status="experimental")},
     ]
 
     trigger._sync_once()
 
-    # Both sample rules imported, the experimental one is filtered.
     assert trigger._sekoia.create_rule.call_count == 2
     event = trigger.send_event.call_args.kwargs["event"]
     assert event["skipped_filter"] == 1
 
 
-def test_stale_put_then_failed_post_counts_as_failed(trigger):
-    """If the POST fallback also fails, the rule counts as failed and the
-    id-map is not repopulated."""
-    trigger._sync_once()
-    trigger._sekoia.create_rule.reset_mock()
-    trigger._sekoia.update_rule.reset_mock()
-    trigger.send_event.reset_mock()
+@pytest.mark.parametrize("status", ["deprecated", "unsupported"])
+def test_deprecated_and_unsupported_are_never_imported(trigger, status):
+    trigger._valhalla.get_sigma_feed.return_value = [
+        {"id": "v-x", "filename": "x.yml", "content": _rule_yaml("X", status=status)},
+    ]
 
-    trigger._sekoia.update_rule.side_effect = SekoiaRuleNotFoundError(
-        "gone", status_code=403
-    )
+    trigger._sync_once()
+
+    assert trigger._sekoia.create_rule.call_count == 0
+
+
+def test_stale_put_then_failed_post_counts_as_failed(trigger):
+    """If the create fallback also fails, the rule counts as failed."""
+    trigger._sync_once()
+    trigger._sekoia.update_rule.side_effect = SekoiaRuleNotFoundError("gone", status_code=404)
     trigger._sekoia.create_rule.side_effect = RuntimeError("POST also broken")
 
     trigger._sync_once()
@@ -406,62 +487,29 @@ def test_stale_put_then_failed_post_counts_as_failed(trigger):
 # ---------------------------------------------------------------------------
 
 
-def test_update_preserves_user_disabled(trigger):
-    """A rule the user disabled in the catalog must stay disabled on
-    the next sync even if the trigger config has enabled=True."""
-    trigger._enabled = True
-    trigger._sync_once()  # populate id_map with POSTs
-    trigger._sekoia.create_rule.reset_mock()
+@pytest.mark.parametrize("server_enabled", [True, False])
+def test_update_keeps_server_enabled_flag(trigger, server_enabled):
+    """The user's per-rule ``enabled`` choice, read from the catalog scan,
+    is re-sent on update — whatever the trigger's ``enabled`` default."""
+    trigger._sync_once()
+    for rule in trigger.catalog.rules.values():
+        rule["enabled"] = server_enabled
+    trigger._enabled = not server_enabled
     trigger._sekoia.update_rule.reset_mock()
-    trigger._sekoia.get_rule.return_value = {"enabled": False}
 
     trigger._sync_once()
 
-    assert trigger._sekoia.update_rule.call_count == 2
-    for call in trigger._sekoia.update_rule.call_args_list:
-        body = call.args[1]
-        assert body["enabled"] is False
+    bodies = [c.args[1] for c in trigger._sekoia.update_rule.call_args_list]
+    assert len(bodies) == 2
+    assert all(b["enabled"] is server_enabled for b in bodies)
 
 
-def test_update_preserves_user_enabled(trigger):
-    """A rule the user enabled must stay enabled even if the trigger's
-    default is enabled=False."""
-    trigger._enabled = False
+def test_sync_does_not_get_each_rule(trigger):
+    """S15: the scan provides the server state; no per-rule GET."""
     trigger._sync_once()
-    trigger._sekoia.create_rule.reset_mock()
-    trigger._sekoia.update_rule.reset_mock()
-    trigger._sekoia.get_rule.return_value = {"enabled": True}
-
     trigger._sync_once()
 
-    assert trigger._sekoia.update_rule.call_count == 2
-    for call in trigger._sekoia.update_rule.call_args_list:
-        body = call.args[1]
-        assert body["enabled"] is True
-
-
-def test_get_rule_404_falls_back_to_repost(trigger, data_storage):
-    """A GET that returns 404 (rule deleted server-side) must drop the
-    id-map entry and POST the rule as new — same fallback path as a 404
-    on PUT. Fresh POST uses the trigger's own ``enabled`` default, not
-    whatever the stale server state said."""
-    trigger._sync_once()  # populate id_map
-    trigger._sekoia.create_rule.reset_mock()
-    trigger._sekoia.update_rule.reset_mock()
-    trigger._sekoia.get_rule.side_effect = SekoiaRuleNotFoundError(
-        "gone", status_code=404
-    )
-    trigger._sekoia.create_rule.side_effect = lambda body: f"sekoia-new-{body['name']}"
-
-    trigger._sync_once()
-
-    assert trigger._sekoia.update_rule.call_count == 0
-    assert trigger._sekoia.create_rule.call_count == 2
-    id_map = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
-    assert id_map == {
-        "valhalla-a": "sekoia-new-A",
-        "valhalla-b": "sekoia-new-B",
-    }
+    assert trigger._sekoia.get_rule.call_count == 0
 
 
 # ---------------------------------------------------------------------------
@@ -491,11 +539,14 @@ def test_invalid_min_status_raises(trigger):
 def test_run_exits_when_stop_event_is_set(monkeypatch, data_storage):
     """Pre-set the stop event; run() must return without iterating."""
     import threading
+
     from nextron_valhalla_sigma_rules_modules.triggers import (
         sync_sigma_rules_catalog as sync_mod,
     )
+
     monkeypatch.setattr(sync_mod, "ValhallaClient", MagicMock())
     monkeypatch.setattr(sync_mod, "SekoiaClient", MagicMock())
+    monkeypatch.setattr(sync_mod.SyncSigmaRulesCatalog, "_validate_alert_types", lambda self: None)
 
     t = SyncSigmaRulesCatalog(data_path=Path(data_storage))
     t.module = MagicMock()
@@ -507,6 +558,7 @@ def test_run_exits_when_stop_event_is_set(monkeypatch, data_storage):
     th.start()
     th.join(timeout=5)
     assert not th.is_alive(), "run() should exit when stop event is set"
+    assert t._sync_once.call_count == 0
 
 
 def test_run_exits_after_stop_during_wait(monkeypatch, data_storage):
@@ -514,11 +566,14 @@ def test_run_exits_after_stop_during_wait(monkeypatch, data_storage):
     iteration — _stop_event.wait() returns early and the loop exits."""
     import threading
     import time
+
     from nextron_valhalla_sigma_rules_modules.triggers import (
         sync_sigma_rules_catalog as sync_mod,
     )
+
     monkeypatch.setattr(sync_mod, "ValhallaClient", MagicMock())
     monkeypatch.setattr(sync_mod, "SekoiaClient", MagicMock())
+    monkeypatch.setattr(sync_mod.SyncSigmaRulesCatalog, "_validate_alert_types", lambda self: None)
 
     t = SyncSigmaRulesCatalog(data_path=Path(data_storage))
     t.module = MagicMock()
@@ -534,15 +589,91 @@ def test_run_exits_after_stop_during_wait(monkeypatch, data_storage):
     assert t._sync_once.call_count >= 1
 
 
+def test_run_logs_sync_errors_once_and_keeps_looping(monkeypatch, data_storage):
+    """Nit: the error is caught and logged in ``run()`` only."""
+    import threading
+    import time
+
+    from nextron_valhalla_sigma_rules_modules.triggers import (
+        sync_sigma_rules_catalog as sync_mod,
+    )
+
+    monkeypatch.setattr(sync_mod, "ValhallaClient", MagicMock())
+    monkeypatch.setattr(sync_mod, "SekoiaClient", MagicMock())
+    monkeypatch.setattr(sync_mod.SyncSigmaRulesCatalog, "_validate_alert_types", lambda self: None)
+
+    t = SyncSigmaRulesCatalog(data_path=Path(data_storage))
+    t.module = MagicMock()
+    t.configuration = {"frequency": 3600}
+    t._sync_once = MagicMock(side_effect=RuntimeError("boom"))
+    t.log_exception = MagicMock()
+
+    th = threading.Thread(target=t.run)
+    th.start()
+    time.sleep(0.2)
+    t.stop()
+    th.join(timeout=5)
+    assert t.log_exception.call_count == 1
+
+
+def test_per_rule_loop_stops_when_trigger_stops(trigger):
+    """S5: ``self.running`` is checked per rule; an interrupted run skips
+    the disable pass."""
+    calls = {"n": 0}
+    original = trigger._sekoia.create_rule.side_effect
+
+    def create_then_stop(body):
+        calls["n"] += 1
+        trigger._stop_event.set()
+        return original(body)
+
+    trigger._sekoia.create_rule.side_effect = create_then_stop
+    trigger._disable_removed = True
+
+    trigger._sync_once()
+
+    assert calls["n"] == 1
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["created"] == 1
+    assert event["disable_skipped_reason"] == "interrupted"
+
+
+def _alert_types_client(uuids):
+    client = MagicMock(spec=SekoiaClient)
+    client.list_alert_types.return_value = [{"uuid": u} for u in uuids]
+    return client
+
+
+def test_validate_alert_types_passes_when_all_exist(trigger):
+    from nextron_valhalla_sigma_rules_modules.sigma_mapper import DEFAULT_ALERT_UUID, TAG_ALERT_UUID_MAP
+
+    trigger._sekoia = _alert_types_client([DEFAULT_ALERT_UUID, *(u for _, u in TAG_ALERT_UUID_MAP)])
+    trigger._validate_alert_types()
+
+
+def test_validate_alert_types_fails_fast_on_missing_uuid(trigger):
+    """S16: a hard-coded alert type unknown to the tenant fails at startup
+    with a clear message instead of a 400 on every create."""
+    trigger._sekoia = _alert_types_client(["something-else"])
+    with pytest.raises(ValueError, match="do not exist on this Sekoia tenant"):
+        trigger._validate_alert_types()
+
+
+def test_validate_alert_types_tolerates_listing_failure(trigger):
+    trigger._sekoia = MagicMock(spec=SekoiaClient)
+    trigger._sekoia.list_alert_types.side_effect = RuntimeError("403")
+    trigger.log = MagicMock()
+    trigger._validate_alert_types()
+    assert trigger.log.call_args.kwargs["level"] == "warning"
+
+
 # ---------------------------------------------------------------------------
 # preserve_rule_names — per-rule opt-out from Valhalla overwrites
 # ---------------------------------------------------------------------------
 
 
 def test_normalize_names_strips_whitespace_and_drops_empties():
-    assert _normalize_names(["  A rule  ", "Another", " ", ""]) == frozenset(
-        {"A rule", "Another"}
-    )
+    assert _normalize_names(["  A rule  ", "Another", " ", ""]) == frozenset({"A rule", "Another"})
 
 
 def test_normalize_names_non_list_returns_empty():
@@ -565,10 +696,6 @@ def test_preserve_rule_names_skips_update_when_server_name_matches(trigger):
 
     trigger._preserve_rule_names = frozenset({"A"})
 
-    def _get(uuid):
-        return {"enabled": True, "name": "A" if uuid == "sekoia-A" else "B"}
-    trigger._sekoia.get_rule.side_effect = _get
-
     trigger._sync_once()
 
     # A was preserved → no PUT for A; B was updated normally.
@@ -589,9 +716,7 @@ def test_preserve_rule_names_tolerates_whitespace_on_server_name(trigger):
 
     trigger._preserve_rule_names = frozenset({"A"})
 
-    def _get(uuid):
-        return {"enabled": True, "name": "  A  " if uuid == "sekoia-A" else "B"}
-    trigger._sekoia.get_rule.side_effect = _get
+    trigger.catalog.rules["sekoia-A"]["name"] = "  A  "
 
     trigger._sync_once()
 
@@ -606,7 +731,6 @@ def test_preserve_rule_names_absent_updates_normally(trigger):
     trigger._sekoia.update_rule.reset_mock()
     trigger.send_event.reset_mock()
 
-    trigger._sekoia.get_rule.return_value = {"enabled": True, "name": "A"}
     trigger._sync_once()
 
     assert trigger._sekoia.update_rule.call_count == 2
@@ -623,7 +747,6 @@ def test_preserve_rule_names_mismatched_name_does_not_preserve(trigger):
     trigger.send_event.reset_mock()
 
     trigger._preserve_rule_names = frozenset({"a"})  # lowercase; server is "A"
-    trigger._sekoia.get_rule.return_value = {"enabled": True, "name": "A"}
     trigger._sync_once()
 
     assert trigger._sekoia.update_rule.call_count == 2
@@ -633,8 +756,8 @@ def test_preserve_rule_names_mismatched_name_does_not_preserve(trigger):
 
 def test_preserve_rule_names_does_not_affect_posts(trigger, data_storage):
     """A brand-new Valhalla rule whose title happens to match a preserve
-    entry is still POSTed — the preserve check only guards the update
-    path (no id_map entry yet means no GET, no name comparison)."""
+    entry is still created — the preserve check only guards the update
+    path (no catalog rule yet, nothing to compare against)."""
     trigger._preserve_rule_names = frozenset({"New"})
     trigger._valhalla.get_sigma_feed.return_value = [
         {
@@ -661,34 +784,35 @@ def test_preserve_rule_names_does_not_affect_posts(trigger, data_storage):
 
 
 def test_disable_pass_still_fires_on_preserved_rule(trigger, data_storage):
-    """A preserved rule that then leaves the Valhalla feed must still be
-    disabled by ``disable_removed=true`` — the preserve list protects
-    content, not lifecycle."""
-    trigger._sync_once()  # populate id_map
-    trigger._sekoia.create_rule.reset_mock()
-    trigger._sekoia.update_rule.reset_mock()
-    trigger.send_event.reset_mock()
-
-    # A drops from the feed AND is on the preserve list.
+    """A preserved rule that leaves the feed is still disabled by
+    ``disable_removed=true`` — preserve protects content, not lifecycle."""
+    trigger._sync_once()
+    for rule in trigger.catalog.rules.values():
+        rule["enabled"] = True
     trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[1]]
     trigger._disable_removed = True
     trigger._preserve_rule_names = frozenset({"A"})
 
-    def _get(uuid):
-        return {"enabled": True, "name": "A" if uuid == "sekoia-A" else "B"}
-    trigger._sekoia.get_rule.side_effect = _get
+    trigger._sync_once()
+
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["newly_disabled"] == 1
+    assert trigger._sekoia.disable_rule.call_args.args[0] == "sekoia-A"
+    assert trigger.catalog.rules["sekoia-A"]["enabled"] is False
+
+
+def test_preserve_entry_matches_uuid_tag(trigger):
+    """Nit: names aren't unique, so an entry may also be the rule's
+    ``uuid-<valhalla_id>`` tag."""
+    trigger._sync_once()
+    trigger._sekoia.update_rule.reset_mock()
+    trigger._preserve_rule_names = frozenset({"uuid-valhalla-a"})
 
     trigger._sync_once()
 
-    # A is disabled (enabled=false PUT) despite the preserve entry.
-    # B is updated normally.
     event = trigger.send_event.call_args.kwargs["event"]
-    assert event["newly_disabled"] == 1
-    disable_puts = [
-        c for c in trigger._sekoia.update_rule.call_args_list
-        if c.args[1].get("enabled") is False
-    ]
-    assert len(disable_puts) == 1
+    assert event["preserved"] == 1
+    assert [c.args[0] for c in trigger._sekoia.update_rule.call_args_list] == ["sekoia-B"]
 
 
 # ---------------------------------------------------------------------------
@@ -696,20 +820,23 @@ def test_disable_pass_still_fires_on_preserved_rule(trigger, data_storage):
 # ---------------------------------------------------------------------------
 
 
+def _catalog_rule(uuid, *tags, name="R", enabled=False, community="c-1"):
+    return {
+        "uuid": uuid,
+        "name": name,
+        "enabled": enabled,
+        "community_uuid": community,
+        "tags": [{"uuid": f"t-{t}", "name": t} for t in tags],
+    }
+
+
 def test_scan_builds_id_map_from_uuid_tags(trigger, data_storage):
-    """Fresh id-map, server already carries uuid tags → id-map is rebuilt
-    from the catalog, so the sync loop PUTs (no POSTs, no duplicates)."""
-    trigger._sekoia.iter_rules.return_value = [
-        {
-            "uuid": "sekoia-A",
-            "tags": ["nextron-valhalla", "uuid-valhalla-a"],
-        },
-        {
-            "uuid": "sekoia-B",
-            "tags": ["nextron-valhalla", "uuid-valhalla-b"],
-        },
-    ]
-    # get_rule by default returns {"enabled": False} — fine for update path.
+    """Fresh trigger (empty id-map), catalog already holds the rules → they
+    are updated, not duplicated."""
+    trigger.catalog.rules = {
+        "sekoia-A": _catalog_rule("sekoia-A", "nextron-valhalla", "uuid-valhalla-a", name="A"),
+        "sekoia-B": _catalog_rule("sekoia-B", "nextron-valhalla", "uuid-valhalla-b", name="B"),
+    }
 
     trigger._sync_once()
 
@@ -718,53 +845,61 @@ def test_scan_builds_id_map_from_uuid_tags(trigger, data_storage):
     event = trigger.send_event.call_args.kwargs["event"]
     assert event["server_marker_count"] == 2
     assert event["duplicate_markers"] == 0
-    assert event["local_overridden"] == 0
     id_map = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
     assert id_map == {"valhalla-a": "sekoia-A", "valhalla-b": "sekoia-B"}
 
 
-def test_scan_detects_duplicate_markers(trigger):
-    """Two server rules carrying the same uuid-X tag → warning logged,
-    first-seen wins, counter increments."""
-    trigger._sekoia.iter_rules.return_value = [
-        {
-            "uuid": "sekoia-A-original",
-            "tags": ["nextron-valhalla", "uuid-valhalla-a"],
-        },
-        {
-            "uuid": "sekoia-A-duplicate",
-            "tags": ["nextron-valhalla", "uuid-valhalla-a"],
-        },
-    ]
+def test_scan_uses_server_side_tag_filter(trigger):
+    trigger._sync_once()
+    kwargs = trigger._sekoia.iter_rules.call_args.kwargs
+    assert kwargs["tag_name"] == "nextron-valhalla"
+    assert kwargs["community_uuid"] is None
+
+
+def test_scan_duplicate_markers_first_listed_wins_without_local_entry(trigger):
+    trigger.catalog.rules = {
+        "sekoia-A-1": _catalog_rule("sekoia-A-1", "nextron-valhalla", "uuid-valhalla-a", name="A"),
+        "sekoia-A-2": _catalog_rule("sekoia-A-2", "nextron-valhalla", "uuid-valhalla-a", name="A"),
+    }
+    trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[0]]
     trigger.log = MagicMock()
 
     trigger._sync_once()
 
     event = trigger.send_event.call_args.kwargs["event"]
     assert event["duplicate_markers"] == 1
-    assert event["server_marker_count"] == 1  # first-seen only
-    # First-seen UUID is the one that ends up in the sync path.
-    assert trigger._sekoia.update_rule.call_args_list[0].args[0] == "sekoia-A-original"
-    # Warning was logged with both uuids and the clean-up hint.
-    warnings = [
-        c for c in trigger.log.call_args_list if c.kwargs.get("level") == "warning"
-    ]
-    assert any("sekoia-A-duplicate" in str(c) for c in warnings)
+    assert event["server_marker_count"] == 1
+    assert trigger._sekoia.update_rule.call_args.args[0] == "sekoia-A-1"
+    warnings = [c for c in trigger.log.call_args_list if c.kwargs.get("level") == "warning"]
+    assert any("sekoia-A-2" in str(c) for c in warnings)
 
 
-def test_scan_overrides_local_on_conflict(trigger, data_storage):
-    """Local id-map says valhalla-a → stale-uuid; catalog says fresh-uuid.
-    Scan trusts the catalog; local_overridden counter increments."""
-    (Path(data_storage) / UUID_MAP_FILE).write_text(
-        json.dumps({"valhalla-a": "stale-uuid"})
-    )
-    trigger._sekoia.iter_rules.return_value = [
-        {
-            "uuid": "fresh-uuid",
-            "tags": ["nextron-valhalla", "uuid-valhalla-a"],
-        },
-    ]
-    # Narrow the feed to one rule so this test asserts a single update path.
+def test_scan_duplicate_markers_prefer_local_mapping(trigger, data_storage):
+    """S4: a user duplicated an imported rule to tune it (the uuid tag is
+    copied). The rule already in the local map keeps being updated, even
+    if the user's copy is listed first."""
+    (Path(data_storage) / UUID_MAP_FILE).write_text(json.dumps({"valhalla-a": "sekoia-original"}))
+    trigger.catalog.rules = {
+        "sekoia-user-copy": _catalog_rule("sekoia-user-copy", "nextron-valhalla", "uuid-valhalla-a", name="A tuned"),
+        "sekoia-original": _catalog_rule("sekoia-original", "nextron-valhalla", "uuid-valhalla-a", name="A"),
+    }
+    trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[0]]
+
+    trigger._sync_once()
+
+    assert [c.args[0] for c in trigger._sekoia.update_rule.call_args_list] == ["sekoia-original"]
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["duplicate_markers"] == 1
+    assert event["local_overridden"] == 0
+
+
+def test_scan_overrides_local_entry_missing_from_catalog(trigger, data_storage):
+    """Local map points at a UUID the catalog doesn't have; the catalog's
+    rule carrying the uuid tag is used instead."""
+    (Path(data_storage) / UUID_MAP_FILE).write_text(json.dumps({"valhalla-a": "stale-uuid"}))
+    trigger.catalog.rules = {
+        "fresh-uuid": _catalog_rule("fresh-uuid", "nextron-valhalla", "uuid-valhalla-a", name="A"),
+    }
     trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[0]]
     trigger.log = MagicMock()
 
@@ -775,6 +910,56 @@ def test_scan_overrides_local_on_conflict(trigger, data_storage):
     assert trigger._sekoia.update_rule.call_args.args[0] == "fresh-uuid"
     id_map = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
     assert id_map["valhalla-a"] == "fresh-uuid"
+
+
+def test_legacy_rule_without_uuid_tag_is_updated_via_local_map(trigger, data_storage):
+    """Rules synced before the uuid tag existed are still found through the
+    local map (the scan lists every marker-tagged rule) and get the tag on
+    the next update."""
+    (Path(data_storage) / UUID_MAP_FILE).write_text(json.dumps({"valhalla-a": "legacy"}))
+    trigger.catalog.rules = {"legacy": _catalog_rule("legacy", "nextron-valhalla", name="A")}
+    trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[0]]
+
+    trigger._sync_once()
+
+    assert trigger._sekoia.create_rule.call_count == 0
+    uuid, body = trigger._sekoia.update_rule.call_args.args
+    assert uuid == "legacy"
+    assert "uuid-valhalla-a" in body["tags"]
+
+
+def test_scan_aborts_when_rules_span_several_communities(trigger):
+    """S3: without ``community_uuid`` the sync refuses to touch rules in
+    more than one community."""
+    trigger.catalog.rules = {
+        "x": _catalog_rule("x", "nextron-valhalla", "uuid-valhalla-a", community="c-1"),
+        "y": _catalog_rule("y", "nextron-valhalla", "uuid-valhalla-b", community="c-2"),
+    }
+
+    with pytest.raises(RuntimeError, match="community_uuid"):
+        trigger._sync_once()
+
+    assert trigger._sekoia.update_rule.call_count == 0
+    assert trigger._sekoia.create_rule.call_count == 0
+
+
+def test_configured_community_filters_scan_and_is_sent(trigger):
+    trigger._community_uuid = "c-2"
+    trigger.catalog.rules = {
+        "x": _catalog_rule("x", "nextron-valhalla", "uuid-valhalla-a", name="A", community="c-1"),
+        "y": _catalog_rule("y", "nextron-valhalla", "uuid-valhalla-b", name="B", community="c-2"),
+    }
+
+    trigger._sync_once()
+
+    assert trigger._sekoia.iter_rules.call_args.kwargs["community_uuid"] == "c-2"
+    # A exists only in c-1 → created in c-2; B updated in c-2.
+    created = trigger._sekoia.create_rule.call_args.args[0]
+    assert created["name"] == "A"
+    assert created["community_uuid"] == "c-2"
+    uuid, body = trigger._sekoia.update_rule.call_args.args
+    assert uuid == "y"
+    assert body["community_uuid"] == "c-2"
 
 
 def test_scan_ignores_rules_without_marker_tag(trigger):
@@ -809,24 +994,22 @@ def test_scan_ignores_marker_rules_without_uuid_tag(trigger):
     assert event["server_marker_count"] == 0
 
 
-def test_scan_accepts_dict_shape_tags(trigger, data_storage):
-    """Sekoia's GET-returned tags shape is ``[{uuid, name}, …]``. The scan
-    reads either shape (dict or plain string)."""
-    trigger._sekoia.iter_rules.return_value = [
-        {
+def test_scan_accepts_plain_string_tags(trigger, data_storage):
+    trigger.catalog.rules = {
+        "sekoia-A": {
             "uuid": "sekoia-A",
-            "tags": [
-                {"uuid": "t1", "name": "nextron-valhalla"},
-                {"uuid": "t2", "name": "uuid-valhalla-a"},
-            ],
+            "name": "A",
+            "enabled": False,
+            "tags": [{"name": "nextron-valhalla"}, {"name": "uuid-valhalla-a"}],
         },
-    ]
+    }
+    trigger._sekoia.iter_rules.side_effect = lambda **_: iter(
+        [{**trigger.catalog.rules["sekoia-A"], "tags": ["nextron-valhalla", "uuid-valhalla-a"]}]
+    )
     trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[0]]
 
     trigger._sync_once()
 
-    event = trigger.send_event.call_args.kwargs["event"]
-    assert event["server_marker_count"] == 1
     id_map = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
     assert id_map["valhalla-a"] == "sekoia-A"
 
@@ -847,245 +1030,255 @@ def test_posted_body_carries_uuid_tag(trigger):
 # ---------------------------------------------------------------------------
 
 
-def test_disable_body_strips_server_read_only_fields():
-    """Sekoia's GET response carries read-only fields (uuid, created_at,
-    created_by, …) that PUT rejects. The disable pass must strip them
-    before round-tripping or every PUT 400s."""
-    server_body = {
-        "uuid": "sk-1",
-        "created_at": "2026-10-01T00:00:00Z",
-        "created_by": "key-uuid",
-        "updated_at": "2026-10-10T00:00:00Z",
-        "community_uuid": "comm-123",
-        "name": "A rule",
-        "type": "sigma",
-        "description": "desc",
-        "payload": "detection: {}",
-        "severity": 50,
-        "effort": 2,
-        "alert_type_uuid": "alert-uuid",
-        "enabled": True,
-        "tags": ["attack.t1059", "nextron-valhalla"],
-        "false_positives": "noise",
-    }
-    body = _disable_body_from_server(server_body)
-    # Enabled flipped.
-    assert body["enabled"] is False
-    # Writable fields preserved.
-    for k in ("name", "type", "description", "payload", "severity", "effort",
-              "alert_type_uuid", "tags", "false_positives"):
-        assert body[k] == server_body[k], k
-    # Read-only fields stripped.
-    for k in ("uuid", "created_at", "created_by", "updated_at", "community_uuid"):
-        assert k not in body, k
+def _enable_all(trigger):
+    for rule in trigger.catalog.rules.values():
+        rule["enabled"] = True
 
 
-def test_disable_body_normalises_expanded_alert_type_object():
-    """Sekoia's GET returns ``alert_type`` as ``{uuid, name}`` but PUT
-    requires a flat ``alert_type_uuid`` string. Pull the uuid out of the
-    expanded object."""
-    server_body = {
-        "name": "A",
-        "type": "sigma",
-        "payload": "detection: {}",
-        "enabled": True,
-        "alert_type": {
-            "uuid": "0b7c0b5b-da8e-4e43-a2e1-11cb5a40f168",
-            "name": "exfiltration",
-        },
-    }
-    body = _disable_body_from_server(server_body)
-    assert body["alert_type_uuid"] == "0b7c0b5b-da8e-4e43-a2e1-11cb5a40f168"
-    assert "alert_type" not in body
-    assert body["enabled"] is False
-
-
-def test_disable_body_falls_back_to_default_alert_type_when_missing():
-    """If the server returned neither a flat ``alert_type_uuid`` nor an
-    expanded ``alert_type`` object, substitute ``DEFAULT_ALERT_UUID`` so
-    the required-field validator can't reject the PUT."""
-    from nextron_valhalla_sigma_rules_modules.sigma_mapper import DEFAULT_ALERT_UUID
-    server_body = {
-        "name": "A",
-        "type": "sigma",
-        "payload": "detection: {}",
-        "enabled": True,
-    }
-    body = _disable_body_from_server(server_body)
-    assert body["alert_type_uuid"] == DEFAULT_ALERT_UUID
-    assert body["enabled"] is False
-
-
-def test_disable_body_prefers_flat_alert_type_uuid_over_expanded():
-    """When both are present (hypothetical), the flat one wins — it's the
-    shape PUT expects natively."""
-    server_body = {
-        "name": "A",
-        "type": "sigma",
-        "payload": "detection: {}",
-        "enabled": True,
-        "alert_type_uuid": "flat-uuid",
-        "alert_type": {"uuid": "nested-uuid", "name": "x"},
-    }
-    body = _disable_body_from_server(server_body)
-    assert body["alert_type_uuid"] == "flat-uuid"
-
-
-def test_disable_body_flattens_structured_tags():
-    """Sekoia returns tags as ``[{uuid, name}, …]`` on GET but PUT expects
-    plain strings. The helper flattens so the round-trip is accepted."""
-    server_body = {
-        "name": "A rule",
-        "type": "sigma",
-        "payload": "detection: {}",
-        "enabled": True,
-        "tags": [
-            {"uuid": "t1", "name": "attack.t1059"},
-            {"uuid": "t2", "name": "nextron-valhalla"},
-            "already-a-string",
-        ],
-    }
-    body = _disable_body_from_server(server_body)
-    assert body["tags"] == ["attack.t1059", "nextron-valhalla", "already-a-string"]
-    assert body["enabled"] is False
-
-
-def test_disable_removed_dry_run_counts_but_doesnt_put(trigger, data_storage):
-    """With disable_removed=False (default) a rule dropped from the feed
-    appears in ``to_disable`` but is NOT PUT with enabled=false."""
-    trigger._sync_once()  # populate id_map with both A and B
-    trigger._sekoia.create_rule.reset_mock()
-    trigger._sekoia.update_rule.reset_mock()
-    trigger.send_event.reset_mock()
-
-    # A drops from the feed; B stays.
+def test_disable_removed_dry_run_counts_but_doesnt_disable(trigger):
+    trigger._sync_once()
+    _enable_all(trigger)
     trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[1]]
-    trigger._sekoia.get_rule.return_value = {"enabled": False}
 
     trigger._sync_once()
 
     event = trigger.send_event.call_args.kwargs["event"]
     assert event["to_disable"] == 1
     assert event["newly_disabled"] == 0
-    # No extra PUTs for the disable pass — just the update PUT for B.
-    assert trigger._sekoia.update_rule.call_count == 1
-    # id_map keeps A (reappearing rule resumes update in place).
-    id_map = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
-    assert "valhalla-a" in id_map
+    assert trigger._sekoia.disable_rule.call_count == 0
 
 
-def test_disable_removed_puts_rule_with_enabled_false(trigger, data_storage):
-    """With disable_removed=True, a dropped rule gets GET-then-PUT with
-    enabled=false. Other server fields on the body are preserved."""
-    trigger._sync_once()  # populate id_map
-    trigger._sekoia.create_rule.reset_mock()
-    trigger._sekoia.update_rule.reset_mock()
-    trigger.send_event.reset_mock()
-
-    trigger._disable_removed = True
+def test_disable_removed_uses_dedicated_endpoint(trigger):
+    """S13: disabling goes through ``disable_rule`` — no rebuilt PUT body."""
+    trigger._sync_once()
+    _enable_all(trigger)
     trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[1]]
-    trigger._sekoia.get_rule.return_value = {
-        "enabled": True,
-        "name": "A",
-        "severity": 42,  # must round-trip
-    }
+    trigger._disable_removed = True
+    trigger._sekoia.update_rule.reset_mock()
 
     trigger._sync_once()
 
     event = trigger.send_event.call_args.kwargs["event"]
     assert event["to_disable"] == 1
     assert event["newly_disabled"] == 1
-
-    disable_puts = [
-        c for c in trigger._sekoia.update_rule.call_args_list
-        if c.args[1].get("severity") == 42
-    ]
-    assert len(disable_puts) == 1
-    assert disable_puts[0].args[1]["enabled"] is False
-    # Server body round-tripped — no clobber of severity.
-    assert disable_puts[0].args[1]["severity"] == 42
-
-    # id_map entry kept so reappearing rule resumes update.
-    id_map = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
-    assert "valhalla-a" in id_map
+    assert trigger._sekoia.disable_rule.call_args.args == ("sekoia-A",)
+    assert [c.args[0] for c in trigger._sekoia.update_rule.call_args_list] == ["sekoia-B"]
 
 
-def test_already_disabled_is_counted(trigger):
-    """Rules already disabled server-side are counted under
-    ``already_disabled`` and no PUT is sent for them."""
+def test_disable_removed_also_covers_rules_now_below_threshold(trigger):
     trigger._sync_once()
-    trigger._sekoia.update_rule.reset_mock()
-    trigger.send_event.reset_mock()
+    _enable_all(trigger)
+    trigger._min_severity = SEVERITY_HIGH
     trigger._disable_removed = True
 
-    # A drops from the feed; GET on A returns already-disabled.
-    trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[1]]
+    trigger._sync_once()
 
-    def _get(uuid):
-        return {"enabled": uuid != "sekoia-A"}  # sekoia-A is disabled
-    trigger._sekoia.get_rule.side_effect = _get
+    assert trigger._sekoia.disable_rule.call_args.args == ("sekoia-A",)
+
+
+def test_already_disabled_is_counted_not_in_to_disable(trigger):
+    """Nit: ``to_disable`` only counts rules that are still enabled."""
+    trigger._sync_once()  # rules created with enabled=False
+    trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[1]]
+    trigger._disable_removed = True
 
     trigger._sync_once()
 
     event = trigger.send_event.call_args.kwargs["event"]
-    assert event["to_disable"] == 1
     assert event["already_disabled"] == 1
-    assert event["newly_disabled"] == 0
-    disable_puts = [
-        c for c in trigger._sekoia.update_rule.call_args_list
-        if c.args[0] == "sekoia-A"
-    ]
-    assert len(disable_puts) == 0
+    assert event["to_disable"] == 0
+    assert trigger._sekoia.disable_rule.call_count == 0
 
 
 def test_already_gone_drops_idmap(trigger, data_storage):
-    """A disable candidate whose GET returns ``SekoiaRuleNotFoundError``
-    is counted under ``already_gone`` and the id-map entry is dropped
-    (nothing left to disable)."""
     trigger._sync_once()
-    trigger.send_event.reset_mock()
-    trigger._disable_removed = True
-
+    del trigger.catalog.rules["sekoia-A"]
     trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[1]]
-
-    def _get(uuid):
-        if uuid == "sekoia-A":
-            raise SekoiaRuleNotFoundError("gone", status_code=404)
-        return {"enabled": True}
-    trigger._sekoia.get_rule.side_effect = _get
+    trigger._disable_removed = True
 
     trigger._sync_once()
 
     event = trigger.send_event.call_args.kwargs["event"]
     assert event["already_gone"] == 1
-
+    assert event["to_disable"] == 0
     id_map = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
     assert "valhalla-a" not in id_map
 
 
 def test_reappearing_rule_resumes_update_in_place(trigger, data_storage):
-    """A rule disabled on sync N and then reappearing on sync N+1 goes
-    down the UPDATE path (GET-then-PUT) with its old sekoia_uuid, not a
-    fresh POST — because the id-map entry was kept."""
-    trigger._sync_once()  # populate; id_map["valhalla-a"] = "sekoia-A"
-    original_a_uuid = json.loads(
-        (Path(data_storage) / UUID_MAP_FILE).read_text()
-    )["valhalla-a"]
-    trigger._sekoia.create_rule.reset_mock()
-    trigger._sekoia.update_rule.reset_mock()
+    """A rule disabled on sync N and reappearing on sync N+1 is updated in
+    place with its old UUID — the id-map entry was kept."""
+    trigger._sync_once()
+    _enable_all(trigger)
     trigger._disable_removed = True
-    trigger._sekoia.get_rule.return_value = {"enabled": True}
-
-    # Sync 2: A missing, B present. A gets disabled.
     trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[1]]
     trigger._sync_once()
-    trigger._sekoia.update_rule.reset_mock()
+    assert trigger.catalog.rules["sekoia-A"]["enabled"] is False
     trigger._sekoia.create_rule.reset_mock()
+    trigger._sekoia.update_rule.reset_mock()
 
-    # Sync 3: A returns. Expect UPDATE with the same sekoia_uuid.
     trigger._valhalla.get_sigma_feed.return_value = list(SAMPLE_RULES)
     trigger._sync_once()
 
     assert trigger._sekoia.create_rule.call_count == 0
-    update_uuids = [c.args[0] for c in trigger._sekoia.update_rule.call_args_list]
-    assert original_a_uuid in update_uuids
+    assert "sekoia-A" in [c.args[0] for c in trigger._sekoia.update_rule.call_args_list]
+
+
+# ---------------------------------------------------------------------------
+# Disable-pass safety (B2)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def guarded(trigger, monkeypatch):
+    """The trigger with the real feed-shrink guard (the default fixture
+    disables it so ordinary tests can drop rules from a 2-rule feed)."""
+    from nextron_valhalla_sigma_rules_modules.triggers import sync_sigma_rules_catalog as sync_mod
+
+    monkeypatch.setattr(sync_mod, "MAX_FEED_SHRINK_RATIO", 0.2)
+    feed = [{"id": f"v-{i}", "filename": f"{i}.yml", "content": _rule_yaml(f"R{i}")} for i in range(10)]
+    trigger._valhalla.get_sigma_feed.return_value = list(feed)
+    trigger._disable_removed = True
+    trigger._sync_once()
+    _enable_all(trigger)
+    trigger.feed = feed
+    return trigger
+
+
+def test_empty_feed_skips_disable_pass(guarded):
+    guarded._valhalla.get_sigma_feed.return_value = []
+
+    guarded._sync_once()
+
+    event = guarded.send_event.call_args.kwargs["event"]
+    assert event["disable_skipped_reason"] == "empty_feed"
+    assert guarded._sekoia.disable_rule.call_count == 0
+
+
+def test_feed_shrinking_beyond_ratio_skips_disable_pass(guarded):
+    guarded._valhalla.get_sigma_feed.return_value = guarded.feed[:5]
+
+    guarded._sync_once()
+
+    event = guarded.send_event.call_args.kwargs["event"]
+    assert event["disable_skipped_reason"] == "feed_shrank"
+    assert guarded._sekoia.disable_rule.call_count == 0
+
+
+def test_small_shrink_still_disables(guarded):
+    guarded._valhalla.get_sigma_feed.return_value = guarded.feed[:9]
+
+    guarded._sync_once()
+
+    event = guarded.send_event.call_args.kwargs["event"]
+    assert event["disable_skipped_reason"] == ""
+    assert event["newly_disabled"] == 1
+
+
+def test_persistent_shrink_is_accepted_after_confirm_runs(guarded, data_storage):
+    from nextron_valhalla_sigma_rules_modules.triggers.sync_sigma_rules_catalog import FEED_SHRINK_CONFIRM_RUNS
+
+    guarded._valhalla.get_sigma_feed.return_value = guarded.feed[:5]
+    for _ in range(FEED_SHRINK_CONFIRM_RUNS - 1):
+        guarded._sync_once()
+        assert guarded.send_event.call_args.kwargs["event"]["disable_skipped_reason"] == "feed_shrank"
+
+    guarded._sync_once()
+
+    event = guarded.send_event.call_args.kwargs["event"]
+    assert event["disable_skipped_reason"] == ""
+    assert event["newly_disabled"] == 5
+    state = json.loads((Path(data_storage) / FEED_STATE_FILE).read_text())
+    assert state == {"reference_size": 5, "shrink_runs": 0}
+
+
+def test_shrink_counter_resets_when_feed_recovers(guarded, data_storage):
+    guarded._valhalla.get_sigma_feed.return_value = guarded.feed[:5]
+    guarded._sync_once()
+    guarded._valhalla.get_sigma_feed.return_value = list(guarded.feed)
+    guarded._sync_once()
+
+    state = json.loads((Path(data_storage) / FEED_STATE_FILE).read_text())
+    assert state == {"reference_size": 10, "shrink_runs": 0}
+
+
+def test_unparsable_rule_is_not_a_disable_candidate(trigger):
+    """A rule whose YAML fails to parse this run has an unknown status; it
+    must not be disabled as "below threshold"."""
+    trigger._sync_once()
+    _enable_all(trigger)
+    trigger._disable_removed = True
+    trigger._valhalla.get_sigma_feed.return_value = [
+        {"id": "valhalla-a", "filename": "a.yml", "content": "title: [unclosed"},
+        SAMPLE_RULES[1],
+    ]
+
+    trigger._sync_once()
+
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["to_disable"] == 0
+    assert trigger._sekoia.disable_rule.call_count == 0
+
+
+# ---------------------------------------------------------------------------
+# ATT&CK related_object_refs (suggestion)
+# ---------------------------------------------------------------------------
+
+
+def test_attack_technique_ids_parsing():
+    tags = ["attack.execution", "attack.t1059.001", "ATTACK.T1027", "attack.t1059.001", "cve.2021-1", 7]
+    assert _attack_technique_ids(tags) == ["T1059.001", "T1027"]
+
+
+def test_related_object_refs_set_from_technique_tags(trigger):
+    trigger._valhalla.get_sigma_feed.return_value = [
+        {
+            "id": "v-t",
+            "filename": "t.yml",
+            "content": _rule_yaml("T") + "tags:\n  - attack.t1059.001\n  - attack.t9999\n",
+        }
+    ]
+    trigger._sekoia.find_attack_pattern.side_effect = lambda t: "attack-pattern--1" if t == "T1059.001" else None
+
+    trigger._sync_once()
+
+    body = trigger._sekoia.create_rule.call_args.args[0]
+    assert body["related_object_refs"] == ["attack-pattern--1"]
+
+
+def test_attack_lookups_are_cached_and_failures_tolerated(trigger):
+    rules = [
+        {"id": f"v-{i}", "filename": f"{i}.yml", "content": _rule_yaml(f"T{i}") + "tags:\n  - attack.t1059\n"}
+        for i in range(3)
+    ]
+    trigger._valhalla.get_sigma_feed.return_value = rules
+    trigger._sekoia.find_attack_pattern.side_effect = RuntimeError("inthreat down")
+    trigger.log = MagicMock()
+
+    trigger._sync_once()
+
+    assert trigger._sekoia.find_attack_pattern.call_count == 1
+    assert trigger._sekoia.create_rule.call_count == 3
+    assert "related_object_refs" not in trigger._sekoia.create_rule.call_args.args[0]
+
+
+def test_attack_lookups_stop_after_permission_error(trigger):
+    """A key without intelligence read access gets one warning, not one per
+    technique, and the sync continues without refs."""
+    from nextron_valhalla_sigma_rules_modules.sekoia_client import SekoiaAPIError
+
+    rules = [
+        {"id": f"v-{i}", "filename": f"{i}.yml", "content": _rule_yaml(f"T{i}") + f"tags:\n  - attack.t10{i}0\n"}
+        for i in range(5)
+    ]
+    trigger._valhalla.get_sigma_feed.return_value = rules
+    trigger._sekoia.find_attack_pattern.side_effect = SekoiaAPIError("HTTP 403", status_code=403)
+    trigger.log = MagicMock()
+
+    trigger._sync_once()
+
+    assert trigger._sekoia.find_attack_pattern.call_count == 1
+    assert trigger._sekoia.create_rule.call_count == 5
+    warnings = [c for c in trigger.log.call_args_list if c.kwargs.get("level") == "warning"]
+    assert len(warnings) == 1
+    assert "ATT&CK technique linking disabled" in warnings[0].args[0]
