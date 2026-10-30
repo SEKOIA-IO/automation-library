@@ -28,7 +28,7 @@ mapping:
           "osArchitecture": "64-bit",
           "osBuild": 18209,
           "lastIpAddress": "172.17.230.209",
-          "lastExternalIpAddress": "167.220.196.71",
+          "lastExternalIpAddress": "203.0.113.10",
           "healthStatus": "Active",
           "onboardingstatus": "Onboarded",
           "rbacGroupId": "140",
@@ -109,8 +109,14 @@ mapping:
     - source: "machine.computerDnsName"
       target: "device.hostname"
       type: "string"
-      logic: "First label of the DNS name"
+      logic: "First label of `computerDnsName` (>= 2 chars); otherwise Intune `managedDevice.deviceName`; otherwise the device is skipped"
       description: "Short hostname"
+
+    - source: "managedDevice.device_name"
+      target: "device.hostname"
+      type: "string"
+      logic: "Fallback when `computerDnsName` has no first label of >= 2 chars: first label of the Intune device name (>= 2 chars)"
+      description: "Short hostname (fallback)"
 
     - source: "machine.computerDnsName"
       target: "device.domain"

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-10-27 - 1.4.2
+
+### Fixed
+
+- Skip devices without a usable hostname (Intune device name as fallback)
+- Stop the cycle on API page errors
+
+### Changed
+
+- Vulnerability findings only carry the minimal device (`type`, `uid`, `hostname`)
+
 ## 2026-09-21 - 1.4.1
 
 ### Fixed
