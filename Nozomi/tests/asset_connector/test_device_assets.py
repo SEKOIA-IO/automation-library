@@ -5,16 +5,16 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests_mock
-
-from nozomi_networks import NozomiConfiguration, NozomiModule
-from nozomi_networks.asset_connector.client import NozomiQueryClient, NozomiQueryError
-from nozomi_networks.asset_connector.device_assets import NozomiDeviceAssetConnector
-from nozomi_networks.asset_connector.models import NozomiAsset
 from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceOCSFModel,
     DeviceTypeId,
     DeviceTypeStr,
 )
+
+from nozomi_networks import NozomiConfiguration, NozomiModule
+from nozomi_networks.asset_connector.client import NozomiQueryClient, NozomiQueryError
+from nozomi_networks.asset_connector.device_assets import NozomiDeviceAssetConnector
+from nozomi_networks.asset_connector.models import NozomiAsset
 
 BASE_URL = "https://guardian.test"
 SIGN_IN_URL = f"{BASE_URL}/api/open/sign_in"
@@ -128,17 +128,20 @@ def test_build_operating_system_other(test_connector, sample_assets):
 
 def test_build_network_interfaces(test_connector, sample_assets):
     asset = NozomiAsset.parse_obj(sample_assets[1])
-    interfaces = test_connector.build_network_interfaces(asset)
+    interfaces = test_connector.build_network_interfaces(asset, "plc-01")
     assert interfaces is not None
     assert len(interfaces) == 2
     assert all(iface.mac == "d0:03:4b:18:9e:41" for iface in interfaces)
+    assert all(iface.hostname == "plc-01" for iface in interfaces)
 
 
 def test_build_device(test_connector, sample_assets):
     asset = NozomiAsset.parse_obj(sample_assets[0])
     device = test_connector.build_device(asset)
     assert device.uid == asset.id
-    assert device.hostname == "AC 800M PM851"
+    # A product name is not a hostname: it stays in name/model only
+    assert device.hostname is None
+    assert device.name == "AC 800M PM851"
     assert device.ip == "192.168.196.234"
     assert device.vendor_name == "ABB"
     assert device.model == "AC 800M PM851"
@@ -146,10 +149,37 @@ def test_build_device(test_connector, sample_assets):
     assert abs(device.created_time - 1724888822.710) < 0.001
 
 
-def test_build_device_hostname_fallback(test_connector):
+def test_build_device_without_name_has_no_hostname(test_connector):
     asset = NozomiAsset(id="abc", name=None)
     device = test_connector.build_device(asset)
-    assert device.hostname == "abc"
+    assert device.hostname is None
+
+
+def test_build_device_splits_fqdn_name(test_connector):
+    asset = NozomiAsset(id="abc", name="PLC-01.plant.example.com", ip=["192.0.2.1"])
+    device = test_connector.build_device(asset)
+    assert device.hostname == "plc-01"
+    assert device.domain == "plant.example.com"
+    assert device.network_interfaces[0].hostname == "plc-01"
+
+
+def test_get_mapped_fields(test_connector):
+    fields = test_connector.get_mapped_fields()
+    assert fields["id"] == "device.uid"
+    assert fields["name"] == "device.name,device.hostname,device.domain"
+    assert "checkpoint" in fields["created_at"]
+
+
+def test_reset_checkpoint(test_connector):
+    with test_connector.context as cache:
+        cache["most_recent_created_at_ms"] = 1724888822710
+        cache["most_recent_ids"] = ["abc"]
+    test_connector._latest_checkpoint = (1724888822710, {"abc"})
+
+    test_connector.reset_checkpoint()
+
+    assert test_connector.checkpoint == (None, set())
+    assert test_connector._latest_checkpoint is None
 
 
 def test_build_enrichments(test_connector, sample_assets):

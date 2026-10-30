@@ -6,7 +6,7 @@ import pytest
 from aioresponses import aioresponses
 from faker.proxy import Faker
 from loguru import logger
-from pydantic.v1 import ValidationError
+from pydantic import ValidationError
 
 from nozomi_networks import NozomiModule
 from nozomi_networks.client.event_type import EventType
