@@ -8,6 +8,8 @@ from sekoia_automation.module import ModuleConfigurationError
 from nextron_valhalla_sigma_rules_modules import NextronValhallaSigmaRulesModule
 from nextron_valhalla_sigma_rules_modules.models import (
     DEMO_API_KEY,
+)
+from nextron_valhalla_sigma_rules_modules.models import (
     NextronValhallaSigmaRulesModuleConfiguration as ModuleConfig,
 )
 
@@ -25,7 +27,7 @@ def test_valid_configuration_parses():
 
 
 def test_sekoia_api_key_is_required():
-    """Without it the trigger issues `Authorization: Bearer ` and every
+    """Without it both triggers issue `Authorization: Bearer ` and every
     Rules Catalog call 401s — a full sync reports thousands of per-rule
     failures with only the first one logged."""
     with pytest.raises(ValidationError) as excinfo:
@@ -89,9 +91,7 @@ def test_manifest_marks_sekoia_api_key_required():
             id="key-omitted-caught-by-manifest-required",
         ),
         pytest.param({"sekoia_api_key": ""}, id="key-blank-caught-by-validator"),
-        pytest.param(
-            {"sekoia_api_key": "   "}, id="key-whitespace-caught-by-validator"
-        ),
+        pytest.param({"sekoia_api_key": "   "}, id="key-whitespace-caught-by-validator"),
     ],
 )
 def test_module_rejects_unusable_credentials(configuration):
@@ -123,4 +123,15 @@ def test_manifest_and_model_agree_on_which_fields_are_optional():
         # and vice versa — otherwise one layer accepts what the other rejects.
         assert field.is_required() == (name in required), name
         if name not in required:
-            assert configuration["properties"][name]["default"] == field.default
+            assert configuration["properties"][name].get("default") == field.default, name
+
+
+@pytest.mark.parametrize("value", [None, "", "   "])
+def test_blank_community_uuid_means_unset(value):
+    config = ModuleConfig(sekoia_api_key=A_KEY, community_uuid=value)
+    assert config.community_uuid is None
+
+
+def test_community_uuid_is_stripped():
+    config = ModuleConfig(sekoia_api_key=A_KEY, community_uuid=" c-1\n")
+    assert config.community_uuid == "c-1"

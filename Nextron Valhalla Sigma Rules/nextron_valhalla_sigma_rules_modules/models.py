@@ -8,6 +8,7 @@ class NextronValhallaSigmaRulesModuleConfiguration(BaseModel):
     valhalla_api_key: str = Field(default=DEMO_API_KEY)
     sekoia_api_key: str
     sekoia_base_url: str = Field(default="https://api.sekoia.io")
+    community_uuid: str | None = Field(default=None)
 
     @field_validator("valhalla_api_key", "sekoia_api_key", "sekoia_base_url")
     @classmethod
@@ -22,8 +23,13 @@ class NextronValhallaSigmaRulesModuleConfiguration(BaseModel):
         """
         stripped = value.strip()
         if not stripped:
-            raise ValueError(
-                f"{info.field_name} must not be empty — "
-                f"set it in the module configuration."
-            )
+            raise ValueError(f"{info.field_name} must not be empty — set it in the module configuration.")
         return stripped
+
+    @field_validator("community_uuid")
+    @classmethod
+    def _blank_community_is_none(cls, value: str | None) -> str | None:
+        """Optional: an empty or whitespace-only value means "not set"."""
+        if value is None:
+            return None
+        return value.strip() or None

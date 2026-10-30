@@ -6,31 +6,41 @@
     "properties": {
       "valhalla_api_key": {
         "type": "string",
-        "format": "password",
         "title": "Valhalla API key",
-        "description": "API key from valhalla.nextron-systems.com. The default is the public demo key, which only grants the community feed.",
+        "description": "API key from valhalla.nextron-systems.com. The default is the public demo key, which only grants the community feed. Stored as a secret: masked once the account is saved.",
         "default": "1111111111111111111111111111111111111111111111111111111111111111"
       },
       "sekoia_api_key": {
         "type": "string",
-        "format": "password",
         "title": "Sekoia API key",
-        "description": "Bearer token from Sekoia (Settings → Workspace → API Keys). Used to push rules into the Sekoia Rules Catalog."
+        "description": "Bearer token from Sekoia (Settings \u2192 Workspace \u2192 API Keys). Used to push rules into the Sekoia Rules Catalog. Stored as a secret: masked once the account is saved."
       },
       "sekoia_base_url": {
         "type": "string",
         "title": "Sekoia API base URL",
         "description": "Region-specific base URL. Default https://api.sekoia.io covers FRA1. For FRA2/MCO1/UAE1 use https://app.<region>.sekoia.io/api.",
         "default": "https://api.sekoia.io"
+      },
+      "community_uuid": {
+        "type": "string",
+        "title": "Sekoia community UUID",
+        "description": "Optional. Only needed when the API key has access to several communities (e.g. MSSP keys): the sync then only reads and writes rules of this community. To find the UUID, open the community in Sekoia, go to Settings > General and copy the part of the URL between /communities/ and /community-details."
       }
     },
-    "required": ["sekoia_api_key"],
-    "secrets": ["valhalla_api_key", "sekoia_api_key"]
+    "required": [
+      "sekoia_api_key"
+    ],
+    "secrets": [
+      "valhalla_api_key",
+      "sekoia_api_key"
+    ]
   },
-  "description": "Nextron Valhalla Sigma Rules integration for Sekoia XDR",
+  "description": "Nextron Valhalla Sigma Rules integration for Sekoia",
   "name": "Nextron Valhalla Sigma Rules",
   "slug": "nextron-valhalla-sigma-rules",
-  "categories": ["Threat Intelligence"],
+  "categories": [
+    "Threat Intelligence"
+  ],
   "uuid": "a81edea4-3259-4c20-b68d-0bdc923349d7",
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

@@ -3,19 +3,17 @@ import textwrap
 import pytest
 import yaml
 
+from nextron_valhalla_sigma_rules_modules.ecs_field_maps import RAW_TO_ECS, RAW_TO_ECS_BY_PRODUCT
 from nextron_valhalla_sigma_rules_modules.sigma_mapper import (
-    DEFAULT_EFFORT,
     DEFAULT_SEVERITY,
     MARKER_TAG,
     MAX_DESCRIPTION_LENGTH,
     MAX_NAME_LENGTH,
-    RAW_TO_ECS,
+    RULE_EFFORT,
     SEVERITY_MAP,
-    STATUS_EFFORT_MAP,
     convert_payload_to_ecs,
     sigma_rule_to_catalog_payload,
 )
-
 
 # ---------------------------------------------------------------------------
 # sigma_rule_to_catalog_payload — new structured-body shape
@@ -51,33 +49,40 @@ def test_maps_required_fields():
     assert body["type"] == "sigma"
     assert body["description"] == "Detects a suspicious process being spawned."
     assert body["severity"] == 70
-    assert body["effort"] == DEFAULT_EFFORT  # no status field → default
+    assert body["effort"] == RULE_EFFORT
     # No tactic tag → default alert type (application-compromise).
     assert body["alert_type_uuid"] == "599f4b1a-dd60-43fe-8ee9-07d3c5d00ded"
     assert body["enabled"] is False
 
 
-def test_payload_is_detection_only():
-    """The `payload` string must contain the ECS-converted detection block
-    (with the `detection:` keyword) and NOT any of the surrounding metadata."""
+def test_payload_carries_logsource_and_detection_only():
+    """S11: the payload keeps the Sigma ``logsource`` next to the converted
+    ``detection``; other metadata travels in structured fields."""
     rule, parsed = _rule_and_parsed(HIGH_RULE_YAML)
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
 
-    assert body["payload"].lstrip().startswith("detection:")
+    assert body["payload"].startswith("logsource:")
     assert "title:" not in body["payload"]
     assert "description:" not in body["payload"]
     assert "references:" not in body["payload"]
     assert "level:" not in body["payload"]
 
 
-def test_payload_roundtrips_back_to_a_detection_block():
+def test_payload_roundtrips_back_to_logsource_and_detection():
     rule, parsed = _rule_and_parsed(HIGH_RULE_YAML)
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
 
     reparsed = yaml.safe_load(body["payload"])
-    assert set(reparsed.keys()) == {"detection"}
+    assert list(reparsed) == ["logsource", "detection"]
+    assert reparsed["logsource"] == parsed["logsource"]
     assert "condition" in reparsed["detection"]
     assert "selection" in reparsed["detection"]
+
+
+def test_payload_without_logsource_is_detection_only():
+    rule, parsed = _rule_and_parsed("title: t\ndetection: {selection: {a: 1}, condition: selection}\n")
+    body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
+    assert list(yaml.safe_load(body["payload"])) == ["detection"]
 
 
 def test_enabled_flag_propagates():
@@ -97,7 +102,9 @@ def test_enabled_flag_propagates():
     ],
 )
 def test_severity_mapping_per_level(level, expected):
-    rule, parsed = _rule_and_parsed(f"title: t\nlevel: {level}\ndetection: {{selection: {{a: 1}}, condition: selection}}\n")
+    rule, parsed = _rule_and_parsed(
+        f"title: t\nlevel: {level}\ndetection: {{selection: {{a: 1}}, condition: selection}}\n"
+    )
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
     assert body["severity"] == expected
 
@@ -118,27 +125,26 @@ def test_severity_falls_back_to_default_when_level_missing():
     assert body["severity"] == DEFAULT_SEVERITY == 0
 
 
-@pytest.mark.parametrize(
-    "status,expected",
-    [
-        ("stable", 1),
-        ("test", 2),
-        ("experimental", 3),
-        ("unsupported", 4),
-        ("deprecated", 4),
-        ("STABLE", 1),  # case-insensitive
-    ],
-)
-def test_effort_from_status(status, expected):
+@pytest.mark.parametrize("status", ["stable", "test", "experimental", "STABLE", None])
+def test_effort_is_fixed_whatever_the_status(status):
+    """S17: ``effort`` is the expected analysis effort, not Sigma maturity."""
+    status_line = f"status: {status}\n" if status else ""
+    rule, parsed = _rule_and_parsed(f"title: t\n{status_line}detection: {{}}\n")
+    body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
+    assert body["effort"] == RULE_EFFORT
+
+
+@pytest.mark.parametrize("status", ["stable", "test", "experimental", "STABLE"])
+def test_sigma_status_becomes_a_tag(status):
     rule, parsed = _rule_and_parsed(f"title: t\nstatus: {status}\ndetection: {{}}\n")
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
-    assert body["effort"] == expected
+    assert f"status-{status.lower()}" in body["tags"]
 
 
-def test_effort_defaults_when_status_missing():
+def test_no_status_tag_when_status_missing():
     rule, parsed = _rule_and_parsed("title: t\ndetection: {}\n")
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
-    assert body["effort"] == DEFAULT_EFFORT == 3
+    assert not any(t.startswith("status-") for t in body["tags"])
 
 
 def test_title_falls_back_to_filename_when_yaml_lacks_title():
@@ -160,8 +166,7 @@ def test_uses_top_level_level_field_when_yaml_lacks_one():
 
 def test_name_is_truncated_when_over_sekoia_limit():
     long_title = (
-        "CVE-2023-1389 Potential Exploitation Attempt - Unauthenticated "
-        "Command Injection In TP-Link Archer AX21"
+        "CVE-2023-1389 Potential Exploitation Attempt - Unauthenticated Command Injection In TP-Link Archer AX21"
     )
     assert len(long_title) > MAX_NAME_LENGTH
     rule, parsed = _rule_and_parsed(f"title: {long_title}\ndetection: {{}}\n")
@@ -181,9 +186,7 @@ def test_name_at_exact_limit_is_untouched():
 
 def test_description_is_truncated_when_over_sekoia_limit():
     long_desc = "x" * (MAX_DESCRIPTION_LENGTH + 500)
-    rule, parsed = _rule_and_parsed(
-        f"title: t\ndescription: {long_desc}\ndetection: {{}}\n"
-    )
+    rule, parsed = _rule_and_parsed(f"title: t\ndescription: {long_desc}\ndetection: {{}}\n")
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
     assert len(body["description"]) <= MAX_DESCRIPTION_LENGTH
     assert body["description"].endswith("…")
@@ -191,9 +194,7 @@ def test_description_is_truncated_when_over_sekoia_limit():
 
 def test_description_at_exact_limit_is_untouched():
     desc = "y" * MAX_DESCRIPTION_LENGTH
-    rule, parsed = _rule_and_parsed(
-        f"title: t\ndescription: {desc}\ndetection: {{}}\n"
-    )
+    rule, parsed = _rule_and_parsed(f"title: t\ndescription: {desc}\ndetection: {{}}\n")
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
     assert body["description"] == desc
     assert not body["description"].endswith("…")
@@ -220,11 +221,7 @@ def test_community_uuid_is_never_shipped():
 
 
 def test_tags_pass_through_and_marker_is_appended():
-    yaml_body = (
-        "title: t\n"
-        "tags:\n  - attack.credential-access\n  - cve.2023-1389\n"
-        "detection: {}\n"
-    )
+    yaml_body = "title: t\ntags:\n  - attack.credential-access\n  - cve.2023-1389\ndetection: {}\n"
     rule, parsed = _rule_and_parsed(yaml_body)
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
     assert body["tags"] == [
@@ -245,9 +242,7 @@ def test_uuid_tag_carries_valhalla_id():
     """Every rule we POST/PUT carries a ``uuid-<valhalla_id>`` tag so the
     sync trigger can rebuild the id-map from the Sekoia catalog when its
     local file is empty (fresh playbook, recreated trigger)."""
-    rule, parsed = _rule_and_parsed(
-        "title: t\ndetection: {}\n", rule_id="feed-uuid-xyz"
-    )
+    rule, parsed = _rule_and_parsed("title: t\ndetection: {}\n", rule_id="feed-uuid-xyz")
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
     assert "uuid-feed-uuid-xyz" in body["tags"]
 
@@ -263,22 +258,14 @@ def test_uuid_tag_omitted_when_rule_has_no_id():
 
 
 def test_uuid_tag_is_not_duplicated():
-    yaml_body = (
-        "title: t\n"
-        f"tags:\n  - uuid-abc-123\n"
-        "detection: {}\n"
-    )
+    yaml_body = "title: t\ntags:\n  - uuid-abc-123\ndetection: {}\n"
     rule, parsed = _rule_and_parsed(yaml_body)
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
     assert body["tags"].count("uuid-abc-123") == 1
 
 
 def test_marker_tag_is_not_duplicated():
-    yaml_body = (
-        "title: t\n"
-        f"tags:\n  - {MARKER_TAG}\n  - attack.t1059\n"
-        "detection: {}\n"
-    )
+    yaml_body = f"title: t\ntags:\n  - {MARKER_TAG}\n  - attack.t1059\ndetection: {{}}\n"
     rule, parsed = _rule_and_parsed(yaml_body)
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
     assert body["tags"].count(MARKER_TAG) == 1
@@ -288,11 +275,7 @@ def test_datasources_not_shipped_even_when_logsource_present():
     # Sekoia's `datasources` is a list of tenant-registered data-source UUIDs,
     # not the Sigma logsource dict. We can't derive UUIDs from `{product,
     # category}`, so the field is intentionally omitted.
-    yaml_body = (
-        "title: t\n"
-        "logsource:\n  product: windows\n  category: process_creation\n"
-        "detection: {}\n"
-    )
+    yaml_body = "title: t\nlogsource:\n  product: windows\n  category: process_creation\ndetection: {}\n"
     rule, parsed = _rule_and_parsed(yaml_body)
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
     assert "datasources" not in body
@@ -304,11 +287,7 @@ def test_related_object_refs_is_never_shipped():
     `related_object_refs` would just add dangling references. Field is
     intentionally omitted."""
     yaml_body = (
-        "title: t\n"
-        "related:\n"
-        "  - id: 8cf4da11-0d3b-4a4f-9f5f-abcdef012345\n"
-        "    type: obsoletes\n"
-        "detection: {}\n"
+        "title: t\nrelated:\n  - id: 8cf4da11-0d3b-4a4f-9f5f-abcdef012345\n    type: obsoletes\ndetection: {}\n"
     )
     rule, parsed = _rule_and_parsed(yaml_body)
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
@@ -316,14 +295,7 @@ def test_related_object_refs_is_never_shipped():
 
 
 def test_false_positives_list_is_joined_with_newlines():
-    yaml_body = (
-        "title: t\n"
-        "falsepositives:\n"
-        "  - Legit scanners\n"
-        "  - IT admin scripts\n"
-        "  - Backup jobs\n"
-        "detection: {}\n"
-    )
+    yaml_body = "title: t\nfalsepositives:\n  - Legit scanners\n  - IT admin scripts\n  - Backup jobs\ndetection: {}\n"
     rule, parsed = _rule_and_parsed(yaml_body)
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
     assert body["false_positives"] == "Legit scanners\nIT admin scripts\nBackup jobs"
@@ -369,7 +341,8 @@ def test_all_optional_fields_together():
         "false_positives",
     }
     assert body["severity"] == 70
-    assert body["effort"] == 1
+    assert body["effort"] == RULE_EFFORT
+    assert "status-stable" in body["tags"]
     assert body["enabled"] is True
     assert "datasources" not in body
     assert "community_uuid" not in body
@@ -404,13 +377,9 @@ def test_priority_tie_break_higher_wins():
     # Exfiltration wins over persistence.
     exfiltration_uuid = "0b7c0b5b-da8e-4e43-a2e1-11cb5a40f168"
     backdoor_uuid = "5928d144-2038-4a87-b996-b3585a9a1a41"
-    assert derive_alert_type_uuid(
-        ["attack.persistence", "attack.exfiltration"]
-    ) == exfiltration_uuid
+    assert derive_alert_type_uuid(["attack.persistence", "attack.exfiltration"]) == exfiltration_uuid
     # Order in the tag list must not matter — priority list is authoritative.
-    assert derive_alert_type_uuid(
-        ["attack.exfiltration", "attack.persistence"]
-    ) == exfiltration_uuid
+    assert derive_alert_type_uuid(["attack.exfiltration", "attack.persistence"]) == exfiltration_uuid
     # Sanity: backdoor is what persistence alone yields.
     assert derive_alert_type_uuid(["attack.persistence"]) == backdoor_uuid
 
@@ -423,25 +392,20 @@ def test_case_insensitive_tag_matching():
 def test_non_string_tag_entries_are_ignored():
     # Defensive: tags list occasionally contains non-strings from odd YAML.
     exfiltration_uuid = "0b7c0b5b-da8e-4e43-a2e1-11cb5a40f168"
-    assert derive_alert_type_uuid(
-        [None, 123, "attack.exfiltration"]
-    ) == exfiltration_uuid
+    assert derive_alert_type_uuid([None, 123, "attack.exfiltration"]) == exfiltration_uuid
 
 
 def test_marker_tag_alone_does_not_override_default():
     # The marker tag must not accidentally match any priority-list entry.
     from nextron_valhalla_sigma_rules_modules.sigma_mapper import MARKER_TAG
+
     assert derive_alert_type_uuid([MARKER_TAG]) == DEFAULT_ALERT_UUID
 
 
 def test_body_alert_type_uuid_derived_from_tags():
     """End-to-end: a rule tagged attack.exfiltration ends up with the
     exfiltration alert_type_uuid in the POSTed body."""
-    yaml_body = (
-        "title: t\n"
-        "tags: [attack.exfiltration, attack.t1041]\n"
-        "detection: {}\n"
-    )
+    yaml_body = "title: t\ntags: [attack.exfiltration, attack.t1041]\ndetection: {}\n"
     rule, parsed = _rule_and_parsed(yaml_body)
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
     assert body["alert_type_uuid"] == "0b7c0b5b-da8e-4e43-a2e1-11cb5a40f168"
@@ -452,44 +416,33 @@ def test_body_alert_type_uuid_derived_from_tags():
 # ---------------------------------------------------------------------------
 
 
-def _single_field_rule(field: str, value: str = "'foo'") -> str:
-    return textwrap.dedent(
-        f"""\
-        title: T
-        detection:
-          selection:
-            {field}: {value}
-          condition: selection
-        """
-    )
+def _single_field_rule(field: str, value: str = "'foo'", product: str | None = None) -> str:
+    logsource = f"logsource:\n  product: {product}\n" if product else ""
+    return f"title: T\n{logsource}detection:\n  selection:\n    {field}: {value}\n  condition: selection\n"
 
 
 @pytest.mark.parametrize(
     "raw,ecs",
     [
         # SigmaHQ Windows pipeline (source of truth)
-        ("Image", "process.executable"),               # .caseless stripped
+        ("Image", "process.executable"),  # .caseless stripped
         ("CommandLine", "process.command_line"),
         ("ParentImage", "process.parent.executable"),  # .caseless stripped
         ("ParentCommandLine", "process.parent.command_line"),
         ("EventID", "event.code"),
         ("TargetFilename", "file.path"),
-        ("ImageLoaded", "file.path"),                  # SigmaHQ target (was dll.path)
         ("ScriptBlockText", "powershell.file.script_block_text"),
         ("DestinationIp", "destination.ip"),
         ("QueryName", "dns.question.name"),
         ("User", "user.name"),
-        ("Signed", "file.code_signature.signed"),      # SigmaHQ prefixes with `file.`
+        ("Signed", "file.code_signature.signed"),  # SigmaHQ prefixes with `file.`
         ("SignatureStatus", "file.code_signature.status"),
-        ("TargetUserName", "user.target.name"),
         ("TargetDomainName", "user.target.domain"),
-        ("TargetUserSid", "user.target.id"),
-        ("Imphash", "file.pe.imphash"),
         # Web / proxy W3C ELF fields (Zeek pipeline)
         ("cs-method", "http.request.method"),
         ("cs-referer", "http.request.referrer"),
         ("cs-uri-query", "url.query"),
-        ("cs-uri-stem", "url.original"),               # Zeek target (was url.path)
+        ("cs-uri-stem", "url.original"),  # Zeek target (was url.path)
         ("cs-uri", "url.original"),
         ("sc-status", "http.response.status_code"),
         # Cloud (custom mappings, SigmaHQ doesn't cover)
@@ -505,28 +458,6 @@ def _single_field_rule(field: str, value: str = "'foo'") -> str:
         ("a1", "auditd.data.a1"),
         ("exe", "process.executable"),
         ("cfgpath", "auditd.data.cfgpath"),
-        # Windows security event_data (custom)
-        ("ObjectClass", "action.properties.ObjectClass"),
-        ("ObjectDN", "action.properties.ObjectDN"),
-        ("Details", "action.properties.Details"),
-        ("SubjectUserName", "user.name"),
-        ("LogonType", "action.properties.LogonType"),
-        ("GrantedAccess", "action.properties.GrantedAccess"),
-        ("CallTrace", "action.properties.CallTrace"),
-        ("InterfaceUuid", "action.properties.InterfaceUuid"),
-        ("IsatapRouter", "action.properties.IsatapRouter"),
-        ("FilterName", "action.properties.FilterName"),
-        ("LogonId", "action.properties.LogonId"),
-        ("LogonProcessName", "action.properties.LogonProcessName"),
-        ("ObjectServer", "action.properties.ObjectServer"),
-        ("ObjectValueName", "action.properties.ObjectValueName"),
-        ("PrivilegeList", "action.properties.PrivilegeList"),
-        ("SamAccountName", "action.properties.SamAccountName"),
-        ("SourceName", "action.properties.SourceName"),
-        ("SubjectUserSid", "action.properties.SubjectUserSid"),
-        ("TargetName", "action.properties.TargetName"),
-        ("TaskContent", "action.properties.TaskContent"),
-        ("TicketEncryptionType", "action.properties.TicketEncryptionType"),
         # Custom W3C ELF variants
         ("userAgent", "user_agent.original"),
         ("cs-user-agent", "user_agent.original"),
@@ -580,10 +511,7 @@ def test_multiple_modifiers_are_preserved():
     converted, unmapped = convert_payload_to_ecs(payload)
     assert unmapped == []
     parsed = converted
-    assert (
-        "process.command_line|contains|base64offset"
-        in parsed["detection"]["selection"]
-    )
+    assert "process.command_line|contains|base64offset" in parsed["detection"]["selection"]
 
 
 def test_hyphenated_field_with_modifier_maps_correctly():
@@ -683,10 +611,7 @@ def test_list_of_dict_selection_is_walked():
     converted, unmapped = convert_payload_to_ecs(payload)
     assert unmapped == []
     parsed = converted
-    assert all(
-        "process.executable|endswith" in item
-        for item in parsed["detection"]["selection"]
-    )
+    assert all("process.executable|endswith" in item for item in parsed["detection"]["selection"])
 
 
 def test_multi_value_lists_are_preserved():
@@ -770,21 +695,64 @@ def test_missing_detection_block_returns_marker():
 
 def test_custom_mapping_overrides_default():
     payload = _single_field_rule("Foo|contains", "'bar'")
-    converted, unmapped = convert_payload_to_ecs(
-        payload, mapping={"Foo": "custom.ecs.field"}
-    )
+    converted, unmapped = convert_payload_to_ecs(payload, mapping={"Foo": "custom.ecs.field"})
     assert unmapped == []
     parsed = converted
     assert "custom.ecs.field|contains" in parsed["detection"]["selection"]
 
 
-def test_raw_to_ecs_map_has_no_duplicate_targets_for_process_executable():
-    """Sanity check: multiple raw names map to the same ECS target intentionally."""
-    process_exec = [
-        k for k, v in RAW_TO_ECS.items() if v == "process.executable"
-    ]
-    # Image, SourceImage, TargetImage, ImagePath all map here
-    assert set(process_exec) >= {"Image", "SourceImage", "TargetImage", "ImagePath"}
+def test_windows_process_access_keeps_source_and_target_apart():
+    """C1: Sekoia's parser keeps the access *source* in ``process.*`` and
+    the target under ``action.properties.*`` (Sysmon 10 fixture)."""
+    win = RAW_TO_ECS_BY_PRODUCT["windows"]
+    assert win["SourceImage"] == "process.executable"
+    assert win["Image"] == "process.executable"
+    assert win["TargetImage"] == "action.properties.TargetImage"
+    assert win["TargetProcessId"] == "action.properties.TargetProcessId"
+    assert win["TargetProcessGUID"] == "action.properties.TargetProcessGUID"
+
+
+def test_lsass_access_rule_keeps_both_conditions():
+    payload = textwrap.dedent(
+        """\
+        title: T
+        logsource:
+          product: windows
+          category: process_access
+        detection:
+          selection:
+            SourceImage|endswith: '\\rundll32.exe'
+            TargetImage|endswith: '\\lsass.exe'
+          condition: selection
+        """
+    )
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert unmapped == []
+    assert converted["detection"]["selection"] == {
+        "process.executable|endswith": "\\rundll32.exe",
+        "action.properties.TargetImage|endswith": "\\lsass.exe",
+    }
+
+
+@pytest.mark.parametrize("a,b", [("ProcessId", "SourceProcessId"), ("User", "AccountName")])
+def test_colliding_fields_mark_rule_unmapped(a, b):
+    """C1: two source keys resolving to the same ECS key would silently drop
+    a condition — the rule is reported unmapped instead."""
+    payload = (
+        "title: T\nlogsource:\n  product: windows\n  category: process_access\n"
+        f"detection:\n  selection:\n    {a}: x\n    {b}: y\n  condition: selection\n"
+    )
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert converted is None
+    assert len(unmapped) == 1
+    assert unmapped[0].startswith("<collision:")
+
+
+def test_url_fields_collide_in_one_selection():
+    payload = _single_field_rule("c-uri", "'/a'\n    cs-uri-stem: '/b'")
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert converted is None
+    assert unmapped == ["<collision:url.original>"]
 
 
 # ---------------------------------------------------------------------------
@@ -799,33 +767,74 @@ def test_sigmahq_pipelines_load_without_caseless_suffix():
         assert not target.endswith(".caseless"), target
 
 
-def test_windows_wins_shared_field_names_over_macos():
-    """User, ProcessName, ParentImage etc. exist in both SigmaHQ Windows
-    and macOS pipelines with different targets. The merge order puts
-    Windows first so Windows-appropriate ECS targets win — Valhalla's
-    feed is majority Windows."""
-    from nextron_valhalla_sigma_rules_modules.ecs_field_maps import (
-        RAW_TO_ECS_SIGMAHQ_MACOS,
-        RAW_TO_ECS_SIGMAHQ_WINDOWS,
+def test_product_picks_its_own_field_map():
+    """S9: macOS rules use the macOS map (``ProcessName`` → ``process.name``),
+    not the Windows targets."""
+    mac = RAW_TO_ECS_BY_PRODUCT["macos"]
+    win = RAW_TO_ECS_BY_PRODUCT["windows"]
+    assert mac["ProcessName"] == "process.name"
+    assert mac["FileName"] == "file.name"
+    assert win["ProcessName"] == "process.executable"
+    assert win["FileName"] == "file.path"
+
+    payload = textwrap.dedent(
+        """\
+        title: T
+        logsource:
+          product: macos
+          category: process_creation
+        detection:
+          selection:
+            ProcessName: osascript
+          condition: selection
+        """
     )
-    shared = set(RAW_TO_ECS_SIGMAHQ_WINDOWS) & set(RAW_TO_ECS_SIGMAHQ_MACOS)
-    assert shared, "Expected shared field names between Windows and macOS"
-    for k in shared:
-        # After merge, the target should match Windows (stripped of .caseless).
-        expected = RAW_TO_ECS_SIGMAHQ_WINDOWS[k].removesuffix(".caseless")
-        assert RAW_TO_ECS[k] == expected, k
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert unmapped == []
+    assert converted["detection"]["selection"] == {"process.name": "osascript"}
 
 
-def test_custom_map_fills_gaps_windows_pipeline_doesnt_cover():
-    from nextron_valhalla_sigma_rules_modules.ecs_field_maps import (
-        RAW_TO_ECS_CUSTOM,
-        RAW_TO_ECS_SIGMAHQ_WINDOWS,
-    )
-    # CUSTOM's TargetImage should surface in the runtime map (Windows
-    # doesn't have TargetImage in its static dict).
-    assert "TargetImage" not in RAW_TO_ECS_SIGMAHQ_WINDOWS
-    assert "TargetImage" in RAW_TO_ECS_CUSTOM
-    assert RAW_TO_ECS["TargetImage"] == RAW_TO_ECS_CUSTOM["TargetImage"]
+def test_product_match_is_case_insensitive():
+    from nextron_valhalla_sigma_rules_modules.ecs_field_maps import mapping_for_product
+
+    assert mapping_for_product("Windows") is RAW_TO_ECS_BY_PRODUCT["windows"]
+    assert mapping_for_product("okta") is RAW_TO_ECS
+    assert mapping_for_product(None) is RAW_TO_ECS
+
+
+WINDOWS_ONLY_FIELDS = [
+    ("ObjectClass", "action.properties.ObjectClass"),
+    ("Details", "action.properties.Details"),
+    ("GrantedAccess", "action.properties.GrantedAccess"),
+    ("Status", "action.properties.Status"),
+    ("Category", "action.properties.Category"),
+    ("Level", "action.properties.Level"),
+    ("Path", "action.properties.Path"),
+    ("SubjectUserName", "user.name"),
+    ("TargetUserName", "user.target.name"),
+    ("TargetUserSid", "user.target.id"),
+    ("Signature", "action.properties.Signature"),
+    ("Signed", "action.properties.Signed"),
+]
+
+
+@pytest.mark.parametrize("raw,ecs", WINDOWS_ONLY_FIELDS)
+def test_windows_only_fields_map_for_windows_rules(raw, ecs):
+    payload = _single_field_rule(raw, product="windows")
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert unmapped == []
+    assert ecs in converted["detection"]["selection"]
+
+
+@pytest.mark.parametrize("raw", ["Status", "Category", "Level", "Path", "Details"])
+@pytest.mark.parametrize("product", ["okta", None])
+def test_windows_event_data_catch_alls_are_unmapped_elsewhere(raw, product):
+    """S10: an Okta rule using ``Status`` must not be accepted with a
+    Windows ``action.properties.Status`` target that never matches."""
+    payload = _single_field_rule(raw, product=product)
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert converted is None
+    assert unmapped == [raw]
 
 
 # ---------------------------------------------------------------------------
@@ -836,33 +845,44 @@ def test_custom_map_fills_gaps_windows_pipeline_doesnt_cover():
 @pytest.mark.parametrize(
     "field,category,expected",
     [
-        # PE fields differ between process_creation and image_load contexts.
-        ("Description", "process_creation", "process.pe.description"),
-        ("Description", "image_load", "file.pe.description"),
-        ("Product", "process_creation", "process.pe.product"),
-        ("Product", "image_load", "file.pe.product"),
-        ("Company", "process_creation", "process.pe.company"),
-        ("Company", "image_load", "file.pe.company"),
-        ("OriginalFileName", "process_creation", "process.pe.original_file_name"),
-        ("OriginalFileName", "image_load", "file.pe.original_file_name"),
-        ("FileVersion", "process_creation", "process.pe.file_version"),
-        ("FileVersion", "image_load", "file.pe.file_version"),
-        # Description has a third category (sysmon_error) per SigmaHQ.
+        # Verified against the Sekoia Windows parser fixtures: PE metadata
+        # stays in action.properties.* for both process_creation and
+        # image_load.
+        ("Description", "process_creation", "action.properties.Description"),
+        ("Description", "image_load", "action.properties.Description"),
+        ("Product", "process_creation", "action.properties.Product"),
+        ("Product", "image_load", "action.properties.Product"),
+        ("Company", "process_creation", "action.properties.Company"),
+        ("Company", "image_load", "action.properties.Company"),
+        ("OriginalFileName", "process_creation", "action.properties.OriginalFileName"),
+        ("OriginalFileName", "image_load", "action.properties.OriginalFileName"),
+        ("FileVersion", "process_creation", "action.properties.FileVersion"),
+        ("FileVersion", "image_load", "action.properties.FileVersion"),
         ("Description", "sysmon_error", "action.properties.Description"),
-        # Initiated / Protocol are network_connection-only.
-        ("Initiated", "network_connection", "network.direction"),
         ("Protocol", "network_connection", "network.transport"),
+        # C3: ImageLoad → dll.*, DriverLoad → process.*
+        ("ImageLoaded", "image_load", "dll.path"),
+        ("ImageLoaded", "driver_load", "process.executable"),
+        ("Imphash", "process_creation", "process.pe.imphash"),
+        ("Imphash", "image_load", "dll.pe.imphash"),
     ],
 )
 def test_context_aware_field_maps_by_category(field, category, expected):
-    payload = _rule_with_logsource(
-        category, f"{field}|contains: 'x'"
-    )
+    payload = _rule_with_logsource(category, f"{field}|contains: 'x'")
     converted, unmapped = convert_payload_to_ecs(payload)
     assert unmapped == []
     assert converted is not None
     selection = converted["detection"]["selection"]
     assert f"{expected}|contains" in selection
+
+
+def test_initiated_is_unmapped():
+    """S8: the parser has no ``Initiated`` field; ``network.direction`` holds
+    ingress/egress, never ``'true'``."""
+    payload = _rule_with_logsource("network_connection", "Initiated: 'true'")
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert converted is None
+    assert unmapped == ["Initiated"]
 
 
 def test_context_aware_field_without_matching_category_is_unmapped():
@@ -874,52 +894,35 @@ def test_context_aware_field_without_matching_category_is_unmapped():
     assert unmapped == ["Description"]
 
 
-@pytest.mark.parametrize(
-    "category",
-    ["driver_loaded", "image_loaded", "process_creation", "some_random_category"],
-)
-def test_signature_maps_statically_regardless_of_category(category):
-    """SigmaHQ makes ``Signature`` context-aware, but both variants map to
-    the same target. We collapse it to a static CUSTOM entry so rules
-    outside driver_loaded/image_loaded still convert."""
+@pytest.mark.parametrize("category", ["driver_load", "image_load", "process_creation"])
+def test_signature_maps_to_action_properties(category):
     payload = _rule_with_logsource(category, "Signature|contains: 'Microsoft'")
     converted, unmapped = convert_payload_to_ecs(payload)
     assert unmapped == []
-    assert converted is not None
-    assert (
-        "file.code_signature.subject_name|contains"
-        in converted["detection"]["selection"]
-    )
+    assert "action.properties.Signature|contains" in converted["detection"]["selection"]
 
 
 @pytest.mark.parametrize(
-    "raw,ecs",
+    "raw,ecs,product",
     [
-        # AWS variants added to CUSTOM
-        ("eventType", "event.action"),
-        ("EventType", "event.action"),
-        ("OperationName", "event.action"),
-        # Auditd extras
-        ("a2", "auditd.data.a2"),
-        ("a3", "auditd.data.a3"),
-        ("a4", "auditd.data.a4"),
-        # Windows Security event_data
-        ("Data", "action.properties.Data"),
-        ("ObjectName", "action.properties.ObjectName"),
-        ("ObjectType", "action.properties.ObjectType"),
-        ("ShareName", "action.properties.ShareName"),
-        ("AccessMask", "action.properties.AccessMask"),
-        ("Status", "action.properties.Status"),
-        ("TaskName", "action.properties.TaskName"),
-        ("Category", "action.properties.Category"),
-        ("Level", "action.properties.Level"),
-        ("Path", "action.properties.Path"),
-        ("Contents", "action.properties.Contents"),
-        ("ContextInfo", "action.properties.ContextInfo"),
+        ("eventType", "event.action", None),
+        ("EventType", "event.action", None),
+        ("OperationName", "event.action", None),
+        ("a2", "auditd.data.a2", None),
+        ("a3", "auditd.data.a3", None),
+        ("a4", "auditd.data.a4", None),
+        ("Data", "action.properties.Data", "windows"),
+        ("ObjectName", "action.properties.ObjectName", "windows"),
+        ("ObjectType", "action.properties.ObjectType", "windows"),
+        ("ShareName", "action.properties.ShareName", "windows"),
+        ("AccessMask", "action.properties.AccessMask", "windows"),
+        ("TaskName", "action.properties.TaskName", "windows"),
+        ("Contents", "action.properties.Contents", "windows"),
+        ("ContextInfo", "action.properties.ContextInfo", "windows"),
     ],
 )
-def test_custom_map_additions_are_reachable(raw, ecs):
-    payload = _single_field_rule(raw)
+def test_custom_map_additions_are_reachable(raw, ecs, product):
+    payload = _single_field_rule(raw, product=product)
     converted, unmapped = convert_payload_to_ecs(payload)
     assert unmapped == []
     assert converted is not None
@@ -998,79 +1001,138 @@ def test_target_object_without_logsource_category_is_unmapped():
 
 
 def test_hashes_single_value_splits_to_ecs():
-    payload = textwrap.dedent(
-        """\
-        title: T
-        detection:
-          selection:
-            Hashes|contains: 'IMPHASH=abc123'
-          condition: selection
-        """
-    )
+    payload = _hashes_rule("'IMPHASH=abc123'")
     converted, unmapped = convert_payload_to_ecs(payload)
     assert unmapped == []
-    parsed = converted
-    sel = parsed["detection"]["selection"]
-    assert "process.hash.imphash|contains" in sel
-    assert sel["process.hash.imphash|contains"] == "abc123"
-    assert "Hashes" not in sel and "Hashes|contains" not in sel
+    sel = converted["detection"]["selection"]
+    assert sel == {"process.pe.imphash|contains": "abc123"}
 
 
 def test_hashes_list_of_same_algo_preserves_list():
+    payload = _hashes_rule("\n      - 'IMPHASH=abc'\n      - 'IMPHASH=def'")
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert unmapped == []
+    assert converted["detection"]["selection"] == {"process.pe.imphash|contains": ["abc", "def"]}
+
+
+def test_hashes_mixed_algos_become_or_list_of_maps():
+    """C2: ``Hashes|contains: [MD5=a, SHA1=b, SHA256=c]`` is an OR. It becomes a
+    list of maps (Sigma OR), each carrying the selection's other keys."""
+    payload = _hashes_rule(
+        "\n      - 'MD5=aaaa'\n      - 'SHA1=bbbb'\n      - 'SHA256=cccc'", extra="Image|endswith: '.exe'"
+    )
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert unmapped == []
+    assert converted["detection"]["selection"] == [
+        {"process.executable|endswith": ".exe", "process.hash.md5|contains": "aaaa"},
+        {"process.executable|endswith": ".exe", "process.hash.sha1|contains": "bbbb"},
+        {"process.executable|endswith": ".exe", "process.hash.sha256|contains": "cccc"},
+    ]
+
+
+def _matches(selection, event: dict) -> bool:
+    """Tiny evaluator for the shapes the converter emits (|contains only)."""
+    if isinstance(selection, list):
+        return any(_matches(s, event) for s in selection)
+    for key, value in selection.items():
+        field = key.split("|")[0]
+        values = value if isinstance(value, list) else [value]
+        if not any(str(v).lower() in str(event.get(field, "")).lower() for v in values):
+            return False
+    return True
+
+
+def test_hashes_or_matches_event_without_sha1():
+    """C2: Sysmon configs commonly log MD5/SHA256/IMPHASH but not SHA1. A
+    rule listing a SHA1 must still match on the MD5."""
+    payload = _hashes_rule("\n      - 'MD5=aaaa'\n      - 'SHA1=bbbb'")
+    converted, _ = convert_payload_to_ecs(payload)
+    event = {"process.hash.md5": "aaaa", "process.hash.sha256": "ffff"}
+    assert _matches(converted["detection"]["selection"], event)
+
+
+def test_hashes_all_modifier_keeps_and():
+    payload = _hashes_rule("\n      - 'MD5=aaaa'\n      - 'SHA256=bbbb'", mods="|contains|all")
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert unmapped == []
+    assert converted["detection"]["selection"] == {
+        "process.hash.md5|contains|all": "aaaa",
+        "process.hash.sha256|contains|all": "bbbb",
+    }
+
+
+def test_hashes_inside_list_of_maps_is_spliced():
     payload = textwrap.dedent(
         """\
         title: T
         detection:
           selection:
-            Hashes|contains:
-              - 'IMPHASH=abc'
-              - 'IMPHASH=def'
+            - Hashes|contains: ['MD5=a', 'SHA256=b']
+            - Image|endswith: x.exe
           condition: selection
         """
     )
     converted, unmapped = convert_payload_to_ecs(payload)
     assert unmapped == []
-    parsed = converted
-    sel = parsed["detection"]["selection"]
-    assert sel["process.hash.imphash|contains"] == ["abc", "def"]
+    assert converted["detection"]["selection"] == [
+        {"process.hash.md5|contains": "a"},
+        {"process.hash.sha256|contains": "b"},
+        {"process.executable|endswith": "x.exe"},
+    ]
 
 
-def test_hashes_mixed_algos_split_to_multiple_ecs_keys():
-    payload = textwrap.dedent(
-        """\
-        title: T
-        detection:
-          selection:
-            Hashes|contains:
-              - 'MD5=aaaa'
-              - 'SHA256=bbbb'
-          condition: selection
-        """
-    )
+@pytest.mark.parametrize(
+    "category,expected",
+    [
+        ("image_load", {"dll.hash.md5|contains": "a", "dll.pe.imphash|contains": "c"}),
+        ("file_delete", {"file.hash.md5|contains": "a", "file.pe.imphash|contains": "c"}),
+    ],
+)
+def test_hash_targets_depend_on_category(category, expected):
+    """C3: ImageLoad hashes are ``dll.*``, file-hash events ``file.*``; SHA1
+    doesn't exist there and is dropped from the OR."""
+    payload = _rule_with_logsource(category, "Hashes|contains: ['MD5=a', 'SHA1=b', 'IMPHASH=c']")
     converted, unmapped = convert_payload_to_ecs(payload)
     assert unmapped == []
-    parsed = converted
-    sel = parsed["detection"]["selection"]
-    assert sel["process.hash.md5|contains"] == "aaaa"
-    assert sel["process.hash.sha256|contains"] == "bbbb"
+    sel = converted["detection"]["selection"]
+    assert {k: v for branch in sel for k, v in branch.items()} == expected
+
+
+def test_hashes_with_only_unavailable_algos_is_unmapped():
+    payload = _rule_with_logsource("image_load", "Hashes|contains: 'SHA1=b'")
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert converted is None
+    assert unmapped == ["Hashes"]
 
 
 def test_hashes_comma_separated_single_string():
-    payload = textwrap.dedent(
-        """\
-        title: T
-        detection:
-          selection:
-            Hashes|contains: 'MD5=aaaa,SHA1=bbbb'
-          condition: selection
-        """
-    )
+    payload = _hashes_rule("'MD5=aaaa,SHA1=bbbb'")
     converted, unmapped = convert_payload_to_ecs(payload)
     assert unmapped == []
-    parsed = converted
-    sel = parsed["detection"]["selection"]
-    assert sel["process.hash.md5|contains"] == "aaaa"
-    assert sel["process.hash.sha1|contains"] == "bbbb"
+    assert converted["detection"]["selection"] == [
+        {"process.hash.md5|contains": "aaaa"},
+        {"process.hash.sha1|contains": "bbbb"},
+    ]
+
+
+def _hashes_rule(value: str, extra: str = "", mods: str = "|contains") -> str:
+    extra_line = f"    {extra}\n" if extra else ""
+    return f"title: T\ndetection:\n  selection:\n{extra_line}    Hashes{mods}: {value}\n  condition: selection\n"
+
+
+def test_fieldref_value_is_resolved():
+    """S7: the ``|fieldref`` value names a field and is rewritten too."""
+    payload = _single_field_rule("ParentImage|fieldref", "Image", product="windows")
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert unmapped == []
+    assert converted["detection"]["selection"] == {"process.parent.executable|fieldref": "process.executable"}
+
+
+def test_fieldref_to_unknown_field_is_unmapped():
+    payload = _single_field_rule("ParentImage|fieldref", "NoSuchField", product="windows")
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert converted is None
+    assert unmapped == ["NoSuchField"]
 
 
 def test_hashes_alongside_other_fields_still_splits():
@@ -1159,3 +1221,55 @@ def test_hashes_bare_field_no_modifier_still_splits():
     parsed = converted
     sel = parsed["detection"]["selection"]
     assert sel["process.hash.md5"] == "aaaa"
+
+
+# ---------------------------------------------------------------------------
+# Second review round: tags, references
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "tag,expected_label",
+    [("attack.command_and_control", "attack.command-and-control"), ("attack.initial_access", "attack.initial-access")],
+)
+def test_underscore_tactic_tags_are_recognised(tag, expected_label):
+    """S12: ``attack.command_and_control`` is the same tactic as the
+    hyphenated spelling."""
+    from nextron_valhalla_sigma_rules_modules.sigma_mapper import TAG_ALERT_UUID_MAP, derive_alert_type_uuid
+
+    expected = dict(TAG_ALERT_UUID_MAP)[expected_label]
+    assert derive_alert_type_uuid([tag]) == expected
+
+
+def test_references_are_appended_to_description():
+    rule, parsed = _rule_and_parsed(
+        "title: t\ndescription: Detects X.\nreferences:\n  - https://a.example\n  - https://b.example\ndetection: {}\n"
+    )
+    body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
+    assert body["description"] == "Detects X.\n\nReferences:\n- https://a.example\n- https://b.example"
+
+
+def test_references_respect_description_limit():
+    refs = "".join(f"  - https://example.com/{'x' * 80}/{i}\n" for i in range(30))
+    rule, parsed = _rule_and_parsed(f"title: t\ndescription: d\nreferences:\n{refs}detection: {{}}\n")
+    body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
+    assert len(body["description"]) == MAX_DESCRIPTION_LENGTH
+
+
+def test_rpc_firewall_rules_use_the_windows_map():
+    """RPC Firewall logs arrive through the Windows event-log parser, so its
+    ``event_data`` catch-alls apply."""
+    payload = _single_field_rule("InterfaceUuid", "'abc'", product="rpc_firewall")
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert unmapped == []
+    assert converted["detection"]["selection"] == {"action.properties.InterfaceUuid": "abc"}
+
+
+def test_windows_map_still_resolves_commandline():
+    """SigmaHQ's Windows map has no ``CommandLine``; the other SigmaHQ maps
+    fill that gap for every product."""
+    for product in ("windows", "macos", "linux", None):
+        payload = _single_field_rule("CommandLine|contains", "'x'", product=product)
+        converted, unmapped = convert_payload_to_ecs(payload)
+        assert unmapped == [], product
+        assert "process.command_line|contains" in converted["detection"]["selection"]

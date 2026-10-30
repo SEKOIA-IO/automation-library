@@ -1,5 +1,62 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## 2026-10-30 - 1.2.0
+
+### Added
+- Optional `community_uuid` module setting: scopes the catalog scan and is
+  sent on every create/update. Without it the sync aborts if imported rules
+  exist in more than one community.
+- `disable_skipped_reason` on the summary event.
+- `related_object_refs` from ATT&CK technique tags (`attack.tXXXX`), resolved
+  once per technique via the intelligence API. If the API key may not read
+  intelligence objects, linking is switched off after one warning.
+- Sigma `references` are appended to the rule description.
+- Sigma `status` as a tag: `status-<status>`.
+- Startup check that the hard-coded alert-type UUIDs exist on the tenant.
+- Field descriptions explain where to find the community UUID.
+
+### Changed
+- The catalog scan lists rules with the server-side `match[tag_name]` filter
+  and provides the server state for the whole sync: the per-rule GET is gone.
+  A failing scan aborts the run instead of continuing on a partial map.
+- A mapped rule missing from the scan is re-created; a 403 is always a
+  failure, never "rule deleted" (AU202 handling removed).
+- Duplicate `uuid-*` markers resolve to the rule already in the local map.
+- Disable pass uses `PUT /rules/{uuid}/disabled`; `to_disable` only counts
+  rules that are still enabled. It is skipped when the feed is empty, shrank
+  by more than 20% (until that persists for 3 syncs), or the run was stopped.
+  Rules whose YAML failed to parse are never disabled.
+- A missing or malformed Valhalla `rules` list fails the run instead of being
+  treated as an empty feed.
+- The per-rule and disable loops check the stop event; sync errors are logged
+  once.
+- `preserve_rule_names` entries also match rule tags (e.g. `uuid-<valhalla_id>`).
+- Converter: field maps chosen by `logsource.product`; Windows `event_data`
+  catch-alls only apply to Windows rules; colliding target fields and
+  unmappable `|fieldref` values mark a rule unmapped; `TargetImage` /
+  `TargetProcessId` / `TargetProcessGUID`, signature and PE-metadata fields
+  map to `action.properties.*`; `ImageLoaded` maps to `dll.path` (image load)
+  or `process.executable` (driver load); `Hashes` targets depend on the
+  category and mixed algorithms become an OR (list of maps); `Initiated` is
+  no longer mapped; `attack.*` tags with underscores select the alert type.
+- The rule payload now includes the Sigma `logsource` block.
+- `effort` is a fixed value (`2`) instead of being derived from the Sigma
+  status: it describes the expected analysis effort, not rule maturity.
+- Python 3.14, `sekoia-automation-sdk>=1.27.0`, sibling ruff/mypy config,
+  `mise.toml`, Dockerfile with the `/tmp` → `/dev/shm` symlink.
+- `sekoia_base_url` must use `https://`.
+
+### Removed
+- `tests/test_lockfile.py`.
+- `"format": "password"` on the API key fields: Sekoia's account form doesn't
+  use it (the 1.1.0 entry claiming masked input was wrong). The keys are
+  stored as secrets and masked once the account is saved.
+
 ## 2026-10-13 - 1.1.0
 
 ### Added
@@ -73,14 +130,17 @@
 
 ## 2026-08-11 - 1.0.2
 
+### Changed
 - Replaced `logo.svg` with the official Valhalla brand mark.
 
 ## 2026-08-10 - 1.0.1
 
+### Fixed
 - `convert_parsed_to_ecs` no longer mutates the caller's parsed rule dict.
   A shallow copy is taken before the ECS-converted `detection` block is
   written, so callers can safely reuse the original Sigma structure.
 
 ## 2026-07-29 - 1.0.0
 
+### Added
 - Initial release.

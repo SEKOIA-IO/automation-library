@@ -22,29 +22,51 @@
         "type": "string",
         "title": "Minimum Sigma level",
         "description": "Only rules with a Sigma `level` at least this severe are imported. Rules missing the `level` field are always skipped.",
-        "enum": ["informational", "low", "medium", "high", "critical"],
-        "enumNames": ["informational", "low", "medium", "high", "critical"],
+        "enum": [
+          "informational",
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ],
+        "enumNames": [
+          "informational",
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ],
         "default": "medium"
       },
       "min_sigma_status": {
         "type": "string",
         "title": "Minimum Sigma status",
         "description": "Only rules with a Sigma `status` at least this mature are imported (ordering: experimental < test < stable). Rules with status `deprecated` or `unsupported` are never imported. Rules missing the `status` field are always skipped.",
-        "enum": ["experimental", "test", "stable"],
-        "enumNames": ["experimental", "test", "stable"],
+        "enum": [
+          "experimental",
+          "test",
+          "stable"
+        ],
+        "enumNames": [
+          "experimental",
+          "test",
+          "stable"
+        ],
         "default": "stable"
       },
       "disable_removed": {
         "type": "boolean",
         "title": "Disable rules removed from the Valhalla feed",
-        "description": "Disables rules that Nextron removed from the Valhalla feed, or that newly fell below your minimum level/status. The rule stays in the catalog (not deleted); if Nextron re-publishes it later, the sync resumes updating it. Default false runs a dry-run — candidates are counted under `to_disable` on the summary event. Set true to actually disable.",
+        "description": "Disables rules that Nextron removed from the Valhalla feed, or that newly fell below your minimum level/status. The rule stays in the catalog (not deleted); if Nextron re-publishes it later, the sync resumes updating it. Default false runs a dry-run \u2014 candidates are counted under `to_disable` on the summary event. Set true to actually disable. The pass is skipped when the feed is empty or shrank by more than 20% (see `disable_skipped_reason`). Enable it on only one trigger per community.",
         "default": false
       },
       "preserve_rule_names": {
         "type": "array",
         "title": "Preserve rule names (per-rule opt-out)",
-        "description": "Rules whose exact name appears in this list are not overwritten by future syncs — counted under `preserved` on the summary event. Copy the rule's name from the Sekoia Rules Catalog UI. Match is case-sensitive; surrounding whitespace is tolerated. Leave empty (default) to disable. The `disable_removed` pass still runs on preserved rules — only the content is protected. Use the Form input mode. To delete entries from this list, create a new trigger configuration.",
-        "items": { "type": "string" },
+        "description": "Rules matching an entry of this list are not overwritten by future syncs \u2014 counted under `preserved` on the summary event. An entry matches the rule's name as shown in the Sekoia Rules Catalog, or one of its tags (e.g. `uuid-<valhalla_id>`, which is unique). Match is case-sensitive; surrounding whitespace is tolerated. Leave empty (default) to disable. Any customisation of a synced rule that is not listed here is overwritten on the next sync. The `disable_removed` pass still runs on preserved rules \u2014 only the content is protected. Use the Form input mode. To delete entries from this list, create a new trigger configuration.",
+        "items": {
+          "type": "string"
+        },
         "default": []
       }
     },
@@ -53,22 +75,57 @@
   "results": {
     "type": "object",
     "properties": {
-      "created": { "type": "integer" },
-      "updated": { "type": "integer" },
-      "preserved": { "type": "integer" },
-      "failed": { "type": "integer" },
-      "skipped_unmapped": { "type": "integer" },
-      "skipped_filter": { "type": "integer" },
-      "total_rules": { "type": "integer" },
-      "top_unmapped": { "type": "object" },
-      "server_marker_count": { "type": "integer" },
-      "duplicate_markers": { "type": "integer" },
-      "local_overridden": { "type": "integer" },
-      "to_disable": { "type": "integer" },
-      "newly_disabled": { "type": "integer" },
-      "already_disabled": { "type": "integer" },
-      "already_gone": { "type": "integer" },
-      "disable_failed": { "type": "integer" }
+      "created": {
+        "type": "integer"
+      },
+      "updated": {
+        "type": "integer"
+      },
+      "preserved": {
+        "type": "integer"
+      },
+      "failed": {
+        "type": "integer"
+      },
+      "skipped_unmapped": {
+        "type": "integer"
+      },
+      "skipped_filter": {
+        "type": "integer"
+      },
+      "total_rules": {
+        "type": "integer"
+      },
+      "top_unmapped": {
+        "type": "object"
+      },
+      "server_marker_count": {
+        "type": "integer"
+      },
+      "duplicate_markers": {
+        "type": "integer"
+      },
+      "local_overridden": {
+        "type": "integer"
+      },
+      "to_disable": {
+        "type": "integer"
+      },
+      "newly_disabled": {
+        "type": "integer"
+      },
+      "already_disabled": {
+        "type": "integer"
+      },
+      "already_gone": {
+        "type": "integer"
+      },
+      "disable_failed": {
+        "type": "integer"
+      },
+      "disable_skipped_reason": {
+        "type": "string"
+      }
     }
   }
 }

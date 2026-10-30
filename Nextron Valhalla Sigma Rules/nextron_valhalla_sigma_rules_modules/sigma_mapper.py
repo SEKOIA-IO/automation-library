@@ -1,12 +1,13 @@
 import re
-from typing import Optional
 
 import yaml
 
 from nextron_valhalla_sigma_rules_modules.ecs_field_maps import (
-    CONTEXT_AWARE_FIELDS,
-    RAW_TO_ECS,
     _ECS_PASSTHROUGH_FIELDS,
+    CONTEXT_AWARE_FIELDS,
+    HASH_TARGETS_BY_CATEGORY,
+    HASH_TARGETS_DEFAULT,
+    mapping_for_product,
 )
 
 SEVERITY_MAP = {
@@ -19,19 +20,21 @@ SEVERITY_MAP = {
 # Returned when the Sigma rule has no ``level`` field at all.
 DEFAULT_SEVERITY = 0
 
-# Sekoia ``effort`` is derived from Sigma's rule maturity (``status`` field).
-# Lower effort = higher maturity. Also used by the sync trigger to filter
-# rules by minimum maturity: a rule passes when its effort is ``<=`` the
-# effort configured for ``min_sigma_status``.
-STATUS_EFFORT_MAP = {
-    "stable": 1,
+# Sigma maturity order used by the sync trigger's ``min_sigma_status``
+# filter: a rule passes when its rank is ``>=`` the configured one.
+# ``deprecated`` / ``unsupported`` are absent on purpose — never imported.
+STATUS_RANK = {
+    "experimental": 1,
     "test": 2,
-    "experimental": 3,
-    "unsupported": 4,
-    "deprecated": 4,
+    "stable": 3,
 }
-# Returned when the Sigma rule has no ``status`` field.
-DEFAULT_EFFORT = 3
+
+# Sekoia's ``effort`` (1-4) is the expected analysis effort of an alert —
+# Sigma has no equivalent, so every rule gets the same value. The field is
+# required on create and update. The Sigma maturity is carried as a tag
+# instead (``status-<status>``).
+RULE_EFFORT = 2
+STATUS_TAG_PREFIX = "status-"
 
 # Sekoia Rules Catalog API rejects (HTTP 400 VA301) rule names longer than
 # 100 characters. Truncate defensively and mark truncation with a single-char
@@ -62,27 +65,31 @@ DEFAULT_ALERT_UUID = "599f4b1a-dd60-43fe-8ee9-07d3c5d00ded"  # application-compr
 # stages beat earlier ones; specific detections (c&c, exfiltration)
 # beat generic categories.
 TAG_ALERT_UUID_MAP: tuple[tuple[str, str], ...] = (
-    ("attack.exfiltration",        "0b7c0b5b-da8e-4e43-a2e1-11cb5a40f168"),  # exfiltration
+    ("attack.exfiltration", "0b7c0b5b-da8e-4e43-a2e1-11cb5a40f168"),  # exfiltration
     ("attack.command-and-control", "47e51ab7-4caa-4c4b-8442-a1caf868806d"),  # c&c
-    ("attack.persistence",         "5928d144-2038-4a87-b996-b3585a9a1a41"),  # backdoor
-    ("attack.initial-access",      "4321cd89-89d6-4674-9e99-690ce0e61621"),  # exploit
-    ("attack.discovery",           "38305ebd-cec9-47ff-b38b-d20bd22eb79d"),  # appscan
-    ("attack.reconnaissance",      "38305ebd-cec9-47ff-b38b-d20bd22eb79d"),  # appscan
+    ("attack.persistence", "5928d144-2038-4a87-b996-b3585a9a1a41"),  # backdoor
+    ("attack.initial-access", "4321cd89-89d6-4674-9e99-690ce0e61621"),  # exploit
+    ("attack.discovery", "38305ebd-cec9-47ff-b38b-d20bd22eb79d"),  # appscan
+    ("attack.reconnaissance", "38305ebd-cec9-47ff-b38b-d20bd22eb79d"),  # appscan
 )
 
 
 def derive_alert_type_uuid(tags: list) -> str:
     """Return the highest-priority alert_type_uuid the Sigma tags map
-    to, or ``DEFAULT_ALERT_UUID`` if no tactic tag matches."""
-    tag_set = {t.lower() for t in tags if isinstance(t, str)}
+    to, or ``DEFAULT_ALERT_UUID`` if no tactic tag matches.
+
+    Tactic tags are matched case-insensitively and with ``_`` treated as
+    ``-`` (``attack.command_and_control`` == ``attack.command-and-control``).
+    """
+    tag_set = {t.lower().replace("_", "-") for t in tags if isinstance(t, str)}
     for tag, uuid in TAG_ALERT_UUID_MAP:
         if tag in tag_set:
             return uuid
     return DEFAULT_ALERT_UUID
 
 
-# Sigma Hashes values look like ``ALGO=DIGEST``; recognised algorithms are
-# folded to their ECS ``process.hash.<algo>`` counterpart.
+# Sigma Hashes values look like ``ALGO=DIGEST``. The ECS target per algo
+# depends on the rule's category (see ``HASH_TARGETS_BY_CATEGORY``).
 _HASH_ALGOS: frozenset[str] = frozenset({"md5", "sha1", "sha256", "sha512", "imphash"})
 
 # Field key like "CommandLine" or "cs-uri-query|contains|base64offset".
@@ -122,8 +129,8 @@ def _split_field_key(key: str) -> tuple[str, str]:
 def _resolve_field(
     bare: str,
     mapping: dict[str, str],
-    logsource_category: Optional[str],
-) -> Optional[str]:
+    logsource_category: str | None,
+) -> str | None:
     """Return the ECS field name for ``bare``, or ``None`` if unmapped.
 
     Consults ``CONTEXT_AWARE_FIELDS`` first (Sigma fields whose ECS
@@ -140,17 +147,17 @@ def _resolve_field(
     return mapping.get(bare)
 
 
-def _parse_hash_values(value) -> Optional[list[tuple[str, str]]]:
+def _parse_hash_values(value) -> list[tuple[str, str]] | None:
     """Parse a Sigma ``Hashes`` value into ``[(algo_lower, digest), ...]``.
 
     Accepts either a single string like ``"MD5=abc,SHA256=def"`` or a list of
     such strings. Returns ``None`` if any value doesn't match ``ALGO=DIGEST``
     or the algo is unknown — signals the caller to skip the rule.
     """
+    candidates: list[str] = []
     if isinstance(value, str):
         candidates = value.split(",")
     elif isinstance(value, list):
-        candidates: list = []
         for item in value:
             if not isinstance(item, str):
                 return None
@@ -172,124 +179,153 @@ def _parse_hash_values(value) -> Optional[list[tuple[str, str]]]:
     return result or None
 
 
-def _apply_hashes_transform(selection_dict: dict) -> Optional[dict]:
-    """Rewrite a selection dict's ``Hashes|<mods>`` key into individual
-    ``process.hash.<algo>|<mods>`` keys.
+def _apply_hashes_transform(
+    selection_dict: dict,
+    logsource_category: str | None,
+    unmapped: list[str],
+) -> dict | list[dict]:
+    """Rewrite a selection's ``Hashes|<mods>`` key into ECS hash keys.
 
-    Semantics note: if the original value is a list of mixed algos (e.g.
-    ``[MD5=x, SHA256=y]``), Sigma treats them as OR-matched under the same
-    key. This transform emits them as AND-matched sibling keys within the
-    same dict, which is a known approximation.
+    Sigma's ``Hashes`` field is a single string (``MD5=…,SHA256=…,IMPHASH=…``)
+    and a list value is OR-matched. Sekoia's parser splits it into one field
+    per algorithm, so a list mixing algorithms becomes a **list of maps**,
+    one per algorithm, each carrying the selection's other keys — Sigma
+    reads a list of maps as OR, which keeps the original semantics. A
+    single algorithm stays one map (its digests stay an OR-list).
 
-    Two cases where the approximation stays exact and covers the entire
-    Valhalla feed in practice:
+    With the ``|all`` modifier every listed value must match, so the keys
+    stay in one map (AND).
 
-    1. Single-algo lists (e.g. ``[MD5=x, MD5=y]``) — values collapse back
-       into a same-key list, so OR is preserved.
-    2. Multi-algo IOC lists that enumerate malicious files by fingerprint
-       (e.g. ``[SHA256=A, SHA1=B, MD5=C, SHA256=D, SHA1=E, MD5=F]``, one
-       set of hashes per file). A real event has exactly one digest per
-       algo, so the AND across sibling algo keys is satisfied iff the
-       event's file matches one of the listed fingerprints — which is the
-       intended OR-over-files semantic. Valhalla's Hashes rules are all
-       of this shape.
+    Targets depend on ``logsource.category`` (``process.hash.*``,
+    ``dll.hash.*``, ``file.hash.*``). Algorithms the parser never emits for
+    that category (e.g. SHA1 on ImageLoad, SHA512 anywhere) are dropped from
+    the OR; if none is left — or the value is malformed, or several
+    ``Hashes*`` keys share the selection — the rule is marked unmapped.
 
-    The approximation would only misbehave for lists of *orphan* hashes
-    (unrelated files, one algo each), which don't occur in Valhalla-authored
-    IOC rules.
-
-    Returns:
-        - The updated dict on success.
-        - ``None`` if the ``Hashes`` value is malformed (caller marks rule
-          as unmapped and skips it).
-        - The input dict unchanged if no ``Hashes*`` key is present.
+    Returns the input dict unchanged when it has no ``Hashes*`` key.
     """
-    hashes_key = None
-    for k in selection_dict.keys():
-        if isinstance(k, str) and (k == "Hashes" or k.startswith("Hashes|")):
-            hashes_key = k
-            # Known limitation: only the first ``Hashes*`` key is rewritten.
-            # Valhalla's current feed never emits multiple distinct
-            # ``Hashes|<mod>`` keys in the same selection; see README
-            # "Known limitations".
-            break
-    if hashes_key is None:
+    hashes_keys = [k for k in selection_dict if isinstance(k, str) and (k == "Hashes" or k.startswith("Hashes|"))]
+    if not hashes_keys:
         return selection_dict
+    if len(hashes_keys) > 1:
+        unmapped.append("Hashes")
+        return selection_dict
+    hashes_key = hashes_keys[0]
 
     _, mods = _split_field_key(hashes_key)
     parsed = _parse_hash_values(selection_dict[hashes_key])
     if parsed is None:
-        return None
+        unmapped.append("Hashes")
+        return selection_dict
 
-    # Group digests by algo so lists collapse into a single ECS key.
-    by_algo: dict[str, list[str]] = {}
+    targets = HASH_TARGETS_BY_CATEGORY.get(logsource_category or "", HASH_TARGETS_DEFAULT)
+    by_target: dict[str, list[str]] = {}
     for algo, digest in parsed:
-        by_algo.setdefault(algo, []).append(digest)
+        target = targets.get(algo)
+        if target is not None:
+            by_target.setdefault(f"{target}{mods}", []).append(digest)
+    if not by_target:
+        unmapped.append("Hashes")
+        return selection_dict
 
-    new_dict: dict = {k: v for k, v in selection_dict.items() if k != hashes_key}
-    for algo, digests in by_algo.items():
-        key = f"process.hash.{algo}{mods}"
-        new_dict[key] = digests[0] if len(digests) == 1 else digests
-    return new_dict
+    rest = {k: v for k, v in selection_dict.items() if k != hashes_key}
+    branches: list[dict] = []
+    for key, digests in by_target.items():
+        if key in rest:
+            unmapped.append(f"<collision:{key}>")
+            return selection_dict
+        branches.append({**rest, key: digests[0] if len(digests) == 1 else digests})
+    if len(branches) == 1:
+        return branches[0]
+    if "|all" in mods:
+        merged: dict = dict(rest)
+        for branch in branches:
+            merged.update({k: v for k, v in branch.items() if k not in rest})
+        return merged
+    return branches
+
+
+def _resolve_fieldref_value(value, mapping, unmapped, logsource_category):
+    """``Field|fieldref: OtherField`` compares two fields: the value is a
+    field name too and must be rewritten like a key."""
+    if isinstance(value, list):
+        return [_resolve_fieldref_value(v, mapping, unmapped, logsource_category) for v in value]
+    if isinstance(value, str):
+        mapped = _resolve_field(value, mapping, logsource_category)
+        if mapped is None:
+            unmapped.append(value)
+            return value
+        return mapped
+    return value
 
 
 def _convert_selection(
     node,
     mapping: dict[str, str],
     unmapped: list[str],
-    logsource_category: Optional[str] = None,
+    logsource_category: str | None = None,
 ):
     """Recurse into a detection selection block or list of such blocks.
 
-    Applies the Hashes value transform (Stage 2), then rewrites field-name
-    keys via ``mapping`` while preserving Sigma modifiers. Context-dependent
-    fields (currently ``TargetObject``) resolve against ``logsource_category``.
-    Any bare field not resolvable is appended to ``unmapped``; the key is
-    kept as-is (the caller decides to skip the rule).
+    Applies the Hashes transform, then rewrites field-name keys via
+    ``mapping`` while preserving Sigma modifiers. Context-dependent fields
+    resolve against ``logsource_category``.
+
+    Anything that would make the converted rule match differently is
+    reported in ``unmapped`` (the caller skips the rule):
+    - a field with no ECS target;
+    - two source keys of one selection resolving to the same ECS key
+      (``<collision:…>``) — writing both would silently drop a condition;
+    - a ``|fieldref`` value naming an unmappable field.
     """
     if isinstance(node, dict):
-        transformed = _apply_hashes_transform(node)
-        if transformed is None:
-            unmapped.append("Hashes")
-            transformed = node  # keep going so we still surface other unmapped fields
+        transformed = _apply_hashes_transform(node, logsource_category, unmapped)
+        if isinstance(transformed, list):
+            return [_convert_selection(item, mapping, unmapped, logsource_category) for item in transformed]
 
         new_dict: dict = {}
         for k, v in transformed.items():
-            if isinstance(k, str):
-                bare, mods = _split_field_key(k)
-                if not bare:
-                    # Bare-modifier key like ``|all`` — Sigma keyword-
-                    # modifier construct with no field name. Preserve.
-                    new_dict[k] = _convert_selection(
-                        v, mapping, unmapped, logsource_category
-                    )
-                    continue
-                mapped = _resolve_field(bare, mapping, logsource_category)
-                if mapped is None:
-                    unmapped.append(bare)
-                    new_key = k
-                else:
-                    new_key = f"{mapped}{mods}"
-                new_dict[new_key] = _convert_selection(
-                    v, mapping, unmapped, logsource_category
-                )
+            if not isinstance(k, str):
+                new_dict[k] = _convert_selection(v, mapping, unmapped, logsource_category)
+                continue
+            bare, mods = _split_field_key(k)
+            if not bare:
+                # Bare-modifier key like ``|all`` — Sigma keyword-modifier
+                # construct with no field name. Preserve.
+                new_dict[k] = _convert_selection(v, mapping, unmapped, logsource_category)
+                continue
+            mapped = _resolve_field(bare, mapping, logsource_category)
+            if mapped is None:
+                unmapped.append(bare)
+                new_key = k
             else:
-                new_dict[k] = _convert_selection(
-                    v, mapping, unmapped, logsource_category
-                )
+                new_key = f"{mapped}{mods}"
+            if new_key in new_dict:
+                unmapped.append(f"<collision:{new_key}>")
+                continue
+            if "|fieldref" in f"{mods}|":
+                new_dict[new_key] = _resolve_fieldref_value(v, mapping, unmapped, logsource_category)
+            else:
+                new_dict[new_key] = _convert_selection(v, mapping, unmapped, logsource_category)
         return new_dict
     if isinstance(node, list):
-        return [
-            _convert_selection(item, mapping, unmapped, logsource_category)
-            for item in node
-        ]
+        out: list = []
+        for item in node:
+            converted = _convert_selection(item, mapping, unmapped, logsource_category)
+            # A dict item split by the Hashes transform comes back as a list
+            # of maps; splice it in so the selection stays one OR-list.
+            if isinstance(item, dict) and isinstance(converted, list):
+                out.extend(converted)
+            else:
+                out.append(converted)
+        return out
     return node
 
 
 def convert_parsed_to_ecs(
     parsed: dict,
-    mapping: Optional[dict[str, str]] = None,
-) -> tuple[Optional[dict], list[str]]:
+    mapping: dict[str, str] | None = None,
+) -> tuple[dict | None, list[str]]:
     """ECS-convert the ``detection`` block of an already-parsed Sigma rule.
 
     Only ``parsed["detection"]`` is transformed. Every other field
@@ -299,7 +335,8 @@ def convert_parsed_to_ecs(
 
     Args:
         parsed: The parsed Sigma rule dict.
-        mapping: Field-name mapping to use. Defaults to :data:`RAW_TO_ECS`.
+        mapping: Field-name mapping to use. Defaults to the map for the
+            rule's ``logsource.product`` (see ``mapping_for_product``).
 
     Returns:
         ``(parsed_rule_dict, [])`` if every field in every selection block
@@ -309,15 +346,16 @@ def convert_parsed_to_ecs(
         On missing/malformed detection block returns
         ``(None, ["<no-detection>"])``.
     """
-    if mapping is None:
-        mapping = RAW_TO_ECS
-
     detection = parsed.get("detection")
     if not isinstance(detection, dict):
         return None, ["<no-detection>"]
 
     logsource = parsed.get("logsource") or {}
-    category = logsource.get("category") if isinstance(logsource, dict) else None
+    if not isinstance(logsource, dict):
+        logsource = {}
+    category = logsource.get("category")
+    if mapping is None:
+        mapping = mapping_for_product(logsource.get("product"))
 
     unmapped: list[str] = []
     new_detection: dict = {}
@@ -337,8 +375,8 @@ def convert_parsed_to_ecs(
 
 def convert_payload_to_ecs(
     payload_yaml: str,
-    mapping: Optional[dict[str, str]] = None,
-) -> tuple[Optional[dict], list[str]]:
+    mapping: dict[str, str] | None = None,
+) -> tuple[dict | None, list[str]]:
     """YAML-parsing wrapper around :func:`convert_parsed_to_ecs`.
 
     Only used by the test suite — production code parses YAML once at the
@@ -369,10 +407,11 @@ def sigma_rule_to_catalog_payload(
 ) -> dict:
     """Build the Sekoia Rules Catalog POST body.
 
-    Metadata (name, description, severity, effort, tags, ...) is lifted
-    from the parsed Sigma rule dict into structured Sekoia fields. The
-    ``payload`` is only the ECS-converted ``detection:`` block,
-    YAML-serialised with the ``detection:`` keyword preserved.
+    Metadata (name, description, severity, tags, ...) is lifted from the
+    parsed Sigma rule dict into structured Sekoia fields; the Sigma
+    ``status`` becomes a ``status-<status>`` tag and ``effort`` is the
+    fixed ``RULE_EFFORT``. The ``payload`` is the Sigma ``logsource`` block
+    (when present) plus the ECS-converted ``detection`` block.
 
     ``alert_type_uuid`` is auto-derived from the rule's Sigma tags via
     ``derive_alert_type_uuid`` — no user config needed.
@@ -392,24 +431,28 @@ def sigma_rule_to_catalog_payload(
         title = title[: MAX_NAME_LENGTH - len(_TRUNCATION_MARKER)] + _TRUNCATION_MARKER
 
     description = parsed.get("description") or rule.get("description") or ""
+    # ``references`` is read-only in the Rules Catalog API; keep the Sigma
+    # references visible by appending them to the description.
+    references = [str(r) for r in parsed.get("references") or [] if r]
+    if references:
+        description = (description + "\n\nReferences:\n" + "\n".join(f"- {r}" for r in references)).strip()
     if len(description) > MAX_DESCRIPTION_LENGTH:
-        description = (
-            description[: MAX_DESCRIPTION_LENGTH - len(_TRUNCATION_MARKER)]
-            + _TRUNCATION_MARKER
-        )
+        description = description[: MAX_DESCRIPTION_LENGTH - len(_TRUNCATION_MARKER)] + _TRUNCATION_MARKER
 
     level = (parsed.get("level") or rule.get("level") or "").lower()
     severity = SEVERITY_MAP.get(level, DEFAULT_SEVERITY)
 
-    status = (parsed.get("status") or "").lower()
-    effort = STATUS_EFFORT_MAP.get(status, DEFAULT_EFFORT)
+    status = str(parsed.get("status") or "").strip().lower()
 
-    # payload = only the detection block, YAML-serialised with the
-    # ``detection:`` key so it round-trips back to the Sigma detection shape.
-    detection_only = {"detection": parsed.get("detection", {})}
-    payload_yaml = yaml.safe_dump(
-        detection_only, sort_keys=False, allow_unicode=True
-    )
+    # payload = the Sigma ``logsource`` block (when present) and the
+    # ECS-converted ``detection`` block, YAML-serialised so it round-trips
+    # back to the Sigma shape. Metadata travels in the structured fields.
+    payload_doc: dict = {}
+    logsource = parsed.get("logsource")
+    if isinstance(logsource, dict) and logsource:
+        payload_doc["logsource"] = logsource
+    payload_doc["detection"] = parsed.get("detection", {})
+    payload_yaml = yaml.safe_dump(payload_doc, sort_keys=False, allow_unicode=True)
 
     # Always attach the integration marker tag so operators can identify
     # rules created by this integration independently of the Sekoia API key
@@ -423,6 +466,10 @@ def sigma_rule_to_catalog_payload(
         uuid_tag = f"{UUID_TAG_PREFIX}{valhalla_id}"
         if uuid_tag not in tags:
             tags.append(uuid_tag)
+    if status:
+        status_tag = f"{STATUS_TAG_PREFIX}{status}"
+        if status_tag not in tags:
+            tags.append(status_tag)
 
     body: dict = {
         "name": title,
@@ -430,22 +477,18 @@ def sigma_rule_to_catalog_payload(
         "description": description,
         "payload": payload_yaml,
         "severity": severity,
-        "effort": effort,
+        "effort": RULE_EFFORT,
         "alert_type_uuid": derive_alert_type_uuid(tags),
         "enabled": enabled,
     }
 
-    # Optional fields — include only when the Sigma rule actually has them.
-    # community_uuid is deliberately not shipped (see docstring).
     body["tags"] = tags
 
     # Sekoia's `datasources` is a list of registered data-source UUIDs in the
     # tenant, not the free-form Sigma `logsource` dict — we have no reliable
     # mapping from `{product, category}` to a tenant-specific UUID, so this
-    # field is omitted. The Sigma logsource stays visible via the payload
-    # YAML if needed downstream.
-
-    # `related_object_refs` is deliberately not shipped (see docstring).
+    # field is omitted. `community_uuid` and `related_object_refs` are added
+    # by the sync trigger (they need the module config / API lookups).
 
     falsepositives = parsed.get("falsepositives")
     if falsepositives:
