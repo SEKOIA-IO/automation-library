@@ -1,0 +1,74 @@
+{
+  "uuid": "349e50ff-f44f-420d-a09e-7567997ddd62",
+  "name": "Sync Valhalla Sigma rules into Sekoia Rules Catalog",
+  "description": "Periodically pulls the Valhalla Sigma feed and pushes each rule into the Sekoia Rules Catalog so it runs in the detection engine. New rules are created, known rules are updated in place, and a rule the user has disabled in the catalog stays disabled across syncs.",
+  "docker_parameters": "sync-sigma-rules-catalog",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "title": "Pull frequency in seconds",
+        "default": 86400,
+        "minimum": 3600
+      },
+      "enabled": {
+        "type": "boolean",
+        "title": "Enable rules on push",
+        "description": "If false (default), newly-imported rules are disabled on first import. Existing rules keep their current catalog state.",
+        "default": false
+      },
+      "min_sigma_level": {
+        "type": "string",
+        "title": "Minimum Sigma level",
+        "description": "Only rules with a Sigma `level` at least this severe are imported. Rules missing the `level` field are always skipped.",
+        "enum": ["informational", "low", "medium", "high", "critical"],
+        "enumNames": ["informational", "low", "medium", "high", "critical"],
+        "default": "medium"
+      },
+      "min_sigma_status": {
+        "type": "string",
+        "title": "Minimum Sigma status",
+        "description": "Only rules with a Sigma `status` at least this mature are imported (ordering: experimental < test < stable). Rules with status `deprecated` or `unsupported` are never imported. Rules missing the `status` field are always skipped.",
+        "enum": ["experimental", "test", "stable"],
+        "enumNames": ["experimental", "test", "stable"],
+        "default": "stable"
+      },
+      "disable_removed": {
+        "type": "boolean",
+        "title": "Disable rules removed from the Valhalla feed",
+        "description": "Disables rules that Nextron removed from the Valhalla feed, or that newly fell below your minimum level/status. The rule stays in the catalog (not deleted); if Nextron re-publishes it later, the sync resumes updating it. Default false runs a dry-run — candidates are counted under `to_disable` on the summary event. Set true to actually disable.",
+        "default": false
+      },
+      "preserve_rule_names": {
+        "type": "array",
+        "title": "Preserve rule names (per-rule opt-out)",
+        "description": "Rules whose exact name appears in this list are not overwritten by future syncs — counted under `preserved` on the summary event. Copy the rule's name from the Sekoia Rules Catalog UI. Match is case-sensitive; surrounding whitespace is tolerated. Leave empty (default) to disable. The `disable_removed` pass still runs on preserved rules — only the content is protected. Use the Form input mode. To delete entries from this list, create a new trigger configuration.",
+        "items": { "type": "string" },
+        "default": []
+      }
+    },
+    "required": []
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "created": { "type": "integer" },
+      "updated": { "type": "integer" },
+      "preserved": { "type": "integer" },
+      "failed": { "type": "integer" },
+      "skipped_unmapped": { "type": "integer" },
+      "skipped_filter": { "type": "integer" },
+      "total_rules": { "type": "integer" },
+      "top_unmapped": { "type": "object" },
+      "server_marker_count": { "type": "integer" },
+      "duplicate_markers": { "type": "integer" },
+      "local_overridden": { "type": "integer" },
+      "to_disable": { "type": "integer" },
+      "newly_disabled": { "type": "integer" },
+      "already_disabled": { "type": "integer" },
+      "already_gone": { "type": "integer" },
+      "disable_failed": { "type": "integer" }
+    }
+  }
+}
