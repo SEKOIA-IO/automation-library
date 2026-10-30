@@ -162,7 +162,7 @@ class AzureEventsHubTrigger(AsyncConnector):
         start = time.time()
 
         records = []
-        skipped_categories: Counter[str | None] = Counter()
+        skipped_categories: Counter[str] = Counter()
         for message in messages:
             body, body_type = self.get_records_from_message(message)
             for record in body:
@@ -175,8 +175,9 @@ class AzureEventsHubTrigger(AsyncConnector):
                             and record.get("category") not in self.configuration.categories
                         ):
                             # Count skipped records instead of logging each one: logs are sent to the API
-                            # with a blocking call, so a log per record stalls the event loop
-                            skipped_categories[record.get("category")] += 1
+                            # with a blocking call, so a log per record stalls the event loop.
+                            # The category is stringified as it may be unhashable (list, object)
+                            skipped_categories[str(record.get("category"))] += 1
                             continue
 
                         # Dump the record into a JSON document
