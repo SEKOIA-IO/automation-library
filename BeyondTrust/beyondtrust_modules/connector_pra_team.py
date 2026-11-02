@@ -43,7 +43,7 @@ class BeyondTrustPRATeamConnector(BeyondTrustBaseConnector):
 
         if response.ok and "<error" in response.text:
             if "No Support Team report information matching your chosen criteria is available." in response.text:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(0)
                 # Just no new events
                 return
 
@@ -64,4 +64,4 @@ class BeyondTrustPRATeamConnector(BeyondTrustBaseConnector):
 
             now = int(datetime.now(timezone.utc).timestamp())
             current_lag = now - latest_event_timestamp
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, **self.scalability_labels).set(current_lag)

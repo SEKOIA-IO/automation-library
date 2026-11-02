@@ -31,5 +31,9 @@
       "intake_key",
       "config_id"
     ]
+  },
+  "labels": {
+    "scalable_horizontally": false,
+    "scalable_vertically": true
   }
 }
