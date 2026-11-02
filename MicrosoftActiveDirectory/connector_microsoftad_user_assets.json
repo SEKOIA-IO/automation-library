@@ -11,7 +11,7 @@
     "on_premise"
   ],
   "on_premise_action": "8109d625-424c-4edb-bafc-81261932c898",
-  "feature-flag": ["reveal-beta-connectors"],
+  "feature_flags": ["reveal-beta-connectors"],
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
