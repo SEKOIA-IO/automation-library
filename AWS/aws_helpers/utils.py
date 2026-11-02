@@ -21,6 +21,9 @@ T = TypeVar("T")
 # objects bigger than this are spooled to a local temp file instead of memory
 SPOOL_MAX_SIZE = 32 * 1024 * 1024
 
+# a Parquet file starts and ends with these bytes
+PARQUET_MAGIC = b"PAR1"
+
 
 def is_gzip_compressed(content: bytes) -> bool:
     """
@@ -324,6 +327,35 @@ async def to_seekable_file(stream: AsyncReader) -> BinaryIO:
 
     # shortcut: other readers are copied in memory; only used by tests and non-aiofiles callers
     return io.BytesIO(await stream.read())
+
+
+async def has_parquet_footer(stream: Any) -> bool:
+    """
+    Check if a stream, already known to start with the Parquet magic bytes, also ends with them.
+
+    The stream is rewound to read its end, then put back where it was.
+
+    Args:
+        stream: An aiofiles reader (as produced by S3Wrapper.read_key): it must support tell() and seek()
+
+    Returns:
+        bool: True if the stream is at least 8 bytes long and ends with the Parquet magic bytes.
+    """
+    position = await stream.tell()
+    await stream.seek(0)
+    file = await to_seekable_file(stream)
+    try:
+        size = file.seek(0, io.SEEK_END)
+        if size < 2 * len(PARQUET_MAGIC):
+            return False
+
+        file.seek(size - len(PARQUET_MAGIC))
+        return file.read(len(PARQUET_MAGIC)) == PARQUET_MAGIC
+    finally:
+        # a gzip stream is decompressed into a new spool, which is ours to close
+        if file is not getattr(stream, "_file", None):
+            file.close()
+        await stream.seek(position)
 
 
 def _nullable_integer_columns(parquet: pyarrow.parquet.ParquetFile) -> set[str]:

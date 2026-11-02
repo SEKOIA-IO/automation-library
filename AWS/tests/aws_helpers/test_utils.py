@@ -18,6 +18,7 @@ from aws_helpers.utils import (
     async_gzip_open,
     async_islice,
     get_content,
+    has_parquet_footer,
     is_gzip_compressed,
     is_parquet_content,
     normalize_s3_key,
@@ -300,3 +301,53 @@ async def test_to_seekable_file_closes_the_spool_when_the_copy_fails():
             await to_seekable_file(stream)
 
     assert spools[0].closed
+
+
+@pytest.mark.parametrize(
+    "data, expected",
+    [
+        (b"PAR1\xc2\x15cbPAR1", True),
+        (b"PAR1PAR1", True),
+        (b"PAR1PAR", False),
+        (b"PAR1 text records\nsecond line\n", False),
+        (b"PAR1\xc2\x15cb", False),
+    ],
+)
+@pytest.mark.asyncio
+async def test_has_parquet_footer_on_plain_stream(data, expected):
+    async with async_temporary_file(data) as f:
+        assert await f.read(4) == b"PAR1"  # what the caller consumed to recognize the header
+
+        assert await has_parquet_footer(f) is expected
+
+        # the stream is put back where it was and its file is still open
+        assert await f.tell() == 4
+        assert await f.read() == data[4:]
+        assert not f._file.closed
+
+
+@pytest.mark.parametrize(
+    "data, expected",
+    [
+        (b"PAR1\xc2\x15cbPAR1", True),
+        (b"PAR1 text records\nsecond line\n", False),
+        (b"PAR1PAR", False),
+    ],
+)
+@pytest.mark.asyncio
+async def test_has_parquet_footer_on_gzip_stream_closes_its_spool(data, expected):
+    spools = []
+    original_spool = tempfile.SpooledTemporaryFile
+
+    def spy_spool(*args, **kwargs):
+        spools.append(original_spool(*args, **kwargs))
+        return spools[-1]
+
+    stream = await async_gzip_open(io.BytesIO(compress(data)))
+    assert await stream.read(4) == b"PAR1"
+
+    with patch("aws_helpers.utils.tempfile.SpooledTemporaryFile", side_effect=spy_spool):
+        assert await has_parquet_footer(stream) is expected
+
+    assert await stream.read() == data[4:]
+    assert len(spools) == 1 and spools[0].closed

@@ -4,7 +4,14 @@ import ipaddress
 from collections.abc import AsyncGenerator
 from typing import Any, cast
 
-from aws_helpers.utils import AsyncReader, PeekableStreamReader, async_islice, split_stream_by_separator
+from aws_helpers.utils import (
+    PARQUET_MAGIC,
+    AsyncReader,
+    PeekableStreamReader,
+    async_islice,
+    has_parquet_footer,
+    split_stream_by_separator,
+)
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import (
     AbstractAwsS3QueuedConnector,
@@ -13,7 +20,6 @@ from connectors.s3 import (
 )
 from connectors.s3.provider import AwsAccountProvider
 
-PARQUET_MAGIC = b"PAR1"
 # reads go through a thread pool: bigger chunks than the helper default avoid one round-trip per KB
 READ_CHUNK_SIZE = 64 * 1024
 
@@ -92,7 +98,8 @@ class BaseAwsS3FlowLogsTrigger:
         """
         reader = PeekableStreamReader(stream)
 
-        if await reader.peek(len(PARQUET_MAGIC)) == PARQUET_MAGIC:
+        # a complete Parquet file starts and ends with the magic bytes: anything else is parsed as text
+        if await reader.peek(len(PARQUET_MAGIC)) == PARQUET_MAGIC and await has_parquet_footer(stream):
             self._warn_parquet_content()
             return
 
