@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Download S3 objects through a spooled temporary file instead of holding them fully in memory
 - Parse parquet objects (VPC flow logs, OCSF) by batches instead of loading them fully in memory
   - Integer fields nested in structs or lists that contain nulls may be serialized as floats (e.g. `443.0`) only in the batches holding a null
+- Stream text VPC flow logs line by line instead of decoding the whole object in memory
 
 ## 2026-11-02 - 1.38.5
 

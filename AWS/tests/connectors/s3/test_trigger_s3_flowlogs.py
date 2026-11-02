@@ -1,7 +1,7 @@
 """Tests related to AwsS3FlowLogsTrigger."""
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from faker import Faker
@@ -116,3 +116,37 @@ async def test_aws_s3_logs_trigger_parse_parquet_data(connector: AwsS3FlowLogsTr
         ),
         level="warning",
     )
+
+
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_parse_record_spanning_read_chunks(connector: AwsS3FlowLogsTrigger):
+    """Records crossing the read chunk boundary are returned whole."""
+    records = [
+        f"2 111111111111 eni-0a479835a7588c9ca 79.124.62.{i % 250 + 1} 172.31.39.167 {i} 39045 6 1 40 1 2 REJECT OK"
+        for i in range(30)
+    ]
+    connector.configuration.ignore_comments = False
+    connector.configuration.skip_first = 0
+
+    with patch("connectors.s3.trigger_s3_flowlogs.READ_CHUNK_SIZE", 64):
+        async with async_temporary_file("\n".join(records).encode("utf-8")) as f:
+            assert await async_list(connector._parse_content(f)) == records
+
+
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_never_reads_whole_object(connector: AwsS3FlowLogsTrigger, test_data: bytes):
+    """The object is read by bounded chunks, never in one go."""
+    sizes = []
+
+    class BoundedReader:
+        def __init__(self, data: bytes):
+            self._data = data
+
+        async def read(self, size: int = -1) -> bytes:
+            sizes.append(size)
+            assert size > 0, "the whole object must not be read at once"
+            chunk, self._data = self._data[:size], self._data[size:]
+            return chunk
+
+    assert await async_list(connector._parse_content(BoundedReader(test_data))) != []
+    assert sizes
