@@ -1,0 +1,69 @@
+{
+  "name": "Update Request / Incident",
+  "description": "Update an incident or request.",
+  "uuid": "16395168-e36f-48b3-a120-53500304b1a4",
+  "slug": "update_request_incident",
+  "docker_parameters": "easyvista_update_request_incident",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      },
+      "append": {
+        "description": "Append to the description (requires EV SM 2025.3+)",
+        "title": "Append",
+        "type": "boolean"
+      },
+      "description": {
+        "title": "Description",
+        "type": "string"
+      },
+      "urgency_id": {
+        "title": "Urgency Id",
+        "type": "string"
+      },
+      "external_reference": {
+        "title": "External Reference",
+        "type": "string"
+      },
+      "asset": {
+        "title": "Asset",
+        "type": "string"
+      },
+      "asset_serial": {
+        "title": "Asset Serial",
+        "type": "string"
+      },
+      "ci": {
+        "title": "Ci",
+        "type": "string"
+      },
+      "ci_id": {
+        "title": "Ci Id",
+        "type": "integer"
+      },
+      "custom_fields": {
+        "description": "EasyVista field names, forwarded verbatim",
+        "title": "Custom Fields",
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    "required": [
+      "rfc_number"
+    ],
+    "title": "UpdateRequestIncidentArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "href": {
+        "type": "string",
+        "description": "`HREF` of the updated ticket"
+      }
+    }
+  }
+}
