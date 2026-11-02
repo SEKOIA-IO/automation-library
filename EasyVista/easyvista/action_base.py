@@ -49,7 +49,9 @@ class EasyVistaHttpMixin(ModuleItem):
         data = json_body(response)
         return str(data["error"]) if isinstance(data, dict) and "error" in data else response.text[:500]
 
-    def _handle_response(self, response: requests.Response, suffix: str = "") -> bool:
+    def _handle_response(self, response: requests.Response, suffix: str = "", *, file_response: bool = False) -> bool:
+        if file_response and 200 <= response.status_code < 300:
+            return True
         data = json_body(response)
         if 200 <= response.status_code < 300 and not (isinstance(data, dict) and "error" in data):
             return True
@@ -63,7 +65,9 @@ class EasyVistaHttpMixin(ModuleItem):
         self.error(self.redact(f"EasyVista API error {response.status_code} on {method} {path}: {detail}{suffix}"))
         return False
 
-    def request(self, method: str, path: str, *, check: bool = True, **kwargs) -> requests.Response | None:
+    def request(
+        self, method: str, path: str, *, check: bool = True, file_response: bool = False, **kwargs
+    ) -> requests.Response | None:
         config = self.module.configuration
         url = f"{config.base_url}/api/v1/{quote(config.tenant_id, safe='')}{path}"
         try:
@@ -77,7 +81,7 @@ class EasyVistaHttpMixin(ModuleItem):
         except requests.RequestException as exc:
             self.error(self.redact(f"EasyVista API unreachable: {type(exc).__name__}: {exc}"))
             return None
-        if check and not self._handle_response(response):
+        if check and not self._handle_response(response, file_response=file_response):
             return None
         return response
 
