@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- Fix memory leak caused by the SQS queue URL cache retaining AWS sessions
+
 ## 2026-11-02 - 1.38.5
 
 ### Fixed
