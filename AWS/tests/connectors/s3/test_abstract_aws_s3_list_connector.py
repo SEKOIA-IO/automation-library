@@ -12,7 +12,7 @@ from faker import Faker
 
 from aws_helpers.s3_wrapper import S3Wrapper
 from connectors import AwsModule
-from connectors.s3 import AbstractAwsS3ListConnector, AwsS3ListConfiguration
+from connectors.s3 import AbstractAwsS3ListConnector, AwsS3ListConfiguration, IntakePushError
 from connectors.s3.provider import AwsAccountProvider
 from tests.helpers import async_bytesIO
 
@@ -352,3 +352,138 @@ async def test_abstract_aws_s3_list_connector_next_batch_no_objects(
 
     assert result == (0, [])
     assert abstract_list_connector.read_marker() is None
+
+
+def _mock_s3_with_objects(keys: list[str]) -> MagicMock:
+    """Build a mocked S3 wrapper listing the given keys, each holding some bytes."""
+
+    async def list_objects(bucket=None, prefix=None, start_after=None):
+        for key in keys:
+            yield {"Key": key, "Size": 100}
+
+    async def read_key():
+        return await async_bytesIO(b"content")
+
+    mock_s3 = MagicMock()
+    mock_s3.list_objects = list_objects
+    mock_s3.read_key = MagicMock()
+    mock_s3.read_key.return_value.__aenter__.side_effect = read_key
+    return mock_s3
+
+
+def _set_objects_events(connector: AbstractAwsS3ListConnector, events_per_object: list[list]) -> None:
+    """Make `_parse_content` yield the given events for each successive object (an Exception item is raised)."""
+    scenarios = iter(events_per_object)
+
+    async def _parse_content(stream: BinaryIO) -> AsyncGenerator[str, None]:
+        await stream.read()
+        for item in next(scenarios):
+            if isinstance(item, Exception):
+                raise item
+            yield item
+
+    connector._parse_content = MagicMock(side_effect=_parse_content)
+
+
+async def _next_batch(
+    connector: AbstractAwsS3ListConnector, keys: list[str], events_per_object: list[list]
+) -> tuple[int, list[int]]:
+    """Run `next_batch` on objects with the given keys, each yielding the given events."""
+    _set_objects_events(connector, events_per_object)
+    with patch.object(
+        type(connector), "s3_wrapper", new_callable=PropertyMock, return_value=_mock_s3_with_objects(keys)
+    ):
+        return await connector.next_batch()
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_list_connector_next_batch_flushes_inside_large_object(
+    abstract_list_connector: AbstractAwsS3ListConnector,
+    mock_push_data_to_intakes: AsyncMock,
+):
+    """The events of an object are pushed by batches while it is read, never buffered whole."""
+    abstract_list_connector.limit_of_events_to_push = 2
+
+    result = await _next_batch(abstract_list_connector, ["a"], [["e1", "e2", "e3", "e4", "e5"]])
+
+    assert result[0] == 5
+    assert [len(call.kwargs["events"]) for call in mock_push_data_to_intakes.call_args_list] == [2, 2, 1]
+    assert abstract_list_connector.read_marker() == "a"
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_list_connector_next_batch_marker_lags_inside_object(
+    abstract_list_connector: AbstractAwsS3ListConnector,
+    mock_push_data_to_intakes: AsyncMock,
+):
+    """The marker never points to an object that is still being read."""
+    abstract_list_connector.limit_of_events_to_push = 2
+    markers_at_push = []
+
+    async def record_marker(events: list[str]) -> list[str]:
+        markers_at_push.append(abstract_list_connector.read_marker())
+        return events
+
+    mock_push_data_to_intakes.side_effect = record_marker
+
+    await _next_batch(abstract_list_connector, ["file-0.log", "file-1.log"], [["a1"], ["b1", "b2", "b3"]])
+
+    # pushes: [a1, b1] (file-0 complete, file-1 partial) then [b2, b3]
+    assert markers_at_push == [None, "file-0.log"]
+    assert abstract_list_connector.read_marker() == "file-1.log"
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_list_connector_next_batch_failure_drops_unpushed_part_of_object(
+    abstract_list_connector: AbstractAwsS3ListConnector,
+    mock_push_data_to_intakes: AsyncMock,
+):
+    """A failing object contributes nothing and the marker stays on the last complete object."""
+    abstract_list_connector.limit_of_events_to_push = 10
+
+    result = await _next_batch(
+        abstract_list_connector,
+        ["file-0.log", "file-1.log", "file-2.log"],
+        [["a1"], ["b1", Exception("parse error")], ["c1"]],
+    )
+
+    assert result[0] == 1
+    assert mock_push_data_to_intakes.call_args.kwargs["events"] == ["a1"]
+    assert abstract_list_connector.read_marker() == "file-0.log"
+    assert abstract_list_connector._parse_content.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_list_connector_next_batch_push_errors_propagate(
+    abstract_list_connector: AbstractAwsS3ListConnector,
+    mock_push_data_to_intakes: AsyncMock,
+):
+    """A failing intake push is not reported as a fetch failure."""
+    abstract_list_connector.limit_of_events_to_push = 1
+    mock_push_data_to_intakes.side_effect = RuntimeError("intake down")
+
+    with pytest.raises(IntakePushError, match="intake down") as error:
+        await _next_batch(abstract_list_connector, ["a"], [["a1"]])
+
+    assert isinstance(error.value.__cause__, RuntimeError)
+    abstract_list_connector.log.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_list_connector_next_batch_failure_after_mid_object_push(
+    abstract_list_connector: AbstractAwsS3ListConnector,
+    mock_push_data_to_intakes: AsyncMock,
+):
+    """After a mid-object push, a failure only drops what was not pushed yet and keeps the marker before the object."""
+    abstract_list_connector.limit_of_events_to_push = 2
+
+    result = await _next_batch(
+        abstract_list_connector,
+        ["file-0.log", "file-1.log"],
+        [["a1"], ["b1", "b2", Exception("parse error")]],
+    )
+
+    # [a1, b1] was pushed while file-1 was being read; b2 was never pushed and is dropped
+    assert result[0] == 2
+    assert [call.kwargs["events"] for call in mock_push_data_to_intakes.call_args_list] == [["a1", "b1"]]
+    assert abstract_list_connector.read_marker() == "file-0.log"
