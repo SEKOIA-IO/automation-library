@@ -6,7 +6,7 @@ from collections.abc import AsyncGenerator, Sequence
 from typing import Any
 
 import orjson
-import pandas
+import pyarrow.parquet
 
 from aws_helpers.utils import AsyncReader
 from connectors.metrics import DISCARDED_EVENTS
@@ -54,15 +54,16 @@ class BaseAwsS3FlowLogsParquetRecordsTrigger:
         if len(content) == 0:
             return
 
-        reader = io.BytesIO(content)
-        df = pandas.read_parquet(reader)
-
-        for record in df.to_dict(orient="records"):
-            if len(record) > 0:
-                if not self.check_all_ips_are_private(record, ("srcaddr", "dstaddr")):
-                    yield orjson.dumps(record).decode("utf-8")
-                else:
-                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+        # Keep pandas' record conversion semantics without materializing the entire
+        # decompressed file and its Python dictionaries at the same time.
+        with io.BytesIO(content) as reader, pyarrow.parquet.ParquetFile(reader) as parquet:
+            for batch in parquet.iter_batches(batch_size=1000):
+                for record in batch.to_pandas().to_dict(orient="records"):
+                    if len(record) > 0:
+                        if not self.check_all_ips_are_private(record, ("srcaddr", "dstaddr")):
+                            yield orjson.dumps(record).decode("utf-8")
+                        else:
+                            DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
 
 
 class AwsS3FlowLogsParquetRecordsTrigger(

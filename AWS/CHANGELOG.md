@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-02 - 1.38.4
+
+### Fixed
+
+- Process VPC Flow Logs Parquet files in batches of 1,000 rows instead of materializing the entire decoded file and its Python records at once, reducing peak memory usage. The compressed S3 object is still read into memory.
+
 ## 2026-10-01 - 1.38.3
 
 ### Changed
