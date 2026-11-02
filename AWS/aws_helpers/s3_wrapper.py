@@ -11,9 +11,8 @@ from loguru import logger
 from pydantic import Field
 
 from aws_helpers.client import AwsClient, AwsClientConfiguration
-from aws_helpers.utils import AsyncReader, async_gzip_open, is_gzip_compressed
+from aws_helpers.utils import SPOOL_MAX_SIZE, AsyncReader, async_gzip_open, is_gzip_compressed
 
-SPOOL_MAX_SIZE = 32 * 1024 * 1024
 DOWNLOAD_CHUNK_SIZE = 1024 * 1024
 
 

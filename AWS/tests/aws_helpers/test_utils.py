@@ -1,8 +1,9 @@
 """Test utils module."""
 
+import gzip
 import io
 from gzip import compress
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import aiofiles
 import pytest
@@ -18,6 +19,7 @@ from aws_helpers.utils import (
     normalize_s3_key,
     unescape_string,
     split_stream_by_separator,
+    to_seekable_file,
 )
 from tests.helpers import async_temporary_file
 
@@ -156,3 +158,30 @@ async def test_async_islice(items, start, stop, expected):
 
     result = [item async for item in async_islice(async_iterable(), start, stop)]
     assert result == expected
+
+
+@pytest.mark.asyncio
+async def test_to_seekable_file_returns_wrapped_file():
+    async with async_temporary_file(b"data") as f:
+        assert await to_seekable_file(f) is f._file
+
+
+@pytest.mark.asyncio
+async def test_to_seekable_file_copies_other_readers():
+    stream = MagicMock()
+    stream.read = AsyncMock(return_value=b"data")
+    del stream._file
+
+    file = await to_seekable_file(stream)
+
+    assert isinstance(file, io.BytesIO)
+    assert file.read() == b"data"
+
+
+@pytest.mark.asyncio
+async def test_to_seekable_file_decompresses_gzip_once():
+    stream = await async_gzip_open(io.BytesIO(compress(b"data")))
+    file = await to_seekable_file(stream)
+
+    assert not isinstance(file, gzip.GzipFile)
+    assert file.read() == b"data"

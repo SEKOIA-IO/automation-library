@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix memory leak caused by the SQS queue URL cache retaining AWS sessions
 - Reuse S3 and SQS wrappers (and their AWS sessions) across batches instead of recreating them for every object
 - Download S3 objects through a spooled temporary file instead of holding them fully in memory
+- Parse parquet objects (VPC flow logs, OCSF) by batches instead of loading them fully in memory
+  - Integer fields nested in structs or lists that contain nulls may be serialized as floats (e.g. `443.0`) only in the batches holding a null
 
 ## 2026-11-02 - 1.38.5
 
