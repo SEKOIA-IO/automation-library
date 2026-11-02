@@ -39,7 +39,7 @@ class GetRequestIncidentDocuments(EasyVistaAction):
 class GetRequestIncidentDocument(EasyVistaAction):
     def run(self, arguments: dict) -> dict | None:
         args = GetRequestIncidentDocumentArguments(**arguments)
-        response = self.request("GET", self.request_path(args.rfc_number, "documents", args.id))
+        response = self.request("GET", self.request_path(args.rfc_number, "documents", args.id), file_response=True)
         if response is None:
             return None
         return {
