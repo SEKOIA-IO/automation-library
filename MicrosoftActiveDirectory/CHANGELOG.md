@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-02 - 1.6.3
+
+### Fixed
+
+- Gate the user assets connector behind the `reveal-local-runners` feature flag
+
 ## 2026-11-02 - 1.6.2
 
 ### Added
