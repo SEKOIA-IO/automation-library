@@ -1,0 +1,38 @@
+{
+  "name": "Restart Request / Incident",
+  "description": "Resume a suspended incident or request, with an optional comment.",
+  "uuid": "5718dc64-8b26-4e26-9bf7-540dd0087644",
+  "slug": "restart_request_incident",
+  "docker_parameters": "easyvista_restart_request_incident",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      },
+      "comment": {
+        "title": "Comment",
+        "type": "string"
+      },
+      "done_by_id": {
+        "title": "Done By Id",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "rfc_number"
+    ],
+    "title": "RestartRequestIncidentArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "href": {
+        "type": "string",
+        "description": "`HREF` of the restarted ticket"
+      }
+    }
+  }
+}

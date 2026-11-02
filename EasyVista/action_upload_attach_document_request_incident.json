@@ -1,0 +1,59 @@
+{
+  "name": "Upload and attach a Document to a Request / Incident",
+  "description": "Uploads a file (docx, pdf, txt or image file) and attach it to the specified request. Known vendor issue: REST-uploaded files may be impossible to open on some deployments.",
+  "uuid": "f5cd4bdc-f935-4f2a-8668-2b342ebcdf0f",
+  "slug": "upload_attach_document_request_incident",
+  "docker_parameters": "easyvista_upload_attach_document_request_incident",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      },
+      "documents": {
+        "items": {
+          "properties": {
+            "filename": {
+              "title": "Filename",
+              "type": "string"
+            },
+            "filedata": {
+              "description": "File content encoded in standard base64",
+              "title": "Filedata",
+              "type": "string"
+            }
+          },
+          "required": [
+            "filename",
+            "filedata"
+          ],
+          "title": "DocumentItem",
+          "type": "object"
+        },
+        "minItems": 1,
+        "title": "Documents",
+        "type": "array"
+      },
+      "description": {
+        "title": "Description",
+        "type": "string"
+      }
+    },
+    "required": [
+      "rfc_number",
+      "documents"
+    ],
+    "title": "UploadAttachDocumentRequestIncidentArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "href": {
+        "type": "string",
+        "description": "`HREF` returned by the API (the ticket). The brief\u2019s result `documents` reflected the OpenAPI defect and is **replaced**: the API does not echo the documents back. Use *Get the list of Documents* to obtain the document ids"
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "View Request / Incident Comment",
+  "description": "Returns the comment associated to the specified incident or request",
+  "uuid": "bcbb8b65-35b0-4bad-9564-37347ce335f9",
+  "slug": "view_request_incident_comment",
+  "docker_parameters": "easyvista_view_request_incident_comment",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      }
+    },
+    "required": [
+      "rfc_number"
+    ],
+    "title": "ViewRequestIncidentCommentArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "href": {
+        "type": "string",
+        "description": "`HREF` of the comment resource"
+      },
+      "parent_href": {
+        "type": "string",
+        "description": "`PARENT_HREF`, the ticket"
+      },
+      "comment": {
+        "type": "string",
+        "description": "`COMMENT` text, returned verbatim without transformation. It holds the `Description` set by *Create* / *Update* (HTML line breaks `<br>` included)"
+      }
+    }
+  }
+}

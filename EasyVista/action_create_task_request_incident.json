@@ -1,0 +1,83 @@
+{
+  "name": "Create Task",
+  "description": "This endpoint allows you to create a new task related to the incident or request specified in the URL.",
+  "uuid": "810c1ccf-cd09-46b1-aea8-e3604bc78cb2",
+  "slug": "create_task_request_incident",
+  "docker_parameters": "easyvista_create_task_request_incident",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      },
+      "action_type_id": {
+        "title": "Action Type Id",
+        "type": "string",
+        "description": "Action type identifier; provide at least one of action_type_id or action_type_name"
+      },
+      "action_type_name": {
+        "title": "Action Type Name",
+        "type": "string",
+        "description": "Type name in the API user language; provide at least one of action_type_id or action_type_name"
+      },
+      "group_id": {
+        "title": "Group Id",
+        "type": "integer",
+        "description": "Assigned group ID; provide at least one of group_id, group_name or group_mail"
+      },
+      "group_name": {
+        "title": "Group Name",
+        "type": "string",
+        "description": "Assigned group name; provide at least one of group_id, group_name or group_mail"
+      },
+      "group_mail": {
+        "title": "Group Mail",
+        "type": "string",
+        "description": "Assigned group email; provide at least one of group_id, group_name or group_mail"
+      },
+      "description": {
+        "title": "Description",
+        "type": "string"
+      },
+      "elapsed_time": {
+        "title": "Elapsed Time",
+        "type": "string"
+      },
+      "time_cost": {
+        "title": "Time Cost",
+        "type": "string"
+      },
+      "contractual_cost": {
+        "title": "Contractual Cost",
+        "type": "string"
+      },
+      "creation_date_ut": {
+        "title": "Creation Date Ut",
+        "type": "string"
+      },
+      "start_date_ut": {
+        "title": "Start Date Ut",
+        "type": "string"
+      },
+      "end_date_ut": {
+        "title": "End Date Ut",
+        "type": "string"
+      }
+    },
+    "required": [
+      "rfc_number"
+    ],
+    "title": "CreateTaskRequestIncidentArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "href": {
+        "type": "string",
+        "description": "`HREF` returned by the API (`.../actions/<rfc_number>` on the tenant)"
+      }
+    }
+  }
+}
