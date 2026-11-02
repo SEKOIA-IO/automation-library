@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Integer fields nested in structs or lists that contain nulls may be serialized as floats (e.g. `443.0`) only in the batches holding a null
 - Stream text VPC flow logs line by line instead of decoding the whole object in memory
 - Flush events while reading an object in the S3 list connector instead of buffering the whole object
+- Serialize SQS messages as they are received instead of keeping all parsed records in memory
 
 ## 2026-11-02 - 1.38.5
 

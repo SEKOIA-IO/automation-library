@@ -51,7 +51,7 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
         Returns:
             tuple[list[str], list[int]]:
         """
-        records = []
+        records: list[str] = []
         timestamps_to_log: list[int] = []
 
         continue_receiving = True
@@ -68,12 +68,15 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
                     timestamps_to_log.append(message_timestamp)
                     try:
                         content = orjson.loads(message)
+                        # records are serialized right away: keeping parsed dicts would multiply the memory used
                         if self.is_aws_notification(content):
                             # The message is an AWS notification, we extract the Records field
-                            records.extend(content.get("Records", []))
+                            records.extend(
+                                orjson.dumps(record).decode("utf-8") for record in content.get("Records", [])
+                            )
                         else:
                             # The message is a raw message, we add it as is
-                            records.append(content)
+                            records.append(orjson.dumps(content).decode("utf-8"))
                     except ValueError as e:
                         self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
@@ -82,8 +85,6 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
 
         self.log(message=f"Forwarding {len(records)} messages", level="info")
 
-        result: list[str] = await self.push_data_to_intakes(
-            events=[orjson.dumps(record).decode("utf-8") for record in records],
-        )
+        result: list[str] = await self.push_data_to_intakes(events=records)
 
         return len(result), timestamps_to_log
