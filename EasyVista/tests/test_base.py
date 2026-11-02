@@ -131,6 +131,40 @@ def test_base_url_rejects_non_host_urls(url):
         EasyVistaConfiguration(base_url=url, tenant_id="00001")
 
 
+@pytest.mark.parametrize("use_token", [True, False])
+def test_configuration_rejects_plaintext_transport(use_token):
+    with pytest.raises(ValidationError, match="base_url must use HTTPS"):
+        EasyVistaConfiguration(
+            base_url="http://easyvista.example",
+            tenant_id="00001",
+            use_token=use_token,
+            token="fake-token",
+            username="user",
+            password="fake-password",
+        )
+
+
+@pytest.mark.parametrize("use_token", [True, False])
+def test_client_rejects_plaintext_before_sending_credentials(make_action, use_token):
+    action = make_action(ViewRequestsIncidentsList, use_token=use_token, username="user", password="fake-password")
+    with patch.object(requests.Session, "request") as send:
+        with pytest.raises(ValueError, match="requests must use HTTPS"):
+            action.client.get("http://easyvista.example/requests")
+    send.assert_not_called()
+
+
+@pytest.mark.parametrize("tenant_id", ["", " ", "\t\r\n", "\u2003"])
+def test_configuration_rejects_empty_tenant(tenant_id):
+    with pytest.raises(ValidationError):
+        EasyVistaConfiguration(base_url="https://easyvista.example", tenant_id=tenant_id)
+
+
+def test_configuration_preserves_tenant_leading_zeros():
+    config = EasyVistaConfiguration(base_url="https://easyvista.example/", tenant_id="00001")
+    assert config.tenant_id == "00001"
+    assert config.base_url == "https://easyvista.example"
+
+
 def test_url_encoding(make_action, requests_mock):
     action = make_action(ViewRequestsIncidentsList, tenant_id="00001/extra")
     path = action.request_path("I/number?#", "documents", "doc/id ?#")
@@ -185,7 +219,7 @@ def test_http_retry_policy(make_action, monkeypatch, method, status, attempts):
 
     with patch("urllib3.connectionpool.HTTPConnectionPool._make_request", side_effect=reply) as call:
         with patch("urllib3.util.retry.time.sleep"):
-            response = action.client.request(method, "http://easyvista.example/requests")
+            response = action.client.request(method, "https://easyvista.example/requests")
     assert response.status_code == status
     assert call.call_count == attempts
 
@@ -198,7 +232,7 @@ def test_connection_retries(make_action, monkeypatch, method, attempts):
         "urllib3.connectionpool.HTTPConnectionPool._make_request", side_effect=NewConnectionError(None, "unreachable")
     ) as call:
         with patch("urllib3.util.retry.time.sleep"), pytest.raises(requests.ConnectionError):
-            action.client.request(method, "http://easyvista.example/requests")
+            action.client.request(method, "https://easyvista.example/requests")
     assert call.call_count == attempts
 
 
@@ -212,7 +246,7 @@ def test_read_timeouts_are_not_retried(make_action, monkeypatch):
         side_effect=ReadTimeoutError(None, "/requests", "timed out"),
     ) as call:
         with pytest.raises(requests.RequestException):
-            action.client.get("http://easyvista.example/requests")
+            action.client.get("https://easyvista.example/requests")
     assert call.call_count == 1
 
 
