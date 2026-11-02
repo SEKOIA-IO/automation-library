@@ -89,13 +89,13 @@ jobs:
           to_json() { printf '%s\n' "$@" | jq -R -s -c 'split("\n") | map(select(length > 0))'; }
           echo "modules=$(to_json "${modules[@]}")" >> "$GITHUB_OUTPUT"
 
-          # A module has a Python image if it has a Dockerfile, and an HWL
+          # A module has a Python image (and tests) if it has a pyproject.toml, and an HWL
           # image if it has HWL actions
           python_modules=()
           hwl_modules=()
           for dir in "${modules[@]}"; do
             [ -n "$dir" ] || continue
-            [ -f "$dir/Dockerfile" ] && python_modules+=("$dir")
+            [ -f "$dir/pyproject.toml" ] && python_modules+=("$dir")
             compgen -G "$dir/action_*.yml" >/dev/null && hwl_modules+=("$dir")
           done
           echo "python_modules=$(to_json "${python_modules[@]}")" >> "$GITHUB_OUTPUT"
@@ -143,7 +143,7 @@ jobs:
               fission=$(jq '((.fission // {})["python-version"] // []) | length > 0' "$manifest")
 
               python=false
-              [ -f "$dir/Dockerfile" ] && python=true
+              [ -f "$dir/pyproject.toml" ] && python=true
               hwl=false
               compgen -G "$dir/action_*.yml" >/dev/null && hwl=true
 
@@ -168,10 +168,10 @@ jobs:
     name: Test module ${{ matrix.module }}
     runs-on: ubuntu-latest
     needs: detect
-    if: needs.detect.outputs.modules != '[]'
+    if: needs.detect.outputs.python_modules != '[]'
     strategy:
       matrix:
-        module: ${{fromJSON(needs.detect.outputs.modules)}}
+        module: ${{fromJSON(needs.detect.outputs.python_modules)}}
       fail-fast: false
     steps:
       - name: Check-out the repo under $GITHUB_WORKSPACE
