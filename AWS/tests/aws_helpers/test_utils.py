@@ -4,8 +4,11 @@ import asyncio
 import gzip
 import io
 import shutil
+import subprocess
+import sys
 import tempfile
 import threading
+from pathlib import Path
 from gzip import compress
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -351,3 +354,24 @@ async def test_has_parquet_footer_on_gzip_stream_closes_its_spool(data, expected
 
     assert await stream.read() == data[4:]
     assert len(spools) == 1 and spools[0].closed
+
+
+@pytest.mark.parametrize(
+    "module",
+    [
+        "aws_helpers.utils",
+        "connectors.s3.trigger_s3_logs",
+        "connectors.s3.trigger_s3_records",
+        "connectors.trigger_sqs_messages",
+    ],
+)
+def test_shared_modules_do_not_load_pandas_or_pyarrow(module):
+    """Importing the shared helpers and the non-Parquet connectors must not load pandas or pyarrow."""
+    code = (
+        f"import sys, importlib; importlib.import_module({module!r}); "
+        "print('pandas' in sys.modules or 'pyarrow' in sys.modules)"
+    )
+    # run from the AWS root, whatever the directory pytest was started from
+    aws_root = Path(__file__).resolve().parents[2]
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True, cwd=aws_root)
+    assert result.stdout.strip() == "False"

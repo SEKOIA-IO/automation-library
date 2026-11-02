@@ -7,7 +7,8 @@ from typing import Any
 
 import orjson
 
-from aws_helpers.utils import AsyncReader, iter_parquet_dataframes, to_seekable_file
+from aws_helpers.parquet import iter_parquet_dataframes
+from aws_helpers.utils import AsyncReader, to_seekable_file
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from connectors.s3.provider import AwsAccountProvider
