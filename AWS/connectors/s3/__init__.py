@@ -54,7 +54,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         super().__init__(*args, **kwargs)
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
         self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
-        self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 60))
+        self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 600))
         self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
         self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
 
@@ -102,7 +102,8 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
         messages: list[tuple[str, int]]
         async with self.sqs_wrapper.receive_messages(
-            max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
+            max_messages=self.sqs_max_messages,
+            visibility_timeout=self.sqs_visibility_timeout,
         ) as messages:
             message_records = []
 
@@ -114,7 +115,10 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                     # Records is a list of strings
                     message_records.extend(self._get_notifs_from_sqs_message(message))
                 except ValueError as e:
-                    self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
+                    self.log_exception(
+                        e,
+                        message=f"Invalid JSON in message.\nInvalid message is: {message}",
+                    )
 
             INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_records))
             for record in message_records:
@@ -235,7 +239,10 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
             except Exception as e:
                 # do not advance the marker past a failing object to avoid losing data.
-                self.log(message=f"Failed to fetch content of {key}: {str(e)}", level="warning")
+                self.log(
+                    message=f"Failed to fetch content of {key}: {str(e)}",
+                    level="warning",
+                )
                 break
 
             last_processed = key
