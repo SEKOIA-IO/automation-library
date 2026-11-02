@@ -79,6 +79,17 @@ class FlareEventsConnector(Connector):
                 yield event_resp.json(), page["next"]
             self.limiter.tick()
 
+    @staticmethod
+    def _serialize(event: dict[str, Any]) -> str:
+        activity = event.get("activity", event)
+        data = activity.get("data")
+        if isinstance(data, dict):
+            # Chat messages embed up to 50 older and 50 newer messages of the conversation as
+            # context, which pushes them above the intake's 250kB limit. They are not parsed.
+            data.pop("olders", None)
+            data.pop("newers", None)
+        return orjson.dumps(activity).decode("utf-8")
+
     def _push(self, events: list[str], cursor: str | None) -> int:
         self.push_events_to_intakes(events=events)
         OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
@@ -96,20 +107,29 @@ class FlareEventsConnector(Connector):
         page_cursor = self.cursor.offset
         total = 0
         not_found = 0
+        # Number of events of `batch` belonging to fully read pages, and the cursor after them.
+        complete, complete_cursor = 0, page_cursor
 
-        for event, next_cursor in self._scroll_events():
-            # Page boundary reached: flush if we already gathered a full batch.
-            if next_cursor != page_cursor:
-                if len(batch) >= self.BATCH_SIZE:
-                    total += self._push(batch, page_cursor)
-                    batch = []
-                page_cursor = next_cursor
+        try:
+            for event, next_cursor in self._scroll_events():
+                # Page boundary reached: flush if we already gathered a full batch.
+                if next_cursor != page_cursor:
+                    if len(batch) >= self.BATCH_SIZE:
+                        total += self._push(batch, page_cursor)
+                        batch = []
+                    complete, complete_cursor = len(batch), page_cursor
+                    page_cursor = next_cursor
 
-            if event is None:
-                # Details no longer available on Flare's side: skip the event.
-                not_found += 1
-            elif isinstance(event, dict):
-                batch.append(orjson.dumps(event.get("activity", event)).decode("utf-8"))
+                if event is None:
+                    # Details no longer available on Flare's side: skip the event.
+                    not_found += 1
+                elif isinstance(event, dict):
+                    batch.append(self._serialize(event))
+        except Exception:
+            # Keep the progress made on fully read pages before failing (e.g. rate limited).
+            if complete:
+                self._push(batch[:complete], complete_cursor)
+            raise
 
         if batch:
             total += self._push(batch, page_cursor)
@@ -141,3 +161,5 @@ class FlareEventsConnector(Connector):
                 self.next_batch()
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
+                # Back off before retrying, so a rate-limited API is not hammered again right away.
+                time.sleep(self.configuration.frequency)
