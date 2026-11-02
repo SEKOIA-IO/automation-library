@@ -1,0 +1,56 @@
+{
+  "name": "View Requests / Incidents list",
+  "description": "Returns List of Incidents or Requests.",
+  "uuid": "9376d305-e553-4911-8e4a-0b904a83de70",
+  "slug": "view_requests_incidents_list",
+  "docker_parameters": "easyvista_view_requests_incidents_list",
+  "arguments": {
+    "properties": {
+      "max_rows": {
+        "description": "Page size; API default is 100. Returns a single page",
+        "title": "Max Rows",
+        "type": "integer"
+      },
+      "search": {
+        "description": "EasyVista filter expression, forwarded verbatim",
+        "title": "Search",
+        "type": "string"
+      },
+      "sort": {
+        "title": "Sort",
+        "type": "string"
+      },
+      "fields": {
+        "description": "Comma-separated field names",
+        "title": "Fields",
+        "type": "string"
+      }
+    },
+    "title": "ViewRequestsIncidentsListArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "href": {
+        "type": "string",
+        "description": "`HREF` of the query"
+      },
+      "record_count": {
+        "type": "string",
+        "description": "Records in this page. The API returns a **string** and the action keeps it as is (brief)"
+      },
+      "total_record_count": {
+        "type": "string",
+        "description": "Total matching records (string)"
+      },
+      "records": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        },
+        "description": "Records as returned. The OpenAPI item schema is incorrect (it repeats the envelope), so each item is declared as a free-form `object`"
+      }
+    }
+  }
+}

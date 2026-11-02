@@ -1,0 +1,41 @@
+{
+  "name": "Get the list of Documents of a Request / Incident",
+  "description": "Returns the list of documents attached to the specified incident or request",
+  "uuid": "3f7ce920-61be-42be-9c6c-a830026b1ce1",
+  "slug": "get_request_incident_documents",
+  "docker_parameters": "easyvista_get_request_incident_documents",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      }
+    },
+    "required": [
+      "rfc_number"
+    ],
+    "title": "GetRequestIncidentDocumentsArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "parent_href": {
+        "type": "string",
+        "description": "`PARENT_HREF`, the ticket"
+      },
+      "href": {
+        "type": "string",
+        "description": "`HREF` of the documents collection"
+      },
+      "documents": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        },
+        "description": "From `Documents` (capital `D` in the API). Items are returned **as is**, with keys `HREF`, `PARENT_HREF`, `DOCUMENT_ID`, `DOCUMENT` (file name) and `DDL_HREF` (download link). They are not renamed. `DOCUMENT_ID` (format `<n>_<sha256>`, e.g.\u00a0`40000_9ae8\u2026`) is the identifier expected by *Get a specific Document* and *Delete a request document* (Q10 resolved). `HREF` is a web UI link (`autoconnect_mail.php?...`) that returns an HTML login page, not the file"
+      }
+    }
+  }
+}
