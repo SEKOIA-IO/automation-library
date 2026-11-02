@@ -70,3 +70,5 @@ def test_manifest_configuration():
     assert config["required"] == ["base_url", "tenant_id"]
     assert config["secrets"] == ["password", "token"]
     assert set(config["properties"]) == set(EasyVistaConfiguration.model_fields)
+    assert config["properties"]["tenant_id"]["minLength"] == 1
+    assert config["properties"]["tenant_id"]["pattern"] == r"\S"
