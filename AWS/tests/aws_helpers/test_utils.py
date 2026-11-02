@@ -1,9 +1,13 @@
 """Test utils module."""
 
+import asyncio
 import gzip
 import io
+import shutil
+import tempfile
+import threading
 from gzip import compress
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiofiles
 import pytest
@@ -211,3 +215,88 @@ async def test_to_seekable_file_decompresses_gzip_once():
 
     assert not isinstance(file, gzip.GzipFile)
     assert file.read() == b"data"
+
+
+@pytest.mark.asyncio
+async def test_to_seekable_file_decompresses_gzip_off_the_event_loop():
+    loop_thread = threading.get_ident()
+    copy_threads = []
+    original_copyfileobj = shutil.copyfileobj
+
+    def spy(*args, **kwargs):
+        copy_threads.append(threading.get_ident())
+        return original_copyfileobj(*args, **kwargs)
+
+    stream = await async_gzip_open(io.BytesIO(compress(b"data")))
+    with patch("aws_helpers.utils.shutil.copyfileobj", side_effect=spy):
+        file = await to_seekable_file(stream)
+
+    assert copy_threads
+    assert loop_thread not in copy_threads
+    assert file.read() == b"data"
+
+
+@pytest.mark.parametrize("cancellations", [1, 2])
+@pytest.mark.asyncio
+async def test_to_seekable_file_waits_for_the_copy_when_cancelled(cancellations):
+    started, release, finished = threading.Event(), threading.Event(), threading.Event()
+    spools = []
+    original_spool = tempfile.SpooledTemporaryFile
+
+    def spy_spool(*args, **kwargs):
+        spools.append(original_spool(*args, **kwargs))
+        return spools[-1]
+
+    def blocking_copy(*args, **kwargs):
+        started.set()
+        release.wait(5)
+        finished.set()
+
+    ended_before_release = []
+
+    async def release_later():
+        await asyncio.sleep(0.05)
+        ended_before_release.append(task.done())
+        release.set()
+
+    stream = await async_gzip_open(io.BytesIO(compress(b"data")))
+    with (
+        patch("aws_helpers.utils.tempfile.SpooledTemporaryFile", side_effect=spy_spool),
+        patch("aws_helpers.utils.shutil.copyfileobj", side_effect=blocking_copy),
+    ):
+        task = asyncio.create_task(to_seekable_file(stream))
+        assert await asyncio.to_thread(started.wait, 5)
+        for _ in range(cancellations):
+            task.cancel()
+            for _ in range(3):  # let the cancellation be delivered
+                await asyncio.sleep(0)
+
+        # the copy is released only after the task was cancelled: the task must still be waiting for it
+        releaser = asyncio.create_task(release_later())
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        await releaser
+
+    assert ended_before_release == [False]
+    assert await asyncio.to_thread(finished.wait, 1)
+    assert spools[0].closed
+
+
+@pytest.mark.asyncio
+async def test_to_seekable_file_closes_the_spool_when_the_copy_fails():
+    spools = []
+    original_spool = tempfile.SpooledTemporaryFile
+
+    def spy_spool(*args, **kwargs):
+        spools.append(original_spool(*args, **kwargs))
+        return spools[-1]
+
+    stream = await async_gzip_open(io.BytesIO(compress(b"data")))
+    with (
+        patch("aws_helpers.utils.tempfile.SpooledTemporaryFile", side_effect=spy_spool),
+        patch("aws_helpers.utils.shutil.copyfileobj", side_effect=OSError("disk full")),
+    ):
+        with pytest.raises(OSError, match="disk full"):
+            await to_seekable_file(stream)
+
+    assert spools[0].closed

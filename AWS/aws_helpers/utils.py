@@ -271,6 +271,38 @@ async def split_stream_by_separator(
         search_from = max(0, len(buffer) - len(separator) + 1)
 
 
+async def _decompress_to_spool(file: gzip.GzipFile) -> BinaryIO:
+    """
+    Decompress a gzip file once into a spool (memory up to SPOOL_MAX_SIZE, then a temporary file).
+
+    The copy runs in a thread, so that a big object does not block the event loop. A thread cannot be
+    cancelled: it is waited for, however many times the task is cancelled, so that the files it uses are not
+    closed under it. The spool is closed if the copy does not complete.
+
+    Args:
+        file: gzip.GzipFile
+
+    Returns:
+        BinaryIO: The spool, rewound to its beginning.
+    """
+    spool = tempfile.SpooledTemporaryFile(max_size=SPOOL_MAX_SIZE)
+    copy = asyncio.ensure_future(asyncio.to_thread(shutil.copyfileobj, file, spool))
+    try:
+        await asyncio.shield(copy)
+    except (asyncio.CancelledError, Exception):
+        while not copy.done():
+            try:
+                await asyncio.wait([copy])
+            except asyncio.CancelledError:
+                pass
+        spool.close()
+        raise
+
+    spool.seek(0)
+    # shortcut: the spool is closed (and its temp file removed) when garbage collected
+    return spool  # type: ignore[return-value]
+
+
 async def to_seekable_file(stream: AsyncReader) -> BinaryIO:
     """
     Return a seekable synchronous file for the stream, without copying it when possible.
@@ -285,11 +317,7 @@ async def to_seekable_file(stream: AsyncReader) -> BinaryIO:
     file = getattr(stream, "_file", None)
     if isinstance(file, gzip.GzipFile):
         # seeking backward in a gzip stream decompresses it again: decompress once into a spool
-        spool = tempfile.SpooledTemporaryFile(max_size=SPOOL_MAX_SIZE)
-        shutil.copyfileobj(file, spool)
-        spool.seek(0)
-        # shortcut: the spool is closed (and its temp file removed) when garbage collected
-        return spool  # type: ignore[return-value]
+        return await _decompress_to_spool(file)
 
     if file is not None and file.seekable():
         return file  # type: ignore[no-any-return]
