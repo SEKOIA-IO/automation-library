@@ -133,6 +133,62 @@ async def test_parse_content_does_not_convert_later_batches_before_yielding(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("write_statistics", [True, False])
+@pytest.mark.parametrize("integer_type", [pyarrow.int64(), pyarrow.uint64()])
+@pytest.mark.parametrize("null_position", [0, 1000, None])
+async def test_parse_content_preserves_file_wide_integer_serialization(
+    connector: AwsS3FlowLogsParquetRecordsTrigger,
+    write_statistics: bool,
+    integer_type: pyarrow.DataType,
+    null_position: int | None,
+) -> None:
+    values: list[int | None] = [1] * 1001
+    if null_position is not None:
+        values[null_position] = None
+    table = pyarrow.table(
+        {
+            "srcaddr": ["8.8.8.8"] * len(values),
+            "dstaddr": ["10.0.0.1"] * len(values),
+            "packets": pyarrow.array(values, type=integer_type),
+        }
+    )
+    buffer = io.BytesIO()
+    # Isolate the null in a different row group as well as a different batch.
+    pyarrow.parquet.write_table(table, buffer, row_group_size=1000, write_statistics=write_statistics)
+    content = buffer.getvalue()
+    expected = [
+        orjson.dumps(record).decode("utf-8")
+        for record in pandas.read_parquet(io.BytesIO(content)).to_dict(orient="records")
+    ]
+    async with async_temporary_file(content) as stream:
+        assert await async_list(connector._parse_content(stream)) == expected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("write_statistics", [True, False])
+@pytest.mark.parametrize("dtype", ["Int64", "UInt64"])
+async def test_parse_content_preserves_explicit_pandas_integer_dtype(
+    connector: AwsS3FlowLogsParquetRecordsTrigger, write_statistics: bool, dtype: str
+) -> None:
+    frame = pandas.DataFrame(
+        {
+            "srcaddr": ["8.8.8.8"] * 1001,
+            "dstaddr": ["10.0.0.1"] * 1001,
+            "packets": pandas.array([1] * 1000 + [None], dtype=dtype),
+        }
+    )
+    buffer = io.BytesIO()
+    frame.to_parquet(buffer, row_group_size=1000, write_statistics=write_statistics)
+    content = buffer.getvalue()
+    expected = [
+        orjson.dumps(record).decode("utf-8")
+        for record in pandas.read_parquet(io.BytesIO(content)).to_dict(orient="records")
+    ]
+    async with async_temporary_file(content) as stream:
+        assert await async_list(connector._parse_content(stream)) == expected
+
+
+@pytest.mark.asyncio
 async def test_parse_content_rejects_invalid_parquet(connector: AwsS3FlowLogsParquetRecordsTrigger) -> None:
     async with async_temporary_file(b"not a parquet file") as stream:
         with pytest.raises(pyarrow.ArrowInvalid):
