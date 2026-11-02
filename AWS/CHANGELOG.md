@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix memory leak caused by the SQS queue URL cache retaining AWS sessions
 - Reuse S3 and SQS wrappers (and their AWS sessions) across batches instead of recreating them for every object
+- Download S3 objects through a spooled temporary file instead of holding them fully in memory
 
 ## 2026-11-02 - 1.38.5
 
