@@ -10,15 +10,17 @@
   "configuration": {
     "properties": {
       "base_url": {
-        "description": "Protocol and host of the EasyVista server, without a path",
+        "description": "HTTPS protocol and host of the EasyVista server, without a path",
         "title": "Base Url",
         "type": "string",
         "format": "uri"
       },
       "tenant_id": {
-        "description": "EasyVista account number, including any leading zeros",
+        "description": "Non-empty EasyVista account number, including any leading zeros",
         "title": "Tenant Id",
-        "type": "string"
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
       },
       "use_token": {
         "default": true,

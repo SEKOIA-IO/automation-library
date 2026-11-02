@@ -8,7 +8,8 @@ Use a dedicated EasyVista user whose profile enables **REST API** access. Allow 
 your playbook. Update and Close also require `GET /requests/{rfc_number}` to check whether the ticket is already closed.
 The account validator requires `GET /requests`.
 
-Set `base_url` to the protocol and host of the server, without a path. Set `tenant_id` to the EasyVista **account** number
+Set `base_url` to the HTTPS protocol and host of the server, without a path. HTTP URLs are rejected to protect credentials.
+Set `tenant_id` to the non-empty EasyVista **account** number
 used in `/api/v1/{account}`. Keep it as a string to preserve leading zeros.
 
 Bearer authentication is the default. An administrator creates an access token under
@@ -20,8 +21,8 @@ requires otherwise.
 
 | Field | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `base_url` | string | Yes | — | Protocol and host of the EasyVista server, without a path, query or credentials. A trailing `/` is removed. |
-| `tenant_id` | string | Yes | — | EasyVista account number used in the API URL; preserve any leading zeros. |
+| `base_url` | string | Yes | — | HTTPS protocol and host of the EasyVista server, without a path, query or credentials. A trailing `/` is removed. HTTP is rejected. |
+| `tenant_id` | string | Yes | — | Non-empty EasyVista account number used in the API URL; preserve any leading zeros. Whitespace-only values are rejected. |
 | `use_token` | boolean | No | `true` | Use Bearer authentication; set to `false` for Basic authentication. |
 | `username` | string | When `use_token = false` | — | REST API user login. |
 | `password` | string (secret) | When `use_token = false` | — | REST API user password. |

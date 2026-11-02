@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -56,6 +58,8 @@ class ApiClient(requests.Session):
         self.mount("http://", IdempotentRetryAdapter())
 
     def request(self, method, url, **kwargs):
+        if urlsplit(url).scheme != "https":
+            raise ValueError("EasyVista API requests must use HTTPS")
         kwargs.setdefault("timeout", 60)
         kwargs.setdefault("verify", self.verify)
         kwargs.setdefault("allow_redirects", False)
