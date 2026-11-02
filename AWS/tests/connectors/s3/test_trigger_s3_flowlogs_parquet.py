@@ -189,6 +189,71 @@ async def test_parse_content_preserves_explicit_pandas_integer_dtype(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("write_statistics", [True, False])
+@pytest.mark.parametrize("index_name", [None, "event_index"])
+@pytest.mark.parametrize("dtype", ["Int64", "UInt64"])
+async def test_parse_content_preserves_nullable_integer_index(
+    connector: AwsS3FlowLogsParquetRecordsTrigger,
+    write_statistics: bool,
+    index_name: str | None,
+    dtype: str,
+) -> None:
+    frame = pandas.DataFrame(
+        {
+            "srcaddr": ["8.8.8.8"] * 1001,
+            "dstaddr": ["10.0.0.1"] * 1001,
+            "packets": [1] * 1001,
+        },
+        index=pandas.Index([1] * 1000 + [None], dtype=dtype, name=index_name),
+    )
+    buffer = io.BytesIO()
+    frame.to_parquet(buffer, row_group_size=1000, write_statistics=write_statistics)
+    content = buffer.getvalue()
+    expected = [
+        orjson.dumps(record).decode("utf-8")
+        for record in pandas.read_parquet(io.BytesIO(content)).to_dict(orient="records")
+    ]
+    async with async_temporary_file(content) as stream:
+        assert await async_list(connector._parse_content(stream)) == expected
+
+
+@pytest.mark.asyncio
+async def test_parse_content_skips_empty_record(
+    connector: AwsS3FlowLogsParquetRecordsTrigger, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Exercise the defensive empty-record guard without emitting or counting it."""
+    buffer = io.BytesIO()
+    pyarrow.parquet.write_table(pyarrow.table({"srcaddr": ["8.8.8.8"]}), buffer)
+    discarded = DISCARDED_EVENTS.labels(intake_key=connector.configuration.intake_key)
+    discarded_before = discarded._value.get()
+
+    def empty_records(frame: pandas.DataFrame, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+        return [{}]
+
+    monkeypatch.setattr(pandas.DataFrame, "to_dict", empty_records)
+    async with async_temporary_file(buffer.getvalue()) as stream:
+        assert await async_list(connector._parse_content(stream)) == []
+    assert discarded._value.get() == discarded_before
+
+
+@pytest.mark.parametrize(
+    "record,expected",
+    [
+        ({"srcaddr": "10.0.0.1", "dstaddr": "192.168.1.1"}, True),
+        ({"srcaddr": "8.8.8.8", "dstaddr": "10.0.0.1"}, False),
+        ({"srcaddr": "invalid", "dstaddr": "10.0.0.1"}, True),
+        ({"srcaddr": "invalid", "dstaddr": "8.8.8.8"}, False),
+        ({"dstaddr": "8.8.8.8"}, False),
+        ({}, True),
+    ],
+)
+def test_check_all_ips_are_private(
+    connector: AwsS3FlowLogsParquetRecordsTrigger, record: dict[str, str], expected: bool
+) -> None:
+    assert connector.check_all_ips_are_private(record, ("srcaddr", "dstaddr")) is expected
+
+
+@pytest.mark.asyncio
 async def test_parse_content_rejects_invalid_parquet(connector: AwsS3FlowLogsParquetRecordsTrigger) -> None:
     async with async_temporary_file(b"not a parquet file") as stream:
         with pytest.raises(pyarrow.ArrowInvalid):

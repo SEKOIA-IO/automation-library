@@ -90,6 +90,8 @@ class BaseAwsS3FlowLogsParquetRecordsTrigger:
             for batch in parquet.iter_batches(batch_size=1000):
                 frame = batch.to_pandas()
                 for name in nullable_integer_columns:
+                    if name not in frame.columns:
+                        continue
                     dtype = frame[name].dtype
                     # Preserve explicit pandas extension dtypes (e.g. Int64), but
                     # match full-file pandas conversion for NumPy integer columns.
