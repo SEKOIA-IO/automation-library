@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stream text VPC flow logs line by line instead of decoding the whole object in memory
 - Flush events while reading an object in the S3 list connector instead of buffering the whole object
 - Serialize SQS messages as they are received instead of keeping all parsed records in memory
+- Speed up the line splitting of S3 logs: no more repeated buffer copies and rescans
 
 ## 2026-11-02 - 1.38.5
 

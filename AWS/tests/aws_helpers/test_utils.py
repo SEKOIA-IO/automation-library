@@ -137,6 +137,32 @@ async def test_split_stream_by_separator(content, expected_chunks):
 
 
 @pytest.mark.parametrize(
+    "content, separator, chunk_size, expected_chunks",
+    [
+        # separator spanning two reads
+        (b"a\r\nb\r\nc", b"\r\n", 1, [b"a", b"b", b"c"]),
+        (b"a\r\nb\r\nc", b"\r\n", 2, [b"a", b"b", b"c"]),
+        (b"xabyabz", b"ab", 1, [b"x", b"y", b"z"]),
+        # overlapping separator
+        (b"aaa", b"aa", 1, [b"", b"a"]),
+        # no separator in the data
+        (b"abc", b"\n", 2, [b"abc"]),
+        # empty separator falls back to a space
+        (b"a b c", b"", 2, [b"a", b"b", b"c"]),
+        # separator at the very start and at the very end
+        (b"\nabc", b"\n", 3, [b"", b"abc"]),
+        (b"abc\n", b"\n", 3, [b"abc"]),
+        (b"", b"\n", 3, []),
+    ],
+)
+@pytest.mark.asyncio
+async def test_split_stream_by_separator_across_reads(content, separator, chunk_size, expected_chunks):
+    async with async_temporary_file(content) as f:
+        chunks = [chunk async for chunk in split_stream_by_separator(f, separator, chunk_size=chunk_size)]
+        assert chunks == expected_chunks
+
+
+@pytest.mark.parametrize(
     "items, start, stop, expected",
     [
         ([1, 2, 3, 4, 5], 0, None, [1, 2, 3, 4, 5]),

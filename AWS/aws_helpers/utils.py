@@ -248,6 +248,8 @@ async def split_stream_by_separator(
         separator = b" "
 
     buffer = bytearray()
+    # position from which the next search starts: what lies before it is known to hold no separator
+    search_from = 0
     while True:
         chunk = await stream.read(chunk_size)
 
@@ -258,12 +260,15 @@ async def split_stream_by_separator(
             break
 
         buffer += chunk
-        while True:
-            index = buffer.find(separator)
-            if index == -1:
-                break
-            yield bytes(buffer[:index])
-            buffer = buffer[index + len(separator) :]
+        start = 0
+        while (index := buffer.find(separator, search_from)) != -1:
+            yield bytes(buffer[start:index])
+            start = search_from = index + len(separator)
+
+        # drop the consumed records at once instead of copying the rest of the buffer for each of them
+        del buffer[:start]
+        # a separator may span two reads: only its possible beginning is searched again
+        search_from = max(0, len(buffer) - len(separator) + 1)
 
 
 async def to_seekable_file(stream: AsyncReader) -> BinaryIO:
