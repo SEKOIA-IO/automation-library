@@ -199,7 +199,41 @@ def test_next_batch_raises_on_other_detail_errors(mock_sleep, data_storage):
     trigger.push_events_to_intakes.assert_not_called()
 
 
-def test_run_logs_exception_when_batch_fails(data_storage):
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_pushes_complete_pages_before_failing(mock_sleep, data_storage):
+    trigger = _build_trigger(data_storage)
+    trigger.cursor.offset = "previous-cursor"
+    fake_client = _fake_client(
+        [([_event("evt-1"), _event("evt-2")], "cursor-1"), ([_event("evt-3"), _event("evt-4")], "cursor-2")]
+    )
+    responses = fake_client.get.side_effect
+    fake_client.get.side_effect = lambda url, params: (
+        _response(429) if params["uid"] == "uid-1-1" else responses(url, params)
+    )
+
+    with pytest.raises(requests.HTTPError):
+        _run_next_batch(trigger, fake_client)
+
+    # Only the fully read first page is forwarded; the second one will be read again.
+    pushed_events = trigger.push_events_to_intakes.call_args.kwargs["events"]
+    assert [json.loads(event)["header"]["uid"] for event in pushed_events] == ["evt-1", "evt-2"]
+    assert trigger.cursor.offset == "cursor-1"
+
+
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_drops_chat_message_context(mock_sleep, data_storage):
+    trigger = _build_trigger(data_storage)
+    event = _event("evt-1")
+    event["activity"]["data"] = {"message": "hello", "olders": [{"message": "a"}], "newers": [{"message": "b"}]}
+
+    _run_next_batch(trigger, _fake_client([([event], "cursor-1")]))
+
+    pushed_event = json.loads(trigger.push_events_to_intakes.call_args.kwargs["events"][0])
+    assert pushed_event["data"] == {"message": "hello"}
+
+
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_run_logs_exception_when_batch_fails(mock_sleep, data_storage):
     trigger = _build_trigger(data_storage)
 
     trigger.log = MagicMock()
@@ -210,3 +244,5 @@ def test_run_logs_exception_when_batch_fails(data_storage):
             trigger.run()
 
     trigger.log_exception.assert_called()
+    # Back off for one period after a failure.
+    mock_sleep.assert_called_once_with(60)
