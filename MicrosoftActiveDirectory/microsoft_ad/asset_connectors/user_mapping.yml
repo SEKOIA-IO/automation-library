@@ -174,7 +174,7 @@ mapping:
     - source: "givenName + ' ' + sn"
       target: "user.name"
       type: "string"
-      logic: "Concatenate givenName and sn; fallback to givenName only, sn only, or 'Unknown' if both absent"
+      logic: "Concatenate givenName and sn; fallback to givenName only, sn only, sAMAccountName, or 'Unknown' if all absent"
       description: "User full name built from first and last name"
 
     - source: "displayName"
@@ -230,7 +230,7 @@ mapping:
     - source: "userPrincipalName"
       target: "user.account.name"
       type: "string"
-      logic: "Direct mapping of user principal name"
+      logic: "User principal name; fallback to sAMAccountName, or 'Unknown' if both absent"
       description: "User principal name (UPN) as account name"
 
     - source: "static: LDAP Account"
