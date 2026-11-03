@@ -1,20 +1,17 @@
+import asyncio
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import AbstractAsyncContextManager
 from functools import cached_property
 from urllib.parse import urlencode, urljoin
 
-from azure.identity.aio import ClientSecretCredential
-from kiota_abstractions.base_request_configuration import RequestConfiguration
 from msgraph import GraphServiceClient
-from msgraph.generated.device_management.managed_devices.managed_devices_request_builder import (
-    ManagedDevicesRequestBuilder,
-)
 from msgraph.generated.models.managed_device import ManagedDevice
 from sekoia_automation.asset_connector import AsyncAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.device import DeviceOCSFModel
 from sekoia_automation.storage import PersistentJSON
 
+from asset_connector.intune_enrichment import fetch_managed_device, graph_client, is_transient_graph_error
 from asset_connector.mappers import DeviceMapper, MissingHostnameError
 from asset_connector.models import DefenderMachine, DefenderMachineListResponse
 from microsoftdefender_modules import MicrosoftDefenderModule
@@ -22,8 +19,6 @@ from microsoftdefender_modules.client import ApiClient
 from microsoftdefender_modules.logging import get_logger
 
 logger = get_logger(__name__)
-
-GRAPH_SCOPES: list[str] = ["https://graph.microsoft.com/.default"]
 
 
 class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
@@ -45,24 +40,22 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
 
     MACHINES_ENDPOINT: str = "/api/machines"
 
+    # Pause before fetching again after a failed cycle, capped by the connector frequency
+    RETRY_DELAY: int = 300
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("device_context.json", self._data_path)
         self._latest_time_raw: str | None = None
+        self._retry_pending = False
 
     @property
     def most_recent_date_seen(self) -> str | None:
         with self.context as cache:
             return cache.get("most_recent_date_seen")
 
-    @asynccontextmanager
-    async def _graph_client(self) -> AsyncGenerator[GraphServiceClient, None]:
-        async with ClientSecretCredential(
-            tenant_id=self.module.configuration.tenant_id,
-            client_id=self.module.configuration.app_id,
-            client_secret=self.module.configuration.app_secret,
-        ) as credential:
-            yield GraphServiceClient(credentials=credential, scopes=GRAPH_SCOPES)
+    def _graph_client(self) -> AbstractAsyncContextManager[GraphServiceClient]:
+        return graph_client(self.module.configuration)
 
     @cached_property
     def defender_client(self) -> ApiClient:
@@ -119,6 +112,7 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
                 response.raise_for_status()
             except Exception as e:
                 self.log(message=f"Error fetching machines: {e}", level="error")
+                self._retry_pending = True
                 raise
 
             data = response.json()
@@ -128,34 +122,21 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
 
         return machines
 
-    async def _fetch_managed_device_by_aad_id(
-        self, client: GraphServiceClient, aad_device_id: str
-    ) -> ManagedDevice | None:
-        """Fetch a managed device from Graph API by its Azure AD device ID."""
-        query_params = ManagedDevicesRequestBuilder.ManagedDevicesRequestBuilderGetQueryParameters(
-            filter=f"azureADDeviceId eq '{aad_device_id}'",
-            top=1,
-        )
-        request_config = RequestConfiguration(
-            query_parameters=query_params,
-        )
-
-        try:
-            response = await client.device_management.managed_devices.get(
-                request_configuration=request_config,
-            )
-            if response and response.value:
-                return response.value[0]
-        except Exception as e:
-            self.log(message=f"Error fetching managed device for aadDeviceId={aad_device_id}: {e}", level="warning")
-
-        return None
-
     async def get_assets(self) -> AsyncGenerator[DeviceOCSFModel, None]:
         """Yield OCSF DeviceOCSFModel: fetch Defender machines, enrich with Graph managed devices."""
+        if self._retry_pending:
+            # The SDK starts a new cycle at once after an error: wait, so a persistent error is not a hot loop
+            delay = min(self.RETRY_DELAY, self.frequency)
+            self.log(message=f"Previous cycle failed, fetching again in {delay}s", level="warning")
+            if await asyncio.to_thread(self._stop_event.wait, delay):
+                return
+            self._retry_pending = False
+
         most_recent_raw: str | None = None
         generated = 0
         skipped = 0
+        # A device skipped after a transient Intune lookup failure must be fetched again on the next cycle
+        keep_checkpoint = False
 
         machines = self._fetch_machines()
 
@@ -166,14 +147,23 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
 
                 # Enrich with managed device data if aadDeviceId available
                 managed_device: ManagedDevice | None = None
+                lookup_failed = False
                 if machine.aadDeviceId:
-                    managed_device = await self._fetch_managed_device_by_aad_id(client, machine.aadDeviceId)
+                    try:
+                        managed_device = await fetch_managed_device(client, machine.aadDeviceId)
+                    except Exception as e:
+                        self.log(
+                            message=f"Error fetching managed device for aadDeviceId={machine.aadDeviceId}: {e}",
+                            level="warning",
+                        )
+                        lookup_failed = is_transient_graph_error(e)
 
                 try:
                     ocsf_device = self.map_to_ocsf(machine, managed_device)
                 except MissingHostnameError as e:
                     self.log(message=f"Skipping device: {e}", level="warning")
                     skipped += 1
+                    keep_checkpoint = keep_checkpoint or lookup_failed
                     # Still move the cursor past it so it is not re-fetched and re-warned every cycle
                     if machine.lastSeen and (most_recent_raw is None or machine.lastSeen > most_recent_raw):
                         most_recent_raw = machine.lastSeen
@@ -195,7 +185,12 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
                 yield ocsf_device
 
         self.log(message=f"Device assets: {generated} generated, {skipped} skipped", level="info")
-        if self.running:
+        if keep_checkpoint:
+            self.log(
+                message="Devices skipped after a failed Intune lookup: the checkpoint is kept to fetch them again",
+                level="warning",
+            )
+        elif self.running:
             self._latest_time_raw = most_recent_raw
 
     async def update_checkpoint(self) -> None:

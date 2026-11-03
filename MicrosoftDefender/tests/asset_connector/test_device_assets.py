@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock, patch
 
 import pytest
+from kiota_abstractions.api_error import APIError
 from msgraph.generated.models.compliance_state import ComplianceState
 from msgraph.generated.models.managed_device import ManagedDevice
 from msgraph.generated.models.managed_device_owner_type import ManagedDeviceOwnerType
@@ -19,6 +20,7 @@ from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId
 from sekoia_automation.module import Module
 
 from asset_connector.device_assets import MicrosoftDefenderDeviceAssetConnector
+from asset_connector.intune_enrichment import fetch_managed_device, is_transient_graph_error
 from asset_connector.mappers import DeviceMapper, MissingHostnameError
 from asset_connector.models import DefenderMachine
 
@@ -458,59 +460,54 @@ class TestFetchMachines:
         assert "$filter" not in called_url
 
 
-class TestFetchManagedDeviceByAadId:
+def _graph_api_error(status_code):
+    error = APIError()
+    error.response_status_code = status_code
+    return error
+
+
+def _mock_graph_lookup(**get_kwargs):
+    """Helper: return a Graph client mock whose managed device lookup behaves as get_kwargs."""
+    mock_client = MagicMock()
+    mock_client.device_management.managed_devices.get = AsyncMock(**get_kwargs)
+    return mock_client
+
+
+class TestFetchManagedDevice:
     @pytest.mark.asyncio
-    async def test_found(self, connector, sample_managed_device):
-        mock_response = MagicMock()
-        mock_response.value = [sample_managed_device]
+    async def test_found(self, sample_managed_device):
+        mock_client = _mock_graph_lookup(return_value=MagicMock(value=[sample_managed_device]))
 
-        mock_managed_devices = MagicMock()
-        mock_managed_devices.get = AsyncMock(return_value=mock_response)
-
-        mock_device_management = MagicMock()
-        mock_device_management.managed_devices = mock_managed_devices
-
-        mock_client = MagicMock()
-        mock_client.device_management = mock_device_management
-
-        result = await connector._fetch_managed_device_by_aad_id(mock_client, "80fe8ff8-2624-418e-9591-41f0491218f9")
+        result = await fetch_managed_device(mock_client, "80fe8ff8-2624-418e-9591-41f0491218f9")
 
         assert result is not None
         assert result.id == sample_managed_device.id
 
     @pytest.mark.asyncio
-    async def test_not_found(self, connector):
-        mock_response = MagicMock()
-        mock_response.value = []
+    async def test_not_found(self):
+        mock_client = _mock_graph_lookup(return_value=MagicMock(value=[]))
 
-        mock_managed_devices = MagicMock()
-        mock_managed_devices.get = AsyncMock(return_value=mock_response)
-
-        mock_device_management = MagicMock()
-        mock_device_management.managed_devices = mock_managed_devices
-
-        mock_client = MagicMock()
-        mock_client.device_management = mock_device_management
-
-        result = await connector._fetch_managed_device_by_aad_id(mock_client, "nonexistent-id")
+        result = await fetch_managed_device(mock_client, "nonexistent-id")
 
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_api_error(self, connector):
-        mock_managed_devices = MagicMock()
-        mock_managed_devices.get = AsyncMock(side_effect=Exception("Graph error"))
+    async def test_api_error_raises(self):
+        # The caller must know the lookup failed, to keep its checkpoint
+        mock_client = _mock_graph_lookup(side_effect=Exception("Graph error"))
 
-        mock_device_management = MagicMock()
-        mock_device_management.managed_devices = mock_managed_devices
+        with pytest.raises(Exception, match="Graph error"):
+            await fetch_managed_device(mock_client, "some-id")
 
-        mock_client = MagicMock()
-        mock_client.device_management = mock_device_management
 
-        result = await connector._fetch_managed_device_by_aad_id(mock_client, "some-id")
+class TestIsTransientGraphError:
+    @pytest.mark.parametrize("status_code", [401, 403])
+    def test_permission_errors_are_permanent(self, status_code):
+        assert is_transient_graph_error(_graph_api_error(status_code)) is False
 
-        assert result is None
-        connector.log.assert_called()
+    @pytest.mark.parametrize("error", [_graph_api_error(429), _graph_api_error(503), TimeoutError("timeout")])
+    def test_other_errors_are_transient(self, error):
+        assert is_transient_graph_error(error) is True
 
 
 def _mock_graph_client(mock_client):
@@ -768,3 +765,87 @@ class TestGetAssetsCheckpointTracking:
 
         assert assets == []
         assert connector._latest_time_raw is None
+
+
+class TestGetAssetsIntuneLookupFailure:
+    NAMED = DefenderMachine(id="named", computerDnsName="pc01.corp.example.com", lastSeen="2024-12-01T10:00:00Z")
+    # Only Intune knows the name of this machine
+    NAMELESS = DefenderMachine(
+        id="nameless",
+        computerDnsName=None,
+        aadDeviceId="00000000-0000-0000-0000-000000000001",
+        lastSeen="2024-12-02T10:00:00Z",
+    )
+
+    async def _run_cycle(self, connector, graph_client):
+        with patch.object(connector, "_fetch_machines", return_value=[self.NAMED, self.NAMELESS]), patch.object(
+            connector, "_graph_client", _mock_graph_client(graph_client)
+        ):
+            return [asset async for asset in connector.get_assets()]
+
+    @pytest.mark.asyncio
+    async def test_transient_failure_keeps_checkpoint(self, connector):
+        connector._latest_time_raw = "2024-11-01T00:00:00Z"
+
+        assets = await self._run_cycle(connector, _mock_graph_lookup(side_effect=_graph_api_error(503)))
+
+        # The nameless device is skipped but will be fetched again next cycle
+        assert [asset.device.uid for asset in assets] == ["named"]
+        assert connector._latest_time_raw == "2024-11-01T00:00:00Z"
+
+    @pytest.mark.asyncio
+    async def test_permanent_failure_moves_checkpoint(self, connector):
+        # A missing Intune permission would block the checkpoint forever: move on
+        assets = await self._run_cycle(connector, _mock_graph_lookup(side_effect=_graph_api_error(403)))
+
+        assert [asset.device.uid for asset in assets] == ["named"]
+        assert connector._latest_time_raw == "2024-12-02T10:00:00Z"
+
+    @pytest.mark.asyncio
+    async def test_intune_name_used_after_recovery(self, connector, sample_managed_device):
+        assets = await self._run_cycle(
+            connector, _mock_graph_lookup(return_value=MagicMock(value=[sample_managed_device]))
+        )
+
+        assert [asset.device.uid for asset in assets] == ["named", "nameless"]
+        assert assets[1].device.hostname == sample_managed_device.device_name
+        assert connector._latest_time_raw == "2024-12-02T10:00:00Z"
+
+
+class TestRetryAfterFailedCycle:
+    @pytest.mark.asyncio
+    async def test_page_error_requests_a_pause(self, connector):
+        with patch.object(connector, "defender_client", create=True) as mock_client:
+            mock_client.base_url = "https://api.securitycenter.microsoft.com"
+            mock_client.get = Mock(side_effect=Exception("401 Unauthorized"))
+            with pytest.raises(Exception, match="401"):
+                async for _ in connector.get_assets():
+                    pass
+
+        assert connector._retry_pending is True
+
+    @pytest.mark.asyncio
+    async def test_next_cycle_waits_before_fetching(self, connector):
+        connector._retry_pending = True
+        machine = DefenderMachine(id="m1", computerDnsName="pc01.corp.example.com", lastSeen="2024-12-01T10:00:00Z")
+
+        with patch.object(connector._stop_event, "wait", return_value=False) as wait, patch.object(
+            connector, "_fetch_machines", return_value=[machine]
+        ), patch.object(connector, "_graph_client", _mock_graph_client(MagicMock())):
+            assets = [asset async for asset in connector.get_assets()]
+
+        wait.assert_called_once_with(min(connector.RETRY_DELAY, connector.frequency))
+        assert len(assets) == 1
+        assert connector._retry_pending is False
+
+    @pytest.mark.asyncio
+    async def test_stop_during_pause(self, connector):
+        connector._retry_pending = True
+
+        with patch.object(connector._stop_event, "wait", return_value=True), patch.object(
+            connector, "_fetch_machines"
+        ) as fetch_machines:
+            assets = [asset async for asset in connector.get_assets()]
+
+        assert assets == []
+        fetch_machines.assert_not_called()
