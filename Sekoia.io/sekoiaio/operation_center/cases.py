@@ -119,6 +119,7 @@ class CaseAPIClient(Action):
     )
     def _call_api(self, verb: str, path: str, **kwargs: Any) -> Any:
         url = urljoin(self.module.configuration["base_url"], base_url + path)
+        url = url.replace("/api/api", "/api")  # In case base_url ends with /api/
         headers = {
             "Accept": "application/json",
             "Authorization": f"Bearer {self.module.configuration['api_key']}",
@@ -208,13 +209,19 @@ class CaseAPIClient(Action):
         )
         arguments["subscribers"] = subscribers
 
-    def _apply_template(self, case: dict, template_uuid: str) -> dict:
-        """Apply a case template to a case just created, and return the case read again."""
+    def _apply_template(self, case: dict, template_uuid: str, retry_hint: str) -> dict:
+        """Apply a case template to a case just created, and return the case read again.
+
+        `retry_hint` says what running the action again would do, since it would not apply the template.
+        """
         try:
             self._call_api("post", f"case-templates/{template_uuid}/apply", json={"uuids": [case["uuid"]]})
         except (CaseActionError, requests.RequestException) as exc:
             # The case exists: return it so the playbook can still use it, but flag the run as failed
-            self.error(f"Case {case.get('short_id')} was created, but the template could not be applied: {exc}")
+            self.error(
+                f"Case {case.get('short_id')} was created, but the template could not be applied: {exc}. "
+                f"Apply the template to this case: {retry_hint}"
+            )
             return case
 
         # Read the case again to return the custom fields set by the template
@@ -262,7 +269,7 @@ class CreateCase(_CaseAction):
         if not _is_set(self._template_uuid):
             return case
 
-        return self._apply_template(case, self._template_uuid)
+        return self._apply_template(case, self._template_uuid, "running the action again would create another case")
 
 
 class UpdateCase(_CaseAction):

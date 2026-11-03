@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from sekoiaio.operation_center import CreateCase, UpdateCase
@@ -164,6 +166,7 @@ def test_create_case_returns_the_case_when_the_template_fails(requests_mock):
 
     assert results == CASE
     assert action.error_message.startswith("Case CAfake was created, but the template could not be applied")
+    assert action.error_message.endswith("running the action again would create another case")
 
 
 @pytest.mark.parametrize("template_uuid", [None, ""])
@@ -203,6 +206,17 @@ def test_update_case_applies_tag_changes_to_the_given_tags(requests_mock):
 
     assert requests_mock.call_count == 1
     assert update.last_request.json() == {"tags": ["b", "c"]}
+
+
+def test_update_case_applies_tag_changes_to_the_current_tags_when_tags_is_empty(requests_mock):
+    # The playbook node can send an empty list for `tags` left untouched: it must not wipe the tags of the case
+    action = make_action(UpdateCase)
+    requests_mock.get(f"{base_url}cases/{CASE_UUID}", json=CASE)
+    update = requests_mock.patch(f"{base_url}cases/{CASE_UUID}", json=CASE)
+
+    action.run({"uuid": CASE_UUID, "tags": [], "add_tags": ["grouped"]})
+
+    assert update.last_request.json() == {"tags": ["phishing", "ext:INC001", "grouped"]}
 
 
 def test_update_case_keeps_the_tags_without_tag_changes(requests_mock):
@@ -254,3 +268,18 @@ def test_update_case_returns_none_on_api_error(requests_mock):
 
     assert action.run({"uuid": CASE_UUID, "verdict_analysis": "analysis"}) is None
     assert action.error_message.startswith("Invalid verdict")
+
+
+@pytest.mark.parametrize(
+    "configured_url", ["https://app.sekoia.fake", "https://app.sekoia.fake/api", "https://app.sekoia.fake/api/"]
+)
+def test_name_lookups_support_a_base_url_ending_with_api(requests_mock, configured_url):
+    action = CreateCase()
+    action.module.configuration = {"base_url": configured_url, "api_key": apikey}
+    statuses = requests_mock.get(f"{base_url}custom_statuses", json=CUSTOM_STATUSES)
+    # The case itself is created by the generic call of the SDK, which builds its own URL
+    requests_mock.post(re.compile(r".*/v1/sic/cases$"), json=CASE)
+
+    action.run({"title": "title", "custom_status_uuid": "Closed"})
+
+    assert statuses.called

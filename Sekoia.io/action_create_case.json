@@ -79,7 +79,7 @@
         "in": "body"
       },
       "template_uuid": {
-        "description": "UUID of a case template to apply once the case is created (custom fields, tasks and notebooks)",
+        "description": "UUID of a case template to apply once the case is created (custom fields, tasks and notebooks). If the template fails, the action fails but still returns the created case",
         "type": "string"
       }
     },

@@ -99,7 +99,9 @@ class CreateOrUpdateCase(CaseAPIClient):
 
         case = self._call_api("post", "cases", json=body)
         if _is_set(arguments.get("template_uuid")):
-            case = self._apply_template(case, arguments["template_uuid"])
+            case = self._apply_template(
+                case, arguments["template_uuid"], "running the action again would update this case without it"
+            )
         return self._result(case, "created", None)
 
     def _update(self, case: dict, arguments: dict, priority_uuid: str | None, custom_fields: list[dict]) -> dict:
