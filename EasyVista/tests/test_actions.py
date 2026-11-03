@@ -295,6 +295,48 @@ def test_update_mapping_and_append(make_action, requests_mock, api_url):
     }
 
 
+@pytest.mark.parametrize("custom_fields", [{}, {"Description": "From custom fields"}, {"Description": ""}])
+def test_update_ignores_empty_playbook_defaults(make_action, requests_mock, api_url, custom_fields):
+    action = make_action(UpdateRequestIncident)
+    requests_mock.get(api_url + "/" + RFC, json={"END_DATE_UT": ""})
+    requests_mock.put(api_url + "/" + RFC, json={"HREF": "ticket"})
+    action.run(
+        {
+            **TICKET,
+            "description": "",
+            "urgency_id": "2",
+            "external_reference": "",
+            "asset": "",
+            "asset_serial": "",
+            "ci": "",
+            "ci_id": 0,
+            "custom_fields": custom_fields,
+        }
+    )
+    assert requests_mock.last_request.json() == {"Urgency_ID": "2", "CI_ID": 0, **custom_fields}
+    action.error.assert_not_called()
+
+
+def test_update_only_empty_playbook_defaults_is_rejected(make_action, requests_mock):
+    action = make_action(UpdateRequestIncident)
+    assert (
+        action.run(
+            {
+                **TICKET,
+                "description": "",
+                "urgency_id": "",
+                "external_reference": "",
+                "asset": "",
+                "asset_serial": "",
+                "ci": "",
+            }
+        )
+        is None
+    )
+    assert not requests_mock.called
+    action.error.assert_called_once_with("Nothing to update: provide at least one field")
+
+
 @pytest.mark.parametrize("args", [TICKET, {**TICKET, "append": True}, {**TICKET, "custom_fields": {}}])
 def test_update_empty(make_action, requests_mock, args):
     action = make_action(UpdateRequestIncident)

@@ -13,9 +13,9 @@ from easyvista.models import (
 
 
 def map_fields(model: BaseModel, mapping: dict[str, str]) -> dict:
-    """Keep custom names verbatim; explicit fields win even with different casing."""
+    """Ignore empty playbook text defaults; keep custom values verbatim, including blanks."""
     values = model.model_dump(exclude_none=True)
-    explicit = {api_name: values[name] for name, api_name in mapping.items() if name in values}
+    explicit = {api_name: values[name] for name, api_name in mapping.items() if name in values and values[name] != ""}
     explicit_names = {name.casefold() for name in explicit}
     custom = {
         key: value
