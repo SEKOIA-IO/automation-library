@@ -166,6 +166,7 @@ def test_create_case_returns_the_case_when_the_template_fails(requests_mock):
 
     assert results == CASE
     assert action.error_message.startswith("Case CAfake was created, but the template could not be applied")
+    assert action.error_message.endswith("running the action again would create another case")
 
 
 @pytest.mark.parametrize("template_uuid", [None, ""])

@@ -158,8 +158,12 @@ class CreateCase(_CaseAction):
         try:
             self._call_api("post", f"case-templates/{self._template_uuid}/apply", json={"uuids": [case["uuid"]]})
         except (CaseActionError, requests.RequestException) as exc:
-            # The case exists: return it so the playbook can still use it, but flag the run as failed
-            self.error(f"Case {case.get('short_id')} was created, but the template could not be applied: {exc}")
+            # The case exists: return it so the playbook can still use it, but flag the run as failed.
+            # Running the action again would create another case, so the message says what to do instead.
+            self.error(
+                f"Case {case.get('short_id')} was created, but the template could not be applied: {exc}. "
+                "Apply the template to this case: running the action again would create another case"
+            )
             return case
 
         # Read the case again to return the custom fields set by the template
