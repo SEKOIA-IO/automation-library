@@ -75,7 +75,10 @@ class BaseAwsS3FlowLogsParquetRecordsTrigger:
 
         # Keep pandas' record conversion semantics without materializing the entire
         # decompressed file and its Python dictionaries at the same time.
-        with io.BytesIO(content) as reader, pyarrow.parquet.ParquetFile(reader) as parquet:
+        with (
+            io.BytesIO(content) as reader,
+            pyarrow.parquet.ParquetFile(reader) as parquet,
+        ):
             nullable_integer_columns = _nullable_integer_columns(parquet)
             for batch in parquet.iter_batches(batch_size=1000):
                 frame = batch.to_pandas()
@@ -99,6 +102,8 @@ class BaseAwsS3FlowLogsParquetRecordsTrigger:
 
 
 class AwsS3FlowLogsParquetRecordsTrigger(
-    BaseAwsS3FlowLogsParquetRecordsTrigger, AbstractAwsS3QueuedConnector, AwsAccountProvider
+    BaseAwsS3FlowLogsParquetRecordsTrigger,
+    AbstractAwsS3QueuedConnector,
+    AwsAccountProvider,
 ):
     """AWS S3 Flow Logs Parquet Records Trigger connector."""
