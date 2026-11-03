@@ -1,5 +1,6 @@
 from aws_helpers.utils.codecs import normalize_s3_key, unescape_string
 from aws_helpers.utils.compress import is_gzip_compressed, get_content
+from aws_helpers.utils.flowlogs import check_all_ips_are_private
 from aws_helpers.utils.parquet import is_parquet_content
 from aws_helpers.utils.stream import (
     AsyncReader,
@@ -16,6 +17,7 @@ __all__ = [
     "is_gzip_compressed",
     "get_content",
     "is_parquet_content",
+    "check_all_ips_are_private",
     "AsyncReader",
     "PeekableAsyncReader",
     "async_gzip_open",

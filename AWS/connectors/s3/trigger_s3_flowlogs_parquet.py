@@ -1,7 +1,6 @@
 """Contains AwsS3ParquetRecordsTrigger."""
 
 import io
-import ipaddress
 from collections.abc import AsyncGenerator, Sequence
 from typing import Any
 
@@ -9,7 +8,7 @@ import orjson
 import pandas
 import pyarrow.parquet
 
-from aws_helpers.utils import AsyncReader
+from aws_helpers.utils import AsyncReader, check_all_ips_are_private
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from connectors.s3.provider import AwsAccountProvider
@@ -59,15 +58,7 @@ class BaseAwsS3FlowLogsParquetRecordsTrigger:
         Returns:
             bool:
         """
-        ips = []
-        for name in names:
-            if name in record:
-                try:
-                    ips.append(ipaddress.ip_address(record[name]))
-                except ValueError:  # if substring is not IP then just omit it
-                    pass
-
-        return all([ip.is_private for ip in ips])
+        return check_all_ips_are_private(record[name] for name in names if name in record)
 
     async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """

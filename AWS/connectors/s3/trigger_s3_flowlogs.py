@@ -1,11 +1,10 @@
 """Contains AwsS3FlowLogsTrigger."""
 
-import ipaddress
 from collections.abc import AsyncGenerator, Generator
 from itertools import islice
 from typing import Any, cast
 
-from aws_helpers.utils import AsyncReader, is_parquet_content
+from aws_helpers.utils import AsyncReader, check_all_ips_are_private, is_parquet_content
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import (
     AbstractAwsS3QueuedConnector,
@@ -49,14 +48,7 @@ class BaseAwsS3FlowLogsTrigger:
         Returns:
             bool:
         """
-        ips = []
-        for ip in input_str.split(" "):
-            try:
-                ips.append(ipaddress.ip_address(ip))
-            except ValueError:  # if substring is not IP then just omit it
-                pass
-
-        return all([ip.is_private for ip in ips])
+        return check_all_ips_are_private(input_str.split(" "))
 
     def _read_content(self, content: bytes) -> Generator[str, None, None]:
         """
