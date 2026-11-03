@@ -196,6 +196,7 @@ ListsCases = type(
             "match[custom_status]",
             "match[verdict]",
             "match[custom_field]",
+            "match[type]",
             "sort",
             "direction",
         ],

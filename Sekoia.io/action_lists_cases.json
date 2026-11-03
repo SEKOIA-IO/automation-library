@@ -76,6 +76,17 @@
         "type": "string",
         "description": "Custom field values, as `field_uuid:value` (e.g. 123e4567-e89b-12d3-a456-426614174000:INC0012345), or a field UUID alone to match the cases where the field is set. Separated by commas"
       },
+      "match[type]": {
+        "default": "manual",
+        "enum": [
+          "manual",
+          "automatic",
+          "manual,automatic"
+        ],
+        "in": "query",
+        "type": "string",
+        "description": "Creation mode of the cases to return: manual, automatic, or manual,automatic for both"
+      },
       "limit": {
         "in": "query",
         "type": "integer",

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-10-29 - 2.82.0
+## 2026-11-03 - 2.83.0
 
 ### Added
 
@@ -22,6 +22,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Case Created: output the assignees of the case, read from its subscribers, instead of an empty list
 - Create case and Edit case: default the subscription type to `assignee`, the only type the API accepts
 - Search Cases: remove `has_more` from the results, the API does not return it
+
+## 2026-11-03 - 2.82.0
+
+### Added
+
+- `Execute custom agent`: adding a new action to allow execute an agent directly inside a playbook
+
+
+## 2026-10-28 - 2.81.0
+
+### Added
+
+- Alert Created Trigger: add `api` property support for `rule_filter` argument.
+- Update Alert Status: Add `api` property support for `status` argument.
+
+
+## 2026-11-02 - 2.80.0
+
+### Added
+
+- Search Cases: add the `match[type]` argument to also return automatically created cases
 
 ## 2026-10-22 - 2.79.1
 
