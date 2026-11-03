@@ -27,3 +27,17 @@ def check_all_ips_are_private(candidates: Iterable[Any]) -> bool:
             return False
 
     return True
+
+
+def filter_internal_traffic(filter: bool, candidates: Iterable[Any]) -> bool:
+    """
+    Filter internal traffic based on the configuration.
+
+    Args:
+        filter: whether to filter internal traffic
+        candidates: values that may be IP addresses
+
+    Returns:
+        bool: True if the record should be filtered out
+    """
+    return filter and check_all_ips_are_private(candidates)
