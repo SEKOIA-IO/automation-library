@@ -1,12 +1,13 @@
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Generator
 from datetime import datetime, timedelta
 from functools import cached_property
-from typing import Generator
+from typing import Literal
 
 import orjson
 import requests
-from pydantic.v1 import Field
+from pydantic import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from .client import TrendMicroVisionApiClient
@@ -22,12 +23,12 @@ class VisionOneFetchError(Exception):
 
 class TrendMicroVisionOneBaseConfiguration(DefaultConnectorConfiguration):
     base_url: str = Field(..., description="Base URL")
-    api_key: str = Field(..., description="API key", secret=True)
+    api_key: str = Field(..., description="API key", json_schema_extra={"secret": True})
     frequency: int = Field(60, description="Batch frequency in seconds", ge=1)
 
 
 class TrendMicroVisionOneBaseConnector(Connector, ABC):
-    configuration: TrendMicroVisionOneBaseConfiguration
+    configuration: TrendMicroVisionOneBaseConfiguration  # type: ignore[override]
 
     CONNECTOR_METRICS_LABEL: str
     CONNECTOR_TITLE: str
@@ -48,7 +49,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
             f"Request on Trend Micro Vision One API to fetch events failed with status "
             f"{response.status_code} - {response.reason}"
         )
-        level = "error"
+        level: Literal["error", "critical"] = "error"
         if response.status_code in [401, 403]:
             self._auth_errors += 1
             if self._auth_errors >= self.AUTH_ERROR_THRESHOLD:
@@ -84,7 +85,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
         return (time + timedelta(seconds=1)).replace(microsecond=0)
 
     @abstractmethod
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list]:
         pass
 
     def next_batch(self):
