@@ -41,14 +41,14 @@
         }
       },
       "add_tags": {
-        "description": "Tags to add to the current tags of the case",
+        "description": "Tags to add. They apply to `tags` when it is not empty, otherwise to the current tags of the case",
         "type": "array",
         "items": {
           "type": "string"
         }
       },
       "remove_tags": {
-        "description": "Tags to remove from the current tags of the case",
+        "description": "Tags to remove. They apply to `tags` when it is not empty, otherwise to the current tags of the case",
         "type": "array",
         "items": {
           "type": "string"

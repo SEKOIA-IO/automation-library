@@ -208,6 +208,17 @@ def test_update_case_applies_tag_changes_to_the_given_tags(requests_mock):
     assert update.last_request.json() == {"tags": ["b", "c"]}
 
 
+def test_update_case_applies_tag_changes_to_the_current_tags_when_tags_is_empty(requests_mock):
+    # The playbook node can send an empty list for `tags` left untouched: it must not wipe the tags of the case
+    action = make_action(UpdateCase)
+    requests_mock.get(f"{base_url}cases/{CASE_UUID}", json=CASE)
+    update = requests_mock.patch(f"{base_url}cases/{CASE_UUID}", json=CASE)
+
+    action.run({"uuid": CASE_UUID, "tags": [], "add_tags": ["grouped"]})
+
+    assert update.last_request.json() == {"tags": ["phishing", "ext:INC001", "grouped"]}
+
+
 def test_update_case_keeps_the_tags_without_tag_changes(requests_mock):
     action = make_action(UpdateCase)
     update = requests_mock.patch(f"{base_url}cases/{CASE_UUID}", json=CASE)
