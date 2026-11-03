@@ -17,6 +17,7 @@ AGENT_RUNS_URL = "https://fake.url/api/v1/generative/agent-runs"
 PLAYBOOK_UUID = str(uuid4())
 PLAYBOOK_RUN_UUID = str(uuid4())
 NODE_RUN_UUID = str(uuid4())
+PLAYBOOK_COMMUNITY_UUID = str(uuid4())
 
 SAMPLE_AGENT: dict = {
     "uuid": str(uuid4()),
@@ -34,7 +35,7 @@ AGENT_RUN_UUID = str(uuid4())
 def make_agent_run(status: str, **extra) -> dict:
     return {
         "uuid": AGENT_RUN_UUID,
-        "community_uuid": SAMPLE_AGENT["community_uuid"],
+        "community_uuid": PLAYBOOK_COMMUNITY_UUID,
         "agent_uuid": SAMPLE_AGENT["uuid"],
         "run_name": None,
         "status": status,
@@ -47,11 +48,14 @@ def make_agent_run(status: str, **extra) -> dict:
     }
 
 
-def make_action() -> ExecuteCustomAgent:
+def make_action(
+    community_uuid: str | None = PLAYBOOK_COMMUNITY_UUID, playbook_run_uuid: str | None = PLAYBOOK_RUN_UUID
+) -> ExecuteCustomAgent:
     action = ExecuteCustomAgent()
     action.module.configuration = {"base_url": BASE_URL, "api_key": API_KEY}
+    action.module._community_uuid = community_uuid
     action.module._playbook_uuid = PLAYBOOK_UUID
-    action.module._playbook_run_uuid = PLAYBOOK_RUN_UUID
+    action.module._playbook_run_uuid = playbook_run_uuid
     action.module._node_run_uuid = NODE_RUN_UUID
     return action
 
@@ -76,7 +80,7 @@ def test_execute_custom_agent_success(requests_mock):
 
     assert result["uuid"] == AGENT_RUN_UUID
     assert result["agent_uuid"] == SAMPLE_AGENT["uuid"]
-    assert result["community_uuid"] == SAMPLE_AGENT["community_uuid"]
+    assert result["community_uuid"] == PLAYBOOK_COMMUNITY_UUID
     assert result["status"] == "completed"
     assert result["run_name"] is None
     assert result["duration_seconds"] == 12.5
@@ -97,7 +101,7 @@ def test_execute_custom_agent_sends_api_key(requests_mock):
 
 
 def test_execute_custom_agent_run_body(requests_mock):
-    """The run is created from the agent definition and scoped to the current playbook run."""
+    """The run starts the catalog agent by its UUID and is scoped to the current playbook run."""
     action = make_action()
     mock_agent_and_run_creation(requests_mock)
     requests_mock.get(f"{AGENT_RUNS_URL}/{AGENT_RUN_UUID}", json=make_agent_run("completed"))
@@ -108,15 +112,94 @@ def test_execute_custom_agent_run_body(requests_mock):
     create_request = next(r for r in requests_mock.request_history if r.method == "POST")
     assert create_request.url == AGENT_RUNS_URL
     body = create_request.json()
-    assert body["community_uuid"] == SAMPLE_AGENT["community_uuid"]
+    assert body["community_uuid"] == PLAYBOOK_COMMUNITY_UUID
     assert body["scope_type"] == "playbook_run"
     assert body["scope_uuid"] == PLAYBOOK_RUN_UUID
-    assert body["agent"] == {
-        "key": f"{PLAYBOOK_UUID}:{PLAYBOOK_RUN_UUID}+{NODE_RUN_UUID}",
-        "instructions": SAMPLE_AGENT["instructions"],
-        "tools": SAMPLE_AGENT["tools"],
-        "skill_uuids": SAMPLE_AGENT["skill_uuids"],
-        "response_format": SAMPLE_AGENT["response_format"],
+    assert body["agent_uuid"] == SAMPLE_AGENT["uuid"]
+    assert "agent" not in body
+
+
+def test_execute_custom_agent_community_falls_back_to_agent(requests_mock):
+    """Without the community of the playbook, the run is for the community owning the agent."""
+    action = make_action(community_uuid=None)
+    mock_agent_and_run_creation(requests_mock)
+    requests_mock.get(f"{AGENT_RUNS_URL}/{AGENT_RUN_UUID}", json=make_agent_run("completed"))
+
+    with (
+        patch("sekoiaio.elevate.execute_custom_agent.sleep"),
+        patch.object(action.module, "load_config", return_value=None),
+    ):
+        action.run({"agent_uuid": SAMPLE_AGENT["uuid"]})
+
+    create_request = next(r for r in requests_mock.request_history if r.method == "POST")
+    assert create_request.json()["community_uuid"] == SAMPLE_AGENT["community_uuid"]
+
+
+def test_execute_custom_agent_outside_playbook_run(requests_mock):
+    """Without a playbook run, e.g. when the action is tested manually, the run is scoped to the community."""
+    action = make_action(playbook_run_uuid=None)
+    mock_agent_and_run_creation(requests_mock)
+    requests_mock.get(f"{AGENT_RUNS_URL}/{AGENT_RUN_UUID}", json=make_agent_run("completed"))
+
+    with patch("sekoiaio.elevate.execute_custom_agent.sleep"):
+        result = action.run({"agent_uuid": SAMPLE_AGENT["uuid"]})
+
+    assert result["status"] == "completed"
+    create_request = next(r for r in requests_mock.request_history if r.method == "POST")
+    body = create_request.json()
+    assert body["scope_type"] == "playbook_run"
+    assert body["scope_uuid"] == f"playbook-run-{PLAYBOOK_COMMUNITY_UUID}"
+
+
+@pytest.mark.parametrize(
+    "arguments,expected",
+    [
+        ({}, {}),
+        ({"initial_state": None}, {}),
+        ({"initial_state": ""}, {}),
+        ({"initial_state": "Investigate this alert"}, "Investigate this alert"),
+        ({"initial_state": {"alert": {"short_id": "ALXyz"}}}, {"alert": {"short_id": "ALXyz"}}),
+    ],
+)
+def test_execute_custom_agent_initial_state(requests_mock, arguments, expected):
+    """The initial state is sent as given, a message or an object; without one, the agent starts from an empty state."""
+    action = make_action()
+    mock_agent_and_run_creation(requests_mock)
+    requests_mock.get(f"{AGENT_RUNS_URL}/{AGENT_RUN_UUID}", json=make_agent_run("completed"))
+
+    with patch("sekoiaio.elevate.execute_custom_agent.sleep"):
+        action.run({"agent_uuid": SAMPLE_AGENT["uuid"], **arguments})
+
+    create_request = next(r for r in requests_mock.request_history if r.method == "POST")
+    assert create_request.json()["initial_state"] == expected
+
+
+@pytest.mark.parametrize("missing", ["null", "absent"])
+def test_execute_custom_agent_without_optional_fields(requests_mock, missing):
+    """An agent may leave instructions, tools, skills and response format unset: the run is still created."""
+    agent = dict(SAMPLE_AGENT)
+    for field in ("instructions", "tools", "skill_uuids", "response_format"):
+        if missing == "null":
+            agent[field] = None
+        else:
+            del agent[field]
+
+    action = make_action()
+    requests_mock.get(f"{AGENTS_URL}/{SAMPLE_AGENT['uuid']}", json=agent)
+    requests_mock.post(AGENT_RUNS_URL, json={"uuid": AGENT_RUN_UUID})
+    requests_mock.get(f"{AGENT_RUNS_URL}/{AGENT_RUN_UUID}", json=make_agent_run("completed"))
+
+    with patch("sekoiaio.elevate.execute_custom_agent.sleep"):
+        result = action.run({"agent_uuid": SAMPLE_AGENT["uuid"]})
+
+    assert result["status"] == "completed"
+    create_request = next(r for r in requests_mock.request_history if r.method == "POST")
+    assert create_request.json() == {
+        "agent_uuid": SAMPLE_AGENT["uuid"],
+        "community_uuid": PLAYBOOK_COMMUNITY_UUID,
+        "initial_state": {},
+        "scope_type": "playbook_run",
+        "scope_uuid": PLAYBOOK_RUN_UUID,
     }
 
 
