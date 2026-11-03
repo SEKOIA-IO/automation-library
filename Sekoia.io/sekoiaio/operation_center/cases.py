@@ -13,10 +13,11 @@ from urllib.parse import urljoin
 from uuid import UUID
 
 import requests
-from sekoia_automation.action import GenericAPIAction
+from sekoia_automation.action import Action, GenericAPIAction
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from sekoiaio.operation_center.constants import base_url
+from sekoiaio.utils import user_agent
 
 ASSIGNEE = "assignee"
 
@@ -44,6 +45,50 @@ def _is_uuid(value: str) -> bool:
         return False
 
 
+def _custom_field_value(definition: dict, value: Any) -> Any:
+    """Convert a value to the type of the custom field, with the options of the select fields given by label."""
+    name, field_type = definition.get("name"), definition.get("type")
+    if value is None:
+        return None
+
+    if field_type in ("single_select", "multi_select"):
+        options = {str(option["uuid"]): str(option["value"]) for option in definition.get("options") or []}
+        by_label = {label.casefold(): option_uuid for option_uuid, label in options.items()}
+        selected = []
+        for label in value if isinstance(value, list) else [value]:
+            label = str(label).strip()
+            if label in options:
+                selected.append(label)
+            elif label.casefold() in by_label:
+                selected.append(by_label[label.casefold()])
+            else:
+                valid = ", ".join(sorted(options.values())) or "none"
+                raise CaseActionError(
+                    f"Unknown option '{label}' for the custom field '{name}'. Valid options: {valid}"
+                )
+        if field_type == "single_select" and len(selected) != 1:
+            raise CaseActionError(f"The custom field '{name}' takes a single option")
+        return selected
+
+    if field_type == "integer":
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+        if isinstance(value, str) and value.strip().lstrip("-").isdigit():
+            return int(value)
+        raise CaseActionError(f"The custom field '{name}' expects an integer, not '{value}'")
+
+    if field_type == "boolean":
+        if isinstance(value, bool):
+            return value
+        if str(value).strip().lower() in ("true", "false"):
+            return str(value).strip().lower() == "true"
+        raise CaseActionError(f"The custom field '{name}' expects true or false, not '{value}'")
+
+    if field_type == "text":
+        return str(value)
+    return value
+
+
 def _error_detail(response: requests.Response) -> str:
     try:
         content = response.json()
@@ -54,7 +99,9 @@ def _error_detail(response: requests.Response) -> str:
     return str(content)
 
 
-class _CaseAction(GenericAPIAction):
+class CaseAPIClient(Action):
+    """Calls to the Cases API shared by the case actions."""
+
     timeout = 60
 
     # argument -> (listing route, query parameters, name of the object in error messages)
@@ -73,7 +120,12 @@ class _CaseAction(GenericAPIAction):
     def _call_api(self, verb: str, path: str, **kwargs: Any) -> Any:
         url = urljoin(self.module.configuration["base_url"], base_url + path)
         url = url.replace("/api/api", "/api")  # In case base_url ends with /api/
-        response = requests.request(verb, url, headers=self.get_headers(), timeout=self.timeout, **kwargs)
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {self.module.configuration['api_key']}",
+            "User-Agent": user_agent(),
+        }
+        response = requests.request(verb, url, headers=headers, timeout=self.timeout, **kwargs)
         if 400 <= response.status_code < 500:
             raise CaseActionError(
                 f"{verb.upper()} {base_url}{path} failed with status {response.status_code}: {_error_detail(response)}"
@@ -99,6 +151,44 @@ class _CaseAction(GenericAPIAction):
 
             arguments[argument] = str(matches[0]["uuid"])
 
+    def _list_custom_fields(self) -> list[dict]:
+        """Definitions of the custom fields, with their name, type and options."""
+        definitions: list[dict] = []
+        while True:
+            page = self._call_api("get", "custom-fields", params={"limit": 100, "offset": len(definitions)}) or {}
+            items = page.get("items") or []
+            definitions.extend(items)
+            if not items or len(definitions) >= page.get("total", 0):
+                return definitions
+
+    def _resolve_custom_fields(self, custom_fields: dict[str, Any]) -> list[dict[str, Any]]:
+        """Turn custom fields given as `{name: value}` into the `[{uuid, value}]` the API expects.
+
+        A field can also be given by its UUID. The options of the select fields are given by their label, and
+        integers and booleans can come as text, as playbooks often send them.
+        """
+        if not custom_fields:
+            return []
+
+        definitions = self._list_custom_fields()
+        resolved = []
+        for key, value in custom_fields.items():
+            matches = [
+                definition
+                for definition in definitions
+                if str(definition.get("uuid")) == key
+                or str(definition.get("name", "")).casefold() == key.strip().casefold()
+            ]
+            if len(matches) > 1:
+                candidates = ", ".join(f"{item['name']} ({item['uuid']})" for item in matches)
+                raise CaseActionError(f"Several custom fields are named '{key}': {candidates}. Use the UUID")
+            if not matches:
+                valid = ", ".join(sorted(str(item.get("name")) for item in definitions)) or "none"
+                raise CaseActionError(f"Unknown custom field '{key}'. Valid names: {valid}")
+
+            resolved.append({"uuid": str(matches[0]["uuid"]), "value": _custom_field_value(matches[0], value)})
+        return resolved
+
     @staticmethod
     def _complete_subscribers(arguments: dict, assignees: list[str] | None = None) -> None:
         """Default the subscription type, which can only be `assignee`, and append the assignees."""
@@ -119,6 +209,30 @@ class _CaseAction(GenericAPIAction):
         )
         arguments["subscribers"] = subscribers
 
+    def _apply_template(self, case: dict, template_uuid: str, retry_hint: str) -> dict:
+        """Apply a case template to a case just created, and return the case read again.
+
+        `retry_hint` says what running the action again would do, since it would not apply the template.
+        """
+        try:
+            self._call_api("post", f"case-templates/{template_uuid}/apply", json={"uuids": [case["uuid"]]})
+        except (CaseActionError, requests.RequestException) as exc:
+            # The case exists: return it so the playbook can still use it, but flag the run as failed
+            self.error(
+                f"Case {case.get('short_id')} was created, but the template could not be applied: {exc}. "
+                f"Apply the template to this case: {retry_hint}"
+            )
+            return case
+
+        # Read the case again to return the custom fields set by the template
+        try:
+            return self._call_api("get", f"cases/{case['uuid']}")
+        except (CaseActionError, requests.RequestException) as exc:
+            self.log(f"Template applied, but the case could not be read again: {exc}", level="warning")
+            return case
+
+
+class _CaseAction(CaseAPIClient, GenericAPIAction):
     def _prepare(self, arguments: dict) -> None:
         """Rewrite the arguments in place before they are sent to the API."""
         self._resolve_named_references(arguments)
@@ -155,23 +269,7 @@ class CreateCase(_CaseAction):
         if not _is_set(self._template_uuid):
             return case
 
-        try:
-            self._call_api("post", f"case-templates/{self._template_uuid}/apply", json={"uuids": [case["uuid"]]})
-        except (CaseActionError, requests.RequestException) as exc:
-            # The case exists: return it so the playbook can still use it, but flag the run as failed.
-            # Running the action again would create another case, so the message says what to do instead.
-            self.error(
-                f"Case {case.get('short_id')} was created, but the template could not be applied: {exc}. "
-                "Apply the template to this case: running the action again would create another case"
-            )
-            return case
-
-        # Read the case again to return the custom fields set by the template
-        try:
-            return self._call_api("get", f"cases/{case['uuid']}")
-        except (CaseActionError, requests.RequestException) as exc:
-            self.log(f"Template applied, but the case could not be read again: {exc}", level="warning")
-            return case
+        return self._apply_template(case, self._template_uuid, "running the action again would create another case")
 
 
 class UpdateCase(_CaseAction):

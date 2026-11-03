@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-03 - 2.85.0
+
+### Added
+
+- Create or update case: new action that finds the case of an external incident, tagged `ext:<source>:<external_id>`, and updates it, or creates the case with custom fields given by name. An open case only gets a higher priority, the new tags, its empty custom fields filled and the comment. A closed case only gets the comment
+
 ## 2026-11-03 - 2.83.0
 
 ### Added

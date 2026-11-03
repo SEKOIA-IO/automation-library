@@ -1,0 +1,107 @@
+{
+  "uuid": "1c39734f-9c7e-4ce3-af36-da369a4384fb",
+  "name": "Create or update case",
+  "docker_parameters": "create_or_update_case",
+  "description": "Find the case of an external incident and update it, or create the case. The incident is identified by the tag ext:<source>:<external_id> on its case. An open case is updated: the priority can only go up, the tags are added, the empty custom fields are filled and the comment is posted, its status never changes. A closed case only gets the comment",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "create_or_update_case",
+    "properties": {
+      "source": {
+        "type": "string",
+        "description": "Tool the incident comes from (e.g. sentinel, servicenow). Part of the incident tag ext:<source>:<external_id>"
+      },
+      "external_id": {
+        "type": "string",
+        "description": "Identifier of the incident in its source. Part of the incident tag ext:<source>:<external_id>"
+      },
+      "title": {
+        "type": "string",
+        "description": "Title of the case, when it is created"
+      },
+      "description": {
+        "type": "string",
+        "description": "Description of the case, when it is created"
+      },
+      "priority": {
+        "type": "string",
+        "description": "Custom priority of the case: its name (e.g. High) or its UUID. On an existing case, only a higher priority is applied"
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Tags to add to the case"
+      },
+      "custom_fields": {
+        "type": "object",
+        "description": "Custom fields of the case, as {\"Field name\": value}. Options of the select fields are given by their label. On an existing case, only the empty fields are filled"
+      },
+      "assignees": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "UUIDs of the avatars to assign to the case, when it is created"
+      },
+      "template_uuid": {
+        "type": "string",
+        "description": "UUID of a case template to apply, when the case is created"
+      },
+      "comment": {
+        "type": "string",
+        "description": "Comment to post on an existing case, open or closed"
+      },
+      "community_uuid": {
+        "type": "string",
+        "description": "Community of the case. The case is only searched in this community"
+      }
+    },
+    "required": [
+      "source",
+      "external_id",
+      "title"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "case_uuid": {
+        "type": "string",
+        "description": "UUID of the case"
+      },
+      "short_id": {
+        "type": "string",
+        "description": "Short ID of the case"
+      },
+      "outcome": {
+        "type": "string",
+        "enum": [
+          "created",
+          "updated"
+        ],
+        "description": "created: a new case was created. updated: the case of the incident was found and updated, or commented when closed"
+      },
+      "matched_by": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "How the case was found: external_id. Null when the case was created"
+      },
+      "case": {
+        "type": "object",
+        "description": "The case, as returned by Get case"
+      }
+    },
+    "required": [
+      "case_uuid",
+      "short_id",
+      "outcome"
+    ]
+  },
+  "slug": "create_or_update_case"
+}
