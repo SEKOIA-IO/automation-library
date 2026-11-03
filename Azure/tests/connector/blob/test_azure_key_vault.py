@@ -1,6 +1,6 @@
 """Tests related to connector."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from gzip import GzipFile
 from tempfile import NamedTemporaryFile
 from unittest.mock import AsyncMock, MagicMock
@@ -74,7 +74,7 @@ async def test_azure_key_vault_connector_last_event_date(connector):
     with connector.context as cache:
         cache["last_event_date"] = None
 
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
     one_hour_ago = current_date - timedelta(hours=1)
 
     assert connector.last_event_date == one_hour_ago
@@ -100,7 +100,7 @@ async def test_azure_key_vault_get_azure_blob_data_1(connector: AzureKeyVaultCon
         session_faker: Faker
         blob_content: bytes
     """
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
 
     # Try to put last event date higher to be 1 day ahead of the log file date
     with connector.context as cache:
@@ -146,7 +146,7 @@ async def test_azure_key_vault_get_azure_blob_data_2(
         symphony_storage: str
         blob_content: bytes
     """
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
 
     # Try to put last event date higher to be 1 day ahead of the log file date
     with connector.context as cache:
@@ -196,7 +196,7 @@ async def test_azure_key_vault_get_azure_blob_data_3(
         symphony_storage: str
         blob_content: bytes
     """
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
 
     # Try to put last event date higher to be 1 day ahead of the log file date
     with connector.context as cache:
@@ -246,7 +246,7 @@ async def test_azure_key_vault_get_azure_blob_data_4(
         symphony_storage: str
         blob_content_simple_format: bytes
     """
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
 
     # Try to put last event date higher to be 1 day ahead of the log file date
     with connector.context as cache:
@@ -294,7 +294,7 @@ async def test_azure_key_vault_get_most_recent_blob(
         symphony_storage: str
         blob_content: bytes
     """
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
 
     # Try to put last event date higher to be 1 day ahead of the log file date
     with connector.context as cache:

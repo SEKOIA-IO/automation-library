@@ -13,6 +13,7 @@ from sekoia_automation import constants
 from sekoia_automation.module import Module
 
 from connectors.azure_eventhub import AzureEventsHubConfiguration, AzureEventsHubTrigger, Client
+from connectors.metrics import SKIPPED_RECORDS
 
 
 @pytest.mark.skipif(
@@ -142,7 +143,7 @@ async def test_forward_events_logs_skipped_records_once_per_batch(trigger):
 @pytest.mark.asyncio
 async def test_client_receive_batch():
     client = Client(
-        AzureEventsHubConfiguration.parse_obj(
+        AzureEventsHubConfiguration.model_validate(
             {
                 "chunk_size": 1,
                 "hub_connection_string": "hub_connection_string",
@@ -166,7 +167,7 @@ async def test_client_receive_batch():
 @pytest.mark.asyncio
 async def test_client_receive_batch_with_error():
     client = Client(
-        AzureEventsHubConfiguration.parse_obj(
+        AzureEventsHubConfiguration.model_validate(
             {
                 "chunk_size": 1,
                 "hub_connection_string": "hub_connection_string",
@@ -195,7 +196,7 @@ async def test_client_receive_batch_with_error():
 @pytest.mark.asyncio
 async def test_client_close():
     client = Client(
-        AzureEventsHubConfiguration.parse_obj(
+        AzureEventsHubConfiguration.model_validate(
             {
                 "chunk_size": 1,
                 "hub_connection_string": "hub_connection_string",
@@ -262,7 +263,7 @@ def create_and_run_connector(data_storage, is_quick: bool = True) -> None:
     if not is_quick:
         connector = AzureEventsHubTestTriggerSlow(module=module, data_path=data_storage)
 
-    connector.configuration = AzureEventsHubConfiguration.parse_obj(
+    connector.configuration = AzureEventsHubConfiguration.model_validate(
         {
             "chunk_size": 1,
             "hub_connection_string": "hub_connection_string",
@@ -353,3 +354,37 @@ def test_get_records_from_message_str():
     # assert
     assert len(records[0]) == 1
     assert records[0][0] == "teststring"
+
+
+@pytest.mark.asyncio
+async def test_forward_events_increments_skipped_records_metric(trigger):
+    # arrange
+    events: list[str] = [
+        '[{"name": "record1", "category": "test1"}, {"name": "record2", "category": "test3"}]',
+        '[{"name": "record3", "category": "test3"}, {"name": "record5"}]',
+    ]
+    messages: list[EventData] = [EventData(event) for event in events]
+    trigger.configuration.categories = ["test1"]
+    counter = SKIPPED_RECORDS.labels(intake_key=trigger.configuration.intake_key)
+    before = counter._value.get()
+
+    # act
+    await trigger.forward_events(messages)
+
+    # assert
+    assert counter._value.get() - before == 3
+
+
+@pytest.mark.asyncio
+async def test_forward_events_does_not_count_skipped_records_without_filter(trigger):
+    # arrange
+    messages: list[EventData] = [EventData('[{"name": "record1", "category": "test1"}]')]
+    trigger.configuration.categories = []
+    counter = SKIPPED_RECORDS.labels(intake_key=trigger.configuration.intake_key)
+    before = counter._value.get()
+
+    # act
+    await trigger.forward_events(messages)
+
+    # assert
+    assert counter._value.get() == before

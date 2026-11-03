@@ -49,10 +49,7 @@ async def test_connection_string(config):
         config: AzureBlobStorageConfig
     """
     assert config.get_connection_string() == (
-        "DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net".format(
-            config.account_name,
-            config.account_key,
-        )
+        f"DefaultEndpointsProtocol=https;AccountName={config.account_name};AccountKey={config.account_key};EndpointSuffix=core.windows.net"
     )
 
 
