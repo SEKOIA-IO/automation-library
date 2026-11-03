@@ -392,3 +392,47 @@ def test_long_next_batch_should_not_sleep(trigger, message_1):
 
         assert trigger.push_events_to_intakes.call_count == 1
         assert mock_time.sleep.call_count == 0
+
+
+def log_levels(trigger):
+    return [c.kwargs["level"] for c in trigger.log.call_args_list if c.args and "failed with status" in c.args[0]]
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_auth_error_is_critical_only_after_threshold(trigger, status):
+    url = "https://api.xdr.trendmicro.com/v3.0/workbench/alerts"
+    with patch("trendmicro_modules.trigger_vision_one_base.time") as mock_time, requests_mock.Mocker() as m:
+        mock_time.time.return_value = 0
+        m.register_uri("GET", url, status_code=status)
+        for _ in range(trigger.AUTH_ERROR_THRESHOLD):
+            trigger.next_batch()
+
+    assert log_levels(trigger) == ["error"] * (trigger.AUTH_ERROR_THRESHOLD - 1) + ["critical"]
+    assert trigger.push_events_to_intakes.call_count == 0
+
+
+def test_auth_error_counter_reset_on_success(trigger, message_1):
+    url = "https://api.xdr.trendmicro.com/v3.0/workbench/alerts"
+    trigger.cursor.offset = datetime(year=2024, month=11, day=1, tzinfo=timezone.utc)
+    with patch("trendmicro_modules.trigger_vision_one_base.time") as mock_time, requests_mock.Mocker() as m:
+        mock_time.time.return_value = 0
+        m.register_uri(
+            "GET",
+            url,
+            [{"status_code": 401}] * (trigger.AUTH_ERROR_THRESHOLD - 1)
+            + [{"json": message_1}]
+            + [{"status_code": 401}],
+        )
+        for _ in range(trigger.AUTH_ERROR_THRESHOLD + 1):
+            trigger.next_batch()
+
+    assert "critical" not in log_levels(trigger)
+    assert trigger.push_events_to_intakes.call_count == 1
+
+
+def test_client_retries_auth_errors():
+    from trendmicro_modules.client import TrendMicroVisionApiClient
+
+    retry = TrendMicroVisionApiClient(api_key="k").get_adapter("https://x").max_retries
+    assert {401, 403} <= set(retry.status_forcelist)
+    assert retry.raise_on_status is False

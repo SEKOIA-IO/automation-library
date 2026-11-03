@@ -28,32 +28,44 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
     CONNECTOR_METRICS_LABEL: str
     CONNECTOR_TITLE: str
 
+    AUTH_ERROR_THRESHOLD = 5  # consecutive 401/403 before logging critical (critical stops the connector)
+    _auth_errors = 0
+
     @cached_property
     def client(self) -> TrendMicroVisionApiClient:
         return TrendMicroVisionApiClient(api_key=self.configuration.api_key)
 
-    def handle_response_error(self, response: requests.Response) -> None:  # pragma: no cover
-        if not response.ok:
-            message = (
-                f"Request on Trend Micro Vision One API to fetch events failed with status "
-                f"{response.status_code} - {response.reason}"
+    def handle_response_error(self, response: requests.Response) -> bool:
+        """Log a failed response. Return True if the request failed."""
+        if response.ok:
+            self._auth_errors = 0
+            return False
+
+        message = (
+            f"Request on Trend Micro Vision One API to fetch events failed with status "
+            f"{response.status_code} - {response.reason}"
+        )
+        level = "error"
+        if response.status_code in [401, 403]:
+            self._auth_errors += 1
+            if self._auth_errors >= self.AUTH_ERROR_THRESHOLD:
+                level = "critical"
+
+        # enrich error logs with detail from the Vision One API
+        try:
+            error = response.json()["error"]
+            logger.error(
+                message,
+                error_code=error.get("code"),
+                error_message=error.get("message"),
+                error_number=error.get("number"),
             )
-            level = "critical" if response.status_code in [401, 403] else "error"
 
-            # enrich error logs with detail from the Okta API
-            try:
-                error = response.json()["error"]
-                logger.error(
-                    message,
-                    error_code=error.get("code"),
-                    error_message=error.get("message"),
-                    error_number=error.get("number"),
-                )
+        except Exception:
+            pass
 
-            except Exception as e:
-                pass
-
-            self.log(message, level=level)
+        self.log(message, level=level)
+        return True
 
     @staticmethod
     def get_upper_second(time: datetime) -> datetime:

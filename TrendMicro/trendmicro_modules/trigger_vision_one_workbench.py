@@ -46,7 +46,8 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
         response = self.client.get(url, params=query_params, timeout=60)
 
         while self.running:  # pragma: no cover
-            self.handle_response_error(response)
+            if self.handle_response_error(response):
+                return
 
             message = response.json()
             events = message.get("items", [])
