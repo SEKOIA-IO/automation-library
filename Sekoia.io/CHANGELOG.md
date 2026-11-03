@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-10-29 - 2.83.0
+## 2026-11-03 - 2.84.0
 
 ### Fixed
 
@@ -17,6 +17,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Case Updated: add the `changed_fields` output and the `changed_fields_filter` argument, to create a run only when one of the given fields changed
 - Case Updated: add the `custom_fields_changes` output, with the custom fields added, updated or removed
+
+## 2026-11-03 - 2.82.0
+
+### Added
+
+- `Execute custom agent`: adding a new action to allow execute an agent directly inside a playbook
+
+
+## 2026-10-28 - 2.81.0
+
+### Added
+
+- Alert Created Trigger: add `api` property support for `rule_filter` argument.
+- Update Alert Status: Add `api` property support for `status` argument.
+
+
+## 2026-11-02 - 2.80.0
+
+### Added
+
+- Search Cases: add the `match[type]` argument to also return automatically created cases
 
 ## 2026-10-22 - 2.79.1
 

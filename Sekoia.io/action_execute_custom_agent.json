@@ -1,0 +1,73 @@
+{
+  "uuid": "c43833bc-9aa3-466b-9758-c21c865993d0",
+  "name": "Execute custom agent",
+  "description": "Execute a custom agent",
+  "docker_parameters": "execute-custom-agent",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Execute custom agent arguments",
+    "properties": {
+      "agent_uuid": {
+        "type": "string",
+        "description": "The UUID of the agent to execute",
+        "api": {
+          "type": "request",
+          "url": "/api/v1/generative/agents",
+          "search_key": "search",
+          "label_path": "items.name",
+          "value_path": "items.uuid"
+        }
+      }
+      
+    },
+    "required": [
+      "agent_uuid"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "description": "UUID of the agent execution"
+      },
+      "community_uuid": {
+        "type": "string","description": "UUID of the community"
+      },
+      "agent_uuid": {
+        "type": "string",
+        "description": "UUID of the agent"
+      },
+      "run_name": {
+        "type": ["string", "null"],
+        "description": "Name of the agent run"
+      },
+      "status": {
+        "type": "string",
+        "description": "Status of the agent execution"
+      },
+      "started_at": {
+        "type": "string",
+        "description": "Start time of the agent execution in ISO 8601 format"
+      },
+      "ended_at": {
+        "type": "string",
+        "description": "End time of the agent execution in ISO 8601 format"
+      },
+      "duration_seconds": {
+        "type": "number",
+        "description": "Duration of the agent execution in seconds"
+      },
+      "credits": {
+        "type": "string",
+        "description": "Cost of the agent execution"
+      },
+      "output": {
+        "description": "The result of the agent execution. The content depend of the response_format of the agent",
+        "type": ["object", "array", "string", "number", "boolean", "null"]
+      }
+    }
+  },
+  "slug": "execute_custom_agent"
+}
