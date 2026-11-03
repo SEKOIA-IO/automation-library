@@ -7,7 +7,7 @@ Docs: https://developer.tenable.com/reference/assets-asset-info
 
 from typing import List, Optional
 from enum import StrEnum
-from pydantic import BaseModel
+from tenable_conn.asset_connector.models.base import TenableBaseModel
 
 
 class SourceName(StrEnum):
@@ -86,13 +86,13 @@ class SourceName(StrEnum):
     WIZ_VULNERABILITY_MANAGEMENT = "WIZ_VULNERABILITY_MANAGEMENT"
 
 
-class AssetDetailsSource(BaseModel):
+class AssetDetailsSource(TenableBaseModel):
     name: Optional[SourceName] = None
     first_seen: Optional[str] = None
     last_seen: Optional[str] = None
 
 
-class AssetDetailsTag(BaseModel):
+class AssetDetailsTag(TenableBaseModel):
     tag_uuid: Optional[str] = None
     tag_key: Optional[str] = None
     tag_value: Optional[str] = None
@@ -106,18 +106,18 @@ class DriverNameValues(StrEnum):
     INTERNET_EXPOSURE = "internet_exposure"
 
 
-class AcrDriversObject(BaseModel):
+class AcrDriversObject(TenableBaseModel):
     driver_name: Optional[DriverNameValues] = None
     driver_value: List[str] = []
 
 
-class ScanFrequencyObject(BaseModel):
+class ScanFrequencyObject(TenableBaseModel):
     interval: Optional[int] = None
     frequency: Optional[int] = None
     licensed: Optional[bool] = None
 
 
-class NetworkInterface(BaseModel):
+class NetworkInterface(TenableBaseModel):
     name: Optional[str] = None
     ipv4: List[str] = []
     ipv6: List[str] = []
@@ -127,7 +127,7 @@ class NetworkInterface(BaseModel):
     aliased: Optional[bool] = None
 
 
-class AssetDetails(BaseModel):
+class AssetDetails(TenableBaseModel):
     name: Optional[str] = None
     id: str
     has_agent: Optional[bool] = None
