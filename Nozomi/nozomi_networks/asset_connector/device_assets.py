@@ -21,10 +21,10 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
 )
 from sekoia_automation.storage import PersistentJSON
-from sekoia_automation_models.hostname import split_hostname
 
 from nozomi_networks import NozomiModule
 from nozomi_networks.asset_connector.client import NozomiQueryClient
+from nozomi_networks.asset_connector.hostname import split_hostname
 from nozomi_networks.asset_connector.models import NozomiAsset
 
 
@@ -143,7 +143,7 @@ class NozomiDeviceAssetConnector(AssetConnector):
             return DeviceTypeStr.UNKNOWN, DeviceTypeId.UNKNOWN
         return self.DEVICE_TYPE_MAP.get(asset_type.strip().lower(), (DeviceTypeStr.OTHER, DeviceTypeId.OTHER))
 
-    def build_network_interfaces(self, asset: NozomiAsset, hostname: str | None) -> list[NetworkInterface] | None:
+    def build_network_interfaces(self, asset: NozomiAsset, hostname: str) -> list[NetworkInterface] | None:
         """
         Build network interfaces from the asset IP and MAC lists.
 
@@ -179,6 +179,9 @@ class NozomiDeviceAssetConnector(AssetConnector):
         vendor = asset.vendor or (asset.mac_vendor[0] if asset.mac_vendor else None)
         # `name` is often a label or a product name: only a usable hostname is sent
         hostname, domain = split_hostname(asset.name)
+        if hostname is None:
+            # The platform cannot store a device without hostname yet (SekoiaLab/platform#98032)
+            raise ValueError("no usable hostname")
 
         return Device(
             type=device_type,
@@ -286,36 +289,6 @@ class NozomiDeviceAssetConnector(AssetConnector):
             cache["most_recent_created_at_ms"] = timestamp_ms
             cache["most_recent_ids"] = sorted(ids)
         self.log(f"Checkpoint updated - New created_at: {timestamp_ms}", level="debug")
-
-    def get_mapped_fields(self) -> dict[str, str]:
-        """Return the Nozomi -> OCSF field mapping used for schema-change fingerprinting."""
-        return {
-            "id": "device.uid",
-            "name": "device.name,device.hostname,device.domain",
-            "type": "device.type",
-            "os": "device.os.name",
-            "ip": "device.ip,device.network_interfaces.ip",
-            "mac_address": "device.network_interfaces.mac",
-            "vendor": "device.vendor_name",
-            "mac_vendor": "device.vendor_name",
-            "product_name": "device.model",
-            "created_at": "device.created_time,device.first_seen_time,time,checkpoint",
-            "last_activity_time": "device.last_seen_time",
-            "firmware_version": "enrichments.firmware_version",
-            "serial_number": "enrichments.serial_number",
-            "zones": "enrichments.zones",
-            "roles": "enrichments.roles",
-            "protocols": "enrichments.protocols",
-            "levels": "enrichments.levels",
-        }
-
-    def reset_checkpoint(self) -> None:
-        """Clear the checkpoint so all assets are re-fetched from scratch."""
-        with self.context as cache:
-            cache.pop("most_recent_created_at_ms", None)
-            cache.pop("most_recent_ids", None)
-        self._latest_checkpoint = None
-        self.log("Checkpoint reset - all assets will be re-fetched on the next cycle", level="info")
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
         self.log("Nozomi device asset generation started", level="info")

@@ -8,7 +8,7 @@ import orjson
 from cachetools import LRUCache
 from dateutil.parser import isoparse
 from loguru import logger
-from pydantic import Field
+from pydantic.v1 import Field
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
@@ -157,7 +157,7 @@ class NozomiVantageConnector(AsyncConnector):
                 "nn-app-version": self._version,
             }
             self._nozomi_client = NozomiClient(
-                **self.module.configuration.model_dump(),
+                **self.module.configuration.dict(),
                 page_size=self.configuration.page_size,
                 default_headers=default_headers,
             )
