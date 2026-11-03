@@ -9,5 +9,4 @@ class TenableModuleConfiguration(BaseModel):
 
 
 class TenableModule(Module):
-    # The annotation is read by the SDK to build the configuration model; SDK >= 1.27 is typed (py.typed)
     configuration: TenableModuleConfiguration  # type: ignore[override]
