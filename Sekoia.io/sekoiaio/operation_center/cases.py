@@ -72,6 +72,7 @@ class _CaseAction(GenericAPIAction):
     )
     def _call_api(self, verb: str, path: str, **kwargs: Any) -> Any:
         url = urljoin(self.module.configuration["base_url"], base_url + path)
+        url = url.replace("/api/api", "/api")  # In case base_url ends with /api/
         response = requests.request(verb, url, headers=self.get_headers(), timeout=self.timeout, **kwargs)
         if 400 <= response.status_code < 500:
             raise CaseActionError(

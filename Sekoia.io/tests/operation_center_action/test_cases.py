@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from sekoiaio.operation_center import CreateCase, UpdateCase
@@ -254,3 +256,18 @@ def test_update_case_returns_none_on_api_error(requests_mock):
 
     assert action.run({"uuid": CASE_UUID, "verdict_analysis": "analysis"}) is None
     assert action.error_message.startswith("Invalid verdict")
+
+
+@pytest.mark.parametrize(
+    "configured_url", ["https://app.sekoia.fake", "https://app.sekoia.fake/api", "https://app.sekoia.fake/api/"]
+)
+def test_name_lookups_support_a_base_url_ending_with_api(requests_mock, configured_url):
+    action = CreateCase()
+    action.module.configuration = {"base_url": configured_url, "api_key": apikey}
+    statuses = requests_mock.get(f"{base_url}custom_statuses", json=CUSTOM_STATUSES)
+    # The case itself is created by the generic call of the SDK, which builds its own URL
+    requests_mock.post(re.compile(r".*/v1/sic/cases$"), json=CASE)
+
+    action.run({"title": "title", "custom_status_uuid": "Closed"})
+
+    assert statuses.called
