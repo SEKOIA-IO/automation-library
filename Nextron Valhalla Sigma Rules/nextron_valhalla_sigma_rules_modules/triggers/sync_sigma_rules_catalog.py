@@ -28,6 +28,9 @@ from nextron_valhalla_sigma_rules_modules.sigma_mapper import (
 
 UUID_MAP_FILE = "valhalla-sigma-catalog-uuid-map.json"
 FEED_STATE_FILE = "valhalla-sigma-feed-state.json"
+# Key in FEED_STATE_FILE: Valhalla ids the disable pass switched off, so a
+# returning rule can be re-enabled without touching rules the user disabled.
+AUTO_DISABLED_KEY = "auto_disabled"
 TOP_UNMAPPED_REPORT = 5
 DEFAULT_MIN_LEVEL = "medium"
 DEFAULT_MIN_STATUS = "stable"
@@ -276,6 +279,7 @@ class SyncSigmaRulesCatalog(Trigger):
                         )
                         first_failure_logged = True
 
+            reenable_counts = self._reenable_returned_rules(id_map, scan, seen_in_feed, passed_filter, unparsed)
             skip_reason = "interrupted" if interrupted else self._check_feed_size(len(rules))
             if skip_reason:
                 disable_counts = self._skipped_disable_counts(skip_reason, len(rules))
@@ -289,6 +293,7 @@ class SyncSigmaRulesCatalog(Trigger):
             f"skipped_unmapped={skipped_unmapped} "
             f"filtered_out={filtered_out} total_rules={len(rules)} "
             f"scan={scan.stats()} "
+            f"reenable_counts={reenable_counts} "
             f"disable_counts={disable_counts} "
             f"top_unmapped={top_unmapped}",
             level="info",
@@ -305,6 +310,7 @@ class SyncSigmaRulesCatalog(Trigger):
                 "total_rules": len(rules),
                 "top_unmapped": top_unmapped,
                 **scan.stats(),
+                **reenable_counts,
                 **disable_counts,
             },
         )
@@ -333,8 +339,8 @@ class SyncSigmaRulesCatalog(Trigger):
                         self._attack_lookups_enabled = False
                         self.log(
                             "ATT&CK technique linking disabled: the Sekoia API key may not read "
-                            f"intelligence objects (HTTP {exc.status_code}). Grant read access to "
-                            "the intelligence (CTI) objects to link imported rules to ATT&CK.",
+                            f"intelligence objects (HTTP {exc.status_code}). Grant 'View intelligence' or "
+                            "'View intelligence with limited access' to link imported rules to ATT&CK.",
                             level="warning",
                         )
                         break
@@ -355,9 +361,9 @@ class SyncSigmaRulesCatalog(Trigger):
         (server-side ``match[tag_name]`` filter), optionally restricted to
         the configured community. For rules that also carry a
         ``uuid-<valhalla_id>`` tag the mapping is merged into the local
-        id-map, so a fresh trigger instance (new playbook, recreated
-        trigger, wiped data volume) picks up existing rules instead of
-        creating duplicates.
+        id-map, so a trigger with empty local storage (new trigger
+        configuration, wiped data volume) picks up existing rules instead
+        of creating duplicates.
 
         When several rules carry the same ``uuid-*`` tag (e.g. a user
         duplicated an imported rule to tune it), the UUID already in the
@@ -409,8 +415,58 @@ class SyncSigmaRulesCatalog(Trigger):
         return scan
 
     # ------------------------------------------------------------------
-    # Disable pass
+    # Re-enable and disable passes
     # ------------------------------------------------------------------
+
+    def _reenable_returned_rules(
+        self,
+        id_map,
+        scan: CatalogScan,
+        seen_in_feed: set[str],
+        passed_filter: set[str],
+        unparsed: set[str],
+    ) -> dict:
+        """Re-enable rules the disable pass switched off once they are back.
+
+        Only ids recorded by ``_disable_removed_rules`` are considered, so a
+        rule the user disabled is never touched. An id is dropped from the
+        record when its rule is gone, when the user already re-enabled it,
+        or after it was re-enabled here. Preserved rules are re-enabled too:
+        the dedicated endpoint flips only ``enabled``.
+        """
+        re_enabled = 0
+        reenable_failed = 0
+        first_failure_logged = False
+        with PersistentJSON(FEED_STATE_FILE, self.data_path) as state:
+            recorded = set(state.get(AUTO_DISABLED_KEY) or [])
+            remaining = set(recorded)
+            for vid in sorted(recorded):
+                if not self.running:
+                    break
+                sekoia_uuid = id_map.get(vid)
+                server_rule = scan.rules_by_uuid.get(sekoia_uuid) if sekoia_uuid else None
+                if server_rule is None or server_rule.get("enabled", False):
+                    remaining.discard(vid)
+                    continue
+                if vid in unparsed or vid not in seen_in_feed or vid not in passed_filter:
+                    continue
+                try:
+                    self._sekoia.enable_rule(sekoia_uuid)
+                    re_enabled += 1
+                    remaining.discard(vid)
+                except SekoiaRuleNotFoundError:
+                    remaining.discard(vid)
+                except Exception as exc:
+                    reenable_failed += 1
+                    if not first_failure_logged:
+                        self.log(
+                            f"First re-enable failure. valhalla_id={vid}, sekoia_uuid={sekoia_uuid}. Error: {exc}",
+                            level="error",
+                        )
+                        first_failure_logged = True
+            if remaining != recorded:
+                state[AUTO_DISABLED_KEY] = sorted(remaining)
+        return {"re_enabled": re_enabled, "reenable_failed": reenable_failed}
 
     def _check_feed_size(self, feed_size: int) -> str:
         """Return a skip reason for the disable pass, or ``""``.
@@ -465,8 +521,10 @@ class SyncSigmaRulesCatalog(Trigger):
         only candidates that still exist and are enabled.
 
         The id-map entry is kept after disabling so a reappearing rule
-        resumes updating in place. With ``disable_removed`` off this is a
-        dry-run that only counts ``to_disable``.
+        resumes updating in place, and the id is recorded so
+        ``_reenable_returned_rules`` can switch it back on. With
+        ``disable_removed`` off this is a dry-run that only counts
+        ``to_disable``.
         """
         to_disable = 0
         newly_disabled = 0
@@ -475,6 +533,7 @@ class SyncSigmaRulesCatalog(Trigger):
         disable_failed = 0
         skip_reason = ""
         first_failure_logged = False
+        disabled_now: set[str] = set()
         for vid in list(id_map):
             if vid in unparsed or (vid in seen_in_feed and vid in passed_filter):
                 continue
@@ -496,6 +555,7 @@ class SyncSigmaRulesCatalog(Trigger):
             try:
                 self._sekoia.disable_rule(sekoia_uuid)
                 newly_disabled += 1
+                disabled_now.add(vid)
             except SekoiaRuleNotFoundError:
                 already_gone += 1
                 del id_map[vid]
@@ -507,6 +567,9 @@ class SyncSigmaRulesCatalog(Trigger):
                         level="error",
                     )
                     first_failure_logged = True
+        if disabled_now:
+            with PersistentJSON(FEED_STATE_FILE, self.data_path) as state:
+                state[AUTO_DISABLED_KEY] = sorted(set(state.get(AUTO_DISABLED_KEY) or []) | disabled_now)
         return {
             "to_disable": to_disable,
             "newly_disabled": newly_disabled,

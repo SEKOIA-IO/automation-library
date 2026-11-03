@@ -10,6 +10,7 @@ from nextron_valhalla_sigma_rules_modules.sekoia_client import (
 )
 from nextron_valhalla_sigma_rules_modules.sigma_mapper import SEVERITY_MAP
 from nextron_valhalla_sigma_rules_modules.triggers.sync_sigma_rules_catalog import (
+    AUTO_DISABLED_KEY,
     FEED_STATE_FILE,
     UUID_MAP_FILE,
     SyncSigmaRulesCatalog,
@@ -69,6 +70,11 @@ class FakeCatalog:
             raise SekoiaRuleNotFoundError("gone", status_code=404)
         self.rules[uuid]["enabled"] = False
 
+    def enable(self, uuid):
+        if uuid not in self.rules:
+            raise SekoiaRuleNotFoundError("gone", status_code=404)
+        self.rules[uuid]["enabled"] = True
+
     def iter_rules(self, tag_name=None, community_uuid=None, **_):
         for rule in list(self.rules.values()):
             names = {t["name"] for t in rule["tags"]}
@@ -96,6 +102,7 @@ def trigger(data_storage, monkeypatch):
     t._sekoia.create_rule.side_effect = catalog.create
     t._sekoia.update_rule.side_effect = catalog.update
     t._sekoia.disable_rule.side_effect = catalog.disable
+    t._sekoia.enable_rule.side_effect = catalog.enable
     t._sekoia.iter_rules.side_effect = catalog.iter_rules
     t._sekoia.find_attack_pattern.return_value = None
     t._enabled = False
@@ -161,6 +168,8 @@ def test_second_sync_puts_existing_rules(trigger):
         "server_marker_count": 2,
         "duplicate_markers": 0,
         "local_overridden": 0,
+        "re_enabled": 0,
+        "reenable_failed": 0,
         "to_disable": 0,
         "newly_disabled": 0,
         "already_disabled": 0,
@@ -1122,6 +1131,207 @@ def test_reappearing_rule_resumes_update_in_place(trigger, data_storage):
 
     assert trigger._sekoia.create_rule.call_count == 0
     assert "sekoia-A" in [c.args[0] for c in trigger._sekoia.update_rule.call_args_list]
+    assert trigger.catalog.rules["sekoia-A"]["enabled"] is True
+    assert trigger.send_event.call_args.kwargs["event"]["re_enabled"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Re-enable after the disable pass
+# ---------------------------------------------------------------------------
+
+
+def _auto_disabled(data_storage) -> list[str]:
+    path = Path(data_storage) / FEED_STATE_FILE
+    if not path.exists():
+        return []
+    return json.loads(path.read_text()).get(AUTO_DISABLED_KEY, [])
+
+
+def _auto_disable_a(trigger):
+    """Sync, enable everything, then let the disable pass switch off A."""
+    trigger._sync_once()
+    _enable_all(trigger)
+    trigger._disable_removed = True
+    trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[1]]
+    trigger._sync_once()
+    assert trigger.catalog.rules["sekoia-A"]["enabled"] is False
+
+
+def test_disable_pass_records_disabled_ids(trigger, data_storage):
+    _auto_disable_a(trigger)
+
+    assert _auto_disabled(data_storage) == ["valhalla-a"]
+
+
+def test_dry_run_records_nothing(trigger, data_storage):
+    trigger._sync_once()
+    _enable_all(trigger)
+    trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[1]]
+
+    trigger._sync_once()
+
+    assert _auto_disabled(data_storage) == []
+
+
+def test_rule_disabled_by_user_is_never_reenabled(trigger):
+    trigger._sync_once()
+    _enable_all(trigger)
+    trigger._disable_removed = True
+    trigger.catalog.rules["sekoia-A"]["enabled"] = False  # user's choice
+
+    trigger._sync_once()
+
+    assert trigger._sekoia.enable_rule.call_count == 0
+    assert trigger.catalog.rules["sekoia-A"]["enabled"] is False
+    assert trigger.send_event.call_args.kwargs["event"]["re_enabled"] == 0
+
+
+def test_rule_still_missing_stays_disabled(trigger, data_storage):
+    _auto_disable_a(trigger)
+
+    trigger._sync_once()  # A still not in the feed
+
+    assert trigger._sekoia.enable_rule.call_count == 0
+    assert _auto_disabled(data_storage) == ["valhalla-a"]
+
+
+def test_rule_reenabled_by_user_is_forgotten(trigger, data_storage):
+    """Once the user re-enabled the rule, a later manual disable is theirs."""
+    _auto_disable_a(trigger)
+    trigger.catalog.rules["sekoia-A"]["enabled"] = True
+    trigger._disable_removed = False  # keep A enabled while it is missing
+    trigger._sync_once()
+    assert _auto_disabled(data_storage) == []
+
+    trigger.catalog.rules["sekoia-A"]["enabled"] = False
+    trigger._valhalla.get_sigma_feed.return_value = list(SAMPLE_RULES)
+    trigger._sync_once()
+
+    assert trigger._sekoia.enable_rule.call_count == 0
+    assert trigger.catalog.rules["sekoia-A"]["enabled"] is False
+
+
+def test_rule_back_above_threshold_is_reenabled(trigger, data_storage):
+    trigger._sync_once()
+    _enable_all(trigger)
+    trigger._disable_removed = True
+    trigger._min_severity = SEVERITY_HIGH
+    trigger._sync_once()
+    assert trigger.catalog.rules["sekoia-A"]["enabled"] is False
+
+    trigger._min_severity = SEVERITY_MAP["informational"]
+    trigger._sync_once()
+
+    assert trigger.catalog.rules["sekoia-A"]["enabled"] is True
+    assert trigger.send_event.call_args.kwargs["event"]["re_enabled"] == 1
+    assert _auto_disabled(data_storage) == []
+
+
+def test_preserved_rule_is_reenabled_without_update(trigger):
+    _auto_disable_a(trigger)
+    trigger._preserve_rule_names = frozenset({"A"})
+    trigger._sekoia.update_rule.reset_mock()
+    trigger._valhalla.get_sigma_feed.return_value = list(SAMPLE_RULES)
+
+    trigger._sync_once()
+
+    assert trigger.catalog.rules["sekoia-A"]["enabled"] is True
+    assert "sekoia-A" not in [c.args[0] for c in trigger._sekoia.update_rule.call_args_list]
+
+
+def test_reenable_not_found_drops_the_id(trigger, data_storage):
+    _auto_disable_a(trigger)
+    trigger._sekoia.enable_rule.side_effect = SekoiaRuleNotFoundError("gone", status_code=404)
+    trigger._valhalla.get_sigma_feed.return_value = list(SAMPLE_RULES)
+
+    trigger._sync_once()
+
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["re_enabled"] == 0
+    assert event["reenable_failed"] == 0
+    assert _auto_disabled(data_storage) == []
+
+
+def test_reenable_error_is_counted_and_retried_next_sync(trigger, data_storage):
+    _auto_disable_a(trigger)
+    trigger._sekoia.enable_rule.side_effect = RuntimeError("boom")
+    trigger._valhalla.get_sigma_feed.return_value = list(SAMPLE_RULES)
+    trigger.log = MagicMock()
+
+    trigger._sync_once()
+
+    assert trigger.send_event.call_args.kwargs["event"]["reenable_failed"] == 1
+    assert _auto_disabled(data_storage) == ["valhalla-a"]
+    errors = [c for c in trigger.log.call_args_list if c.kwargs.get("level") == "error"]
+    assert len(errors) == 1
+
+
+# ---------------------------------------------------------------------------
+# Disable-pass error paths
+# ---------------------------------------------------------------------------
+
+
+def _drop_a_from_feed(trigger):
+    trigger._sync_once()
+    _enable_all(trigger)
+    trigger._disable_removed = True
+    trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[1]]
+
+
+def test_disable_not_found_counts_already_gone_and_drops_idmap(trigger, data_storage):
+    _drop_a_from_feed(trigger)
+    trigger._sekoia.disable_rule.side_effect = SekoiaRuleNotFoundError("gone", status_code=404)
+
+    trigger._sync_once()
+
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["already_gone"] == 1
+    assert event["newly_disabled"] == 0
+    id_map = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
+    assert "valhalla-a" not in id_map
+    assert _auto_disabled(data_storage) == []
+
+
+def test_disable_error_counts_failed_and_logs_once(trigger, data_storage):
+    trigger._sync_once()
+    _enable_all(trigger)
+    trigger._disable_removed = True
+    trigger._min_severity = SEVERITY_MAP["critical"]  # both rules become candidates
+    trigger._sekoia.disable_rule.side_effect = RuntimeError("boom")
+    trigger.log = MagicMock()
+
+    trigger._sync_once()
+
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["disable_failed"] == 2
+    assert event["newly_disabled"] == 0
+    errors = [c for c in trigger.log.call_args_list if c.kwargs.get("level") == "error"]
+    assert len(errors) == 1
+    id_map = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
+    assert set(id_map) == {"valhalla-a", "valhalla-b"}
+    assert _auto_disabled(data_storage) == []
+
+
+def test_stop_during_disable_pass_reports_interrupted(trigger, data_storage):
+    trigger._sync_once()
+    _enable_all(trigger)
+    trigger._disable_removed = True
+    trigger._min_severity = SEVERITY_MAP["critical"]  # both rules become candidates
+    original = trigger._sekoia.disable_rule.side_effect
+
+    def disable_then_stop(uuid):
+        original(uuid)
+        trigger._stop_event.set()
+
+    trigger._sekoia.disable_rule.side_effect = disable_then_stop
+
+    trigger._sync_once()
+
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["disable_skipped_reason"] == "interrupted"
+    assert event["newly_disabled"] == 1
+    assert trigger._sekoia.disable_rule.call_count == 1
+    assert len(_auto_disabled(data_storage)) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -1189,7 +1399,8 @@ def test_persistent_shrink_is_accepted_after_confirm_runs(guarded, data_storage)
     assert event["disable_skipped_reason"] == ""
     assert event["newly_disabled"] == 5
     state = json.loads((Path(data_storage) / FEED_STATE_FILE).read_text())
-    assert state == {"reference_size": 5, "shrink_runs": 0}
+    assert state["reference_size"] == 5
+    assert state["shrink_runs"] == 0
 
 
 def test_shrink_counter_resets_when_feed_recovers(guarded, data_storage):

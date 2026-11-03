@@ -398,14 +398,16 @@ def test_iter_rules_stops_when_offset_reaches_total():
         assert _offsets(m) == ["0", "2"]
 
 
-def test_iter_rules_sends_tag_and_community_filters():
+def test_iter_rules_sends_tag_filter_but_not_community():
+    """``match[community_uuid]`` is not a documented filter of the list
+    endpoint; the community is filtered client-side only."""
     client = SekoiaClient(BASE_URL, "k")
     with requests_mock.Mocker() as m:
         m.get(RULES_URL, json={"items": [], "total": 0})
         list(client.iter_rules(tag_name="nextron-valhalla", community_uuid="c-1"))
         qs = m.last_request.qs
         assert qs["match[tag_name]"] == ["nextron-valhalla"]
-        assert qs["match[community_uuid]"] == ["c-1"]
+        assert "match[community_uuid]" not in qs
 
 
 def test_iter_rules_client_side_tag_and_community_filter():
@@ -472,6 +474,32 @@ def test_disable_rule_raises_on_403():
         assert not isinstance(excinfo.value, SekoiaRuleNotFoundError)
 
 
+def test_enable_rule_uses_dedicated_endpoint():
+    client = SekoiaClient(BASE_URL, "k")
+    with requests_mock.Mocker() as m:
+        m.put(f"{RULES_URL}/sk-1/enabled", status_code=200, json={})
+        client.enable_rule("sk-1")
+        assert m.last_request.method == "PUT"
+        assert m.last_request.body is None
+
+
+def test_enable_rule_raises_not_found_on_404():
+    client = SekoiaClient(BASE_URL, "k")
+    with requests_mock.Mocker() as m:
+        m.put(f"{RULES_URL}/gone/enabled", status_code=404)
+        with pytest.raises(SekoiaRuleNotFoundError):
+            client.enable_rule("gone")
+
+
+def test_enable_rule_raises_on_403():
+    client = SekoiaClient(BASE_URL, "k")
+    with requests_mock.Mocker() as m:
+        m.put(f"{RULES_URL}/u/enabled", status_code=403, text="{}")
+        with pytest.raises(SekoiaAPIError) as excinfo:
+            client.enable_rule("u")
+        assert not isinstance(excinfo.value, SekoiaRuleNotFoundError)
+
+
 def test_list_alert_types_paginates():
     client = SekoiaClient(BASE_URL, "k")
     with requests_mock.Mocker() as m:
@@ -489,15 +517,16 @@ def test_find_attack_pattern_returns_stix_id():
     client = SekoiaClient(BASE_URL, "k")
     with requests_mock.Mocker() as m:
         m.get(
-            f"{BASE_URL}/v2/inthreat/objects",
+            f"{BASE_URL}/v2/inthreat/objects/light",
             json={"items": [{"id": "x-mitre-tactic--1"}, {"id": "attack-pattern--abc"}]},
         )
         assert client.find_attack_pattern("T1059") == "attack-pattern--abc"
         assert m.last_request.qs["match[external_id]"] == ["t1059"]
+        assert m.last_request.qs["match[type]"] == ["attack-pattern"]
 
 
 def test_find_attack_pattern_returns_none_when_unknown():
     client = SekoiaClient(BASE_URL, "k")
     with requests_mock.Mocker() as m:
-        m.get(f"{BASE_URL}/v2/inthreat/objects", json={"items": []})
+        m.get(f"{BASE_URL}/v2/inthreat/objects/light", json={"items": []})
         assert client.find_attack_pattern("T9999") is None

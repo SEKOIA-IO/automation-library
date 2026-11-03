@@ -51,8 +51,8 @@ MARKER_TAG = "nextron-valhalla"
 
 # Per-rule tag prefix carrying the Valhalla rule UUID. Lets the sync trigger
 # recover the valhalla_id → sekoia_uuid mapping from the catalog itself when
-# the local id-map is empty (fresh playbook, recreated trigger instance,
-# wiped data volume). Prefix uses ``-`` instead of ``:`` to stay inside the
+# the local id-map is empty (new trigger configuration, wiped data
+# volume). Prefix uses ``-`` instead of ``:`` to stay inside the
 # character set Sekoia accepts on tag names.
 UUID_TAG_PREFIX = "uuid-"
 

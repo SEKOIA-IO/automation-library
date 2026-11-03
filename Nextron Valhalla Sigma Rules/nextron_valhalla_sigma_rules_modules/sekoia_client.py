@@ -24,7 +24,9 @@ MAX_LIST_PAGES = 10_000  # safety bound against a server that ignores ``offset``
 
 RULES_PATH = "/v1/sic/conf/rules-catalog/rules"
 ALERT_TYPES_PATH = "/v1/sic/conf/alerts/types"
-INTHREAT_OBJECTS_PATH = "/v2/inthreat/objects"
+# The light listing accepts "View intelligence" or "View intelligence with
+# limited access" and returns the STIX ``id``, which is all we need.
+INTHREAT_OBJECTS_PATH = "/v2/inthreat/objects/light"
 
 QueryParams = dict[str, str | int]
 
@@ -164,6 +166,14 @@ class SekoiaClient:
         self._maybe_raise_not_found(resp, "PUT", url)
         self._ensure_ok(resp, "PUT", url)
 
+    def enable_rule(self, sekoia_uuid: str) -> None:
+        """Enable one rule through the dedicated endpoint, which flips only
+        ``enabled`` and leaves every other rule setting untouched."""
+        url = f"{self._base_url}{RULES_PATH}/{sekoia_uuid}/enabled"
+        resp = self._session.put(url, timeout=self._timeout)
+        self._maybe_raise_not_found(resp, "PUT", url)
+        self._ensure_ok(resp, "PUT", url)
+
     def iter_rules(
         self,
         tag_name: str | None = None,
@@ -173,16 +183,15 @@ class SekoiaClient:
         """Paginate ``GET /v1/sic/conf/rules-catalog/rules`` and yield each
         rule dict.
 
-        Filters are sent server-side (``match[tag_name]``,
-        ``match[community_uuid]``) and re-applied
-        client-side as a safety net, so a rule that doesn't match is never
-        yielded even if the server ignores a filter.
+        ``match[tag_name]`` is sent server-side and re-applied client-side
+        as a safety net, so a rule that doesn't match is never yielded even
+        if the server ignores the filter. ``community_uuid`` is filtered
+        client-side only: it is not a documented filter of the list
+        endpoint.
         """
         params: QueryParams = {}
         if tag_name:
             params["match[tag_name]"] = tag_name
-        if community_uuid:
-            params["match[community_uuid]"] = community_uuid
         for item in self._paginate(RULES_PATH, params, page_size):
             if tag_name and tag_name not in rule_tag_names(item):
                 continue
@@ -198,7 +207,11 @@ class SekoiaClient:
         """Return the STIX id (``attack-pattern--…``) of the ATT&CK technique
         with this external id (e.g. ``T1059``), or ``None`` if unknown."""
         url = f"{self._base_url}{INTHREAT_OBJECTS_PATH}"
-        params: QueryParams = {"match[external_id]": external_id, "limit": 10}
+        params: QueryParams = {
+            "match[external_id]": external_id,
+            "match[type]": "attack-pattern",
+            "limit": 10,
+        }
         resp = self._session.get(url, params=params, timeout=self._timeout)
         self._ensure_ok(resp, "GET", url)
         data = self._json(resp, "GET", url)

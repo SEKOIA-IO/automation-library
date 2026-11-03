@@ -11,7 +11,7 @@ Rules whose fields can't be mapped to an ECS field Sekoia actually emits are ski
 ## Prerequisites
 
 - Sekoia workspace with API access. Note your region — `https://api.sekoia.io` (FRA1) is the default; FRA2 / MCO1 / UAE1 use `https://app.<region>.sekoia.io/api`.
-- Sekoia API key with the permissions *Manage rules and alert filters*, *View Rules Catalog* and *Manage rule settings* (Settings → Workspace → API Keys). Optional: read access to the intelligence (CTI) objects lets the sync link rules to their ATT&CK techniques; without it the sync logs one warning and skips the linking.
+- Sekoia API key with the permissions *Manage rules and alert filters* and *View Rules Catalog* (Settings → Workspace → API Keys). Optional: *View intelligence* or *View intelligence with limited access* lets the sync link rules to their ATT&CK techniques; without it the sync logs one warning and skips the linking.
 - Valhalla API key from [valhalla.nextron-systems.com](https://valhalla.nextron-systems.com). The public demo key `1111…` (sixty-four ones) is the built-in default and grants the community feed.
 
 ## How to use
@@ -28,8 +28,9 @@ Rules whose fields can't be mapped to an ECS field Sekoia actually emits are ski
 2. List every catalog rule tagged `nextron-valhalla` (one paginated scan, scoped to `community_uuid` if set). Each synced rule also carries a `uuid-<valhalla_id>` tag, so the scan rebuilds the Valhalla → Sekoia mapping from the catalog itself — a new playbook or a re-created trigger picks up existing rules instead of creating duplicates. If the scan fails, the run aborts.
 3. Keep rules that meet `min_sigma_level` / `min_sigma_status` and convert them to ECS.
 4. Create rules that aren't in the catalog yet (with `enabled` as configured); update the others in place, keeping each rule's current `enabled` state. Rules listed in `preserve_rule_names` are not updated.
-5. Disable pass (`disable_removed`): rules that left the feed or fell below the thresholds are disabled through the dedicated disable endpoint — never deleted.
-6. Emit a `valhalla-sigma-catalog-sync` summary event.
+5. Re-enable: rules the disable pass switched off earlier are enabled again once they are back in the feed and meet the thresholds. Rules you disabled yourself are never touched.
+6. Disable pass (`disable_removed`): rules that left the feed or fell below the thresholds are disabled through the dedicated disable endpoint — never deleted.
+7. Emit a `valhalla-sigma-catalog-sync` summary event.
 
 ## Sync trigger arguments
 
@@ -39,7 +40,7 @@ Rules whose fields can't be mapped to an ECS field Sekoia actually emits are ski
 | `enabled` | `false` | Whether newly created rules are enabled. Existing rules keep their current state. |
 | `min_sigma_level` | `medium` | Minimum Sigma `level` (`informational` … `critical`). Rules without a level are skipped. |
 | `min_sigma_status` | `stable` | Minimum Sigma `status` (`experimental` < `test` < `stable`). `deprecated` / `unsupported` are never imported. |
-| `disable_removed` | `false` | Disable rules that left the feed or fell below the thresholds. `false` is a dry-run that only counts them (`to_disable`). |
+| `disable_removed` | `false` | Disable rules that left the feed or fell below the thresholds; they are re-enabled if they come back. `false` is a dry-run that only counts them (`to_disable`). |
 | `preserve_rule_names` | `[]` | Rules that are never updated. An entry matches the rule's name in the catalog **or** one of its tags — use `uuid-<valhalla_id>` to target a single rule, since names aren't unique. |
 
 ## Summary event
@@ -52,6 +53,7 @@ Rules whose fields can't be mapped to an ECS field Sekoia actually emits are ski
 | `server_marker_count` | Catalog rules recognised through their `uuid-*` tag. |
 | `duplicate_markers` | Extra catalog rules carrying an already-seen `uuid-*` tag (see logs; delete the copies). |
 | `local_overridden` | Local mapping entries corrected from the catalog. |
+| `re_enabled` / `reenable_failed` | Rules switched off by an earlier disable pass that came back and were enabled again (or failed to). |
 | `to_disable` / `newly_disabled` / `already_disabled` / `already_gone` / `disable_failed` | Disable pass counters (`to_disable` only counts rules that are still enabled). |
 | `disable_skipped_reason` | `""`, or why the disable pass did not run: `empty_feed`, `feed_shrank`, `interrupted`. |
 
@@ -69,9 +71,11 @@ The Valhalla API URL is hardcoded to `https://valhalla.nextron-systems.com`.
 ## Behaviour to be aware of
 
 - **Customisations of synced rules are overwritten.** Each update replaces the rule with the Valhalla version (only `enabled` is kept). This includes settings made in the Sekoia UI such as entities, assets, parameters or event fields. To keep a customised rule, add it to `preserve_rule_names`; it then no longer receives Valhalla updates, but `disable_removed` still applies to it.
+- **Re-enabling only covers the integration's own disables.** The trigger remembers which rules its disable pass switched off and re-enables them when they return. A rule you disabled yourself stays disabled. The record is kept per trigger configuration: modifying that configuration keeps it, but rules disabled under one configuration stay disabled if you switch to a new configuration or delete it. Enable them in the UI (filter the catalog by the `nextron-valhalla` tag to find them).
 - **Disable-pass safety.** The disable pass is skipped when the feed is empty, or when it shrank by more than 20% compared to the last accepted size (e.g. a truncated response, or the key switched to the demo key). A smaller feed is only accepted once it persisted for 3 consecutive syncs. Rules whose YAML failed to parse in a run are never disabled in that run.
 - **Use `disable_removed=true` on one trigger per community only.** The disable pass acts on every rule the integration imported into the community. A second trigger with stricter thresholds would disable rules imported by the first one.
 - **Concurrent first syncs can duplicate rules.** Two triggers starting at the same moment both see an empty catalog and both create the rules. Later syncs log the copies under `duplicate_markers`; delete them in the UI.
+- **Removing the `nextron-valhalla` tag makes the sync re-create the rule.** The scan only sees rules carrying the marker tag, so an untagged rule is treated as missing and a new copy is created.
 - **Duplicating an imported rule copies its `uuid-*` tag.** The rule already known to the trigger keeps being updated; the copy is ignored and logged.
 
 ## Conversion notes
@@ -79,7 +83,7 @@ The Valhalla API URL is hardcoded to `https://valhalla.nextron-systems.com`.
 - Field targets are chosen per `logsource.product`: Windows rules use the SigmaHQ Windows map plus overrides verified against Sekoia's Windows parser; macOS and Zeek rules use their own maps. Windows `event_data` catch-alls (`Status`, `Path`, `Details`, …) are only applied to Windows rules.
 - A rule is skipped (`skipped_unmapped`) when a field has no target, when two fields of one selection resolve to the same ECS field (`<collision:…>`), or when a `|fieldref` value names an unmappable field.
 - `Hashes` values are split per algorithm into the fields the parser emits for that category (`process.hash.*`, `dll.hash.*` for image loads, `file.hash.*` for file-hash events; IMPHASH → `*.pe.imphash`). A list mixing algorithms becomes an OR over one map per algorithm, so an event without SHA1 still matches on MD5. Algorithms the parser never emits for the category are dropped; `|all` keeps AND semantics.
-- The rule payload contains the Sigma `logsource` block and the converted `detection` block.
+- The rule payload contains the Sigma `logsource` block and the converted `detection` block. `logsource` is informational: Sekoia's detection engine only evaluates `detection`, so it doesn't restrict which events a rule runs on.
 - The Sigma `status` is added as a tag (`status-stable`, `status-test`, `status-experimental`). Sekoia's `effort` field describes the expected analysis effort, which Sigma doesn't define, so every rule gets the same value (`2`).
 - ATT&CK technique tags (`attack.t1059.001`) are linked as `related_object_refs`; tactic tags pick the alert type. Sigma `references` are appended to the description (the API's `references` field is read-only).
 

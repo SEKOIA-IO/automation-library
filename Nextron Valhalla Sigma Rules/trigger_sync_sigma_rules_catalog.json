@@ -57,7 +57,7 @@
       "disable_removed": {
         "type": "boolean",
         "title": "Disable rules removed from the Valhalla feed",
-        "description": "Disables rules that Nextron removed from the Valhalla feed, or that newly fell below your minimum level/status. The rule stays in the catalog (not deleted); if Nextron re-publishes it later, the sync resumes updating it. Default false runs a dry-run \u2014 candidates are counted under `to_disable` on the summary event. Set true to actually disable. The pass is skipped when the feed is empty or shrank by more than 20% (see `disable_skipped_reason`). Enable it on only one trigger per community.",
+        "description": "Disables rules that Nextron removed from the Valhalla feed, or that newly fell below your minimum level/status. The rule stays in the catalog (not deleted); if it returns to the feed later, the sync updates and re-enables it. Rules you disabled yourself are left alone. Default false runs a dry-run \u2014 candidates are counted under `to_disable` on the summary event. Set true to actually disable. The pass is skipped when the feed is empty or shrank by more than 20% (see `disable_skipped_reason`). Enable it on only one trigger per community.",
         "default": false
       },
       "preserve_rule_names": {
@@ -106,6 +106,12 @@
         "type": "integer"
       },
       "local_overridden": {
+        "type": "integer"
+      },
+      "re_enabled": {
+        "type": "integer"
+      },
+      "reenable_failed": {
         "type": "integer"
       },
       "to_disable": {
