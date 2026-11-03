@@ -11,6 +11,7 @@ from urllib3.response import HTTPResponse
 from easyvista import EasyVistaConfiguration
 from easyvista.account_validator import EasyVistaAccountValidator
 from easyvista.actions_read import ViewRequestsIncidentsList
+from easyvista.actions_requests import CloseRequestIncidentArguments, UpdateRequestIncident, map_fields
 
 
 @pytest.mark.parametrize(
@@ -113,6 +114,61 @@ def test_error_redacts_credentials(make_action, requests_mock, api_url):
     requests_mock.get(api_url, status_code=590, json={"error": f"fake-access-token fake-password {basic}"})
     action.run({})
     assert action.error.call_args.args[0].endswith("[REDACTED] [REDACTED] [REDACTED]")
+
+
+@pytest.mark.parametrize("credential", ["token", "password", "basic"])
+def test_error_redacts_credentials_before_truncation(make_action, requests_mock, api_url, credential):
+    action = make_action(ViewRequestsIncidentsList, username="user", password="fake-password")
+    secrets = {
+        "token": "fake-access-token",
+        "password": "fake-password",
+        "basic": base64.b64encode(b"user:fake-password").decode(),
+    }
+    secret = secrets[credential]
+    requests_mock.get(api_url, status_code=500, text="x" * 495 + secret + " tail")
+    assert action.run({}) is None
+    message = action.error.call_args.args[0]
+    assert secret[:5] not in message
+    assert message.endswith("x" * 495 + "[REDA")
+
+
+def test_empty_text_filter_preserves_false():
+    args = CloseRequestIncidentArguments(rfc_number="ticket", comment="", delete_actions=False)
+    assert map_fields(args, {"comment": "COMMENT", "delete_actions": "DELETE_ACTIONS"}) == {"DELETE_ACTIONS": False}
+
+
+@pytest.mark.parametrize("status", [502, 503, 504])
+@pytest.mark.parametrize("append,attempts", [(True, 1), (False, 3)])
+def test_append_updates_are_not_retried(make_action, monkeypatch, api_url, status, append, attempts):
+    monkeypatch.setenv("NO_PROXY", "*")
+    action = make_action(UpdateRequestIncident)
+    methods = []
+
+    def reply(conn, method, url, **kwargs):
+        methods.append(method)
+        return HTTPResponse(
+            status=200 if method == "GET" else status,
+            body=BytesIO(b'{"END_DATE_UT":""}' if method == "GET" else b'{"error":"gateway error"}'),
+            headers={"Content-Type": "application/json"},
+            preload_content=False,
+        )
+
+    with patch("urllib3.connectionpool.HTTPConnectionPool._make_request", side_effect=reply):
+        with patch("urllib3.util.retry.time.sleep"):
+            assert action.run({"rfc_number": "ticket", "description": "Evidence", "append": append}) is None
+    assert methods == ["GET"] + ["PUT"] * attempts
+    assert f"EasyVista API error {status}" in action.error.call_args.args[0]
+
+
+def test_append_connection_failure_is_not_retried(make_action, monkeypatch):
+    monkeypatch.setenv("NO_PROXY", "*")
+    action = make_action(ViewRequestsIncidentsList)
+    with patch(
+        "urllib3.connectionpool.HTTPConnectionPool._make_request", side_effect=NewConnectionError(None, "unreachable")
+    ) as call:
+        with pytest.raises(requests.ConnectionError):
+            action.client.put("https://easyvista.example/requests/ticket", params={"append": "true"})
+    assert call.call_count == 1
 
 
 @pytest.mark.parametrize(

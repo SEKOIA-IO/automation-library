@@ -44,10 +44,11 @@ class EasyVistaHttpMixin(ModuleItem):
             message = message.replace(secret, "[REDACTED]")
         return message
 
-    @staticmethod
-    def response_error(response: requests.Response) -> str:
+    def response_error(self, response: requests.Response) -> str:
         data = json_body(response)
-        return str(data["error"]) if isinstance(data, dict) and "error" in data else response.text[:500]
+        if isinstance(data, dict) and "error" in data:
+            return self.redact(str(data["error"]))
+        return self.redact(response.text)[:500]
 
     def _handle_response(self, response: requests.Response, suffix: str = "", *, file_response: bool = False) -> bool:
         if file_response and 200 <= response.status_code < 300:

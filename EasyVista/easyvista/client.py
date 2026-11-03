@@ -1,4 +1,4 @@
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -32,7 +32,9 @@ class IdempotentRetryAdapter(HTTPAdapter):
         self.no_retry = HTTPAdapter(max_retries=0)
 
     def send(self, request, **kwargs):
-        if request.method not in self.max_retries.allowed_methods:
+        append_values = parse_qs(urlsplit(request.url).query).get("append", [])
+        is_append = request.method == "PUT" and any(value.casefold() in {"true", "1"} for value in append_values)
+        if is_append or request.method not in self.max_retries.allowed_methods:
             return self.no_retry.send(request, **kwargs)
         return super().send(request, **kwargs)
 
