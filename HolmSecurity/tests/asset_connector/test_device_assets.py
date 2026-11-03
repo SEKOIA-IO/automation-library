@@ -193,14 +193,13 @@ def test_fqdn_hostname_is_split(connector):
     assert device.network_interfaces[0].hostname == "ec2-63-35-154-82"
 
 
-def test_unusable_hostname_is_not_sent(connector):
-    device = connector.build_device(
-        HolmDevice.model_validate(make_device(hostname="", device_name="BMXP342020 Modicon M340 Processor Module"))
+def test_device_without_usable_hostname_is_skipped(connector):
+    device = HolmDevice.model_validate(
+        make_device(hostname="", device_name="BMXP342020 Modicon M340 Processor Module")
     )
 
-    assert device.hostname is None
-    assert device.domain is None
-    assert device.name == "BMXP342020 Modicon M340 Processor Module"
+    with pytest.raises(ValueError, match="no usable hostname"):
+        connector.build_device(device)
 
 
 def test_map_fields_without_timestamps_raises(connector):

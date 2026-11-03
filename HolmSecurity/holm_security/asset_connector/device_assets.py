@@ -123,7 +123,7 @@ class HolmSecurityDeviceAssetConnector(AssetConnector):
         """Map the Holm OS fields to an OCSF ``OperatingSystem`` object."""
         return mappers.build_operating_system(device.os_name, device.os_family)
 
-    def build_network_interfaces(self, device: HolmDevice, hostname: str | None) -> list[NetworkInterface] | None:
+    def build_network_interfaces(self, device: HolmDevice, hostname: str) -> list[NetworkInterface] | None:
         """Build the primary IPv4 and secondary IPv6 network interfaces."""
         return mappers.build_network_interfaces(device.network, hostname)
 
