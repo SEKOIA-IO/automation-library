@@ -9,4 +9,4 @@ class TenableModuleConfiguration(BaseModel):
 
 
 class TenableModule(Module):
-    configuration: TenableModuleConfiguration
+    configuration: TenableModuleConfiguration  # type: ignore[override]
