@@ -9,6 +9,7 @@ from http_module.helpers import params_as_dict
         ("param1=value1&param2=value2", "param1=value1&param2=value2"),
         ({"param1": "value1", "param2": "value2"}, {"param1": "value1", "param2": "value2"}),
         ('{"param1": "value1", "param2": "value2"}', {"param1": "value1", "param2": "value2"}),
+        ('{"param1": "value1",}', '{"param1": "value1",}'),
         ("not a dict", "not a dict"),
         (None, None),
     ],

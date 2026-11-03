@@ -1,15 +1,16 @@
 import json
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import requests
 import requests_mock as requests_mock_module
+from sekoia_automation.asset_connector.models.ocsf.device import NetworkInterfaceTypeId
 
 from eset_modules import EsetModule
 from eset_modules.asset_connector.device_assets import EsetDeviceAssetConnector
 from eset_modules.asset_connector.models import (
-    EsetActiveProduct,
     EsetActivateDate,
+    EsetActiveProduct,
     EsetCloningConfiguration,
     EsetDeployedComponent,
     EsetDevice,
@@ -20,7 +21,6 @@ from eset_modules.asset_connector.models import (
     EsetOsVersion,
 )
 from eset_modules.models import EsetModuleConfiguration
-from sekoia_automation.asset_connector.models.ocsf.device import NetworkInterfaceTypeId
 
 
 @pytest.fixture
@@ -794,3 +794,95 @@ def test_iterate_devices_second_run_uses_first_run_checkpoint(test_connector, sa
     assert "dev-c" in uuids_run2  # new device → included
     assert "dev-a" not in uuids_run2  # unchanged since run 1 → skipped
     assert "dev-b" not in uuids_run2  # unchanged since run 1 → skipped
+
+
+def test_get_mapped_fields_declares_eset_to_ocsf_mapping(test_connector):
+    """The declared mapping is what the SDK fingerprints to detect schema changes."""
+    mapping = test_connector.get_mapped_fields()
+
+    assert mapping["uuid"] == "device.uid"
+    assert mapping["displayName"] == "device.hostname"
+    assert mapping["operatingSystem.familyId"] == "device.os.type"
+    assert mapping["operatingSystem.displayName"] == "device.os.name"
+    assert mapping["hardwareProfiles.networkAdapters.macAddress"] == "device.network_interfaces.mac"
+    assert mapping["lastSyncTime"] == "device.last_seen_time"
+    assert mapping["parentGroupUuid"] == "device.groups"
+
+    # Only source API fields belong in the mapping, never the static OCSF constants
+    assert not any(key.startswith("static") for key in mapping)
+
+
+def test_reset_checkpoint_clears_persisted_checkpoint(test_connector):
+    with test_connector.context as cache:
+        cache["most_recent_date_seen"] = "2026-05-21T10:00:00+00:00"
+    test_connector._latest_time = "2026-05-21T10:00:00+00:00"
+
+    test_connector.reset_checkpoint()
+
+    assert test_connector.most_recent_date_seen is None
+    assert test_connector._latest_time is None
+
+
+def test_reset_checkpoint_without_existing_checkpoint_is_a_noop(test_connector):
+    test_connector.reset_checkpoint()
+
+    assert test_connector.most_recent_date_seen is None
+
+
+def test_reset_checkpoint_makes_already_seen_devices_collected_again(test_connector, sample_groups_response):
+    """After a reset, devices older than the previous checkpoint must be collected again."""
+    devices_response = {
+        "devices": [{"uuid": "dev-old", "displayName": "Old", "lastSyncTime": "2026-05-20T09:00:00Z"}],
+        "nextPageToken": None,
+    }
+    with test_connector.context as cache:
+        cache["most_recent_date_seen"] = "2026-05-21T00:00:00+00:00"
+
+    with requests_mock_module.Mocker() as m:
+        m.get(f"{test_connector.base_url}/v1/device_groups", json=sample_groups_response)
+        m.get(f"{test_connector.base_url}/v1/devices", json=devices_response)
+
+        assert list(test_connector.get_assets()) == []
+
+        test_connector.reset_checkpoint()
+        assets = list(test_connector.get_assets())
+
+    assert [asset.device.uid for asset in assets] == ["dev-old"]
+
+
+def test_first_schema_check_stores_fingerprint_without_resetting(test_connector):
+    """An existing deployment must not re-fetch everything just because the mapping is now declared."""
+    with test_connector.context as cache:
+        cache["most_recent_date_seen"] = "2026-05-21T10:00:00+00:00"
+
+    test_connector._check_schema_and_reset_if_needed()
+
+    assert test_connector.most_recent_date_seen == "2026-05-21T10:00:00+00:00"
+    with test_connector.schema_store as store:
+        assert store["fields"] == test_connector.get_mapped_fields()
+
+
+def test_schema_change_resets_checkpoint(test_connector):
+    with test_connector.context as cache:
+        cache["most_recent_date_seen"] = "2026-05-21T10:00:00+00:00"
+
+    test_connector._check_schema_and_reset_if_needed()  # stores the current fingerprint
+
+    with patch.object(
+        EsetDeviceAssetConnector,
+        "get_mapped_fields",
+        return_value={"uuid": "device.uid", "newField": "device.new_field"},
+    ):
+        test_connector._check_schema_and_reset_if_needed()
+
+    assert test_connector.most_recent_date_seen is None
+
+
+def test_unchanged_schema_keeps_checkpoint(test_connector):
+    with test_connector.context as cache:
+        cache["most_recent_date_seen"] = "2026-05-21T10:00:00+00:00"
+
+    test_connector._check_schema_and_reset_if_needed()
+    test_connector._check_schema_and_reset_if_needed()
+
+    assert test_connector.most_recent_date_seen == "2026-05-21T10:00:00+00:00"

@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from threading import Event
-from typing import Callable
 
 import requests
 from requests.adapters import HTTPAdapter

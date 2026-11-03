@@ -4,6 +4,7 @@ import pytest
 from cachetools import LRUCache
 
 from sentinelone_module.helpers import (
+    PASSWORD_SPECIAL_CHARACTERS,
     clean_hostname,
     filter_collected_events,
     generate_password,
@@ -21,8 +22,13 @@ def assert_password(password: str):
 
 
 def test_generate_password():
-    assert_password(generate_password())
-    assert_password(generate_password(6))
+    safe_alphabet = set(string.ascii_letters + string.digits + PASSWORD_SPECIAL_CHARACTERS)
+    unsafe_special_characters = set(string.punctuation) - set(PASSWORD_SPECIAL_CHARACTERS)
+
+    for password in (generate_password(), generate_password(6)):
+        assert_password(password)
+        assert set(password) <= safe_alphabet
+        assert set(password).isdisjoint(unsafe_special_characters)
 
 
 def test_is_a_supported_stix_indicator():

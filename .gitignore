@@ -88,3 +88,8 @@ dmypy.json
 */.github/copilot*
 .github/skills/*
 .github/agents/*
+
+# Temporary directories
+**/.tmp/
+.mcp.json
+.claude/*

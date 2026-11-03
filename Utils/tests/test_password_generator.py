@@ -1,5 +1,7 @@
-import pytest
 import string
+
+import pytest
+
 from utils.password_generator import PasswordGenerator
 
 

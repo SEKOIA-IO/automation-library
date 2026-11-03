@@ -80,7 +80,7 @@ def test_get_asset_by_uuid_returns_none_if_http_error(requests_mock):
     requests_mock.get(base_url + str(asset_uuid), status_code=404)
 
     results: dict = action.run(arguments)
-    assert results == None
+    assert results is None
 
 
 def test_get_asset_returns_none_if_uuid_empty(requests_mock):

@@ -1,5 +1,6 @@
-from unittest.mock import patch
 import socket
+from unittest.mock import patch
+
 from dns_modules.action_dns_reverse_search import DnsReverseSearchAction
 
 

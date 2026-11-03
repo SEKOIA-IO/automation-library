@@ -25,7 +25,7 @@ def test_get_alert_by_uuid(requests_mock, alert_uuid):
     assert requests_mock.call_count == 1
     history = requests_mock.request_history
     assert history[0].method == "GET"
-    assert history[0].url == f"{base_url}{alert_uuid}?stix=True&cases=True"
+    assert history[0].url == f"{base_url}{alert_uuid}?stix=true&cases=true"
 
 
 def test_get_alert_by_uuid_returns_none_if_http_error(requests_mock):
@@ -70,3 +70,23 @@ def test_get_alert_returns_none_if_uuid_missing(requests_mock):
     with pytest.raises(ValidationError):
         action.run(arguments)
     assert requests_mock.call_count == 0
+
+
+def test_get_alert_drops_unset_booleans(requests_mock):
+    """`stix`/`cases` left untouched in the node arrive as False, not as None.
+
+    `exclude_none` cannot drop them, so they used to be sent as active
+    parameters. They must be omitted, exactly like in the Search Alerts action.
+    """
+    action = GetAlert()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    alert_uuid = "781b21f0-4961-450e-b7ed-80e66b04ac87"
+    arguments = {"uuid": alert_uuid, "stix": False, "cases": True}
+
+    requests_mock.get(base_url + alert_uuid, json={"uuid": alert_uuid})
+
+    action.run(arguments)
+
+    url = requests_mock.request_history[0].url
+    assert "stix" not in url
+    assert url.endswith("?cases=true")

@@ -1,18 +1,19 @@
 import json
 import logging
+from collections.abc import Generator, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import wait as wait_futures
 from posixpath import join as urljoin
-from typing import Any, Generator, Sequence
+from typing import Any
 
 import requests
 from requests import Response
 from sekoia_automation.action import Action
 from sekoia_automation.constants import CHUNK_BYTES_MAX_SIZE, EVENT_BYTES_MAX_SIZE
-from tenacity import Retrying, stop_after_delay, wait_exponential, retry_if_exception
+from tenacity import Retrying, retry_if_exception, stop_after_delay, wait_exponential
 
-from sekoiaio.utils import user_agent
 from sekoiaio.logging import get_logger
+from sekoiaio.utils import user_agent
 
 logger = get_logger(__name__)
 
@@ -47,7 +48,7 @@ class PushEventToIntake(Action):
             reraise=True,
         )
 
-    def _chunk_events(self, events: Sequence[str]) -> Generator[list[Any], None, None]:
+    def _chunk_events(self, events: Sequence[str]) -> Generator[list[Any]]:
         """
         Group events by chunk.
 
@@ -87,7 +88,7 @@ class PushEventToIntake(Action):
 
         # if events were discarded, log it
         if nb_discarded_events > 0:
-            self.log(message=f"{nb_discarded_events} too long events " "were discarded (length > 250kb)")
+            self.log(message=f"{nb_discarded_events} too long events were discarded (length > 250kb)")
 
     def _send_chunk(
         self,

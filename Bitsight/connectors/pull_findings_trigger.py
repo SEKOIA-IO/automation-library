@@ -1,13 +1,12 @@
 import asyncio
 import time
 from asyncio import Queue
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import reduce
-from typing import Annotated, Any, Optional, TypeAlias, cast
+from typing import Any, cast
 
 import orjson
 from loguru import logger
-from pydantic import Field
 from pydantic.v1 import BaseModel
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
@@ -18,8 +17,8 @@ from connectors import BitsightModule
 
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
-FindingQueue: TypeAlias = Queue[tuple[dict[str, Any] | None, str]]
-Finding: TypeAlias = dict[str, Any]
+type FindingQueue = Queue[tuple[dict[str, Any] | None, str]]
+type Finding = dict[str, Any]
 
 
 class CompanyCheckpoint(BaseModel):
@@ -27,7 +26,7 @@ class CompanyCheckpoint(BaseModel):
     last_seen: str | None = None
     offset: int | None = None
 
-    def with_updated_last_seen(self, time_delta: int) -> "CompanyCheckpoint":
+    def with_updated_last_seen(self, time_delta: int) -> CompanyCheckpoint:
         """
         Get CompanyCheckpoint with updated last_see corresponded to the next logic.
 
@@ -41,13 +40,9 @@ class CompanyCheckpoint(BaseModel):
         Returns:
             datetime:
         """
-        result = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(
-            days=time_delta
-        )
+        result = datetime.now(UTC).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(days=time_delta)
 
-        parsed_last_seen = (
-            datetime.fromisoformat(self.last_seen).replace(tzinfo=timezone.utc) if self.last_seen else None
-        )
+        parsed_last_seen = datetime.fromisoformat(self.last_seen).replace(tzinfo=UTC) if self.last_seen else None
 
         if parsed_last_seen is not None and parsed_last_seen >= result:
             return self
@@ -72,15 +67,13 @@ class Checkpoint(BaseModel):
             return
 
         last_seen = (
-            datetime.fromisoformat(company_checkpoint.last_seen or datetime.now(timezone.utc).isoformat())
-            .replace(tzinfo=timezone.utc)
+            datetime.fromisoformat(company_checkpoint.last_seen or datetime.now(UTC).isoformat())
+            .replace(tzinfo=UTC)
             .replace(microsecond=0, second=0, minute=0, hour=0)
         )
 
         next_day = last_seen + timedelta(days=1)
-        now = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(
-            days=self.time_delta
-        )
+        now = datetime.now(UTC).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(days=self.time_delta)
         if next_day <= now:
             company_checkpoint.last_seen = next_day.strftime("%Y-%m-%d")
             company_checkpoint.offset = 1
@@ -122,7 +115,7 @@ class PullFindingsConnector(AsyncConnector):
     module: BitsightModule
     configuration: PullFindingsConnectorConfiguration
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         """Init PullFindingsConnector."""
 
         super().__init__(*args, **kwargs)

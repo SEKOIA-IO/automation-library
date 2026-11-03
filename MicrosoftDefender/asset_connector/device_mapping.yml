@@ -109,8 +109,14 @@ mapping:
     - source: "machine.computerDnsName"
       target: "device.hostname"
       type: "string"
-      logic: "Direct mapping"
-      description: "Fully qualified DNS name"
+      logic: "First label of the DNS name"
+      description: "Short hostname"
+
+    - source: "machine.computerDnsName"
+      target: "device.domain"
+      type: "string"
+      logic: "Labels after the first one, absent when the name has none"
+      description: "Domain the host belongs to"
 
     - source: "machine.lastIpAddress"
       target: "device.ip"
@@ -267,7 +273,8 @@ mapping:
             "type_id": 2,
             "type": "Desktop",
             "uid": "1e5bc9d7e413ddd7902c2932e418702b84d0cc07",
-            "hostname": "mymachine1.contoso.com",
+            "hostname": "mymachine1",
+            "domain": "contoso.com",
             "ip": "172.17.230.209",
             "os": {
               "name": "10.0.22631.3880",

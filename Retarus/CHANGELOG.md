@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-30 - 1.2.1
+
+### Changed
+
+- Pin Docker base image to `python:3.14-bookworm` for reproducible runtime builds.
+
+## 2026-07-23 - 1.2.0
+
+### Changed
+
+- Migrated module from Poetry to uv
+
 ## 2026-07-02 - 1.1.3
 
 ### Fixed

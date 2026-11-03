@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 few constants shared by all the module of the integration
 """

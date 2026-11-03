@@ -35,7 +35,6 @@ class GetAssetArguments(BaseModel):
 
 
 class GetAsset(Action):
-
     def url(self, path: str) -> str:
         return urljoin(self.module.configuration["base_url"], "api/v2/asset-management/assets/", path)
 

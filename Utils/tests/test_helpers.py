@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from utils.helpers import time_to_sleep, accurate_sleep
+from utils.helpers import accurate_sleep, time_to_sleep
 
 
 @pytest.mark.parametrize(

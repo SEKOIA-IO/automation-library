@@ -587,7 +587,6 @@ mapping:
             "hostname": "testhostaname1",
             "type": "Desktop",
             "type_id": 1,
-            "vendor_name": "HarfangLab",
             "ip": "1.2.2.5",
             "domain": "TestGROUP",
             "subnet": "255.255.255.0",

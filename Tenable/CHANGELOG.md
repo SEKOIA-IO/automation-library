@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-03 - 1.1.1
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.27.0: a rate limited push (HTTP 429) stops the cycle and pauses the connector for the Retry-After delay, instead of pushing the remaining batches
+- Declare the mapped fields: a mapping change resets the checkpoint and fetches all open findings again
+
+## 2026-10-26 - 1.1.0
+
+### Fixed
+
+- Device IP, OS, hostnames, network interfaces, cloud region and timestamps are filled again for assets read from the asset export
+- Fix duplicate vulnerabilities on every run
+- State changes (fixed, reopened) of an already sent vulnerability are always sent
+- The checkpoint is saved only after a complete export and once every batch is accepted by Sekoia.io (only a batch rejected as invalid, HTTP 400 or 422, is dropped and logged; other refusals are retried), so an interrupted cycle no longer skips findings
+- First run collects all open and reopened vulnerabilities; an old checkpoint is no longer moved forward
+- Same device hostname fallback (hostname, name, FQDN) whatever the asset source
+- A failed asset export no longer triggers a new export for every vulnerability
+- A temporary error on the asset details endpoint no longer loses the finding: the checkpoint stops at that finding so it is fetched again on the next cycle
+- An incomplete cycle (asset API error, refused batch) is retried after a delay instead of immediately
+- Findings with an unknown state are sent as Create instead of being skipped
+
+### Changed
+
+- The existing checkpoint is reused: no full re-fetch on upgrade
+- Asset cache refreshed every 6 hours from a full asset export (no longer limited to the assets updated since the vulnerability checkpoint), up to 20000 assets
+- `device.name` falls back to the hostname, then the FQDN
+- REOPENED findings are sent with the OCSF activity name `Update`
+- Descriptions and references are capped to the platform limits
+- Tenable API payloads with explicit `null` values are accepted
+- The event `time` is when the current state was observed (latest of `last_found` and `last_fixed`), no longer `first_found`
+- The cloud region of the asset is sent in `device.region` instead of `device.location.city`
+- The Tenable severity is also sent as the OCSF event `severity` and `severity_id`
+- Mapping code split into `TenableVulnerabilityMapper`, `TenableDeviceMapper` and helper functions; mapping documentation updated
+
+## 2026-08-28 - 1.0.19
+
+### Changed
+
+- Add dedicated Pydantic model files split by endpoint: `models/vuln_export_model.py` (Export Vulnerabilities), `models/assets_export_model.py` (Export Assets v2), `models/asset_details_model.py` (Get Asset Details)
+- Migrate `vulnerability_asset.py` to use new split Pydantic models (`Vulnerability` from `vuln_export_model`, `AssetDetails` and `NetworkInterface` from `asset_details_model`) instead of the legacy monolithic `model.py`
+- Add missing fields to all models
+
+## 2026-07-29 - 1.0.18
+
+### Fixed
+
+- Fix `AssetInfo` model to accept float values for `aes_score_v3` and `acr_score_v3` fields returned by the Tenable API
+- Fix `TagsObject` model to accept `None` for the `added_by` field
+
 ## 2026-05-20 - 1.0.17
 
 ### Changed

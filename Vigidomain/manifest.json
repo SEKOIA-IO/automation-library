@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Vigidomain",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Vigidomain detects typosquatting, brand impersonation, and malicious domains targeting your organization.\n\nThe platform provides contextualized and actionable threat indicators to identify emerging phishing campaigns and external threats at an early stage.",
+  "name": "Vigidomain",
+  "uuid": "6db02007-b303-4e27-9ba4-f576fc7f9a4f",
+  "version": "1.0.0",
+  "slug": "vigidomain",
+  "categories": [
+    "Threat Intelligence"
+  ]
+}

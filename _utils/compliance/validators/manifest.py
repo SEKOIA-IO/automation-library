@@ -149,6 +149,62 @@ class ManifestValidator(Validator):
                         )
                     )
 
+        cls.validate_fission(result, manifest, module_dir, manifest_path)
+
+    @staticmethod
+    def validate_fission(
+        result: CheckResult, manifest: dict, module_dir: Path, manifest_path: Path
+    ) -> None:
+        if "fission" not in manifest:
+            return
+
+        fission = manifest["fission"]
+        if not isinstance(fission, dict):
+            result.errors.append(
+                CheckError(
+                    filepath=manifest_path,
+                    error="`fission` must be an object in manifest.json",
+                )
+            )
+            return
+
+        python_versions = fission.get("python-version", [])
+        if not isinstance(python_versions, list):
+            result.errors.append(
+                CheckError(
+                    filepath=manifest_path,
+                    error="`fission.python-version` must be a list in manifest.json",
+                )
+            )
+            return
+
+        for python_version in python_versions:
+            if not isinstance(python_version, str) or not re.match(
+                r"^\d+\.\d+$", python_version
+            ):
+                result.errors.append(
+                    CheckError(
+                        filepath=manifest_path,
+                        error=f"`fission.python-version` contains '{python_version}', expected a X.Y Python version",
+                    )
+                )
+
+        if len(python_versions) != len(set(map(str, python_versions))):
+            result.errors.append(
+                CheckError(
+                    filepath=manifest_path,
+                    error="`fission.python-version` contains duplicated versions",
+                )
+            )
+
+        if python_versions and not (module_dir / "uv.lock").is_file():
+            result.errors.append(
+                CheckError(
+                    filepath=manifest_path,
+                    error="fission packages can only be built for modules managed with uv (uv.lock is missing)",
+                )
+            )
+
     @staticmethod
     def is_valid_json_schema(schema: dict) -> bool:
         try:

@@ -1,17 +1,17 @@
 from pathlib import Path
-from typing import Any, List, Dict
+from typing import Any
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 from sekoia_automation.storage import PersistentJSON
 
-from usta_modules.models import UstaATPConnectorConfiguration, UstaModule, UstaModuleConfig
+from usta_modules.models import UstaATPConnectorConfiguration, UstaModule
 from usta_modules.usta_atp_connector import UstaAtpConnector
 from usta_modules.usta_sdk import UstaClient
 
 
 @pytest.fixture
-def sample_events() -> List[Dict[str, Any]]:
+def sample_events() -> list[dict[str, Any]]:
     """Provides a standard dataset of USTA events for testing.
 
     Returns:
@@ -106,7 +106,7 @@ def atp_connector(symphony_storage: Path) -> UstaAtpConnector:
     """
     connector = UstaAtpConnector()
     connector.module = UstaModule()
-    connector.module.configuration = UstaModuleConfig(api_key="test_api_key")
+    connector.module.configuration = {"api_key": "test_api_key"}
 
     connector.configuration = UstaATPConnectorConfiguration(
         intake_key="intake_key", frequency=60, max_historical_days=1

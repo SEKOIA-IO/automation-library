@@ -301,7 +301,7 @@ def test_map_fields_success(test_sentinelone_device_asset_connector, sample_agen
     assert result.device.ip == "31.155.5.7"
     assert result.device.subnet == "31.155.5.x"
     assert result.device.model == "Acme computers - 15x4k"
-    assert result.device.vendor_name == "Acme computers - 15x4k"
+    assert result.device.vendor_name is None
     assert result.device.is_managed is True
     assert result.device.is_compliant is True
     assert result.device.region == "Test Site"
@@ -416,7 +416,7 @@ def test_map_fields_minimal_agent(test_sentinelone_device_asset_connector):
 
     # These fields should always be set
     assert result.device.name == "MINIMAL-PC"
-    assert result.device.vendor_name is None  # modelName not provided in minimal agent
+    assert result.device.vendor_name is None
     assert result.device.is_managed is True
     assert result.device.created_time is not None
 

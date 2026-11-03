@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Hodor", 
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": " Hodor governs AI agent access to business applications through identities, contracts and policies.",
+  "name": "Hodor", 
+  "uuid": "e8964b5b-fbeb-475a-908b-879f4f6f1e9b",
+  "version": "1.0.0",
+  "slug": "hodor",
+  "categories": [
+    "Network"
+  ]
+}

@@ -1,16 +1,22 @@
+import ipaddress
 from datetime import datetime
 
-import ipaddress
+import whois
+from sekoia_automation.action import Action
 from tldextract import extract
 
-import whois
-from whois.parser import PywhoisError
-from sekoia_automation.action import Action
+try:
+    from whois.parser import PywhoisError as WhoisLookupError
+except ImportError:
+    try:
+        from whois import WhoisError as WhoisLookupError
+    except ImportError:
+        WhoisLookupError = Exception
 
 
 # Returns an item in a list at a given index
-def list_tool(item, list, number):
-    if isinstance(item, list):
+def list_tool(item, item_type, number):
+    if isinstance(item, item_type):
         return str(item[number])
     else:
         return item
@@ -19,6 +25,8 @@ def list_tool(item, list, number):
 # converts inputs into a string w/o u' prepended
 def my_converter(obj):
     if isinstance(obj, datetime):
+        if obj.tzinfo is not None:
+            obj = obj.replace(tzinfo=None)
         return obj.__str__()
     else:
         return obj
@@ -27,17 +35,14 @@ def my_converter(obj):
 # Converts a list of time objects into human readable format
 def time_list_tool(obj):
     if obj is not None and isinstance(obj, list):
-        for string in obj:
-            my_converter(string)
-        return string
-    else:
-        return obj
+        return my_converter(obj[-1]) if obj else obj
+    return my_converter(obj)
 
 
 # Checks if the input is an IP address
 def is_ip_adress(ip_adresse: str) -> bool:
     try:
-        s = ipaddress.ip_address(ip_adresse)
+        ipaddress.ip_address(ip_adresse)
         return True
     except ValueError:
         return False
@@ -81,5 +86,5 @@ class WhoisAction(Action):
                     },
                 }
             }
-        except PywhoisError as e:
+        except WhoisLookupError:
             return {}

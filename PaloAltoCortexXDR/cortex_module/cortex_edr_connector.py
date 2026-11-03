@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import orjson
 from cachetools import Cache, LRUCache
+from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import HTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
@@ -45,6 +46,7 @@ class CortexQueryEDRTrigger(CortexConnector):
         # This cache should be big enough to cover all events within 1 second.
         self.cache_size = 10_000
         self.alerts_cache: Cache[str, bool] = self.load_alerts_cache()
+        self._connection_issue_detected = False
 
     def load_alerts_cache(self) -> Cache[str, bool]:
         result: LRUCache[str, bool] = LRUCache(maxsize=self.cache_size)
@@ -190,9 +192,22 @@ class CortexQueryEDRTrigger(CortexConnector):
         Collect and forward the next batch of alerts
         """
         start = time.time()
+        connection_issue_detected = self._connection_issue_detected
         try:
             self.get_all_alerts(self.pagination_limit)
+            if connection_issue_detected:
+                self.log(
+                    level="info",
+                    message="Cortex connection restored, the connector reconnected successfully",
+                )
+                self._connection_issue_detected = False
 
+        except RequestsConnectionError as ex:
+            self._connection_issue_detected = True
+            self.log(
+                level="warning",
+                message="Temporary connection issue while fetching Cortex alerts, will retry on next run",
+            )
         except (HTTPError, BaseHTTPError) as ex:
             error_response = getattr(ex, "response", None)
             if error_response is None:

@@ -1,6 +1,7 @@
+from uuid import uuid4
+
 import pytest
 import requests
-from uuid import uuid4
 
 from sekoiaio.operation_center.list_queries import ListQueries, ListQueriesArguments
 

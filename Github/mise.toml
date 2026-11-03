@@ -1,0 +1,32 @@
+[tools]
+python = '3.14'
+uv = '0.12.5'
+
+[env]
+_.python.venv = { path = ".venv" }
+
+[tasks.test]
+description = "Run tests"
+run = "uv run pytest tests"
+
+[tasks.lint]
+description = "lint the automation module"
+dir = ".."
+run = "python linter.py check --changes"
+
+[tasks.format]
+description = "Format the python code in the automation module"
+run = "uvx black ."
+
+[tasks.check]
+description = "Check typing"
+run = "uvx mypy --install-types --non-interactive --ignore-missing-imports --show-column-numbers --hide-error-context ."
+
+[tasks.compliance]
+description = "check the compliance of the automation module"
+dir = "../utils"
+run = "uv run python compliance check --changes"
+
+[tasks.validate]
+description = "Check the automation module"
+depends = ["lint", "format", "check", "compliance"]

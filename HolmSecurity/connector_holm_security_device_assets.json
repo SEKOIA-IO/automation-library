@@ -1,6 +1,6 @@
 {
   "name": "Holm Security Devices",
-  "description": "Fetch holm device assets",
+  "description": "Fetch Holm Security device agents and scanned network assets",
   "uuid": "4df342f5-9fb0-4d45-97c0-bdae48e2e7c2",
   "docker_parameters": "holm_security_device_asset_connector",
   "type": "asset",
@@ -42,5 +42,6 @@
       "frequency",
       "batch_size"
     ]
-  }
+  },
+  "feature-flag": ["reveal-beta-connectors"]
 }

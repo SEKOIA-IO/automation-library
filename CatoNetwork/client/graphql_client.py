@@ -1,15 +1,26 @@
 """Cato graphql client."""
 
+import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from enum import Enum
-from typing import Any, AsyncGenerator
+from typing import Any
 
 from aiolimiter import AsyncLimiter
 from gql import Client
+from gql.client import AsyncClientSession
 from gql.transport.aiohttp import AIOHTTPTransport
-from loguru import logger
+from gql.transport.exceptions import TransportQueryError
 
 from client.schemas.events_feed import EventsFeedQueries, EventsFeedResponseSchema
+
+# gql logs every request and the full response body at INFO level, which would dump customer events to stderr.
+logging.getLogger("gql.transport.aiohttp").setLevel(logging.WARNING)
+
+logger = logging.getLogger(__name__)
+
+# Seconds, applied both to the HTTP request and to the whole GraphQL execution
+DEFAULT_TIMEOUT = 60
 
 
 class CatoRequestType(Enum):
@@ -22,11 +33,8 @@ class CatoRequestType(Enum):
     EVENTS_FEED = "eventsFeed"
 
 
-class CatoGraphQLClient(object):
+class CatoGraphQLClient:
     """Class for Cato GraphQL client."""
-
-    _rate_limiters: dict[CatoRequestType, AsyncLimiter] | None = None
-    _cato_clients: dict[CatoRequestType, Client] | None = None
 
     def __init__(
         self,
@@ -67,14 +75,17 @@ class CatoGraphQLClient(object):
 
         self.base_url = "https://api.catonetworks.com/api/v1/graphql2" if not base_url else base_url
 
+        self._rate_limiters: dict[CatoRequestType, AsyncLimiter] = {}
+        self._cato_clients: dict[CatoRequestType, Client] | None = None
+        self._sessions: dict[CatoRequestType, AsyncClientSession] = {}
+
         self.set_rate_limiter(CatoRequestType.ACCOUNT_METRICS, account_metrics_rate_limiter)
         self.set_rate_limiter(CatoRequestType.ACCOUNT_SNAPSHOT, account_snapshot_rate_limiter)
         self.set_rate_limiter(CatoRequestType.AUDIT_FEED, audit_feed_rate_limiter)
         self.set_rate_limiter(CatoRequestType.ENTITY_LOOKUP, entity_lookup_rate_limiter)
         self.set_rate_limiter(CatoRequestType.EVENTS_FEED, events_feed_rate_limiter)
 
-    @classmethod
-    def set_rate_limiter(cls, request_type: CatoRequestType, rate_limiter: AsyncLimiter | None) -> None:
+    def set_rate_limiter(self, request_type: CatoRequestType, rate_limiter: AsyncLimiter | None) -> None:
         """
         Set rate limiter for specific request type.
 
@@ -82,11 +93,8 @@ class CatoGraphQLClient(object):
             request_type: CatoRequestType
             rate_limiter: AsyncLimiter | None
         """
-        if not cls._rate_limiters:
-            cls._rate_limiters = {}
-
         if rate_limiter:
-            cls._rate_limiters[request_type] = rate_limiter
+            self._rate_limiters[request_type] = rate_limiter
         else:
             match request_type:
                 case CatoRequestType.AUDIT_FEED:
@@ -102,10 +110,9 @@ class CatoGraphQLClient(object):
                     # Default is 120/minute for accountMetrics and accountSnapshot
                     _limiter = AsyncLimiter(120)
 
-            cls._rate_limiters[request_type] = _limiter
+            self._rate_limiters[request_type] = _limiter
 
-    @classmethod
-    def get_rate_limiter(cls, request_type: CatoRequestType) -> AsyncLimiter:
+    def get_rate_limiter(self, request_type: CatoRequestType) -> AsyncLimiter:
         """
         Get rate limiter for specific request type.
 
@@ -115,10 +122,7 @@ class CatoGraphQLClient(object):
         Returns:
             AsyncLimiter:
         """
-        if not cls._rate_limiters:
-            cls._rate_limiters = {}
-
-        _rate_limiter = cls._rate_limiters.get(request_type)
+        _rate_limiter = self._rate_limiters.get(request_type)
 
         if not _rate_limiter:
             raise ValueError(f"Rate limiter for {request_type} is not set")
@@ -140,27 +144,81 @@ class CatoGraphQLClient(object):
 
         _cato_client = self._cato_clients.get(request_type)
         if not _cato_client:
-            transport = AIOHTTPTransport(url=self.base_url, headers={"x-api-key": self.api_key})
+            transport = AIOHTTPTransport(
+                url=self.base_url,
+                headers={"x-api-key": self.api_key},
+                ssl=True,
+                timeout=DEFAULT_TIMEOUT,
+            )
 
-            _cato_client = Client(transport=transport, fetch_schema_from_transport=False)
+            _cato_client = Client(
+                transport=transport,
+                fetch_schema_from_transport=False,
+                execute_timeout=DEFAULT_TIMEOUT,
+            )
 
             self._cato_clients[request_type] = _cato_client
 
         return _cato_client
 
-    @asynccontextmanager
-    async def _session(self, request_type: CatoRequestType) -> AsyncGenerator[Client, None]:
+    async def _get_session(self, request_type: CatoRequestType) -> AsyncClientSession:
         """
-        Get configured GraphQL client with correct rate limiter.
+        Get the connected GraphQL session of a request type, opening it on first use.
+
+        The session (and its aiohttp session) is reused across calls until `close` is called
+        or a transport error occurs.
+
+        Args:
+            request_type: CatoRequestType
+
+        Returns:
+            AsyncClientSession:
+        """
+        session = self._sessions.get(request_type)
+        if session is None:
+            session = await self.cato_client(request_type).connect_async()
+            self._sessions[request_type] = session
+
+        return session
+
+    async def _close_session(self, request_type: CatoRequestType) -> None:
+        """
+        Close the GraphQL session of a request type, if any.
+
+        Args:
+            request_type: CatoRequestType
+        """
+        session = self._sessions.pop(request_type, None)
+        if session is not None:
+            await session.client.close_async()
+
+    async def close(self) -> None:
+        """Close every open GraphQL session."""
+        for request_type in list(self._sessions):
+            await self._close_session(request_type)
+
+    @asynccontextmanager
+    async def _session(self, request_type: CatoRequestType) -> AsyncGenerator[AsyncClientSession]:
+        """
+        Get a connected GraphQL session, under the rate limiter of the request type.
+
+        On any failure but a GraphQL query error, the session is closed so the next call opens a fresh one.
 
         Args:
             request_type: CatoRequestType
 
         Yields:
-            Client:
+            AsyncClientSession:
         """
         async with self.get_rate_limiter(request_type):
-            yield self.cato_client(request_type)
+            session = await self._get_session(request_type)
+            try:
+                yield session
+            except TransportQueryError:
+                raise
+            except BaseException:
+                await self._close_session(request_type)
+                raise
 
     async def load_events_feed(self, last_event_id: str | None = None) -> EventsFeedResponseSchema:
         """
@@ -172,14 +230,14 @@ class CatoGraphQLClient(object):
         Returns:
             EventsFeedResponseSchema:
         """
-        logger.info(f"Loading events feed for account {self.account_id} with marker start from {last_event_id}")
+        logger.debug("Loading events feed from marker %s", last_event_id)
         async with self._session(CatoRequestType.EVENTS_FEED) as session:
             variables = {
                 "accountIds": [self.account_id],
                 "lastEventId": last_event_id,
             }
 
-            response: dict[str, Any] = await session.execute_async(
+            response: dict[str, Any] = await session.execute(
                 EventsFeedQueries.GET_EVENTS_FEED.value,
                 variable_values=variables,
             )

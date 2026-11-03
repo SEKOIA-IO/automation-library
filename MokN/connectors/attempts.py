@@ -1,7 +1,8 @@
 import json
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from typing import Any, Iterator, Optional
+from typing import Any
 
 from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector
@@ -21,7 +22,7 @@ class MoknLoginAttemptsTrigger(Connector):
     description = "Collect MokN bait attempts and forward them to Sekoia.io"
     module: MoknModule
     configuration: MoknLoginAttemptsTriggerConfiguration
-    _next_cursor: Optional[AttemptCursor] = None
+    _next_cursor: AttemptCursor | None = None
 
     @property
     def frequency(self) -> int:
@@ -199,8 +200,7 @@ class MoknLoginAttemptsTrigger(Connector):
         sleep_time = max(delta_sleep, 0)
         self.log(
             message=(
-                f"MokN run completed with {total_number_of_events} fetched event(s). "
-                f"Next wait time: {sleep_time:.2f}s"
+                f"MokN run completed with {total_number_of_events} fetched event(s). Next wait time: {sleep_time:.2f}s"
             ),
             level="info",
         )

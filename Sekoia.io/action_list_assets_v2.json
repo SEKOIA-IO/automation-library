@@ -72,6 +72,14 @@
         ],
         "description": "Filter assets with higher criticality"
       },
+      "include_revoked": {
+        "in": "query",
+        "type": [
+          "boolean",
+          "null"
+        ],
+        "description": "Include revoked assets in the search results"
+      },
       "sort": {
         "in": "query",
         "anyOf": [

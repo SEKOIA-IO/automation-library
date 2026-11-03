@@ -1,0 +1,12 @@
+From: Test Sender <sender@example.test>
+To: mailbox@example.test
+Date: Tue, 25 Aug 2026 13:05:15 +0000
+Message-ID: <incoming-sample-0001@example.test>
+Subject: E2E-OUTLOOK-ANON-01
+X-MS-Exchange-Organization-Network-Message-Id: 11111111-2222-3333-4444-555555555555
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+
+Hi,
+
+This is an anonymized incoming email fixture used for tests.

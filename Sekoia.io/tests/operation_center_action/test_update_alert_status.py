@@ -1,8 +1,8 @@
 import uuid
-
 from unittest.mock import patch
 
 import pytest
+
 from sekoiaio.operation_center.update_alert_status import (
     NonRetryableAlertStatusError,
     UpdateAlertStatus,
@@ -126,9 +126,8 @@ def test_patch_alert_status_custom_status_lookup_fails_on_server_error(requests_
 
     requests_mock.get(module_base_url + "api/v1/sic/custom_statuses", json={}, status_code=500)
 
-    with patch("tenacity.nap.time"):
-        with pytest.raises(Exception):
-            action.run(arguments)
+    with patch("tenacity.nap.time"), pytest.raises(Exception):
+        action.run(arguments)
 
 
 def test_patch_alert_status_custom_status_lookup_fails_on_client_error_without_retry(requests_mock):
@@ -139,9 +138,8 @@ def test_patch_alert_status_custom_status_lookup_fails_on_client_error_without_r
 
     requests_mock.get(module_base_url + "api/v1/sic/custom_statuses", text="forbidden", status_code=403)
 
-    with patch("tenacity.nap.time") as nap_mock:
-        with pytest.raises(NonRetryableAlertStatusError):
-            action.run(arguments)
+    with patch("tenacity.nap.time") as nap_mock, pytest.raises(NonRetryableAlertStatusError):
+        action.run(arguments)
 
     nap_mock.assert_not_called()
 
@@ -154,9 +152,8 @@ def test_patch_alert_status_custom_status_lookup_fails_on_invalid_json_without_r
 
     requests_mock.get(module_base_url + "api/v1/sic/custom_statuses", text="not-json")
 
-    with patch("tenacity.nap.time") as nap_mock:
-        with pytest.raises(NonRetryableAlertStatusError):
-            action.run(arguments)
+    with patch("tenacity.nap.time") as nap_mock, pytest.raises(NonRetryableAlertStatusError):
+        action.run(arguments)
 
     nap_mock.assert_not_called()
 
@@ -182,9 +179,8 @@ def test_patch_alert_status_custom_status_lookup_fails_on_unexpected_payload_wit
 
     requests_mock.get(module_base_url + "api/v1/sic/custom_statuses", json={"unexpected": "format"})
 
-    with patch("tenacity.nap.time") as nap_mock:
-        with pytest.raises(NonRetryableAlertStatusError):
-            action.run(arguments)
+    with patch("tenacity.nap.time") as nap_mock, pytest.raises(NonRetryableAlertStatusError):
+        action.run(arguments)
 
     nap_mock.assert_not_called()
 
@@ -196,6 +192,5 @@ def test_patch_alert_status_fails(requests_mock):
     arguments = {"status": "8f206505-af6d-433e-93f4-775d46dc7d0f", "uuid": alert_uuid}
 
     requests_mock.patch(f"{base_url}/{alert_uuid}/workflow", json={}, status_code=500)
-    with patch("tenacity.nap.time"):
-        with pytest.raises(Exception):
-            action.run(arguments)
+    with patch("tenacity.nap.time"), pytest.raises(Exception):
+        action.run(arguments)

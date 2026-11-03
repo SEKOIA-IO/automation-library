@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class MoknThreatLevel(str, Enum):
+class MoknThreatLevel(StrEnum):
     """Supported MokN threat levels used for filtering."""
 
     HIGH = "HIGH"

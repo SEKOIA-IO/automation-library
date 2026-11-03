@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-10 - 2.11.0
+
+### Changed
+
+- Migrated module from Poetry to uv
+
+## 2026-09-09 - 2.10.6
+
+### Fixed
+
+- Fix duplicated events in the system logs connector on restart during a large fetch: the checkpoint was only persisted after a full pagination drain, so a restart mid-drain replayed events already forwarded but no longer present in the bounded dedup cache. The checkpoint is now persisted after each page is pushed, bounding the replay to a single page that the cache fully deduplicates.
+
+## 2026-08-21 - 2.10.5
+
+### Fixed
+
+- Account validation now reports the real error to the platform instead of "Unknown error": the validator calls `self.error()` so the message reaches the UI, and falls back to `str(err)`/`repr(err)` when the Okta SDK error carries an empty `message`.
+
 ## 2026-06-16 - 2.10.4
 
 ### Fixed

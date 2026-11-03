@@ -1,5 +1,6 @@
 import time
 from posixpath import join as urljoin
+from typing import ClassVar
 
 import requests
 from sekoia_automation.storage import PersistentJSON, write
@@ -11,7 +12,7 @@ class FeedConsumptionTrigger(Trigger):
     This trigger fetches STIX objects from Sekoia.io feed API
     """
 
-    API_URL_ADDITIONAL_PARAMETERS = ["skip_expired=true"]
+    API_URL_ADDITIONAL_PARAMETERS: ClassVar[list[str]] = ["skip_expired=true"]
     FILE_NAME = "stix_objects.json"
     frequency: int = 300  # Frequency in seconds, previous value 3600
     _STOP_EVENT_WAIT = 120
@@ -136,7 +137,7 @@ class FeedConsumptionTrigger(Trigger):
                     sources_to_fetch.append(ref)
 
         # Remove duplicates
-        sources_to_fetch = sorted(list(set(sources_to_fetch)))
+        sources_to_fetch = sorted(set(sources_to_fetch))
 
         # Adding sources to the cache
         sources = self.fetch_objects(sources_to_fetch)
@@ -220,7 +221,7 @@ class FeedIOCConsumptionTrigger(FeedConsumptionTrigger):
     This trigger fetches STIX IOC objects from Sekoia.io feed API
     """
 
-    API_URL_ADDITIONAL_PARAMETERS = [
+    API_URL_ADDITIONAL_PARAMETERS: ClassVar[list[str]] = [
         "skip_expired=true",
         "include_revoked=false",
         "match[type]=indicator",

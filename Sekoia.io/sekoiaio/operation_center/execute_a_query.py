@@ -1,24 +1,19 @@
+from collections.abc import Callable
+from posixpath import join as urljoin
+from time import sleep, time
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
-from posixpath import join as urljoin
-
-from time import sleep, time
-
-from typing import Any, Callable, Literal
-
 from pydantic import BaseModel
-
-from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
-
 from requests import Session
-from requests.exceptions import Timeout, HTTPError
-
+from requests.exceptions import HTTPError, Timeout
 from tenacity import (
     retry,
-    wait_exponential,
-    stop_after_attempt,
     retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
 )
+from urllib3.exceptions import TimeoutError as Urllib3TimeoutError
 
 from .base_sol import BaseSolAction
 
@@ -72,11 +67,13 @@ class ExecuteAQuery(BaseSolAction):
         stop=stop_after_attempt(10),
         retry=retry_if_exception_type(Timeout) | retry_if_exception_type(Urllib3TimeoutError),
     )
-    def trigger_query_execution(self, query_uuid: UUID, query_definition: str, query_parameters: dict | None) -> str:
+    def trigger_query_execution(
+        self, query_uuid: UUID, query_definition: dict[str, Any], query_parameters: dict | None
+    ) -> str:
         """Trigger the asynchronous execution of a SOL query and return the run UUID.
 
         :param query_uuid: UUID of the query to execute
-        :param query_definition: SOL query definition string
+        :param query_definition: SOL query definition object
         :param query_parameters: Optional dict of named parameters passed to the query
         :return: UUID of the created query run
         """
@@ -93,7 +90,11 @@ class ExecuteAQuery(BaseSolAction):
             response_execute_query.raise_for_status()
         except HTTPError as e:
             self.log(
-                f"HTTP error when triggering query execution for query_uuid '{query_uuid}': {e}. Response status: {response_execute_query.status_code}, Response text: {response_execute_query.text}",
+                (
+                    f"HTTP error when triggering query execution for query_uuid '{query_uuid}': {e}. "
+                    f"Response status: {response_execute_query.status_code}, "
+                    f"Response text: {response_execute_query.text}"
+                ),
                 level="error",
             )
             raise
@@ -131,7 +132,10 @@ class ExecuteAQuery(BaseSolAction):
             response_list_query.raise_for_status()
         except HTTPError as e:
             self.log(
-                f"HTTP error when retrieving existing queries matching '{query_name}': {e}. Response status: {response_list_query.status_code}, Response text: {response_list_query.text}",
+                (
+                    f"HTTP error when retrieving existing queries matching '{query_name}': {e}. "
+                    f"Response status: {response_list_query.status_code}, Response text: {response_list_query.text}"
+                ),
                 level="error",
             )
             raise
@@ -160,7 +164,10 @@ class ExecuteAQuery(BaseSolAction):
 
         if len(results) > 1:
             self.log(
-                f"found {len(results)} queries matching name '{query_name}'. Raising an error. Consider using query_uuid to avoid this ambiguity.",
+                (
+                    f"found {len(results)} queries matching name '{query_name}'. "
+                    f"Raising an error. Consider using query_uuid to avoid this ambiguity."
+                ),
                 level="error",
                 num_results=len(results),
                 query_name=query_name,
@@ -190,7 +197,10 @@ class ExecuteAQuery(BaseSolAction):
             response_get_query.raise_for_status()
         except HTTPError as e:
             self.log(
-                f"HTTP error when retrieving query definition for query_uuid '{query_uuid}': {e}. Response status: {response_get_query.status_code}, Response text: {response_get_query.text}",
+                (
+                    f"HTTP error when retrieving query definition for query_uuid '{query_uuid}': {e}. "
+                    f"Response status: {response_get_query.status_code}, Response text: {response_get_query.text}"
+                ),
                 level="error",
             )
             raise
@@ -230,7 +240,11 @@ class ExecuteAQuery(BaseSolAction):
             response_download_result.raise_for_status()
         except HTTPError as e:
             self.log(
-                f"HTTP error when downloading query result for run_uuid '{run_uuid}': {e}. Response status: {response_download_result.status_code}, Response text: {response_download_result.text}",
+                (
+                    f"HTTP error when downloading query result for run_uuid '{run_uuid}': {e}. "
+                    f"Response status: {response_download_result.status_code}, "
+                    f"Response text: {response_download_result.text}"
+                ),
                 level="error",
             )
             raise
@@ -264,7 +278,10 @@ class ExecuteAQuery(BaseSolAction):
             response_get_run.raise_for_status()
         except HTTPError as e:
             self.log(
-                f"HTTP error when retrieving query run status for run_uuid '{run_uuid}': {e}. Response status: {response_get_run.status_code}, Response text: {response_get_run.text}",
+                (
+                    f"HTTP error when retrieving query run status for run_uuid '{run_uuid}': {e}. "
+                    f"Response status: {response_get_run.status_code}, Response text: {response_get_run.text}"
+                ),
                 level="error",
             )
             raise
@@ -290,7 +307,10 @@ class ExecuteAQuery(BaseSolAction):
                 response_get_run.raise_for_status()
             except HTTPError as e:
                 self.log(
-                    f"HTTP error when retrieving query run status for run_uuid '{run_uuid}': {e}. Response status: {response_get_run.status_code}, Response text: {response_get_run.text}",
+                    (
+                        f"HTTP error when retrieving query run status for run_uuid '{run_uuid}': {e}. "
+                        f"Response status: {response_get_run.status_code}, Response text: {response_get_run.text}"
+                    ),
                     level="error",
                 )
                 raise
@@ -345,6 +365,12 @@ class ExecuteAQuery(BaseSolAction):
             query = self.get_query_by_uuid(arguments.query_uuid)
         else:
             query = self.get_query_by_name(arguments.query_name)
+
+        # Remove `community_uuids` from further request, as it contains all workspace communities.
+        # Without it, we will target the current community and avoid permissions error.
+        community_uuids = query.get("definition", {}).get("community_uuids")
+        if community_uuids:
+            del query["definition"]["community_uuids"]
 
         # Trigger the asynchronous query execution run
         run_uuid = self.trigger_query_execution(

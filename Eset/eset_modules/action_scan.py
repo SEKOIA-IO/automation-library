@@ -15,7 +15,9 @@ class EsetScanAction(EsetBaseAction):
 
         url = f"https://{self.module.configuration.region}.automation.eset.systems/v1/device_tasks"
 
-        payload = {
+        # Annotated because the nested "params" dict mixes str and bool values, which mypy joins to
+        # `object` — not assignable to the recursive `JsonType` that requests declares inline.
+        payload: dict[str, Any] = {
             "task": {
                 "targets": {"devicesUuids": device_uuids},
                 "action": {

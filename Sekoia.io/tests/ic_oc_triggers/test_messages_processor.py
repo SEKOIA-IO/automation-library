@@ -6,9 +6,9 @@ import pytest
 from sekoiaio.triggers.messages_processor import MessagesProcessor
 
 
-@pytest.fixture()
+@pytest.fixture
 def callback():
-    yield Mock()
+    return Mock()
 
 
 def test_push_message(callback):

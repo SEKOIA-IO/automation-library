@@ -11,7 +11,7 @@ from requests import Response
 
 from okta_modules import OktaModule
 from okta_modules.helpers import get_upper_second
-from okta_modules.system_log_trigger import FetchEventsException, SystemLogConnector
+from okta_modules.system_log_trigger import FetchEventsError, SystemLogConnector
 
 
 @pytest.fixture
@@ -305,6 +305,46 @@ def test_fetch_events_with_pagination_2(trigger, message1, message2):
         assert trigger.cursor.offset.isoformat() == get_upper_second(expected_new_checkpoint_time).isoformat()
 
 
+def test_fetch_events_persists_raw_checkpoint_before_next_page(trigger, message1, message2):
+    now = datetime.now(timezone.utc)
+    page1_date = now - timedelta(seconds=45)
+    page2_date = now - timedelta(seconds=20)
+
+    response_1 = [{**message1, "published": page1_date.isoformat()}]
+    response_2 = [{**message2, "uuid": str(uuid.uuid4()), "published": page2_date.isoformat()}]
+
+    captured: dict[str, datetime] = {}
+
+    def page2_callback(request, context):
+        # capture the persisted checkpoint at the moment page 2 is requested
+        captured["offset_at_page2_request"] = trigger.cursor.offset
+        return response_2
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://tenant_id.okta.com/api/v1/logs",
+            status_code=200,
+            json=response_1,
+            headers={"Link": "https://tenant_id.okta.com/api/v1/logs?after=1111111; rel=next"},
+        )
+        mock_requests.get(
+            "https://tenant_id.okta.com/api/v1/logs?after=1111111",
+            status_code=200,
+            json=page2_callback,
+        )
+
+        events = list(trigger.fetch_events())
+
+        assert events == [response_1, response_2]
+
+        # page 1's raw (un-rounded) checkpoint must be persisted before page 2 is requested,
+        # so a restart mid-drain replays at most one page without skipping same-second events
+        assert captured["offset_at_page2_request"].isoformat() == page1_date.isoformat()
+
+        # after the full drain the checkpoint is rounded up to exclude the most recent event
+        assert trigger.cursor.offset.isoformat() == get_upper_second(page2_date).isoformat()
+
+
 def test_next_batch_sleep_until_next_round(trigger, message1, message2):
     with patch("okta_modules.system_log_trigger.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
@@ -348,7 +388,7 @@ def test_long_next_batch_should_not_sleep(trigger, message1, message2):
         assert events_cache[message2["uuid"]] == True
 
 
-@pytest.mark.skipif("{'OKTA_BASE_URL', 'OKTA_API_TOKEN'}" ".issubset(os.environ.keys()) == False")
+@pytest.mark.skipif("{'OKTA_BASE_URL', 'OKTA_API_TOKEN'}.issubset(os.environ.keys()) == False")
 def test_run_integration(data_storage):
     one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
     with patch("okta_modules.system_log_trigger.datetime") as mock_datetime:
@@ -408,7 +448,7 @@ def test_handle_response_error(data_storage):
     response = Response()
     response.status_code = 500
     response.reason = "Internal Error"
-    with pytest.raises(FetchEventsException) as m:
+    with pytest.raises(FetchEventsError) as m:
         trigger._handle_response_error(response)
 
     assert str(m.value) == "Request on Okta API to fetch events failed with status 500 - Internal Error"

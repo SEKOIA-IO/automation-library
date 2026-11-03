@@ -1,13 +1,15 @@
-# flake8: noqa: E402
-from sekoiaio.utils import should_patch
+import sys
 
-if should_patch():
+# Patch before any import pulls in ssl (via requests/urllib3), otherwise
+# gevent patches an already-loaded ssl module and HTTPS calls hit RecursionError.
+if len(sys.argv) >= 2 and sys.argv[1].endswith("_trigger"):
     from gevent import monkey
 
     monkey.patch_all()
 
 from sekoia_automation.module import Module
 
+from sekoiaio.elevate.execute_custom_agent import ExecuteCustomAgent
 from sekoiaio.intelligence_center import (
     CreateNewTrackerNotification,
     PostReportsPdf,
@@ -87,6 +89,7 @@ from sekoiaio.triggers.alerts import (
 )
 from sekoiaio.triggers.cases import (
     CaseAlertsUpdatedTrigger,
+    CaseCommentCreatedTrigger,
     CaseCreatedTrigger,
     CaseUpdatedTrigger,
 )
@@ -96,7 +99,8 @@ from sekoiaio.triggers.intelligence import (
 )
 from sekoiaio.workspace import GetCommunity
 
-if __name__ == "__main__":
+
+def main():
     module = Module()
 
     module.register(ActivateCountermeasure, "patch-alerts/countermeasures/{cm_uuid}/activate")
@@ -160,6 +164,7 @@ if __name__ == "__main__":
     module.register(ListQueries, "list-queries")
     module.register(ExecuteAQuery, "execute-a-query")
     module.register(DeleteDataset, "delete-dataset")
+    module.register(ExecuteCustomAgent, "execute-custom-agent")
 
     # Operation Center Triggers
     module.register(SecurityAlertsTrigger, "security_alerts_trigger")
@@ -171,9 +176,19 @@ if __name__ == "__main__":
     module.register(CaseCreatedTrigger, "case_created_trigger")
     module.register(CaseUpdatedTrigger, "case_updated_trigger")
     module.register(CaseAlertsUpdatedTrigger, "case_alerts_updated_trigger")
+    module.register(CaseCommentCreatedTrigger, "case_comment_created_trigger")
 
     # Intelligence Center Triggers
     module.register(FeedConsumptionTrigger, "feed_consumption_trigger")
     module.register(FeedIOCConsumptionTrigger, "feed_ioc_consumption_trigger")
 
     module.run()
+
+
+def fission_main():
+    main()
+    return "ok"
+
+
+if __name__ == "__main__":
+    main()

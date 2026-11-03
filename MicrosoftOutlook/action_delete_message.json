@@ -1,26 +1,56 @@
 {
   "name": "Delete a message",
-  "description": "Delete a message from the user's mailbox",
+  "description": "The action that deletes a message from the user's mailbox",
   "uuid": "e3641fd8-54f9-5282-95fc-6429c9ce697b",
   "docker_parameters": "action_delete_message",
   "arguments": {
     "title": "ApplicationArguments",
     "type": "object",
     "required": [
-      "user",
-      "message_id"
+      "message_id",
+      "user"
     ],
     "properties": {
-      "user": {
-        "description": "The identifier or the principal name of the user",
-        "type": "string"
-      },
       "message_id": {
-        "description": "The identifier of the message to delete",
+        "description": "The Microsoft Graph message item ID, or a message object containing message_id",
+        "type": [
+          "string",
+          "object"
+        ]
+      },
+      "user": {
+        "description": "The user identifier or user principal name (UPN)",
         "type": "string"
       }
     }
   },
-  "results": {},
+  "results": {
+    "title": "DeleteMessageResults",
+    "type": "object",
+    "required": [
+      "action",
+      "status",
+      "target_message_id",
+      "user"
+    ],
+    "properties": {
+      "action": {
+        "description": "The action technical identifier",
+        "type": "string"
+      },
+      "status": {
+        "description": "The execution status",
+        "type": "string"
+      },
+      "target_message_id": {
+        "description": "The Microsoft Graph message item ID targeted by the action",
+        "type": "string"
+      },
+      "user": {
+        "description": "The echo of the user identifier used for this action",
+        "type": "string"
+      }
+    }
+  },
   "slug": "delete_a_message"
 }

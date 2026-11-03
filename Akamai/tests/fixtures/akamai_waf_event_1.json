@@ -1,0 +1,29 @@
+{
+  "type": "akamai_siem",
+  "format": "json",
+  "version": "1.0",
+  "attackData": {
+    "configId": "14227",
+    "policyId": "qik1_26545",
+    "clientIP": "1.2.3.4",
+    "rules": [
+      {
+        "rule": "950002",
+        "ruleVersion": "4",
+        "ruleMessage": "System Command Access",
+        "ruleData": "telnet.exe",
+        "ruleAction": "alert"
+      }
+    ]
+  },
+  "httpMessage": {
+    "requestId": "1158db1758e37bfe67b7c09",
+    "start": "1491303422",
+    "protocol": "HTTP/1.1",
+    "method": "GET",
+    "host": "example.com",
+    "port": "80",
+    "path": "/",
+    "query": "REDACTED"
+  }
+}

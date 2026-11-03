@@ -1,9 +1,9 @@
 from posixpath import join as urljoin
 from uuid import UUID
 
-from sekoia_automation.action import Action
 import requests
-from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
+from sekoia_automation.action import Action
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 STATUS_UUIDS = {
     "PENDING": "2efc4930-1442-4abb-acf2-58ba219a4fd0",
@@ -33,7 +33,6 @@ def _is_retryable_request_exception(exc: BaseException) -> bool:
 
 
 class UpdateAlertStatus(Action):
-
     def workflow_url(self, alert_uuid: str) -> str:
         return urljoin(self.module.configuration["base_url"], f"api/v1/sic/alerts/{alert_uuid}/workflow")
 

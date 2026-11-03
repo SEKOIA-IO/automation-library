@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic import BaseModel
 
 from withsecure.incident_operation_action import IncidentOperationAction
@@ -16,7 +14,7 @@ class ItemKeys(BaseModel):
 
 
 class CommentIncidentResponse(BaseModel):
-    items: List[ItemKeys]
+    items: list[ItemKeys]
 
 
 class CommentIncident(IncidentOperationAction):

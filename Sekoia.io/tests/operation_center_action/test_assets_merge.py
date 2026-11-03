@@ -1,6 +1,4 @@
-import pytest
-import requests_mock
-from sekoiaio.operation_center.assets_merge import Arguments, Response, MergeAssets
+from sekoiaio.operation_center.assets_merge import Arguments, MergeAssets, Response
 
 module_base_url = "https://api.sekoia.io"
 apikey = "fake_api_key"

@@ -179,3 +179,100 @@ class EsetDeviceGroupPage(BaseModel):
 
     class Config:
         extra = "allow"
+
+
+# --- Vulnerability management models (/v1/device-vulnerabilities) ---
+
+
+class EsetVulnApplicationVersion(BaseModel):
+    id: Optional[str] = None
+    major: Optional[int] = None
+    minor: Optional[int] = None
+    name: Optional[str] = None
+    patch: Optional[int] = None
+
+    class Config:
+        extra = "allow"
+
+
+class EsetVulnApplication(BaseModel):
+    developerDisplayName: Optional[str] = None
+    displayName: Optional[str] = None
+    version: Optional[EsetVulnApplicationVersion] = None
+    uuid: Optional[str] = None
+
+    class Config:
+        extra = "allow"
+
+
+class EsetVulnPackage(BaseModel):
+    displayName: Optional[str] = None
+    name: Optional[str] = None
+    packageManagerType: Optional[str] = None
+    reference: Optional[str] = None
+    versionName: Optional[str] = None
+
+    class Config:
+        extra = "allow"
+
+
+class EsetApplicationVulnerability(BaseModel):
+    application: Optional[EsetVulnApplication] = None
+    cveNumber: Optional[str] = None
+    firstDetectTime: Optional[str] = None
+    lastDetectTime: Optional[str] = None
+    patchAvailable: Optional[bool] = None
+    riskScore: Optional[int] = None
+    severity: Optional[str] = None
+    vulnerabilityId: Optional[int] = None
+
+    class Config:
+        extra = "allow"
+
+
+class EsetOsVulnerability(BaseModel):
+    osFamilyId: Optional[int] = None
+    cveNumber: Optional[str] = None
+    firstDetectTime: Optional[str] = None
+    lastDetectTime: Optional[str] = None
+    patchAvailable: Optional[bool] = None
+    riskScore: Optional[int] = None
+    severity: Optional[str] = None
+    vulnerabilityId: Optional[int] = None
+
+    class Config:
+        extra = "allow"
+
+
+class EsetPackageVulnerability(BaseModel):
+    package: Optional[EsetVulnPackage] = None
+    cveNumber: Optional[str] = None
+    firstDetectTime: Optional[str] = None
+    lastDetectTime: Optional[str] = None
+    patchAvailable: Optional[bool] = None
+    riskScore: Optional[int] = None
+    severity: Optional[str] = None
+    vulnerabilityId: Optional[int] = None
+
+    class Config:
+        extra = "allow"
+
+
+class EsetDeviceVulnerability(BaseModel):
+    availablePatchUuids: Optional[list[str]] = None
+    deviceUuid: Optional[str] = None
+    deviceGroupUuid: Optional[str] = None
+    applicationVulnerability: Optional[EsetApplicationVulnerability] = None
+    osVulnerability: Optional[EsetOsVulnerability] = None
+    packageVulnerability: Optional[EsetPackageVulnerability] = None
+
+    class Config:
+        extra = "allow"
+
+
+class EsetVulnerabilityPage(BaseModel):
+    vulnerabilities: list[EsetDeviceVulnerability] = []
+    nextPageToken: Optional[str] = None
+
+    class Config:
+        extra = "allow"

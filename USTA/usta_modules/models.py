@@ -1,4 +1,4 @@
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 

@@ -120,6 +120,35 @@ def test_next_batch_without_events(trigger, message_1, message_2):
         mock_time.sleep.assert_called_once_with(44)
 
 
+def test_next_batch_stops_on_last_page(trigger, message_1):
+    # A final page carrying events with `has_more=False` must not trigger an extra
+    # request with the reset cursor, which would re-deliver already-seen events.
+    trigger.from_date = 1645668000000
+    worker = SignInAttemptsEndpoint(connector=trigger)
+
+    last_page = {**message_1, "cursor": "CURSOR_LAST", "has_more": False}
+
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch("onepassword_modules.connector_1password_epm.time") as mock_time,
+    ):
+        mock_requests.post(
+            "https://example.com/api/v1/signinattempts",
+            [{"json": last_page}],
+        )
+
+        batch_duration = 16
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time, end_time]
+
+        worker.next_batch()
+
+        # Only the initial request is made; no follow-up with the reset cursor.
+        assert mock_requests.call_count == 1
+        assert trigger.push_events_to_intakes.call_count == 1
+
+
 def test_start_consumers(trigger):
     with patch("onepassword_modules.connector_1password_epm.OnePasswordEndpoint.start") as mock_start:
         consumers = trigger.start_consumers()
