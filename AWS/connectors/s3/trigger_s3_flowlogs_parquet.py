@@ -10,15 +10,11 @@ import pyarrow.parquet
 
 from aws_helpers.utils import AsyncReader, filter_internal_traffic
 from connectors.metrics import DISCARDED_EVENTS
-from connectors.s3 import (
-    AbstractAwsS3QueuedConnector,
-    AwsS3LogsBaseConfiguration,
-    AwsS3QueuedConfiguration,
-)
+from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from connectors.s3.provider import AwsAccountProvider
 
 
-class AwsS3FlowLogsParquetConfiguration(AwsS3QueuedConfiguration, AwsS3LogsBaseConfiguration):
+class AwsS3FlowLogsParquetConfiguration(AwsS3QueuedConfiguration):
     """AwsS3FlowLogsTrigger configuration."""
 
     filter_internal_traffic: bool = True
