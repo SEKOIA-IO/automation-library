@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-03 - 2.82.0
+
+### Added
+
+- `Execute custom agent`: adding a new action to allow execute an agent directly inside a playbook
+
+
 ## 2026-10-28 - 2.81.0
 
 ### Added
