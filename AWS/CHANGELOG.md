@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-03 - 1.38.6
+
+### Fixed
+
+- Increase the default SQS message timeout visibility to 10 minutes (instead of 1 minute).
+
 ## 2026-11-02 - 1.38.5
 
 ### Fixed
