@@ -138,6 +138,23 @@ def test_applies_the_template_to_the_created_case(action, requests_mock):
     assert results["case"] == with_template
 
 
+def test_returns_the_created_case_when_the_template_fails(action, requests_mock):
+    requests_mock.get(f"{base_url}cases", json={"items": [], "total": 0})
+    requests_mock.post(f"{base_url}cases", json=make_case())
+    requests_mock.post(
+        f"{base_url}case-templates/{TEMPLATE_UUID}/apply", status_code=404, json={"message": "Unknown case template"}
+    )
+
+    results = action.run(
+        {"source": "sentinel", "external_id": "1234", "title": "Suspicious sign-in", "template_uuid": TEMPLATE_UUID}
+    )
+
+    assert results["outcome"] == "created"
+    assert results["case_uuid"] == CASE_UUID
+    assert action.error_message.startswith("Case CAfake was created, but the template could not be applied")
+    assert action.error_message.endswith("running the action again would update this case without it")
+
+
 def test_updates_the_open_case_of_a_known_incident(action, requests_mock):
     case = make_case(
         tags=[TAG, "identity"],
