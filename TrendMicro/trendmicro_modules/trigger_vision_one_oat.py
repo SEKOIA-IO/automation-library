@@ -1,3 +1,4 @@
+
 from datetime import datetime, timedelta, timezone
 from typing import Generator
 from urllib.parse import urljoin
@@ -9,7 +10,11 @@ from sekoia_automation.checkpoint import CheckpointDatetime
 from . import TrendMicroModule
 from .logging import get_logger
 from .metrics import EVENTS_LAG, INCOMING_MESSAGES
-from .trigger_vision_one_base import TrendMicroVisionOneBaseConfiguration, TrendMicroVisionOneBaseConnector
+from .trigger_vision_one_base import (
+    TrendMicroVisionOneBaseConfiguration,
+    TrendMicroVisionOneBaseConnector,
+    VisionOneFetchError,
+)
 
 logger = get_logger()
 
@@ -51,8 +56,7 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
         response = self.client.get(url, params=query_params, headers=headers, timeout=60)
 
         while self.running:  # pragma: no cover
-            if self.handle_response_error(response):
-                return
+            self.handle_response_error(response)
 
             message = response.json()
             events = message.get("items", [])
@@ -76,15 +80,21 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_date_seen = self.from_date
 
-        for next_events in self.__fetch_events(most_recent_date_seen):
-            if next_events:
-                last_event = max(next_events, key=lambda x: x["detectedDateTime"])
-                last_event_datetime = isoparse(last_event["detectedDateTime"])
+        try:
+            for next_events in self.__fetch_events(most_recent_date_seen):
+                if next_events:
+                    last_event = max(next_events, key=lambda x: x["detectedDateTime"])
+                    last_event_datetime = isoparse(last_event["detectedDateTime"])
 
-                if last_event_datetime > most_recent_date_seen:
-                    most_recent_date_seen = self.get_upper_second(last_event_datetime)
+                    if last_event_datetime > most_recent_date_seen:
+                        most_recent_date_seen = self.get_upper_second(last_event_datetime)
 
-                yield next_events
+                    yield next_events
+
+        except VisionOneFetchError:
+            return  # incomplete walk: keep the checkpoint, next batch re-reads from it
+
+        self._auth_errors = 0
 
         # save the most recent date
         if most_recent_date_seen > self.from_date:  # pragma: no cover

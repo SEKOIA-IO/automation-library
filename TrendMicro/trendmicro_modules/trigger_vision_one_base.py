@@ -16,6 +16,10 @@ from .metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 logger = get_logger()
 
 
+class VisionOneFetchError(Exception):
+    """A page walk failed: the checkpoint must not advance."""
+
+
 class TrendMicroVisionOneBaseConfiguration(DefaultConnectorConfiguration):
     base_url: str = Field(..., description="Base URL")
     api_key: str = Field(..., description="API key", secret=True)
@@ -35,11 +39,10 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
     def client(self) -> TrendMicroVisionApiClient:
         return TrendMicroVisionApiClient(api_key=self.configuration.api_key)
 
-    def handle_response_error(self, response: requests.Response) -> bool:
-        """Log a failed response. Return True if the request failed."""
+    def handle_response_error(self, response: requests.Response) -> None:
+        """Log a failed response and raise VisionOneFetchError so the page walk stops."""
         if response.ok:
-            self._auth_errors = 0
-            return False
+            return
 
         message = (
             f"Request on Trend Micro Vision One API to fetch events failed with status "
@@ -50,6 +53,8 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
             self._auth_errors += 1
             if self._auth_errors >= self.AUTH_ERROR_THRESHOLD:
                 level = "critical"
+        else:
+            self._auth_errors = 0
 
         # enrich error logs with detail from the Vision One API
         try:
@@ -65,7 +70,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
             pass
 
         self.log(message, level=level)
-        return True
+        raise VisionOneFetchError(message)
 
     @staticmethod
     def get_upper_second(time: datetime) -> datetime:
