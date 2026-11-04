@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-11-02 - 1.4.2
+
+### Fixed
+
+- Skip devices without a usable hostname (Intune device name as fallback)
+- Use the Intune device name as hostname fallback for vulnerability findings too
+- Keep the checkpoint when a device or finding is skipped after a transient Intune lookup failure
+- Stop the cycle on API page errors, and wait before the next cycle
+
+### Changed
+
+- Vulnerability findings only carry the minimal device (`type`, `uid`, `hostname`)
+- Device asset connector description: the devices come from Defender for Endpoint, Intune only enriches them
+
 ## 2026-09-21 - 1.4.1
 
 ### Fixed
