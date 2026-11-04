@@ -1,0 +1,193 @@
+mapping:
+  ocsf_class: "Device Inventory Info"
+  class_uid: 5001
+  ocsf_version: "1.5.0"
+
+  samples:
+    - name: "EasyVista Asset Sample"
+      description: "Single asset record from GET /api/v1/{account}/assets, with the fields requested by the connector."
+      data: |
+        {
+          "HREF": "https://company.easyvista.com/api/v1/50004/assets/9479",
+          "ASSET_ID": "9479",
+          "ASSET_LABEL": "Web server",
+          "ASSET_TAG": "a99f7fc1-4080-402b-b85d-2c484c6108c7",
+          "SERIAL_NUMBER": "2AS-155-6V",
+          "NETWORK_IDENTIFIER": "SRV-WEB01.corp.example.com",
+          "SERVER_TYPE_ID": "2",
+          "DEPARTMENT_ID": "5",
+          "DEPARTMENT_PATH": "IT/Infrastructure",
+          "ENTRY_DATE": "2018-06-01",
+          "INSTALLATION_DATE": "2018-07-03",
+          "LAST_UPDATE": "2026-10-01T06:17:46.297-05:00",
+          "LAST_AUTOMATIC_DISCOVERY": "2026-10-30T08:00:00.000+01:00",
+          "REMOVED_DATE": "",
+          "RECYCLED_DATE": "",
+          "LOCATION": {"CITY": "Paris", "LOCATION_PATH": "Europe/France/Paris", "LOCATION_ID": "66"},
+          "EMPLOYEE": {"E_MAIL": "jane.doe@example.com", "LAST_NAME": "Doe"},
+          "CATALOG_ASSET": {"ARTICLE_MODEL": "PowerEdge 860", "SMBIOS_NAME": "PowerEdge 860", "CATALOG_ID": "3544"}
+        }
+
+  fields:
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      logic: "Always 2 for 'Collect' activity"
+      description: "OCSF activity ID"
+
+    - source: "static: 5001"
+      target: "class_uid"
+      type: "integer"
+      logic: "Device Inventory Info class"
+      description: "OCSF class ID"
+
+    - source: "static: 500102"
+      target: "type_uid"
+      type: "integer"
+      logic: "Device Inventory Info: Collect"
+      description: "OCSF type ID"
+
+    - source: "LAST_UPDATE"
+      target: "time"
+      type: "timestamp"
+      logic: "ISO 8601 date converted to epoch seconds; collection time when empty"
+      description: "Event time"
+
+    - source: "ASSET_ID"
+      target: "device.uid"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Unique identifier of the device"
+
+    - source: "NETWORK_IDENTIFIER"
+      target: "device.hostname"
+      type: "string"
+      logic: "Lowercased first label of the name. Assets without a usable network identifier (licenses, contracts) are not collected"
+      description: "Device hostname"
+
+    - source: "NETWORK_IDENTIFIER"
+      target: "device.domain"
+      type: "string"
+      logic: "Remaining labels when the network identifier is a fully qualified name"
+      description: "Domain of the device"
+
+    - source: "NETWORK_IDENTIFIER"
+      target: "device.name"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Device name"
+
+    - source: "ASSET_LABEL"
+      target: "device.desc"
+      type: "string"
+      logic: "Direct mapping"
+      description: "Description of the device"
+
+    - source: "SERIAL_NUMBER, ASSET_TAG"
+      target: "device.uid_alt"
+      type: "string"
+      logic: "Serial number, else asset tag"
+      description: "Alternate identifier of the device"
+
+    - source: "SERVER_TYPE_ID"
+      target: "device.type_id"
+      type: "integer"
+      logic: "1 (Server) when a server type is set, else 0 (Unknown)"
+      description: "Device type ID"
+
+    - source: "CATALOG_ASSET.ARTICLE_MODEL, CATALOG_ASSET.SMBIOS_NAME"
+      target: "device.model"
+      type: "string"
+      logic: "Catalog article model, else SMBIOS name"
+      description: "Device model"
+
+    - source: "LOCATION.CITY"
+      target: "device.location.city"
+      type: "string"
+      logic: "Direct mapping"
+      description: "City of the device"
+
+    - source: "DEPARTMENT_ID, DEPARTMENT_PATH"
+      target: "device.groups"
+      type: "list"
+      logic: "One group per department: uid from DEPARTMENT_ID, name from DEPARTMENT_PATH"
+      description: "Groups of the device"
+
+    - source: "INSTALLATION_DATE, ENTRY_DATE"
+      target: "device.created_time, device.first_seen_time"
+      type: "timestamp"
+      logic: "Installation date, else entry date, converted to epoch seconds"
+      description: "Creation time of the device"
+
+    - source: "LAST_AUTOMATIC_DISCOVERY"
+      target: "device.last_seen_time"
+      type: "timestamp"
+      logic: "Converted to epoch seconds"
+      description: "Last time the device was seen"
+
+    - source: "static: true"
+      target: "device.is_managed"
+      type: "boolean"
+      logic: "Devices are managed in the EasyVista inventory"
+      description: "Managed device"
+
+    - source: "EMPLOYEE.E_MAIL"
+      target: "enrichments.data.Users"
+      type: "list"
+      logic: "Email of the employee owning the asset"
+      description: "Users of the device"
+
+    - source: "NETWORK_IDENTIFIER"
+      target: "enrichments.data.Full_qualified_domain_name"
+      type: "string"
+      logic: "Only when the network identifier is a fully qualified name"
+      description: "Fully qualified domain name of the device"
+
+  ocsf_samples:
+    - name: "EasyVista Device"
+      description: "OCSF output of the asset sample"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "Device Inventory Info",
+          "class_uid": 5001,
+          "type_name": "Device Inventory Info: Collect",
+          "type_uid": 500102,
+          "severity": "Informational",
+          "severity_id": 1,
+          "time": 1790853466.297,
+          "metadata": {
+            "product": {"name": "EasyVista Service Manager", "vendor_name": "EasyVista"},
+            "version": "1.5.0"
+          },
+          "device": {
+            "type_id": 1,
+            "type": "Server",
+            "uid": "9479",
+            "location": {"city": "Paris"},
+            "hostname": "srv-web01",
+            "domain": "corp.example.com",
+            "name": "SRV-WEB01.corp.example.com",
+            "desc": "Web server",
+            "uid_alt": "2AS-155-6V",
+            "model": "PowerEdge 860",
+            "groups": [{"name": "IT/Infrastructure", "uid": "5"}],
+            "created_time": 1530576000.0,
+            "first_seen_time": 1530576000.0,
+            "last_seen_time": 1793343600.0,
+            "is_managed": true
+          },
+          "enrichments": [
+            {
+              "name": "compliance",
+              "value": "hygiene",
+              "data": {
+                "Users": ["jane.doe@example.com"],
+                "Full_qualified_domain_name": "SRV-WEB01.corp.example.com"
+              }
+            }
+          ]
+        }
