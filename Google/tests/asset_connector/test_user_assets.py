@@ -7,6 +7,8 @@ from googleapiclient.errors import HttpError
 from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.module import Module
 
+from google_module.asset_connector.mappers import UserMapper
+from google_module.asset_connector.models import DirectoryUser
 from google_module.asset_connector.user_assets import (
     GROUP_SCOPE,
     KNOWN_USERS_KEY,
@@ -45,6 +47,10 @@ SUSPENDED_USER = {
 }
 
 GROUP = {"id": "group-1", "email": "engineering@example.com", "name": "Engineering", "description": "Engineers"}
+
+
+def map_user(user, groups):
+    return UserMapper(DirectoryUser.model_validate(user), groups).map()
 
 
 @pytest.fixture
@@ -99,8 +105,8 @@ def test_directory_impersonates_admin(connector, credentials, attribute, scope):
     build.assert_called_once_with("admin", "directory_v1", credentials=delegated.return_value, cache_discovery=False)
 
 
-def test_map_fields_admin_user(connector):
-    asset = connector.map_fields(ADMIN_USER, [Group(uid="group-1", name="Engineering")])
+def test_map_admin_user():
+    asset = map_user(ADMIN_USER, [Group(uid="group-1", name="Engineering")])
 
     assert asset.class_uid == 5003
     assert asset.type_uid == 500302
@@ -130,8 +136,8 @@ def test_map_fields_admin_user(connector):
     assert asset.enrichments[0].data.last_logon == "2026-09-28T08:15:00.000Z"
 
 
-def test_map_fields_suspended_user_never_logged_in(connector):
-    asset = connector.map_fields(SUSPENDED_USER, [])
+def test_map_suspended_user_never_logged_in():
+    asset = map_user(SUSPENDED_USER, [])
 
     user = asset.user
     assert user.type == "User"
@@ -143,17 +149,15 @@ def test_map_fields_suspended_user_never_logged_in(connector):
     assert asset.enrichments[0].data.last_logon is None
 
 
-def test_map_fields_delegated_admin_and_archived(connector):
-    asset = connector.map_fields(
-        {**SUSPENDED_USER, "suspended": False, "archived": True, "isDelegatedAdmin": True}, []
-    )
+def test_map_delegated_admin_and_archived():
+    asset = map_user({**SUSPENDED_USER, "suspended": False, "archived": True, "isDelegatedAdmin": True}, [])
 
     assert asset.user.type == "Admin"
     assert asset.enrichments[0].data.is_enabled is False
 
 
-def test_map_fields_null_fields(connector):
-    asset = connector.map_fields({**SUSPENDED_USER, "name": None, "organizations": None, "externalIds": None}, [])
+def test_map_null_fields():
+    asset = map_user({**SUSPENDED_USER, "name": None, "organizations": None, "externalIds": None}, [])
 
     assert asset.user.full_name is None
     assert asset.user.org.name == "example.com"
@@ -297,7 +301,12 @@ def test_get_assets_skips_invalid_user(connector):
 
     assert [asset.user.uid for asset in assets] == [ADMIN_USER["id"]]
     assert set(connector._fingerprints) == {ADMIN_USER["id"]}
-    connector.log.assert_any_call("Skipping Google Workspace user broken: KeyError('primaryEmail')", level="warning")
+    skipped = [call.args[0] for call in connector.log.call_args_list if call.kwargs.get("level") == "warning"]
+    assert [message.split(":")[0] for message in skipped] == [
+        "Skipping Google Workspace user broken",
+        "Skipping Google Workspace user bad-email",
+    ]
+    assert all("primaryEmail" in message for message in skipped)
 
 
 def test_get_assets_api_error_keeps_known_users(connector):
