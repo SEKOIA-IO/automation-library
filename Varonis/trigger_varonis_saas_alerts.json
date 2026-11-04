@@ -1,0 +1,45 @@
+{
+  "name": "[BETA] Get last alerts from Varonis Data Security SaaS",
+  "description": "Fetch new alerts from Varonis Data Security SaaS",
+  "uuid": "535f3a14-445e-5077-9644-3d4dd9bc99cb",
+  "docker_parameters": "connector_varonis_saas_alerts",
+  "arguments": {
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "timedelta": {
+        "type": "integer",
+        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events (default to 5 minutes ago)",
+        "default": 5
+      },
+      "start_time": {
+        "type": "integer",
+        "description": "The number of hours from which events should be queried",
+        "default": 1
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key",
+      "base_url",
+      "api_key"
+    ],
+    "secrets": [
+      "api_key"
+    ],
+    "results": {},
+    "title": "VaronisSaaSAlertsConfiguration",
+    "type": "object"
+  }
+}
