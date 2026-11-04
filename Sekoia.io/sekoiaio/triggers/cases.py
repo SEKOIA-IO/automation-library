@@ -35,6 +35,15 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
             and not any(assignee.get("avatar_uuid") in assignees_filter for assignee in case.get("subscribers", []))
         )
 
+    @staticmethod
+    def _get_assignees(case) -> list[str]:
+        # The Case API returns the assignees as subscribers of type `assignee`
+        return [
+            subscriber["avatar_uuid"]
+            for subscriber in case.get("subscribers") or []
+            if subscriber.get("type") == "assignee" and subscriber.get("avatar_uuid")
+        ]
+
     def _filter_by_uuids(self, case) -> bool:
         case_uuids_filter = self.configuration.get("case_uuids_filter")
         return not (
@@ -185,7 +194,7 @@ class CaseCreatedTrigger(SecurityCasesTrigger):
             "title": case_attrs.get("title"),
             "description": case.get("description"),
             "community_uuid": case.get("community_uuid"),
-            "assignees": case.get("assignees", []),
+            "assignees": self._get_assignees(case),
             "priority_uuid": case_attrs.get("custom_priority_uuid"),
             "status_uuid": case.get("status_uuid"),
             "tags": case.get("tags", []),
@@ -348,6 +357,7 @@ class CaseCommentCreatedTrigger(SecurityCasesTrigger):
                 "uuid": comment.get("uuid"),
                 "content": comment.get("content"),
                 "author": comment.get("created_by"),
+                "created_by_type": comment.get("created_by_type"),
                 "date": comment.get("created_at"),
             },
             "uuid": case_uuid,
@@ -359,6 +369,7 @@ class CaseCommentCreatedTrigger(SecurityCasesTrigger):
             "updated_at": case.get("updated_at"),
             "title": case.get("title"),
             "description": case.get("description"),
+            "tags": case.get("tags") or [],
         }
 
         self.send_event(
