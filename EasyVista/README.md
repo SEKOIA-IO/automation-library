@@ -59,16 +59,15 @@ and tests access with `GET /requests?max_rows=1&fields=rfc_number`.
 - Questionnaire actions require the numeric action type ID from EasyVista administration, rather than its GUID.
   Empty questionnaire results are successful. These actions require EV SM 2023.4+; document download/deletion
   require 2023.1+ and appending descriptions requires 2025.3+.
-- Action types and support groups depend on the tenant and catalog. Related-action creation with `action_type_guid`
-  has not been validated on the integration tenant.
+- Action types and support groups depend on the account and catalog. If related-action creation rejects
+  `action_type_guid`, use an action type ID or name supported by the ticket catalog.
 
 ## Development
 
-Run `uv sync --locked` and `uv run pytest` from this directory. Unit tests mock all vendor calls; no tenant credentials
-are required. Run `uv run ruff check .`, `uv run ruff format --check .` and `uv run mypy easyvista main.py` for linting.
+Use Python 3.14. Run `uv sync --locked` and `uv run pytest` from this directory. Unit tests mock all vendor calls; no tenant credentials
+are required. Run `uv run ruff check .`, `uv run ruff format --check .` and `uv run mypy easyvista_modules main.py` for linting.
 
-Before release, validate Bearer authentication with a tenant administrator. Live tenant testing and the REST-upload
-vendor defect follow-up are external validation steps; the unit tests do not establish live API compatibility.
-Never commit credentials or real tenant identifiers.
+The Python implementation is in `easyvista_modules/`. Unit tests use simulated API responses; validate authentication
+and API permissions against your EasyVista environment before use. Never commit credentials or real account identifiers.
 
 The module icon comes from the [official EasyVista website](https://www.easyvista.com/wp-content/uploads/EV-Bubble-Pink@4x-1.png).
