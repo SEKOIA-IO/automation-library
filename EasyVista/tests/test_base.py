@@ -1,4 +1,5 @@
 import base64
+import json
 from io import BytesIO
 from unittest.mock import patch
 
@@ -9,6 +10,8 @@ from urllib3.exceptions import NewConnectionError
 from urllib3.response import HTTPResponse
 
 from easyvista_modules.account_validator import EasyVistaAccountValidator
+from easyvista_modules.action.action_restart_request_incident import RestartRequestIncident
+from easyvista_modules.action.action_suspend_request_incident import SuspendRequestIncident
 from easyvista_modules.action.action_update_request_incident import UpdateRequestIncident
 from easyvista_modules.action.action_view_requests_incidents_list import ViewRequestsIncidentsList
 from easyvista_modules.helpers import map_fields
@@ -42,6 +45,25 @@ def test_non_json_error_is_truncated(make_action, requests_mock, api_url):
     assert action.run({}) is None
     assert action.error.call_args.args[0].endswith("x" * 500)
     assert "x" * 501 not in action.error.call_args.args[0]
+
+
+@pytest.mark.parametrize("body", ["<html>Sign in</html>", "{broken", " "])
+@pytest.mark.parametrize("cls", [ViewRequestsIncidentsList, EasyVistaAccountValidator])
+def test_successful_non_json_response_is_rejected(make_action, requests_mock, api_url, body, cls):
+    action = make_action(cls)
+    requests_mock.get(api_url, text=body)
+    if cls is EasyVistaAccountValidator:
+        assert action.validate() is False
+    else:
+        assert action.run({}) is None
+    action.error.assert_called_once_with("EasyVista API returned a non-JSON response where JSON was expected")
+
+
+def test_json_null_is_not_malformed(make_action, requests_mock, api_url):
+    action = make_action(ViewRequestsIncidentsList)
+    requests_mock.get(api_url, text="null")
+    assert action.run({}) is None
+    action.error.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -115,6 +137,30 @@ def test_error_redacts_credentials(make_action, requests_mock, api_url):
     requests_mock.get(api_url, status_code=590, json={"error": f"fake-access-token fake-password {basic}"})
     action.run({})
     assert action.error.call_args.args[0].endswith("[REDACTED] [REDACTED] [REDACTED]")
+
+
+@pytest.mark.parametrize("secret", ["sécret-value", 'secret-"quoted"', r"secret-\backslash"])
+@pytest.mark.parametrize("field", ["message", "error"])
+@pytest.mark.parametrize("nested", [False, True])
+def test_json_error_redacts_decoded_strings(make_action, requests_mock, api_url, secret, field, nested):
+    action = make_action(ViewRequestsIncidentsList, token=secret, password=secret)
+    value = {secret: [secret, {"details": secret}, 42, False, None]} if nested else secret
+    requests_mock.get(api_url, status_code=590, text=json.dumps({field: value}))
+    assert action.run({}) is None
+    message = action.error.call_args.args[0]
+    assert secret not in message
+    assert json.dumps(secret)[1:-1] not in message
+    assert "[REDACTED]" in message
+
+
+def test_json_error_redacts_before_truncation(make_action, requests_mock, api_url):
+    secret = 'sécret-"quoted"-value'
+    action = make_action(ViewRequestsIncidentsList, password=secret)
+    requests_mock.get(api_url, status_code=500, text=json.dumps({"message": "x" * 480 + secret}))
+    assert action.run({}) is None
+    message = action.error.call_args.args[0]
+    assert "sécret" not in message and "s\\u00e9cret" not in message
+    assert message.endswith((json.dumps({"message": "x" * 480 + "[REDACTED]"}))[:500])
 
 
 def test_error_redacts_latin1_basic_credentials(make_action, requests_mock, api_url):
@@ -194,6 +240,22 @@ def test_append_connection_failure_is_not_retried(make_action, monkeypatch):
         with pytest.raises(requests.ConnectionError):
             action.client.put("https://easyvista.example/requests/ticket", params={"append": "true"})
     assert call.call_count == 1
+
+
+@pytest.mark.parametrize("cls", [SuspendRequestIncident, RestartRequestIncident])
+def test_state_transition_is_not_retried_after_gateway_timeout(make_action, monkeypatch, cls):
+    monkeypatch.setenv("NO_PROXY", "*")
+    action = make_action(cls)
+    responses = [
+        HTTPResponse(status=504, body=BytesIO(b'{"error":"gateway timeout"}'), preload_content=False),
+        HTTPResponse(status=590, body=BytesIO(b'{"error":"transition already applied"}'), preload_content=False),
+    ]
+    with patch("urllib3.connectionpool.HTTPConnectionPool._make_request", side_effect=responses) as call:
+        with patch("urllib3.util.retry.time.sleep"):
+            assert action.run({"rfc_number": "ticket"}) is None
+    assert call.call_count == 1
+    assert "504" in action.error.call_args.args[0]
+    assert "590" not in action.error.call_args.args[0]
 
 
 @pytest.mark.parametrize(
