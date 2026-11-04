@@ -32,16 +32,21 @@ Use `nextPageToken` to paginate until the items list is empty.
 
 - On startup, read `most_recent_timestamp_seen` from `context.json`.
 - If none, backfill `start_time` hours by calling from `now - start_time * 3600 * 1000`.
-- After fetching all pages, persist the maximum timestamp seen.
+- After each page is forwarded, persist the raw maximum timestamp seen so a restart
+  replays at most one page.
+- Once all pages are drained, persist the maximum timestamp seen + 1ms.
 - Next poll uses that timestamp as the new `filters.fromDate`.
+- An LRU cache of event ids deduplicates events replayed after a restart or resurfaced
+  by `pagination.realtime`.
 
 ---
 
 #### 3. Infinite loop (`run()`)
 
-- Calls `process_batch(start_ts)` to page, serialize and push events.
+- Calls `next_batch()` to page, serialize and push events.
 - Sleeps `frequency` seconds between iterations.
-- Stops when `_stop_event` is set, then saves the final checkpoint.
+- A failed batch is logged and retried on the next iteration.
+- Stops when `_stop_event` is set, then closes the HTTP client and saves the final checkpoint.
 
 ---
 

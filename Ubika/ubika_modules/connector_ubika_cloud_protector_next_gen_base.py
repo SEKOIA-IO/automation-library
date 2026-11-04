@@ -1,7 +1,8 @@
+import signal
 import time
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
-from functools import cached_property
+from threading import Event
 from typing import Any
 from urllib.parse import urljoin
 
@@ -16,8 +17,7 @@ from sekoia_automation.storage import PersistentJSON
 from . import UbikaModule
 from .client import UbikaCloudProtectorNextGenApiClient
 from .client.auth import AuthorizationError, AuthorizationTimeoutError
-from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
-from .timestepper import TimeStepper
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
 class FetchEventsException(Exception):
@@ -35,24 +35,21 @@ class UbikaCloudProtectorNextGenBaseConnectorConfiguration(DefaultConnectorConfi
     base_url: str = Field("https://api.ubika.io/", description="API base URL")
     frequency: int = Field(60, description="Batch frequency in seconds", ge=1)
     chunk_size: int = Field(1000, description="The size of chunks for the batch processing", ge=1)
-    timedelta: int = Field(
-        5,
-        description="The temporal shift, in the past, in minutes, the connector applies when fetching the events",
-        ge=1,
-    )
     start_time: int = Field(1, description="The number of hours from which events should be queried", ge=0)
 
 
 class UbikaCloudProtectorNextGenBaseConnector(Connector):
     """
-    Base class for Next-Gen connectors. Provides:
+    Base class for Next-Gen connectors.
 
-      • `self.client` (@cached_property) for HTTP+auth
-      • `_handle_response_error()`
-      • `_get_pages(endpoint, params)` for cursor+token pagination
-      • `self.context` (PersistentJSON) to store a checkpoint
-      • common config in UbikaCloudProtectorNextGenBaseConnectorConfiguration
-      • Generic `next_batch()` and `filter_processed_events()` for subclasses
+    Uses a single ``filters.fromDate`` timestamp cursor as checkpoint:
+      • read the most recent event timestamp from ``context.json`` on startup
+      • page through the API with ``nextPageToken`` until the items list is empty
+      • forward the events and persist the greatest timestamp seen (per page, then +1ms)
+      • sleep ``frequency`` seconds between batches
+
+    Checkpointing is per page so a crash replays at most one page; an LRU cache of
+    event ids then deduplicates the replayed (or ``realtime``-resurfaced) events.
     """
 
     module: UbikaModule
@@ -63,8 +60,9 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
     cache_size: int = 1000  # Default cache size, can be overridden in subclasses
     endpoint: str = ""  # Must be set by subclasses (e.g., "security-events", "traffic-logs")
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        self._stop_event = Event()
         # Single file to store our checkpoint
         self.context = PersistentJSON("context.json", self.data_path)
         # Cache context for storing event hashes
@@ -72,6 +70,14 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
         self.events_cache: Cache = self.load_events_cache()
         # HTTP client for API requests (lazily initialized)
         self._client: UbikaCloudProtectorNextGenApiClient | None = None
+
+        # Register signal to terminate thread
+        signal.signal(signal.SIGINT, self.exit)
+        signal.signal(signal.SIGTERM, self.exit)
+
+    def exit(self, _: Any, __: Any) -> None:
+        self.log(message=f"Stopping {self.NAME} connector", level="info")
+        self._stop_event.set()
 
     def load_events_cache(self) -> Cache:
         """
@@ -106,41 +112,37 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
             self._client = UbikaCloudProtectorNextGenApiClient(refresh_token=self.configuration.refresh_token)
         return self._client
 
-    @cached_property
-    def stepper(self) -> TimeStepper:
+    @property
+    def most_recent_timestamp_seen(self) -> int:
         """
-        Create a TimeStepper instance to manage time ranges for event collection.
-        Reads the most recent date from context, or creates a new one if not found.
+        Return the checkpoint, in epoch milliseconds, to use as ``filters.fromDate``.
+
+        Reads ``most_recent_timestamp_seen`` (epoch ms) from the context, falling back
+        to the legacy ``most_recent_date_seen`` (ISO 8601) for upgrade continuity. If
+        neither is defined, backfills ``start_time`` hours. The checkpoint is never
+        older than one week.
         """
+        now = datetime.now(UTC)
+
         with self.context as cache:
-            most_recent_date_str = cache.get("most_recent_date_seen")
+            most_recent = cache.get("most_recent_timestamp_seen")
+            legacy_date = cache.get("most_recent_date_seen")
 
-            # If not defined, create a new time stepper from the configuration
-            if most_recent_date_str is None:
-                return TimeStepper.create(
-                    self,
-                    self.configuration.frequency,
-                    self.configuration.timedelta,
-                    self.configuration.start_time,
-                )
+        if most_recent is not None:
+            most_recent_date = datetime.fromtimestamp(most_recent / 1000, tz=UTC)
+        elif legacy_date is not None:
+            most_recent_date = isoparse(legacy_date)
+        elif self.configuration.start_time == 0:
+            most_recent_date = now
+        else:
+            most_recent_date = now - timedelta(hours=self.configuration.start_time)
 
-            # Parse the most recent requested date
-            most_recent_date = isoparse(most_recent_date_str)
+        # we don't retrieve events older than one week
+        one_week_ago = now - timedelta(days=7)
+        if most_recent_date < one_week_ago:
+            most_recent_date = one_week_ago
 
-            # Ensure we do not go back more than one week
-            now = datetime.now(UTC)
-            one_week_ago = now - timedelta(days=7)
-            # If the most recent date is older than one week, set it to one week ago
-            if most_recent_date < one_week_ago:
-                most_recent_date = one_week_ago
-
-            # Create a time stepper from the most recent date seen
-            return TimeStepper.create_from_time(
-                self,
-                most_recent_date,
-                self.configuration.frequency,
-                self.configuration.timedelta,
-            )
+        return int(most_recent_date.timestamp() * 1000)
 
     def _handle_response_error(self, response: httpx.Response) -> None:
         if not response.is_success:
@@ -252,6 +254,25 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
         """
         raise NotImplementedError("Subclasses must implement get_event_id()")
 
+    @staticmethod
+    def get_event_timestamp(event: dict) -> int | None:
+        """
+        Extract the event timestamp, in epoch milliseconds, from an event dict.
+
+        Args:
+            event: event dictionary
+
+        Returns:
+            timestamp in milliseconds, or None if not available/parseable
+        """
+        raw = event.get("timestamp")
+        if raw is None:
+            return None
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return None
+
     def filter_processed_events(self, events: list[dict]) -> list[dict]:
         """
         Filter out events that have already been processed using the events cache.
@@ -283,32 +304,60 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
 
         return filtered_events
 
-    def next_batch(self, start: datetime, end: datetime) -> None:
+    def fetch_events(self) -> Generator[list[dict], None, None]:
         """
-        Fetch pages for the given time range, serialize and push events to intake.
-        Updates the checkpoint with the end time.
+        Page through the API from the checkpoint, deduplicate, and yield new events.
 
-        Args:
-            start: start time of the batch window
-            end: end time of the batch window
+        After each page is forwarded, persist a raw intermediate checkpoint so a crash
+        replays at most one page (the replayed events are absorbed by the events cache).
+        Once pagination is drained, persist the greatest timestamp seen + 1ms so the
+        inclusive ``fromDate`` filter does not replay the last event on the next poll.
         """
-        # Save the starting time
-        batch_start_time = time.time()
-        start_timestamp = int(start.timestamp() * 1000)
-        end_timestamp = int(end.timestamp() * 1000)
+        from_timestamp = self.most_recent_timestamp_seen
+        most_recent_timestamp = from_timestamp
 
-        # Fetch all pages for this time range
         for events in self._get_pages(
             endpoint=self.endpoint,
             params={
-                "filters.fromDate": start_timestamp,
-                "filters.toDate": end_timestamp,
+                "filters.fromDate": from_timestamp,
                 "pagination.pageSize": self.configuration.chunk_size,
                 "pagination.realtime": True,
             },
         ):
+            # track the greatest timestamp seen in this page
+            timestamps = [ts for ts in (self.get_event_timestamp(event) for event in events) if ts is not None]
+            page_max = max(timestamps) if timestamps else None
+
             filtered_events = self.filter_processed_events(events)
-            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in filtered_events]
+            if filtered_events:
+                yield filtered_events
+
+            # resumed once the consumer has pushed the page: advance the checkpoint to
+            # the raw page maximum so a restart replays at most this page
+            if page_max is not None and page_max > most_recent_timestamp:
+                most_recent_timestamp = page_max
+                with self.context as cache:
+                    cache["most_recent_timestamp_seen"] = most_recent_timestamp
+
+        # pagination drained: +1ms to skip the last event on the inclusive fromDate filter
+        if most_recent_timestamp > from_timestamp:
+            with self.context as cache:
+                cache["most_recent_timestamp_seen"] = most_recent_timestamp + 1
+
+        now = datetime.now(UTC)
+        current_lag = now - datetime.fromtimestamp(most_recent_timestamp / 1000, tz=UTC)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
+
+    def next_batch(self) -> None:
+        """
+        Fetch new events, serialize and push them to intake, then sleep the remaining
+        time until the next batch.
+        """
+        # Save the starting time
+        batch_start_time = time.time()
+
+        for events in self.fetch_events():
+            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
 
             # If the batch is not empty, push it
             if len(batch_of_events) > 0:
@@ -318,18 +367,13 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
                 )
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
+
+                self.save_events_cache()
             else:
                 self.log(
                     message="No events to forward",
                     level="info",
                 )
-
-        # Just in case
-        self.save_events_cache()
-
-        # Update checkpoint with the end time of this batch
-        with self.context as cache:
-            cache["most_recent_date_seen"] = end.isoformat()
 
         # Get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
@@ -340,26 +384,28 @@ class UbikaCloudProtectorNextGenBaseConnector(Connector):
         )
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
+        # Compute the remaining sleeping time. If greater than 0, sleep
+        delta_sleep = self.configuration.frequency - batch_duration
+        if delta_sleep > 0:
+            self.log(
+                message=f"Next batch in the future. Waiting {delta_sleep} seconds",
+                level="debug",
+            )
+            time.sleep(delta_sleep)
+
     def run(self) -> None:
         """
-        Main loop using TimeStepper to manage time ranges:
-        1) Use stepper.ranges() to get successive time windows
-        2) For each window, call next_batch() to fetch and push events
-        3) Stepper manages sleep timing and lag handling
+        Continuously fetch and forward events until the connector is asked to stop.
+        A failed batch is logged and retried on the next iteration.
         """
         self.log(message=f"Start fetching {self.NAME} events", level="info")
 
         try:
-            for start, end in self.stepper.ranges():
-                # Check if we need to stop
-                if self._stop_event.is_set():
-                    break
-
+            while not self._stop_event.is_set():
                 try:
-                    self.next_batch(start, end)
+                    self.next_batch()
                 except Exception as error:
                     self.log_exception(error, message="Failed to fetch events")
-                    break
 
         finally:
             # Cleanup on stop or fatal error
