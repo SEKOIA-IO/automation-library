@@ -1,16 +1,13 @@
-from datetime import datetime, timedelta, timezone
-from typing import Generator
+from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urljoin
 
 from dateutil.parser import isoparse
 from sekoia_automation.checkpoint import CheckpointDatetime
 
 from . import TrendMicroModule
-from .logging import get_logger
 from .metrics import EVENTS_LAG, INCOMING_MESSAGES
 from .trigger_vision_one_base import TrendMicroVisionOneBaseConfiguration, TrendMicroVisionOneBaseConnector
-
-logger = get_logger()
 
 
 class TrendMicroVisionOneWorkbenchConnectorConfiguration(TrendMicroVisionOneBaseConfiguration):
@@ -22,18 +19,24 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
     CONNECTOR_METRICS_LABEL = "vision_one_workbench"
 
     module: TrendMicroModule
-    configuration: TrendMicroVisionOneWorkbenchConnectorConfiguration
+    configuration: TrendMicroVisionOneWorkbenchConnectorConfiguration  # type: ignore[override]
+
+    @property
+    def typed_configuration(self) -> TrendMicroVisionOneWorkbenchConnectorConfiguration:
+        return TrendMicroVisionOneWorkbenchConnectorConfiguration.model_validate(self.configuration)
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        if self._data_path is None:
+            raise ValueError("data_path is required for checkpoint initialization")
 
         self.cursor = CheckpointDatetime(
             path=self._data_path, start_at=timedelta(minutes=1), ignore_older_than=timedelta(hours=1)
         )
         self.from_date = self.cursor.offset
 
-    def __fetch_events(self, from_date: datetime) -> Generator[list, None, None]:
-        to_date = datetime.now(timezone.utc)
+    def __fetch_events(self, from_date: datetime) -> Generator[list]:
+        to_date = datetime.now(UTC)
 
         query_params = {
             "startDateTime": from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -42,7 +45,7 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
             "orderBy": "createdDateTime asc",
         }
 
-        url = urljoin(self.configuration.base_url, "v3.0/workbench/alerts")
+        url = urljoin(self.typed_configuration.base_url, "v3.0/workbench/alerts")
         response = self.client.get(url, params=query_params, timeout=60)
 
         while self.running:  # pragma: no cover
@@ -53,12 +56,14 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
 
             if events:
                 INCOMING_MESSAGES.labels(
-                    intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL
+                    intake_key=self.typed_configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL
                 ).inc(len(events))
                 yield events
 
             else:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL).set(0)
+                EVENTS_LAG.labels(
+                    intake_key=self.typed_configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL
+                ).set(0)
                 return
 
             url = message.get("nextLink")
@@ -67,11 +72,17 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
 
             response = self.client.get(url, timeout=60)
 
-    def fetch_events(self) -> Generator[list, None, None]:
-        most_recent_date_seen = self.from_date
+    def fetch_events(self) -> Generator[list]:
+        initial_from_date = self.from_date
+        most_recent_date_seen = self.sanitize_from_date(self.from_date)
+        if most_recent_date_seen != self.from_date:
+            self.reset_cursor_offset(most_recent_date_seen)
+            self.from_date = most_recent_date_seen
 
+        total_events_fetched = 0
         for next_events in self.__fetch_events(most_recent_date_seen):
             if next_events:
+                total_events_fetched += len(next_events)
                 last_event = max(next_events, key=lambda x: x["createdDateTime"])
                 last_event_datetime = isoparse(last_event["createdDateTime"])
 
@@ -83,10 +94,22 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
         # save the most recent date
         if most_recent_date_seen > self.from_date:  # pragma: no cover
             self.from_date = most_recent_date_seen
-            self.cursor.offset = self.from_date
+            self.reset_cursor_offset(self.from_date)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL).set(
-            int(current_lag.total_seconds())
+        current_lag_seconds = int(current_lag.total_seconds())
+        EVENTS_LAG.labels(intake_key=self.typed_configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL).set(
+            current_lag_seconds
+        )
+        self.log(
+            (
+                "Fetch cycle completed "
+                f"connector={self.CONNECTOR_METRICS_LABEL} "
+                f"events_fetched_total={total_events_fetched} "
+                f"initial_checkpoint={initial_from_date.isoformat()} "
+                f"updated_checkpoint={most_recent_date_seen.isoformat()} "
+                f"lag_seconds={current_lag_seconds}"
+            ),
+            level="debug",
         )
