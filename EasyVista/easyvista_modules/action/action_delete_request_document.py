@@ -23,10 +23,16 @@ class DeleteRequestDocument(EasyVistaAction):
                 and isinstance(documents, list)
                 and (not data.get("@next"))
                 and (not (isinstance(total_record_count, int) and total_record_count > len(documents)))
-                and all((isinstance(item, dict) and "DOCUMENT_ID" in item for item in documents))
+                and all(
+                    isinstance(item, dict)
+                    and isinstance(item.get("DOCUMENT_ID"), (str, int))
+                    and not isinstance(item["DOCUMENT_ID"], bool)
+                    and str(item["DOCUMENT_ID"]).strip()
+                    for item in documents
+                )
                 and (not any((str(item["DOCUMENT_ID"]) == args.id for item in documents)))
             ):
-                error_data = json_body(response)
+                error_data = self.redact_json(json_body(response))
                 error = (
                     str(error_data.get("error", error_data.get("message", self.response_error(response))))
                     if isinstance(error_data, dict)

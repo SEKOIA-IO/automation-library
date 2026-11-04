@@ -32,9 +32,11 @@ class IdempotentRetryAdapter(HTTPAdapter):
         self.no_retry = HTTPAdapter(max_retries=0)
 
     def send(self, request, **kwargs):
-        append_values = parse_qs(urlsplit(request.url).query).get("append", [])
+        parsed_url = urlsplit(request.url)
+        append_values = parse_qs(parsed_url.query).get("append", [])
         is_append = request.method == "PUT" and any(value.casefold() in {"true", "1"} for value in append_values)
-        if is_append or request.method not in self.max_retries.allowed_methods:
+        is_state_transition = request.method == "PUT" and parsed_url.path.endswith(("/suspend", "/restart"))
+        if is_append or is_state_transition or request.method not in self.max_retries.allowed_methods:
             return self.no_retry.send(request, **kwargs)
         return super().send(request, **kwargs)
 
