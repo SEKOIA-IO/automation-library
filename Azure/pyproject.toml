@@ -46,6 +46,7 @@ loguru = "^0.7.2"
 uamqp = "^1.6.11"
 cachetools = "^6.2.0"
 msgraph-sdk = "^1.62.0"
+structlog = "^26.1.0"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
