@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-10 - 2.21.0
+
+### Changed
+
+- In-client retry on transient Office 365 Management API errors (429 honoring `Retry-After`, 5xx and network errors with exponential backoff).
+- Additional per-category Prometheus counters.
+- `FailureTracker` for deduplicated logging during sustained outages.
+- Split the generic `except Exception` in the management API forward loop into multiple branches.
+- Truncate error response bodies when raising O365 exceptions.
+
 ## 2026-07-02 - 2.20.7
 
 ### Fixed
