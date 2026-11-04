@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-09-30 - 2.11.1
+
+### Fixed
+
+- Fix events lost when the intake refuses them: the system logs connector now asks the SDK to raise when some events could not be forwarded, so neither the checkpoint nor the events cache move forward and the page is read again by the next batch. The forwarded events metric and the `Forwarded N events` log now come only after a successful push.
+
 ## 2026-09-10 - 2.11.0
 
 ### Changed
