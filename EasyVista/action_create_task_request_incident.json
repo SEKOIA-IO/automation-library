@@ -76,7 +76,7 @@
     "properties": {
       "href": {
         "type": "string",
-        "description": "`HREF` returned by the API (`.../actions/<rfc_number>` on the tenant)"
+        "description": "URL returned by the API, which may reference /actions/{rfc_number}."
       }
     }
   }

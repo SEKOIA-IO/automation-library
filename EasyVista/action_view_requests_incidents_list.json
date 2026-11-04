@@ -38,7 +38,7 @@
       },
       "record_count": {
         "type": "string",
-        "description": "Records in this page. The API returns a **string** and the action keeps it as is (brief)"
+        "description": "Number of records in this page, returned as a string."
       },
       "total_record_count": {
         "type": "string",
@@ -49,7 +49,7 @@
         "items": {
           "type": "object"
         },
-        "description": "Records as returned. The OpenAPI item schema is incorrect (it repeats the envelope), so each item is declared as a free-form `object`"
+        "description": "Ticket records returned unchanged as objects."
       }
     }
   }

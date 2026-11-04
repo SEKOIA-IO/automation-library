@@ -8,10 +8,11 @@ from pydantic import ValidationError
 from urllib3.exceptions import NewConnectionError
 from urllib3.response import HTTPResponse
 
-from easyvista import EasyVistaConfiguration
-from easyvista.account_validator import EasyVistaAccountValidator
-from easyvista.actions_read import ViewRequestsIncidentsList
-from easyvista.actions_requests import CloseRequestIncidentArguments, UpdateRequestIncident, map_fields
+from easyvista_modules.account_validator import EasyVistaAccountValidator
+from easyvista_modules.action.action_update_request_incident import UpdateRequestIncident
+from easyvista_modules.action.action_view_requests_incidents_list import ViewRequestsIncidentsList
+from easyvista_modules.helpers import map_fields
+from easyvista_modules.models import CloseRequestIncidentArguments, EasyVistaConfiguration
 
 
 @pytest.mark.parametrize(
@@ -114,6 +115,30 @@ def test_error_redacts_credentials(make_action, requests_mock, api_url):
     requests_mock.get(api_url, status_code=590, json={"error": f"fake-access-token fake-password {basic}"})
     action.run({})
     assert action.error.call_args.args[0].endswith("[REDACTED] [REDACTED] [REDACTED]")
+
+
+def test_error_redacts_latin1_basic_credentials(make_action, requests_mock, api_url):
+    username, password = "usér", "sécret-value"
+    authorization = (
+        requests.Request("GET", api_url, auth=requests.auth.HTTPBasicAuth(username, password))
+        .prepare()
+        .headers["Authorization"]
+    )
+    encoded_credentials = authorization.split(" ", 1)[1]
+    action = make_action(ViewRequestsIncidentsList, use_token=False, username=username, password=password)
+    requests_mock.get(api_url, status_code=590, json={"error": f"Rejected {authorization}"})
+
+    assert action.run({}) is None
+    assert requests_mock.last_request.headers["Authorization"] == authorization
+    message = action.error.call_args.args[0]
+    assert encoded_credentials not in message
+    assert message.endswith("Rejected Basic [REDACTED]")
+
+
+@pytest.mark.parametrize("username,password", [("用户", "fake-password"), ("user", "secret-🔒")])
+def test_redaction_handles_credentials_outside_latin1(make_action, username, password):
+    action = make_action(ViewRequestsIncidentsList, username=username, password=password, token="test-token")
+    assert action.redact(f"Password {password}, token test-token") == "Password [REDACTED], token [REDACTED]"
 
 
 @pytest.mark.parametrize("credential", ["token", "password", "basic"])
@@ -264,7 +289,6 @@ def test_http_retry_policy(make_action, monkeypatch, method, status, attempts):
     monkeypatch.setenv("NO_PROXY", "*")
     action = make_action(ViewRequestsIncidentsList)
 
-    # Patch below the HTTPAdapter: requests_mock bypasses urllib3's retry loop.
     def reply(*args, **kwargs):
         return HTTPResponse(
             status=status,
