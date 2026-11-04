@@ -86,6 +86,8 @@ HTTPS remains mandatory even when certificate verification is disabled.
 - **Appending descriptions:** Requires EV Service Manager 2025.3 or later. Appending is not idempotent, so the
   module never retries a request with `append=true`. Check the ticket after an uncertain timeout before trying again.
 - **Other writes:** POST requests are also never retried because they can create duplicates.
+- **Suspend and restart:** These transitions are never retried automatically. After a gateway timeout, check the
+  ticket state before trying again: EasyVista may already have applied the transition.
 - **Partial updates:** Empty optional text fields are omitted so that untouched playbook fields do not clear existing
   ticket values. To clear a field intentionally, send its EasyVista field name with an empty string in `custom_fields`.
   Non-empty explicit arguments take precedence over matching custom fields.

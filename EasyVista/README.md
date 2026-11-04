@@ -48,6 +48,7 @@ and tests access with `GET /requests?max_rows=1&fields=rfc_number`.
 - List actions return a single page. `max_rows` controls the page size; automatic pagination is unavailable in 1.0.0.
 - POST operations are never retried. A timeout can occur after the server has created an object.
 - Updates with `append=true` are never retried, since replaying them could duplicate the appended description.
+- Suspend and restart are never retried. After a gateway timeout, check the ticket state before trying again.
 - For ticket updates, empty optional text arguments are omitted. To intentionally clear a field, pass its EasyVista name with an
   empty string in `custom_fields`. Explicit non-empty arguments take precedence over matching custom fields.
 - Error `590` carries EasyVista business errors. The integration reports the response body and does not retry it.
