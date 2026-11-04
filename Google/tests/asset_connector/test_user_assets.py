@@ -1,3 +1,4 @@
+import hashlib
 from unittest.mock import MagicMock, Mock, patch
 
 import httplib2
@@ -14,6 +15,7 @@ from google_module.asset_connector.user_assets import (
     KNOWN_USERS_KEY,
     USER_SCOPE,
     GoogleWorkspaceUserAssetConnector,
+    unique_groups,
 )
 
 ADMIN_USER = {
@@ -277,6 +279,9 @@ def test_reset_checkpoint(connector):
 
     connector.reset_checkpoint()
 
+    connector.log.assert_called_with("Google Workspace users checkpoint reset", level="info")
+    assert connector._fingerprints == {}
+    assert connector._listing_complete is False and connector._pending is False
     with connector.context as cache:
         assert KNOWN_USERS_KEY not in cache
     serve(connector, [{"users": [ADMIN_USER]}])
@@ -307,6 +312,7 @@ def test_get_assets_skips_invalid_user(connector):
         "Skipping Google Workspace user bad-email",
     ]
     assert all("primaryEmail" in message for message in skipped)
+    connector.log.assert_called_with("1 new or changed users, 2 skipped, out of 1 listed", level="info")
 
 
 def test_get_assets_api_error_keeps_known_users(connector):
@@ -374,6 +380,89 @@ def test_deleted_group_is_skipped(connector):
 
     assert [group.uid for group in asset.user.groups] == ["group-1"]
     connector.log.assert_any_call("Skipping Google Workspace group deleted: not found", level="warning")
+
+
+def test_access_denied_group_is_skipped(connector):
+    serve(
+        connector,
+        [{"users": [ADMIN_USER]}],
+        groups=[{**GROUP, "id": "group-a"}, GROUP],
+        members={
+            "group-a": http_error(403, "forbidden"),
+            "group-1": [{"id": ADMIN_USER["id"], "type": "USER"}],
+        },
+    )
+
+    (asset,) = connector.get_assets()
+
+    assert [group.uid for group in asset.user.groups] == ["group-1"]
+    connector.log.assert_any_call("Skipping Google Workspace group group-a: access denied", level="warning")
+    errors = [call for call in connector.log.call_args_list if call.kwargs.get("level") == "error"]
+    assert errors == []
+    connector.log_exception.assert_not_called()
+
+
+def test_rate_limited_group_members_end_the_cycle(connector):
+    serve(
+        connector,
+        [{"users": [ADMIN_USER]}],
+        groups=[GROUP],
+        members={"group-1": http_error(403, "rateLimitExceeded")},
+    )
+
+    assert list(connector.get_assets()) == []
+    connector.log_exception.assert_called_once()
+
+
+def test_invalid_group_is_skipped(connector):
+    serve(
+        connector,
+        [{"users": [ADMIN_USER]}],
+        groups=[{"id": "no-email", "name": "Broken"}, GROUP],
+        members={
+            "no-email": [{"id": ADMIN_USER["id"], "type": "USER"}],
+            "group-1": [{"id": ADMIN_USER["id"], "type": "USER"}],
+        },
+    )
+
+    (asset,) = connector.get_assets()
+
+    assert [group.uid for group in asset.user.groups] == ["group-1"]
+    warnings = [call.args[0] for call in connector.log.call_args_list if call.kwargs.get("level") == "warning"]
+    assert len(warnings) == 1 and warnings[0].startswith("Skipping Google Workspace group no-email: ")
+    connector.log_exception.assert_not_called()
+
+
+def test_group_with_direct_and_customer_members_is_attached_once(connector):
+    serve(
+        connector,
+        [{"users": [ADMIN_USER, SUSPENDED_USER]}],
+        groups=[GROUP],
+        members={"group-1": [{"id": ADMIN_USER["id"], "type": "USER"}, {"id": "C00000000", "type": "CUSTOMER"}]},
+    )
+
+    admin, suspended = connector.get_assets()
+
+    assert [group.uid for group in admin.user.groups] == ["group-1"]
+    assert [group.uid for group in suspended.user.groups] == ["group-1"]
+
+
+def test_unique_groups_keeps_first_occurrence():
+    first, other, duplicate = (
+        Group(uid="g-1", name="First"),
+        Group(uid="g-2", name="Other"),
+        Group(uid="g-1", name="Again"),
+    )
+
+    assert unique_groups([first, other, duplicate]) == [first, other]
+
+
+def test_fingerprint_ignores_unset_fields(connector):
+    serve(connector, [{"users": [SUSPENDED_USER]}])
+    (asset,) = connector.get_assets()
+
+    expected = hashlib.sha256(asset.model_dump_json(exclude_none=True).encode()).hexdigest()[:16]
+    assert connector._fingerprints[SUSPENDED_USER["id"]] == expected
 
 
 @pytest.mark.parametrize("error", [http_error(403, "forbidden"), RefreshError("unauthorized_client")])

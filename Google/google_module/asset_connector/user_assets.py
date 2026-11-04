@@ -7,6 +7,7 @@ from google.auth.exceptions import RefreshError
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from pydantic import ValidationError
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.connector import AssetList, DefaultAssetConnectorConfiguration
 from sekoia_automation.asset_connector.models.ocsf.group import Group
@@ -38,6 +39,17 @@ def is_access_denied(error: Exception) -> bool:
         reasons = {detail.get("reason") for detail in error.error_details or [] if isinstance(detail, dict)}
         return not reasons & RATE_LIMIT_REASONS
     return False
+
+
+def unique_groups(groups: list[Group]) -> list[Group]:
+    """Drop repeated groups by uid, keeping the first occurrence."""
+    seen: set[str | None] = set()
+    unique = []
+    for group in groups:
+        if group.uid not in seen:
+            seen.add(group.uid)
+            unique.append(group)
+    return unique
 
 
 class GoogleWorkspaceUserAssetConnectorConfiguration(DefaultAssetConnectorConfiguration):
@@ -99,7 +111,11 @@ class GoogleWorkspaceUserAssetConnector(AssetConnector):
         groups_by_user: dict[str, list[Group]] = {}
         directory = self.groups_directory
         for raw_group in self._list(directory.groups(), "groups", customer=self.CUSTOMER, maxResults=200):
-            group = DirectoryGroup.model_validate(raw_group)
+            try:
+                group = DirectoryGroup.model_validate(raw_group)
+            except ValidationError as error:
+                self.log(f"Skipping Google Workspace group {raw_group.get('id')}: {error!r}", level="warning")
+                continue
             if group.directMembersCount == "0":
                 continue
             ocsf_group = Group(uid=group.id, name=group.name or group.email, desc=group.description or None)
@@ -111,10 +127,14 @@ class GoogleWorkspaceUserAssetConnector(AssetConnector):
                     elif member.type == "CUSTOMER":
                         groups_by_user.setdefault(EVERY_USER, []).append(ocsf_group)
             except HttpError as error:
-                # Group deleted between groups.list and members.list
-                if error.status_code != 404:
+                # Group deleted between groups.list and members.list, or a group the administrator cannot read
+                if error.status_code == 404:
+                    reason = "not found"
+                elif is_access_denied(error):
+                    reason = "access denied"
+                else:
                     raise
-                self.log(f"Skipping Google Workspace group {group.id}: not found", level="warning")
+                self.log(f"Skipping Google Workspace group {group.id}: {reason}", level="warning")
         return groups_by_user
 
     def _groups_or_none(self) -> dict[str, list[Group]]:
@@ -135,6 +155,7 @@ class GoogleWorkspaceUserAssetConnector(AssetConnector):
         self._listing_complete = False
         self._pending = False
         changed = 0
+        skipped = 0
 
         try:
             groups_by_user = self._groups_or_none()
@@ -142,12 +163,14 @@ class GoogleWorkspaceUserAssetConnector(AssetConnector):
             for raw_user in self._list(self.directory.users(), "users", customer=self.CUSTOMER, maxResults=500):
                 try:
                     user = DirectoryUser.model_validate(raw_user)
-                    asset = UserMapper(user, groups_by_user.get(user.id, []) + every_user_groups).map()
+                    groups = unique_groups(groups_by_user.get(user.id, []) + every_user_groups)
+                    asset = UserMapper(user, groups).map()
                 except Exception as error:
+                    skipped += 1
                     self.log(f"Skipping Google Workspace user {raw_user.get('id')}: {error!r}", level="warning")
                     continue
 
-                fingerprint = hashlib.sha256(asset.model_dump_json().encode()).hexdigest()[:16]
+                fingerprint = hashlib.sha256(asset.model_dump_json(exclude_none=True).encode()).hexdigest()[:16]
                 # Set before the yield: the SDK checkpoints a full batch before resuming the generator
                 self._fingerprints[user.id] = fingerprint
                 if known.get(user.id) != fingerprint:
@@ -155,6 +178,8 @@ class GoogleWorkspaceUserAssetConnector(AssetConnector):
                     self._pending = True
                     yield asset
             self._listing_complete = self.running
+        # Logged, not re-raised: the SDK run() would restart the cycle immediately, with no backoff.
+        # The checkpoint stays in merge mode since _listing_complete is still False.
         except Exception as error:
             if is_access_denied(error):
                 self.log(f"Google Workspace users access denied: {error!r}. {ACCESS_HINT}", level="error")
@@ -164,7 +189,10 @@ class GoogleWorkspaceUserAssetConnector(AssetConnector):
         # No push follows when every yielded user was already checkpointed: save the snapshot here
         if self._listing_complete and not self._pending:
             self.update_checkpoint()
-        self.log(f"{changed} new or changed users out of {len(self._fingerprints)} listed", level="info")
+        self.log(
+            f"{changed} new or changed users, {skipped} skipped, out of {len(self._fingerprints)} listed",
+            level="info",
+        )
 
     def post_assets_to_api(self, assets: AssetList, asset_connector_api_url: str) -> dict[str, str] | None:
         """Push a batch; on failure forget its fingerprints so a later checkpoint does not mark its users known."""
@@ -187,6 +215,9 @@ class GoogleWorkspaceUserAssetConnector(AssetConnector):
         with self.context as cache:
             cache.pop(KNOWN_USERS_KEY, None)
         self._fingerprints = {}
+        self._listing_complete = False
+        self._pending = False
+        self.log("Google Workspace users checkpoint reset", level="info")
 
     def get_mapped_fields(self) -> dict[str, str]:
         """Return the Directory API -> OCSF field mapping used for schema-change fingerprinting."""
