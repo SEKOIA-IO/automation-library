@@ -1,4 +1,3 @@
-
 from datetime import datetime, timedelta, timezone
 from typing import Generator
 from urllib.parse import urljoin
