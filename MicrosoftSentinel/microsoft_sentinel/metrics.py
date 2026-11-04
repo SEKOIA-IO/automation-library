@@ -10,6 +10,13 @@ INCOMING_EVENTS = Counter(
     labelnames=["intake_key"],
 )
 
+ENTITIES_FETCH_ERRORS = Counter(
+    name="entities_fetch_errors",
+    documentation="Number of incidents forwarded without entities because fetching them failed",
+    namespace=prom_namespace_sophos,
+    labelnames=["intake_key"],
+)
+
 # Declare prometheus metrics
 prom_namespace = "symphony_module_common"
 

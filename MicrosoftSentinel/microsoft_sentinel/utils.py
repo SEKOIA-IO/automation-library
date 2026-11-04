@@ -1,8 +1,9 @@
-from typing import Dict, Any
-from azure.mgmt.securityinsight.models import IncidentAdditionalData, IncidentOwnerInfo, IncidentLabel
+from typing import Any
+
+from azure.mgmt.securityinsight.models import IncidentAdditionalData, IncidentLabel, IncidentOwnerInfo
 
 
-def additional_data_to_dict(additional_data_item: IncidentAdditionalData) -> Dict[str, Any]:
+def additional_data_to_dict(additional_data_item: IncidentAdditionalData) -> dict[str, Any]:
     return {
         "additional_properties": additional_data_item.additional_properties,
         "alerts_count": additional_data_item.alerts_count,
@@ -13,7 +14,7 @@ def additional_data_to_dict(additional_data_item: IncidentAdditionalData) -> Dic
     }
 
 
-def owner_data_to_dict(incident_owner_item: IncidentOwnerInfo) -> Dict[str, Any]:
+def owner_data_to_dict(incident_owner_item: IncidentOwnerInfo) -> dict[str, Any]:
     return {
         "additional_properties": incident_owner_item.additional_properties,
         "assigned_to": incident_owner_item.assigned_to,
@@ -23,7 +24,7 @@ def owner_data_to_dict(incident_owner_item: IncidentOwnerInfo) -> Dict[str, Any]
     }
 
 
-def labels_data_to_dict(label_item: IncidentLabel) -> Dict[str, Any]:
+def labels_data_to_dict(label_item: IncidentLabel) -> dict[str, Any]:
     return {
         "additional_properties": label_item.additional_properties,
         "label_name": label_item.label_name,
