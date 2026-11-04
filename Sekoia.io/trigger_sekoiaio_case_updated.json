@@ -30,6 +30,23 @@
           "type": "string"
         },
         "description": "Create a run only for cases matching a list of case uuids/short ids"
+      },
+      "changed_fields_filter": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "title",
+            "description",
+            "status",
+            "priority",
+            "verdict",
+            "assignees",
+            "tags",
+            "custom_fields"
+          ]
+        },
+        "description": "Create a run only when one of these fields changed. Leave empty to create a run for every update"
       }
     },
     "type": "object",
@@ -96,6 +113,104 @@
       "verdict_uuid": {
         "description": "Unique identifier of the Verdict (UUID string).",
         "type": "string"
+      },
+      "custom_status_uuid": {
+        "description": "Unique identifier of the custom status of the Case (UUID string), when the status changed.",
+        "type": "string"
+      },
+      "custom_status_stage": {
+        "description": "Stage of the custom status (open, in_progress or closed), when the status changed.",
+        "type": "string",
+        "enum": [
+          "open",
+          "in_progress",
+          "closed"
+        ]
+      },
+      "verdict_stage": {
+        "description": "Stage of the verdict (true_positive or false_positive), when the verdict changed. Null when the verdict was removed.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "verdict_analysis": {
+        "description": "Analysis of the verdict, when it changed.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "verdict_confidence": {
+        "description": "Confidence in the verdict, from 0 to 100, when it changed.",
+        "type": [
+          "integer",
+          "null"
+        ]
+      },
+      "custom_fields_changes": {
+        "description": "Custom fields added, updated or removed, with their name. The values are not included.",
+        "type": "object",
+        "properties": {
+          "added": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "uuid": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "updated": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "uuid": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "removed": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "uuid": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "changed_fields": {
+        "description": "Fields changed by this update, among title, description, status, priority, verdict, assignees, tags and custom_fields.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
       }
     },
     "required": [
