@@ -1,23 +1,29 @@
-import os
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
+from typing import Any
 
 import orjson
 import requests
 from dateutil.parser import isoparse
+from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from proofpoint_modules.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
+# The Proofpoint TAP API does not accept a sinceTime older than one hour
+MAX_LOOKBACK = timedelta(hours=1)
+# Without checkpoint, start collecting events from 5 minutes ago
+DEFAULT_LOOKBACK = timedelta(minutes=5)
+
 
 class TAPConfig(DefaultConnectorConfiguration):
     api_host: str
     client_principal: str
     client_secret: str
-    frequency = 60
+    frequency: int = 60
 
 
 class TAPEventsTrigger(Connector):
@@ -36,7 +42,17 @@ class TAPEventsTrigger(Connector):
         super().__init__(*args, **kwargs)
 
         self.http_session = requests.Session()
-        self.last_retrieval_date: datetime = datetime.now(timezone.utc) - timedelta(minutes=5)
+        self.checkpoint = CheckpointDatetime(
+            path=self.data_path, start_at=DEFAULT_LOOKBACK, ignore_older_than=MAX_LOOKBACK
+        )
+
+    @property
+    def last_retrieval_date(self) -> datetime:
+        return self.checkpoint.offset
+
+    @last_retrieval_date.setter
+    def last_retrieval_date(self, value: datetime) -> None:
+        self.checkpoint.offset = value
 
     @cached_property
     def authentication(self):
@@ -63,7 +79,7 @@ class TAPEventsTrigger(Connector):
 
     def get_next_events(self, from_date: datetime) -> dict | None:
         # We don't retrieve messages older than one hour
-        one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
+        one_hour_ago = datetime.now(UTC) - MAX_LOOKBACK
         if from_date < one_hour_ago:
             from_date = one_hour_ago
 
@@ -104,10 +120,7 @@ class TAPEventsTrigger(Connector):
         if response is None:
             return
 
-        # update the retrieval date for the next batch
-        self.last_retrieval_date = isoparse(response["queryEndTime"])
-
-        events: list[str] = []
+        events: list[Any] = []
         for message in response.get("messagesDelivered", []):
             message["status"] = "delivered"
             message["type"] = "message"
@@ -140,5 +153,8 @@ class TAPEventsTrigger(Connector):
                 message="No events to forward",
                 level="info",
             )
+
+        # update the retrieval date for the next batch, only once the events are forwarded
+        self.last_retrieval_date = isoparse(response["queryEndTime"])
 
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(time.time() - start)

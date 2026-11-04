@@ -69,6 +69,10 @@
 			"path": "MokN"
 		},
 		{
+			"name": "Proofpoint",
+			"path": "Proofpoint"
+		},
+		{
 			"name": "PublicSuffix",
 			"path": "PublicSuffix"
 		},
