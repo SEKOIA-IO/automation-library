@@ -1,9 +1,9 @@
-from datetime import datetime, timedelta, timezone
-from typing import Generator
+from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urljoin
 
 from dateutil.parser import isoparse
-from pydantic.v1 import Field
+from pydantic import Field
 from sekoia_automation.checkpoint import CheckpointDatetime
 
 from . import TrendMicroModule
@@ -29,12 +29,14 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
         super().__init__(*args, **kwargs)
 
         self.cursor = CheckpointDatetime(
-            path=self._data_path, start_at=timedelta(hours=1), ignore_older_than=timedelta(days=14)
+            path=self._data_path,  # type: ignore[arg-type]
+            start_at=timedelta(hours=1),
+            ignore_older_than=timedelta(days=14),
         )
         self.from_date = self.cursor.offset
 
-    def __fetch_events(self, from_date: datetime) -> Generator[list, None, None]:
-        to_date = datetime.now(timezone.utc)
+    def __fetch_events(self, from_date: datetime) -> Generator[list]:
+        to_date = datetime.now(UTC)
 
         query_params: dict[str, str | int] = {
             "detectedStartDateTime": from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -72,7 +74,7 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
 
             response = self.client.get(url, timeout=60)
 
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list]:
         most_recent_date_seen = self.from_date
 
         for next_events in self.__fetch_events(most_recent_date_seen):
@@ -90,7 +92,7 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
             self.from_date = most_recent_date_seen
             self.cursor.offset = self.from_date
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         current_lag = now - most_recent_date_seen
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.CONNECTOR_METRICS_LABEL).set(
             int(current_lag.total_seconds())

@@ -7,7 +7,6 @@ import logging
 from pathlib import Path
 
 from trendmicro_modules import TrendMicroModule
-from trendmicro_modules.models import TrendMicroModuleConfiguration
 from trendmicro_modules.trigger_email_sec import TrendMicroConnectorConfiguration, TrendMicroEmailSecurityConnector
 
 logging.basicConfig(
@@ -44,7 +43,7 @@ if __name__ == "__main__":
 
         batch_size: int = 2
         frequency: int = 13
-        intake_key = args.intake_key
+        intake_key: str = args.intake_key
 
         # https://intake.test.sekoia.io or https://intake.sekoia.io
         intake_server: str = "https://intake.sekoia.io"
