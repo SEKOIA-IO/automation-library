@@ -20,7 +20,7 @@ OUTCOMING_EVENTS = Counter(
 
 EVENTS_LAG = Gauge(
     name="events_lags",
-    documentation="The delay, in seconds, from the date of the last event",
+    documentation="The delay, in seconds, from the end of the last collected period",
     namespace=prom_namespace,
     labelnames=["intake_key"],
 )

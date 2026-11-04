@@ -109,23 +109,30 @@ class ESecuremailEventsConnector(Connector):
 
         events = [line.decode("utf-8") for line in response.iter_lines() if line]
 
-        return events, self.served_end(response, end)
+        return events, self.served_end(response, start, end)
 
     @staticmethod
-    def served_end(response: requests.Response, requested_end: datetime) -> datetime:
+    def served_end(response: requests.Response, start: datetime, requested_end: datetime) -> datetime:
         """
         The API truncates the period it was asked for; `X-Query-End-Time` tells how
         far it actually went. Fall back on the requested bound when the header is
         absent or unreadable.
+
+        The API truncates against its own clock: when it lags behind ours, the bound
+        can fall before the start of the period, meaning nothing was served. The
+        bound is then held just before the start so that the cursor never moves
+        backwards and the period is asked for again.
         """
         header = response.headers.get("X-Query-End-Time")
         if not header:
             return requested_end
 
         try:
-            return datetime.fromtimestamp(int(header), tz=UTC)
-        except ValueError:
+            served = datetime.fromtimestamp(int(header), tz=UTC)
+        except ValueError, OverflowError, OSError:
             return requested_end
+
+        return min(max(served, start - WINDOW_STEP), requested_end)
 
     def push_events(self, events: list[str]) -> None:
         for index in range(0, len(events), self.configuration.chunk_size):

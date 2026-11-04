@@ -4,12 +4,12 @@ import pytest
 import requests_mock
 from requests.exceptions import HTTPError
 
-from secuserve_modules.connector_esecuremail_events import MAX_TIME_RANGE, PUBLICATION_DELAY
+from secuserve_modules.connector_esecuremail_events import MAX_TIME_RANGE, PUBLICATION_DELAY, WINDOW_STEP
 
 from .conftest import API_URL, set_cursor
 
 EVENT_DELIVERED = (
-    '{"message_id":"23e0.64facee0.bc601.0","client_ip":"161.38.205.161","stamp_queued":1727254241,'
+    '{"message_id":"23e0.64facee0.bc601.0","client_ip":"198.51.100.161","stamp_queued":1727254241,'
     '"sender":"newsletter@example.com","subject":"Hello","message_size":87879,'
     '"recipient":"john.doe@example.net","stamp_filter":1727254241,"verdict":"valid","action":"pass",'
     '"delivery_status":"sent","antispam_score":1.2}'
@@ -25,17 +25,19 @@ EVENT_BLOCKED = (
 def test_fetch_events_returns_one_event_per_line(connector):
     start = datetime(2024, 9, 25, 8, 0, tzinfo=UTC)
     end = start + timedelta(minutes=5)
+    # the API truncated the period one minute before the requested end
+    truncated_end = end - timedelta(minutes=1)
 
     with requests_mock.Mocker() as mock:
         mock.get(
             API_URL,
             text=f"{EVENT_DELIVERED}\n{EVENT_BLOCKED}\n",
-            headers={"X-Query-End-Time": "1727254500"},
+            headers={"X-Query-End-Time": str(int(truncated_end.timestamp()))},
         )
         events, served_end = connector.fetch_events(start, end)
 
         assert events == [EVENT_DELIVERED, EVENT_BLOCKED]
-        assert served_end == datetime.fromtimestamp(1727254500, tz=UTC)
+        assert served_end == truncated_end
 
         # the connector drives the period itself and asks for the flat format
         query = mock.last_request.qs
@@ -66,6 +68,27 @@ def test_fetch_events_falls_back_on_the_requested_bound(connector):
         assert served_end == end
 
         mock.get(API_URL, text="", headers={"X-Query-End-Time": "not-a-timestamp"})
+        _, served_end = connector.fetch_events(start, end)
+        assert served_end == end
+
+        mock.get(API_URL, text="", headers={"X-Query-End-Time": str(10**20)})
+        _, served_end = connector.fetch_events(start, end)
+        assert served_end == end
+
+
+def test_fetch_events_keeps_the_served_bound_within_the_period(connector):
+    """A bound outside the requested period never moves the cursor backwards nor past the period."""
+    start = datetime(2024, 9, 25, 8, 0, tzinfo=UTC)
+    end = start + timedelta(minutes=5)
+
+    with requests_mock.Mocker() as mock:
+        before_start = int((start - timedelta(minutes=2)).timestamp())
+        mock.get(API_URL, text="", headers={"X-Query-End-Time": str(before_start)})
+        _, served_end = connector.fetch_events(start, end)
+        assert served_end == start - WINDOW_STEP
+
+        after_end = int((end + timedelta(minutes=2)).timestamp())
+        mock.get(API_URL, text="", headers={"X-Query-End-Time": str(after_end)})
         _, served_end = connector.fetch_events(start, end)
         assert served_end == end
 
