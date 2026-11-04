@@ -79,7 +79,7 @@
       },
       "rfc_number": {
         "type": "string",
-        "description": "Last path segment of `HREF`, i.e.\u00a0the RFC number of the created ticket. It is **derived** by the action so that later actions can chain on it, because the API does not return it as a field (**decided, Q4**)"
+        "description": "RFC number derived from the last path segment of HREF; use it to reference the created ticket in later actions."
       }
     }
   }

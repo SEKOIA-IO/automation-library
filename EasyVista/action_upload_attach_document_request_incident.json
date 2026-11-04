@@ -52,7 +52,7 @@
     "properties": {
       "href": {
         "type": "string",
-        "description": "`HREF` returned by the API (the ticket). The brief\u2019s result `documents` reflected the OpenAPI defect and is **replaced**: the API does not echo the documents back. Use *Get the list of Documents* to obtain the document ids"
+        "description": "Ticket URL returned by the API. Use Get the list of Documents to obtain the attached document identifiers."
       }
     }
   }

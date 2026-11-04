@@ -1,30 +1,24 @@
-from easyvista import EasyVistaModule
-from easyvista.account_validator import EasyVistaAccountValidator
-from easyvista.actions_documents import (
-    DeleteRequestDocument,
-    GetRequestIncidentDocument,
-    GetRequestIncidentDocuments,
-    UploadAttachDocumentRequestIncident,
-)
-from easyvista.actions_read import (
+from easyvista_modules import EasyVistaModule
+from easyvista_modules.account_validator import EasyVistaAccountValidator
+from easyvista_modules.action.action_close_request_incident import CloseRequestIncident
+from easyvista_modules.action.action_create_related_action_incident import CreateRelatedActionIncident
+from easyvista_modules.action.action_create_request_incident import CreateRequestIncident
+from easyvista_modules.action.action_create_task_request_incident import CreateTaskRequestIncident
+from easyvista_modules.action.action_delete_request_document import DeleteRequestDocument
+from easyvista_modules.action.action_get_non_terminated_actions_questionnaires import (
     GetNonTerminatedActionsQuestionnaires,
-    GetSpecificActionQuestionnaire,
-    ViewRequestIncident,
-    ViewRequestIncidentComment,
-    ViewRequestIncidentProblem,
-    ViewRequestsIncidentsList,
 )
-from easyvista.actions_requests import (
-    CloseRequestIncident,
-    CreateRequestIncident,
-    RestartRequestIncident,
-    SuspendRequestIncident,
-    UpdateRequestIncident,
-)
-from easyvista.actions_workflow import (
-    CreateRelatedActionIncident,
-    CreateTaskRequestIncident,
-)
+from easyvista_modules.action.action_get_request_incident_document import GetRequestIncidentDocument
+from easyvista_modules.action.action_get_request_incident_documents import GetRequestIncidentDocuments
+from easyvista_modules.action.action_get_specific_action_questionnaire import GetSpecificActionQuestionnaire
+from easyvista_modules.action.action_restart_request_incident import RestartRequestIncident
+from easyvista_modules.action.action_suspend_request_incident import SuspendRequestIncident
+from easyvista_modules.action.action_update_request_incident import UpdateRequestIncident
+from easyvista_modules.action.action_upload_attach_document_request_incident import UploadAttachDocumentRequestIncident
+from easyvista_modules.action.action_view_request_incident import ViewRequestIncident
+from easyvista_modules.action.action_view_request_incident_comment import ViewRequestIncidentComment
+from easyvista_modules.action.action_view_request_incident_problem import ViewRequestIncidentProblem
+from easyvista_modules.action.action_view_requests_incidents_list import ViewRequestsIncidentsList
 
 
 def main():

@@ -24,7 +24,7 @@
             "description": "Type name in the API user language; provide at least one type ID, name or GUID"
           },
           "action_type_guid": {
-            "description": "Type GUID (EV SM 2023.4+); provide at least one type ID, name or GUID. Not validated on the integration tenant",
+            "description": "Type GUID (EV SM 2023.4+); provide at least one type ID, name or GUID. If the API rejects a GUID, use an action type ID or name supported by the ticket catalog",
             "title": "Action Type Guid",
             "type": "string"
           },
@@ -76,7 +76,7 @@
       },
       "href": {
         "type": "string",
-        "description": "`HREF` from the `201` body (the ticket URL on the tenant; undocumented in the OpenAPI document); omitted if absent (**decided, Q7**)"
+        "description": "Ticket URL returned by the API, when present in the response."
       }
     }
   }

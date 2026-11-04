@@ -1,51 +1,5 @@
-import base64
-import binascii
-
-from easyvista.action_base import EasyVistaAction, json_body
-from easyvista.actions_read import select_fields
-from easyvista.actions_requests import href_result
-from easyvista.models import (
-    DeleteRequestDocumentArguments,
-    GetRequestIncidentDocumentArguments,
-    GetRequestIncidentDocumentsArguments,
-    UploadAttachDocumentRequestIncidentArguments,
-)
-
-
-class UploadAttachDocumentRequestIncident(EasyVistaAction):
-    def run(self, arguments: dict) -> dict | None:
-        args = UploadAttachDocumentRequestIncidentArguments(**arguments)
-        try:
-            for document in args.documents:
-                base64.b64decode(document.filedata, validate=True)
-        except (ValueError, binascii.Error):
-            self.error("documents[*].filedata is not valid base64")
-            return None
-        body: dict = {"documents": [item.model_dump() for item in args.documents]}
-        if args.description:
-            body["description"] = args.description
-        return href_result(self.post(self.request_path(args.rfc_number, "documents"), json=body))
-
-
-class GetRequestIncidentDocuments(EasyVistaAction):
-    def run(self, arguments: dict) -> dict | None:
-        args = GetRequestIncidentDocumentsArguments(**arguments)
-        return select_fields(
-            self.get(self.request_path(args.rfc_number, "documents")),
-            {"href": "HREF", "parent_href": "PARENT_HREF", "documents": "Documents"},
-        )
-
-
-class GetRequestIncidentDocument(EasyVistaAction):
-    def run(self, arguments: dict) -> dict | None:
-        args = GetRequestIncidentDocumentArguments(**arguments)
-        response = self.request("GET", self.request_path(args.rfc_number, "documents", args.id), file_response=True)
-        if response is None:
-            return None
-        return {
-            "content_type": response.headers.get("Content-Type", "application/octet-stream"),
-            "content_base64": base64.b64encode(response.content).decode("ascii"),
-        }
+from easyvista_modules.action_base import EasyVistaAction, json_body
+from easyvista_modules.models import DeleteRequestDocumentArguments
 
 
 class DeleteRequestDocument(EasyVistaAction):
@@ -65,12 +19,12 @@ class DeleteRequestDocument(EasyVistaAction):
                 verification is not None
                 and 200 <= verification.status_code < 300
                 and isinstance(data, dict)
-                and "error" not in data
+                and ("error" not in data)
                 and isinstance(documents, list)
-                and not data.get("@next")
-                and not (isinstance(total_record_count, int) and total_record_count > len(documents))
-                and all(isinstance(item, dict) and "DOCUMENT_ID" in item for item in documents)
-                and not any(str(item["DOCUMENT_ID"]) == args.id for item in documents)
+                and (not data.get("@next"))
+                and (not (isinstance(total_record_count, int) and total_record_count > len(documents)))
+                and all((isinstance(item, dict) and "DOCUMENT_ID" in item for item in documents))
+                and (not any((str(item["DOCUMENT_ID"]) == args.id for item in documents)))
             ):
                 error_data = json_body(response)
                 error = (

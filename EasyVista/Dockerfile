@@ -1,4 +1,4 @@
-FROM python:3.11-bookworm
+FROM python:3.14-bookworm
 
 WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:0.11.13 /uv /bin/

@@ -4,7 +4,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from easyvista import EasyVistaConfiguration
+from easyvista_modules.models import EasyVistaConfiguration
 
 
 class CredentialConfigurationError(ValueError):

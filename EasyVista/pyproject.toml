@@ -2,7 +2,7 @@
 name = "automation-module-easyvista"
 version = "1.0.0"
 description = "EasyVista Service Manager playbook actions"
-requires-python = ">=3.11,<4"
+requires-python = ">=3.14,<4"
 dependencies = [
     "requests>=2.32,<3",
     "pydantic>=2,<3",
@@ -19,21 +19,21 @@ default-groups = ["dev", "lint"]
 
 [tool.ruff]
 line-length = 119
-target-version = "py311"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
 ignore_missing_imports = true
 exclude = ["tests/"]
 
 [tool.coverage.run]
-source = ["easyvista"]
+source = ["easyvista_modules"]
 omit = ["tests/*", "main.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "--cov=easyvista --cov-report=term-missing --cov-fail-under=90"
+addopts = "--cov=easyvista_modules --cov-report=term-missing --cov-fail-under=90"

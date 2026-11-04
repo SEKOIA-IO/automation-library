@@ -6,7 +6,8 @@ from uuid import UUID
 import jsonschema
 
 import main
-from easyvista import EasyVistaConfiguration, models
+from easyvista_modules import models
+from easyvista_modules.models import EasyVistaConfiguration
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -50,6 +51,10 @@ def test_all_descriptors_registered_and_match_models():
         jsonschema.Draft7Validator.check_schema(descriptor["arguments"])
         jsonschema.Draft7Validator.check_schema(descriptor["results"])
         action = registrations[descriptor["docker_parameters"]]
+        action_filename = "action_" + descriptor["slug"]
+        assert action.__module__ == "easyvista_modules.action." + action_filename
+        assert (ROOT / "easyvista_modules" / "action" / (action_filename + ".py")).is_file()
+        assert (ROOT / "tests" / ("test_" + action_filename + ".py")).is_file()
         model = getattr(models, action.__name__ + "Arguments")
         assert descriptor["arguments"] == inline_schema(model)
         for key in descriptor["arguments"]["properties"]:
@@ -71,4 +76,4 @@ def test_manifest_configuration():
     assert config["secrets"] == ["password", "token"]
     assert set(config["properties"]) == set(EasyVistaConfiguration.model_fields)
     assert config["properties"]["tenant_id"]["minLength"] == 1
-    assert config["properties"]["tenant_id"]["pattern"] == r"\S"
+    assert config["properties"]["tenant_id"]["pattern"] == "\\S"

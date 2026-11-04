@@ -34,7 +34,7 @@
         "items": {
           "type": "object"
         },
-        "description": "From `Documents` (capital `D` in the API). Items are returned **as is**, with keys `HREF`, `PARENT_HREF`, `DOCUMENT_ID`, `DOCUMENT` (file name) and `DDL_HREF` (download link). They are not renamed. `DOCUMENT_ID` (format `<n>_<sha256>`, e.g.\u00a0`40000_9ae8\u2026`) is the identifier expected by *Get a specific Document* and *Delete a request document* (Q10 resolved). `HREF` is a web UI link (`autoconnect_mail.php?...`) that returns an HTML login page, not the file"
+        "description": "Document records returned unchanged, including HREF, PARENT_HREF, DOCUMENT_ID, DOCUMENT (file name) and DDL_HREF (download link). Use DOCUMENT_ID for download and deletion. HREF is a web UI link and does not return the file content."
       }
     }
   }

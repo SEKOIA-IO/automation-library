@@ -2,11 +2,12 @@ from unittest.mock import Mock
 
 import pytest
 
-from easyvista import EasyVistaModule
+from easyvista_modules import EasyVistaModule
 
 
 @pytest.fixture
 def make_action(tmp_path):
+
     def factory(action_class, **configuration):
         module = EasyVistaModule()
         module.configuration = {
