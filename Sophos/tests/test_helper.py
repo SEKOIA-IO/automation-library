@@ -1,4 +1,4 @@
-from sophos_module.helper import extract_info, strip_null_values, translate_fields
+from sophos_module.helper import extract_info, parse_iso8601_timestamp, strip_null_values, translate_fields
 
 
 def test_translate_fields():
@@ -9,11 +9,30 @@ def test_translate_fields():
     }
 
 
+def test_translate_fields_with_created_at_camel_case():
+    assert translate_fields({"name": "name", "source": "source", "createdAt": "createdAt"}) == {
+        "name": "name",
+        "suser": "source",
+        "rt": "createdAt",
+    }
+
+
 def test_strip_null_values():
     assert strip_null_values({"name1": "value1", "name2": None, "name3": "value3"}) == {
         "name1": "value1",
         "name3": "value3",
     }
+
+
+def test_parse_iso8601_timestamp_handles_invalid_values():
+    assert parse_iso8601_timestamp(None) is None
+    assert parse_iso8601_timestamp(123) is None
+    assert parse_iso8601_timestamp("") is None
+    assert parse_iso8601_timestamp("not-a-date") is None
+
+
+def test_parse_iso8601_timestamp_supports_z_suffix():
+    assert parse_iso8601_timestamp("2023-07-03T11:28:45.000Z") is not None
 
 
 def test_extract_info():

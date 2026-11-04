@@ -1,4 +1,3 @@
-import datetime
 import time
 from functools import cached_property
 from typing import Any, Optional
@@ -13,7 +12,7 @@ from sophos_module.base import SophosConnector
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
 from sophos_module.client.exceptions import SophosApiAuthenticationError
-from sophos_module.helper import normalize_message
+from sophos_module.helper import normalize_message, parse_iso8601_timestamp
 from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
 
 
@@ -141,16 +140,23 @@ class SophosEDREventsTrigger(SophosConnector):
 
         return result
 
-    def _get_most_recent_timestamp_from_items(self, items: list[dict[str, Any]]) -> float:
-        def _extract_timestamp(item: dict[str, Any]) -> float:
-            RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+    def _get_most_recent_timestamp_from_items(self, items: list[dict[str, Any]]) -> float | None:
+        latest_timestamp: float | None = None
 
-            return datetime.datetime.strptime(item["created_at"], RFC3339_STRICT_FORMAT).timestamp()
+        for item in items:
+            item_timestamp: float | None = None
+            for key in ("created_at", "createdAt", "when"):
+                item_timestamp = parse_iso8601_timestamp(item.get(key))
+                if item_timestamp is not None:
+                    break
 
-        latest_message: dict[str, Any] = max(items, key=lambda item: item["created_at"])  # type: ignore
-        latest_message_timestamp = _extract_timestamp(latest_message)
+            if item_timestamp is None:
+                continue
 
-        return latest_message_timestamp
+            if latest_timestamp is None or item_timestamp > latest_timestamp:
+                latest_timestamp = item_timestamp
+
+        return latest_timestamp
 
     def forward_next_batches(self) -> None:
         """
@@ -177,8 +183,9 @@ class SophosEDREventsTrigger(SophosConnector):
             items = batch.get("items", [])
             if len(items) > 0:
                 most_recent_timestamp_seen = self._get_most_recent_timestamp_from_items(items)
-                events_lag = int(time.time() - most_recent_timestamp_seen)
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
+                if most_recent_timestamp_seen is not None:
+                    events_lag = int(time.time() - most_recent_timestamp_seen)
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
                 INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
             for message in items:
