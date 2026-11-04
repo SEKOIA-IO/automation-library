@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-11-04 - 1.4.3
+
+### Fixed
+
+- Retry asset pushes failing with an HTTP 5xx server error, instead of dropping the batch at the first error, in the device and vulnerability asset connectors
+- Wait between device asset push retries without blocking the event loop
+
 ## 2026-11-02 - 1.4.2
 
 ### Fixed
