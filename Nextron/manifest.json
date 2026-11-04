@@ -1,0 +1,29 @@
+{
+  "uuid": "300b9a0b-30ba-4b4a-b0b0-f16cc6091377",
+  "name": "THOR Cloud",
+  "slug": "thor_cloud",
+  "description": "Nextron THOR Cloud and THOR Cloud Lite endpoint scanner - comprehensive malware detection logs with file scanning, rootkit detection, and signature-based alerting.",
+  "version": "1.0.0",
+  "categories": [
+    "Endpoint"
+  ],
+  "supports_validation": true,
+  "configuration": {
+    "description": "Module-level configuration for THOR Cloud",
+    "properties": {
+      "api_key": {
+        "description": "API key for THOR Cloud or THOR Cloud Lite",
+        "title": "THOR Cloud API Key",
+        "type": "string"
+      }
+    },
+    "required": [
+      "api_key"
+    ],
+    "secrets": [
+      "api_key"
+    ],
+    "title": "ThorCloudModuleConfiguration",
+    "type": "object"
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "name": "THOR Cloud Connector",
+  "description": "Continuously pull THOR Cloud / THOR Cloud Lite scan logs and forward them to a Sekoia intake.",
+  "uuid": "3bcc5c7d-1a8f-4e2b-9f0a-8d3c2e1f9a7b",
+  "docker_parameters": "ThorCloudConnector",
+  "arguments": {
+    "properties": {
+      "intake_server": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Intake Server"
+      },
+      "intake_key": {
+        "title": "Intake Key",
+        "type": "string"
+      },
+      "Product": {
+        "default": "thor_cloud_lite",
+        "description": "THOR Cloud product",
+        "enum": [
+          "thor_cloud",
+          "thor_cloud_lite"
+        ],
+        "enumNames": [
+          "THOR Cloud",
+          "THOR Cloud Lite"
+        ],
+        "title": "Product",
+        "type": "string"
+      },
+      "polling_interval": {
+        "default": 60,
+        "description": "Polling interval in minutes",
+        "title": "Polling Interval",
+        "type": "integer"
+      },
+      "days_back": {
+        "default": 7,
+        "description": "Days to look back for scans",
+        "title": "Days Back",
+        "type": "integer"
+      },
+      "campaigns": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Comma-separated campaign UUIDs to monitor (empty = all campaigns)",
+        "title": "Campaigns"
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "title": "ThorCloudConnectorConfiguration",
+    "type": "object"
+  }
+}
