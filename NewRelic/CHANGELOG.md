@@ -7,31 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## [1.1.1] - 2026-01-22
+## 1.2.0 - 2026-10-26
+
+### Added
+
+- Add support for Fission execution engine.
+
+### Changed
+
+- Move from Poetry to `uv`.
+- Update Python dependencies.
+- Move to Python 3.14.
+
+## 1.1.1 - 2026-01-22
 
 ### Changed
 
 - Return relative file path
 
-## [1.1.0] - 2026-01-16
+## 1.1.0 - 2026-01-16
 
 ### Added
 
 - Added option to save query results to a file
 
-## [1.0.2] - 2025-12-10
+## 1.0.2 - 2025-12-10
 
 ### Fixed
 
 - Fix the output of the NRQL action
 
-## [1.0.1] - 2025-12-08
+## 1.0.1 - 2025-12-08
 
 ### Fixed
 
 - Change the category of the module
 
-## [1.0.0] - 2025-11-26
+## 1.0.0 - 2025-11-26
 
 ### Added
 
