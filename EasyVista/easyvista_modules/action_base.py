@@ -7,8 +7,8 @@ import requests
 from sekoia_automation.action import Action
 from sekoia_automation.module import ModuleItem
 
-from easyvista import EasyVistaModule
-from easyvista.client import ApiClient, CredentialConfigurationError
+from easyvista_modules import EasyVistaModule
+from easyvista_modules.client import ApiClient, CredentialConfigurationError
 
 
 def json_body(response: requests.Response) -> Any:
@@ -39,7 +39,14 @@ class EasyVistaHttpMixin(ModuleItem):
         config = self.module.configuration
         secrets = [config.token, config.password]
         if config.username and config.password:
-            secrets.append(base64.b64encode(f"{config.username}:{config.password}".encode()).decode())
+            credentials = f"{config.username}:{config.password}"
+            # requests encodes Basic credentials as Latin-1. Also cover UTF-8 echoes.
+            for encoding in ("latin-1", "utf-8"):
+                try:
+                    encoded = credentials.encode(encoding)
+                except UnicodeEncodeError:
+                    continue
+                secrets.append(base64.b64encode(encoded).decode("ascii"))
         for secret in sorted((value for value in secrets if value), key=len, reverse=True):
             message = message.replace(secret, "[REDACTED]")
         return message
@@ -113,4 +120,17 @@ class EasyVistaHttpMixin(ModuleItem):
 
 
 class EasyVistaAction(EasyVistaHttpMixin, Action):
-    pass
+    def href_result(self, data: Any, *, required: bool = True) -> dict | None:
+        if not required and (data is None or (isinstance(data, dict) and "HREF" not in data)):
+            return {}
+        href = data.get("HREF") if isinstance(data, dict) else None
+        if not isinstance(href, str) or not href.strip():
+            self.error("EasyVista API response must contain a non-empty string HREF")
+            return None
+        return {"href": href}
+
+    def request_href(self, method: str, path: str, **kwargs) -> dict | None:
+        response = self.request(method, path, **kwargs)
+        if response is None:
+            return None
+        return self.href_result(json_body(response))

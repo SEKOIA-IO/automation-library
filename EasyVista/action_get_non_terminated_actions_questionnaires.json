@@ -44,7 +44,7 @@
         "items": {
           "type": "object"
         },
-        "description": "Items returned as is: `REQUEST_ID`, `ACTION_ID`, `ACTION_TYPE_ID`, `WORKFLOW_ID` (strings) and `QUESTION_LIST_ID` (string or `null`). The tenant returned the same action twice, once with `QUESTION_LIST_ID: null`; items are not deduplicated or filtered. Use *View Questionnaires single* (`GET /questionnaires/{QUESTION_LIST_ID}`, out of scope) to read the questionnaire itself"
+        "description": "Items returned unchanged: REQUEST_ID, ACTION_ID, ACTION_TYPE_ID, WORKFLOW_ID (strings) and QUESTION_LIST_ID (string or null). Results may contain duplicates and are not filtered. To read a questionnaire, use the EasyVista GET /questionnaires/{QUESTION_LIST_ID} endpoint; this module does not expose that operation."
       }
     }
   }

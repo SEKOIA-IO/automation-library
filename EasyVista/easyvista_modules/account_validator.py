@@ -1,6 +1,6 @@
 from sekoia_automation.account_validator import AccountValidator
 
-from easyvista.action_base import EasyVistaHttpMixin
+from easyvista_modules.action_base import EasyVistaHttpMixin
 
 
 class EasyVistaAccountValidator(EasyVistaHttpMixin, AccountValidator):
