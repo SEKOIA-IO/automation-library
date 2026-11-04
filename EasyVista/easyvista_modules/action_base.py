@@ -1,4 +1,5 @@
 import base64
+import json
 from functools import cached_property
 from typing import TYPE_CHECKING, Any
 from urllib.parse import quote, urlsplit
@@ -51,16 +52,34 @@ class EasyVistaHttpMixin(ModuleItem):
             message = message.replace(secret, "[REDACTED]")
         return message
 
+    def redact_json(self, data: Any) -> Any:
+        """Mask decoded strings before JSON escaping can obscure credentials."""
+        if isinstance(data, str):
+            return self.redact(data)
+        if isinstance(data, list):
+            return [self.redact_json(value) for value in data]
+        if isinstance(data, dict):
+            return {self.redact(key): self.redact_json(value) for key, value in data.items()}
+        return data
+
     def response_error(self, response: requests.Response) -> str:
-        data = json_body(response)
+        data = self.redact_json(json_body(response))
         if isinstance(data, dict) and "error" in data:
             return self.redact(str(data["error"]))
+        if data is not None:
+            return self.redact(json.dumps(data, ensure_ascii=False))[:500]
         return self.redact(response.text)[:500]
 
     def _handle_response(self, response: requests.Response, suffix: str = "", *, file_response: bool = False) -> bool:
         if file_response and 200 <= response.status_code < 300:
             return True
-        data = json_body(response)
+        try:
+            data = response.json() if response.content else None
+        except ValueError:
+            if 200 <= response.status_code < 300:
+                self.error("EasyVista API returned a non-JSON response where JSON was expected")
+                return False
+            data = None
         if 200 <= response.status_code < 300 and not (isinstance(data, dict) and "error" in data):
             return True
         method = str(response.request.method)
