@@ -1,6 +1,6 @@
 """Tests for Trellix EDR connector."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -72,7 +72,7 @@ async def test_trellix_connector_last_event_date(connector: TrellixEdrConnector,
     with connector.context as cache:
         cache[random_key] = None
 
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
     one_week_ago = current_date - timedelta(days=7)
 
     assert connector.last_event_date(random_key) == one_week_ago
@@ -104,7 +104,7 @@ async def test_trellix_connector_get_alert_events(
         http_token: HttpToken
         edr_alert_event_response: tuple[dict[str, Any], TrellixResponse[EdrAlertAttributes]]
     """
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    current_date = datetime.now(UTC).replace(microsecond=0)
 
     with connector.context as cache:
         cache["alerts"] = current_date.isoformat()
@@ -114,10 +114,10 @@ async def test_trellix_connector_get_alert_events(
 
         token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
 
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump())
 
         expected_edr_result = [edr_alert_event_response[0] for _ in range(0, session_faker.pyint(max_value=100))]
-        expected_edr_result_dto = [edr_alert_event_response[1].dict() for _ in expected_edr_result]
+        expected_edr_result_dto = [edr_alert_event_response[1].model_dump() for _ in expected_edr_result]
 
         mocked_responses.get(
             http_client.edr_alerts_url(current_date, limit=connector.configuration.records_per_request),
@@ -149,7 +149,7 @@ async def test_trellix_connector_get_detection_events(
         edr_alert_event_response: TrellixResponse[EdrAlertAttributes]
     """
     # Starting from 1 hour ago
-    end_date = datetime.now(timezone.utc).replace(microsecond=0)
+    end_date = datetime.now(UTC).replace(microsecond=0)
     start_date = end_date - timedelta(hours=1)
     limit = connector.configuration.records_per_request
 
@@ -161,13 +161,15 @@ async def test_trellix_connector_get_detection_events(
         token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
 
         # Each mock for each request for fresh token. We should have 3 requests
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict(), repeat=3)
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump(), repeat=3)
 
         first_request_expected_detections_result = [
-            edr_detection_event_response.dict(exclude_none=True) for _ in range(0, session_faker.pyint(max_value=100))
+            edr_detection_event_response.model_dump(exclude_none=True)
+            for _ in range(0, session_faker.pyint(max_value=100))
         ]
         second_request_expected_detections_result = [
-            edr_detection_event_response.dict(exclude_none=True) for _ in range(0, session_faker.pyint(max_value=100))
+            edr_detection_event_response.model_dump(exclude_none=True)
+            for _ in range(0, session_faker.pyint(max_value=100))
         ]
         third_request_expected_detections_result = []
 
@@ -224,7 +226,7 @@ async def test_trellix_connector_get_affectedhosts_events(
         edr_affectedhost_event_response: TrellixResponse[EdrAffectedhostAttributes]
     """
     # Starting from 1 hour ago
-    end_date = datetime.now(timezone.utc).replace(microsecond=0)
+    end_date = datetime.now(UTC).replace(microsecond=0)
     start_date = end_date - timedelta(hours=1)
     limit = connector.configuration.records_per_request
 
@@ -236,14 +238,14 @@ async def test_trellix_connector_get_affectedhosts_events(
         token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
 
         # Each mock for each request for fresh token. We should have 3 requests
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict(), repeat=3)
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump(), repeat=3)
 
         first_request_expected_detections_result = [
-            edr_affectedhost_event_response.dict(exclude_none=True)
+            edr_affectedhost_event_response.model_dump(exclude_none=True)
             for _ in range(0, session_faker.pyint(max_value=100))
         ]
         second_request_expected_detections_result = [
-            edr_affectedhost_event_response.dict(exclude_none=True)
+            edr_affectedhost_event_response.model_dump(exclude_none=True)
             for _ in range(0, session_faker.pyint(max_value=100))
         ]
         third_request_expected_detections_result = []
@@ -305,7 +307,7 @@ async def test_trellix_connector_get_threats_events(
         edr_affectedhost_event_response: TrellixResponse[EdrAffectedhostAttributes]
     """
     # Starting from 1 hour ago
-    end_date = datetime.now(timezone.utc).replace(microsecond=0)
+    end_date = datetime.now(UTC).replace(microsecond=0)
     start_date = end_date - timedelta(hours=1)
 
     with connector.context as cache:
@@ -330,13 +332,13 @@ async def test_trellix_connector_get_threats_events(
 
         # Mocks #1
         # We mock request to get token
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict(), repeat=100)
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.model_dump(), repeat=100)
 
         # Mocks #2
         # We mock request to get threats. Let`s say we should send 2 requests. First request
         # will return first threat, second request should return second threat
-        first_threat_request_result = [threat_response_1.dict(exclude_none=True)]
-        second_threat_request_result = [threat_response_2.dict(exclude_none=True)]
+        first_threat_request_result = [threat_response_1.model_dump(exclude_none=True)]
+        second_threat_request_result = [threat_response_2.model_dump(exclude_none=True)]
 
         mocked_responses.get(
             http_client.edr_threats_url(start_date, end_date, limit=limit, offset=0),
@@ -367,10 +369,10 @@ async def test_trellix_connector_get_threats_events(
         # First request will return first max 100 detections, second request should return second 100 detections
         # and third request should return empty list
         first_request_expected_detections_result = [
-            edr_detection_event_response.dict(exclude_none=True) for _ in range(0, 1)
+            edr_detection_event_response.model_dump(exclude_none=True) for _ in range(0, 1)
         ]
         second_request_expected_detections_result = [
-            edr_detection_event_response.dict(exclude_none=True) for _ in range(0, 1)
+            edr_detection_event_response.model_dump(exclude_none=True) for _ in range(0, 1)
         ]
         total_detections_expected_result = []
         for threat_id in [threat_id_1, threat_id_2]:
@@ -410,10 +412,10 @@ async def test_trellix_connector_get_threats_events(
         # First request will return first max 100 affected hosts, second request should return second 100 affected hosts
         # and third request should return empty list
         first_request_expected_affectedhosts_result = [
-            edr_affectedhost_event_response.dict(exclude_none=True) for _ in range(0, 1)
+            edr_affectedhost_event_response.model_dump(exclude_none=True) for _ in range(0, 1)
         ]
         second_request_expected_affectedhosts_result = [
-            edr_affectedhost_event_response.dict(exclude_none=True) for _ in range(0, 1)
+            edr_affectedhost_event_response.model_dump(exclude_none=True) for _ in range(0, 1)
         ]
 
         total_affectedhosts_expected_result = []
@@ -461,8 +463,39 @@ async def test_trellix_connector_get_threats_events(
         assert sorted(result) == sorted(
             [
                 orjson.dumps(event).decode("utf-8")
-                for event in [threat_response_1.dict(exclude_none=True), threat_response_2.dict(exclude_none=True)]
-                + total_affectedhosts_expected_result
-                + total_detections_expected_result
+                for event in [
+                    threat_response_1.model_dump(exclude_none=True),
+                    threat_response_2.model_dump(exclude_none=True),
+                    *total_affectedhosts_expected_result,
+                    *total_detections_expected_result,
+                ]
             ]
         )
+
+
+def test_trellix_edr_connector_run_without_existing_event_loop(connector):
+    """run() must start its own event loop (no current loop exists on Python 3.14)."""
+    connector.async_run = AsyncMock()
+
+    connector.run()
+
+    connector.async_run.assert_awaited_once()
+
+
+def test_trellix_edr_connector_rate_limiters(connector: TrellixEdrConnector):
+    """The per-minute and per-day limiters use the configured values over 60 s and 86400 s windows."""
+    connector.configuration = {
+        **connector.configuration.model_dump(),
+        "ratelimit_per_minute": 42,
+        "ratelimit_per_day": 1234,
+    }
+    connector._trellix_client = None
+
+    http_client = connector.trellix_client
+
+    assert http_client._rate_limiter is not None
+    assert http_client._rate_limiter.max_rate == 42
+    assert http_client._rate_limiter.time_period == 60
+    assert http_client._rate_limiter_per_day is not None
+    assert http_client._rate_limiter_per_day.max_rate == 1234
+    assert http_client._rate_limiter_per_day.time_period == 86400
