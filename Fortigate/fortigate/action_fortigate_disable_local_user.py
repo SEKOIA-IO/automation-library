@@ -51,13 +51,10 @@ class FortigateDisableLocalUserAction(Action):
 
             except requests.exceptions.Timeout:
                 self.log_exception(message=f"Time out session on firewall {base_ip}")
-                pass
 
             except Exception as error:
                 self.log_exception(error, message="Impossible to disable the local user account on the firewall")
-                pass
             else:
                 self.log(
                     f"Successfully disabled the local user account {name} on the firewall {base_ip}",
                 )
-                pass
