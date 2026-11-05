@@ -197,3 +197,12 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
         if self._latest_time_raw:
             with self.context as cache:
                 cache["most_recent_date_seen"] = self._latest_time_raw
+
+    async def reset_checkpoint(self) -> None:
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self._latest_time_raw = None
+
+    def get_mapped_fields(self) -> dict[str, str]:
+        # An empty mapping disables the SDK schema-change checkpoint reset
+        return {}

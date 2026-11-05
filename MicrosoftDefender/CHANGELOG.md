@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-11-04 - 1.4.3
+
+### Changed
+
+- Upgrade `sekoia-automation-sdk` to 1.27.2: asset pushes rate limited by Sekoia.io (HTTP 429) pause the connector instead of dropping the batch
+
 ## 2026-11-02 - 1.4.2
 
 ### Fixed
