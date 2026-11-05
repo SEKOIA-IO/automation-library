@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-05 - 1.7.1
+
+### Changed
+
+- Increase authentication error retries to 10 attempts before stopping the connector 
+
+## 2026-11-03 - 1.7.0
+
+### Changed
+
+- Migrated module from Poetry to uv
+- Upgraded sekoia-automation-sdk to 1.27.0 and moved to Python 3.14
+- Migrated Pydantic v1 models to Pydantic v2
+
+## 2026-11-03 - 1.6.5
+
+### Fixed
+
+- Vision One: retry on 401/403 and log a critical error only after repeated authentication failures
+
 ## 2026-03-24 - 1.6.4
 
 ### Changed

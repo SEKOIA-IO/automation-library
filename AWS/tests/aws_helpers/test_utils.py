@@ -232,7 +232,7 @@ async def test_to_seekable_file_decompresses_gzip_off_the_event_loop():
         return original_copyfileobj(*args, **kwargs)
 
     stream = await async_gzip_open(io.BytesIO(compress(b"data")))
-    with patch("aws_helpers.utils.shutil.copyfileobj", side_effect=spy):
+    with patch("aws_helpers.utils.stream.shutil.copyfileobj", side_effect=spy):
         file = await to_seekable_file(stream)
 
     assert copy_threads
@@ -265,8 +265,8 @@ async def test_to_seekable_file_waits_for_the_copy_when_cancelled(cancellations)
 
     stream = await async_gzip_open(io.BytesIO(compress(b"data")))
     with (
-        patch("aws_helpers.utils.tempfile.SpooledTemporaryFile", side_effect=spy_spool),
-        patch("aws_helpers.utils.shutil.copyfileobj", side_effect=blocking_copy),
+        patch("aws_helpers.utils.stream.tempfile.SpooledTemporaryFile", side_effect=spy_spool),
+        patch("aws_helpers.utils.stream.shutil.copyfileobj", side_effect=blocking_copy),
     ):
         task = asyncio.create_task(to_seekable_file(stream))
         assert await asyncio.to_thread(started.wait, 5)
@@ -297,8 +297,8 @@ async def test_to_seekable_file_closes_the_spool_when_the_copy_fails():
 
     stream = await async_gzip_open(io.BytesIO(compress(b"data")))
     with (
-        patch("aws_helpers.utils.tempfile.SpooledTemporaryFile", side_effect=spy_spool),
-        patch("aws_helpers.utils.shutil.copyfileobj", side_effect=OSError("disk full")),
+        patch("aws_helpers.utils.stream.tempfile.SpooledTemporaryFile", side_effect=spy_spool),
+        patch("aws_helpers.utils.stream.shutil.copyfileobj", side_effect=OSError("disk full")),
     ):
         with pytest.raises(OSError, match="disk full"):
             await to_seekable_file(stream)
@@ -349,7 +349,7 @@ async def test_has_parquet_footer_on_gzip_stream_closes_its_spool(data, expected
     stream = await async_gzip_open(io.BytesIO(compress(data)))
     assert await stream.read(4) == b"PAR1"
 
-    with patch("aws_helpers.utils.tempfile.SpooledTemporaryFile", side_effect=spy_spool):
+    with patch("aws_helpers.utils.stream.tempfile.SpooledTemporaryFile", side_effect=spy_spool):
         assert await has_parquet_footer(stream) is expected
 
     assert await stream.read() == data[4:]

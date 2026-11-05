@@ -10,8 +10,8 @@
     "cloud",
     "on_premise"
   ],
+  "feature_flags": [],
   "on_premise_action": "8109d625-424c-4edb-bafc-81261932c898",
-  "feature_flags": ["reveal-local-runners"],
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",

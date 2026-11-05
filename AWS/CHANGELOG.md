@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-11-02 - 1.38.6
+## 2026-11-05 - 1.38.8
 
 ### Fixed
 
@@ -20,6 +20,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Flush events while reading an object in the S3 list connector instead of buffering the whole object
 - Serialize SQS messages as they are received instead of keeping all parsed records in memory
 - Speed up the line splitting of S3 logs: no more repeated buffer copies and rescans
+
+## 2026-11-03 - 1.38.7
+
+### Changed
+
+- Allow to enable or disable the internal traffic filter for VPC flowlogs events.
+
+## 2026-11-02 - 1.38.6
+
+### Fixed
+
+- Increase the default SQS message timeout visibility to 10 minutes (instead of 1 minute).
 
 ## 2026-11-02 - 1.38.5
 

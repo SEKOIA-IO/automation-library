@@ -29,7 +29,7 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
         super().__init__(*args, **kwargs)
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
         self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
-        self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 60))
+        self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 600))
 
     def is_aws_notification(self, message: Any) -> bool:
         """
@@ -57,7 +57,8 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
         continue_receiving = True
         while continue_receiving:
             async with self.sqs_wrapper.receive_messages(
-                max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
+                max_messages=self.sqs_max_messages,
+                visibility_timeout=self.sqs_visibility_timeout,
             ) as messages:
                 if not messages:
                     continue_receiving = False
@@ -78,7 +79,10 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
                             # The message is a raw message, we add it as is
                             records.append(orjson.dumps(content).decode("utf-8"))
                     except ValueError as e:
-                        self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
+                        self.log_exception(
+                            e,
+                            message=f"Invalid JSON in message.\nInvalid message is: {message}",
+                        )
 
             if len(records) >= self.limit_of_events_to_push or not records:
                 continue_receiving = False

@@ -19,6 +19,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 )
 from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId, RiskLevelStr
 
+from holm_security.asset_connector.hostname import split_hostname
 from holm_security.asset_connector.models import HolmNetwork, HolmSeverityBreakdown
 
 # Holm os_family -> (OCSF OSTypeStr, OCSF OSTypeId)
@@ -159,6 +160,16 @@ def map_severity_breakdown(
             return risk_level
 
     return None, None
+
+
+def pick_hostname(*candidates: str | None) -> tuple[str, str | None]:
+    """Return the ``(hostname, domain)`` of the first candidate the asset management API accepts."""
+    for candidate in candidates:
+        hostname, domain = split_hostname(candidate)
+        if hostname:
+            return hostname, domain
+    # The platform cannot store a device without hostname yet (SekoiaLab/platform#98032)
+    raise ValueError("no usable hostname")
 
 
 def build_network_interfaces(network: HolmNetwork | None, hostname: str | None) -> list[NetworkInterface] | None:
