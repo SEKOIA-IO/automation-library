@@ -1,5 +1,6 @@
 from functools import cached_property
 
+from azure.core.exceptions import ClientAuthenticationError
 from azure.identity import UsernamePasswordCredential
 from azure.identity.aio import ClientSecretCredential
 from kiota_abstractions.base_request_configuration import RequestConfiguration
@@ -20,6 +21,7 @@ from .base import (
     RequiredTwoUserArguments,
     RequiredTwoUserArgumentsV2,
 )
+from .delegated_credential import ConfidentialUsernamePasswordCredential
 from .utils import generate_password
 
 
@@ -127,13 +129,27 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
         It's not a good practice to use. But the app permission is not supported for this action.
         More information about it here:
         https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.usernamepasswordcredential?view=azure-python
+
+        If a client secret is configured, the application authenticates as a confidential client:
+        "Allow public client flows" is then not required on the app registration.
+        The token remains a delegated token of the delegated account in both cases.
         """
-        credentials = UsernamePasswordCredential(
-            client_id=self.module.configuration.client_id,
-            username=self.module.configuration.username,
-            password=self.module.configuration.password,
-            tenant_id=self.module.configuration.tenant_id,
-        )
+        configuration = self.module.configuration
+        if configuration.client_secret:
+            credentials = ConfidentialUsernamePasswordCredential(
+                tenant_id=configuration.tenant_id,
+                client_id=configuration.client_id,
+                client_secret=configuration.client_secret,
+                username=configuration.username,
+                password=configuration.password,
+            )
+        else:
+            credentials = UsernamePasswordCredential(
+                client_id=configuration.client_id,
+                username=configuration.username,
+                password=configuration.password,
+                tenant_id=configuration.tenant_id,
+            )
 
         # https://learn.microsoft.com/en-us/graph/authenticationmethods-get-started
         # Put scopes explicitly in order to follow documentation and avoid issues
@@ -154,7 +170,11 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
         )
         user_param = arguments.id or arguments.userPrincipalName
 
-        response_listMethods = await self.query_list_user_methods(user_param, request_configuration)
+        try:
+            response_listMethods = await self.query_list_user_methods(user_param, request_configuration)
+        except ClientAuthenticationError as error:
+            self.error(f"Authentication of the delegated account failed: {error.message}")
+            return None
 
         response_listMethods.raise_for_status()
 

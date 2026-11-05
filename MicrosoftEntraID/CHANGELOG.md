@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-16 - 2.10.30
+
+### Changed
+
+- Reset User Password [DEPRECATED]: when a client secret is configured, authenticate the application as a confidential client in the delegated username/password flow, so that "Allow public client flows" is no longer required on the app registration. The token remains a delegated token. Without client secret, the previous public client flow is kept. If "Allow public client flows" was enabled to work around `AADSTS7000218`, make sure the configured client secret is valid, otherwise the action now fails with `AADSTS7000215`
+- Reset User Password [DEPRECATED]: report authentication errors (AADSTS codes) explicitly
+
+### Fixed
+
+- Fix the misleading validation message of the Reset User Password [DEPRECATED] action
+
 ## 2026-08-25 - 2.10.29
 
 ### Changed
