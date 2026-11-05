@@ -1,5 +1,5 @@
 from unittest.mock import patch
-from uuid import uuid4
+from uuid import UUID, uuid4, uuid5
 
 import pytest
 from requests.exceptions import HTTPError, ReadTimeout
@@ -148,7 +148,8 @@ def test_execute_custom_agent_outside_playbook_run(requests_mock):
     create_request = next(r for r in requests_mock.request_history if r.method == "POST")
     body = create_request.json()
     assert body["scope_type"] == "playbook_run"
-    assert body["scope_uuid"] == f"playbook-run-{PLAYBOOK_COMMUNITY_UUID}"
+    # A valid UUID, the same for every run of the community
+    assert body["scope_uuid"] == str(uuid5(UUID(PLAYBOOK_COMMUNITY_UUID), "playbook-run"))
 
 
 @pytest.mark.parametrize(

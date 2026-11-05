@@ -1,5 +1,6 @@
 from time import sleep, time
 from typing import Any
+from uuid import UUID, uuid5
 
 from pydantic import BaseModel
 
@@ -53,9 +54,10 @@ class ExecuteCustomAgent(BaseAgent):
             # describe its whole task
             initial_state=initial_state or {},
             # The run is always scoped: outside a playbook run (e.g. a manual test of the action),
-            # it falls back to the community, as the API does not check that the playbook run exists
+            # it falls back to a UUID derived from the community, as the API requires a UUID
+            # but does not check that the playbook run exists
             scope_type="playbook_run",
-            scope_uuid=self.module.playbook_run_uuid or "playbook-run-" + community_uuid,
+            scope_uuid=self.module.playbook_run_uuid or str(uuid5(UUID(community_uuid), "playbook-run")),
         )
 
     def trigger_error(self, message: str, run_uuid: str, error: Any = None) -> None:
