@@ -1,19 +1,15 @@
 import asyncio
-import json
 from collections.abc import AsyncGenerator
 from contextlib import AbstractAsyncContextManager
 from functools import cached_property
 from urllib.parse import urlencode, urljoin
 
-import aiohttp
 from msgraph import GraphServiceClient
 from msgraph.generated.models.managed_device import ManagedDevice
 from sekoia_automation.asset_connector import AsyncAssetConnector
-from sekoia_automation.asset_connector.models.connector import AssetList
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.device import DeviceOCSFModel
 from sekoia_automation.storage import PersistentJSON
-from tenacity import AsyncRetrying, stop_after_delay, wait_exponential
 
 from asset_connector.intune_enrichment import fetch_managed_device, graph_client, is_transient_graph_error
 from asset_connector.mappers import DeviceMapper, MissingHostnameError
@@ -202,64 +198,11 @@ class MicrosoftDefenderDeviceAssetConnector(AsyncAssetConnector):
             with self.context as cache:
                 cache["most_recent_date_seen"] = self._latest_time_raw
 
-    # `_retry` and `post_assets_to_api` copy the SDK 1.23.0 methods, plus a retry on HTTP 5xx that does not block
-    # the event loop. Remove both once the module runs an SDK release with SEKOIA-IO/sekoia-automation-sdk#302.
-    @staticmethod
-    def _retry() -> AsyncRetrying:
-        return AsyncRetrying(
-            stop=stop_after_delay(3600),
-            wait=wait_exponential(multiplier=1, min=1, max=10),
-            reraise=True,
-        )
+    async def reset_checkpoint(self) -> None:
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self._latest_time_raw = None
 
-    async def post_assets_to_api(self, assets: AssetList, asset_connector_api_url: str) -> dict[str, str] | None:
-        request_body = assets.model_dump(exclude_none=True)
-        asset_count = len(request_body.get("items", []))
-
-        status_code: int | None = None
-        response_text: str | None = None
-        response_json: dict | None = None
-
-        try:
-            async for attempt in self._retry():
-                with attempt:
-                    async with self.session() as session:
-                        async with session.post(
-                            asset_connector_api_url,
-                            json=request_body,
-                            timeout=aiohttp.ClientTimeout(total=30),
-                        ) as response:
-                            status_code = response.status
-                            response_text = await response.text()
-
-                            if status_code >= 500:
-                                response.raise_for_status()
-
-                            if status_code == 200:
-                                try:
-                                    response_json = json.loads(response_text)
-                                except json.JSONDecodeError as e:
-                                    self.log_exception(
-                                        e,
-                                        message="Failed to parse JSON response from Sekoia.io asset connector API",
-                                    )
-                                    return None
-        except TimeoutError as ex:
-            self.log_exception(ex, message="Timeout while pushing assets to Sekoia.io asset connector API")
-            return None
-        except aiohttp.ClientResponseError:
-            # Retries exhausted: the last response is reported below
-            pass
-
-        if status_code is None:
-            self.log(message="Failed to get response from Sekoia.io asset connector API", level="error")
-            return None
-
-        if status_code != 200:
-            await self._log_api_error(status_code, response_text, response_json)
-            return None
-
-        await self.update_checkpoint()
-
-        self.log(message=f"Successfully posted {asset_count} assets to Sekoia.io asset connector API", level="info")
-        return response_json
+    def get_mapped_fields(self) -> dict[str, str]:
+        # An empty mapping disables the SDK schema-change checkpoint reset
+        return {}

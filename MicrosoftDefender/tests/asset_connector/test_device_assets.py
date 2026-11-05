@@ -2,14 +2,12 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock, patch
 
-import aiohttp
 import pytest
 from kiota_abstractions.api_error import APIError
 from msgraph.generated.models.compliance_state import ComplianceState
 from msgraph.generated.models.managed_device import ManagedDevice
 from msgraph.generated.models.managed_device_owner_type import ManagedDeviceOwnerType
 from msgraph.generated.models.management_agent_type import ManagementAgentType
-from sekoia_automation.asset_connector.models.connector import AssetList
 from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceOCSFModel,
     DeviceTypeId,
@@ -20,7 +18,6 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 )
 from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId, RiskLevelStr
 from sekoia_automation.module import Module
-from tenacity import AsyncRetrying, stop_after_attempt
 
 from asset_connector.device_assets import MicrosoftDefenderDeviceAssetConnector
 from asset_connector.intune_enrichment import fetch_managed_device, is_transient_graph_error
@@ -854,53 +851,13 @@ class TestRetryAfterFailedCycle:
         fetch_machines.assert_not_called()
 
 
-def _server_error_response(status: int) -> AsyncMock:
-    response = AsyncMock()
-    response.status = status
-    response.text = AsyncMock(return_value="Bad Gateway")
-    response.raise_for_status = Mock(side_effect=aiohttp.ClientResponseError(Mock(), (), status=status))
-    return response
-
-
 @pytest.mark.asyncio
-async def test_post_assets_to_api_retries_server_error(connector):
-    connector.update_checkpoint = AsyncMock()
-    connector._retry = lambda: AsyncRetrying(stop=stop_after_attempt(2), reraise=True)
+async def test_reset_checkpoint(connector):
+    connector._latest_time_raw = "2024-12-01T10:00:00Z"
+    await connector.update_checkpoint()
+    assert connector.most_recent_date_seen == "2024-12-01T10:00:00Z"
 
-    success = AsyncMock()
-    success.status = 200
-    success.text = AsyncMock(return_value='{"task_id": "abc"}')
+    await connector.reset_checkpoint()
 
-    with patch("aiohttp.ClientSession.post") as mock_post:
-        mock_post.return_value.__aenter__.side_effect = [_server_error_response(502), success]
-        mock_post.return_value.__aexit__.return_value = None
-
-        response = await connector.post_assets_to_api(AssetList(version=1, items=[]), "https://sekoia.io/api")
-
-    await connector._session.close()
-
-    assert response == {"task_id": "abc"}
-    assert mock_post.call_count == 2
-    connector.update_checkpoint.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_post_assets_to_api_server_error_after_retries(connector):
-    connector.update_checkpoint = AsyncMock()
-    connector._retry = lambda: AsyncRetrying(stop=stop_after_attempt(2), reraise=True)
-
-    with patch("aiohttp.ClientSession.post") as mock_post:
-        mock_post.return_value.__aenter__.side_effect = [_server_error_response(502), _server_error_response(502)]
-        mock_post.return_value.__aexit__.return_value = None
-
-        response = await connector.post_assets_to_api(AssetList(version=1, items=[]), "https://sekoia.io/api")
-
-    await connector._session.close()
-
-    assert response is None
-    assert mock_post.call_count == 2
-    connector.update_checkpoint.assert_not_called()
-    connector.log.assert_called_once_with(
-        message="Error while pushing assets to Sekoia.io - Server error - HTTP (502) - Bad Gateway",
-        level="error",
-    )
+    assert connector._latest_time_raw is None
+    assert connector.most_recent_date_seen is None
