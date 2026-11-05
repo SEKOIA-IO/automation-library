@@ -28,7 +28,7 @@ mapping:
           "osArchitecture": "64-bit",
           "osBuild": 18209,
           "lastIpAddress": "172.17.230.209",
-          "lastExternalIpAddress": "167.220.196.71",
+          "lastExternalIpAddress": "203.0.113.10",
           "healthStatus": "Active",
           "onboardingstatus": "Onboarded",
           "rbacGroupId": "140",
@@ -109,8 +109,20 @@ mapping:
     - source: "machine.computerDnsName"
       target: "device.hostname"
       type: "string"
-      logic: "Direct mapping"
-      description: "Fully qualified DNS name"
+      logic: "First label of `computerDnsName` (>= 2 chars); otherwise Intune `managedDevice.deviceName`; otherwise the device is skipped"
+      description: "Short hostname"
+
+    - source: "managedDevice.device_name"
+      target: "device.hostname"
+      type: "string"
+      logic: "Fallback when `computerDnsName` has no first label of >= 2 chars: first label of the Intune device name (>= 2 chars)"
+      description: "Short hostname (fallback)"
+
+    - source: "machine.computerDnsName"
+      target: "device.domain"
+      type: "string"
+      logic: "Labels after the first one, absent when the name has none"
+      description: "Domain the host belongs to"
 
     - source: "machine.lastIpAddress"
       target: "device.ip"
@@ -267,7 +279,8 @@ mapping:
             "type_id": 2,
             "type": "Desktop",
             "uid": "1e5bc9d7e413ddd7902c2932e418702b84d0cc07",
-            "hostname": "mymachine1.contoso.com",
+            "hostname": "mymachine1",
+            "domain": "contoso.com",
             "ip": "172.17.230.209",
             "os": {
               "name": "10.0.22631.3880",

@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2026-11-04 - 1.4.3
+
+### Changed
+
+- Upgrade `sekoia-automation-sdk` to 1.27.2: asset pushes rate limited by Sekoia.io (HTTP 429) pause the connector instead of dropping the batch
+
+## 2026-11-02 - 1.4.2
+
+### Fixed
+
+- Skip devices without a usable hostname (Intune device name as fallback)
+- Use the Intune device name as hostname fallback for vulnerability findings too
+- Keep the checkpoint when a device or finding is skipped after a transient Intune lookup failure
+- Stop the cycle on API page errors, and wait before the next cycle
+
+### Changed
+
+- Vulnerability findings only carry the minimal device (`type`, `uid`, `hostname`)
+- Device asset connector description: the devices come from Defender for Endpoint, Intune only enriches them
+
+## 2026-09-21 - 1.4.1
+
+### Fixed
+
+- The device and vulnerability asset connectors now send the short hostname in `hostname` and the remaining labels in `domain`, instead of putting the whole `computerDnsName` in `hostname`. A fully-qualified name there created an asset that no other intake or connector reporting the short name could match.
+
 ## 2026-09-14 - 1.4.0
 
 ### Added
