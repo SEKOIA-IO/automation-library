@@ -470,6 +470,21 @@ def test_writable_rule_converts_get_shape_to_put_shape():
     assert rule["tags"][0] == {"uuid": "t-2", "name": "zz"}  # input untouched
 
 
+def test_writable_rule_sends_entities_assets_datasources_as_uuids():
+    rule = {
+        "tags": [],
+        "entities": [{"uuid": "e-1", "name": "HQ"}, "e-2"],
+        "assets": [{"uuid": "a-1"}],
+        "datasources": [{"uuid": "d-1", "name": "Sysmon"}],
+    }
+
+    body = writable_rule(rule)
+
+    assert body["entities"] == ["e-1", "e-2"]
+    assert body["assets"] == ["a-1"]
+    assert body["datasources"] == ["d-1"]
+
+
 def test_writable_rule_keeps_existing_alert_type_uuid():
     body = writable_rule({"alert_type_uuid": "at-9", "alert_type": {"uuid": "at-1"}, "tags": ["x"]})
     assert body["alert_type_uuid"] == "at-9"

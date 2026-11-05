@@ -43,10 +43,15 @@ def rule_tag_names(rule: dict) -> set[str]:
     return names
 
 
+# Rule fields GET returns as objects but PUT expects as UUIDs (per Sekoia).
+UUID_LIST_FIELDS = ("entities", "assets", "datasources")
+
+
 def writable_rule(rule: dict) -> dict:
     """A catalog rule as returned by GET or the list endpoint, in the shape
-    PUT accepts: ``alert_type`` (object) becomes ``alert_type_uuid`` and tag
-    objects become tag names. Sending this back changes nothing on the rule
+    PUT accepts: ``alert_type`` (object) becomes ``alert_type_uuid``, tag
+    objects become tag names, and entity / asset / data-source objects
+    become their UUIDs. Sending this back changes nothing on the rule
     (verified on a tenant), so it is the base for updates that must keep
     the user's settings."""
     body = dict(rule)
@@ -55,6 +60,9 @@ def writable_rule(rule: dict) -> dict:
     if "alert_type_uuid" not in body and isinstance(alert_type, dict):
         body["alert_type_uuid"] = alert_type.get("uuid")
     body["tags"] = sorted(rule_tag_names(rule))
+    for key in UUID_LIST_FIELDS:
+        if isinstance(body.get(key), list):
+            body[key] = [item.get("uuid") if isinstance(item, dict) else item for item in body[key]]
     return body
 
 

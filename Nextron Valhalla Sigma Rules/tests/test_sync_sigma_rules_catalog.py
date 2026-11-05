@@ -91,7 +91,13 @@ class FakeCatalog:
         tags = body.get("tags", [])
         if not all(isinstance(t, str) for t in tags):
             raise SekoiaAPIError("tags: Input should be a valid string", status_code=400)
-        rule = {**self.DEFAULTS, **{k: v for k, v in body.items() if k not in ("alert_type_uuid", "tags")}}
+        refs = {}
+        for key in ("entities", "assets", "datasources"):
+            if not all(isinstance(x, str) for x in body.get(key) or []):
+                raise SekoiaAPIError(f"{key}: Input should be a valid UUID", status_code=400)
+            if key in body:
+                refs[key] = [{"uuid": x} for x in body[key] or []]  # GET returns objects
+        rule = {**self.DEFAULTS, **{k: v for k, v in body.items() if k not in ("alert_type_uuid", "tags")}, **refs}
         rule.update(
             uuid=uuid,
             community_uuid=community_uuid,
@@ -2006,7 +2012,7 @@ def test_attack_lookups_stop_after_permission_error(trigger):
 USER_SETTINGS = {
     "entities": [{"uuid": "e-1"}],
     "all_entities": False,
-    "assets": ["asset-1"],
+    "assets": [{"uuid": "asset-1"}],
     "all_assets": False,
     "parameters": [{"name": "p", "value": 1}],
     "event_fields": [{"field": "process.name"}],
@@ -2022,6 +2028,21 @@ def test_update_keeps_user_settings(trigger):
 
     rule_a = trigger.catalog.rules["sekoia-A"]
     assert {k: rule_a[k] for k in USER_SETTINGS} == USER_SETTINGS
+
+
+def test_update_sends_entities_and_datasources_as_uuids(trigger):
+    """GET returns them as objects; PUT expects UUIDs (reviewer, round 3)."""
+    trigger._sync_once()
+    trigger.catalog.rules["sekoia-A"].update(
+        entities=[{"uuid": "e-1", "name": "HQ"}], all_entities=False, datasources=[{"uuid": "d-1", "name": "Sysmon"}]
+    )
+
+    trigger._sync_once()
+
+    body = next(c.args[1] for c in reversed(trigger._sekoia.update_rule.call_args_list) if c.args[0] == "sekoia-A")
+    assert body["entities"] == ["e-1"]
+    assert body["datasources"] == ["d-1"]
+    assert body["all_entities"] is False
 
 
 def test_update_still_replaces_valhalla_content(trigger):

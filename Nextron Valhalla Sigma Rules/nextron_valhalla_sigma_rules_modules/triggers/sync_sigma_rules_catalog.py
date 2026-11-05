@@ -306,9 +306,10 @@ class SyncSigmaRulesCatalog(Trigger):
         sync links. When ATT&CK lookups are switched off, the techniques
         linked earlier are kept instead of being dropped.
         """
+        current = writable_rule(server_rule)
         for key in USER_FIELDS:
-            if key in server_rule:
-                body[key] = server_rule[key]
+            if key in current:
+                body[key] = current[key]
         server_refs = [r for r in server_rule.get("related_object_refs") or [] if isinstance(r, str)]
         keep = [r for r in server_refs if not r.startswith(ATTACK_PATTERN_PREFIX)]
         if not getattr(self, "_attack_lookups_enabled", True):
