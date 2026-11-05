@@ -72,10 +72,10 @@ def test_state_of(statuses, expected):
         # open in remediated, not open in new -> Close
         (False, {"remediated": [{}]}, activity.CLOSE),
         (False, {"new": [{"status": "EXCEPTION_VULN_VERS"}], "remediated": [{}]}, activity.CLOSE),
-        # moved to another port with the same status -> no change
-        (False, {"new": [{"port": 443}], "remediated": [{"port": 22}]}, None),
-        # fixed on one port, still open on another -> no Close
-        (False, {"same": [{"port": 8443}], "remediated": [{"port": 443}]}, None),
+        # moved to another port with the same status -> Update (the affected ports changed)
+        (False, {"new": [{"port": 443}], "remediated": [{"port": 22}]}, activity.UPDATE),
+        # fixed on one port, still open on another -> no Close, Update
+        (False, {"same": [{"port": 8443}], "remediated": [{"port": 443}]}, activity.UPDATE),
         # status change of an open vulnerability -> Update
         (
             False,
@@ -99,8 +99,14 @@ def test_state_of(statuses, expected):
         (True, {"same": [{"status": "UNEXPECTED_ERR"}]}, None),
         # an exception closes
         (False, {"new": [{"status": "EXCEPTION_VULN_EXPL"}], "remediated": [{}]}, activity.CLOSE),
-        # one open instance plus one skipped: still open, no event
-        (False, {"same": [{"port": 22}, {"port": 443, "status": "SKIPPED_DOS"}], "remediated": [{"port": 443}]}, None),
+        # one open instance plus one skipped: still open, no Close; port 443 no longer vulnerable -> Update
+        (
+            False,
+            {"same": [{"port": 22}, {"port": 443, "status": "SKIPPED_DOS"}], "remediated": [{"port": 443}]},
+            activity.UPDATE,
+        ),
+        # one open instance plus one skipped, unchanged -> nothing
+        (False, {"same": [{"port": 22}, {"port": 443, "status": "SKIPPED_DOS"}]}, None),
     ],
 )
 def test_detect_change(first_run, buckets, expected):
@@ -138,6 +144,85 @@ def test_detect_change_close_uses_the_remediated_findings():
     )
     assert decided == activity.CLOSE
     assert [item.port for item in findings] == [22]
+
+
+@pytest.mark.parametrize(
+    "buckets, expected",
+    [
+        # a port removed with the same status -> Update with the remaining open instances
+        (
+            {
+                "same": [{"port": 22, "status": "VULNERABLE_VERS"}],
+                "remediated": [{"port": 443, "status": "VULNERABLE_VERS"}],
+            },
+            [22],
+        ),
+        # a port added with the same status -> Update with every open instance
+        (
+            {"same": [{"port": 22, "status": "VULNERABLE_VERS"}], "new": [{"port": 443, "status": "VULNERABLE_VERS"}]},
+            [22, 443],
+        ),
+        # same port, other protocol or key -> Update
+        ({"new": [{"protocol": "UDP"}], "remediated": [{"protocol": "TCP"}]}, [22]),
+        ({"new": [{"key": "/usr/sbin/sshd"}], "remediated": [{"key": ""}]}, [22]),
+        # identical instances (protocol case and a null key ignored) -> nothing
+        ({"new": [{"protocol": "tcp", "key": None}], "remediated": [{"protocol": "TCP", "key": ""}]}, None),
+        ({"same": [{"port": 22}, {"port": 443}]}, None),
+    ],
+)
+def test_detect_change_on_affected_instances(buckets, expected):
+    decision = activity.detect_change(delta(**buckets), first_run=False)
+    if expected is None:
+        assert decision is None
+    else:
+        assert decision[0] == activity.UPDATE
+        assert sorted(item.port for item in decision[1]) == expected
+
+
+@pytest.mark.parametrize(
+    "buckets, expected",
+    [
+        # open -> inconclusive (nothing emitted) -> closed: the held back Close
+        ({"remediated": [{"status": "SKIPPED_VERS"}], "new": [{"status": "NOT_VULNERABLE"}]}, activity.CLOSE),
+        ({"remediated": [{"status": "UNEXPECTED_ERR"}], "new": [{"status": "EXCEPTION_VULN_EXPL"}]}, activity.CLOSE),
+        # closed before and after (one instance only skipped before) -> Close again, idempotent
+        (
+            {
+                "same": [{"port": 80, "status": "NOT_VULNERABLE"}],
+                "remediated": [{"port": 443, "status": "SKIPPED_DOS"}],
+                "new": [{"port": 443, "status": "NOT_VULNERABLE"}],
+            },
+            activity.CLOSE,
+        ),
+        # closed before and after, nothing inconclusive -> nothing
+        ({"remediated": [{"status": "EXCEPTION_VULN_EXPL"}], "new": [{"status": "NOT_VULNERABLE"}]}, None),
+        ({"same": [{"status": "NOT_VULNERABLE"}]}, None),
+        # inconclusive -> open: a Create as usual
+        ({"remediated": [{"status": "SKIPPED_VERS"}], "new": [{}]}, activity.CREATE),
+    ],
+)
+def test_detect_change_after_an_inconclusive_state(buckets, expected):
+    decision = activity.detect_change(delta(**buckets), first_run=False)
+    assert (decision[0] if decision else None) == expected
+
+
+def test_detect_change_close_after_an_inconclusive_state_uses_the_before_findings():
+    decided, findings = activity.detect_change(
+        delta(
+            remediated=[{"status": "SKIPPED_VERS", "remediation_date": "2026-10-28T10:00:00Z"}],
+            new=[{"status": "NOT_VULNERABLE"}],
+        ),
+        first_run=False,
+    )
+    assert decided == activity.CLOSE
+    assert [(item.status, item.remediation_date) for item in findings] == [("SKIPPED_VERS", "2026-10-28T10:00:00Z")]
+    # not on a first run: only the open findings are collected
+    assert (
+        activity.detect_change(
+            delta(remediated=[{"status": "SKIPPED_VERS"}], new=[{"status": "NOT_VULNERABLE"}]), first_run=True
+        )
+        is None
+    )
 
 
 def test_split_by_vulnerability_merges_duplicates():

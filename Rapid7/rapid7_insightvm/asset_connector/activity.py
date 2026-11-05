@@ -115,12 +115,26 @@ def _status_set(findings: list[Rapid7Finding]) -> frozenset[str]:
     return frozenset(normalise_status(finding.status) for finding in findings)
 
 
+def _instance_set(findings: list[Rapid7Finding]) -> frozenset[tuple[int | None, str, str]]:
+    """The affected instances: ``(port, protocol, key)`` of each finding."""
+    return frozenset(
+        (finding.port, (finding.protocol or "").strip().upper(), finding.key or "") for finding in findings
+    )
+
+
+def _is_inconclusive(finding: Rapid7Finding) -> bool:
+    return not is_vulnerable(finding.status) and not is_closing(finding.status)
+
+
 def detect_change(
     delta: VulnerabilityDelta, first_run: bool, full_resync: bool = False
 ) -> tuple[FindingActivity, list[Rapid7Finding]] | None:
     """The activity of a vulnerability on an asset over the window, with the findings it is built from.
 
-    An inconclusive current state (check skipped or failed) emits nothing. With ``full_resync``
+    An inconclusive current state (check skipped or failed) emits nothing. A vulnerability closed
+    after an inconclusive state is closed, since the window that made it inconclusive emitted nothing:
+    the Close may reach a finding the platform does not know, which is harmless. An open vulnerability
+    whose statuses or affected instances (port, protocol, key) change is updated. With ``full_resync``
     (after a checkpoint reset), a vulnerability still open and unchanged is emitted again as Update.
     """
     state = current_state(delta)
@@ -131,13 +145,21 @@ def detect_change(
     if first_run:
         return (CREATE, vulnerable_now) if vulnerable_now else None
 
-    vulnerable_before = _vulnerable_instances(delta.same + delta.remediated)
+    before = delta.same + delta.remediated
+    vulnerable_before = _vulnerable_instances(before)
     if vulnerable_now and not vulnerable_before:
         if any(finding.reintroduced for finding in _vulnerable_instances(delta.new)):
             return UPDATE, vulnerable_now
         return CREATE, vulnerable_now
     if vulnerable_before and not vulnerable_now:
         return CLOSE, vulnerable_before
-    if vulnerable_now and (full_resync or _status_set(vulnerable_before) != _status_set(vulnerable_now)):
+    if state is State.CLOSED and not vulnerable_before and any(_is_inconclusive(finding) for finding in before):
+        # open -> inconclusive -> closed: the Close was held back while the state was inconclusive
+        return CLOSE, before
+    if vulnerable_now and (
+        full_resync
+        or _status_set(vulnerable_before) != _status_set(vulnerable_now)
+        or _instance_set(vulnerable_before) != _instance_set(vulnerable_now)
+    ):
         return UPDATE, vulnerable_now
     return None

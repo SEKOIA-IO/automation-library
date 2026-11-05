@@ -197,6 +197,55 @@ def test_pagination_fails_far_past_the_announced_pages(client, requests_mock):
     assert counter["n"] == 12
 
 
+def endless_pages(total_pages=None, data=None):
+    """A callback answering a new cursor and a next link on every request."""
+    counter = {"n": 0}
+
+    def answer(request, context):
+        counter["n"] += 1
+        return page(
+            [{"id": "a"}] if data is None else data, cursor=f"c{counter['n']}", has_next=True, total_pages=total_pages
+        )
+
+    answer.counter = counter
+    return answer
+
+
+def test_pagination_without_total_pages_stops_on_an_empty_page(client, requests_mock):
+    """Without totalPages, an empty page with a next link and a new cursor ends the traversal, on both endpoints."""
+    assets = requests_mock.post(
+        ASSETS_URL,
+        [
+            {"json": page([{"id": "a"}], cursor="c1", has_next=True, total_pages=None)},
+            {"json": page([], cursor="c2", has_next=True, number=1, total_pages=None)},
+        ],
+    )
+    pages = list(client.iter_asset_pages("2026-10-28T11:00:00Z", "2026-10-28T10:00:00Z", 50))
+    assert [p.number for p in pages] == [0, 1]
+    assert assets.call_count == 2
+
+    vulns = requests_mock.post(VULNS_URL, json=endless_pages(total_pages=None, data=[]))
+    assert list(client.search_vulnerabilities(["v1"])) == []
+    assert vulns.call_count == 1
+
+
+def test_pagination_fails_past_the_absolute_cap(client, requests_mock, monkeypatch):
+    """Without totalPages, pages that never end raise at MAX_PAGES, on both endpoints."""
+    monkeypatch.setattr(ApiClient, "MAX_PAGES", 5)
+
+    assets = endless_pages()
+    requests_mock.post(ASSETS_URL, json=assets)
+    with pytest.raises(RuntimeError, match="do not end: 5 pages read"):
+        list(client.iter_asset_pages("2026-10-28T11:00:00Z", "2026-10-28T10:00:00Z", 50))
+    assert assets.counter["n"] == 5
+
+    vulns = endless_pages()
+    requests_mock.post(VULNS_URL, json=vulns)
+    with pytest.raises(RuntimeError, match="do not end: 5 pages read"):
+        list(client.search_vulnerabilities(["v"]))
+    assert vulns.counter["n"] == 5
+
+
 def test_search_vulnerabilities_stops_on_an_empty_last_page(client, requests_mock):
     vulns = requests_mock.post(VULNS_URL, json=page([], cursor="vc", has_next=True, total_pages=1))
 

@@ -38,6 +38,8 @@ class ApiClient(requests.Session):
     MAX_RATE_LIMIT_WAIT: float = 3600.0
     # Pages tolerated beyond the announced totalPages before the traversal is considered stuck.
     EXTRA_PAGES: int = 10
+    # Absolute cap on the pages of one traversal, whatever totalPages says (or when it is missing).
+    MAX_PAGES: int = 100_000
     REGION_PATTERN = re.compile(r"[a-z0-9]+")
 
     def __init__(self, region: str, api_key: str, nb_retries: int = 5, timeout: tuple[int, int] | None = None) -> None:
@@ -123,10 +125,17 @@ class ApiClient(requests.Session):
 
     @classmethod
     def check_progress(cls, endpoint: str, page: int, data: list[Any], metadata: Rapid7PageMetadata) -> bool:
-        """Whether to request the page after ``page``: stop after an empty last page, fail far past the last."""
+        """Whether to request the page after ``page``: stop after an empty last page, fail far past the last.
+
+        Without ``totalPages``, an empty page ends the traversal: nothing says that more pages follow.
+        """
         total_pages = metadata.totalPages
-        if not data and total_pages is not None and page >= total_pages - 1:
+        if not data and (total_pages is None or page >= total_pages - 1):
             return False
+        if page + 1 >= cls.MAX_PAGES:
+            raise RuntimeError(
+                f"The {endpoint} pages do not end: {cls.MAX_PAGES} pages read, the maximum of a traversal"
+            )
         if total_pages is not None and page + 1 >= total_pages + cls.EXTRA_PAGES:
             raise RuntimeError(
                 f"The {endpoint} pages do not end: page {page + 1} requested, {total_pages} pages announced"
