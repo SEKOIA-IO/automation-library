@@ -33,7 +33,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
     CONNECTOR_METRICS_LABEL: str
     CONNECTOR_TITLE: str
 
-    AUTH_ERROR_THRESHOLD = 5  # consecutive 401/403 before logging critical (critical stops the connector)
+    AUTH_ERROR_THRESHOLD = 10  # consecutive 401/403 before logging critical (critical stops the connector)
     _auth_errors = 0
 
     @cached_property
