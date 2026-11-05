@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-05 - 1.7.1
+
+### Changed
+
+- Increase authentication error retries to 10 attempts before stopping the connector 
+
 ## 2026-11-03 - 1.7.0
 
 ### Changed
