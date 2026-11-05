@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-11-03 - 1.38.6
+## 2026-11-03 - 1.38.7
+
+### Changed
+
+- Allow to enable or disable the internal traffic filter for VPC flowlogs events.
+
+## 2026-11-02 - 1.38.6
 
 ### Fixed
 

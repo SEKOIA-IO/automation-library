@@ -11,19 +11,49 @@ import pandas
 import pyarrow
 import pyarrow.parquet
 import pytest
+from faker import Faker
 
 from connectors import AwsModule
 from connectors.metrics import DISCARDED_EVENTS
-from connectors.s3 import AwsS3QueuedConfiguration
-from connectors.s3.trigger_s3_flowlogs_parquet import AwsS3FlowLogsParquetRecordsTrigger
+from connectors.s3.trigger_s3_flowlogs_parquet import (
+    AwsS3FlowLogsParquetRecordsTrigger,
+    AwsS3FlowLogsParquetConfiguration,
+)
+from aws_helpers.utils import check_all_ips_are_private
 from tests.helpers import async_list, async_temporary_file
+
+
+@pytest.fixture
+def aws_s3_flowlogs_parquet_trigger_config(
+    faker: Faker,
+) -> AwsS3FlowLogsParquetConfiguration:
+    """
+    Create a configuration.
+
+    Args:
+        faker: Faker
+
+    Returns:
+        AwsS3LogsConfiguration:
+    """
+    config = {
+        "frequency": 0,
+        "queue_name": faker.word(),
+        "separator": "\n",
+        "skip_first": 1,
+        "ignore_comments": True,
+        "intake_key": faker.word(),
+        "filter_internal_traffic": True,
+    }
+
+    return AwsS3FlowLogsParquetConfiguration(**config)
 
 
 @pytest.fixture
 def connector(
     aws_module: AwsModule,
     symphony_storage: Path,
-    aws_s3_queued_config: AwsS3QueuedConfiguration,
+    aws_s3_flowlogs_parquet_trigger_config: AwsS3FlowLogsParquetConfiguration,
 ) -> AwsS3FlowLogsParquetRecordsTrigger:
     """
     Create a connector.
@@ -31,20 +61,22 @@ def connector(
     Args:
         aws_module: AwsModule
         symphony_storage: Path
-        aws_s3_queued_config: AwsS3QueuedConfiguration
+        aws_s3_flowlogs_parquet_trigger_config: AwsS3FlowLogsParquetConfiguration
 
     Returns:
         AwsS3FlowLogsParquetRecordsTrigger:
     """
     connector = AwsS3FlowLogsParquetRecordsTrigger(module=aws_module, data_path=symphony_storage)
 
-    connector.configuration = aws_s3_queued_config
+    connector.configuration = aws_s3_flowlogs_parquet_trigger_config
 
     return connector
 
 
 @pytest.mark.asyncio
-async def test_aws_s3_flowlogs_records_trigger_parse_content(connector: AwsS3FlowLogsParquetRecordsTrigger):
+async def test_aws_s3_flowlogs_records_trigger_parse_content(
+    connector: AwsS3FlowLogsParquetRecordsTrigger,
+):
     """
     Test AwsS3ParquetRecordsTrigger `_parse_content`.
 
@@ -60,7 +92,9 @@ async def test_aws_s3_flowlogs_records_trigger_parse_content(connector: AwsS3Flo
 
 
 @pytest.mark.asyncio
-async def test_aws_s3_flowlogs_records_trigger_parse_empty_data(connector: AwsS3FlowLogsParquetRecordsTrigger):
+async def test_aws_s3_flowlogs_records_trigger_parse_empty_data(
+    connector: AwsS3FlowLogsParquetRecordsTrigger,
+):
     async with async_temporary_file(b"") as f:
         assert await async_list(connector._parse_content(f)) == []
 
@@ -89,7 +123,7 @@ async def test_parse_content_converts_bounded_batches(
     expected = [
         orjson.dumps(record).decode("utf-8")
         for record in records
-        if not connector.check_all_ips_are_private(record, ("srcaddr", "dstaddr"))
+        if not check_all_ips_are_private((record[name] for name in ("srcaddr", "dstaddr") if name in record))
     ]
     discarded = DISCARDED_EVENTS.labels(intake_key=connector.configuration.intake_key)
     discarded_before = discarded._value.get()
@@ -126,7 +160,10 @@ async def test_parse_content_does_not_convert_later_batches_before_yielding(
     async with async_temporary_file(buffer.getvalue()) as stream:
         events = connector._parse_content(stream)
         try:
-            assert orjson.loads(await anext(events)) == {"srcaddr": "8.8.8.8", "dstaddr": "10.0.0.1"}
+            assert orjson.loads(await anext(events)) == {
+                "srcaddr": "8.8.8.8",
+                "dstaddr": "10.0.0.1",
+            }
             assert converted_sizes == [1000]
         finally:
             await events.aclose()
@@ -248,13 +285,17 @@ async def test_parse_content_skips_empty_record(
     ],
 )
 def test_check_all_ips_are_private(
-    connector: AwsS3FlowLogsParquetRecordsTrigger, record: dict[str, str], expected: bool
+    connector: AwsS3FlowLogsParquetRecordsTrigger,
+    record: dict[str, str],
+    expected: bool,
 ) -> None:
-    assert connector.check_all_ips_are_private(record, ("srcaddr", "dstaddr")) is expected
+    assert check_all_ips_are_private((record[name] for name in ("srcaddr", "dstaddr") if name in record)) is expected
 
 
 @pytest.mark.asyncio
-async def test_parse_content_rejects_invalid_parquet(connector: AwsS3FlowLogsParquetRecordsTrigger) -> None:
+async def test_parse_content_rejects_invalid_parquet(
+    connector: AwsS3FlowLogsParquetRecordsTrigger,
+) -> None:
     async with async_temporary_file(b"not a parquet file") as stream:
         with pytest.raises(pyarrow.ArrowInvalid):
             await async_list(connector._parse_content(stream))
