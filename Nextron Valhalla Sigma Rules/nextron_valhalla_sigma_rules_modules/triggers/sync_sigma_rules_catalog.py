@@ -1,7 +1,9 @@
 import re
 import time
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from functools import partial
 from typing import cast
 
 import yaml
@@ -16,6 +18,7 @@ from nextron_valhalla_sigma_rules_modules.sekoia_client import (
     SekoiaClient,
     SekoiaRuleNotFoundError,
     rule_tag_names,
+    writable_rule,
 )
 from nextron_valhalla_sigma_rules_modules.sigma_mapper import (
     DEFAULT_ALERT_UUID,
@@ -30,12 +33,34 @@ from nextron_valhalla_sigma_rules_modules.sigma_mapper import (
 
 UUID_MAP_FILE = "valhalla-sigma-catalog-uuid-map.json"
 FEED_STATE_FILE = "valhalla-sigma-feed-state.json"
-# Key in FEED_STATE_FILE: Valhalla ids the disable pass switched off, so a
-# returning rule can be re-enabled without touching rules the user disabled.
-AUTO_DISABLED_KEY = "auto_disabled"
+# Tag the disable pass adds to the rules it switches off. It lives in the
+# catalog, so any trigger configuration can re-enable those rules once they
+# are back, while rules the user disabled (no tag) are never touched.
+AUTO_DISABLED_TAG = "valhalla-auto-disabled"
+# Key in FEED_STATE_FILE: Valhalla ids this configuration re-enabled in its
+# last sync. Finding one disabled again means another trigger disabled it.
+REENABLED_LAST_RUN_KEY = "reenabled_last_run"
+# Rule settings a user changes in the Sekoia UI. An update copies them from
+# the catalog: PUT replaces the whole rule, so leaving them out resets them.
+USER_FIELDS = (
+    "entities",
+    "all_entities",
+    "exclude_entities",
+    "assets",
+    "all_assets",
+    "exclude_assets",
+    "parameters",
+    "event_fields",
+    "similarity_strategy",
+    "valid_until",
+    "goal",
+    "datasources",
+)
+ATTACK_PATTERN_PREFIX = "attack-pattern--"
+STALE_REPORT = 5
 TOP_UNMAPPED_REPORT = 5
 DEFAULT_MIN_LEVEL = "medium"
-DEFAULT_MIN_STATUS = "stable"
+DEFAULT_MIN_STATUS = "experimental"
 
 # Disable-pass safety (B2): a feed that shrank by more than this ratio
 # against the last accepted size is treated as suspicious (truncated
@@ -58,10 +83,14 @@ _ATTACK_TECHNIQUE_TAG = re.compile(r"^attack\.(t\d{4}(?:\.\d{3})?)$", re.IGNOREC
 def _normalize_names(names) -> frozenset[str]:
     """Build the preserve matcher set from the trigger config.
 
-    Non-list input → empty set (disables the check). Whitespace is
-    stripped and empty entries are dropped so copy-paste from the Sekoia
-    UI tolerates stray spaces or blank lines.
+    The argument is a text field: entries are separated by line breaks or
+    ``;`` (not commas, which rule names may contain). A list is accepted
+    too. Whitespace is stripped and empty entries are dropped so copy-paste
+    from the Sekoia UI tolerates stray spaces or blank lines. Anything else
+    → empty set (disables the check).
     """
+    if isinstance(names, str):
+        names = re.split(r"[;\r\n]", names)
     if not isinstance(names, list):
         return frozenset()
     return frozenset(n.strip() for n in names if isinstance(n, str) and n.strip())
@@ -105,6 +134,54 @@ class CatalogScan:
         }
 
 
+@dataclass
+class ReenableTracker:
+    """Counts the re-enables of one sync.
+
+    ``last_run`` holds the Valhalla ids this configuration re-enabled in its
+    previous sync. Re-enabling one of them again means another trigger
+    disabled it in between (``conflicts``).
+    """
+
+    last_run: set[str]
+    log: Callable[..., None] = print
+    done: set[str] = field(default_factory=set)
+    re_enabled: int = 0
+    failed: int = 0
+    conflicts: int = 0
+    logged: bool = False
+
+    def run(self, valhalla_id: str, action: Callable[[], None], reraise: bool = False) -> None:
+        """Run one re-enable. A rule that is gone (HTTP 404) is skipped;
+        other errors are counted and logged once. With ``reraise`` the error
+        propagates too, so the caller can count the failed update."""
+        try:
+            action()
+        except SekoiaRuleNotFoundError:
+            if reraise:
+                raise
+            return
+        except Exception as exc:
+            self.failed += 1
+            if reraise:
+                raise  # the caller counts and logs the failed update
+            if not self.logged:
+                self.log(f"First re-enable failure. valhalla_id={valhalla_id}. Error: {exc}", level="error")
+                self.logged = True
+            return
+        self.re_enabled += 1
+        self.done.add(valhalla_id)
+        if valhalla_id in self.last_run:
+            self.conflicts += 1
+
+    def counts(self) -> dict:
+        return {
+            "re_enabled": self.re_enabled,
+            "reenable_failed": self.failed,
+            "reenable_conflicts": self.conflicts,
+        }
+
+
 class SyncSigmaRulesCatalog(Trigger):
     def run(self) -> None:
         # Trigger arguments arrive as a dict; the module configuration is
@@ -123,7 +200,7 @@ class SyncSigmaRulesCatalog(Trigger):
         self._min_status_rank = STATUS_RANK[min_status]
         self._enabled = args.get("enabled", False)
         self._disable_removed = bool(args.get("disable_removed", False))
-        self._preserve_rule_names = _normalize_names(args.get("preserve_rule_names", []))
+        self._preserve_rule_names = _normalize_names(args.get("preserve_rule_names", ""))
         frequency = args.get("frequency", 86400)
 
         cfg = cast(NextronValhallaSigmaRulesModuleConfiguration, self.module.configuration)
@@ -221,6 +298,57 @@ class SyncSigmaRulesCatalog(Trigger):
             body["related_object_refs"] = refs
         return body
 
+    def _keep_user_settings(self, body: dict, server_rule: dict) -> None:
+        """Copy the settings a user owns from the catalog rule into an update
+        body: PUT replaces the rule, so anything left out would be reset.
+
+        Threats the user linked are kept next to the ATT&CK techniques the
+        sync links. When ATT&CK lookups are switched off, the techniques
+        linked earlier are kept instead of being dropped.
+        """
+        for key in USER_FIELDS:
+            if key in server_rule:
+                body[key] = server_rule[key]
+        server_refs = [r for r in server_rule.get("related_object_refs") or [] if isinstance(r, str)]
+        keep = [r for r in server_refs if not r.startswith(ATTACK_PATTERN_PREFIX)]
+        if not getattr(self, "_attack_lookups_enabled", True):
+            keep = server_refs
+        refs = list(dict.fromkeys([*(body.get("related_object_refs") or []), *keep]))
+        if refs:
+            body["related_object_refs"] = refs
+
+    @staticmethod
+    def _is_auto_disabled(server_rule: dict) -> bool:
+        """Disabled by the disable pass (not by the user) and still off."""
+        return AUTO_DISABLED_TAG in rule_tag_names(server_rule) and not server_rule.get("enabled", False)
+
+    @staticmethod
+    def _has_stale_marker(server_rule: dict) -> bool:
+        """Carries the marker although the user enabled the rule again: the
+        marker must go, or a later manual disable would look like ours."""
+        return AUTO_DISABLED_TAG in rule_tag_names(server_rule) and bool(server_rule.get("enabled", False))
+
+    def _drop_marker(self, sekoia_uuid: str, server_rule: dict) -> None:
+        """Remove the marker from a rule that is not updated in this run
+        (updates drop it anyway). Bookkeeping only: errors are logged and
+        the next sync tries again."""
+        body = writable_rule(server_rule)
+        body["tags"] = [t for t in body["tags"] if t != AUTO_DISABLED_TAG]
+        try:
+            self._sekoia.update_rule(sekoia_uuid, body)
+        except Exception as exc:
+            self.log(f"Could not remove the {AUTO_DISABLED_TAG} tag from {sekoia_uuid}: {exc}", level="warning")
+
+    def _reenable_as_is(self, sekoia_uuid: str, server_rule: dict) -> None:
+        """Enable a rule the disable pass switched off without updating its
+        content (preserved rules, rules whose new version can't be
+        converted): the catalog rule is sent back with ``enabled`` on and
+        without the marker tag."""
+        body = writable_rule(server_rule)
+        body["tags"] = [t for t in body["tags"] if t != AUTO_DISABLED_TAG]
+        body["enabled"] = True
+        self._sekoia.update_rule(sekoia_uuid, body)
+
     def _confirm_missing_rule(self, sekoia_uuid: str) -> dict | None:
         """Look up a mapped rule the catalog scan did not return.
 
@@ -259,6 +387,8 @@ class SyncSigmaRulesCatalog(Trigger):
         seen_in_feed: set[str] = set()
         passed_filter: set[str] = set()
         unparsed: set[str] = set()
+        stale_names: list[str] = []
+        reenable = ReenableTracker(self._load_reenabled_last_run(), log=self.log)
         with PersistentJSON(UUID_MAP_FILE, self.data_path) as id_map:
             scan = self._scan_catalog(id_map)
             for rule in rules:
@@ -279,6 +409,7 @@ class SyncSigmaRulesCatalog(Trigger):
                     unparsed.add(valhalla_id)
                     skipped_unmapped += 1
                     unmapped_field_counter["<yaml-parse-error>"] += 1
+                    self._note_stale(valhalla_id, id_map, scan, stale_names)
                     continue
 
                 # One rule with unexpected field types must not abort the
@@ -292,6 +423,7 @@ class SyncSigmaRulesCatalog(Trigger):
                     unparsed.add(valhalla_id)
                     skipped_unmapped += 1
                     unmapped_field_counter["<malformed>"] += 1
+                    self._note_stale(valhalla_id, id_map, scan, stale_names)
                     if not first_malformed_logged:
                         self.log(
                             f"Skipped malformed rule id={valhalla_id} (subsequent ones counted under "
@@ -310,6 +442,13 @@ class SyncSigmaRulesCatalog(Trigger):
                     skipped_unmapped += 1
                     for f in unmapped:
                         unmapped_field_counter[f] += 1
+                    # The catalog keeps the last version that converted. If
+                    # the disable pass had switched it off, it is back now.
+                    server_rule = self._note_stale(valhalla_id, id_map, scan, stale_names)
+                    if server_rule is not None and self._is_auto_disabled(server_rule):
+                        reenable.run(valhalla_id, partial(self._reenable_as_is, id_map[valhalla_id], server_rule))
+                    elif server_rule is not None and self._has_stale_marker(server_rule):
+                        self._drop_marker(id_map[valhalla_id], server_rule)
                     continue
 
                 try:
@@ -330,46 +469,68 @@ class SyncSigmaRulesCatalog(Trigger):
                     elif self._is_preserved(server_rule):
                         # Operator listed this rule in ``preserve_rule_names``
                         # to protect their hand-edits. ``disable_removed`` still
-                        # applies independently.
+                        # applies independently, and so does re-enabling.
                         preserved += 1
+                        if self._is_auto_disabled(server_rule):
+                            reenable.run(valhalla_id, partial(self._reenable_as_is, sekoia_uuid, server_rule))
+                        elif self._has_stale_marker(server_rule):
+                            self._drop_marker(sekoia_uuid, server_rule)
                     else:
-                        # Keep the user's per-rule ``enabled`` choice.
-                        body["enabled"] = bool(server_rule.get("enabled", self._enabled))
-                        try:
+                        # Keep the user's settings and per-rule ``enabled``
+                        # choice. The generated tags never carry the marker,
+                        # so a rule the disable pass switched off is enabled
+                        # again in the same PUT (a second PUT built from the
+                        # scan would undo this update).
+                        self._keep_user_settings(body, server_rule)
+                        if self._is_auto_disabled(server_rule):
+                            body["enabled"] = True
+                            reenable.run(
+                                valhalla_id, partial(self._sekoia.update_rule, sekoia_uuid, body), reraise=True
+                            )
+                        else:
+                            body["enabled"] = bool(server_rule.get("enabled", self._enabled))
                             self._sekoia.update_rule(sekoia_uuid, body)
-                            updated += 1
-                        except SekoiaRuleNotFoundError:
-                            # Deleted between the scan and now.
-                            del id_map[valhalla_id]
-                            body["enabled"] = self._enabled
-                            id_map[valhalla_id] = self._sekoia.create_rule(body)
-                            created += 1
+                        updated += 1
+                except SekoiaRuleNotFoundError:
+                    # Deleted between the scan and now: create it again.
+                    try:
+                        del id_map[valhalla_id]
+                        body["enabled"] = self._enabled
+                        id_map[valhalla_id] = self._sekoia.create_rule(body)
+                        created += 1
+                    except Exception as exc:
+                        failed += 1
+                        first_failure_logged = self._log_first_failure(first_failure_logged, valhalla_id, body, exc)
                 except Exception as exc:
                     failed += 1
-                    # Log the first failure loudly with the full body so the
-                    # user can see exactly what shape the API rejected.
-                    if not first_failure_logged:
-                        self.log(
-                            f"First rule sync failure (subsequent failures "
-                            f"counted but not individually logged). "
-                            f"Rule id={valhalla_id}, name={body.get('name')!r}. "
-                            f"Sent body: {body}. Error: {exc}",
-                            level="error",
-                        )
-                        first_failure_logged = True
+                    first_failure_logged = self._log_first_failure(first_failure_logged, valhalla_id, body, exc)
 
-            reenable_counts = self._reenable_returned_rules(id_map, scan, seen_in_feed, passed_filter, unparsed)
             skip_reason = "interrupted" if interrupted else self._check_feed_size(len(rules))
             if skip_reason:
                 disable_counts = self._skipped_disable_counts(skip_reason, len(rules))
             else:
                 disable_counts = self._disable_removed_rules(id_map, scan, seen_in_feed, passed_filter, unparsed)
+        self._save_reenabled_last_run(reenable)
 
+        if stale_names:
+            self.log(
+                f"{len(stale_names)} imported rule(s) kept at an older version because the new version "
+                f"could not be converted (see top_unmapped), e.g. {stale_names[:STALE_REPORT]}",
+                level="info",
+            )
+        if reenable.conflicts:
+            self.log(
+                f"{reenable.conflicts} rule(s) this trigger re-enabled in its last sync were disabled again "
+                f"by another trigger with 'Disable removed'. Run one sync trigger per community, or give the "
+                f"trigger with 'Disable removed' filters that cover all rules you want to keep.",
+                level="warning",
+            )
         top_unmapped = dict(unmapped_field_counter.most_common(TOP_UNMAPPED_REPORT))
+        reenable_counts = reenable.counts()
         self.log(
             f"Catalog sync: created={created} updated={updated} "
             f"preserved={preserved} failed={failed} "
-            f"skipped_unmapped={skipped_unmapped} "
+            f"skipped_unmapped={skipped_unmapped} stale={len(stale_names)} "
             f"filtered_out={filtered_out} total_rules={len(rules)} "
             f"scan={scan.stats()} "
             f"reenable_counts={reenable_counts} "
@@ -385,6 +546,7 @@ class SyncSigmaRulesCatalog(Trigger):
                 "preserved": preserved,
                 "failed": failed,
                 "skipped_unmapped": skipped_unmapped,
+                "stale": len(stale_names),
                 "skipped_filter": filtered_out,
                 "total_rules": len(rules),
                 "top_unmapped": top_unmapped,
@@ -393,6 +555,39 @@ class SyncSigmaRulesCatalog(Trigger):
                 **disable_counts,
             },
         )
+
+    def _log_first_failure(self, logged: bool, valhalla_id: str, body: dict, exc: Exception) -> bool:
+        """Log the first failure of a run loudly with the full body, so the
+        user can see exactly what shape the API rejected. Returns True."""
+        if not logged:
+            self.log(
+                f"First rule sync failure (subsequent failures "
+                f"counted but not individually logged). "
+                f"Rule id={valhalla_id}, name={body.get('name')!r}. "
+                f"Sent body: {body}. Error: {exc}",
+                level="error",
+            )
+        return True
+
+    @staticmethod
+    def _note_stale(valhalla_id: str, id_map, scan: CatalogScan, stale_names: list[str]) -> dict | None:
+        """Record an imported rule that keeps its catalog version because the
+        new feed version was skipped. Returns the catalog rule, if any."""
+        sekoia_uuid = id_map.get(valhalla_id)
+        server_rule = scan.rules_by_uuid.get(sekoia_uuid) if sekoia_uuid else None
+        if server_rule is not None:
+            stale_names.append(str(server_rule.get("name") or valhalla_id))
+        return server_rule
+
+    def _load_reenabled_last_run(self) -> set[str]:
+        with PersistentJSON(FEED_STATE_FILE, self.data_path) as state:
+            return set(state.get(REENABLED_LAST_RUN_KEY) or [])
+
+    def _save_reenabled_last_run(self, reenable: ReenableTracker) -> None:
+        if reenable.done == reenable.last_run:
+            return
+        with PersistentJSON(FEED_STATE_FILE, self.data_path) as state:
+            state[REENABLED_LAST_RUN_KEY] = sorted(reenable.done)
 
     def _attack_refs(self, tags) -> list[str]:
         """STIX ``attack-pattern`` ids for the rule's ATT&CK technique tags.
@@ -496,58 +691,8 @@ class SyncSigmaRulesCatalog(Trigger):
         return scan
 
     # ------------------------------------------------------------------
-    # Re-enable and disable passes
+    # Disable pass
     # ------------------------------------------------------------------
-
-    def _reenable_returned_rules(
-        self,
-        id_map,
-        scan: CatalogScan,
-        seen_in_feed: set[str],
-        passed_filter: set[str],
-        unparsed: set[str],
-    ) -> dict:
-        """Re-enable rules the disable pass switched off once they are back.
-
-        Only ids recorded by ``_disable_removed_rules`` are considered, so a
-        rule the user disabled is never touched. An id is dropped from the
-        record when its rule is gone, when the user already re-enabled it,
-        or after it was re-enabled here. Preserved rules are re-enabled too:
-        the dedicated endpoint flips only ``enabled``.
-        """
-        re_enabled = 0
-        reenable_failed = 0
-        first_failure_logged = False
-        with PersistentJSON(FEED_STATE_FILE, self.data_path) as state:
-            recorded = set(state.get(AUTO_DISABLED_KEY) or [])
-            remaining = set(recorded)
-            for vid in sorted(recorded):
-                if not self.running:
-                    break
-                sekoia_uuid = id_map.get(vid)
-                server_rule = scan.rules_by_uuid.get(sekoia_uuid) if sekoia_uuid else None
-                if server_rule is None or server_rule.get("enabled", False):
-                    remaining.discard(vid)
-                    continue
-                if vid in unparsed or vid not in seen_in_feed or vid not in passed_filter:
-                    continue
-                try:
-                    self._sekoia.enable_rule(sekoia_uuid)
-                    re_enabled += 1
-                    remaining.discard(vid)
-                except SekoiaRuleNotFoundError:
-                    remaining.discard(vid)
-                except Exception as exc:
-                    reenable_failed += 1
-                    if not first_failure_logged:
-                        self.log(
-                            f"First re-enable failure. valhalla_id={vid}, sekoia_uuid={sekoia_uuid}. Error: {exc}",
-                            level="error",
-                        )
-                        first_failure_logged = True
-            if remaining != recorded:
-                state[AUTO_DISABLED_KEY] = sorted(remaining)
-        return {"re_enabled": re_enabled, "reenable_failed": reenable_failed}
 
     def _check_feed_size(self, feed_size: int) -> str:
         """Return a skip reason for the disable pass, or ``""``.
@@ -597,15 +742,17 @@ class SyncSigmaRulesCatalog(Trigger):
         feed OR now below the configured thresholds), excluding rules whose
         YAML failed to parse this run (their status is unknown).
 
-        Uses the dedicated disable endpoint, which flips only ``enabled``.
-        Server state comes from the catalog scan, so ``to_disable`` counts
-        only candidates that still exist and are enabled.
+        The catalog rule is sent back with ``enabled`` off and the
+        ``AUTO_DISABLED_TAG`` added; everything else, including the user's
+        settings, is unchanged (verified on a tenant). The tag lets any
+        trigger configuration re-enable the rule once it is back, and tells
+        it apart from a rule the user disabled. Server state comes from the
+        catalog scan, so ``to_disable`` counts only candidates that still
+        exist and are enabled.
 
         The id-map entry is kept after disabling so a reappearing rule
-        resumes updating in place, and the id is recorded so
-        ``_reenable_returned_rules`` can switch it back on. With
-        ``disable_removed`` off this is a dry-run that only counts
-        ``to_disable``.
+        resumes updating in place. With ``disable_removed`` off this is a
+        dry-run that only counts ``to_disable``.
         """
         to_disable = 0
         newly_disabled = 0
@@ -614,7 +761,6 @@ class SyncSigmaRulesCatalog(Trigger):
         disable_failed = 0
         skip_reason = ""
         first_failure_logged = False
-        disabled_now: set[str] = set()
         for vid in list(id_map):
             if vid in unparsed or (vid in seen_in_feed and vid in passed_filter):
                 continue
@@ -632,11 +778,17 @@ class SyncSigmaRulesCatalog(Trigger):
                 continue
             to_disable += 1
             if not self._disable_removed:
-                continue  # dry-run
+                # Dry-run. A marker left on a rule the user re-enabled is
+                # still cleared, so a later manual disable stays theirs.
+                if self._has_stale_marker(server_rule):
+                    self._drop_marker(sekoia_uuid, server_rule)
+                continue
+            body = writable_rule(server_rule)
+            body["tags"] = sorted({*body["tags"], AUTO_DISABLED_TAG})
+            body["enabled"] = False
             try:
-                self._sekoia.disable_rule(sekoia_uuid)
+                self._sekoia.update_rule(sekoia_uuid, body)
                 newly_disabled += 1
-                disabled_now.add(vid)
             except SekoiaRuleNotFoundError:
                 already_gone += 1
                 del id_map[vid]
@@ -648,9 +800,6 @@ class SyncSigmaRulesCatalog(Trigger):
                         level="error",
                     )
                     first_failure_logged = True
-        if disabled_now:
-            with PersistentJSON(FEED_STATE_FILE, self.data_path) as state:
-                state[AUTO_DISABLED_KEY] = sorted(set(state.get(AUTO_DISABLED_KEY) or []) | disabled_now)
         return {
             "to_disable": to_disable,
             "newly_disabled": newly_disabled,

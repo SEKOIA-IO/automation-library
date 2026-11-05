@@ -43,6 +43,21 @@ def rule_tag_names(rule: dict) -> set[str]:
     return names
 
 
+def writable_rule(rule: dict) -> dict:
+    """A catalog rule as returned by GET or the list endpoint, in the shape
+    PUT accepts: ``alert_type`` (object) becomes ``alert_type_uuid`` and tag
+    objects become tag names. Sending this back changes nothing on the rule
+    (verified on a tenant), so it is the base for updates that must keep
+    the user's settings."""
+    body = dict(rule)
+    alert_type = body.pop("alert_type", None)
+    body.pop("alert_category", None)
+    if "alert_type_uuid" not in body and isinstance(alert_type, dict):
+        body["alert_type_uuid"] = alert_type.get("uuid")
+    body["tags"] = sorted(rule_tag_names(rule))
+    return body
+
+
 class SekoiaClient:
     def __init__(self, base_url: str, api_key: str, timeout: float = 30.0):
         if not base_url.lower().startswith("https://"):
@@ -155,22 +170,6 @@ class SekoiaClient:
     def update_rule(self, sekoia_uuid: str, body: dict) -> None:
         url = f"{self._base_url}{RULES_PATH}/{sekoia_uuid}"
         resp = self._session.put(url, json=body, timeout=self._timeout)
-        self._maybe_raise_not_found(resp, "PUT", url)
-        self._ensure_ok(resp, "PUT", url)
-
-    def disable_rule(self, sekoia_uuid: str) -> None:
-        """Disable one rule through the dedicated endpoint, which flips only
-        ``enabled`` and leaves every other rule setting untouched."""
-        url = f"{self._base_url}{RULES_PATH}/{sekoia_uuid}/disabled"
-        resp = self._session.put(url, timeout=self._timeout)
-        self._maybe_raise_not_found(resp, "PUT", url)
-        self._ensure_ok(resp, "PUT", url)
-
-    def enable_rule(self, sekoia_uuid: str) -> None:
-        """Enable one rule through the dedicated endpoint, which flips only
-        ``enabled`` and leaves every other rule setting untouched."""
-        url = f"{self._base_url}{RULES_PATH}/{sekoia_uuid}/enabled"
-        resp = self._session.put(url, timeout=self._timeout)
         self._maybe_raise_not_found(resp, "PUT", url)
         self._ensure_ok(resp, "PUT", url)
 

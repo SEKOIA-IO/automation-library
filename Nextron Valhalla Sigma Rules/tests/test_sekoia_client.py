@@ -8,6 +8,7 @@ from nextron_valhalla_sigma_rules_modules.sekoia_client import (
     SekoiaAPIError,
     SekoiaClient,
     SekoiaRuleNotFoundError,
+    writable_rule,
 )
 
 BASE_URL = "https://api.sekoia.io"
@@ -448,56 +449,31 @@ def test_iter_rules_rejects_non_dict_body():
             list(client.iter_rules())
 
 
-def test_disable_rule_uses_dedicated_endpoint():
-    client = SekoiaClient(BASE_URL, "k")
-    with requests_mock.Mocker() as m:
-        m.put(f"{RULES_URL}/sk-1/disabled", status_code=200, json={})
-        client.disable_rule("sk-1")
-        assert m.last_request.method == "PUT"
-        assert m.last_request.body is None
+def test_writable_rule_converts_get_shape_to_put_shape():
+    """Shapes as seen on a tenant: GET returns ``alert_type`` as an object and
+    tags as objects; PUT rejects both."""
+    rule = {
+        "uuid": "u-1",
+        "name": "R",
+        "alert_type": {"uuid": "at-1", "category_name": "intrusions"},
+        "alert_category": {"uuid": "cat-1", "name": "intrusions"},
+        "tags": [{"uuid": "t-2", "name": "zz"}, {"uuid": "t-1", "name": "aa"}],
+        "event_fields": [{"field": "process.name"}],
+    }
+
+    body = writable_rule(rule)
+
+    assert body["alert_type_uuid"] == "at-1"
+    assert body["tags"] == ["aa", "zz"]
+    assert "alert_type" not in body and "alert_category" not in body
+    assert body["event_fields"] == [{"field": "process.name"}]
+    assert rule["tags"][0] == {"uuid": "t-2", "name": "zz"}  # input untouched
 
 
-def test_disable_rule_raises_not_found_on_404():
-    client = SekoiaClient(BASE_URL, "k")
-    with requests_mock.Mocker() as m:
-        m.put(f"{RULES_URL}/gone/disabled", status_code=404)
-        with pytest.raises(SekoiaRuleNotFoundError):
-            client.disable_rule("gone")
-
-
-def test_disable_rule_raises_on_403():
-    client = SekoiaClient(BASE_URL, "k")
-    with requests_mock.Mocker() as m:
-        m.put(f"{RULES_URL}/u/disabled", status_code=403, text="{}")
-        with pytest.raises(SekoiaAPIError) as excinfo:
-            client.disable_rule("u")
-        assert not isinstance(excinfo.value, SekoiaRuleNotFoundError)
-
-
-def test_enable_rule_uses_dedicated_endpoint():
-    client = SekoiaClient(BASE_URL, "k")
-    with requests_mock.Mocker() as m:
-        m.put(f"{RULES_URL}/sk-1/enabled", status_code=200, json={})
-        client.enable_rule("sk-1")
-        assert m.last_request.method == "PUT"
-        assert m.last_request.body is None
-
-
-def test_enable_rule_raises_not_found_on_404():
-    client = SekoiaClient(BASE_URL, "k")
-    with requests_mock.Mocker() as m:
-        m.put(f"{RULES_URL}/gone/enabled", status_code=404)
-        with pytest.raises(SekoiaRuleNotFoundError):
-            client.enable_rule("gone")
-
-
-def test_enable_rule_raises_on_403():
-    client = SekoiaClient(BASE_URL, "k")
-    with requests_mock.Mocker() as m:
-        m.put(f"{RULES_URL}/u/enabled", status_code=403, text="{}")
-        with pytest.raises(SekoiaAPIError) as excinfo:
-            client.enable_rule("u")
-        assert not isinstance(excinfo.value, SekoiaRuleNotFoundError)
+def test_writable_rule_keeps_existing_alert_type_uuid():
+    body = writable_rule({"alert_type_uuid": "at-9", "alert_type": {"uuid": "at-1"}, "tags": ["x"]})
+    assert body["alert_type_uuid"] == "at-9"
+    assert body["tags"] == ["x"]
 
 
 def test_list_alert_types_paginates():
