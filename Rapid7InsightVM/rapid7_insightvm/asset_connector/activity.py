@@ -1,14 +1,37 @@
 from dataclasses import dataclass, field
+from enum import Enum
 
 from rapid7_insightvm.asset_connector.models import Rapid7Asset, Rapid7Finding, VulnerabilitySummary
 
-
-VULNERABLE_STATUSES = frozenset({"VULNERABLE_EXPL", "VULNERABLE_VERS", "VULNERABLE_POTENTIAL"})
+# AssetVulnerabilityResultSummary.status of the InsightVM v4 API
+OPEN_STATUSES = frozenset({"VULNERABLE_EXPL", "VULNERABLE_VERS", "VULNERABLE_POTENTIAL"})
+CLOSING_STATUSES = frozenset(
+    {
+        "NOT_VULNERABLE",
+        "NOT_VULN_DONT_STORE",
+        "EXCEPTION_VULN_EXPL",
+        "EXCEPTION_VULN_VERS",
+        "EXCEPTION_VULN_POTL",
+        "OVERRIDDEN_VULN_VERS",
+        "SUPERSEDED",
+    }
+)
+# Inconclusive: UNKNOWN, SKIPPED_VERS, SKIPPED_DOS, SKIPPED_DISABLED, UNEXPECTED_ERR and any unrecognised value
+# (except an unknown status starting with VULNERABLE, which is open).
+OPEN_PREFIX = "VULNERABLE"
 
 FindingActivity = tuple[int, str, int]
 CREATE: FindingActivity = (1, "Create", 200201)
 UPDATE: FindingActivity = (2, "Update", 200202)
 CLOSE: FindingActivity = (3, "Close", 200203)
+
+
+class State(Enum):
+    """The state of a vulnerability on an asset, from the statuses of its instances."""
+
+    OPEN = "open"
+    CLOSED = "closed"
+    INCONCLUSIVE = "inconclusive"
 
 
 @dataclass
@@ -32,9 +55,46 @@ class VulnerabilityChange:
     window_end: str | None = None
 
 
+def normalise_status(status: str | None) -> str:
+    return (status or "").strip().upper()
+
+
 def is_vulnerable(status: str | None) -> bool:
-    """Whether a finding status means the vulnerability is present (without exception)."""
-    return (status or "").strip().upper() in VULNERABLE_STATUSES
+    """Whether a finding status means the vulnerability is present (without exception).
+
+    An unknown status starting with ``VULNERABLE`` is open (see ``is_unknown_open_status``).
+    """
+    return normalise_status(status).startswith(OPEN_PREFIX)
+
+
+def is_unknown_open_status(status: str | None) -> bool:
+    """An open status the connector does not know: counted as open, worth a warning."""
+    return is_vulnerable(status) and normalise_status(status) not in OPEN_STATUSES
+
+
+def is_closing(status: str | None) -> bool:
+    """Whether a finding status confirms that the vulnerability is absent or accepted."""
+    return normalise_status(status) in CLOSING_STATUSES
+
+
+def state_of(findings: list[Rapid7Finding]) -> State | None:
+    """The state of a vulnerability from its instances; ``None`` without instance.
+
+    Open if any instance is open. Otherwise closed only if at least one instance is closing
+    and none is inconclusive (check skipped or failed). Otherwise inconclusive.
+    """
+    if not findings:
+        return None
+    if any(is_vulnerable(finding.status) for finding in findings):
+        return State.OPEN
+    if all(is_closing(finding.status) for finding in findings):
+        return State.CLOSED
+    return State.INCONCLUSIVE
+
+
+def current_state(delta: VulnerabilityDelta) -> State | None:
+    """The state at the end of the window: the ``same`` and ``new`` instances."""
+    return state_of(delta.same + delta.new)
 
 
 def split_by_vulnerability(asset: Rapid7Asset) -> dict[str, VulnerabilityDelta]:
@@ -52,10 +112,21 @@ def _vulnerable_instances(findings: list[Rapid7Finding]) -> list[Rapid7Finding]:
 
 
 def _status_set(findings: list[Rapid7Finding]) -> frozenset[str]:
-    return frozenset((finding.status or "").strip().upper() for finding in findings)
+    return frozenset(normalise_status(finding.status) for finding in findings)
 
 
-def detect_change(delta: VulnerabilityDelta, first_run: bool) -> tuple[FindingActivity, list[Rapid7Finding]] | None:
+def detect_change(
+    delta: VulnerabilityDelta, first_run: bool, full_resync: bool = False
+) -> tuple[FindingActivity, list[Rapid7Finding]] | None:
+    """The activity of a vulnerability on an asset over the window, with the findings it is built from.
+
+    An inconclusive current state (check skipped or failed) emits nothing. With ``full_resync``
+    (after a checkpoint reset), a vulnerability still open and unchanged is emitted again as Update.
+    """
+    state = current_state(delta)
+    if state is State.INCONCLUSIVE:
+        return None
+
     vulnerable_now = _vulnerable_instances(delta.same + delta.new)
     if first_run:
         return (CREATE, vulnerable_now) if vulnerable_now else None
@@ -67,6 +138,6 @@ def detect_change(delta: VulnerabilityDelta, first_run: bool) -> tuple[FindingAc
         return CREATE, vulnerable_now
     if vulnerable_before and not vulnerable_now:
         return CLOSE, vulnerable_before
-    if vulnerable_before and vulnerable_now and _status_set(vulnerable_before) != _status_set(vulnerable_now):
+    if vulnerable_now and (full_resync or _status_set(vulnerable_before) != _status_set(vulnerable_now)):
         return UPDATE, vulnerable_now
     return None

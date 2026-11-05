@@ -20,10 +20,15 @@ class Rapid7InsightVMAccountValidator(AccountValidator):
         ("POST", "/vulnerabilities", {}),
     ]
     PROBE_PARAMS: dict[str, int] = {"size": 1}
+    # A validation answers quickly or fails: one retry and short (connect, read) timeouts.
+    NB_RETRIES: int = 1
+    TIMEOUT: tuple[int, int] = (5, 30)
 
     @cached_property
     def client(self) -> ApiClient:
-        return ApiClient.from_configuration(self.module.configuration)
+        return ApiClient.from_configuration(
+            self.module.configuration, nb_retries=self.NB_RETRIES, timeout=self.TIMEOUT
+        )
 
     def _describe_error(self, url: str, response: Response) -> str:
         code = response.status_code
@@ -59,7 +64,7 @@ class Rapid7InsightVMAccountValidator(AccountValidator):
 
         try:
             response = self.client.request(
-                method, url, params=self.PROBE_PARAMS, json=body, timeout=self.client.TIMEOUT
+                method, url, params=self.PROBE_PARAMS, json=body, timeout=self.client.timeout
             )
         except Timeout:
             return self._fail(f"Timeout while validating the Rapid7 InsightVM API key at {url}")
@@ -78,6 +83,13 @@ class Rapid7InsightVMAccountValidator(AccountValidator):
 
     def validate(self) -> bool:
         self.log(message="Starting credentials validation for Rapid7 InsightVM", level="info")
+
+        try:
+            _ = self.client  # built here so an invalid configuration fails the validation
+        except KeyError as error:
+            return self._fail(f"Invalid configuration: missing {error}")
+        except (TypeError, ValueError) as error:
+            return self._fail(f"Invalid configuration: {error}")
 
         for method, endpoint, body in self.VALIDATION_ENDPOINTS:
             if not self._check_endpoint(method, endpoint, body):

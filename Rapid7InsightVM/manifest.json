@@ -3,6 +3,7 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "region": {
+        "title": "Region",
         "description": "Region of the Insight Platform (the prefix of https://<region>.api.insight.rapid7.com)",
         "type": "string",
         "enum": [
@@ -18,6 +19,7 @@
         ]
       },
       "api_key": {
+        "title": "API key",
         "description": "Insight Platform API key (Organization key or User key with access to InsightVM)",
         "type": "string"
       }

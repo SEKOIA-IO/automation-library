@@ -1,3 +1,4 @@
+import re
 from collections.abc import Generator, Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -35,11 +36,18 @@ class ApiClient(requests.Session):
     # Pause applied when the rate limit persists after the retries, capped to MAX_RATE_LIMIT_WAIT.
     DEFAULT_RATE_LIMIT_WAIT: float = 300.0
     MAX_RATE_LIMIT_WAIT: float = 3600.0
+    # Pages tolerated beyond the announced totalPages before the traversal is considered stuck.
+    EXTRA_PAGES: int = 10
+    REGION_PATTERN = re.compile(r"[a-z0-9]+")
 
-    def __init__(self, region: str, api_key: str, nb_retries: int = 5):
+    def __init__(self, region: str, api_key: str, nb_retries: int = 5, timeout: tuple[int, int] | None = None) -> None:
         super().__init__()
 
         self.region = region.strip().lower()
+        # The region is part of the host name: refuse anything that would change the host.
+        if not self.REGION_PATTERN.fullmatch(self.region):
+            raise ValueError(f"Invalid region {region!r}: expected the prefix of <region>.api.insight.rapid7.com")
+        self.timeout = timeout or self.TIMEOUT
         self.base_url = f"https://{self.region}.api.insight.rapid7.com/vm/v4/integration"
         self.verify = True
         self.headers.update(
@@ -55,7 +63,8 @@ class ApiClient(requests.Session):
             max_retries=Retry(
                 total=nb_retries,
                 backoff_factor=1,
-                status_forcelist=[429, 500, 502, 503, 504],
+                # 429 is not retried here: raise_for_status turns it into AssetConnectorRateLimitError.
+                status_forcelist=[500, 502, 503, 504],
                 allowed_methods=frozenset({"GET", "POST"}),
                 respect_retry_after_header=False,
                 # Return the last response once the retries are exhausted, so its status is readable.
@@ -65,11 +74,11 @@ class ApiClient(requests.Session):
         self.mount("https://", adapter)
 
     @classmethod
-    def from_configuration(cls, configuration: Any) -> "ApiClient":
+    def from_configuration(cls, configuration: Any, **kwargs: Any) -> "ApiClient":
         """Build the client from the module configuration (``region``, ``api_key``)."""
         if not isinstance(configuration, Mapping):
             raise TypeError(f"Expected the module configuration as a mapping, got {type(configuration).__name__}")
-        return cls(region=str(configuration["region"]), api_key=str(configuration["api_key"]))
+        return cls(region=str(configuration["region"]), api_key=str(configuration["api_key"]), **kwargs)
 
     def url(self, path: str) -> str:
         return f"{self.base_url}{path}"
@@ -95,7 +104,7 @@ class ApiClient(requests.Session):
         return f"{error} - {detail}" if detail else str(error)
 
     def _search(self, path: str, params: dict[str, Any], body: dict[str, Any]) -> dict[str, Any]:
-        response = self.post(self.url(path), params=params, json=body, timeout=self.TIMEOUT)
+        response = self.post(self.url(path), params=params, json=body, timeout=self.timeout)
         self.raise_for_status(response)
         return response.json()
 
@@ -111,6 +120,18 @@ class ApiClient(requests.Session):
             return True, metadata.cursor
         cursor = parse_qs(urlparse(next_link.href or "").query).get("cursor")
         return True, cursor[0] if cursor else None
+
+    @classmethod
+    def check_progress(cls, endpoint: str, page: int, data: list[Any], metadata: Rapid7PageMetadata) -> bool:
+        """Whether to request the page after ``page``: stop after an empty last page, fail far past the last."""
+        total_pages = metadata.totalPages
+        if not data and total_pages is not None and page >= total_pages - 1:
+            return False
+        if total_pages is not None and page + 1 >= total_pages + cls.EXTRA_PAGES:
+            raise RuntimeError(
+                f"The {endpoint} pages do not end: page {page + 1} requested, {total_pages} pages announced"
+            )
+        return True
 
     @staticmethod
     def id_filter(vuln_ids: list[str]) -> str:
@@ -138,6 +159,8 @@ class ApiClient(requests.Session):
                 "currentTime": current_time,
                 "comparisonTime": comparison_time,
                 "includeSame": "true",
+                # Not mapped, and returned by default: left out to reduce the payload.
+                "includeUniqueIdentifiers": "false",
             }
             if page:
                 params["page"] = page
@@ -154,6 +177,8 @@ class ApiClient(requests.Session):
                 return
             if next_cursor is not None and next_cursor == cursor:
                 raise RuntimeError(f"The asset pages do not advance: cursor {cursor!r} returned again")
+            if not self.check_progress("asset", page, data, metadata):
+                return
             page, cursor = page + 1, next_cursor
 
     def search_vulnerabilities(self, vuln_ids: list[str]) -> Generator[Any, None, None]:
@@ -164,6 +189,7 @@ class ApiClient(requests.Session):
         while True:
             content = self._search(self.VULNERABILITIES_ENDPOINT, params, body)
             data = content.get("data") or []
+            metadata = Rapid7PageMetadata.model_validate(content.get("metadata") or {})
             yield from data
 
             has_next, next_cursor = self.next_cursor(content)
@@ -171,6 +197,8 @@ class ApiClient(requests.Session):
                 return
             if next_cursor is not None and next_cursor == params.get("cursor"):
                 raise RuntimeError(f"The vulnerability pages do not advance: cursor {next_cursor!r} returned again")
+            if not self.check_progress("vulnerability", page, data, metadata):
+                return
             cursor = next_cursor
             page += 1
             params = {"size": len(vuln_ids), "page": page}

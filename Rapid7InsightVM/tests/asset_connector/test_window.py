@@ -28,6 +28,28 @@ def test_too_short_window_is_skipped():
     assert Window.next_from("2026-10-28T09:00:00Z", NOW) is not None
 
 
+def test_full_resync_only_applies_after_a_first_run():
+    assert Window.next_from("2026-10-27T11:00:00Z", NOW, full_resync=True).full_resync is True
+    assert Window.next_from(None, NOW, full_resync=True).full_resync is False
+
+
+def test_window_stored_before_the_new_fields_is_read_with_their_defaults():
+    stored = {
+        "comparison_time": "2026-10-27T11:00:00Z",
+        "current_time": "2026-10-28T11:00:00Z",
+        "page": 3,
+        "cursor": "c",
+    }
+    window = Window.model_validate(stored)
+    assert (window.page, window.cursor, window.full_resync, window.short_attempts) == (3, "c", False, 0)
+
+
+def test_retry_restarts_the_window_and_counts_the_attempt():
+    window = Window(current_time="2026-10-28T11:00:00Z", page=3, cursor="c", full_resync=True)
+    retried = window.retry().retry()
+    assert (retried.page, retried.cursor, retried.short_attempts, retried.full_resync) == (0, None, 2, True)
+
+
 def test_invalid_comparison_time_starts_a_first_run():
     assert Window.next_from("garbage", NOW).first_run is True
 
@@ -39,6 +61,8 @@ def test_window_is_validated_when_built():
         "comparison_time": None,
         "page": 2,
         "cursor": "next",
+        "full_resync": False,
+        "short_attempts": 0,
     }
     with pytest.raises(ValidationError):
         window.at_page(-1, None)

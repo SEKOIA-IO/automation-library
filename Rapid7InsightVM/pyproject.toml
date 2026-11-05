@@ -30,6 +30,7 @@ exclude = ["tests/*", "main.py"]
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 python-dateutil = "^2.8.2"
+tldextract = "^5.1.0"
 
 [tool.poetry.dependencies.sekoia-automation-sdk]
 extras = ["all"]
@@ -43,6 +44,8 @@ mypy = "*"
 isort = "*"
 black = "*"
 types-python-dateutil = "*"
+pyyaml = "*"
+types-PyYAML = "*"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -58,7 +61,7 @@ addopts = """
     --cov=rapid7_insightvm
     --cov-branch
     --cov-report=term-missing:skip-covered
-    --cov-fail-under=5
+    --cov-fail-under=90
     -ra
 """
 

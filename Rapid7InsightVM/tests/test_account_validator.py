@@ -119,3 +119,29 @@ def test_validate_request_failures(validator, exception, expected):
     assert expected in message
     if isinstance(exception, requests.ConnectionError):
         assert "check the region (eu)" in message
+
+
+def test_validator_client_fails_fast(validator):
+    """M6: one retry and short timeouts."""
+    assert validator.client.get_adapter(BASE_URL).max_retries.total == 1
+    assert validator.client.timeout == (5, 30)
+
+
+def test_validate_missing_api_key(validator, requests_mock):
+    """M9: an invalid configuration fails the validation instead of raising."""
+    # Bypasses the manifest check of the setter, as a configuration file missing the key would
+    validator.module._configuration = {"region": "eu"}
+
+    assert validator.validate() is False
+
+    assert error_message(validator) == "Invalid configuration: missing 'api_key'"
+    assert not requests_mock.called
+
+
+def test_validate_invalid_region(validator, requests_mock):
+    validator.module.configuration = {"region": "eu.example.com/", "api_key": "fake_api_key"}
+
+    assert validator.validate() is False
+
+    assert error_message(validator).startswith("Invalid configuration: Invalid region")
+    assert not requests_mock.called

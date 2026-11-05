@@ -20,10 +20,43 @@ def delta(new=(), same=(), remediated=()) -> activity.VulnerabilityDelta:
         ("EXCEPTION_VULN_EXPL", False),
         ("NOT_VULNERABLE", False),
         (None, False),
+        # C3: an unknown status starting with VULNERABLE is open
+        ("VULNERABLE_NEW_KIND", True),
     ],
 )
 def test_is_vulnerable(status, expected):
     assert activity.is_vulnerable(status) is expected
+
+
+def test_unknown_open_status():
+    assert activity.is_unknown_open_status("vulnerable_new_kind") is True
+    assert activity.is_unknown_open_status("VULNERABLE_EXPL") is False
+    assert activity.is_unknown_open_status("SKIPPED_DOS") is False
+
+
+@pytest.mark.parametrize(
+    "statuses, expected",
+    [
+        ([], None),
+        (["VULNERABLE_EXPL"], activity.State.OPEN),
+        # open if any instance is open
+        (["VULNERABLE_EXPL", "SKIPPED_DOS"], activity.State.OPEN),
+        (["UNKNOWN", "VULNERABLE_NEW_KIND"], activity.State.OPEN),
+        # closed only if every instance is closing
+        (["NOT_VULNERABLE"], activity.State.CLOSED),
+        (["EXCEPTION_VULN_EXPL", "SUPERSEDED", "NOT_VULN_DONT_STORE", "OVERRIDDEN_VULN_VERS"], activity.State.CLOSED),
+        # otherwise inconclusive (check skipped or failed, or unrecognised)
+        (["NOT_VULNERABLE", "SKIPPED_DOS"], activity.State.INCONCLUSIVE),
+        (["UNEXPECTED_ERR"], activity.State.INCONCLUSIVE),
+        (["SKIPPED_VERS"], activity.State.INCONCLUSIVE),
+        (["SKIPPED_DISABLED"], activity.State.INCONCLUSIVE),
+        (["UNKNOWN"], activity.State.INCONCLUSIVE),
+        (["SOMETHING_NEW"], activity.State.INCONCLUSIVE),
+        ([None], activity.State.INCONCLUSIVE),
+    ],
+)
+def test_state_of(statuses, expected):
+    assert activity.state_of([finding(status=status) for status in statuses]) is expected
 
 
 @pytest.mark.parametrize(
@@ -58,6 +91,16 @@ def test_is_vulnerable(status, expected):
         (False, {"new": [{"status": "EXCEPTION_VULN_POTL"}]}, None),
         # same outside the first run -> nothing
         (False, {"same": [{}]}, None),
+        # inconclusive now: a skipped check in same is not a Close
+        (False, {"same": [{"status": "SKIPPED_DOS"}], "remediated": [{}]}, None),
+        # inconclusive now: a failed check in new is not a Create, nor a Close
+        (False, {"new": [{"status": "UNEXPECTED_ERR"}]}, None),
+        (False, {"new": [{"status": "UNEXPECTED_ERR"}], "remediated": [{}]}, None),
+        (True, {"same": [{"status": "UNEXPECTED_ERR"}]}, None),
+        # an exception closes
+        (False, {"new": [{"status": "EXCEPTION_VULN_EXPL"}], "remediated": [{}]}, activity.CLOSE),
+        # one open instance plus one skipped: still open, no event
+        (False, {"same": [{"port": 22}, {"port": 443, "status": "SKIPPED_DOS"}], "remediated": [{"port": 443}]}, None),
     ],
 )
 def test_detect_change(first_run, buckets, expected):
@@ -67,6 +110,26 @@ def test_detect_change(first_run, buckets, expected):
     else:
         assert decision[0] == expected
         assert all(activity.is_vulnerable(item.status) for item in decision[1])
+
+
+@pytest.mark.parametrize(
+    "buckets, expected",
+    [
+        # M1: still open and unchanged -> re-emitted as Update
+        ({"same": [{}]}, activity.UPDATE),
+        ({"same": [{"port": 8443}], "remediated": [{"port": 443}]}, activity.UPDATE),
+        # Closes, Creates and status changes as usual
+        ({"remediated": [{}]}, activity.CLOSE),
+        ({"new": [{}]}, activity.CREATE),
+        ({"new": [{"status": "VULNERABLE_EXPL"}], "remediated": [{"status": "VULNERABLE_VERS"}]}, activity.UPDATE),
+        # not open: nothing to re-emit
+        ({"same": [{"status": "NOT_VULNERABLE"}]}, None),
+        ({"same": [{"status": "SKIPPED_DOS"}]}, None),
+    ],
+)
+def test_detect_change_full_resync(buckets, expected):
+    decision = activity.detect_change(delta(**buckets), first_run=False, full_resync=True)
+    assert (decision[0] if decision else None) == expected
 
 
 def test_detect_change_close_uses_the_remediated_findings():
