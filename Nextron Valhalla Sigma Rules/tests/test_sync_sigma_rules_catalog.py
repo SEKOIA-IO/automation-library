@@ -3,8 +3,10 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from sekoia_automation.exceptions import ModuleConfigurationError, TriggerConfigurationError
 
 from nextron_valhalla_sigma_rules_modules.sekoia_client import (
+    SekoiaAPIError,
     SekoiaClient,
     SekoiaRuleNotFoundError,
 )
@@ -60,6 +62,11 @@ class FakeCatalog:
         }
         return uuid
 
+    def get(self, uuid):
+        if uuid not in self.rules:
+            raise SekoiaRuleNotFoundError("gone", status_code=404)
+        return dict(self.rules[uuid])
+
     def update(self, uuid, body):
         if uuid not in self.rules:
             raise SekoiaRuleNotFoundError("gone", status_code=404)
@@ -100,6 +107,7 @@ def trigger(data_storage, monkeypatch):
     # spec= makes a call to a method SekoiaClient doesn't define fail.
     t._sekoia = MagicMock(spec=SekoiaClient)
     t._sekoia.create_rule.side_effect = catalog.create
+    t._sekoia.get_rule.side_effect = catalog.get
     t._sekoia.update_rule.side_effect = catalog.update
     t._sekoia.disable_rule.side_effect = catalog.disable
     t._sekoia.enable_rule.side_effect = catalog.enable
@@ -350,8 +358,9 @@ def test_catalog_scan_error_aborts_sync(trigger):
 
 
 def test_rule_deleted_in_catalog_is_recreated(trigger, data_storage):
-    """A mapped UUID absent from the catalog scan is stale (the rule was
-    deleted in Sekoia): drop it and create the rule again, no PUT."""
+    """A mapped UUID absent from the catalog scan and answering 404 is stale
+    (the rule was deleted in Sekoia): drop it and create the rule again, no
+    PUT."""
     trigger._sync_once()
     trigger.catalog.rules.clear()  # user deleted both rules in the UI
     trigger._sekoia.create_rule.reset_mock()
@@ -384,8 +393,6 @@ def test_update_404_race_falls_back_to_create(trigger):
 def test_update_403_counts_as_failed_not_stale(trigger, data_storage):
     """S1: a 403 on PUT is a failure — the mapping is kept and nothing is
     re-created (that would duplicate the rule on every run)."""
-    from nextron_valhalla_sigma_rules_modules.sekoia_client import SekoiaAPIError
-
     trigger._sync_once()
     before = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
     trigger._sekoia.create_rule.reset_mock()
@@ -398,6 +405,213 @@ def test_update_403_counts_as_failed_not_stale(trigger, data_storage):
     assert event["created"] == 0
     assert trigger._sekoia.create_rule.call_count == 0
     assert json.loads((Path(data_storage) / UUID_MAP_FILE).read_text()) == before
+
+
+# ---------------------------------------------------------------------------
+# Scan misses: a mapped rule absent from the scan is confirmed by GET
+# ---------------------------------------------------------------------------
+
+
+def _scan_returns_nothing(trigger):
+    """Simulate a scan gap: the rules exist, but the listing misses them."""
+    trigger._sekoia.iter_rules.side_effect = lambda **_: iter(())
+
+
+def test_scan_miss_of_existing_rule_updates_instead_of_duplicating(trigger, data_storage):
+    trigger._sync_once()
+    before = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
+    _scan_returns_nothing(trigger)
+    trigger._sekoia.create_rule.reset_mock()
+
+    trigger._sync_once()
+
+    assert trigger._sekoia.get_rule.call_count == 2
+    assert trigger._sekoia.create_rule.call_count == 0
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["updated"] == 2
+    assert event["created"] == 0
+    assert json.loads((Path(data_storage) / UUID_MAP_FILE).read_text()) == before
+
+
+def test_scan_miss_keeps_server_enabled_flag(trigger):
+    trigger._sync_once()
+    trigger.catalog.rules["sekoia-A"]["enabled"] = True
+    _scan_returns_nothing(trigger)
+
+    trigger._sync_once()
+
+    bodies = {c.args[0]: c.args[1] for c in trigger._sekoia.update_rule.call_args_list}
+    assert bodies["sekoia-A"]["enabled"] is True
+    assert bodies["sekoia-B"]["enabled"] is False
+
+
+def test_scan_miss_get_error_counts_as_failed_and_keeps_mapping(trigger, data_storage):
+    """S1: only a 404 means the rule is gone. A 403 on the confirming GET is
+    a failure; re-creating would duplicate the rule."""
+    trigger._sync_once()
+    before = json.loads((Path(data_storage) / UUID_MAP_FILE).read_text())
+    _scan_returns_nothing(trigger)
+    trigger._sekoia.get_rule.side_effect = SekoiaAPIError("HTTP 403", status_code=403)
+    trigger._sekoia.create_rule.reset_mock()
+
+    trigger._sync_once()
+
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["failed"] == 2
+    assert event["created"] == 0
+    assert trigger._sekoia.create_rule.call_count == 0
+    assert json.loads((Path(data_storage) / UUID_MAP_FILE).read_text()) == before
+
+
+def test_scan_miss_unexpected_get_body_counts_as_failed(trigger):
+    trigger._sync_once()
+    _scan_returns_nothing(trigger)
+    trigger._sekoia.get_rule.side_effect = None
+    trigger._sekoia.get_rule.return_value = ["not", "a", "rule"]
+    trigger._sekoia.create_rule.reset_mock()
+
+    trigger._sync_once()
+
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["failed"] == 2
+    assert trigger._sekoia.create_rule.call_count == 0
+
+
+def test_scan_miss_rule_in_other_community_is_not_ours(trigger, data_storage):
+    """S3: with ``community_uuid`` set, a rule found by GET in another
+    community is not touched; the rule is created in the configured one."""
+    trigger._community_uuid = "c-1"
+    trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[0]]
+    (Path(data_storage) / UUID_MAP_FILE).write_text(json.dumps({"valhalla-a": "elsewhere"}))
+    trigger.catalog.rules = {
+        "elsewhere": _catalog_rule("elsewhere", "nextron-valhalla", "uuid-valhalla-a", community="c-2"),
+    }
+
+    trigger._sync_once()
+
+    assert trigger._sekoia.get_rule.call_args.args == ("elsewhere",)
+    assert trigger._sekoia.update_rule.call_count == 0
+    assert trigger._sekoia.create_rule.call_args.args[0]["community_uuid"] == "c-1"
+
+
+def test_rule_without_marker_tag_is_updated_and_retagged(trigger):
+    """Removing the ``nextron-valhalla`` tag hides the rule from the scan,
+    but the mapped UUID is confirmed by GET: the rule is updated (which puts
+    the tag back) instead of being duplicated."""
+    trigger._sync_once()
+    for rule in trigger.catalog.rules.values():
+        rule["tags"] = [t for t in rule["tags"] if t["name"] != "nextron-valhalla"]
+    trigger._sekoia.create_rule.reset_mock()
+
+    trigger._sync_once()
+
+    assert trigger._sekoia.create_rule.call_count == 0
+    assert trigger._sekoia.update_rule.call_count == 2
+    for call in trigger._sekoia.update_rule.call_args_list:
+        assert "nextron-valhalla" in call.args[1]["tags"]
+
+
+def test_rules_found_by_scan_are_not_fetched_again(trigger):
+    trigger._sync_once()
+    trigger._sync_once()
+
+    assert trigger._sekoia.get_rule.call_count == 0
+
+
+def test_scan_ignores_a_rule_listed_twice(trigger):
+    """Offset paging over a changing list can return a rule twice; that is
+    not a duplicate marker."""
+    trigger._sync_once()
+    rule = dict(trigger.catalog.rules["sekoia-A"])
+    trigger._sekoia.iter_rules.side_effect = lambda **_: iter([rule, rule])
+    trigger._valhalla.get_sigma_feed.return_value = [SAMPLE_RULES[0]]
+    trigger.log = MagicMock()
+
+    trigger._sync_once()
+
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["duplicate_markers"] == 0
+    assert event["updated"] == 1
+    assert not [c for c in trigger.log.call_args_list if "Several catalog rules" in c.args[0]]
+
+
+# ---------------------------------------------------------------------------
+# Malformed rules must not abort the sync
+# ---------------------------------------------------------------------------
+
+
+def _explode_on_rule_a(monkeypatch):
+    """Make the conversion of rule A raise, as an unexpected field type in a
+    future feed rule would."""
+    from nextron_valhalla_sigma_rules_modules.triggers import sync_sigma_rules_catalog as sync_mod
+
+    real = sync_mod.convert_parsed_to_ecs
+
+    def convert(parsed):
+        if parsed.get("title") == "A":
+            raise TypeError("unexpected type")
+        return real(parsed)
+
+    monkeypatch.setattr(sync_mod, "convert_parsed_to_ecs", convert)
+
+
+def test_malformed_rule_is_skipped_and_sync_completes(trigger, monkeypatch):
+    _explode_on_rule_a(monkeypatch)
+    trigger.log = MagicMock()
+
+    trigger._sync_once()
+
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["created"] == 1
+    assert event["skipped_unmapped"] == 1
+    assert event["top_unmapped"] == {"<malformed>": 1}
+    warnings = [c for c in trigger.log.call_args_list if c.kwargs.get("level") == "warning"]
+    assert len(warnings) == 1
+    assert "valhalla-a" in warnings[0].args[0]
+
+
+def test_malformed_rule_is_not_a_disable_candidate(trigger, monkeypatch):
+    trigger._sync_once()
+    _enable_all(trigger)
+    trigger._disable_removed = True
+    _explode_on_rule_a(monkeypatch)
+
+    trigger._sync_once()
+
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["to_disable"] == 0
+    assert trigger._sekoia.disable_rule.call_count == 0
+
+
+@pytest.mark.parametrize(
+    "content, expected",
+    [
+        pytest.param(None, "skipped_unmapped", id="null-content"),
+        pytest.param(123, "skipped_unmapped", id="int-content"),
+        pytest.param(_rule_yaml("A").replace("level: medium", "level: 5"), "skipped_filter", id="int-level"),
+        pytest.param(
+            _rule_yaml("A").replace("status: stable", "status: [stable]"), "skipped_filter", id="list-status"
+        ),
+        pytest.param(_rule_yaml("A").replace("title: A", "title: 2024"), "created", id="int-title"),
+        pytest.param(_rule_yaml("A") + "tags: attack.execution\n", "created", id="string-tags"),
+        pytest.param(_rule_yaml("A") + "description: 42\nreferences: https://x\n", "created", id="scalar-text"),
+    ],
+)
+def test_unusual_field_types_do_not_abort_sync(trigger, content, expected):
+    trigger._valhalla.get_sigma_feed.return_value = [
+        {"id": "valhalla-a", "filename": "a.yml", "content": content},
+        SAMPLE_RULES[1],
+    ]
+
+    trigger._sync_once()
+
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["failed"] == 0
+    if expected == "created":
+        assert event["created"] == 2
+    else:
+        assert event[expected] == 1
+        assert event["created"] == 1  # rule B still goes through
 
 
 def test_rules_missing_level_are_filtered_out(trigger):
@@ -529,14 +743,14 @@ def test_sync_does_not_get_each_rule(trigger):
 def test_invalid_min_level_raises(trigger):
     trigger.configuration = {"min_sigma_level": "bogus"}
     trigger.module = MagicMock()
-    with pytest.raises(ValueError, match="min_sigma_level"):
+    with pytest.raises(TriggerConfigurationError, match="min_sigma_level"):
         trigger.run()
 
 
 def test_invalid_min_status_raises(trigger):
     trigger.configuration = {"min_sigma_status": "bogus"}
     trigger.module = MagicMock()
-    with pytest.raises(ValueError, match="min_sigma_status"):
+    with pytest.raises(TriggerConfigurationError, match="min_sigma_status"):
         trigger.run()
 
 
@@ -625,6 +839,85 @@ def test_run_logs_sync_errors_once_and_keeps_looping(monkeypatch, data_storage):
     assert t.log_exception.call_count == 1
 
 
+def _run_with_clock(monkeypatch, data_storage, outcomes, frequency=86400):
+    """Run the trigger loop with a fake clock that advances by each wait.
+    ``outcomes`` lists the sync results (an exception = failed sync); the
+    loop stops after the last one. Returns the waits."""
+    from nextron_valhalla_sigma_rules_modules.triggers import (
+        sync_sigma_rules_catalog as sync_mod,
+    )
+
+    monkeypatch.setattr(sync_mod, "ValhallaClient", MagicMock())
+    monkeypatch.setattr(sync_mod, "SekoiaClient", MagicMock())
+    monkeypatch.setattr(sync_mod.SyncSigmaRulesCatalog, "_validate_alert_types", lambda self: None)
+
+    t = SyncSigmaRulesCatalog(data_path=Path(data_storage))
+    t.module = MagicMock()
+    t.configuration = {"frequency": frequency}
+    t._sync_once = MagicMock(side_effect=outcomes)
+    t.log_exception = MagicMock()
+    clock = {"now": 1000.0}
+    waits: list[float] = []
+
+    def wait(delay):
+        waits.append(delay)
+        clock["now"] += delay
+        if len(waits) == len(outcomes):
+            t._stop_event.set()
+
+    monkeypatch.setattr(sync_mod.time, "monotonic", lambda: clock["now"])
+    monkeypatch.setattr(t._stop_event, "wait", wait)
+
+    t.run()
+    return waits
+
+
+def test_failed_sync_is_retried_at_most_twice_a_day(monkeypatch, data_storage):
+    """A failed sync is retried after 15 then 30 min; once two early
+    retries ran in the last 24 h, the next attempt waits ``frequency``."""
+    from nextron_valhalla_sigma_rules_modules.triggers.sync_sigma_rules_catalog import FAILURE_RETRY_DELAY
+
+    down = RuntimeError("feed down")
+    waits = _run_with_clock(monkeypatch, data_storage, [down, down, down, None])
+
+    assert waits == [FAILURE_RETRY_DELAY, 2 * FAILURE_RETRY_DELAY, 86400, 86400]
+
+
+def test_retries_are_allowed_again_after_24_hours(monkeypatch, data_storage):
+    from nextron_valhalla_sigma_rules_modules.triggers.sync_sigma_rules_catalog import FAILURE_RETRY_DELAY
+
+    down = RuntimeError("feed down")
+    waits = _run_with_clock(monkeypatch, data_storage, [down] * 6)
+
+    assert waits == [FAILURE_RETRY_DELAY, 2 * FAILURE_RETRY_DELAY, 86400] * 2
+
+
+def test_success_between_failures_does_not_reset_the_daily_cap(monkeypatch, data_storage):
+    """The cap counts retries in the last 24 h, not per failure streak:
+    with hourly syncs, a second outage the same day gets one retry left."""
+    from nextron_valhalla_sigma_rules_modules.triggers.sync_sigma_rules_catalog import FAILURE_RETRY_DELAY
+
+    down = RuntimeError("feed down")
+    waits = _run_with_clock(monkeypatch, data_storage, [down, None, down, down, down], frequency=3600)
+
+    assert waits == [FAILURE_RETRY_DELAY, 3600, 2 * FAILURE_RETRY_DELAY, 3600, 3600]
+
+
+@pytest.mark.parametrize(
+    "frequency, failed, recent_retries, expected",
+    [
+        (86400, False, 0, 86400),
+        (86400, True, 0, 900),
+        (86400, True, 1, 1800),
+        (86400, True, 2, 86400),
+        (3600, True, 0, 900),
+        (1200, True, 1, 1200),
+    ],
+)
+def test_next_delay(frequency, failed, recent_retries, expected):
+    assert SyncSigmaRulesCatalog._next_delay(frequency, failed, recent_retries) == expected
+
+
 def test_per_rule_loop_stops_when_trigger_stops(trigger):
     """S5: ``self.running`` is checked per rule; an interrupted run skips
     the disable pass."""
@@ -664,7 +957,7 @@ def test_validate_alert_types_fails_fast_on_missing_uuid(trigger):
     """S16: a hard-coded alert type unknown to the tenant fails at startup
     with a clear message instead of a 400 on every create."""
     trigger._sekoia = _alert_types_client(["something-else"])
-    with pytest.raises(ValueError, match="do not exist on this Sekoia tenant"):
+    with pytest.raises(ModuleConfigurationError, match="do not exist on this Sekoia tenant"):
         trigger._validate_alert_types()
 
 
@@ -1476,8 +1769,6 @@ def test_attack_lookups_are_cached_and_failures_tolerated(trigger):
 def test_attack_lookups_stop_after_permission_error(trigger):
     """A key without intelligence read access gets one warning, not one per
     technique, and the sync continues without refs."""
-    from nextron_valhalla_sigma_rules_modules.sekoia_client import SekoiaAPIError
-
     rules = [
         {"id": f"v-{i}", "filename": f"{i}.yml", "content": _rule_yaml(f"T{i}") + f"tags:\n  - attack.t10{i}0\n"}
         for i in range(5)

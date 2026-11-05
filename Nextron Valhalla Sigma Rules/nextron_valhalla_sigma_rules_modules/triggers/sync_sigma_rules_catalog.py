@@ -1,9 +1,11 @@
 import re
+import time
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import cast
 
 import yaml
+from sekoia_automation.exceptions import ModuleConfigurationError, TriggerConfigurationError
 from sekoia_automation.storage import PersistentJSON
 from sekoia_automation.trigger import Trigger
 
@@ -42,6 +44,13 @@ DEFAULT_MIN_STATUS = "stable"
 # consecutive syncs it is accepted as the new normal.
 MAX_FEED_SHRINK_RATIO = 0.2
 FEED_SHRINK_CONFIRM_RUNS = 3
+
+# After a failed sync, retry sooner than ``frequency``: after 15 min, then
+# after 30 min. At most MAX_RETRIES_PER_DAY such early retries run within
+# any 24 h; once they are used up, the next attempt waits ``frequency``.
+FAILURE_RETRY_DELAY = 900
+MAX_RETRIES_PER_DAY = 2
+RETRY_WINDOW = 86400
 
 _ATTACK_TECHNIQUE_TAG = re.compile(r"^attack\.(t\d{4}(?:\.\d{3})?)$", re.IGNORECASE)
 
@@ -103,10 +112,13 @@ class SyncSigmaRulesCatalog(Trigger):
         args: dict = self.configuration if isinstance(self.configuration, dict) else {}
         min_level = args.get("min_sigma_level", DEFAULT_MIN_LEVEL)
         min_status = args.get("min_sigma_status", DEFAULT_MIN_STATUS)
+        # Configuration errors use the SDK's exception types: it reports them
+        # as critical and waits between restarts. Any other exception from
+        # ``run()`` makes the SDK call it again immediately.
         if min_level not in SEVERITY_MAP:
-            raise ValueError(f"min_sigma_level={min_level!r} is not one of {sorted(SEVERITY_MAP)}")
+            raise TriggerConfigurationError(f"min_sigma_level={min_level!r} is not one of {sorted(SEVERITY_MAP)}")
         if min_status not in STATUS_RANK:
-            raise ValueError(f"min_sigma_status={min_status!r} is not one of {sorted(STATUS_RANK)}")
+            raise TriggerConfigurationError(f"min_sigma_status={min_status!r} is not one of {sorted(STATUS_RANK)}")
         self._min_severity = SEVERITY_MAP[min_level]
         self._min_status_rank = STATUS_RANK[min_status]
         self._enabled = args.get("enabled", False)
@@ -124,12 +136,30 @@ class SyncSigmaRulesCatalog(Trigger):
         # the stop-event so SIGINT/SIGTERM from Sekoia's playbook runner
         # unblocks us within the same tick instead of hanging on the next
         # sleep interval.
+        retry_times: list[float] = []  # when the early retries of the last 24 h run
         while self.running:
             try:
                 self._sync_once()
+                failed = False
             except Exception as exc:
+                failed = True
                 self.log_exception(exc, message="Failed to sync Valhalla Sigma to Rules Catalog")
-            self._stop_event.wait(frequency)
+            now = time.monotonic()
+            retry_times = [t for t in retry_times if now - t < RETRY_WINDOW]
+            delay = self._next_delay(frequency, failed, len(retry_times))
+            if delay < frequency:
+                retry_times.append(now + delay)
+            self._stop_event.wait(delay)
+
+    @staticmethod
+    def _next_delay(frequency: int, failed: bool, recent_retries: int) -> int:
+        """``frequency`` after a successful sync or once
+        ``MAX_RETRIES_PER_DAY`` early retries ran in the last 24 h;
+        otherwise ``FAILURE_RETRY_DELAY`` doubled per recent retry, capped at
+        ``frequency``."""
+        if not failed or recent_retries >= MAX_RETRIES_PER_DAY:
+            return frequency
+        return min(frequency, FAILURE_RETRY_DELAY * 2**recent_retries)
 
     # ------------------------------------------------------------------
     # Startup checks
@@ -149,7 +179,7 @@ class SyncSigmaRulesCatalog(Trigger):
             return
         missing = sorted(required - known)
         if missing:
-            raise ValueError(
+            raise ModuleConfigurationError(
                 f"Alert type UUID(s) {missing} used by the Sigma→catalog mapping do not exist on this "
                 f"Sekoia tenant. Rules cannot be created until they are available."
             )
@@ -162,8 +192,8 @@ class SyncSigmaRulesCatalog(Trigger):
         """Return True when the rule's Sigma ``level`` and ``status``
         both exist and meet the configured minimums. Rules missing
         either field are always filtered out."""
-        level = (parsed.get("level") or "").lower()
-        status = (parsed.get("status") or "").lower()
+        level = str(parsed.get("level") or "").lower()
+        status = str(parsed.get("status") or "").lower()
         level_score = SEVERITY_MAP.get(level)
         status_rank = STATUS_RANK.get(status)
         if level_score is None or status_rank is None:
@@ -180,6 +210,37 @@ class SyncSigmaRulesCatalog(Trigger):
             return True
         return bool(rule_tag_names(server_rule) & self._preserve_rule_names)
 
+    def _build_body(self, rule: dict, parsed: dict) -> dict:
+        """Catalog body for one ECS-converted rule, plus the fields that need
+        the module configuration or API lookups."""
+        body = sigma_rule_to_catalog_payload(rule, parsed, self._enabled)
+        if self._community_uuid:
+            body["community_uuid"] = self._community_uuid
+        refs = self._attack_refs(parsed.get("tags"))
+        if refs:
+            body["related_object_refs"] = refs
+        return body
+
+    def _confirm_missing_rule(self, sekoia_uuid: str) -> dict | None:
+        """Look up a mapped rule the catalog scan did not return.
+
+        The scan can miss a rule that still exists (the listing changed
+        while it was paged through, or the user removed the marker tag), so
+        a miss alone must not trigger a re-create, which would duplicate
+        the rule. Returns the rule, or ``None`` when it is gone (HTTP 404) or
+        belongs to another community than the configured one. Any other
+        error propagates and the rule counts as failed for this run.
+        """
+        try:
+            server_rule = self._sekoia.get_rule(sekoia_uuid)
+        except SekoiaRuleNotFoundError:
+            return None
+        if not isinstance(server_rule, dict):
+            raise SekoiaAPIError(f"GET rule {sekoia_uuid} returned an unexpected body: {server_rule!r}"[:500])
+        if self._community_uuid and server_rule.get("community_uuid") not in (None, self._community_uuid):
+            return None
+        return server_rule
+
     def _sync_once(self) -> None:
         # Errors (feed fetch, catalog scan) propagate to ``run()``, which logs
         # them once. A scan failure aborts the sync: continuing on a partial
@@ -194,6 +255,7 @@ class SyncSigmaRulesCatalog(Trigger):
         interrupted = False
         unmapped_field_counter: Counter[str] = Counter()
         first_failure_logged = False
+        first_malformed_logged = False
         seen_in_feed: set[str] = set()
         passed_filter: set[str] = set()
         unparsed: set[str] = set()
@@ -208,9 +270,9 @@ class SyncSigmaRulesCatalog(Trigger):
                     continue
                 seen_in_feed.add(valhalla_id)
 
-                content = rule.get("content", "")
+                content = rule.get("content")
                 try:
-                    parsed_rule = yaml.safe_load(content)
+                    parsed_rule = yaml.safe_load(content) if isinstance(content, str) else None
                 except yaml.YAMLError:
                     parsed_rule = None
                 if not isinstance(parsed_rule, dict):
@@ -219,29 +281,46 @@ class SyncSigmaRulesCatalog(Trigger):
                     unmapped_field_counter["<yaml-parse-error>"] += 1
                     continue
 
-                if not self._rule_passes_filter(parsed_rule):
+                # One rule with unexpected field types must not abort the
+                # whole sync: it is skipped and, like an unparsable rule,
+                # kept out of the disable and re-enable passes.
+                try:
+                    passes = self._rule_passes_filter(parsed_rule)
+                    parsed, unmapped = convert_parsed_to_ecs(parsed_rule) if passes else (None, [])
+                    body = self._build_body(rule, parsed) if parsed is not None else None
+                except Exception as exc:
+                    unparsed.add(valhalla_id)
+                    skipped_unmapped += 1
+                    unmapped_field_counter["<malformed>"] += 1
+                    if not first_malformed_logged:
+                        self.log(
+                            f"Skipped malformed rule id={valhalla_id} (subsequent ones counted under "
+                            f"'<malformed>' but not individually logged). Error: {exc!r}",
+                            level="warning",
+                        )
+                        first_malformed_logged = True
+                    continue
+
+                if not passes:
                     filtered_out += 1
                     continue
                 passed_filter.add(valhalla_id)
 
-                parsed, unmapped = convert_parsed_to_ecs(parsed_rule)
-                if parsed is None:
+                if body is None:
                     skipped_unmapped += 1
                     for f in unmapped:
                         unmapped_field_counter[f] += 1
                     continue
 
-                body = sigma_rule_to_catalog_payload(rule, parsed, self._enabled)
-                if self._community_uuid:
-                    body["community_uuid"] = self._community_uuid
-                refs = self._attack_refs(parsed.get("tags"))
-                if refs:
-                    body["related_object_refs"] = refs
                 try:
                     sekoia_uuid = id_map.get(valhalla_id)
                     server_rule = scan.rules_by_uuid.get(sekoia_uuid) if sekoia_uuid else None
+                    if server_rule is None and sekoia_uuid:
+                        server_rule = self._confirm_missing_rule(sekoia_uuid)
+                        if server_rule is not None:
+                            scan.rules_by_uuid[sekoia_uuid] = server_rule
                     if server_rule is None:
-                        # Never synced, or the mapped rule is no longer in the
+                        # Never synced, or the mapped rule is gone from the
                         # catalog (deleted in Sekoia) — create it.
                         if sekoia_uuid:
                             del id_map[valhalla_id]
@@ -383,8 +462,10 @@ class SyncSigmaRulesCatalog(Trigger):
             if rule.get("community_uuid"):
                 communities.add(rule["community_uuid"])
             vid = _extract_valhalla_id(rule)
-            if vid:
-                uuids_by_vid.setdefault(vid, []).append(sekoia_uuid)
+            uuids = uuids_by_vid.setdefault(vid, []) if vid else None
+            # Offset paging over a changing list can return a rule twice.
+            if uuids is not None and sekoia_uuid not in uuids:
+                uuids.append(sekoia_uuid)
 
         if not self._community_uuid and len(communities) > 1:
             raise RuntimeError(

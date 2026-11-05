@@ -400,6 +400,16 @@ def convert_payload_to_ecs(
     return convert_parsed_to_ecs(parsed, mapping)
 
 
+def _as_list(value) -> list:
+    """A Sigma list field as a list: a lone string becomes one item, any
+    other non-list value an empty list."""
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        return [value]
+    return []
+
+
 def sigma_rule_to_catalog_payload(
     rule: dict,
     parsed: dict,
@@ -426,20 +436,21 @@ def sigma_rule_to_catalog_payload(
     otherwise a user who flipped a rule off in the catalog will be
     silently re-enabled on the next sync.
     """
-    title = parsed.get("title") or rule.get("name") or rule.get("filename") or "unnamed"
+    # YAML may type scalars as int/date/list, so text fields are coerced.
+    title = str(parsed.get("title") or rule.get("name") or rule.get("filename") or "unnamed")
     if len(title) > MAX_NAME_LENGTH:
         title = title[: MAX_NAME_LENGTH - len(_TRUNCATION_MARKER)] + _TRUNCATION_MARKER
 
-    description = parsed.get("description") or rule.get("description") or ""
+    description = str(parsed.get("description") or rule.get("description") or "")
     # ``references`` is read-only in the Rules Catalog API; keep the Sigma
     # references visible by appending them to the description.
-    references = [str(r) for r in parsed.get("references") or [] if r]
+    references = [str(r) for r in _as_list(parsed.get("references")) if r]
     if references:
         description = (description + "\n\nReferences:\n" + "\n".join(f"- {r}" for r in references)).strip()
     if len(description) > MAX_DESCRIPTION_LENGTH:
         description = description[: MAX_DESCRIPTION_LENGTH - len(_TRUNCATION_MARKER)] + _TRUNCATION_MARKER
 
-    level = (parsed.get("level") or rule.get("level") or "").lower()
+    level = str(parsed.get("level") or rule.get("level") or "").lower()
     severity = SEVERITY_MAP.get(level, DEFAULT_SEVERITY)
 
     status = str(parsed.get("status") or "").strip().lower()
@@ -458,7 +469,7 @@ def sigma_rule_to_catalog_payload(
     # rules created by this integration independently of the Sekoia API key
     # that created them (``created_by`` changes on key rotation; a tag does
     # not).
-    tags = list(parsed.get("tags") or [])
+    tags = [t for t in _as_list(parsed.get("tags")) if isinstance(t, str)]
     if MARKER_TAG not in tags:
         tags.append(MARKER_TAG)
     valhalla_id = rule.get("id")

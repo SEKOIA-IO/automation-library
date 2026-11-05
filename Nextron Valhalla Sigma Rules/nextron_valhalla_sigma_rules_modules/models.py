@@ -26,6 +26,16 @@ class NextronValhallaSigmaRulesModuleConfiguration(BaseModel):
             raise ValueError(f"{info.field_name} must not be empty — set it in the module configuration.")
         return stripped
 
+    @field_validator("sekoia_base_url")
+    @classmethod
+    def _require_https(cls, value: str) -> str:
+        """The bearer token goes in every request header; never send it over
+        plain HTTP. Checked here (not only in ``SekoiaClient``) so the SDK
+        reports a module configuration error before the trigger starts."""
+        if not value.lower().startswith("https://"):
+            raise ValueError(f"sekoia_base_url must use https:// (got {value!r})")
+        return value
+
     @field_validator("community_uuid")
     @classmethod
     def _blank_community_is_none(cls, value: str | None) -> str | None:

@@ -24,9 +24,9 @@ Rules whose fields can't be mapped to an ECS field Sekoia actually emits are ski
 
 ## How a sync works
 
-1. Fetch the Valhalla feed. A malformed response fails the run (it is never treated as an empty feed).
-2. List every catalog rule tagged `nextron-valhalla` (one paginated scan, scoped to `community_uuid` if set). Each synced rule also carries a `uuid-<valhalla_id>` tag, so the scan rebuilds the Valhalla → Sekoia mapping from the catalog itself — a new playbook or a re-created trigger picks up existing rules instead of creating duplicates. If the scan fails, the run aborts.
-3. Keep rules that meet `min_sigma_level` / `min_sigma_status` and convert them to ECS.
+1. Fetch the Valhalla feed; transient errors (timeouts, HTTP 429/5xx) are retried. A malformed response fails the run (it is never treated as an empty feed). After a failed run the trigger tries again after 15 minutes, then after 30 more minutes; at most 2 such early retries run within 24 hours, after that it waits the normal `frequency`.
+2. List every catalog rule tagged `nextron-valhalla` (one paginated scan, scoped to `community_uuid` if set). Each synced rule also carries a `uuid-<valhalla_id>` tag, so the scan rebuilds the Valhalla → Sekoia mapping from the catalog itself — a new playbook or a re-created trigger picks up existing rules instead of creating duplicates. If the scan fails, the run aborts. A known rule missing from the scan is looked up directly and only re-created if Sekoia answers 404, so a listing that misses a rule never duplicates it.
+3. Keep rules that meet `min_sigma_level` / `min_sigma_status` and convert them to ECS. A rule with unexpected field types is skipped and counted under `<malformed>` in `top_unmapped`; it doesn't stop the run.
 4. Create rules that aren't in the catalog yet (with `enabled` as configured); update the others in place, keeping each rule's current `enabled` state. Rules listed in `preserve_rule_names` are not updated.
 5. Re-enable: rules the disable pass switched off earlier are enabled again once they are back in the feed and meet the thresholds. Rules you disabled yourself are never touched.
 6. Disable pass (`disable_removed`): rules that left the feed or fell below the thresholds are disabled through the dedicated disable endpoint — never deleted.
@@ -72,10 +72,10 @@ The Valhalla API URL is hardcoded to `https://valhalla.nextron-systems.com`.
 
 - **Customisations of synced rules are overwritten.** Each update replaces the rule with the Valhalla version (only `enabled` is kept). This includes settings made in the Sekoia UI such as entities, assets, parameters or event fields. To keep a customised rule, add it to `preserve_rule_names`; it then no longer receives Valhalla updates, but `disable_removed` still applies to it.
 - **Re-enabling only covers the integration's own disables.** The trigger remembers which rules its disable pass switched off and re-enables them when they return. A rule you disabled yourself stays disabled. The record is kept per trigger configuration: modifying that configuration keeps it, but rules disabled under one configuration stay disabled if you switch to a new configuration or delete it. Enable them in the UI (filter the catalog by the `nextron-valhalla` tag to find them).
-- **Disable-pass safety.** The disable pass is skipped when the feed is empty, or when it shrank by more than 20% compared to the last accepted size (e.g. a truncated response, or the key switched to the demo key). A smaller feed is only accepted once it persisted for 3 consecutive syncs. Rules whose YAML failed to parse in a run are never disabled in that run.
+- **Disable-pass safety.** The disable pass is skipped when the feed is empty, or when it shrank by more than 20% compared to the last accepted size (e.g. a truncated response, or the key switched to the demo key). A smaller feed is only accepted once it persisted for 3 consecutive syncs. Rules whose YAML failed to parse or that were skipped as malformed in a run are never disabled in that run.
 - **Use `disable_removed=true` on one trigger per community only.** The disable pass acts on every rule the integration imported into the community. A second trigger with stricter thresholds would disable rules imported by the first one.
 - **Concurrent first syncs can duplicate rules.** Two triggers starting at the same moment both see an empty catalog and both create the rules. Later syncs log the copies under `duplicate_markers`; delete them in the UI.
-- **Removing the `nextron-valhalla` tag makes the sync re-create the rule.** The scan only sees rules carrying the marker tag, so an untagged rule is treated as missing and a new copy is created.
+- **Removing the `nextron-valhalla` tag doesn't detach a rule.** The trigger still knows the rule and looks it up directly; the next update puts the tag back. To stop updates, use `preserve_rule_names`.
 - **Duplicating an imported rule copies its `uuid-*` tag.** The rule already known to the trigger keeps being updated; the copy is ignored and logged.
 
 ## Conversion notes
@@ -94,7 +94,7 @@ main.py                                        # entry point; registers the sync
 manifest.json                                  # module manifest (version, config schema, secrets)
 trigger_sync_sigma_rules_catalog.json          # sync trigger manifest
 nextron_valhalla_sigma_rules_modules/
-  client.py                                    # Valhalla HTTP client
+  client.py                                    # Valhalla HTTP client (retries)
   sekoia_client.py                             # Sekoia Rules Catalog HTTP client (pooled session + retries)
   sigma_mapper.py                              # Sigma YAML → Sekoia catalog payload conversion
   ecs_field_maps.py                            # Sigma field name → ECS field name tables

@@ -57,6 +57,19 @@ def test_blank_sekoia_base_url_is_rejected(value):
         ModuleConfig(sekoia_api_key=A_KEY, sekoia_base_url=value)
 
 
+@pytest.mark.parametrize("value", ["http://api.sekoia.io", "api.sekoia.io", "ftp://x"])
+def test_non_https_sekoia_base_url_is_rejected(value):
+    """The bearer token must never go over plain HTTP; rejecting it here
+    makes the SDK report a module configuration error."""
+    with pytest.raises(ValidationError, match="https://"):
+        ModuleConfig(sekoia_api_key=A_KEY, sekoia_base_url=value)
+
+
+def test_uppercase_https_scheme_is_accepted():
+    cfg = ModuleConfig(sekoia_api_key=A_KEY, sekoia_base_url="HTTPS://api.sekoia.io")
+    assert cfg.sekoia_base_url == "HTTPS://api.sekoia.io"
+
+
 def test_surrounding_whitespace_is_stripped():
     """Keys and URLs get copy-pasted; a trailing newline on the key would
     otherwise land inside the Authorization header."""
@@ -92,6 +105,10 @@ def test_manifest_marks_sekoia_api_key_required():
         ),
         pytest.param({"sekoia_api_key": ""}, id="key-blank-caught-by-validator"),
         pytest.param({"sekoia_api_key": "   "}, id="key-whitespace-caught-by-validator"),
+        pytest.param(
+            {"sekoia_api_key": A_KEY, "sekoia_base_url": "http://api.sekoia.io"},
+            id="plain-http-base-url-caught-by-validator",
+        ),
     ],
 )
 def test_module_rejects_unusable_credentials(configuration):

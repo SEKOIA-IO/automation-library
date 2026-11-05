@@ -1273,3 +1273,35 @@ def test_windows_map_still_resolves_commandline():
         converted, unmapped = convert_payload_to_ecs(payload)
         assert unmapped == [], product
         assert "process.command_line|contains" in converted["detection"]["selection"]
+
+
+# ---------------------------------------------------------------------------
+# Unexpected YAML types: a malformed feed rule must not raise
+# ---------------------------------------------------------------------------
+
+
+def test_non_string_title_level_and_description_are_coerced():
+    rule, parsed = _rule_and_parsed("title: 2024\ndescription: 42\nlevel: 5\ndetection: {}\n")
+    body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
+    assert body["name"] == "2024"
+    assert body["description"] == "42"
+    assert body["severity"] == 0
+
+
+def test_string_tags_and_references_become_one_item():
+    rule, parsed = _rule_and_parsed(
+        "title: t\ndescription: d\ntags: attack.execution\nreferences: https://a.example\ndetection: {}\n"
+    )
+    body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
+    assert body["tags"][0] == "attack.execution"
+    assert body["description"] == "d\n\nReferences:\n- https://a.example"
+
+
+def test_non_list_tags_are_ignored_and_non_string_items_dropped():
+    rule, parsed = _rule_and_parsed("title: t\ntags: {a: 1}\ndetection: {}\n")
+    body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
+    assert body["tags"] == ["nextron-valhalla", "uuid-abc-123"]
+
+    rule, parsed = _rule_and_parsed("title: t\ntags: [attack.t1059, 7, null]\ndetection: {}\n")
+    body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
+    assert body["tags"] == ["attack.t1059", "nextron-valhalla", "uuid-abc-123"]
