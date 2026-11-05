@@ -4,4 +4,4 @@ from crowdstrike_falcon.models import CrowdStrikeFalconModuleConfiguration
 
 
 class CrowdStrikeFalconModule(Module):
-    configuration: CrowdStrikeFalconModuleConfiguration
+    configuration: CrowdStrikeFalconModuleConfiguration  # type: ignore[override]
