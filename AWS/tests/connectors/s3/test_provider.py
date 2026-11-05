@@ -6,6 +6,7 @@ import pytest
 from faker import Faker
 
 from aws_helpers.base import AwsModuleConfiguration
+from aws_helpers.client import AwsClientConfiguration
 from aws_helpers.s3_wrapper import S3Wrapper
 from aws_helpers.sqs_wrapper import SqsWrapper
 from connectors import AwsModule
@@ -116,3 +117,34 @@ class TestAwsAccountProviderWithRole:
         assert wrapper._configuration.aws_access_key_id == "ASIA_KEY"
         assert wrapper._configuration.aws_session_token == "assumed_token"
         assert wrapper._configuration.queue_name == queued_config.queue_name
+
+
+class TestAwsAccountProviderWrapperReuse:
+    """Wrappers (and their AWS session) are reused until their configuration changes."""
+
+    def test_s3_wrapper_is_reused(self, aws_module_no_role, queued_config):
+        provider = _make_provider(aws_module_no_role, queued_config)
+        assert provider.s3_wrapper is provider.s3_wrapper
+
+    def test_sqs_wrapper_is_reused(self, aws_module_no_role, queued_config):
+        provider = _make_provider(aws_module_no_role, queued_config)
+        assert provider.sqs_wrapper is provider.sqs_wrapper
+
+    @pytest.mark.parametrize("wrapper_name", ["s3_wrapper", "sqs_wrapper"])
+    def test_wrapper_rebuilt_when_assumed_credentials_change(self, aws_module_with_role, queued_config, wrapper_name):
+        provider = _make_provider(aws_module_with_role, queued_config)
+        creds_a = AwsClientConfiguration(
+            aws_access_key_id="ASIA_A", aws_secret_access_key="secret_a", aws_region="us-west-2", aws_session_token="a"
+        )
+        creds_b = AwsClientConfiguration(
+            aws_access_key_id="ASIA_B", aws_secret_access_key="secret_b", aws_region="us-west-2", aws_session_token="b"
+        )
+
+        with patch.object(provider, "get_assume_role", side_effect=[creds_a, creds_a, creds_b]):
+            first = getattr(provider, wrapper_name)
+            second = getattr(provider, wrapper_name)
+            third = getattr(provider, wrapper_name)
+
+        assert first is second
+        assert third is not first
+        assert third._configuration.aws_session_token == "b"

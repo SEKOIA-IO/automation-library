@@ -1,8 +1,16 @@
 """Test utils module."""
 
+import asyncio
+import gzip
 import io
+import shutil
+import subprocess
+import sys
+import tempfile
+import threading
+from pathlib import Path
 from gzip import compress
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiofiles
 import pytest
@@ -13,11 +21,13 @@ from aws_helpers.utils import (
     async_gzip_open,
     async_islice,
     get_content,
+    has_parquet_footer,
     is_gzip_compressed,
     is_parquet_content,
     normalize_s3_key,
     unescape_string,
     split_stream_by_separator,
+    to_seekable_file,
 )
 from tests.helpers import async_temporary_file
 
@@ -135,6 +145,32 @@ async def test_split_stream_by_separator(content, expected_chunks):
 
 
 @pytest.mark.parametrize(
+    "content, separator, chunk_size, expected_chunks",
+    [
+        # separator spanning two reads
+        (b"a\r\nb\r\nc", b"\r\n", 1, [b"a", b"b", b"c"]),
+        (b"a\r\nb\r\nc", b"\r\n", 2, [b"a", b"b", b"c"]),
+        (b"xabyabz", b"ab", 1, [b"x", b"y", b"z"]),
+        # overlapping separator
+        (b"aaa", b"aa", 1, [b"", b"a"]),
+        # no separator in the data
+        (b"abc", b"\n", 2, [b"abc"]),
+        # empty separator falls back to a space
+        (b"a b c", b"", 2, [b"a", b"b", b"c"]),
+        # separator at the very start and at the very end
+        (b"\nabc", b"\n", 3, [b"", b"abc"]),
+        (b"abc\n", b"\n", 3, [b"abc"]),
+        (b"", b"\n", 3, []),
+    ],
+)
+@pytest.mark.asyncio
+async def test_split_stream_by_separator_across_reads(content, separator, chunk_size, expected_chunks):
+    async with async_temporary_file(content) as f:
+        chunks = [chunk async for chunk in split_stream_by_separator(f, separator, chunk_size=chunk_size)]
+        assert chunks == expected_chunks
+
+
+@pytest.mark.parametrize(
     "items, start, stop, expected",
     [
         ([1, 2, 3, 4, 5], 0, None, [1, 2, 3, 4, 5]),
@@ -156,3 +192,186 @@ async def test_async_islice(items, start, stop, expected):
 
     result = [item async for item in async_islice(async_iterable(), start, stop)]
     assert result == expected
+
+
+@pytest.mark.asyncio
+async def test_to_seekable_file_returns_wrapped_file():
+    async with async_temporary_file(b"data") as f:
+        assert await to_seekable_file(f) is f._file
+
+
+@pytest.mark.asyncio
+async def test_to_seekable_file_copies_other_readers():
+    stream = MagicMock()
+    stream.read = AsyncMock(return_value=b"data")
+    del stream._file
+
+    file = await to_seekable_file(stream)
+
+    assert isinstance(file, io.BytesIO)
+    assert file.read() == b"data"
+
+
+@pytest.mark.asyncio
+async def test_to_seekable_file_decompresses_gzip_once():
+    stream = await async_gzip_open(io.BytesIO(compress(b"data")))
+    file = await to_seekable_file(stream)
+
+    assert not isinstance(file, gzip.GzipFile)
+    assert file.read() == b"data"
+
+
+@pytest.mark.asyncio
+async def test_to_seekable_file_decompresses_gzip_off_the_event_loop():
+    loop_thread = threading.get_ident()
+    copy_threads = []
+    original_copyfileobj = shutil.copyfileobj
+
+    def spy(*args, **kwargs):
+        copy_threads.append(threading.get_ident())
+        return original_copyfileobj(*args, **kwargs)
+
+    stream = await async_gzip_open(io.BytesIO(compress(b"data")))
+    with patch("aws_helpers.utils.stream.shutil.copyfileobj", side_effect=spy):
+        file = await to_seekable_file(stream)
+
+    assert copy_threads
+    assert loop_thread not in copy_threads
+    assert file.read() == b"data"
+
+
+@pytest.mark.parametrize("cancellations", [1, 2])
+@pytest.mark.asyncio
+async def test_to_seekable_file_waits_for_the_copy_when_cancelled(cancellations):
+    started, release, finished = threading.Event(), threading.Event(), threading.Event()
+    spools = []
+    original_spool = tempfile.SpooledTemporaryFile
+
+    def spy_spool(*args, **kwargs):
+        spools.append(original_spool(*args, **kwargs))
+        return spools[-1]
+
+    def blocking_copy(*args, **kwargs):
+        started.set()
+        release.wait(5)
+        finished.set()
+
+    ended_before_release = []
+
+    async def release_later():
+        await asyncio.sleep(0.05)
+        ended_before_release.append(task.done())
+        release.set()
+
+    stream = await async_gzip_open(io.BytesIO(compress(b"data")))
+    with (
+        patch("aws_helpers.utils.stream.tempfile.SpooledTemporaryFile", side_effect=spy_spool),
+        patch("aws_helpers.utils.stream.shutil.copyfileobj", side_effect=blocking_copy),
+    ):
+        task = asyncio.create_task(to_seekable_file(stream))
+        assert await asyncio.to_thread(started.wait, 5)
+        for _ in range(cancellations):
+            task.cancel()
+            for _ in range(3):  # let the cancellation be delivered
+                await asyncio.sleep(0)
+
+        # the copy is released only after the task was cancelled: the task must still be waiting for it
+        releaser = asyncio.create_task(release_later())
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        await releaser
+
+    assert ended_before_release == [False]
+    assert await asyncio.to_thread(finished.wait, 1)
+    assert spools[0].closed
+
+
+@pytest.mark.asyncio
+async def test_to_seekable_file_closes_the_spool_when_the_copy_fails():
+    spools = []
+    original_spool = tempfile.SpooledTemporaryFile
+
+    def spy_spool(*args, **kwargs):
+        spools.append(original_spool(*args, **kwargs))
+        return spools[-1]
+
+    stream = await async_gzip_open(io.BytesIO(compress(b"data")))
+    with (
+        patch("aws_helpers.utils.stream.tempfile.SpooledTemporaryFile", side_effect=spy_spool),
+        patch("aws_helpers.utils.stream.shutil.copyfileobj", side_effect=OSError("disk full")),
+    ):
+        with pytest.raises(OSError, match="disk full"):
+            await to_seekable_file(stream)
+
+    assert spools[0].closed
+
+
+@pytest.mark.parametrize(
+    "data, expected",
+    [
+        (b"PAR1\xc2\x15cbPAR1", True),
+        (b"PAR1PAR1", True),
+        (b"PAR1PAR", False),
+        (b"PAR1 text records\nsecond line\n", False),
+        (b"PAR1\xc2\x15cb", False),
+    ],
+)
+@pytest.mark.asyncio
+async def test_has_parquet_footer_on_plain_stream(data, expected):
+    async with async_temporary_file(data) as f:
+        assert await f.read(4) == b"PAR1"  # what the caller consumed to recognize the header
+
+        assert await has_parquet_footer(f) is expected
+
+        # the stream is put back where it was and its file is still open
+        assert await f.tell() == 4
+        assert await f.read() == data[4:]
+        assert not f._file.closed
+
+
+@pytest.mark.parametrize(
+    "data, expected",
+    [
+        (b"PAR1\xc2\x15cbPAR1", True),
+        (b"PAR1 text records\nsecond line\n", False),
+        (b"PAR1PAR", False),
+    ],
+)
+@pytest.mark.asyncio
+async def test_has_parquet_footer_on_gzip_stream_closes_its_spool(data, expected):
+    spools = []
+    original_spool = tempfile.SpooledTemporaryFile
+
+    def spy_spool(*args, **kwargs):
+        spools.append(original_spool(*args, **kwargs))
+        return spools[-1]
+
+    stream = await async_gzip_open(io.BytesIO(compress(data)))
+    assert await stream.read(4) == b"PAR1"
+
+    with patch("aws_helpers.utils.stream.tempfile.SpooledTemporaryFile", side_effect=spy_spool):
+        assert await has_parquet_footer(stream) is expected
+
+    assert await stream.read() == data[4:]
+    assert len(spools) == 1 and spools[0].closed
+
+
+@pytest.mark.parametrize(
+    "module",
+    [
+        "aws_helpers.utils",
+        "connectors.s3.trigger_s3_logs",
+        "connectors.s3.trigger_s3_records",
+        "connectors.trigger_sqs_messages",
+    ],
+)
+def test_shared_modules_do_not_load_pandas_or_pyarrow(module):
+    """Importing the shared helpers and the non-Parquet connectors must not load pandas or pyarrow."""
+    code = (
+        f"import sys, importlib; importlib.import_module({module!r}); "
+        "print('pandas' in sys.modules or 'pyarrow' in sys.modules)"
+    )
+    # run from the AWS root, whatever the directory pytest was started from
+    aws_root = Path(__file__).resolve().parents[2]
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True, cwd=aws_root)
+    assert result.stdout.strip() == "False"

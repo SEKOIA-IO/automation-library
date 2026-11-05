@@ -172,6 +172,10 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         return result, timestamps_to_log
 
 
+class IntakePushError(Exception):
+    """Pushing events to the intake failed: not to be mistaken with a failure to fetch an S3 object."""
+
+
 class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
     """
     Connector that collects objects from a S3 bucket without relying on SQS notifications.
@@ -203,8 +207,20 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
         with self.context as cache:
             cache["marker"] = marker
 
+    async def _push_events(self, events: list[str]) -> int:
+        """Push events to the intake and return the number of pushed events."""
+        try:
+            return len(await self.push_data_to_intakes(events=events))
+        except Exception as e:
+            raise IntakePushError(f"Failed to push events to the intake: {e}") from e
+
     async def next_batch(self) -> tuple[int, list[int]]:
-        """List objects after the checkpoint, read each one and advance the marker."""
+        """
+        List objects after the checkpoint, read each one and advance the marker.
+
+        Events are pushed as soon as the batch limit is reached, even in the middle of an object.
+        If such an object then fails, its already pushed events are sent again on the next run.
+        """
         records: list[str] = []
         result = 0
         timestamps_to_log: list[int] = []
@@ -227,15 +243,36 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
             if last_modified is not None:
                 timestamps_to_log.append(int(last_modified.timestamp() * 1000))
 
+            # events of this object stay apart from the batch until they are pushed or the object is fully read:
+            # a failing object must not leave its unpushed events in the batch
+            pending: list[str] = []
+            object_records = 0
+
             try:
                 stream: AsyncReader
                 async with (
                     self.s3_fetch_concurrency_sem,
                     self.s3_wrapper.read_key(bucket=self.configuration.bucket, key=normalized_key) as stream,
                 ):
-                    object_records = [event async for event in self._parse_content(stream)]
+                    async for event in self._parse_content(stream):
+                        pending.append(event)
+                        object_records += 1
 
-                logger.info(f"Parsed {len(object_records)} records from object {key}")
+                        if len(records) + len(pending) >= self.limit_of_events_to_push:
+                            records.extend(pending)
+                            pending = []
+                            result += await self._push_events(records)
+                            records = []
+
+                            # the current object is only partly read: commit up to the previous one
+                            if last_processed is not None and last_processed != last_committed:
+                                self.write_marker(last_processed)
+                                last_committed = last_processed
+
+                logger.info(f"Parsed {object_records} records from object {key}")
+
+            except IntakePushError:
+                raise
 
             except Exception as e:
                 # do not advance the marker past a failing object to avoid losing data.
@@ -246,19 +283,12 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
                 break
 
             last_processed = key
+            records.extend(pending)
 
-            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(object_records))
-            records.extend(object_records)
-
-            if len(records) >= self.limit_of_events_to_push:
-                result += len(await self.push_data_to_intakes(events=records))
-                records = []
-                if last_processed is not None and last_processed != last_committed:
-                    self.write_marker(last_processed)
-                    last_committed = last_processed
+            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(object_records)
 
         if records:
-            result += len(await self.push_data_to_intakes(events=records))
+            result += await self._push_events(records)
 
         if last_processed is not None and last_processed != last_committed:
             self.write_marker(last_processed)

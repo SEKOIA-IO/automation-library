@@ -5,11 +5,13 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 import orjson
-import pandas
 
-from aws_helpers.utils import AsyncReader
+from aws_helpers.parquet import iter_parquet_dataframes
+from aws_helpers.utils import AsyncReader, to_seekable_file
 from connectors.s3 import AbstractAwsS3QueuedConnector
 from connectors.s3.provider import AwsAccountProvider
+
+PARQUET_BATCH_SIZE = 10_000
 
 
 class BaseAwsS3OcsfTrigger:
@@ -41,18 +43,16 @@ class BaseAwsS3OcsfTrigger:
         Returns:
              Generator:
         """
-        content = await stream.read()
-
-        if len(content) == 0:
+        file = await to_seekable_file(stream)
+        if file.seek(0, io.SEEK_END) == 0:
             return
+        file.seek(0)
 
-        reader = io.BytesIO(content)
-        df = pandas.read_parquet(reader)
-        records = orjson.loads(df.to_json(orient="records"))
-
-        for record in records:
-            if len(record) > 0:
-                yield orjson.dumps(record).decode("utf-8")
+        # read by batches to bound memory
+        for df in iter_parquet_dataframes(file, PARQUET_BATCH_SIZE):
+            for record in orjson.loads(df.to_json(orient="records")):
+                if len(record) > 0:
+                    yield orjson.dumps(record).decode("utf-8")
 
 
 class AwsS3OcsfTrigger(BaseAwsS3OcsfTrigger, AbstractAwsS3QueuedConnector, AwsAccountProvider):
