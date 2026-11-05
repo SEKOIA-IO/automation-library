@@ -1,24 +1,23 @@
 """Search PolySwarm's metadata index with an operator supplied query.
 
 api.search_by_metadata takes a Lucene style query string and returns every
-artifact document that matches it: the same endpoint and the same query
-language that a scheduled feed of new results can drive with a query it
-assembles itself from a malware family, a tag, a polyscore threshold and a
-time window. This action exposes the endpoint directly instead, so a
-playbook author can hand it any query rather than only those family, tag and
-polyscore filters.
+artifact document that matches it. Every other search action in this module
+sends a fixed query shape for one kind of indicator; this one hands the query
+language itself to the playbook author, so a query can combine a malware
+family, a tag, a polyscore threshold and a time window on artifact.created in
+whatever way the investigation needs.
 
 This action only reads. It never submits, never waits for a scan and never
 touches the sandbox, and it spends no scanning quota.
 
 WHAT THE QUERY LANGUAGE CAN AND CANNOT DO, AND HOW THAT WAS VERIFIED
 
-The ground truth for this client version is that every filter an operator can
-put on a feed of new results (malware family, tag, polyscore, a time window on
-artifact.created) is a server side Lucene term against documented fields, sent
-straight to the search/metadata/query endpoint. That confirms the endpoint
-accepts arbitrary Lucene terms against artifact document fields, not just the
-handful those filters happen to use.
+The ground truth for this client version is that each of the filters used in
+practice (malware family, tag, polyscore, a time window on artifact.created) is
+a server side Lucene term against a documented field, sent straight to the
+search/metadata/query endpoint. That confirms the endpoint accepts arbitrary
+Lucene terms against artifact document fields, not just the handful those
+filters happen to use.
 
 What this action does NOT claim, because it was not found anywhere in the
 installed client (polyswarm_api 3.21.0) or its comments:
@@ -31,8 +30,7 @@ installed client (polyswarm_api 3.21.0) or its comments:
     offset argument (verified by reading its signature in
     polyswarm_api/api.py); pagination is internal to the client, driven by a
     lazily consumed generator. The limit argument below is enforced entirely
-    on this side, by not consuming the generator past it, the same technique
-    that bounds a scheduled feed's runs.
+    on this side, by not consuming the generator past it.
   - No sort order control. The endpoint answers newest first with no sort
     argument, and this action does not expose one because
     there is nothing to expose.
@@ -156,8 +154,8 @@ class SearchMetadata(PolyswarmAction):
     This is the most direct way a playbook can reach api.search_by_metadata,
     the single most powerful read surface the PolySwarm API exposes: an
     arbitrary query against every artifact document PolySwarm holds, rather
-    than the fixed set of filters an individual action or a scheduled
-    feed of new results applies. The action only reads and spends no scanning quota.
+    than the fixed set of filters an individual action applies. The action
+    only reads and spends no scanning quota.
 
     Three branches: found (at least one match, and every match requested was
     returned), truncated (at least one match, but the limit cut the answer

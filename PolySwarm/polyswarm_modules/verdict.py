@@ -9,6 +9,8 @@ from typing import Any, NamedTuple
 
 from pydantic import BaseModel
 
+from polyswarm_modules.coerce import as_text
+
 
 class AssertionResult(BaseModel):
     engine_name: str
@@ -37,8 +39,13 @@ def tally_assertions(result: Any) -> AssertionTally:
         total_count=len(scored),
         assertions=[
             AssertionResult(
-                engine_name=a.engine_name,
-                author_name=a.author_name,
+                # The client reads both names with .get(), so either can be None
+                # for an engine that has not filled its marketplace profile in.
+                # Typing them str and passing None through raises a ValidationError
+                # the module deliberately re-raises, which would take down every
+                # action that reports per engine detail.
+                engine_name=as_text(a.engine_name),
+                author_name=as_text(a.author_name),
                 verdict=a.verdict,
             )
             for a in scored

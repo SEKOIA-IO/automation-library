@@ -12,6 +12,12 @@ from polyswarm_modules.verdict import has_verdict
 # Every action names its argument model <Action>Arguments. A ValidationError
 # from any other model is a payload problem, not a playbook input problem.
 ARGUMENTS_MODEL_SUFFIX = "Arguments"
+# Raised while turning a playbook supplied name into a path: a NUL byte in the
+# name makes resolve() raise ValueError, a symlink loop raises OSError. Kept as
+# a module level tuple, like CLIENT_ERRORS, because an inline parenthesised
+# exception list is formatted one way for Python 3.12 and another for 3.14, and
+# this module is built against both.
+PATH_ERRORS: tuple[type[Exception], ...] = (OSError, ValueError)
 
 
 def describe_validation_error(exc: ValidationError) -> str:
@@ -126,8 +132,7 @@ class PolyswarmAction(Action):
             base = data_path.resolve() if hasattr(data_path, "resolve") else data_path
             joined = base / candidate
             resolved = joined.resolve() if hasattr(joined, "resolve") else joined
-        except (OSError, ValueError):
-            # A name with a NUL byte makes resolve() raise ValueError, and a symlink loop raises OSError.
+        except PATH_ERRORS:
             self.error("File path could not be resolved in the run data directory")
             return None
         if base not in resolved.parents:

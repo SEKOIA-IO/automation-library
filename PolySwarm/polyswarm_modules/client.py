@@ -117,8 +117,7 @@ def redact_key(error: Exception, apikey: str | None) -> str:
     The PolySwarm client renders request parameters into some of its error
     messages, so a message is never trusted to be key free. Lives here rather
     than on the trigger because the client is what puts the key into them, and
-    anything that runs unattended, the trigger and any scheduled
-    ingestion alike, has to log through it.
+    anything that runs unattended has to log through it.
     """
     message = str(error) or error.__class__.__name__
     if apikey:

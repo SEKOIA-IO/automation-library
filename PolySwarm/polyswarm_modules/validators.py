@@ -10,6 +10,7 @@ something the others refuse.
 import ipaddress
 import re
 import socket
+import unicodedata
 from urllib.parse import urlsplit
 
 ALLOWED_SCHEMES: frozenset[str] = frozenset({"http", "https"})
@@ -90,7 +91,16 @@ def invalid_url_reason(value: str) -> str | None:
     # username and password, and a refusal is written to the playbook log.
     if not host:
         return f"'{without_credentials(value)}' has no host"
-    host = host.rstrip(".").lower()
+    host = _normalized_host(host)
+
+    # A percent escape in the host is decoded by a browser style parser and not
+    # by urlsplit, so a host written as escapes for the digits of 10.0.0.1 reads
+    # as a plain name to every check below and as a private address to whatever
+    # fetches it. Nothing legitimate needs an escape in a host, so refuse it.
+    if "%" in host:
+        return (
+            f"The host '{host}' is percent-encoded, which parsers read differently, and will not be sent to {_PUBLIC}"
+        )
 
     # A browser style parser may read a different host than urlsplit does. Work
     # it out the WHATWG way and refuse the URL when the two disagree, so the
@@ -137,7 +147,20 @@ def _whatwg_host(value: str) -> str:
         host = hostport[1:].partition("]")[0]
     else:
         host = hostport.partition(":")[0]
-    return host.rstrip(".").lower()
+    return _normalized_host(host)
+
+
+def _normalized_host(host: str) -> str:
+    """A host in the one form every check in this module is written against.
+
+    Compatibility normalisation comes first, because a browser style parser maps
+    confusables onto their plain equivalents before it resolves anything. A host
+    spelled with circled digits normalises to 10.0.0.1 and is then refused as the
+    private address it really is, rather than passing as an ordinary name. Full
+    width full stops become real dots in the same pass, so the label checks see
+    labels instead of one long name that looks single-label.
+    """
+    return unicodedata.normalize("NFKC", host).lower().rstrip(".")
 
 
 def _is_internal_name(host: str) -> bool:

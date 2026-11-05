@@ -30,7 +30,7 @@
       "force_rescan": {
         "type": "boolean",
         "default": false,
-        "description": "Skip the check for an existing result and submit a new scan. This spends a scan even when PolySwarm already has a result for this IP address, so leave it off unless you need a fresh verdict."
+        "description": "Skip the check for an existing result and submit a new scan. This spends a scan even when PolySwarm already has a result for this IP address, so leave it off unless you need a fresh verdict. A finished result that no engine answered does not count as an existing result, so an artifact that no engine covers is submitted again on every run even when this is off."
       },
       "max_wait_seconds": {
         "type": "integer",

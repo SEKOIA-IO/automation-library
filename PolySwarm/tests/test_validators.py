@@ -88,6 +88,38 @@ def test_a_credentialed_url_on_an_internal_host_is_refused_without_the_password(
     assert "secret" not in reason
 
 
+def test_a_percent_encoded_host_is_refused() -> None:
+    """A browser style parser decodes the escapes and reaches a private address.
+
+    The digits of 10.0.0.1 written as percent escapes pass every check here as
+    an ordinary name, so without this the URL is sent and the engine fetching it
+    resolves the customer's own network.
+    """
+    reason = invalid_url_reason("http://%31%30.0.0.1/")
+
+    assert reason is not None
+    assert "percent-encoded" in reason
+
+
+def test_a_host_spelled_with_confusable_digits_is_refused_as_the_address_it_normalises_to() -> None:
+    """Circled digits normalise to 10.0.0.1 under NFKC, the way a browser maps them."""
+    reason = invalid_url_reason("http://\u2460\u24ea.0.0.1/")
+
+    assert reason is not None
+    assert "10.0.0.1" in reason
+    assert "private" in reason
+
+
+def test_a_full_width_full_stop_separates_labels_like_a_real_dot() -> None:
+    """NFKC turns it into a dot, so the host is a two label public name, not a single label.
+
+    Before normalisation this was refused with the wrong reason: no ASCII dot
+    appeared in the host, so it looked like a name that only resolves inside a
+    network.
+    """
+    assert invalid_url_reason("http://example\uff0ecom/") is None
+
+
 def test_a_url_the_two_parsers_read_differently_is_refused() -> None:
     from unittest.mock import patch
 
