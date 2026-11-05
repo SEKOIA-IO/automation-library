@@ -5,7 +5,6 @@ from datetime import datetime
 
 from dateutil.parser import isoparse
 from sekoia_automation.asset_connector import AssetConnector
-from sekoia_automation.asset_connector.models.connector import AssetList
 from sekoia_automation.asset_connector.models.ocsf.base import (
     Metadata,
     Product,
@@ -27,12 +26,15 @@ from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.storage import PersistentJSON
 
+from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.asset_connectors.crowdstrike_device_model import CrowdStrikeDevice
 from crowdstrike_falcon.asset_connectors.rate_limit import RateLimitedPushMixin
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
 
 
 class CrowdstrikeDeviceAssetConnector(RateLimitedPushMixin, AssetConnector):
+    module: CrowdStrikeFalconModule
+
     PRODUCT_NAME: str = "Crowdstrike Falcon"
     PRODUCT_VERSION: str = "N/A"
     OCSF_VERSION: str = "1.6.0"
@@ -414,27 +416,6 @@ class CrowdstrikeDeviceAssetConnector(RateLimitedPushMixin, AssetConnector):
         )
 
         return device_ocsf
-
-    def post_assets_to_api(self, assets: AssetList, asset_connector_api_url: str) -> dict[str, str] | None:
-        """
-        Push a batch and remember whether it made it through.
-
-        A batch refused by the rate limit is retried by `RateLimitedPushMixin`.
-        """
-        response = super().post_assets_to_api(assets=assets, asset_connector_api_url=asset_connector_api_url)
-        if response is None:
-            # The batch was dropped (or the connector stopped before it was pushed), so the
-            # devices it carried were never ingested: hold the checkpoint back so the next
-            # cycle walks the whole listing again.
-            self._push_failed = True
-        return response
-
-    def asset_fetch_cycle(self) -> None:
-        """Run a fetch cycle, then commit the checkpoint if it collected everything."""
-        super().asset_fetch_cycle()
-        # Every batch of the cycle has been pushed by now, so this is the first moment we
-        # know the run was complete. An interrupted cycle raises and never gets here.
-        self.update_checkpoint()
 
     def get_mapped_fields(self) -> dict[str, str]:
         """

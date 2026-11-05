@@ -560,15 +560,15 @@ class _PersistentContext:
         pass
 
 
-def _install_push_session(connector, statuses):
-    """Mock the Sekoia push; `statuses` gives the status code of each POST."""
+def _install_push_session(connector, statuses, headers=None):
+    """Mock the Sekoia push; `statuses` gives the status code of each POST, `headers` their headers."""
     pushed = []
     codes = iter(statuses)
 
     def post(url, json=None, timeout=None):
         res = Mock()
         res.status_code = next(codes)
-        res.headers = {}
+        res.headers = headers or {}
         res.json.return_value = {}
         if res.status_code == 200:
             pushed.append(len(json["items"]))
@@ -638,6 +638,7 @@ def _cycle_connector(connector, monkeypatch, total, batch=100):
     connector.module.connector_configuration_uuid = "adcd0095-0f3d-4699-8621-158977b6c2c3"
     connector.context = _PersistentContext()
     monkeypatch.setattr(connector, "_check_schema_and_reset_if_needed", lambda: None)
+    monkeypatch.delenv("ASSET_CONNECTOR_RATE_LIMIT_WAIT", raising=False)
 
     uuids = [f"dev-{i:03d}" for i in range(total)]  # first_seen.desc
     client = Mock()
@@ -681,6 +682,44 @@ def test_asset_fetch_cycle_gives_up_on_a_persistent_rate_limit(connector, monkey
 
     assert connector._http_session.post.call_count == attempts
     assert [c.args[0] for c in waits.call_args_list if c.args[0] > 1] == [60.0] * connector.MAX_RATE_LIMIT_RETRIES
+    assert connector.context.store["most_recent_device_id"] == "dev-200"
+
+
+def test_asset_fetch_cycle_honours_the_retry_after_header(connector, monkeypatch):
+    waits = _cycle_connector(connector, monkeypatch, total=300)
+
+    pushed = _install_push_session(connector, [200, 429, 200, 200], headers={"Retry-After": "120"})
+    connector.asset_fetch_cycle()
+
+    assert sum(pushed) == 300
+    assert [c.args[0] for c in waits.call_args_list if c.args[0] > 1] == [120.0]
+    assert connector.context.store["most_recent_device_id"] == "dev-000"
+
+
+@pytest.mark.parametrize("env_value,expected_wait", [("5", 5.0), ("not-a-number", 60.0)])
+def test_asset_fetch_cycle_uses_the_rate_limit_wait_env_variable(connector, monkeypatch, env_value, expected_wait):
+    waits = _cycle_connector(connector, monkeypatch, total=300)
+    monkeypatch.setenv("ASSET_CONNECTOR_RATE_LIMIT_WAIT", env_value)
+
+    pushed = _install_push_session(connector, [200, 429, 200, 200])
+    connector.asset_fetch_cycle()
+
+    assert sum(pushed) == 300
+    assert [c.args[0] for c in waits.call_args_list if c.args[0] > 1] == [expected_wait]
+
+
+def test_asset_fetch_cycle_gives_up_when_the_rate_limit_wait_budget_is_exhausted(connector, monkeypatch):
+    waits = _cycle_connector(connector, monkeypatch, total=300)
+    connector.context.store["most_recent_device_id"] = "dev-200"
+    _install_push_session(connector, [429] * 3, headers={"Retry-After": "3600"})
+
+    with pytest.raises(AssetConnectorRateLimitError):
+        connector.asset_fetch_cycle()
+
+    # The first wait uses the whole budget: the batch gives up instead of waiting again
+    assert connector._http_session.post.call_count == 2
+    assert [c.args[0] for c in waits.call_args_list if c.args[0] > 1] == [connector.MAX_TOTAL_RATE_LIMIT_WAIT]
+    assert connector._push_failed is True
     assert connector.context.store["most_recent_device_id"] == "dev-200"
 
 

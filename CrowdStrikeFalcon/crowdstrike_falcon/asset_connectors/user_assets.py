@@ -18,6 +18,7 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
 from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId, RiskLevelStr
 from sekoia_automation.storage import PersistentJSON
 
+from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.asset_connectors.crowdstrike_user_model import CrowdStrikeUser, CrowdStrikeUserAccount
 from crowdstrike_falcon.asset_connectors.rate_limit import RateLimitedPushMixin
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
@@ -66,6 +67,8 @@ IDENTITY_ENTITIES_QUERY = """
 
 
 class CrowdstrikeUserAssetConnector(RateLimitedPushMixin, AssetConnector):
+    module: CrowdStrikeFalconModule
+
     PRODUCT_NAME: str = "Crowdstrike Falcon"
     PRODUCT_VERSION = "N/A"
     LIMIT: int = 100
@@ -119,9 +122,17 @@ class CrowdstrikeUserAssetConnector(RateLimitedPushMixin, AssetConnector):
 
         This method updates the persistent storage with the latest processed date
         to enable incremental data collection.
+
+        The SDK calls it after every successful push, but `_latest_time` is only known once
+        the whole listing was walked, and nothing is committed once a push failed: users
+        collected by an incomplete cycle are collected again by the next one.
         """
         if self._latest_time is None:
-            self.log("Warning: new_most_recent_date is None, skipping checkpoint update", level="warning")
+            self.log("No new user checkpoint to commit, skipping checkpoint update", level="info")
+            return
+
+        if self._push_failed:
+            self.log("A push failed during this cycle, skipping checkpoint update", level="warning")
             return
 
         try:
@@ -285,14 +296,27 @@ class CrowdstrikeUserAssetConnector(RateLimitedPushMixin, AssetConnector):
     def _fetch_identity_entities(self) -> Generator[CrowdStrikeUser, None, None]:
         """
         Fetch identity entities from Crowdstrike with checkpointing.
+
+        The most recent creation time is only remembered once the whole listing was walked,
+        and it is committed by `asset_fetch_cycle` once every batch has been pushed.
         """
         checkpoint = self.most_recent_user_date
         most_recent_date: str | None = checkpoint
+
+        # Nothing is collected yet: the pushes happening during this walk must not commit
+        # a checkpoint.
+        self._latest_time = None
+        self._push_failed = False
 
         if checkpoint:
             self.log(f"Resuming from checkpoint: {checkpoint}", level="info")
 
         for raw_entity in self.client.list_identity_entities(IDENTITY_ENTITIES_QUERY):
+            # Stopped: leave the walk incomplete so no checkpoint is committed
+            if not self.running:
+                self.log("Connector stopped, interrupting the user listing", level="info")
+                return
+
             entity = CrowdStrikeUser.model_validate(raw_entity)
             asset_date = entity.creationTime
 
@@ -303,10 +327,15 @@ class CrowdstrikeUserAssetConnector(RateLimitedPushMixin, AssetConnector):
                 most_recent_date = asset_date
 
             yield entity
+
+        if not self.running:
+            self.log("Connector stopped, interrupting the user listing", level="info")
+            return
+
+        # The whole listing was walked: remember the most recent creation time. It is
+        # committed at the end of the cycle, once every batch has been pushed.
         if most_recent_date and most_recent_date != checkpoint:
             self._latest_time = most_recent_date
-            self.update_checkpoint()
-            self.log(f"Checkpoint updated to: {most_recent_date}", level="info")
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
         """Retrieve user assets from Crowdstrike and map them to OCSF models."""
