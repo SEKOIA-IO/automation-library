@@ -45,6 +45,36 @@ A word about the community field, because it is the one thing the two products d
 
 The search actions branch on their outcome, so a hash search leads to `detected`, `not detected` and `unknown` outputs you can wire to different steps. The `unknown` branch matters: it is what fires when PolySwarm has never seen the artifact, or when a scan has not finished, and it is deliberately not the same as `not detected`.
 
+### What leaves your environment
+
+Every action except `ExtractIocs` sends something to PolySwarm, and the actions
+differ in what that is. The short version: a lookup sends the indicator, a scan
+or a detonation sends the artifact itself, and an artifact you send is shared.
+
+- **Nothing leaves.** `ExtractIocs` runs entirely inside Sekoia. It never calls
+  PolySwarm, so text you hand it stays in your environment.
+- **The API key only.** `AccountUsage` sends your key and asks what the account
+  is entitled to. The `Sandbox detonation completed` trigger polls the status of
+  detonations your account already created.
+- **The indicator you looked up.** `SearchHash`, `SearchHashes`, `SearchUrl`,
+  `SearchIp`, `SearchIoc` and `Report` send the hash, URL, address or indicator
+  you asked about, and nothing else. `SearchMetadata` sends the query string you
+  wrote, so treat that string like any other field an analyst fills in. These are
+  read-only lookups against what PolySwarm already holds. They do not add the
+  indicator to PolySwarm as a submission.
+- **The artifact itself, and it is shared.** `ScanFile` and `SandboxFile` upload
+  the file's contents. `ScanUrl`, `ScanIp`, `ScanDomain`, `SandboxUrl` and
+  `SandboxIp` submit the URL or the address as an artifact. Whatever you submit
+  is visible to every engine in the community the key belongs to, and it cannot
+  be withdrawn afterwards. On the default public community that means every
+  participating vendor, not only PolySwarm. Decide deliberately before you send
+  a customer file, an internal URL or anything else you would not publish.
+
+The scan and detonate actions refuse a private, loopback, reserved or otherwise
+non-public address before anything is sent, so a host from your own network is
+not submitted by accident. A URL that two parsers read differently is refused
+for the same reason.
+
 ### Before you wire this into something that runs on every alert
 
 - **The search actions are read only.** They look up what is already known and cost almost nothing. The scan actions submit the artifact to the engines and the detonate actions run it in a sandbox. Those spend against your plan.
