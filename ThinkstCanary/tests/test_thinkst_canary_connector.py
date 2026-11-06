@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 import requests_mock
 
 from thinkst_canary_modules import ThinkstCanaryModule
@@ -267,6 +268,24 @@ def test_next_batch_should_retry(trigger, message1):
             "https://example.com/api/v1/incidents/unacknowledged",
             status_code=200,
             json=message1,
+        )
+        batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time]
+
+        trigger.next_batch()
+
+
+def test_next_batch_should_handle_5xx_errors(trigger):
+    with (
+        patch("thinkst_canary_modules.connector_thinkst_canary_alerts.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_requests.get(
+            "https://example.com/api/v1/incidents/unacknowledged",
+            status_code=502,
+            text="<html><body>Bad Gateway</body></html>",
         )
         batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
         start_time = 1666711174.0
