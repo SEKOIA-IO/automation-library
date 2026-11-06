@@ -1,0 +1,43 @@
+{
+  "description": "Get the filtering events of an e-securemail protected domain",
+  "docker_parameters": "collect_esecuremail_events",
+  "name": "Fetch new events from e-securemail",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_key": {
+        "description": "SIEM API key of the domain, found in the e-securemail console under 'SIEM integration'",
+        "type": "string"
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 1000
+      }
+    },
+    "required": [
+      "api_key",
+      "intake_key"
+    ],
+    "secrets": [
+      "api_key"
+    ],
+    "title": "e-securemail Events Configuration",
+    "type": "object"
+  },
+  "uuid": "475c8d71-2b3c-40e1-a7e0-5dc715b07e54"
+}

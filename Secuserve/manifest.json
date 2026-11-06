@@ -1,0 +1,26 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "secuserve",
+    "type": "object",
+    "properties": {
+      "api_host": {
+        "description": "URL of the e-securemail administration console (e.g. 'https://www.security-mail.net')",
+        "type": "string",
+        "default": "https://www.security-mail.net",
+        "format": "uri"
+      }
+    },
+    "required": [
+      "api_host"
+    ]
+  },
+  "description": "SECUSERVE is a French managed service provider for email security. e-securemail filters inbound and outbound messages of more than 12000 organizations against spam, phishing and malware. This module collects the filtering events of a domain from the e-securemail SIEM API.",
+  "name": "SECUSERVE",
+  "slug": "secuserve",
+  "uuid": "8832d9b6-9f11-49ab-b7ec-27f04efe5571",
+  "version": "1.0.0",
+  "categories": [
+    "Email"
+  ]
+}
