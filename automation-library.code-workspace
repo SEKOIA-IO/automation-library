@@ -119,6 +119,10 @@
 		{
 			"name": "TrendMicro",
 			"path": "TrendMicro"
+		},
+		{
+			"name": "Nextron Valhalla Sigma Rules",
+			"path": "Nextron Valhalla Sigma Rules"
 		}
 	],
 	"settings": {
