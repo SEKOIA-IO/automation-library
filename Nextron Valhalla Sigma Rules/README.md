@@ -87,7 +87,7 @@ The Valhalla API URL is hardcoded to `https://valhalla.nextron-systems.com`.
 - `Hashes` values are split per algorithm into the fields the parser emits for that category (`process.hash.*`, `dll.hash.*` for image loads, `file.hash.*` for file-hash events; IMPHASH → `*.pe.imphash`). A list mixing algorithms becomes an OR over one map per algorithm, so an event without SHA1 still matches on MD5. Algorithms the parser never emits for the category are dropped; `|all` keeps AND semantics.
 - The rule payload contains the Sigma `logsource` block and the converted `detection` block. `logsource` is informational: Sekoia's detection engine only evaluates `detection`, so it doesn't restrict which events a rule runs on.
 - The Sigma `status` is added as a tag (`status-stable`, `status-test`, `status-experimental`). Sekoia's `effort` field describes the expected analysis effort, which Sigma doesn't define, so every rule gets the same value (`2`).
-- ATT&CK technique tags (`attack.t1059.001`) are linked as `related_object_refs`; tactic tags pick the alert type. Sigma `references` are appended to the description (the API's `references` field is read-only).
+- ATT&CK technique tags (`attack.t1059.001`) are linked as `related_object_refs`; a failed lookup keeps the rule's existing links and is retried on the next sync. Tactic tags pick the alert type. Sigma `references` are appended to the description (the API's `references` field is read-only).
 
 ## Repository layout
 

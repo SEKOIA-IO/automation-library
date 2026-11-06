@@ -313,8 +313,9 @@ class SyncSigmaRulesCatalog(Trigger):
         body: PUT replaces the rule, so anything left out would be reset.
 
         Threats the user linked are kept next to the ATT&CK techniques the
-        sync links. When ATT&CK lookups are switched off, the techniques
-        linked earlier are kept instead of being dropped.
+        sync links. When ATT&CK lookups are switched off, or a lookup for one
+        of the rule's techniques failed in this sync, the techniques linked
+        earlier are kept instead of being dropped.
         """
         current = writable_rule(server_rule)
         for key in USER_FIELDS:
@@ -322,7 +323,10 @@ class SyncSigmaRulesCatalog(Trigger):
                 body[key] = current[key]
         server_refs = [r for r in server_rule.get("related_object_refs") or [] if isinstance(r, str)]
         keep = [r for r in server_refs if not r.startswith(ATTACK_PATTERN_PREFIX)]
-        if not getattr(self, "_attack_lookups_enabled", True):
+        failed: set[str] = getattr(self, "_attack_failed", set())
+        if not getattr(self, "_attack_lookups_enabled", True) or any(
+            t in failed for t in _attack_technique_ids(body.get("tags"))
+        ):
             keep = server_refs
         refs = list(dict.fromkeys([*(body.get("related_object_refs") or []), *keep]))
         if refs:
@@ -434,6 +438,7 @@ class SyncSigmaRulesCatalog(Trigger):
         passed_filter: set[str] = set()
         unparsed: set[str] = set()
         stale_names: list[str] = []
+        self._attack_failed: set[str] = set()  # failed ATT&CK lookups are retried next sync
         reenable = ReenableTracker(self._load_reenabled_last_run(), log=self.log)
         with PersistentJSON(UUID_MAP_FILE, self.data_path) as id_map:
             scan = self._scan_catalog(id_map)
@@ -645,17 +650,24 @@ class SyncSigmaRulesCatalog(Trigger):
     def _attack_refs(self, tags) -> list[str]:
         """STIX ``attack-pattern`` ids for the rule's ATT&CK technique tags.
 
-        Optional enrichment: lookups are cached for the life of the trigger
-        and a failed or unknown lookup just omits that ref. If the API key
-        may not read the intelligence objects (HTTP 401/403), lookups are
-        switched off after one warning instead of failing per technique.
+        Optional enrichment: answers are cached for the life of the trigger
+        and an unknown technique just omits that ref. A failed lookup is not
+        cached: it is skipped for the rest of the sync (the rule keeps the
+        links it has, see ``_keep_user_settings``) and retried on the next
+        one. If the API key may not read the intelligence objects (HTTP
+        401/403), lookups are switched off after one warning instead of
+        failing per technique.
         """
         if not hasattr(self, "_attack_cache"):
             self._attack_cache: dict[str, str | None] = {}
             self._attack_lookups_enabled = True
+        if not hasattr(self, "_attack_failed"):
+            self._attack_failed = set()
         cache = self._attack_cache
         refs: list[str] = []
         for technique in _attack_technique_ids(tags):
+            if technique in self._attack_failed:
+                continue
             if technique not in cache:
                 if not self._attack_lookups_enabled:
                     break
@@ -671,11 +683,13 @@ class SyncSigmaRulesCatalog(Trigger):
                             level="warning",
                         )
                         break
-                    cache[technique] = None
+                    self._attack_failed.add(technique)
                     self.log(f"ATT&CK lookup for {technique} failed: {exc}", level="warning")
+                    continue
                 except Exception as exc:
-                    cache[technique] = None
+                    self._attack_failed.add(technique)
                     self.log(f"ATT&CK lookup for {technique} failed: {exc}", level="warning")
+                    continue
             stix_id = cache[technique]
             if stix_id:
                 refs.append(stix_id)

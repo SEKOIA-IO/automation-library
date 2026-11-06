@@ -2007,6 +2007,74 @@ def test_attack_lookups_are_cached_and_failures_tolerated(trigger):
     assert trigger._sekoia.create_rule.call_count == 3
     assert "related_object_refs" not in trigger._sekoia.create_rule.call_args.args[0]
 
+    # A failure is not cached: the next sync asks again. A real answer
+    # ("no such technique") is cached.
+    trigger._sekoia.find_attack_pattern.side_effect = None
+    trigger._sekoia.find_attack_pattern.return_value = None
+    trigger._sync_once()
+    assert trigger._sekoia.find_attack_pattern.call_count == 2
+    trigger._sync_once()
+    assert trigger._sekoia.find_attack_pattern.call_count == 2
+
+
+def _attack_feed(trigger):
+    trigger._valhalla.get_sigma_feed.return_value = [
+        {"id": "valhalla-a", "filename": "a.yml", "content": _rule_yaml("A") + "tags:\n  - attack.t1059\n"}
+    ]
+
+
+def test_failed_attack_lookup_keeps_the_link_and_is_retried(trigger):
+    """Should-fix (round 5): one transient lookup error must not remove the
+    rule's ATT&CK link until the trigger restarts."""
+    _attack_feed(trigger)
+    trigger._sekoia.find_attack_pattern.return_value = "attack-pattern--1"
+    trigger._sync_once()
+    assert trigger.catalog.rules["sekoia-A"]["related_object_refs"] == ["attack-pattern--1"]
+
+    trigger._sekoia.find_attack_pattern.side_effect = SekoiaAPIError("HTTP 502", status_code=502)
+    trigger._attack_cache.clear()  # as after a restart: the technique must be looked up
+    trigger.log = MagicMock()
+    trigger._sync_once()
+    assert trigger.catalog.rules["sekoia-A"]["related_object_refs"] == ["attack-pattern--1"]
+    assert trigger._sekoia.update_rule.call_count == 0  # nothing to change
+
+    trigger._sekoia.find_attack_pattern.side_effect = None
+    trigger._sync_once()
+    trigger._sync_once()
+    assert trigger.catalog.rules["sekoia-A"]["related_object_refs"] == ["attack-pattern--1"]
+    assert trigger._sekoia.find_attack_pattern.call_count == 3  # 1st sync, failure, retry
+
+
+def test_failed_attack_lookup_keeps_the_link_on_update(trigger):
+    _attack_feed(trigger)
+    trigger._sekoia.find_attack_pattern.return_value = "attack-pattern--1"
+    trigger._sync_once()
+    trigger.catalog.rules["sekoia-A"]["related_object_refs"] = ["attack-pattern--1", "malware--user"]
+    _outdate(trigger)
+    trigger._sekoia.find_attack_pattern.side_effect = RuntimeError("inthreat down")
+    trigger._attack_cache.clear()
+    trigger.log = MagicMock()
+
+    trigger._sync_once()
+
+    rule = trigger.catalog.rules["sekoia-A"]
+    assert rule["description"] != "outdated"  # the update went through
+    assert rule["related_object_refs"] == ["attack-pattern--1", "malware--user"]
+
+
+def test_rule_created_during_lookup_outage_is_linked_next_sync(trigger):
+    _attack_feed(trigger)
+    trigger._sekoia.find_attack_pattern.side_effect = SekoiaAPIError("HTTP 502", status_code=502)
+    trigger.log = MagicMock()
+    trigger._sync_once()
+    assert not trigger.catalog.rules["sekoia-A"].get("related_object_refs")
+
+    trigger._sekoia.find_attack_pattern.side_effect = None
+    trigger._sekoia.find_attack_pattern.return_value = "attack-pattern--1"
+    trigger._sync_once()
+
+    assert trigger.catalog.rules["sekoia-A"]["related_object_refs"] == ["attack-pattern--1"]
+
 
 def test_attack_lookups_stop_after_permission_error(trigger):
     """A key without intelligence read access gets one warning, not one per

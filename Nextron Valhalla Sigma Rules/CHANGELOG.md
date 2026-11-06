@@ -49,7 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reported as a module configuration error.
 - ATT&CK techniques linked as `related_object_refs` via the light
   intelligence objects endpoint; skipped after one warning if the key may
-  not read it.
+  not read it. A failed lookup keeps the existing links and is retried on
+  the next sync.
 - Startup check that the alert-type UUIDs used by the mapping exist.
   Invalid trigger arguments, a non-`https://` base URL and missing alert
   types are reported as configuration errors.
