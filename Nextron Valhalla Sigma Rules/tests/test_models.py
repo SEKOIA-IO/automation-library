@@ -152,3 +152,10 @@ def test_blank_community_uuid_means_unset(value):
 def test_community_uuid_is_stripped():
     config = ModuleConfig(sekoia_api_key=A_KEY, community_uuid=" c-1\n")
     assert config.community_uuid == "c-1"
+
+
+def test_api_keys_are_marked_secret_in_the_schema():
+    props = ModuleConfig.model_json_schema()["properties"]
+    assert props["valhalla_api_key"]["secret"] is True
+    assert props["sekoia_api_key"]["secret"] is True
+    assert props["valhalla_api_key"]["default"] == DEMO_API_KEY

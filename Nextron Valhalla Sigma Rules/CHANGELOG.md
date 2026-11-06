@@ -13,8 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Rules Catalog on a schedule: rules are created on first sight and updated
   in place afterwards. Updates replace the Valhalla content and keep the
   rule's `enabled` state and the settings made in Sekoia (entities, assets,
-  parameters, event fields, similarity strategy, validity, threats linked
-  by the user). Transient
+  parameters, event fields, similarity strategy, effort, validity,
+  deprecation message, threats linked by the user). Rules whose update
+  would change nothing are not sent again (`unchanged`). Transient
   Valhalla errors are retried, and a failed sync is retried after 15 and
   then 30 minutes (at most 2 early retries per 24 hours).
 - Filters `min_sigma_level` (default `medium`) and `min_sigma_status`
@@ -27,7 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `status-<sigma status>`. A catalog scan at the start of each sync rebuilds
   the Valhalla → Sekoia mapping from these tags, so a new trigger
   configuration doesn't create duplicates. A known rule missing from the
-  scan is looked up and only re-created if Sekoia answers 404.
+  scan is looked up and only re-created if Sekoia answers 404. Feed rules
+  without an `id` are counted under `skipped_no_id`.
 - `preserve_rule_names` (text field, one entry per line or separated by
   `;`): rules matched by name or tag are not updated.
 - Imported rules whose new version can't be converted keep their catalog
@@ -35,12 +37,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `disable_removed`: disables rules that left the feed or fell below the
   thresholds and tags them `valhalla-auto-disabled`. Skipped on an empty
   feed, a feed that shrank by more than 20% (until that persists for 3
-  syncs), or a stopped run. Any trigger configuration re-enables tagged
+  syncs), or a stopped run. A rule missing from the scan (e.g. without the
+  `nextron-valhalla` tag) is looked up before it is written off, and every
+  rule is re-read right before it is disabled or re-enabled, so a change
+  saved since the scan is kept. Any trigger configuration re-enables tagged
   rules once they are back in the feed and removes the tag; rules disabled
   by the user are never touched. `reenable_conflicts` reports rules that
   another trigger disabled again.
 - Optional `community_uuid` module setting for keys that see several
-  communities.
+  communities. Rules imported into several communities without it are
+  reported as a module configuration error.
 - ATT&CK techniques linked as `related_object_refs` via the light
   intelligence objects endpoint; skipped after one warning if the key may
   not read it.

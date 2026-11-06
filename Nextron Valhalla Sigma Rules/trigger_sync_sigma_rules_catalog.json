@@ -78,6 +78,9 @@
       "updated": {
         "type": "integer"
       },
+      "unchanged": {
+        "type": "integer"
+      },
       "preserved": {
         "type": "integer"
       },
@@ -91,6 +94,9 @@
         "type": "integer"
       },
       "skipped_filter": {
+        "type": "integer"
+      },
+      "skipped_no_id": {
         "type": "integer"
       },
       "total_rules": {

@@ -53,9 +53,16 @@ USER_FIELDS = (
     "event_fields",
     "similarity_strategy",
     "valid_until",
+    "deprecation_message",
     "goal",
     "datasources",
+    "effort",
 )
+# Fields the sync owns but leaves out of a body when the Sigma rule has no
+# value for them. A catalog value for one of them still means "changed".
+OPTIONAL_SYNC_FIELDS = ("false_positives", "related_object_refs")
+# Compared as sets: the order of tags and refs carries no meaning.
+UNORDERED_FIELDS = ("tags", "related_object_refs")
 ATTACK_PATTERN_PREFIX = "attack-pattern--"
 STALE_REPORT = 5
 TOP_UNMAPPED_REPORT = 5
@@ -151,12 +158,13 @@ class ReenableTracker:
     conflicts: int = 0
     logged: bool = False
 
-    def run(self, valhalla_id: str, action: Callable[[], None], reraise: bool = False) -> None:
+    def run(self, valhalla_id: str, action: Callable[[], bool | None], reraise: bool = False) -> None:
         """Run one re-enable. A rule that is gone (HTTP 404) is skipped;
         other errors are counted and logged once. With ``reraise`` the error
         propagates too, so the caller can count the failed update."""
         try:
-            action()
+            if action() is False:
+                return  # nothing to do any more (e.g. the user enabled the rule)
         except SekoiaRuleNotFoundError:
             if reraise:
                 raise
@@ -218,6 +226,8 @@ class SyncSigmaRulesCatalog(Trigger):
             try:
                 self._sync_once()
                 failed = False
+            except TriggerConfigurationError, ModuleConfigurationError:
+                raise  # the SDK reports these as configuration errors
             except Exception as exc:
                 failed = True
                 self.log_exception(exc, message="Failed to sync Valhalla Sigma to Rules Catalog")
@@ -329,26 +339,59 @@ class SyncSigmaRulesCatalog(Trigger):
         marker must go, or a later manual disable would look like ours."""
         return AUTO_DISABLED_TAG in rule_tag_names(server_rule) and bool(server_rule.get("enabled", False))
 
-    def _drop_marker(self, sekoia_uuid: str, server_rule: dict) -> None:
+    def _fresh_rule(self, sekoia_uuid: str) -> dict:
+        """Re-read a rule right before sending it back whole. The scan is
+        taken at the start of the sync, so a change the user saved since then
+        would otherwise be overwritten. Raises ``SekoiaRuleNotFoundError``
+        when the rule is gone."""
+        rule = self._sekoia.get_rule(sekoia_uuid)
+        if not isinstance(rule, dict):
+            raise SekoiaAPIError(f"GET rule {sekoia_uuid} returned an unexpected body: {rule!r}"[:500])
+        return rule
+
+    @staticmethod
+    def _unchanged(body: dict, server_rule: dict) -> bool:
+        """True when an update would not change the catalog rule, so the PUT
+        can be skipped. If Sekoia normalises a field, the rule simply never
+        compares equal and keeps being updated."""
+        current = writable_rule(server_rule)
+        for key, value in body.items():
+            other = current.get(key)
+            if key in UNORDERED_FIELDS:
+                if set(value or []) != set(other or []):
+                    return False
+            elif value != other:
+                return False
+        return not any(current.get(key) for key in OPTIONAL_SYNC_FIELDS if key not in body)
+
+    def _drop_marker(self, sekoia_uuid: str) -> None:
         """Remove the marker from a rule that is not updated in this run
         (updates drop it anyway). Bookkeeping only: errors are logged and
         the next sync tries again."""
-        body = writable_rule(server_rule)
-        body["tags"] = [t for t in body["tags"] if t != AUTO_DISABLED_TAG]
         try:
+            fresh = self._fresh_rule(sekoia_uuid)
+            if not self._has_stale_marker(fresh):
+                return
+            body = writable_rule(fresh)
+            body["tags"] = [t for t in body["tags"] if t != AUTO_DISABLED_TAG]
             self._sekoia.update_rule(sekoia_uuid, body)
         except Exception as exc:
             self.log(f"Could not remove the {AUTO_DISABLED_TAG} tag from {sekoia_uuid}: {exc}", level="warning")
 
-    def _reenable_as_is(self, sekoia_uuid: str, server_rule: dict) -> None:
+    def _reenable_as_is(self, sekoia_uuid: str) -> bool:
         """Enable a rule the disable pass switched off without updating its
         content (preserved rules, rules whose new version can't be
-        converted): the catalog rule is sent back with ``enabled`` on and
-        without the marker tag."""
-        body = writable_rule(server_rule)
+        converted): the current catalog rule is sent back with ``enabled``
+        on and without the marker tag. Returns False when there is nothing
+        to do any more."""
+        fresh = self._fresh_rule(sekoia_uuid)
+        if not self._is_auto_disabled(fresh):
+            return False
+        body = writable_rule(fresh)
         body["tags"] = [t for t in body["tags"] if t != AUTO_DISABLED_TAG]
         body["enabled"] = True
         self._sekoia.update_rule(sekoia_uuid, body)
+        return True
 
     def _confirm_missing_rule(self, sekoia_uuid: str) -> dict | None:
         """Look up a mapped rule the catalog scan did not return.
@@ -377,6 +420,8 @@ class SyncSigmaRulesCatalog(Trigger):
         rules = self._valhalla.get_sigma_feed()
         created = 0
         updated = 0
+        unchanged = 0
+        skipped_no_id = 0
         preserved = 0
         failed = 0
         skipped_unmapped = 0
@@ -398,6 +443,7 @@ class SyncSigmaRulesCatalog(Trigger):
                     break
                 valhalla_id = rule.get("id")
                 if not valhalla_id:
+                    skipped_no_id += 1
                     continue
                 seen_in_feed.add(valhalla_id)
 
@@ -447,9 +493,9 @@ class SyncSigmaRulesCatalog(Trigger):
                     # the disable pass had switched it off, it is back now.
                     server_rule = self._note_stale(valhalla_id, id_map, scan, stale_names)
                     if server_rule is not None and self._is_auto_disabled(server_rule):
-                        reenable.run(valhalla_id, partial(self._reenable_as_is, id_map[valhalla_id], server_rule))
+                        reenable.run(valhalla_id, partial(self._reenable_as_is, id_map[valhalla_id]))
                     elif server_rule is not None and self._has_stale_marker(server_rule):
-                        self._drop_marker(id_map[valhalla_id], server_rule)
+                        self._drop_marker(id_map[valhalla_id])
                     continue
 
                 try:
@@ -473,9 +519,9 @@ class SyncSigmaRulesCatalog(Trigger):
                         # applies independently, and so does re-enabling.
                         preserved += 1
                         if self._is_auto_disabled(server_rule):
-                            reenable.run(valhalla_id, partial(self._reenable_as_is, sekoia_uuid, server_rule))
+                            reenable.run(valhalla_id, partial(self._reenable_as_is, sekoia_uuid))
                         elif self._has_stale_marker(server_rule):
-                            self._drop_marker(sekoia_uuid, server_rule)
+                            self._drop_marker(sekoia_uuid)
                     else:
                         # Keep the user's settings and per-rule ``enabled``
                         # choice. The generated tags never carry the marker,
@@ -488,10 +534,14 @@ class SyncSigmaRulesCatalog(Trigger):
                             reenable.run(
                                 valhalla_id, partial(self._sekoia.update_rule, sekoia_uuid, body), reraise=True
                             )
+                            updated += 1
                         else:
                             body["enabled"] = bool(server_rule.get("enabled", self._enabled))
-                            self._sekoia.update_rule(sekoia_uuid, body)
-                        updated += 1
+                            if self._unchanged(body, server_rule):
+                                unchanged += 1
+                            else:
+                                self._sekoia.update_rule(sekoia_uuid, body)
+                                updated += 1
                 except SekoiaRuleNotFoundError:
                     # Deleted between the scan and now: create it again.
                     try:
@@ -529,10 +579,10 @@ class SyncSigmaRulesCatalog(Trigger):
         top_unmapped = dict(unmapped_field_counter.most_common(TOP_UNMAPPED_REPORT))
         reenable_counts = reenable.counts()
         self.log(
-            f"Catalog sync: created={created} updated={updated} "
+            f"Catalog sync: created={created} updated={updated} unchanged={unchanged} "
             f"preserved={preserved} failed={failed} "
             f"skipped_unmapped={skipped_unmapped} stale={len(stale_names)} "
-            f"filtered_out={filtered_out} total_rules={len(rules)} "
+            f"filtered_out={filtered_out} skipped_no_id={skipped_no_id} total_rules={len(rules)} "
             f"scan={scan.stats()} "
             f"reenable_counts={reenable_counts} "
             f"disable_counts={disable_counts} "
@@ -544,11 +594,13 @@ class SyncSigmaRulesCatalog(Trigger):
             event={
                 "created": created,
                 "updated": updated,
+                "unchanged": unchanged,
                 "preserved": preserved,
                 "failed": failed,
                 "skipped_unmapped": skipped_unmapped,
                 "stale": len(stale_names),
                 "skipped_filter": filtered_out,
+                "skipped_no_id": skipped_no_id,
                 "total_rules": len(rules),
                 "top_unmapped": top_unmapped,
                 **scan.stats(),
@@ -664,7 +716,7 @@ class SyncSigmaRulesCatalog(Trigger):
                 uuids.append(sekoia_uuid)
 
         if not self._community_uuid and len(communities) > 1:
-            raise RuntimeError(
+            raise ModuleConfigurationError(
                 f"Rules imported by this integration exist in {len(communities)} communities "
                 f"({sorted(communities)}). Set `community_uuid` in the module configuration so the "
                 f"sync only touches one community."
@@ -751,6 +803,10 @@ class SyncSigmaRulesCatalog(Trigger):
         catalog scan, so ``to_disable`` counts only candidates that still
         exist and are enabled.
 
+        A rule missing from the scan is looked up before it is written off,
+        and a rule about to be disabled is re-read first, so changes made
+        since the scan are kept.
+
         The id-map entry is kept after disabling so a reappearing rule
         resumes updating in place. With ``disable_removed`` off this is a
         dry-run that only counts ``to_disable``.
@@ -762,6 +818,17 @@ class SyncSigmaRulesCatalog(Trigger):
         disable_failed = 0
         skip_reason = ""
         first_failure_logged = False
+
+        def failed(vid: str, sekoia_uuid: str, exc: Exception) -> None:
+            nonlocal disable_failed, first_failure_logged
+            disable_failed += 1
+            if not first_failure_logged:
+                self.log(
+                    f"First disable-pass failure. valhalla_id={vid}, sekoia_uuid={sekoia_uuid}. Error: {exc}",
+                    level="error",
+                )
+                first_failure_logged = True
+
         for vid in list(id_map):
             if vid in unparsed or (vid in seen_in_feed and vid in passed_filter):
                 continue
@@ -770,19 +837,46 @@ class SyncSigmaRulesCatalog(Trigger):
                 break
             sekoia_uuid = id_map[vid]
             server_rule = scan.rules_by_uuid.get(sekoia_uuid)
+            fetched = False
             if server_rule is None:
-                already_gone += 1
-                del id_map[vid]
-                continue
+                # Missing from the scan (e.g. the user removed the marker
+                # tag): only a confirmed 404 means the rule is gone.
+                try:
+                    server_rule = self._confirm_missing_rule(sekoia_uuid)
+                except Exception as exc:
+                    failed(vid, sekoia_uuid, exc)
+                    continue
+                if server_rule is None:
+                    already_gone += 1
+                    del id_map[vid]
+                    continue
+                scan.rules_by_uuid[sekoia_uuid] = server_rule
+                fetched = True
             if not server_rule.get("enabled", False):
                 already_disabled += 1
                 continue
+            if self._disable_removed and not fetched:
+                # The disabling PUT sends the whole rule back: re-read it so
+                # a change made since the scan isn't overwritten.
+                try:
+                    server_rule = self._fresh_rule(sekoia_uuid)
+                except SekoiaRuleNotFoundError:
+                    already_gone += 1
+                    del id_map[vid]
+                    continue
+                except Exception as exc:
+                    to_disable += 1
+                    failed(vid, sekoia_uuid, exc)
+                    continue
+                if not server_rule.get("enabled", False):
+                    already_disabled += 1
+                    continue
             to_disable += 1
             if not self._disable_removed:
                 # Dry-run. A marker left on a rule the user re-enabled is
                 # still cleared, so a later manual disable stays theirs.
                 if self._has_stale_marker(server_rule):
-                    self._drop_marker(sekoia_uuid, server_rule)
+                    self._drop_marker(sekoia_uuid)
                 continue
             body = writable_rule(server_rule)
             body["tags"] = sorted({*body["tags"], AUTO_DISABLED_TAG})
@@ -794,13 +888,7 @@ class SyncSigmaRulesCatalog(Trigger):
                 already_gone += 1
                 del id_map[vid]
             except Exception as exc:
-                disable_failed += 1
-                if not first_failure_logged:
-                    self.log(
-                        f"First disable-pass failure. valhalla_id={vid}, sekoia_uuid={sekoia_uuid}. Error: {exc}",
-                        level="error",
-                    )
-                    first_failure_logged = True
+                failed(vid, sekoia_uuid, exc)
         return {
             "to_disable": to_disable,
             "newly_disabled": newly_disabled,
