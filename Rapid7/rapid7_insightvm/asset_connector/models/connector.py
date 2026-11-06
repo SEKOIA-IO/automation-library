@@ -11,8 +11,8 @@ class Rapid7InsightVMConnectorConfiguration(DefaultAssetConnectorConfiguration):
 class Rapid7PageMetadata(Rapid7BaseModel):
     number: int | None = None
     size: int | None = None
-    totalPages: int | None = None
-    totalResources: int | None = None
+    totalPages: int | None = None  # noqa: N815 - API field name
+    totalResources: int | None = None  # noqa: N815 - API field name
     cursor: str | None = None
     effective_time: str | None = Field(default=None, validation_alias=AliasChoices("effective_time", "effectiveTime"))
 

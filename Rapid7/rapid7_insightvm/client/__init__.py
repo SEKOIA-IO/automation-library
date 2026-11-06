@@ -26,7 +26,6 @@ class AssetPage:
 
 
 class ApiClient(requests.Session):
-
     ASSETS_ENDPOINT: str = "/assets"
     VULNERABILITIES_ENDPOINT: str = "/vulnerabilities"
     SORT: str = "id,ASC"
@@ -76,7 +75,7 @@ class ApiClient(requests.Session):
         self.mount("https://", adapter)
 
     @classmethod
-    def from_configuration(cls, configuration: Any, **kwargs: Any) -> "ApiClient":
+    def from_configuration(cls, configuration: Any, **kwargs: Any) -> ApiClient:
         """Build the client from the module configuration (``region``, ``api_key``)."""
         if not isinstance(configuration, Mapping):
             raise TypeError(f"Expected the module configuration as a mapping, got {type(configuration).__name__}")
@@ -154,7 +153,7 @@ class ApiClient(requests.Session):
         page_size: int,
         page: int = 0,
         cursor: str | None = None,
-    ) -> Generator[AssetPage, None, None]:
+    ) -> Generator[AssetPage]:
         """Walk the pages of ``POST /assets`` with the delta between the two times, from a page and cursor.
 
         ``same`` is always requested: with ``new`` and ``remediated`` it gives the state of every
@@ -190,7 +189,7 @@ class ApiClient(requests.Session):
                 return
             page, cursor = page + 1, next_cursor
 
-    def search_vulnerabilities(self, vuln_ids: list[str]) -> Generator[Any, None, None]:
+    def search_vulnerabilities(self, vuln_ids: list[str]) -> Generator[Any]:
         """Yield the raw definitions of the given vulnerability ids, following the pages."""
         body = {"vulnerability": self.id_filter(vuln_ids)}
         params: dict[str, Any] = {"size": len(vuln_ids)}

@@ -21,7 +21,6 @@ Reference = Annotated[str, BeforeValidator(_coerce_reference)]
 
 
 class Rapid7BaseModel(BaseModel):
-
     model_config = ConfigDict(extra="allow")
 
     @model_validator(mode="before")

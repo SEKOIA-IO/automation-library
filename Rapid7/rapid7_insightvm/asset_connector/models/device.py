@@ -1,3 +1,5 @@
+from pydantic import Field
+
 from rapid7_insightvm.asset_connector.models.base import Rapid7BaseModel, Reference, StrId
 
 
@@ -32,6 +34,6 @@ class Rapid7Asset(Rapid7BaseModel):
     ip: str | None = None
     type: str | None = None
     last_assessed_for_vulnerabilities: str | None = None
-    new: list[Rapid7Finding] = []
-    same: list[Rapid7Finding] = []
-    remediated: list[Rapid7Finding] = []
+    new: list[Rapid7Finding] = Field(default_factory=list)
+    same: list[Rapid7Finding] = Field(default_factory=list)
+    remediated: list[Rapid7Finding] = Field(default_factory=list)

@@ -1,11 +1,11 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
 
 from rapid7_insightvm.asset_connector.models.window import Window
 
-NOW = datetime(2026, 10, 28, 12, 0, 0, 123456, tzinfo=timezone.utc)
+NOW = datetime(2026, 10, 28, 12, 0, 0, 123456, tzinfo=UTC)
 
 
 def test_first_window_collects_every_open_finding():

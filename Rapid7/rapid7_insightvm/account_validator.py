@@ -1,8 +1,9 @@
 from functools import cached_property
-from typing import Any
+from typing import Any, ClassVar
 
 from requests import Response
-from requests.exceptions import ConnectionError, RequestException, Timeout
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import RequestException, Timeout
 from sekoia_automation.account_validator import AccountValidator
 
 from rapid7_insightvm.client import ApiClient
@@ -15,11 +16,11 @@ class Rapid7InsightVMAccountValidator(AccountValidator):
     """
 
     # (HTTP method, endpoint, JSON body) probes that must each return 200.
-    VALIDATION_ENDPOINTS: list[tuple[str, str, dict[str, Any] | None]] = [
+    VALIDATION_ENDPOINTS: ClassVar[list[tuple[str, str, dict[str, Any] | None]]] = [
         ("POST", "/assets", {}),
         ("POST", "/vulnerabilities", {}),
     ]
-    PROBE_PARAMS: dict[str, int] = {"size": 1}
+    PROBE_PARAMS: ClassVar[dict[str, int]] = {"size": 1}
     # A validation answers quickly or fails: one retry and short (connect, read) timeouts.
     NB_RETRIES: int = 1
     TIMEOUT: tuple[int, int] = (5, 30)
@@ -68,7 +69,7 @@ class Rapid7InsightVMAccountValidator(AccountValidator):
             )
         except Timeout:
             return self._fail(f"Timeout while validating the Rapid7 InsightVM API key at {url}")
-        except ConnectionError as error:
+        except RequestsConnectionError as error:
             return self._fail(
                 f"Unable to reach the Insight Platform at {url}: check the region ({self.client.region}): {error}"
             )

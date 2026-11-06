@@ -1,23 +1,45 @@
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
-name = "Automation Module for Rapid7 InsightVM"
-description = ""
+[project]
+name = "automation-module-rapid7-insightvm"
 version = "0.0"
+description = ""
 authors = []
-package-mode = false
+requires-python = ">=3.14,<4"
+dependencies = [
+  "sekoia-automation-sdk>=1.27.0,<2",
+  "python-dateutil>=2.8.2,<3",
+  "tldextract>=5.1.0,<6",
+]
 
-[tool.black]
+[dependency-groups]
+dev = [
+  "pytest>=7.0",
+  "pytest-cov",
+  "requests-mock",
+  "pyyaml",
+  "types-python-dateutil",
+  "types-PyYAML",
+]
+lint = [
+  "ruff>=0.14",
+  "mypy",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "lint"]
+
+[tool.ruff]
 line-length = 119
-target-version = ["py311"]
+target-version = "py314"
 
-[tool.isort]
-profile = "black"
-line_length = 119
+[tool.ruff.lint]
+select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]
 
 [tool.mypy]
+python_version = "3.14"
 strict = false
 ignore_missing_imports = true
 allow_subclassing_any = true
@@ -25,27 +47,7 @@ allow_untyped_calls = true
 pretty = true
 show_error_codes = true
 implicit_reexport = true
-exclude = ["tests/*", "main.py"]
-
-[tool.poetry.dependencies]
-python = ">=3.11,<3.12"
-python-dateutil = "^2.8.2"
-tldextract = "^5.1.0"
-
-[tool.poetry.dependencies.sekoia-automation-sdk]
-extras = ["all"]
-version = "^1.27.0"
-
-[tool.poetry.dev-dependencies]
-pytest = "*"
-pytest-cov = "*"
-requests-mock = "*"
-mypy = "*"
-isort = "*"
-black = "*"
-types-python-dateutil = "*"
-pyyaml = "*"
-types-PyYAML = "*"
+exclude = ["tests/", "main.py"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"

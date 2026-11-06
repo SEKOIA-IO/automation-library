@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
@@ -18,15 +18,13 @@ def test_strip_html_and_truncate():
 
 
 def test_decode_unicode_escapes():
-    assert helpers.decode_unicode_escapes("Plugin \\u2013 100% FREE") == "Plugin – 100% FREE"
+    assert helpers.decode_unicode_escapes("Plugin \\u2013 100% FREE") == "Plugin – 100% FREE"  # noqa: RUF001
     assert helpers.decode_unicode_escapes(None) is None
 
 
 def test_dates():
-    assert helpers.parse_datetime("2026-10-13T15:04:28.719Z") == datetime(
-        2026, 10, 13, 15, 4, 28, 719000, tzinfo=timezone.utc
-    )
-    assert helpers.parse_datetime("2026-10-13T15:04:28").tzinfo == timezone.utc
+    assert helpers.parse_datetime("2026-10-13T15:04:28.719Z") == datetime(2026, 10, 13, 15, 4, 28, 719000, tzinfo=UTC)
+    assert helpers.parse_datetime("2026-10-13T15:04:28").tzinfo == UTC
     assert helpers.parse_datetime("not a date") is None
     assert helpers.parse_datetime(None) is None
     assert helpers.to_int_epoch("1970-01-01T00:01:00Z") == 60

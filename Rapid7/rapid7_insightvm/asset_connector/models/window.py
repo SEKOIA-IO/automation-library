@@ -32,7 +32,7 @@ class Window(BaseModel):
         return self.comparison_time is None
 
     @classmethod
-    def next_from(cls, comparison_time: str | None, now: datetime, full_resync: bool = False) -> "Window | None":
+    def next_from(cls, comparison_time: str | None, now: datetime, full_resync: bool = False) -> Window | None:
         start = parse_datetime(comparison_time)
         end = now.replace(microsecond=0) - cls.CLOUD_SYNC_DELAY
         if start is not None and end - start < cls.MIN_WINDOW_DURATION:
@@ -44,9 +44,9 @@ class Window(BaseModel):
             full_resync=full_resync and start is not None,
         )
 
-    def at_page(self, page: int, cursor: str | None) -> "Window":
+    def at_page(self, page: int, cursor: str | None) -> Window:
         return Window(**{**self.model_dump(), "page": page, "cursor": cursor})
 
-    def retry(self) -> "Window":
+    def retry(self) -> Window:
         """The same window, requested again from its first page after a short traversal."""
         return Window(**{**self.model_dump(), "page": 0, "cursor": None, "short_attempts": self.short_attempts + 1})

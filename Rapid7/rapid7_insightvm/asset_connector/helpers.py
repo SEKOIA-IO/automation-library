@@ -1,6 +1,6 @@
 import html
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from dateutil.parser import isoparse
 
@@ -21,16 +21,16 @@ def parse_datetime(value: str | None) -> datetime | None:
         return None
     try:
         parsed = isoparse(value)
-    except (ValueError, OverflowError, TypeError):
+    except ValueError, OverflowError, TypeError:
         return None
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
+        parsed = parsed.replace(tzinfo=UTC)
     return parsed
 
 
 def format_datetime(value: datetime) -> str:
     """Format a timestamp as the API expects it: ``2026-10-28T10:00:00Z`` (UTC, seconds)."""
-    return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def to_epoch(value: str | None) -> float | None:
