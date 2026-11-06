@@ -11,6 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- EasyVista Service Manager module with access token authentication
-- Account validator
+- EasyVista Service Manager module with access token (Bearer) or login/password (Basic) authentication
+- Account validator reading one request, else one asset
 - Device asset connector that collects the assets of `GET /assets` and maps them to the OCSF Device Inventory Info model

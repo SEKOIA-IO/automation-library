@@ -3,34 +3,52 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "base_url": {
-        "description": "URL of the EasyVista Service Manager server (e.g. https://company.easyvista.com)",
+        "description": "Protocol and host of the EasyVista Service Manager server, without path (e.g. https://company.easyvista.com)",
         "type": "string",
         "format": "uri"
       },
-      "account": {
-        "description": "EasyVista Service Manager account identifier (e.g. 50004)",
+      "tenant_id": {
+        "description": "EasyVista account number used in the API URL (e.g. 50004)",
         "type": "string"
       },
-      "api_token": {
-        "description": "Access token of the EasyVista Service Manager REST API",
+      "use_token": {
+        "description": "Authenticate with an access token (Bearer); otherwise with the login and password of a REST API user (Basic)",
+        "type": "boolean",
+        "default": true
+      },
+      "username": {
+        "description": "Login of the REST API user. Required when use_token is false",
         "type": "string"
+      },
+      "password": {
+        "description": "Password of the REST API user. Required when use_token is false",
+        "type": "string"
+      },
+      "token": {
+        "description": "Access token of the EasyVista Service Manager REST API. Required when use_token is true",
+        "type": "string"
+      },
+      "verify_ssl": {
+        "description": "Verify the TLS certificate of the server",
+        "type": "boolean",
+        "default": true
       }
     },
     "required": [
       "base_url",
-      "account",
-      "api_token"
+      "tenant_id"
     ],
     "title": "Arguments",
     "type": "object",
     "secrets": [
-      "api_token"
+      "password",
+      "token"
     ]
   },
   "description": "EasyVista Service Manager is an IT service management (ITSM) platform that manages the IT assets of an organization.",
-  "name": "EasyVista",
+  "name": "EasyVista Service Manager",
   "uuid": "c0d06574-ee36-448b-bfd7-f1dd962f01e8",
-  "slug": "easyvista",
+  "slug": "easyvista-service-manager",
   "version": "1.0.0",
   "categories": [
     "Collaboration Tools"

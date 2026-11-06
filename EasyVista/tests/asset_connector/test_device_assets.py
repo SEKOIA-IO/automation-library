@@ -61,8 +61,8 @@ def connector(tmp_path):
     module = Module()
     module.configuration = {
         "base_url": "https://company.easyvista.com/",
-        "account": "50004",
-        "api_token": "token",
+        "tenant_id": "50004",
+        "token": "token",
     }
     connector = EasyVistaDeviceAssetConnector(module=module, data_path=tmp_path)
     connector.configuration = {
@@ -191,6 +191,18 @@ def test_api_error_keeps_known_devices(connector, requests_mock):
 
     assert list(connector.get_assets()) == []
     connector.log_exception.assert_called_once()
+    with connector.context as cache:
+        assert cache[KNOWN_DEVICES_KEY] == {"known": "fingerprint"}
+
+
+@pytest.mark.parametrize("status_code", [200, 590])
+def test_error_body_keeps_known_devices(connector, requests_mock, status_code):
+    with connector.context as cache:
+        cache[KNOWN_DEVICES_KEY] = {"known": "fingerprint"}
+    requests_mock.get(API_URL, status_code=status_code, json={"error": "Bad Request"})
+
+    assert list(connector.get_assets()) == []
+    assert "Bad Request" in str(connector.log_exception.call_args.args[0])
     with connector.context as cache:
         assert cache[KNOWN_DEVICES_KEY] == {"known": "fingerprint"}
 
