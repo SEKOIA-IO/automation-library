@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-06 - 1.0.1
+
+### Fixed
+
+- Fix the way to handle non-200 responses from the API to parsing errors.
+- Add retries on 500 errors.
+
 ## 2024-07-30 - 1.0.0
 
 ### Added
