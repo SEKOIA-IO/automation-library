@@ -1,0 +1,86 @@
+{
+  "name": "Create Request / Incident",
+  "description": "Create an incident",
+  "uuid": "e7542adc-d459-4f90-85a4-6ccc34e86f3c",
+  "slug": "create_request_incident",
+  "docker_parameters": "easyvista_create_request_incident",
+  "arguments": {
+    "properties": {
+      "requests": {
+        "description": "Exactly one ticket per call",
+        "items": {
+          "properties": {
+            "catalog_code": {
+              "description": "Catalog entry code; determines the ticket workflow",
+              "title": "Catalog Code",
+              "type": "string"
+            },
+            "title": {
+              "title": "Title",
+              "type": "string"
+            },
+            "description": {
+              "description": "Ticket description, stored in the COMMENT field",
+              "title": "Description",
+              "type": "string"
+            },
+            "urgency_id": {
+              "title": "Urgency Id",
+              "type": "integer"
+            },
+            "impact_id": {
+              "title": "Impact Id",
+              "type": "string"
+            },
+            "recipient_name": {
+              "title": "Recipient Name",
+              "type": "string"
+            },
+            "recipient_mail": {
+              "title": "Recipient Mail",
+              "type": "string"
+            },
+            "department_code": {
+              "title": "Department Code",
+              "type": "string"
+            },
+            "location_id": {
+              "title": "Location Id",
+              "type": "integer"
+            },
+            "custom_fields": {
+              "description": "EasyVista field names, forwarded verbatim",
+              "title": "Custom Fields",
+              "additionalProperties": true,
+              "type": "object"
+            }
+          },
+          "title": "RequestItem",
+          "type": "object"
+        },
+        "maxItems": 1,
+        "minItems": 1,
+        "title": "Requests",
+        "type": "array"
+      }
+    },
+    "required": [
+      "requests"
+    ],
+    "title": "CreateRequestIncidentArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "href": {
+        "type": "string",
+        "description": "`HREF` of the created ticket (API field)"
+      },
+      "rfc_number": {
+        "type": "string",
+        "description": "RFC number derived from the last path segment of HREF; use it to reference the created ticket in later actions."
+      }
+    }
+  }
+}
