@@ -41,6 +41,7 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 ### Wave 4 first batch completed in this session
 - CatoNetwork
 - Proofpoint
+- TrendMicro
 
 ### Remaining scope
 - Remaining modules to migrate: 84
@@ -153,13 +154,12 @@ Estimated wave effort: 96h
 - SkyhighSecurity
 - Sophos
 - Tenable
-- TrendMicro
 - Trellix
 - Vectra
 - Wiz
 - Zscaler
 
-Estimated wave effort: 108h
+Estimated wave effort: 108h total, 103.5h remaining
 
 ### Wave 5: Criticity 8 (estimated 6h each)
 - Azure

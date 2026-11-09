@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-03 - 1.6.5
+
+### Fixed
+
+- Add feature flags with empty list
+
+## 2026-11-03 - 1.6.4
+
+### Fixed
+
+- Front issue: delete the `reveal-local-runners` feature flag gating for the user assets connector
+
+## 2026-11-02 - 1.6.3
+
+### Fixed
+
+- Gate the user assets connector behind the `reveal-local-runners` feature flag
+
+## 2026-11-02 - 1.6.2
+
+### Added
+
+- Add feature flag for revealing beta connectors
+
 ## 2026-10-19 - 1.6.1
 
 ### Fixed

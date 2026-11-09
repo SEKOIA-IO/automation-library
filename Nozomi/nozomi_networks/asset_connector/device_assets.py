@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from functools import cached_property
 from typing import Any
 
-from pydantic.v1 import ValidationError
+from pydantic import ValidationError
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.connector import AssetList
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
@@ -24,6 +24,7 @@ from sekoia_automation.storage import PersistentJSON
 
 from nozomi_networks import NozomiModule
 from nozomi_networks.asset_connector.client import NozomiQueryClient
+from nozomi_networks.asset_connector.hostname import split_hostname
 from nozomi_networks.asset_connector.models import NozomiAsset
 
 
@@ -142,7 +143,7 @@ class NozomiDeviceAssetConnector(AssetConnector):
             return DeviceTypeStr.UNKNOWN, DeviceTypeId.UNKNOWN
         return self.DEVICE_TYPE_MAP.get(asset_type.strip().lower(), (DeviceTypeStr.OTHER, DeviceTypeId.OTHER))
 
-    def build_network_interfaces(self, asset: NozomiAsset) -> list[NetworkInterface] | None:
+    def build_network_interfaces(self, asset: NozomiAsset, hostname: str) -> list[NetworkInterface] | None:
         """
         Build network interfaces from the asset IP and MAC lists.
 
@@ -158,7 +159,7 @@ class NozomiDeviceAssetConnector(AssetConnector):
 
         def interface(ip: str | None = None, mac: str | None = None) -> NetworkInterface:
             return NetworkInterface(
-                hostname=asset.name,
+                hostname=hostname,
                 ip=ip,
                 mac=mac,
                 type=NetworkInterfaceTypeStr.WIRED,
@@ -176,16 +177,22 @@ class NozomiDeviceAssetConnector(AssetConnector):
 
         device_type, device_type_id = self.build_device_type(asset.type)
         vendor = asset.vendor or (asset.mac_vendor[0] if asset.mac_vendor else None)
+        # `name` is often a label or a product name: only a usable hostname is sent
+        hostname, domain = split_hostname(asset.name)
+        if hostname is None:
+            # The platform cannot store a device without hostname yet (SekoiaLab/platform#98032)
+            raise ValueError("no usable hostname")
 
         return Device(
             type=device_type,
             type_id=device_type_id,
             uid=asset.id,
-            hostname=asset.name or asset.id,
+            hostname=hostname,
+            domain=domain,
             name=asset.name,
             os=self.build_operating_system(asset),
             ip=asset.ip[0] if asset.ip else None,
-            network_interfaces=self.build_network_interfaces(asset),
+            network_interfaces=self.build_network_interfaces(asset, hostname),
             vendor_name=vendor,
             model=asset.product_name,
             created_time=created.timestamp() if created else None,

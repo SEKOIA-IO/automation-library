@@ -9,6 +9,7 @@ if len(sys.argv) >= 2 and sys.argv[1].endswith("_trigger"):
 
 from sekoia_automation.module import Module
 
+from sekoiaio.elevate.execute_custom_agent import ExecuteCustomAgent
 from sekoiaio.intelligence_center import (
     CreateNewTrackerNotification,
     PostReportsPdf,
@@ -163,6 +164,7 @@ def main():
     module.register(ListQueries, "list-queries")
     module.register(ExecuteAQuery, "execute-a-query")
     module.register(DeleteDataset, "delete-dataset")
+    module.register(ExecuteCustomAgent, "execute-custom-agent")
 
     # Operation Center Triggers
     module.register(SecurityAlertsTrigger, "security_alerts_trigger")

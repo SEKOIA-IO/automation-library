@@ -1,6 +1,6 @@
 {
   "name": "Microsoft Defender Device",
-  "description": "Fetch Microsoft Intune managed device assets",
+  "description": "Fetch Microsoft Defender for Endpoint device assets",
   "uuid": "a423222d-e8cc-4ad0-a266-8776f8993feb",
   "docker_parameters": "microsoft_defender_device_asset_connector",
   "type": "asset",
