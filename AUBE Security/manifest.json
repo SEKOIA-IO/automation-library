@@ -12,6 +12,7 @@
   "version": "1.0.0",
   "slug": "aube-security",
   "categories": [
-    "Endpoint"
+    "Endpoint",
+    "IAM"
   ]
 }
