@@ -2506,6 +2506,30 @@ files = [
 typing-extensions = ">=4.14.1"
 
 [[package]]
+name = "pydantic-settings"
+version = "2.15.0"
+description = "Settings management using Pydantic"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "pydantic_settings-2.15.0-py3-none-any.whl", hash = "sha256:0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42"},
+    {file = "pydantic_settings-2.15.0.tar.gz", hash = "sha256:694b793e84f766ba76a90ebdefc01d0a9a045dab0382bee70393da93712ad117"},
+]
+
+[package.dependencies]
+pydantic = ">=2.7.0"
+python-dotenv = ">=0.21.0"
+typing-inspection = ">=0.4.0"
+
+[package.extras]
+aws-secrets-manager = ["boto3 (>=1.35.0)"]
+azure-key-vault = ["azure-identity (>=1.16.0)", "azure-keyvault-secrets (>=4.8.0)"]
+gcp-secret-manager = ["google-cloud-secret-manager (>=2.23.1)"]
+toml = ["tomli (>=2.0.1)"]
+yaml = ["pyyaml (>=6.0.1)"]
+
+[[package]]
 name = "pygments"
 version = "2.20.0"
 description = "Pygments is a syntax highlighting package written in Python."
@@ -2627,6 +2651,21 @@ files = [
 
 [package.dependencies]
 six = ">=1.5"
+
+[[package]]
+name = "python-dotenv"
+version = "1.2.3"
+description = "Read key-value pairs from a .env file and set them as environment variables"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "python_dotenv-1.2.3-py3-none-any.whl", hash = "sha256:904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9"},
+    {file = "python_dotenv-1.2.3.tar.gz", hash = "sha256:a20a594dabeaa385725aa239d5244871c143ecb356add8a20fcf23773a6c3a35"},
+]
+
+[package.extras]
+cli = ["click (>=5.0)"]
 
 [[package]]
 name = "python-slugify"
@@ -3055,15 +3094,30 @@ botocore = ">=1.37.4,<2.0a.0"
 crt = ["botocore[crt] (>=1.37.4,<2.0a.0)"]
 
 [[package]]
+name = "sekoia-automation-models"
+version = "1.3.0"
+description = "Standalone Pydantic models (OCSF asset-connector) shared across Sekoia services and the `sekoia-automation-sdk`"
+optional = false
+python-versions = "<4,>=3.11"
+groups = ["main"]
+files = [
+    {file = "sekoia_automation_models-1.3.0-py3-none-any.whl", hash = "sha256:69e0860061bc8c5d72a01bf59bc649e919249beb0cc2d172ea9ffaa0f59d0cff"},
+    {file = "sekoia_automation_models-1.3.0.tar.gz", hash = "sha256:d524dfc93e312a4f505271d71f9d36dd90e15a5015decbf64b3ab416cb19d752"},
+]
+
+[package.dependencies]
+pydantic = ">=2.10,<3.0.0"
+
+[[package]]
 name = "sekoia-automation-sdk"
-version = "1.23.1"
+version = "1.26.0"
 description = "SDK to create Sekoia.io playbook modules"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "sekoia_automation_sdk-1.23.1-py3-none-any.whl", hash = "sha256:b13a143b8794c188bb900b3e2c3ecbf3b4eeb38b476790f3bdefe6ed52075ebc"},
-    {file = "sekoia_automation_sdk-1.23.1.tar.gz", hash = "sha256:500d2b27ba836411387cf9f339539bfdb4f976d709b9847e10c64d9724ad3e05"},
+    {file = "sekoia_automation_sdk-1.26.0-py3-none-any.whl", hash = "sha256:a0a09ede150089a467b78b42215d1136de2b200aeb9a465de2ee5e3239104cc8"},
+    {file = "sekoia_automation_sdk-1.26.0.tar.gz", hash = "sha256:c1788209d102d70d691cdee9eb015cce80f791282237534f5cfa9f4f2e1914bc"},
 ]
 
 [package.dependencies]
@@ -3082,11 +3136,13 @@ loguru = ">=0.7.0,<0.8"
 orjson = ">=3.8,<4"
 prometheus-client = "*"
 pydantic = ">=2.10,<3"
+pydantic-settings = ">=2.15.0"
 python-slugify = ">=5.0.2,<6"
 pyyaml = ">=6.0,<7"
 requests = ">=2.25,<3"
 requests-ratelimiter = ">=0.7.0,<0.8"
 s3path = ">=0.6.4,<0.7"
+sekoia-automation-models = ">=1.2.0,<2"
 sentry-sdk = "*"
 tenacity = "*"
 typer = ">=0.20"
@@ -3609,4 +3665,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "6487b4abdc3e8410355802c84729f25e76de5704d87684acc056efaff2357ba2"
+content-hash = "89b7538df8a4628cadab3394a6669b886783cb5a1196c7dd3c834244c8d576c5"

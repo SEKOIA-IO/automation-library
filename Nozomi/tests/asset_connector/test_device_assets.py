@@ -5,16 +5,12 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests_mock
+from sekoia_automation.asset_connector.models.ocsf.device import DeviceOCSFModel, DeviceTypeId, DeviceTypeStr
 
 from nozomi_networks import NozomiConfiguration, NozomiModule
 from nozomi_networks.asset_connector.client import NozomiQueryClient, NozomiQueryError
 from nozomi_networks.asset_connector.device_assets import NozomiDeviceAssetConnector
 from nozomi_networks.asset_connector.models import NozomiAsset
-from sekoia_automation.asset_connector.models.ocsf.device import (
-    DeviceOCSFModel,
-    DeviceTypeId,
-    DeviceTypeStr,
-)
 
 BASE_URL = "https://guardian.test"
 SIGN_IN_URL = f"{BASE_URL}/api/open/sign_in"
@@ -128,17 +124,19 @@ def test_build_operating_system_other(test_connector, sample_assets):
 
 def test_build_network_interfaces(test_connector, sample_assets):
     asset = NozomiAsset.parse_obj(sample_assets[1])
-    interfaces = test_connector.build_network_interfaces(asset)
+    interfaces = test_connector.build_network_interfaces(asset, "plc-01")
     assert interfaces is not None
     assert len(interfaces) == 2
     assert all(iface.mac == "d0:03:4b:18:9e:41" for iface in interfaces)
+    assert all(iface.hostname == "plc-01" for iface in interfaces)
 
 
 def test_build_device(test_connector, sample_assets):
-    asset = NozomiAsset.parse_obj(sample_assets[0])
+    asset = NozomiAsset.parse_obj({**sample_assets[0], "name": "PLC-01"})
     device = test_connector.build_device(asset)
     assert device.uid == asset.id
-    assert device.hostname == "AC 800M PM851"
+    assert device.hostname == "plc-01"
+    assert device.name == "PLC-01"
     assert device.ip == "192.168.196.234"
     assert device.vendor_name == "ABB"
     assert device.model == "AC 800M PM851"
@@ -146,10 +144,19 @@ def test_build_device(test_connector, sample_assets):
     assert abs(device.created_time - 1724888822.710) < 0.001
 
 
-def test_build_device_hostname_fallback(test_connector):
-    asset = NozomiAsset(id="abc", name=None)
+@pytest.mark.parametrize("name", [None, "AC 800M PM851"])
+def test_build_device_without_usable_hostname_raises(test_connector, name):
+    # A product name is not a hostname, and the asset id is never used as one
+    with pytest.raises(ValueError, match="no usable hostname"):
+        test_connector.build_device(NozomiAsset(id="abc", name=name))
+
+
+def test_build_device_splits_fqdn_name(test_connector):
+    asset = NozomiAsset(id="abc", name="PLC-01.plant.example.com", ip=["192.0.2.1"])
     device = test_connector.build_device(asset)
-    assert device.hostname == "abc"
+    assert device.hostname == "plc-01"
+    assert device.domain == "plant.example.com"
+    assert device.network_interfaces[0].hostname == "plc-01"
 
 
 def test_build_enrichments(test_connector, sample_assets):
@@ -162,7 +169,7 @@ def test_build_enrichments(test_connector, sample_assets):
 
 
 def test_map_fields_produces_ocsf(test_connector, sample_assets):
-    asset = NozomiAsset.parse_obj(sample_assets[0])
+    asset = NozomiAsset.parse_obj(sample_assets[1])
     result = test_connector.map_fields(asset)
     assert isinstance(result, DeviceOCSFModel)
     assert result.class_uid == 5001
@@ -173,7 +180,7 @@ def test_map_fields_produces_ocsf(test_connector, sample_assets):
 
 
 def test_map_fields_json_serializable(test_connector, sample_assets):
-    asset = NozomiAsset.parse_obj(sample_assets[0])
+    asset = NozomiAsset.parse_obj(sample_assets[1])
     result = test_connector.map_fields(asset)
     data = result.model_dump(exclude_none=True)
     assert json.dumps(data)
@@ -308,7 +315,7 @@ class FakeN2QLBackend:
 
 
 def _asset(asset_id: str, created_at: int) -> dict:
-    return {"id": asset_id, "created_at": str(created_at)}
+    return {"id": asset_id, "name": f"host-{asset_id}", "created_at": str(created_at)}
 
 
 def test_client_fetch_assets_ties_across_page_boundary():
@@ -403,7 +410,8 @@ def test_get_assets_yields_models(test_connector, sample_assets):
         m.get(QUERY_URL, status_code=200, json={"result": sample_assets})
         assets = list(test_connector.get_assets())
 
-    assert len(assets) == 2
+    # The first sample is named after its product: skipped, no usable hostname
+    assert len(assets) == 1
     assert all(isinstance(a, DeviceOCSFModel) for a in assets)
 
 

@@ -7,7 +7,6 @@ import logging
 from pathlib import Path
 
 from trendmicro_modules import TrendMicroModule
-from trendmicro_modules.models import TrendMicroModuleConfiguration
 from trendmicro_modules.trigger_email_sec import TrendMicroConnectorConfiguration, TrendMicroEmailSecurityConnector
 
 logging.basicConfig(

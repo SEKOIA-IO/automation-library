@@ -119,6 +119,10 @@
 		{
 			"name": "PolySwarm",
 			"path": "PolySwarm"
+    },
+    {
+			"name": "TrendMicro",
+			"path": "TrendMicro"
 		}
 	],
 	"settings": {

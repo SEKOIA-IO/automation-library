@@ -7,8 +7,12 @@ from requests.exceptions import SSLError
 
 from sekoia_automation.account_validator import AccountValidator
 
+from tenable_conn import TenableModule
+
 
 class TenableAccountValidator(AccountValidator):
+    module: TenableModule
+
     TIMEOUT = 10
 
     @property
