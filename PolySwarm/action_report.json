@@ -1,7 +1,7 @@
 {
   "name": "Get Sandbox Report",
   "description": "Fetch the sandbox report already on file for a hash and provider. Reads only: it submits nothing and spends no detonation. If nothing has been detonated for this hash and provider yet, call SandboxFile, SandboxUrl or SandboxIp to submit one, then either wait here for it to finish or use the Sandbox detonation completed trigger to be notified instead of waiting.",
-  "uuid": "afdfb95c-e31e-4cba-a635-695f019bd6c9",
+  "uuid": "244be009-2ffe-4d86-be75-9714332af756",
   "docker_parameters": "Report",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

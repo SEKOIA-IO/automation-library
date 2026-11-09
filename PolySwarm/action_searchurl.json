@@ -1,7 +1,7 @@
 {
   "name": "Search URL",
   "description": "Look up any existing PolySwarm verdict for a URL. This action only reads: it spends no scanning quota and creates no activity on the account. To submit the URL for a fresh scan instead, use ScanUrl.",
-  "uuid": "81b109cb-725d-4372-ae14-4d0b44fab106",
+  "uuid": "6460d220-3b55-47b8-b7e9-d711f2775257",
   "docker_parameters": "SearchUrl",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

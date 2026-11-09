@@ -1,7 +1,7 @@
 {
   "name": "Search Multiple Hashes",
   "description": "Look up a list of hashes against what PolySwarm already knows: a read-only search that submits nothing, one API request per distinct hash. PolySwarm has no batch endpoint, so a list of fifty hashes costs fifty requests; duplicates are only paid for once, lookups run sequentially, and a usage limit, a refused key, an unreachable platform, three failures in a row or a ten minute time bound stops the run and returns what was already gathered. The run branches on a malicious count above zero with no detection threshold, unlike Search Hash. A hash that could not be checked, for any reason, routes the run to partial rather than to a clean answer.",
-  "uuid": "fe81a970-c4b9-437a-9a65-05e266cc0844",
+  "uuid": "274fddd5-244d-4842-992a-a2f2b032e914",
   "docker_parameters": "SearchHashes",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

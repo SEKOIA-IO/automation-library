@@ -1,7 +1,7 @@
 {
   "name": "Search Hash",
   "description": "Look up a hash against what PolySwarm already knows. Read-only: nothing is submitted, no scan quota is spent, and an unseen hash comes back as unknown rather than an error. Use ScanFile to submit a file for a fresh verdict instead.",
-  "uuid": "543edad2-e5dd-477a-94fd-8f000e36593d",
+  "uuid": "525cc5d7-0c94-4408-bbd5-8b26debf3dc6",
   "docker_parameters": "SearchHash",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

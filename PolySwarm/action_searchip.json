@@ -1,7 +1,7 @@
 {
   "name": "Search IP Address",
   "description": "Look up any existing PolySwarm verdict for an IP address. This action only reads: it spends no scanning quota and creates no activity on the account. To submit the IP for a fresh scan instead, use ScanIp.",
-  "uuid": "59d2ae4a-60cb-40ca-8597-c24468ca5f82",
+  "uuid": "d61197e4-4834-48bb-8a5c-a5227979290b",
   "docker_parameters": "SearchIp",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
