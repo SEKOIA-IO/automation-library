@@ -389,7 +389,8 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         """
 
         if error := basedn_error(self.configuration.basedn):
-            raise ValueError(error)
+            self.log(error, level="error")
+            return
 
         self.log("Start Microsoft AD user assets generator !!", level="info")
         self.log(f"Data path: {self._data_path.absolute()}", level="info")

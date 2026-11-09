@@ -332,10 +332,14 @@ def test_get_assets_refuses_an_invalid_base_dn(connector):
     connector._configuration.basedn = "EXAMPLE.CORP"
     connector.get_users_generator = Mock()
 
-    with pytest.raises(ValueError, match="use 'DC=EXAMPLE,DC=CORP' for the domain EXAMPLE.CORP"):
-        list(connector.get_assets())
+    assert list(connector.get_assets()) == []
 
     connector.get_users_generator.assert_not_called()
+    connector.log.assert_called_once_with(
+        "The base DN 'EXAMPLE.CORP' is not a valid distinguished name: "
+        "use 'DC=EXAMPLE,DC=CORP' for the domain EXAMPLE.CORP",
+        level="error",
+    )
 
 
 def test_get_assets_handles_exception(connector):
