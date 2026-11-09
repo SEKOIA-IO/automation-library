@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "AUBE Security",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "AUBE (Authorized User Behavior Evaluation) detects insider risk and credential abuse on Linux and Windows servers by finding statistically singular periods of audit-log activity against a routine baseline.",
+  "name": "AUBE Security",
+  "uuid": "b1344b3e-7b5a-4ba0-bf2b-1f70efb64221",
+  "version": "1.0.0",
+  "slug": "aube-security",
+  "categories": [
+    "Endpoint"
+  ]
+}
