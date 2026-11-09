@@ -34,6 +34,11 @@
         "description": "Flag to ignore commented lines (starting with the character `#`; default: false)",
         "default": false
       },
+      "filter_internal_traffic": {
+        "type": "boolean",
+        "description": "Flag to filter out network traffics between your VPC instances (default: true)",
+        "default": true
+      },
       "intake_server": {
         "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
         "default": "https://intake.sekoia.io",

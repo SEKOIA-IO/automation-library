@@ -7,7 +7,11 @@ import pytest
 from faker import Faker
 
 from connectors import AwsModule
-from connectors.s3.trigger_s3_flowlogs import AwsS3FlowLogsConfiguration, AwsS3FlowLogsTrigger
+from connectors.s3.trigger_s3_flowlogs import (
+    AwsS3FlowLogsConfiguration,
+    AwsS3FlowLogsTrigger,
+)
+from aws_helpers.utils import check_all_ips_are_private
 from tests.helpers import async_list, async_temporary_file
 
 
@@ -43,6 +47,7 @@ def aws_s3_flowlogs_trigger_config(faker: Faker) -> AwsS3FlowLogsConfiguration:
         "skip_first": 1,
         "ignore_comments": True,
         "intake_key": faker.word(),
+        "filter_internal_traffic": True,
     }
 
     return AwsS3FlowLogsConfiguration(**config)
@@ -88,8 +93,44 @@ async def test_aws_s3_logs_trigger_parse_data(connector: AwsS3FlowLogsTrigger, t
             == [
                 line
                 for line in test_data.decode("utf-8").split("\n")
-                if line != "" and not line.startswith("#") and not connector.check_all_ips_are_private(line)
+                if line != "" and not line.startswith("#") and not check_all_ips_are_private(line.split(" "))
             ][connector.configuration.skip_first :]
+        )
+
+
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_parse_data_keep_internal_traffic(
+    aws_module: AwsModule, symphony_storage: Path, faker: Faker, test_data: bytes
+):
+    """
+    Test AwsS3FlowLogsTrigger `_parse_data`.
+
+    Args:
+        connector: AwsS3FlowLogsTrigger
+        test_data: bytes
+    """
+    config = AwsS3FlowLogsConfiguration(
+        **{
+            "frequency": 0,
+            "queue_name": faker.word(),
+            "separator": "\n",
+            "skip_first": 1,
+            "ignore_comments": False,
+            "intake_key": faker.word(),
+            "filter_internal_traffic": False,
+        }
+    )
+
+    connector = AwsS3FlowLogsTrigger(module=aws_module, data_path=symphony_storage)
+
+    connector.configuration = config
+
+    async with async_temporary_file(test_data) as f:
+        assert (
+            await async_list(connector._parse_content(f))
+            == [line for line in test_data.decode("utf-8").split("\n") if line != ""][
+                connector.configuration.skip_first :
+            ]
         )
 
 
