@@ -9,12 +9,28 @@ from threading import Event, Timer
 from typing import Any
 from uuid import uuid4
 
+from ldap3.core.exceptions import LDAPInvalidDnError
+from ldap3.utils.dn import safe_dn
 from pydantic.v1 import BaseModel, Field
 from sekoia_automation.storage import PersistentJSON
 
 from microsoft_ad.actions_base import MicrosoftADAction
 from microsoft_ad.asset_connectors.exceptions import AssetConnectorPushError, AssetConnectorStoppedError
 from microsoft_ad.asset_connectors.user_assets_sync import MicrosoftADUserAssetSyncConnector
+
+
+def basedn_error(basedn: str | None) -> str | None:
+    if not basedn:
+        return "A base DN is required to synchronize Active Directory users"
+    try:
+        safe_dn(basedn)
+    except LDAPInvalidDnError:
+        message = f"The base DN '{basedn}' is not a valid distinguished name"
+        if "=" not in basedn and "." in basedn:
+            suggestion = ",".join(f"DC={part}" for part in basedn.split(".") if part)
+            message += f": use '{suggestion}' for the domain {basedn}"
+        return message
+    return None
 
 
 class SynchronizeAssetsArguments(BaseModel):
@@ -131,7 +147,8 @@ class SynchronizeAssetsAction(MicrosoftADAction):
         stats: Counter[str] = Counter()
         has_more = False
         try:
-            if arguments.basedn:
+            error = basedn_error(arguments.basedn)
+            if error is None:
                 with self._run_lock(data_path) as acquired:
                     if acquired:
                         connector.asset_fetch_cycle()
@@ -141,10 +158,9 @@ class SynchronizeAssetsAction(MicrosoftADAction):
                             level="warning",
                         )
             else:
-                basedn_error = "A base DN is required to synchronize Active Directory users"
-                self.error(basedn_error)
+                self.error(error)
                 with self._warn_on_error("send the connector error log"):
-                    connector.log(message=basedn_error, level="error")
+                    connector.log(message=error, level="error")
         except AssetConnectorStoppedError:
             if time_limit_reached.is_set():
                 reason = f"reached the time limit of {self.MAX_DURATION // 60} minutes"

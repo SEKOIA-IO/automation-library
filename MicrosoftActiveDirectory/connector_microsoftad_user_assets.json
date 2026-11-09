@@ -45,7 +45,7 @@
       "basedn": {
         "type": "string",
         "title": "Base DN",
-        "description": "The base distinguished name (DN) to use for LDAP queries"
+        "description": "The base distinguished name (DN) to use for LDAP queries (e.g DC=example-domain,DC=com)"
       }
     },
     "required": [

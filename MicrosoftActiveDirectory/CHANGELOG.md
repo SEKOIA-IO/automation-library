@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-09 - 1.6.6
+
+### Fixed
+
+- Reject an invalid base DN with a clear error that suggests the DC= form for a domain name
+- Show an example of base DN in the user assets connector configuration
+
 ## 2026-11-03 - 1.6.5
 
 ### Fixed
