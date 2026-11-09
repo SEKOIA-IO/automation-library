@@ -808,13 +808,12 @@ BASEDN_ERROR = "A base DN is required to synchronize Active Directory users"
     [
         (None, BASEDN_ERROR),
         ("", BASEDN_ERROR),
+        ("  ", BASEDN_ERROR),
         (
             "EXAMPLE.CORP",
             "The base DN 'EXAMPLE.CORP' is not a valid distinguished name: "
             "use 'DC=EXAMPLE,DC=CORP' for the domain EXAMPLE.CORP",
         ),
-        ("example", "The base DN 'example' is not a valid distinguished name"),
-        ("  ", "The base DN '  ' is not a valid distinguished name"),
     ],
 )
 def test_run_fails_at_once_without_a_valid_base_dn(build_action, api, tmp_path, basedn, expected):

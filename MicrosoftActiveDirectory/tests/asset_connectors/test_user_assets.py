@@ -338,7 +338,7 @@ def test_get_assets_refuses_an_invalid_base_dn(connector):
     connector.log.assert_called_once_with(
         "The base DN 'EXAMPLE.CORP' is not a valid distinguished name: "
         "use 'DC=EXAMPLE,DC=CORP' for the domain EXAMPLE.CORP",
-        level="error",
+        level="critical",
     )
 
 

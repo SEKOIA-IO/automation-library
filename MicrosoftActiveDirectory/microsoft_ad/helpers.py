@@ -1,8 +1,14 @@
+import re
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 
+from ldap3.core.exceptions import LDAPInvalidDnError
+from ldap3.utils.dn import safe_dn
+
 # Server-side sort control (RFC 2891), supported by Active Directory
 SORT_REQUEST_CONTROL_OID = "1.2.840.113556.1.4.473"
+
+DOMAIN_LABEL = re.compile(r"^[A-Za-z0-9-]+$")
 
 
 def ber_length(length: int) -> bytes:
@@ -45,3 +51,20 @@ def retry_after_seconds(value: str | None, now: datetime | None = None) -> float
     if date.tzinfo is None:
         date = date.replace(tzinfo=UTC)
     return max(0.0, (date - (now or datetime.now(UTC))).total_seconds())
+
+
+def basedn_error(basedn: str | None) -> str | None:
+    if not basedn or not basedn.strip():
+        return "A base DN is required to synchronize Active Directory users"
+    if "=" in basedn:
+        try:
+            safe_dn(basedn)
+        except LDAPInvalidDnError as error:
+            return f"The base DN '{basedn}' is not a valid distinguished name: {error}"
+        return None
+    message = f"The base DN '{basedn}' is not a valid distinguished name"
+    labels = basedn.strip().split(".")
+    if len(labels) > 1 and all(DOMAIN_LABEL.match(label) for label in labels):
+        suggestion = ",".join(f"DC={label}" for label in labels)
+        message += f": use '{suggestion}' for the domain {basedn.strip()}"
+    return message

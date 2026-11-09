@@ -14,8 +14,8 @@ from sekoia_automation.storage import PersistentJSON
 
 from microsoft_ad.actions_base import MicrosoftADAction
 from microsoft_ad.asset_connectors.exceptions import AssetConnectorPushError, AssetConnectorStoppedError
-from microsoft_ad.asset_connectors.user_assets import basedn_error
 from microsoft_ad.asset_connectors.user_assets_sync import MicrosoftADUserAssetSyncConnector
+from microsoft_ad.helpers import basedn_error
 
 
 class SynchronizeAssetsArguments(BaseModel):
