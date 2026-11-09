@@ -5,7 +5,9 @@ from typing import Any
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
+from pydantic import ValidationError
 
+from usta_modules.models import UstaATPConnectorConfiguration
 from usta_modules.usta_atp_connector import UstaAPIError, UstaAtpConnector, parse_created
 from usta_modules.usta_sdk import UstaAuthenticationError
 
@@ -315,3 +317,9 @@ def test_partial_collection_on_api_error(atp_connector: UstaAtpConnector, data_s
     atp_connector.push_events_to_intakes.assert_called_once()
     # events are requested in ascending order, so the cursor can move to the last forwarded one
     assert _read_checkpoint(data_storage) == created
+
+
+@pytest.mark.parametrize("max_historical_days", [0, -1])
+def test_max_historical_days_must_be_positive(max_historical_days: int) -> None:
+    with pytest.raises(ValidationError):
+        UstaATPConnectorConfiguration(intake_key="intake_key", max_historical_days=max_historical_days)
