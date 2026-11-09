@@ -3,7 +3,7 @@
   "name": "THOR Cloud",
   "slug": "thor_cloud",
   "description": "Nextron THOR Cloud and THOR Cloud Lite endpoint scanner - comprehensive malware detection logs with file scanning, rootkit detection, and signature-based alerting.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "categories": [
     "Endpoint"
   ],
