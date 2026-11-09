@@ -1,5 +1,9 @@
 """Tests related to AwsS3OcsfTrigger."""
 
+import gzip
+import io
+import tempfile
+from contextlib import aclosing
 from os import path
 from pathlib import Path
 from unittest.mock import patch
@@ -11,6 +15,7 @@ import pyarrow
 import pyarrow.parquet
 import pytest
 
+from aws_helpers.utils import async_gzip_open
 from connectors import AwsModule
 from connectors.s3 import AwsS3QueuedConfiguration
 from connectors.s3.trigger_s3_ocsf_parquet import AwsS3OcsfTrigger
@@ -177,3 +182,26 @@ async def test_aws_s3_ocsf_trigger_keeps_full_file_types_across_batches(
     with patch("connectors.s3.trigger_s3_ocsf_parquet.PARQUET_BATCH_SIZE", 1):
         async with aiofiles.open(file_path, "rb") as f:
             assert await async_list(connector._parse_content(f)) == expected
+
+
+@pytest.mark.asyncio
+async def test_aws_s3_ocsf_trigger_closes_the_decompressed_spool_when_the_consumer_stops_early(
+    connector: AwsS3OcsfTrigger,
+):
+    table = pyarrow.table({"class_uid": [4001] * 30_000})
+    parquet = io.BytesIO()
+    pyarrow.parquet.write_table(table, parquet)
+    stream = await async_gzip_open(io.BytesIO(gzip.compress(parquet.getvalue())))
+
+    spools = []
+    original_spool = tempfile.SpooledTemporaryFile
+
+    def spy_spool(*args, **kwargs):
+        spools.append(original_spool(*args, **kwargs))
+        return spools[-1]
+
+    with patch("aws_helpers.utils.stream.tempfile.SpooledTemporaryFile", side_effect=spy_spool):
+        async with aclosing(connector._parse_content(stream)) as events:
+            await anext(events)
+
+    assert len(spools) == 1 and spools[0].closed

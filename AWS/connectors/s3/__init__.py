@@ -4,6 +4,7 @@ import os
 from abc import ABCMeta
 from asyncio import BoundedSemaphore
 from collections.abc import AsyncGenerator
+from contextlib import aclosing
 from typing import Any, Optional
 
 import orjson
@@ -148,8 +149,9 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                     async with (
                         self.s3_fetch_concurrency_sem,
                         self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as stream,
+                        aclosing(self._parse_content(stream)) as events,
                     ):
-                        async for event in self._parse_content(stream):
+                        async for event in events:
                             object_records += 1
                             records.append(event)
 
@@ -253,8 +255,9 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
                 async with (
                     self.s3_fetch_concurrency_sem,
                     self.s3_wrapper.read_key(bucket=self.configuration.bucket, key=normalized_key) as stream,
+                    aclosing(self._parse_content(stream)) as events,
                 ):
-                    async for event in self._parse_content(stream):
+                    async for event in events:
                         pending.append(event)
                         object_records += 1
 

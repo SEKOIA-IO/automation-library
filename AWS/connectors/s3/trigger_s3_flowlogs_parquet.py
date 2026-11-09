@@ -7,7 +7,7 @@ from typing import Any
 import orjson
 
 from aws_helpers.parquet import iter_parquet_dataframes
-from aws_helpers.utils import AsyncReader, filter_internal_traffic, to_seekable_file
+from aws_helpers.utils import AsyncReader, filter_internal_traffic, seekable_file
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from connectors.s3.provider import AwsAccountProvider
@@ -39,22 +39,22 @@ class BaseAwsS3FlowLogsParquetRecordsTrigger:
         Returns:
              Generator:
         """
-        file = await to_seekable_file(stream)
-        if file.seek(0, io.SEEK_END) == 0:
-            return
-        file.seek(0)
+        async with seekable_file(stream) as file:
+            if file.seek(0, io.SEEK_END) == 0:
+                return
+            file.seek(0)
 
-        # read by batches to bound memory
-        for df in iter_parquet_dataframes(file, PARQUET_BATCH_SIZE):
-            for record in df.to_dict(orient="records"):
-                if len(record) > 0:
-                    if not filter_internal_traffic(
-                        self.configuration.filter_internal_traffic,
-                        (record[name] for name in self.FIELD_NAMES if name in record),
-                    ):
-                        yield orjson.dumps(record).decode("utf-8")
-                    else:
-                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+            # read by batches to bound memory
+            for df in iter_parquet_dataframes(file, PARQUET_BATCH_SIZE):
+                for record in df.to_dict(orient="records"):
+                    if len(record) > 0:
+                        if not filter_internal_traffic(
+                            self.configuration.filter_internal_traffic,
+                            (record[name] for name in self.FIELD_NAMES if name in record),
+                        ):
+                            yield orjson.dumps(record).decode("utf-8")
+                        else:
+                            DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
 
 
 class AwsS3FlowLogsParquetRecordsTrigger(

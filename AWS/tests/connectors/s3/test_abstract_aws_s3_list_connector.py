@@ -487,3 +487,30 @@ async def test_abstract_aws_s3_list_connector_next_batch_failure_after_mid_objec
     assert result[0] == 2
     assert [call.kwargs["events"] for call in mock_push_data_to_intakes.call_args_list] == [["a1", "b1"]]
     assert abstract_list_connector.read_marker() == "file-0.log"
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_list_connector_next_batch_closes_the_parsed_events_on_push_failure(
+    abstract_list_connector: AbstractAwsS3ListConnector,
+    mock_push_data_to_intakes: AsyncMock,
+):
+    """The parser is closed as soon as the object is left, not when the event loop finalizes it later."""
+    closed = []
+
+    async def parse_content(stream: BinaryIO) -> AsyncGenerator[str, None]:
+        try:
+            yield "event-1"
+            yield "event-2"
+        finally:
+            closed.append(True)
+
+    abstract_list_connector._parse_content = MagicMock(side_effect=parse_content)
+    abstract_list_connector.limit_of_events_to_push = 1
+    mock_push_data_to_intakes.side_effect = RuntimeError("intake down")
+
+    mock_s3 = _mock_s3_with_objects(["a"])
+    with patch.object(type(abstract_list_connector), "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3):
+        with pytest.raises(IntakePushError):
+            await abstract_list_connector.next_batch()
+
+    assert closed == [True]

@@ -15,6 +15,7 @@ from aws_helpers.utils.stream import (
     async_islice,
     split_stream_by_separator,
     has_parquet_footer,
+    seekable_file,
     to_seekable_file,
 )
 
@@ -33,6 +34,7 @@ __all__ = [
     "async_islice",
     "split_stream_by_separator",
     "has_parquet_footer",
+    "seekable_file",
     "to_seekable_file",
     "SPOOL_MAX_SIZE",
     "PARQUET_MAGIC",

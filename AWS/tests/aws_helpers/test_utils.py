@@ -1,6 +1,7 @@
 """Test utils module."""
 
 import asyncio
+import contextlib
 import gzip
 import io
 import shutil
@@ -22,6 +23,7 @@ from aws_helpers.utils import (
     async_islice,
     get_content,
     has_parquet_footer,
+    seekable_file,
     is_gzip_compressed,
     is_parquet_content,
     normalize_s3_key,
@@ -375,3 +377,26 @@ def test_shared_modules_do_not_load_pandas_or_pyarrow(module):
     aws_root = Path(__file__).resolve().parents[2]
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True, cwd=aws_root)
     assert result.stdout.strip() == "False"
+
+
+@pytest.mark.asyncio
+async def test_seekable_file_leaves_the_file_of_the_stream_open():
+    async with async_temporary_file(b"data") as f:
+        async with seekable_file(f) as file:
+            assert file is f._file
+
+        assert not f._file.closed
+
+
+@pytest.mark.parametrize("fail", [False, True])
+@pytest.mark.asyncio
+async def test_seekable_file_closes_the_file_it_created(fail):
+    stream = await async_gzip_open(io.BytesIO(compress(b"data")))
+
+    with pytest.raises(RuntimeError) if fail else contextlib.nullcontext():
+        async with seekable_file(stream) as file:
+            assert file.read() == b"data"
+            if fail:
+                raise RuntimeError("parsing failed")
+
+    assert file.closed

@@ -5,6 +5,7 @@ import shutil
 import tempfile
 from abc import abstractmethod
 from collections.abc import AsyncGenerator, AsyncIterable
+from contextlib import asynccontextmanager
 from concurrent.futures import Executor
 from functools import partial
 from typing import Any, BinaryIO, Protocol, TypeVar
@@ -251,6 +252,28 @@ async def to_seekable_file(stream: AsyncReader) -> BinaryIO:
     return io.BytesIO(await stream.read())
 
 
+@asynccontextmanager
+async def seekable_file(stream: AsyncReader) -> AsyncGenerator[BinaryIO, None]:
+    """
+    Yield a seekable synchronous file for the stream, and close it on exit if it was created for it.
+
+    The underlying file of an aiofiles reader is owned by the reader and left open; a gzip object is decompressed
+    into a new spool, which would otherwise live until it is garbage collected.
+
+    Args:
+        stream: AsyncReader
+
+    Yields:
+        BinaryIO: The seekable file.
+    """
+    file = await to_seekable_file(stream)
+    try:
+        yield file
+    finally:
+        if file is not getattr(stream, "_file", None):
+            file.close()
+
+
 async def has_parquet_footer(stream: Any) -> bool:
     """
     Check if a stream, already known to start with the Parquet magic bytes, also ends with them.
@@ -265,16 +288,13 @@ async def has_parquet_footer(stream: Any) -> bool:
     """
     position = await stream.tell()
     await stream.seek(0)
-    file = await to_seekable_file(stream)
     try:
-        size = file.seek(0, io.SEEK_END)
-        if size < 2 * len(PARQUET_MAGIC):
-            return False
+        async with seekable_file(stream) as file:
+            size = file.seek(0, io.SEEK_END)
+            if size < 2 * len(PARQUET_MAGIC):
+                return False
 
-        file.seek(size - len(PARQUET_MAGIC))
-        return file.read(len(PARQUET_MAGIC)) == PARQUET_MAGIC
+            file.seek(size - len(PARQUET_MAGIC))
+            return file.read(len(PARQUET_MAGIC)) == PARQUET_MAGIC
     finally:
-        # a gzip stream is decompressed into a new spool, which is ours to close
-        if file is not getattr(stream, "_file", None):
-            file.close()
         await stream.seek(position)
