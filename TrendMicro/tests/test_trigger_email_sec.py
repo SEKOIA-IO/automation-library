@@ -302,7 +302,7 @@ def test_fetch_all_pages(trigger, paginated_responses):
 
 
 def test_checkpoint_not_moved_when_a_page_fails(trigger, paginated_responses):
-    checkpoint, max_gen_time, pages = paginated_responses
+    checkpoint, _max_gen_time, pages = paginated_responses
     url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
 
     consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")

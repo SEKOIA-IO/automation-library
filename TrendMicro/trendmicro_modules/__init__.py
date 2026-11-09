@@ -4,4 +4,4 @@ from .models import TrendMicroModuleConfiguration
 
 
 class TrendMicroModule(Module):
-    configuration: TrendMicroModuleConfiguration  # type: ignore[assignment,override]
+    configuration: TrendMicroModuleConfiguration  # type: ignore[override]

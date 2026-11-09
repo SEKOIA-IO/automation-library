@@ -35,7 +35,7 @@ target-version = "py314"
 select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["ARG", "E501", "F841", "RUF059"]  # pre-existing test style
+"tests/*" = ["ARG", "E501", "F841"]
 "dev.py" = ["ARG"]
 
 [tool.mypy]
@@ -46,16 +46,10 @@ ignore_missing_imports = true
 show_column_numbers = true
 exclude = ["tests/", "dev.py"]
 
-[tool.pytest.ini_options]
-minversion = "6.0"
-addopts = """
-    --cache-clear
-    --cov=trendmicro_modules
-    --cov-branch
-    --cov-report=term-missing:skip-covered
-    -ra
-"""
-testpaths = ["tests"]
-
 [tool.coverage.run]
 omit = ["tests/*", "main.py", "dev.py"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests"]
+addopts = "  --strict-markers\n  --tb=short\n  --cov=trendmicro_modules\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n  --capture=sys\n"

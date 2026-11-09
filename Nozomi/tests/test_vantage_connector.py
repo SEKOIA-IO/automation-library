@@ -6,6 +6,7 @@ import pytest
 from aioresponses import aioresponses
 from faker.proxy import Faker
 from loguru import logger
+from pydantic.v1 import ValidationError
 
 from nozomi_networks import NozomiModule
 from nozomi_networks.client.event_type import EventType
@@ -33,7 +34,7 @@ def vantage_connector(
     connector = NozomiVantageConnector(module=module)
     connector.configuration = NozomiVantageConfiguration(
         intake_key=session_faker.word(),
-        batch_size=3,
+        chunk_size=3,
     )
     connector.push_data_to_intakes = mock_push_data_to_intakes
 
@@ -96,3 +97,8 @@ async def test_vantage_connector(vantage_connector: NozomiVantageConnector, sess
     assert result == sum([len(value) for _, value in response_data.items()])
 
     await vantage_connector.nozomi_client.close()
+
+
+def test_vantage_configuration_rejects_chunk_size_above_hard_limit() -> None:
+    with pytest.raises(ValidationError):
+        NozomiVantageConfiguration(intake_key="test", chunk_size=1001)

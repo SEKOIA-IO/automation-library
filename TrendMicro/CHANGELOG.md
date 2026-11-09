@@ -7,12 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-10-26 - 1.7.0
-
-### Changed
-
-- Migrated module from Poetry to uv
-- Pin the uv image used to build the Docker image to 0.13.5
+## 2026-11-09 - 1.7.2
 
 ### Fixed
 
@@ -21,6 +16,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trend Micro Email Security: retry the window when a page behind a `nextToken` fails or is empty, without pushing the pages already collected again
 - Trend Micro Email Security: convert the API dates as UTC instead of the local time of the container
 - Trend Micro Email Security: accept event dates with fractional seconds
+- Fix the type annotation of `intake_key` in the development runner for Pydantic v2
+
+## 2026-11-05 - 1.7.1
+
+### Changed
+
+- Increase authentication error retries to 10 attempts before stopping the connector 
+
+## 2026-11-03 - 1.7.0
+
+### Changed
+
+- Migrated module from Poetry to uv
+- Upgraded sekoia-automation-sdk to 1.27.0 and moved to Python 3.14
+- Migrated Pydantic v1 models to Pydantic v2
+
+## 2026-11-03 - 1.6.5
+
+### Fixed
+
+- Vision One: retry on 401/403 and log a critical error only after repeated authentication failures
 
 ## 2026-03-24 - 1.6.4
 

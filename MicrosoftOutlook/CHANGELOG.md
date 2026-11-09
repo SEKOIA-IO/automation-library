@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-03
+
+### Changed
+
+- Regenarate `uv.lock`
+
+### Fixed
+
+- Add hardcoded /tmp symlink workaround in `Dockerfile`
+
 ## [0.5.0] - 2026-10-19
 
 ### Added

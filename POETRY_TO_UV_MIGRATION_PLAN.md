@@ -40,13 +40,11 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 
 ### Wave 4 first batch completed in this session
 - CatoNetwork
-
-### Wave 3 first batch completed in this session
 - TrendMicro
 
 ### Remaining scope
 - Remaining modules to migrate: 84
-- Remaining planned effort: about 385.0 hours
+- Remaining planned effort: about 380.5 hours
 - Criticity scale: 1 (easiest) to 10 (hardest)
 
 ## Incremental Delivery Strategy
@@ -160,7 +158,7 @@ Estimated wave effort: 96h
 - Wiz
 - Zscaler
 
-Estimated wave effort: 108h
+Estimated wave effort: 108h total, 103.5h remaining
 
 ### Wave 5: Criticity 8 (estimated 6h each)
 - Azure

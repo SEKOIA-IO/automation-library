@@ -117,8 +117,16 @@
 			"path": "CatoNetwork"
 		},
 		{
+			"name": "PolySwarm",
+			"path": "PolySwarm"
+    },
+    {
 			"name": "TrendMicro",
 			"path": "TrendMicro"
+		},
+		{
+			"name": "Nextron Valhalla",
+			"path": "Nextron Valhalla"
 		}
 	],
 	"settings": {

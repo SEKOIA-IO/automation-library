@@ -1,11 +1,10 @@
 """Contains AwsS3FlowLogsTrigger."""
 
-import ipaddress
 from collections.abc import AsyncGenerator, Generator
 from itertools import islice
 from typing import Any, cast
 
-from aws_helpers.utils import AsyncReader, is_parquet_content
+from aws_helpers.utils import AsyncReader, filter_internal_traffic, is_parquet_content
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import (
     AbstractAwsS3QueuedConnector,
@@ -19,6 +18,7 @@ class AwsS3FlowLogsConfiguration(AwsS3QueuedConfiguration, AwsS3LogsBaseConfigur
     """AwsS3FlowLogsTrigger configuration."""
 
     ignore_comments: bool = False
+    filter_internal_traffic: bool = True
 
 
 class BaseAwsS3FlowLogsTrigger:
@@ -38,26 +38,6 @@ class BaseAwsS3FlowLogsTrigger:
             level="warning",
         )
 
-    @staticmethod
-    def check_all_ips_are_private(input_str: str) -> bool:
-        """
-        Check if all IPs in the input string are private
-
-        Args:
-            input_str: str
-
-        Returns:
-            bool:
-        """
-        ips = []
-        for ip in input_str.split(" "):
-            try:
-                ips.append(ipaddress.ip_address(ip))
-            except ValueError:  # if substring is not IP then just omit it
-                pass
-
-        return all([ip.is_private for ip in ips])
-
     def _read_content(self, content: bytes) -> Generator[str, None, None]:
         """
         Read the content of the S3 Object
@@ -70,7 +50,7 @@ class BaseAwsS3FlowLogsTrigger:
         """
         for record in content.decode("utf-8").split(self.configuration.sep):
             if len(record) > 0:
-                if not self.check_all_ips_are_private(record):
+                if not filter_internal_traffic(self.configuration.filter_internal_traffic, record.split(" ")):
                     yield record
                 else:
                     DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
