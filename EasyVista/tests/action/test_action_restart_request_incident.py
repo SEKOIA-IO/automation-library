@@ -1,9 +1,9 @@
 import pytest
-from helpers import RFC, TICKET, assert_action_error, assert_action_success
 
 from easyvista_modules.action.action_close_request_incident import CloseRequestIncident
 from easyvista_modules.action.action_restart_request_incident import RestartRequestIncident
 from easyvista_modules.action.action_update_request_incident import UpdateRequestIncident
+from tests.helpers import RFC, TICKET, assert_action_error, assert_action_success
 
 ACTION_CASE = (RestartRequestIncident, TICKET, "PUT", "/" + RFC + "/restart", {"HREF": "ticket"}, {"href": "ticket"})
 

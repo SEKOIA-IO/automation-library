@@ -12,10 +12,12 @@
         "type": "string"
       },
       "comment": {
+        "description": "Restart action comment",
         "title": "Comment",
         "type": "string"
       },
       "done_by_id": {
+        "description": "Employee ID recorded as the author",
         "title": "Done By Id",
         "type": "integer"
       }
@@ -31,7 +33,7 @@
     "properties": {
       "href": {
         "type": "string",
-        "description": "`HREF` of the restarted ticket"
+        "description": "Restarted ticket URL (HREF)"
       }
     }
   }

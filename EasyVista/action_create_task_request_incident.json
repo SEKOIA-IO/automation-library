@@ -12,55 +12,62 @@
         "type": "string"
       },
       "action_type_id": {
+        "description": "Action type ID (tenant-specific); provide at least one of action_type_id or action_type_name",
         "title": "Action Type Id",
-        "type": "string",
-        "description": "Action type identifier; provide at least one of action_type_id or action_type_name"
+        "type": "string"
       },
       "action_type_name": {
+        "description": "Action type name, in the REST API user language; provide at least one of action_type_id or action_type_name",
         "title": "Action Type Name",
-        "type": "string",
-        "description": "Type name in the API user language; provide at least one of action_type_id or action_type_name"
+        "type": "string"
       },
       "group_id": {
+        "description": "Assigned group ID; provide at least one of group_id, group_name or group_mail",
         "title": "Group Id",
-        "type": "integer",
-        "description": "Assigned group ID; provide at least one of group_id, group_name or group_mail"
+        "type": "integer"
       },
       "group_name": {
+        "description": "Assigned group name; provide at least one of group_id, group_name or group_mail",
         "title": "Group Name",
-        "type": "string",
-        "description": "Assigned group name; provide at least one of group_id, group_name or group_mail"
+        "type": "string"
       },
       "group_mail": {
+        "description": "Assigned group email; provide at least one of group_id, group_name or group_mail",
         "title": "Group Mail",
-        "type": "string",
-        "description": "Assigned group email; provide at least one of group_id, group_name or group_mail"
+        "type": "string"
       },
       "description": {
+        "description": "Task description",
         "title": "Description",
         "type": "string"
       },
       "elapsed_time": {
+        "description": "Task elapsed time",
         "title": "Elapsed Time",
         "type": "string"
       },
       "time_cost": {
+        "description": "Task time cost",
         "title": "Time Cost",
         "type": "string"
       },
       "contractual_cost": {
+        "description": "Task contractual cost",
         "title": "Contractual Cost",
         "type": "string"
       },
       "creation_date_ut": {
+        "description": "Task creation date (UTC)",
         "title": "Creation Date Ut",
         "type": "string"
       },
       "start_date_ut": {
+        "description": "Task start date (UTC)",
         "title": "Start Date Ut",
         "type": "string"
       },
       "end_date_ut": {
+        "description": "Task end date (UTC)",
         "title": "End Date Ut",
         "type": "string"
       }
@@ -76,7 +83,7 @@
     "properties": {
       "href": {
         "type": "string",
-        "description": "URL returned by the API, which may reference /actions/{rfc_number}."
+        "description": "URL returned by the API (HREF); may reference /actions/{rfc_number}"
       }
     }
   }

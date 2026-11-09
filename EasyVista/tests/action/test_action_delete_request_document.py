@@ -1,7 +1,7 @@
 import pytest
-from helpers import RFC, TICKET, assert_action_error, assert_action_success
 
 from easyvista_modules.action.action_delete_request_document import DeleteRequestDocument
+from tests.helpers import RFC, TICKET, assert_action_error, assert_action_success
 
 ACTION_CASE = (
     DeleteRequestDocument,

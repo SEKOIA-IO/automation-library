@@ -12,7 +12,7 @@
         "type": "string"
       },
       "id": {
-        "description": "DOCUMENT_ID from the documents list",
+        "description": "Document ID (DOCUMENT_ID from the documents list)",
         "title": "Id",
         "type": "string"
       }
@@ -29,23 +29,23 @@
     "properties": {
       "success": {
         "type": "boolean",
-        "description": "`true` when the document is deleted: either a 2xx response, or a `590` followed by a confirmed absence from the documents list. On failure the action fails and returns nothing"
+        "description": "true when the document is deleted: 2xx response, or 590 followed by a confirmed absence from the documents list; on failure the action fails and returns nothing"
       },
       "status_code": {
         "type": "integer",
-        "description": "HTTP status code returned by the `DELETE` (`204`, `200`, or `590` when the deletion was confirmed by listing)"
+        "description": "HTTP status code of the DELETE (204, 200, or 590 when the deletion was confirmed by listing)"
       },
       "verified_by_listing": {
         "type": "boolean",
-        "description": "`true` when the API returned `590` and the deletion was confirmed by re-listing the documents; `false` for a plain 2xx"
+        "description": "true when the API returned 590 and the deletion was confirmed by re-listing the documents; false for a plain 2xx"
       },
       "api_error": {
         "type": "string",
-        "description": "Only when `verified_by_listing` is `true`: the `error`/`message` of the `590` body (e.g.\u00a0`Document was not found on the server.`), kept for troubleshooting"
+        "description": "Error or message of the 590 body (e.g. Document was not found on the server), kept for troubleshooting; only when verified_by_listing is true"
       },
       "message": {
         "type": "string",
-        "description": "Human-readable outcome, e.g.\u00a0`Document deleted` or `Document deleted (confirmed by listing; the API returned 590: Document was not found on the server.)`"
+        "description": "Human-readable outcome (e.g. Document deleted)"
       }
     }
   }

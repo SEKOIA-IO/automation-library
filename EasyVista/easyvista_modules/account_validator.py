@@ -5,4 +5,4 @@ from easyvista_modules.action_base import EasyVistaHttpMixin
 
 class EasyVistaAccountValidator(EasyVistaHttpMixin, AccountValidator):
     def validate(self) -> bool:
-        return self.request("GET", "/requests", params={"max_rows": 1, "fields": "rfc_number"}) is not None
+        return self.get("/requests", params={"max_rows": 1, "fields": "rfc_number"}) is not None

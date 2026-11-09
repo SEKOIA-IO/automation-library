@@ -1,8 +1,12 @@
+from io import BytesIO
+from unittest.mock import patch
+
 import pytest
-from helpers import RFC, TICKET, assert_action_error, assert_action_success
+from urllib3.response import HTTPResponse
 
 from easyvista_modules.action.action_close_request_incident import CloseRequestIncident
 from easyvista_modules.action.action_update_request_incident import UpdateRequestIncident
+from tests.helpers import RFC, TICKET, assert_action_error, assert_action_success
 
 ACTION_CASE = (
     UpdateRequestIncident,
@@ -34,6 +38,17 @@ def test_precheck_failure(make_action, requests_mock, api_url, cls, extra, close
     assert action.run({**TICKET, **extra}) is None
     assert len(requests_mock.request_history) == 1
     assert ("already closed" if closed else "Resource not found") in action.error.call_args.args[0]
+
+
+@pytest.mark.parametrize("append", [False, None])
+def test_update_replace_omits_append_query(make_action, requests_mock, api_url, append):
+    action = make_action(UpdateRequestIncident)
+    requests_mock.get(api_url + "/" + RFC, json={"END_DATE_UT": ""})
+    requests_mock.put(api_url + "/" + RFC, json={"HREF": "ticket"})
+    arguments = {**TICKET, "description": "New"} | ({"append": append} if append is not None else {})
+    assert action.run(arguments) == {"href": "ticket"}
+    assert requests_mock.last_request.qs == {}
+    assert requests_mock.last_request.json() == {"Description": "New"}
 
 
 def test_update_mapping_and_append(make_action, requests_mock, api_url):
@@ -132,3 +147,26 @@ def test_required_href_rejects_invalid_response(make_action, requests_mock, api_
     assert action.run(args) is None
     action.error.assert_called_once()
     assert "HREF" in action.error.call_args.args[0]
+
+
+@pytest.mark.parametrize("status", [502, 503, 504])
+@pytest.mark.parametrize("append,attempts", [(True, 1), (False, 3)])
+def test_append_updates_are_not_retried(make_action, monkeypatch, api_url, status, append, attempts):
+    monkeypatch.setenv("NO_PROXY", "*")
+    action = make_action(UpdateRequestIncident)
+    methods = []
+
+    def reply(conn, method, url, **kwargs):
+        methods.append(method)
+        return HTTPResponse(
+            status=200 if method == "GET" else status,
+            body=BytesIO(b'{"END_DATE_UT":""}' if method == "GET" else b'{"error":"gateway error"}'),
+            headers={"Content-Type": "application/json"},
+            preload_content=False,
+        )
+
+    with patch("urllib3.connectionpool.HTTPConnectionPool._make_request", side_effect=reply):
+        with patch("urllib3.util.retry.time.sleep"):
+            assert action.run({"rfc_number": "ticket", "description": "Evidence", "append": append}) is None
+    assert methods == ["GET"] + ["PUT"] * attempts
+    assert f"EasyVista API error {status}" in action.error.call_args.args[0]

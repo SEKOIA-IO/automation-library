@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 from pathlib import Path
 from unittest.mock import Mock, patch
 from uuid import UUID
@@ -19,7 +20,8 @@ def inline_schema(model):
     def resolve(item):
         if isinstance(item, dict):
             if "$ref" in item:
-                return resolve(definitions[item["$ref"].rsplit("/", 1)[-1]])
+                siblings = {key: value for key, value in item.items() if key != "$ref"}
+                return resolve({**definitions[item["$ref"].rsplit("/", 1)[-1]], **siblings})
             variants = item.get("anyOf", [])
             non_null = [value for value in variants if value.get("type") != "null"]
             if len(variants) == 2 and len(non_null) == 1:
@@ -54,7 +56,7 @@ def test_all_descriptors_registered_and_match_models():
         action_filename = "action_" + descriptor["slug"]
         assert action.__module__ == "easyvista_modules.action." + action_filename
         assert (ROOT / "easyvista_modules" / "action" / (action_filename + ".py")).is_file()
-        assert (ROOT / "tests" / ("test_" + action_filename + ".py")).is_file()
+        assert (ROOT / "tests" / "action" / ("test_" + action_filename + ".py")).is_file()
         model = getattr(models, action.__name__ + "Arguments")
         assert descriptor["arguments"] == inline_schema(model)
         for key in descriptor["arguments"]["properties"]:
@@ -77,3 +79,35 @@ def test_manifest_configuration():
     assert set(config["properties"]) == set(EasyVistaConfiguration.model_fields)
     assert config["properties"]["tenant_id"]["minLength"] == 1
     assert config["properties"]["tenant_id"]["pattern"] == "\\S"
+    model = inline_schema(EasyVistaConfiguration)["properties"]
+    for name, prop in config["properties"].items():
+        assert (prop.get("description"), prop["type"]) == (model[name].get("description"), model[name]["type"]), name
+
+
+def descriptor_properties(schema, prefix=""):
+    for name, prop in schema.get("properties", {}).items():
+        yield prefix + name, name, prop
+        yield from descriptor_properties(prop, prefix + name + ".")
+        if isinstance(prop.get("items"), dict):
+            yield from descriptor_properties(prop["items"], prefix + name + "[].")
+
+
+# These names describe a different object in each action (ticket, task, closing action...).
+CONTEXTUAL_NAMES = {"comment", "description"}
+
+
+def test_descriptions_are_present_and_consistent():
+    schemas = {"manifest.json": json.loads((ROOT / "manifest.json").read_text())["configuration"]}
+    for path in ROOT.glob("action_*.json"):
+        descriptor = json.loads(path.read_text())
+        schemas[path.name] = descriptor["arguments"]
+        schemas[path.name + " results"] = descriptor["results"]
+    heads = defaultdict(set)
+    for source, schema in schemas.items():
+        for path, name, prop in descriptor_properties(schema):
+            description = prop.get("description", "")
+            assert description, f"{source}: {path} has no description"
+            assert not description.endswith(".") and "`" not in description, f"{source}: {path}: {description}"
+            if not source.endswith(" results") and name not in CONTEXTUAL_NAMES:
+                heads[name].add(description.split(";")[0])
+    assert {name: texts for name, texts in heads.items() if len(texts) > 1} == {}

@@ -12,14 +12,16 @@
         "type": "string"
       },
       "documents": {
+        "description": "Documents to attach; at least one",
         "items": {
           "properties": {
             "filename": {
+              "description": "File name with extension; becomes the document title",
               "title": "Filename",
               "type": "string"
             },
             "filedata": {
-              "description": "File content encoded in standard base64",
+              "description": "File content (standard base64)",
               "title": "Filedata",
               "type": "string"
             }
@@ -36,6 +38,7 @@
         "type": "array"
       },
       "description": {
+        "description": "Attached documents description",
         "title": "Description",
         "type": "string"
       }
@@ -52,7 +55,7 @@
     "properties": {
       "href": {
         "type": "string",
-        "description": "Ticket URL returned by the API. Use Get the list of Documents to obtain the attached document identifiers."
+        "description": "Ticket URL (HREF); use Get the list of Documents to obtain the attached document IDs"
       }
     }
   }

@@ -32,13 +32,7 @@ class DeleteRequestDocument(EasyVistaAction):
                 )
                 and (not any((str(item["DOCUMENT_ID"]) == args.id for item in documents)))
             ):
-                error_data = self.redact_json(json_body(response))
-                error = (
-                    str(error_data.get("error", error_data.get("message", self.response_error(response))))
-                    if isinstance(error_data, dict)
-                    else self.response_error(response)
-                )
-                error = self.redact(error)
+                error = self.response_error(response)
                 self.log(
                     level="warning",
                     message=f"EasyVista returned 590 ({error}) but document {args.id} is no longer attached "

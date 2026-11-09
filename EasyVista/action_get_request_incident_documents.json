@@ -23,18 +23,18 @@
     "properties": {
       "parent_href": {
         "type": "string",
-        "description": "`PARENT_HREF`, the ticket"
+        "description": "Ticket URL (PARENT_HREF)"
       },
       "href": {
         "type": "string",
-        "description": "`HREF` of the documents collection"
+        "description": "Documents collection URL (HREF)"
       },
       "documents": {
         "type": "array",
         "items": {
           "type": "object"
         },
-        "description": "Document records returned unchanged, including HREF, PARENT_HREF, DOCUMENT_ID, DOCUMENT (file name) and DDL_HREF (download link). Use DOCUMENT_ID for download and deletion. HREF is a web UI link and does not return the file content."
+        "description": "Document records, returned unchanged: HREF, PARENT_HREF, DOCUMENT_ID, DOCUMENT (file name) and DDL_HREF (download link); use DOCUMENT_ID to download or delete; HREF is a web UI link and does not return the file content"
       }
     }
   }

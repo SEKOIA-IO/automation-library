@@ -23,5 +23,6 @@ class UpdateRequestIncident(EasyVistaAction):
             return None
         if not self.ensure_open(args.rfc_number):
             return None
-        params = {"append": str(args.append).lower()} if args.append is not None else {}
+        # EasyVista appends whenever `append` is present, even `append=false`: omit it to replace.
+        params = {"append": "true"} if args.append else {}
         return self.request_href("PUT", self.request_path(args.rfc_number), json=body, params=params)

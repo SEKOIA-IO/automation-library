@@ -21,6 +21,13 @@ def json_body(response: requests.Response) -> Any:
         return None
 
 
+def json_body_text(text: str) -> Any:
+    try:
+        return json.loads(text)
+    except ValueError:
+        return None
+
+
 class EasyVistaHttpMixin(ModuleItem):
     module: EasyVistaModule
 
@@ -66,6 +73,11 @@ class EasyVistaHttpMixin(ModuleItem):
         data = self.redact_json(json_body(response))
         if isinstance(data, dict) and "error" in data:
             return self.redact(str(data["error"]))
+        if isinstance(data, dict) and isinstance(data.get("message"), str):
+            # Some 590 responses wrap the useful error in a JSON-encoded message.
+            nested = self.redact_json(json_body_text(data["message"]))
+            detail = nested["error"] if isinstance(nested, dict) and "error" in nested else data["message"]
+            return self.redact(str(detail))[:500]
         if data is not None:
             return self.redact(json.dumps(data, ensure_ascii=False))[:500]
         return self.redact(response.text)[:500]
@@ -114,7 +126,13 @@ class EasyVistaHttpMixin(ModuleItem):
 
     def get(self, path: str, **kwargs) -> Any:
         response = self.request("GET", path, **kwargs)
-        return json_body(response) if response is not None else None
+        if response is None:
+            return None
+        data = json_body(response)
+        if not isinstance(data, dict):
+            self.error(f"EasyVista API returned an empty or non-object response on GET {path}")
+            return None
+        return data
 
     def post(self, path: str, **kwargs) -> Any:
         response = self.request("POST", path, **kwargs)

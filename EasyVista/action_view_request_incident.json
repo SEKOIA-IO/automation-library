@@ -23,11 +23,11 @@
     "properties": {
       "href": {
         "type": "string",
-        "description": "`HREF` of the ticket"
+        "description": "Ticket URL (HREF)"
       },
       "record": {
         "type": "object",
-        "description": "Full response object: `RFC_NUMBER`, `STATUS` (`STATUS_EN`, `STATUS_GUID`), `RECIPIENT`, `REQUESTOR`, `LOCATION`, `DEPARTMENT`, dates, `E_*` fields. `COMMENT` and `DESCRIPTION` are **links** (`{HREF}`), not text: use *View Request / Incident Comment* for the comment"
+        "description": "Full ticket record: RFC_NUMBER, STATUS (STATUS_EN, STATUS_GUID), RECIPIENT, REQUESTOR, LOCATION, DEPARTMENT, dates, E_* fields; COMMENT and DESCRIPTION are links ({HREF}), not text: use View Request / Incident Comment for the comment"
       }
     }
   }

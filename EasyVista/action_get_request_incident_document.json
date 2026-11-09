@@ -12,7 +12,7 @@
         "type": "string"
       },
       "id": {
-        "description": "DOCUMENT_ID from the documents list",
+        "description": "Document ID (DOCUMENT_ID from the documents list)",
         "title": "Id",
         "type": "string"
       }
@@ -29,11 +29,11 @@
     "properties": {
       "content_type": {
         "type": "string",
-        "description": "Response `Content-Type` header"
+        "description": "Response Content-Type header"
       },
       "content_base64": {
         "type": "string",
-        "description": "Response body (`response.content`) encoded in base64"
+        "description": "Document content (standard base64)"
       }
     }
   }

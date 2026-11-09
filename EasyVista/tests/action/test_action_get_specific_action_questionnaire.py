@@ -1,8 +1,8 @@
 import pytest
-from helpers import RFC, assert_action_error, assert_action_success
 from pydantic import ValidationError
 
 from easyvista_modules.action.action_get_specific_action_questionnaire import GetSpecificActionQuestionnaire
+from tests.helpers import RFC, assert_action_error, assert_action_success
 
 ACTION_CASE = (
     GetSpecificActionQuestionnaire,
