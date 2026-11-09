@@ -34,6 +34,9 @@ class TrendMicroVisionApiClient(requests.Session):
                 max_retries=Retry(
                     total=5,
                     backoff_factor=1,
+                    # 401/403 are sometimes transient on the Vision One gateway
+                    status_forcelist=[401, 403, 429, 500, 502, 503, 504],
+                    raise_on_status=False,  # hand the last response to the connector
                 ),
             ),
         )

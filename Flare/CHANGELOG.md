@@ -7,12 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-02 - 0.6.3
+
+### Fixed
+
+- Drop the context messages (`olders`, `newers`) embedded in chat messages, which made them exceed the intake size limit and get discarded
+- Forward the fully read pages before failing on an API error (e.g. rate limiting)
+- Wait for one period before retrying after a failure
+
+## 2026-11-02 - 0.6.2
+
+### Fixed
+
+- Skip events whose details are no longer available on Flare (404) instead of failing the whole batch
+
+## 2026-10-29 - 0.6.1
+
+### Fixed
+
+- Filter the initial collection window on `matched_at` instead of `estimated_created_at`
 
 ## 2026-07-20 - 0.6.0
 
 ### Changed
 
 - Update Flare description in `manifest.json` to provide a more detailed overview of the integration's capabilities and purpose.
+
 ## 2026-07-30 - 0.5.1
 
 ### Changed

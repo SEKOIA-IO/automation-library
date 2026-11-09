@@ -15,7 +15,7 @@
       },
       "frequency": {
         "description": "Number of seconds to wait before polling again when no new events are available",
-        "default": 60,
+        "default": 5,
         "minimum": 1,
         "type": "integer"
       }

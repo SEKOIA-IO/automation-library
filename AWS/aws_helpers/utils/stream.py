@@ -1,89 +1,14 @@
 import asyncio
-import codecs
 import gzip
 from abc import abstractmethod
 from collections.abc import AsyncGenerator, AsyncIterable
 from concurrent.futures import Executor
 from functools import partial
 from typing import Any, BinaryIO, Protocol, TypeVar
-from urllib.parse import unquote
 
 from aiofiles.threadpool.binary import AsyncBufferedReader
 
 T = TypeVar("T")
-
-
-def is_gzip_compressed(content: bytes) -> bool:
-    """
-    Check if the current object is compressed with gzip.
-
-    Args:
-        content: bytes
-
-    Returns:
-        bool:
-    """
-    # check the magic number
-    return content[0:2] == b"\x1f\x8b"
-
-
-def is_parquet_content(content: bytes) -> bool:
-    """
-    Check if the current object appears to be an Apache Parquet file.
-
-    Args:
-        content: bytes
-
-    Returns:
-        bool:
-    """
-    # Parquet files start and end with the magic bytes PAR1.
-    return len(content) >= 8 and content[0:4] == b"PAR1" and content[-4:] == b"PAR1"
-
-
-def get_content(obj: dict[str, Any]) -> bytes:
-    """
-    Return the content of the object.
-
-    Args:
-        obj: dict[str, Any]
-
-    Returns:
-        bytes:
-    """
-    content: bytes = obj["Body"].read()
-
-    if is_gzip_compressed(content):  # pragma: no cover
-        content = gzip.decompress(content)
-
-    return content
-
-
-def normalize_s3_key(key: str) -> str:
-    """
-    Normalize S3 key.
-
-    Args:
-        key: str
-
-    Returns:
-        str:
-    """
-    return unquote(key)
-
-
-def unescape_string(escaped_str: str) -> str:
-    """
-    Converts literal escape sequences (like '\\n')
-    into actual special characters.
-
-    Args:
-        escaped_str: str
-
-    Returns:
-        str:
-    """
-    return codecs.decode(escaped_str.encode("utf-8"), "unicode_escape")
 
 
 class AsyncReader(Protocol):
