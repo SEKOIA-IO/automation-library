@@ -1,10 +1,10 @@
 """Trellix http client."""
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from aiohttp_retry import ExponentialRetry, RetryClient
 from aiolimiter import AsyncLimiter
@@ -23,6 +23,10 @@ from .token_refresher import TrellixTokenRefresher
 
 SECONDS_PER_MINUTE = 60
 SECONDS_PER_DAY = 86400
+
+# Callback reporting a message to the customer: `(message, level)`, e.g. the `log` method of a connector
+RateLimitLevel = Literal["warning", "info"]
+RateLimitLogger = Callable[[str, RateLimitLevel], None]
 
 
 def to_utc(date: datetime) -> datetime:
@@ -63,6 +67,7 @@ class TrellixHttpClient:
     _rate_limiter: AsyncLimiter | None = None
     _rate_limiter_per_day: AsyncLimiter | None = None
     _daily_rate_limit_reached: bool = False
+    _rate_limit_logger: RateLimitLogger | None = None
     _token_refresher: TrellixTokenRefresher | None = None
 
     def __init__(
@@ -74,6 +79,7 @@ class TrellixHttpClient:
         base_url: str,
         rate_limiter: AsyncLimiter | None = None,
         rate_limiter_per_day: AsyncLimiter | None = None,
+        rate_limit_logger: RateLimitLogger | None = None,
     ):
         """
         Initialize TrellixHttpClient.
@@ -84,6 +90,9 @@ class TrellixHttpClient:
             api_key: str
             auth_url: str
             base_url: str
+            rate_limiter: AsyncLimiter | None
+            rate_limiter_per_day: AsyncLimiter | None
+            rate_limit_logger: callback reporting the daily rate limit state to the customer
         """
         self.client_id = client_id
         self.client_secret = client_secret
@@ -94,6 +103,8 @@ class TrellixHttpClient:
             self.set_rate_limiter(rate_limiter)
         if rate_limiter_per_day:
             self.set_rate_limiter_per_day(rate_limiter_per_day)
+        if rate_limit_logger:
+            self.set_rate_limit_logger(rate_limit_logger)
 
     @classmethod
     async def instance(
@@ -144,6 +155,16 @@ class TrellixHttpClient:
         cls._rate_limiter_per_day = rate_limiter
 
     @classmethod
+    def set_rate_limit_logger(cls, rate_limit_logger: RateLimitLogger) -> None:
+        """
+        Set the callback reporting the daily rate limit state to the customer.
+
+        Args:
+            rate_limit_logger: RateLimitLogger
+        """
+        cls._rate_limit_logger = rate_limit_logger
+
+    @classmethod
     def _log_daily_rate_limit_state(cls, rate_limiter: AsyncLimiter) -> None:
         """
         Log once when the daily request budget is exhausted, and once when requests flow freely again.
@@ -151,21 +172,37 @@ class TrellixHttpClient:
         The limiter is a leaky bucket: once the burst of `max_rate` requests is spent, requests are spread
         at `max_rate / time_period` per second (one every 43.2 seconds for 2000 per day).
 
+        The messages are also reported to the customer through `_rate_limit_logger`, when set, because a
+        throttled collection is fixed on their side by raising `ratelimit_per_day`.
+
         Args:
             rate_limiter: AsyncLimiter
         """
         has_capacity = rate_limiter.has_capacity()
         if not has_capacity and not cls._daily_rate_limit_reached:
-            logger.warning(
-                "Daily request limit of {max_rate} reached: requests are now throttled to one every "
-                "{interval:.1f} seconds",
-                max_rate=rate_limiter.max_rate,
-                interval=rate_limiter.time_period / rate_limiter.max_rate,
+            cls._report_rate_limit_state(
+                f"Daily request limit of {rate_limiter.max_rate} reached: requests are now throttled to one every "
+                f"{rate_limiter.time_period / rate_limiter.max_rate:.1f} seconds. "
+                "Increase `ratelimit_per_day` if the Trellix API quota allows it",
+                "warning",
             )
         elif has_capacity and cls._daily_rate_limit_reached:
-            logger.info("Daily request limit no longer throttling requests")
+            cls._report_rate_limit_state("Daily request limit no longer throttling requests", "info")
 
         cls._daily_rate_limit_reached = not has_capacity
+
+    @classmethod
+    def _report_rate_limit_state(cls, message: str, level: RateLimitLevel) -> None:
+        """
+        Log a rate limit message in the connector logs and report it to the customer.
+
+        Args:
+            message: str
+            level: RateLimitLevel
+        """
+        getattr(logger, level)(message)
+        if cls._rate_limit_logger is not None:
+            cls._rate_limit_logger(message, level)
 
     @classmethod
     @asynccontextmanager

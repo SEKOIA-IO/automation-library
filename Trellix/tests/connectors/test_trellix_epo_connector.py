@@ -11,6 +11,7 @@ from aioresponses import CallbackResult, aioresponses
 from faker import Faker
 from yarl import URL
 
+from client.http_client import TrellixHttpClient
 from client.schemas.attributes.epo_events import EpoEventAttributes
 from client.schemas.token import HttpToken, Scope
 from client.schemas.trellix_response import TrellixResponse
@@ -294,7 +295,7 @@ def _paginated_connector(connector: TrellixEpoConnector, start_date: datetime) -
     connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
     with connector.context as cache:
         cache["last_event_date"] = start_date.isoformat()
-        cache["last_event_ids"] = []
+        cache["forwarded_event_keys"] = {}
 
     return connector
 
@@ -346,7 +347,7 @@ async def test_trellix_connector_drains_several_pages_in_one_run(
     # Checkpoint after the multi-page run: newest event of the last page
     assert connector.last_event_date == start_date + timedelta(minutes=5)
     with connector.context as cache:
-        assert cache["last_event_ids"] == ["event-5"]
+        assert list(cache["forwarded_event_keys"]) == ["event-5"]
 
 
 @pytest.mark.asyncio
@@ -527,7 +528,7 @@ async def test_trellix_connector_more_events_than_page_size_in_one_second(
 
         assert connector.last_event_date == busy_second + timedelta(milliseconds=500)
         with connector.context as cache:
-            assert cache["last_event_ids"] == ["event-5"]
+            assert list(cache["forwarded_event_keys"]) == ["event-5"]
 
         # Next run: `GT <busy second>` returns the busy second again, then the newer event
         window = [*same_second, later]
@@ -552,7 +553,7 @@ async def test_trellix_connector_more_events_than_page_size_in_one_second(
     ]
     assert connector.last_event_date == busy_second + timedelta(seconds=1)
     with connector.context as cache:
-        assert cache["last_event_ids"] == ["event-later"]
+        assert list(cache["forwarded_event_keys"]) == ["event-later"]
 
 
 @pytest.mark.asyncio
@@ -671,7 +672,7 @@ async def test_trellix_connector_push_failure_during_pagination(
 
         assert connector.last_event_date == second + timedelta(milliseconds=500)
         with connector.context as cache:
-            assert cache["last_event_ids"] == ["event-2"]
+            assert list(cache["forwarded_event_keys"]) == ["event-2"]
 
         # Next run: `GT <second>` returns events 1 to 4 again, only 3 and 4 are forwarded
         connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
@@ -740,6 +741,11 @@ def test_trellix_epo_connector_rate_limiters(connector: TrellixEpoConnector):
     assert http_client._rate_limiter_per_day is not None
     assert http_client._rate_limiter_per_day.max_rate == 1234
     assert http_client._rate_limiter_per_day.time_period == 86400
+
+    # The daily rate limit messages are reported to the customer through the connector logs
+    assert TrellixHttpClient._rate_limit_logger is not None
+    TrellixHttpClient._rate_limit_logger("Daily request limit reached", "warning")
+    connector.log.assert_called_with(message="Daily request limit reached", level="warning")
 
 
 @pytest.mark.asyncio
@@ -842,7 +848,7 @@ async def test_trellix_connector_recovers_whole_second_events_across_page_bounda
 
         assert connector.last_event_date == second
         with connector.context as cache:
-            assert cache["last_event_ids"] == ["event-a", "event-b"]
+            assert list(cache["forwarded_event_keys"]) == ["event-a", "event-b"]
 
         # Next run: the filter starts one second before the checkpoint second
         connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
@@ -870,7 +876,7 @@ async def test_trellix_connector_run_after_more_than_10k_events_at_one_timestamp
     http_token: HttpToken,
 ):
     """
-    More than 10,000 events share the checkpoint timestamp (the former cap on `last_event_ids`) and the run
+    More than 10,000 events share the checkpoint timestamp (the former cap on the saved event ids) and the run
     fails before reading them all: no id is evicted, so the next run forwards only the remaining events.
     """
     page_size = 5001
@@ -908,7 +914,7 @@ async def test_trellix_connector_run_after_more_than_10k_events_at_one_timestamp
 
         assert connector.last_event_date == second
         with connector.context as cache:
-            assert len(cache["last_event_ids"]) == 10_002
+            assert len(cache["forwarded_event_keys"]) == 10_002
 
         connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
         for index, page in enumerate(pages):
@@ -922,7 +928,7 @@ async def test_trellix_connector_run_after_more_than_10k_events_at_one_timestamp
     assert _pushed_ids(connector) == [["event-10002", "event-later"]]
     assert connector.last_event_date == second + timedelta(seconds=1)
     with connector.context as cache:
-        assert cache["last_event_ids"] == ["event-later"]
+        assert list(cache["forwarded_event_keys"]) == ["event-later"]
 
 
 PARIS_SUMMER = timezone(timedelta(hours=2))
@@ -1029,7 +1035,7 @@ async def test_trellix_connector_events_without_id_not_forwarded_twice(
         assert len(await connector.get_trellix_epo_events()) == 2
 
         with connector.context as cache:
-            saved_keys = cache["last_event_ids"]
+            saved_keys = list(cache["forwarded_event_keys"])
         assert len(saved_keys) == 2
         assert all(key.startswith("sha256:") for key in saved_keys)
 
@@ -1053,3 +1059,140 @@ async def test_trellix_connector_events_without_id_not_forwarded_twice(
 
     assert connector.push_data_to_intakes.await_count == 1
     restarted.push_data_to_intakes.assert_not_awaited()
+
+
+def _timeshift_connector(
+    connector: TrellixEpoConnector, checkpoint: datetime, timeshift: int, forwarded: dict[str, datetime]
+) -> TrellixEpoConnector:
+    """A paginated connector with a `timeshift` in minutes, a checkpoint and the keys already forwarded."""
+    connector = _paginated_connector(connector, checkpoint)
+    connector.configuration = {**connector.configuration.model_dump(), "timeshift": timeshift}
+    with connector.context as cache:
+        cache["forwarded_event_keys"] = {key: timestamp.isoformat() for key, timestamp in forwarded.items()}
+
+    return connector
+
+
+def test_trellix_connector_query_start_with_timeshift():
+    """The `GT` filter starts one second before the second of `checkpoint - timeshift`."""
+    checkpoint = datetime(2026, 11, 9, 12, 0, 0, 500_000, tzinfo=UTC)
+
+    assert TrellixEpoConnector.query_start(checkpoint) == datetime(2026, 11, 9, 11, 59, 59, tzinfo=UTC)
+    assert TrellixEpoConnector.query_start(checkpoint, timedelta(minutes=5)) == datetime(
+        2026, 11, 9, 11, 54, 59, tzinfo=UTC
+    )
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_timeshift_collects_late_events_once(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """
+    With a 5-minute timeshift, an event returned late with a timestamp 2 minutes before the checkpoint is
+    forwarded, the events already forwarded are skipped, and a later run forwards nothing twice.
+    """
+    checkpoint = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _timeshift_connector(
+        connector,
+        checkpoint,
+        timeshift=5,
+        forwarded={"event-old": checkpoint - timedelta(minutes=4, seconds=30), "event-1": checkpoint},
+    )
+    events = [
+        _event(epo_event_response, "event-too-old", checkpoint - timedelta(minutes=5, seconds=1)),
+        _event(epo_event_response, "event-old", checkpoint - timedelta(minutes=4, seconds=30)),
+        _event(epo_event_response, "event-late", checkpoint - timedelta(minutes=2)),
+        _event(epo_event_response, "event-1", checkpoint),
+        _event(epo_event_response, "event-2", checkpoint + timedelta(minutes=1)),
+    ]
+    connector.configuration = {**connector.configuration.model_dump(), "records_per_request": 10}
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        mocked_responses.get(
+            http_client.epo_events_url(checkpoint - timedelta(minutes=5, seconds=1), limit=10),
+            status=200,
+            payload={"data": events},
+        )
+        await connector.get_trellix_epo_events()
+
+        # The event before the window is not collected anymore, the forwarded ones are skipped
+        assert _pushed_ids(connector) == [["event-late", "event-2"]]
+        new_checkpoint = checkpoint + timedelta(minutes=1)
+        assert connector.last_event_date == new_checkpoint
+
+        # Only the keys from `new checkpoint - timeshift` are kept: `event-old` left the window
+        with connector.context as cache:
+            assert cache["forwarded_event_keys"] == {
+                "event-late": (checkpoint - timedelta(minutes=2)).isoformat(),
+                "event-1": checkpoint.isoformat(),
+                "event-2": new_checkpoint.isoformat(),
+            }
+
+        # Next run: the API returns the same events again, nothing is forwarded twice
+        mocked_responses.get(
+            http_client.epo_events_url(new_checkpoint - timedelta(minutes=5, seconds=1), limit=10),
+            status=200,
+            payload={"data": events[2:]},
+        )
+        assert await connector.get_trellix_epo_events() == []
+
+    assert _pushed_ids(connector) == [["event-late", "event-2"]]
+    assert connector.last_event_date == new_checkpoint
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_timeshift_late_event_after_restart(
+    connector: TrellixEpoConnector,
+    http_token: HttpToken,
+    epo_event_response: TrellixResponse[EpoEventAttributes],
+):
+    """A late event forwarded behind the checkpoint is saved, so a restart does not forward it again."""
+    checkpoint = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=2)
+    connector = _timeshift_connector(connector, checkpoint, timeshift=10, forwarded={"event-1": checkpoint})
+    late_event = _event(epo_event_response, "event-late", checkpoint - timedelta(minutes=4))
+    connector.configuration = {**connector.configuration.model_dump(), "records_per_request": 10}
+
+    with aioresponses() as mocked_responses:
+        await _mock_auth(mocked_responses, connector, http_token)
+        http_client = connector.trellix_client
+        mocked_responses.get(
+            http_client.epo_events_url(checkpoint - timedelta(minutes=10, seconds=1), limit=10),
+            status=200,
+            payload={"data": [late_event]},
+            repeat=True,
+        )
+        await connector.get_trellix_epo_events()
+
+        # The checkpoint does not move backward
+        assert connector.last_event_date == checkpoint
+
+        restarted = TrellixEpoConnector(module=connector.module, data_path=connector._data_path)
+        restarted.configuration = connector.configuration
+        restarted.log = MagicMock()
+        restarted.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
+        restarted._trellix_client = http_client
+        assert await restarted.get_trellix_epo_events() == []
+
+    assert _pushed_ids(connector) == [["event-late"]]
+    with connector.context as cache:
+        assert set(cache["forwarded_event_keys"]) == {"event-1", "event-late"}
+
+
+def test_trellix_connector_timeshift_defaults_to_disabled(connector: TrellixEpoConnector):
+    """Without configuration, no period before the checkpoint is read again."""
+    assert connector.configuration.timeshift == 0
+    assert connector.timeshift == timedelta(0)
+
+
+def test_trellix_connector_event_without_timestamp_is_new(
+    connector: TrellixEpoConnector, epo_event_response: TrellixResponse[EpoEventAttributes]
+):
+    """An event without timestamp cannot be placed in the window, so it is forwarded."""
+    event = epo_event_response.model_copy(deep=True)
+    event.attributes.timestamp = None
+
+    assert connector._is_new_event(event, datetime.now(UTC), {connector._event_key(event)})

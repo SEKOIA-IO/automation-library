@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import time
+from collections.abc import Collection
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -32,6 +33,8 @@ class TrellixEpoConnectorConfig(DefaultConnectorConfiguration):
     ratelimit_per_minute: int = 60
     ratelimit_per_day: int = 2000
     records_per_request: int = 100
+    # Minutes before the most recent forwarded event during which late events are still collected
+    timeshift: int = 0
 
 
 class TrellixEpoConnector(AsyncConnector):
@@ -99,41 +102,71 @@ class TrellixEpoConnector(AsyncConnector):
             base_url=str(self.module.configuration.base_url).rstrip("/"),
             rate_limiter=rate_limiter,
             rate_limiter_per_day=daily_rate_limiter,
+            rate_limit_logger=lambda message, level: self.log(message=message, level=level),
         )
 
         return self._trellix_client
 
-    @staticmethod
-    def query_start(checkpoint: datetime) -> datetime:
+    @property
+    def timeshift(self) -> timedelta:
         """
-        Get the date of the `GT` filter for a checkpoint: one second before the checkpoint second.
+        Get the period, before the checkpoint, read again at each run to collect late events.
+
+        Returns:
+            timedelta:
+        """
+        return timedelta(minutes=max(self.configuration.timeshift, 0))
+
+    @staticmethod
+    def query_start(checkpoint: datetime, timeshift: timedelta = timedelta(0)) -> datetime:
+        """
+        Get the date of the `GT` filter for a checkpoint: one second before the second of `checkpoint - timeshift`.
 
         The filter only has a second precision, and it is not known whether the API compares it with the
-        milliseconds of the events. Starting one second earlier makes the whole checkpoint second readable again,
+        milliseconds of the events. Starting one second earlier makes the whole first second readable again,
         including events at exactly `<second>.000`: the events already forwarded are skipped by `_is_new_event`.
 
         Args:
             checkpoint: datetime
+            timeshift: timedelta
 
         Returns:
             datetime:
         """
-        return to_utc(checkpoint).replace(microsecond=0) - timedelta(seconds=1)
+        return (to_utc(checkpoint) - timeshift).replace(microsecond=0) - timedelta(seconds=1)
+
+    def forwarded_event_keys(self) -> dict[str, datetime]:
+        """
+        Get the keys of the forwarded events that can be read again, with their timestamp.
+
+        These are the events from `checkpoint - timeshift` to the checkpoint (see `_save_checkpoint`).
+
+        Returns:
+            dict[str, datetime]:
+        """
+        with self.context as cache:
+            saved_keys: dict[str, str] = cache.get("forwarded_event_keys") or {}
+
+        return {key: to_utc(isoparse(timestamp)) for key, timestamp in saved_keys.items()}
 
     async def get_trellix_epo_events(self) -> list[str]:
         """
         Collect and forward all the available trellix epo events.
 
-        Pages are read inside one `GT <checkpoint second - 1s>` window sorted by ascending timestamp, following
-        `links.next` when the API returns it and using `page[offset]` otherwise. Each page is pushed, then the
-        checkpoint is saved, so a failure loses nothing and only re-reads the pages not saved yet.
+        Pages are read inside one `GT <second of (checkpoint - timeshift)> - 1s` window sorted by ascending
+        timestamp, following `links.next` when the API returns it and using `page[offset]` otherwise. Each page is
+        pushed, then the checkpoint is saved, so a failure loses nothing and only re-reads the pages not saved yet.
+
+        With a `timeshift`, the last minutes before the checkpoint are read again at each run: the events that the
+        API returns late (with a timestamp older than the checkpoint) are forwarded, and those already forwarded
+        are skipped thanks to `forwarded_event_keys`.
 
         Returns:
             List[str]: the ids of the forwarded events
         """
         start_date = self.last_event_date
         start_second = start_date.replace(microsecond=0)
-        query_start = self.query_start(start_date)
+        query_start = self.query_start(start_date, self.timeshift)
         limit = self.configuration.records_per_request
 
         offset = 0
@@ -148,9 +181,8 @@ class TrellixEpoConnector(AsyncConnector):
             page = await self.trellix_client.get_epo_events_page(query_start, limit, offset, url=next_url)
             pages += 1
 
-            checkpoint_date = self.last_event_date
-            with self.context as cache:
-                checkpoint_event_ids = set(cache.get("last_event_ids") or [])
+            window_start = self.last_event_date - self.timeshift
+            forwarded_event_keys = self.forwarded_event_keys()
 
             new_events: list[TrellixResponse[EpoEventAttributes]] = []
             page_has_unseen_events = False
@@ -161,7 +193,7 @@ class TrellixEpoConnector(AsyncConnector):
 
                 seen_event_keys.add(event_key)
                 page_has_unseen_events = True
-                if self._is_new_event(event, checkpoint_date, checkpoint_event_ids):
+                if self._is_new_event(event, window_start, forwarded_event_keys):
                     new_events.append(event)
 
             if new_events:
@@ -213,38 +245,39 @@ class TrellixEpoConnector(AsyncConnector):
     def _is_new_event(
         self,
         event: TrellixResponse[EpoEventAttributes],
-        checkpoint_date: datetime,
-        checkpoint_event_ids: set[str],
+        window_start: datetime,
+        forwarded_event_keys: Collection[str],
     ) -> bool:
         """
         Tell whether an event of the window was not forwarded yet.
 
-        Events are read by ascending timestamp and the checkpoint is the timestamp of the newest forwarded event:
-        older events were forwarded, newer ones were not, and those at exactly the checkpoint timestamp were
-        forwarded if their key (id, or content digest without id) is in `last_event_ids`.
+        `window_start` is `checkpoint - timeshift`, the checkpoint being the timestamp of the newest forwarded event.
+        Events older than `window_start` are not collected anymore. The others were forwarded if their key (id, or
+        content digest without id) is in `forwarded_event_keys`, which holds the keys of all the forwarded events
+        from `window_start`: that includes the late events forwarded after the checkpoint passed them.
 
         Args:
             event: TrellixResponse[EpoEventAttributes]
-            checkpoint_date: datetime
-            checkpoint_event_ids: set[str]
+            window_start: datetime
+            forwarded_event_keys: Collection[str]
 
         Returns:
             bool:
         """
         timestamp = self._event_timestamp(event)
-        if timestamp is None or timestamp > checkpoint_date:
+        if timestamp is None:
             return True
 
-        if timestamp < checkpoint_date:
+        if timestamp < window_start:
             return False
 
-        return self._event_key(event) not in checkpoint_event_ids
+        return self._event_key(event) not in forwarded_event_keys
 
     def _event_key(self, event: TrellixResponse[EpoEventAttributes]) -> str:
         """
         Get the key identifying an event: its id, or a digest of its content when it has none.
 
-        This key is used for the in-run deduplication and saved in `last_event_ids`, so the digest must be
+        This key is used for the in-run deduplication and saved in `forwarded_event_keys`, so the digest must be
         stable across fetches: it is computed on canonical JSON (sorted keys, timestamp in UTC) of the `type`
         and the attributes, which are the parsed fields of the event. Two events without id with the same
         content and timestamp are considered the same event.
@@ -298,14 +331,14 @@ class TrellixEpoConnector(AsyncConnector):
 
     def _save_checkpoint(self, events: list[TrellixResponse[EpoEventAttributes]]) -> None:
         """
-        Save the timestamp (UTC) of the newest event and the keys of the events at exactly that timestamp.
+        Save the timestamp (UTC) of the newest event and the keys of the events that can be read again.
 
         The key is the event id, or a digest of the event content when it has no id (see `_event_key`).
 
-        The checkpoint never moves backward. While it does not move, the ids are merged with those already saved.
-        They are never truncated: dropping some would forward their events again when the checkpoint timestamp
-        is read again. Their number is bounded by the number of events sharing the newest timestamp, and the list
-        is reset as soon as a newer event is saved.
+        The checkpoint never moves backward. The keys of the events from `checkpoint - timeshift` (the start of the
+        window read again by the next run) are merged with those already saved, and the older ones are dropped.
+        They are never truncated otherwise: dropping some would forward their events again. Their number is
+        bounded by the number of events in the `timeshift` period, plus those sharing the checkpoint timestamp.
 
         Args:
             events: list[TrellixResponse[EpoEventAttributes]]
@@ -314,27 +347,22 @@ class TrellixEpoConnector(AsyncConnector):
         if not timestamps:
             return
 
-        current_date = self.last_event_date
-        checkpoint_date = max(current_date, max(timestamps))
+        checkpoint_date = max(self.last_event_date, max(timestamps))
+        window_start = checkpoint_date - self.timeshift
 
-        page_event_ids = [
-            self._event_key(event) for event in events if self._event_timestamp(event) == checkpoint_date
-        ]
+        forwarded_event_keys = {
+            key: timestamp for key, timestamp in self.forwarded_event_keys().items() if timestamp >= window_start
+        }
+        for event in events:
+            timestamp = self._event_timestamp(event)
+            if timestamp is not None and timestamp >= window_start:
+                forwarded_event_keys.setdefault(self._event_key(event), timestamp)
 
         with self.context as cache:
-            # Keep the ids already saved when the checkpoint does not move
-            last_event_ids: list[str] = []
-            if current_date == checkpoint_date:
-                last_event_ids = list(cache.get("last_event_ids") or [])
-
-            known_ids = set(last_event_ids)
-            for event_id in page_event_ids:
-                if event_id not in known_ids:
-                    known_ids.add(event_id)
-                    last_event_ids.append(event_id)
-
             cache["last_event_date"] = checkpoint_date.isoformat()
-            cache["last_event_ids"] = last_event_ids
+            cache["forwarded_event_keys"] = {
+                key: timestamp.isoformat() for key, timestamp in forwarded_event_keys.items()
+            }
 
     async def async_run(self) -> None:  # pragma: no cover
         previous_processing_end: float | None = None

@@ -3,7 +3,7 @@
 import asyncio
 from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import orjson
 import pytest
@@ -439,6 +439,8 @@ async def test_trellix_http_client_logs_daily_rate_limit_once(session_faker: Fak
     # 2 requests per 0.1 s: the third request of the burst waits for ~0.05 s
     TrellixHttpClient.set_rate_limiter_per_day(AsyncLimiter(2, time_period=0.1))
     TrellixHttpClient._daily_rate_limit_reached = False
+    customer_logger = MagicMock()
+    TrellixHttpClient.set_rate_limit_logger(customer_logger)
 
     try:
         with patch("client.http_client.logger") as mocked_logger:
@@ -457,7 +459,14 @@ async def test_trellix_http_client_logs_daily_rate_limit_once(session_faker: Fak
 
             assert mocked_logger.info.call_count == 1
             assert mocked_logger.warning.call_count == 1
+
+        # The same messages are reported to the customer, with their level
+        assert [call.args[1] for call in customer_logger.call_args_list] == ["warning", "info"]
+        assert "Daily request limit of 2 reached" in customer_logger.call_args_list[0].args[0]
+        assert "ratelimit_per_day" in customer_logger.call_args_list[0].args[0]
+        assert customer_logger.call_args_list[1].args[0] == "Daily request limit no longer throttling requests"
     finally:
+        TrellixHttpClient._rate_limit_logger = None
         TrellixHttpClient._rate_limiter = None
         TrellixHttpClient._rate_limiter_per_day = None
         TrellixHttpClient._daily_rate_limit_reached = False

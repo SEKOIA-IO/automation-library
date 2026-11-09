@@ -11,6 +11,7 @@ from dateutil.parser import isoparse
 from faker import Faker
 from orjson import orjson
 
+from client.http_client import TrellixHttpClient
 from client.schemas.attributes.edr_affectedhosts import EdrAffectedhostAttributes
 from client.schemas.attributes.edr_alerts import EdrAlertAttributes
 from client.schemas.attributes.edr_detections import EdrDetectionAttributes
@@ -499,3 +500,8 @@ def test_trellix_edr_connector_rate_limiters(connector: TrellixEdrConnector):
     assert http_client._rate_limiter_per_day is not None
     assert http_client._rate_limiter_per_day.max_rate == 1234
     assert http_client._rate_limiter_per_day.time_period == 86400
+
+    # The daily rate limit messages are reported to the customer through the connector logs
+    assert TrellixHttpClient._rate_limit_logger is not None
+    TrellixHttpClient._rate_limit_logger("Daily request limit reached", "warning")
+    connector.log.assert_called_with(message="Daily request limit reached", level="warning")

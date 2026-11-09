@@ -91,6 +91,7 @@ class TrellixEdrConnector(AsyncConnector):
             base_url=str(self.module.configuration.base_url).rstrip("/"),
             rate_limiter=rate_limiter,
             rate_limiter_per_day=daily_rate_limiter,
+            rate_limit_logger=lambda message, level: self.log(message=message, level=level),
         )
 
         return self._trellix_client
