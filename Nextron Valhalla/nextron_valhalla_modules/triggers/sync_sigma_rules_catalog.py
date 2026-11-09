@@ -11,16 +11,16 @@ from sekoia_automation.exceptions import ModuleConfigurationError, TriggerConfig
 from sekoia_automation.storage import PersistentJSON
 from sekoia_automation.trigger import Trigger
 
-from nextron_valhalla_sigma_rules_modules.client import ValhallaClient
-from nextron_valhalla_sigma_rules_modules.models import NextronValhallaSigmaRulesModuleConfiguration
-from nextron_valhalla_sigma_rules_modules.sekoia_client import (
+from nextron_valhalla_modules.client import ValhallaClient
+from nextron_valhalla_modules.models import NextronValhallaModuleConfiguration
+from nextron_valhalla_modules.sekoia_client import (
     SekoiaAPIError,
     SekoiaClient,
     SekoiaRuleNotFoundError,
     rule_tag_names,
     writable_rule,
 )
-from nextron_valhalla_sigma_rules_modules.sigma_mapper import (
+from nextron_valhalla_modules.sigma_mapper import (
     DEFAULT_ALERT_UUID,
     MARKER_TAG,
     SEVERITY_MAP,
@@ -193,7 +193,7 @@ class ReenableTracker:
 class SyncSigmaRulesCatalog(Trigger):
     def run(self) -> None:
         # Trigger arguments arrive as a dict; the module configuration is
-        # validated into ``NextronValhallaSigmaRulesModuleConfiguration``.
+        # validated into ``NextronValhallaModuleConfiguration``.
         args: dict = self.configuration if isinstance(self.configuration, dict) else {}
         min_level = args.get("min_sigma_level", DEFAULT_MIN_LEVEL)
         min_status = args.get("min_sigma_status", DEFAULT_MIN_STATUS)
@@ -211,7 +211,7 @@ class SyncSigmaRulesCatalog(Trigger):
         self._preserve_rule_names = _normalize_names(args.get("preserve_rule_names", ""))
         frequency = args.get("frequency", 86400)
 
-        cfg = cast(NextronValhallaSigmaRulesModuleConfiguration, self.module.configuration)
+        cfg = cast(NextronValhallaModuleConfiguration, self.module.configuration)
         self._valhalla = ValhallaClient(cfg.valhalla_api_key)
         self._sekoia = SekoiaClient(cfg.sekoia_base_url, cfg.sekoia_api_key)
         self._community_uuid = cfg.community_uuid or None

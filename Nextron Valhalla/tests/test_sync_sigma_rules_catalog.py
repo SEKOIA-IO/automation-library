@@ -6,14 +6,14 @@ from unittest.mock import MagicMock
 import pytest
 from sekoia_automation.exceptions import ModuleConfigurationError, TriggerConfigurationError
 
-from nextron_valhalla_sigma_rules_modules.sekoia_client import (
+from nextron_valhalla_modules.sekoia_client import (
     SekoiaAPIError,
     SekoiaClient,
     SekoiaRuleNotFoundError,
     rule_tag_names,
 )
-from nextron_valhalla_sigma_rules_modules.sigma_mapper import SEVERITY_MAP
-from nextron_valhalla_sigma_rules_modules.triggers.sync_sigma_rules_catalog import (
+from nextron_valhalla_modules.sigma_mapper import SEVERITY_MAP
+from nextron_valhalla_modules.triggers.sync_sigma_rules_catalog import (
     AUTO_DISABLED_TAG,
     FEED_STATE_FILE,
     REENABLED_LAST_RUN_KEY,
@@ -158,7 +158,7 @@ def _marked(trigger) -> list[str]:
 
 @pytest.fixture
 def trigger(data_storage, monkeypatch):
-    from nextron_valhalla_sigma_rules_modules.triggers import sync_sigma_rules_catalog as sync_mod
+    from nextron_valhalla_modules.triggers import sync_sigma_rules_catalog as sync_mod
 
     # Ordinary tests drop rules from a 2-rule feed; switch the B2 shrink
     # guard off here. The ``guarded`` fixture re-enables it.
@@ -614,7 +614,7 @@ def test_scan_ignores_a_rule_listed_twice(trigger):
 def _explode_on_rule_a(monkeypatch):
     """Make the conversion of rule A raise, as an unexpected field type in a
     future feed rule would."""
-    from nextron_valhalla_sigma_rules_modules.triggers import sync_sigma_rules_catalog as sync_mod
+    from nextron_valhalla_modules.triggers import sync_sigma_rules_catalog as sync_mod
 
     real = sync_mod.convert_parsed_to_ecs
 
@@ -830,7 +830,7 @@ def test_invalid_min_status_raises(trigger):
 def test_default_thresholds_are_medium_and_experimental(monkeypatch, data_storage):
     """Without explicit arguments, run() filters on medium / experimental,
     and the manifest declares the same defaults."""
-    from nextron_valhalla_sigma_rules_modules.triggers import sync_sigma_rules_catalog as sync_mod
+    from nextron_valhalla_modules.triggers import sync_sigma_rules_catalog as sync_mod
 
     monkeypatch.setattr(sync_mod, "ValhallaClient", MagicMock())
     monkeypatch.setattr(sync_mod, "SekoiaClient", MagicMock())
@@ -859,7 +859,7 @@ def test_run_exits_when_stop_event_is_set(monkeypatch, data_storage):
     """Pre-set the stop event; run() must return without iterating."""
     import threading
 
-    from nextron_valhalla_sigma_rules_modules.triggers import (
+    from nextron_valhalla_modules.triggers import (
         sync_sigma_rules_catalog as sync_mod,
     )
 
@@ -886,7 +886,7 @@ def test_run_exits_after_stop_during_wait(monkeypatch, data_storage):
     import threading
     import time
 
-    from nextron_valhalla_sigma_rules_modules.triggers import (
+    from nextron_valhalla_modules.triggers import (
         sync_sigma_rules_catalog as sync_mod,
     )
 
@@ -913,7 +913,7 @@ def test_run_logs_sync_errors_once_and_keeps_looping(monkeypatch, data_storage):
     import threading
     import time
 
-    from nextron_valhalla_sigma_rules_modules.triggers import (
+    from nextron_valhalla_modules.triggers import (
         sync_sigma_rules_catalog as sync_mod,
     )
 
@@ -939,7 +939,7 @@ def _run_with_clock(monkeypatch, data_storage, outcomes, frequency=86400):
     """Run the trigger loop with a fake clock that advances by each wait.
     ``outcomes`` lists the sync results (an exception = failed sync); the
     loop stops after the last one. Returns the waits."""
-    from nextron_valhalla_sigma_rules_modules.triggers import (
+    from nextron_valhalla_modules.triggers import (
         sync_sigma_rules_catalog as sync_mod,
     )
 
@@ -971,7 +971,7 @@ def _run_with_clock(monkeypatch, data_storage, outcomes, frequency=86400):
 def test_failed_sync_is_retried_at_most_twice_a_day(monkeypatch, data_storage):
     """A failed sync is retried after 15 then 30 min; once two early
     retries ran in the last 24 h, the next attempt waits ``frequency``."""
-    from nextron_valhalla_sigma_rules_modules.triggers.sync_sigma_rules_catalog import FAILURE_RETRY_DELAY
+    from nextron_valhalla_modules.triggers.sync_sigma_rules_catalog import FAILURE_RETRY_DELAY
 
     down = RuntimeError("feed down")
     waits = _run_with_clock(monkeypatch, data_storage, [down, down, down, None])
@@ -980,7 +980,7 @@ def test_failed_sync_is_retried_at_most_twice_a_day(monkeypatch, data_storage):
 
 
 def test_retries_are_allowed_again_after_24_hours(monkeypatch, data_storage):
-    from nextron_valhalla_sigma_rules_modules.triggers.sync_sigma_rules_catalog import FAILURE_RETRY_DELAY
+    from nextron_valhalla_modules.triggers.sync_sigma_rules_catalog import FAILURE_RETRY_DELAY
 
     down = RuntimeError("feed down")
     waits = _run_with_clock(monkeypatch, data_storage, [down] * 6)
@@ -991,7 +991,7 @@ def test_retries_are_allowed_again_after_24_hours(monkeypatch, data_storage):
 def test_success_between_failures_does_not_reset_the_daily_cap(monkeypatch, data_storage):
     """The cap counts retries in the last 24 h, not per failure streak:
     with hourly syncs, a second outage the same day gets one retry left."""
-    from nextron_valhalla_sigma_rules_modules.triggers.sync_sigma_rules_catalog import FAILURE_RETRY_DELAY
+    from nextron_valhalla_modules.triggers.sync_sigma_rules_catalog import FAILURE_RETRY_DELAY
 
     down = RuntimeError("feed down")
     waits = _run_with_clock(monkeypatch, data_storage, [down, None, down, down, down], frequency=3600)
@@ -1043,7 +1043,7 @@ def _alert_types_client(uuids):
 
 
 def test_validate_alert_types_passes_when_all_exist(trigger):
-    from nextron_valhalla_sigma_rules_modules.sigma_mapper import DEFAULT_ALERT_UUID, TAG_ALERT_UUID_MAP
+    from nextron_valhalla_modules.sigma_mapper import DEFAULT_ALERT_UUID, TAG_ALERT_UUID_MAP
 
     trigger._sekoia = _alert_types_client([DEFAULT_ALERT_UUID, *(u for _, u in TAG_ALERT_UUID_MAP)])
     trigger._validate_alert_types()
@@ -1878,7 +1878,7 @@ def test_stop_during_disable_pass_reports_interrupted(trigger):
 def guarded(trigger, monkeypatch):
     """The trigger with the real feed-shrink guard (the default fixture
     disables it so ordinary tests can drop rules from a 2-rule feed)."""
-    from nextron_valhalla_sigma_rules_modules.triggers import sync_sigma_rules_catalog as sync_mod
+    from nextron_valhalla_modules.triggers import sync_sigma_rules_catalog as sync_mod
 
     monkeypatch.setattr(sync_mod, "MAX_FEED_SHRINK_RATIO", 0.2)
     feed = [{"id": f"v-{i}", "filename": f"{i}.yml", "content": _rule_yaml(f"R{i}")} for i in range(10)]
@@ -1921,7 +1921,7 @@ def test_small_shrink_still_disables(guarded):
 
 
 def test_persistent_shrink_is_accepted_after_confirm_runs(guarded, data_storage):
-    from nextron_valhalla_sigma_rules_modules.triggers.sync_sigma_rules_catalog import FEED_SHRINK_CONFIRM_RUNS
+    from nextron_valhalla_modules.triggers.sync_sigma_rules_catalog import FEED_SHRINK_CONFIRM_RUNS
 
     guarded._valhalla.get_sigma_feed.return_value = guarded.feed[:5]
     for _ in range(FEED_SHRINK_CONFIRM_RUNS - 1):
@@ -2228,7 +2228,7 @@ def test_preserve_rule_names_is_a_text_field_in_the_manifest():
 
 
 def test_run_reads_preserve_text(monkeypatch, data_storage):
-    from nextron_valhalla_sigma_rules_modules.triggers import sync_sigma_rules_catalog as sync_mod
+    from nextron_valhalla_modules.triggers import sync_sigma_rules_catalog as sync_mod
 
     monkeypatch.setattr(sync_mod, "ValhallaClient", MagicMock())
     monkeypatch.setattr(sync_mod, "SekoiaClient", MagicMock())
@@ -2459,7 +2459,7 @@ def test_rules_without_id_are_counted(trigger):
 def test_config_error_from_the_sync_stops_run(monkeypatch, data_storage):
     """Several communities without ``community_uuid`` is a configuration
     error: run() lets it through to the SDK instead of retrying."""
-    from nextron_valhalla_sigma_rules_modules.triggers import sync_sigma_rules_catalog as sync_mod
+    from nextron_valhalla_modules.triggers import sync_sigma_rules_catalog as sync_mod
 
     monkeypatch.setattr(sync_mod, "ValhallaClient", MagicMock())
     monkeypatch.setattr(sync_mod, "SekoiaClient", MagicMock())
