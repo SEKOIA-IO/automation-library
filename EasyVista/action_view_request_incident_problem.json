@@ -23,7 +23,7 @@
     "properties": {
       "href": {
         "type": "string",
-        "description": "`HREF` of the query"
+        "description": "Query URL (HREF)"
       },
       "record_count": {
         "type": "string",
@@ -31,14 +31,14 @@
       },
       "total_record_count": {
         "type": "string",
-        "description": "Total linked problems (string)"
+        "description": "Total number of linked problems (string)"
       },
       "records": {
         "type": "array",
         "items": {
           "type": "object"
         },
-        "description": "Problem records (`RFC_NUMBER`, `TITLE`, `STATUS_ID`, \u2026 as returned)"
+        "description": "Problem records (RFC_NUMBER, TITLE, STATUS_ID, ...), returned unchanged"
       }
     }
   }

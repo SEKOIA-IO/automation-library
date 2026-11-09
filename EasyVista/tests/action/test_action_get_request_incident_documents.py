@@ -1,6 +1,5 @@
-from helpers import RFC, TICKET, assert_action_error, assert_action_success
-
 from easyvista_modules.action.action_get_request_incident_documents import GetRequestIncidentDocuments
+from tests.helpers import RFC, TICKET, assert_action_error, assert_action_success
 
 ACTION_CASE = (
     GetRequestIncidentDocuments,

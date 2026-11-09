@@ -23,15 +23,15 @@
     "properties": {
       "href": {
         "type": "string",
-        "description": "`HREF` of the comment resource"
+        "description": "Comment resource URL (HREF)"
       },
       "parent_href": {
         "type": "string",
-        "description": "`PARENT_HREF`, the ticket"
+        "description": "Ticket URL (PARENT_HREF)"
       },
       "comment": {
         "type": "string",
-        "description": "`COMMENT` text, returned verbatim without transformation. It holds the `Description` set by *Create* / *Update* (HTML line breaks `<br>` included)"
+        "description": "Ticket COMMENT text, returned verbatim (HTML <br> line breaks included); holds the description set by Create / Update"
       }
     }
   }

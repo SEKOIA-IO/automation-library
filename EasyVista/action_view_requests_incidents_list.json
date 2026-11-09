@@ -7,8 +7,9 @@
   "arguments": {
     "properties": {
       "max_rows": {
-        "description": "Page size; API default is 100. Returns a single page",
+        "description": "Page size (API default: 100); returns a single page",
         "title": "Max Rows",
+        "minimum": 1,
         "type": "integer"
       },
       "search": {
@@ -17,11 +18,12 @@
         "type": "string"
       },
       "sort": {
+        "description": "Sort expression (e.g. submit_date_ut desc)",
         "title": "Sort",
         "type": "string"
       },
       "fields": {
-        "description": "Comma-separated field names",
+        "description": "Comma-separated field names to return",
         "title": "Fields",
         "type": "string"
       }
@@ -34,22 +36,22 @@
     "properties": {
       "href": {
         "type": "string",
-        "description": "`HREF` of the query"
+        "description": "Query URL (HREF)"
       },
       "record_count": {
         "type": "string",
-        "description": "Number of records in this page, returned as a string."
+        "description": "Number of records returned in this page (string)"
       },
       "total_record_count": {
         "type": "string",
-        "description": "Total matching records (string)"
+        "description": "Total number of matching records (string)"
       },
       "records": {
         "type": "array",
         "items": {
           "type": "object"
         },
-        "description": "Ticket records returned unchanged as objects."
+        "description": "Ticket records, returned unchanged"
       }
     }
   }

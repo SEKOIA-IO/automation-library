@@ -25,24 +25,29 @@
       "use_token": {
         "default": true,
         "title": "Use Token",
-        "type": "boolean"
+        "type": "boolean",
+        "description": "Use access token (Bearer) authentication, recommended; false: Basic authentication"
       },
       "username": {
         "title": "Username",
-        "type": "string"
+        "type": "string",
+        "description": "REST API user login; required when use_token is false"
       },
       "password": {
         "title": "Password",
-        "type": "string"
+        "type": "string",
+        "description": "REST API user password; required when use_token is false"
       },
       "token": {
         "title": "Token",
-        "type": "string"
+        "type": "string",
+        "description": "EasyVista access token; required when use_token is true"
       },
       "verify_ssl": {
         "default": true,
         "title": "Verify Ssl",
-        "type": "boolean"
+        "type": "boolean",
+        "description": "Verify the server TLS certificate"
       }
     },
     "required": [

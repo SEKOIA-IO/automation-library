@@ -12,7 +12,7 @@
         "type": "string"
       },
       "action_type_id": {
-        "description": "Numeric action type ID from EasyVista administration; not a GUID",
+        "description": "Action type ID (tenant-specific); not the action type GUID",
         "title": "Action Type Id",
         "type": "integer"
       }
@@ -29,22 +29,22 @@
     "properties": {
       "href": {
         "type": "string",
-        "description": "`HREF` of the query"
+        "description": "Query URL (HREF)"
       },
       "record_count": {
         "type": "integer",
-        "description": "Number of items (**integer**, unlike the string counts of the list endpoints)"
+        "description": "Number of items returned (integer)"
       },
       "total_record_count": {
         "type": "integer",
-        "description": "Total number of items"
+        "description": "Total number of items (integer)"
       },
       "results": {
         "type": "array",
         "items": {
           "type": "object"
         },
-        "description": "Items returned unchanged: REQUEST_ID, ACTION_ID, ACTION_TYPE_ID, WORKFLOW_ID (strings) and QUESTION_LIST_ID (string or null). Results may contain duplicates and are not filtered. To read a questionnaire, use the EasyVista GET /questionnaires/{QUESTION_LIST_ID} endpoint; this module does not expose that operation."
+        "description": "Questionnaire items, returned unchanged: REQUEST_ID, ACTION_ID, ACTION_TYPE_ID, WORKFLOW_ID (strings) and QUESTION_LIST_ID (string or null); may contain duplicates; to read a questionnaire, use the EasyVista GET /questionnaires/{QUESTION_LIST_ID} endpoint, not exposed by this module"
       }
     }
   }

@@ -17,19 +17,22 @@
         "type": "string"
       },
       "comment": {
+        "description": "Closing action comment",
         "title": "Comment",
         "type": "string"
       },
       "end_date": {
-        "description": "Closing action date, MM/DD/YYYY HH:MM:SS",
+        "description": "Closing date of the ongoing actions and of the closing action (MM/DD/YYYY HH:MM:SS); defaults to now",
         "title": "End Date",
         "type": "string"
       },
       "catalog_guid": {
+        "description": "Catalog (topic) GUID; only needed to requalify the ticket before closing",
         "title": "Catalog Guid",
         "type": "string"
       },
       "delete_actions": {
+        "description": "Delete the ongoing actions of the ticket",
         "title": "Delete Actions",
         "type": "boolean"
       }
@@ -45,7 +48,7 @@
     "properties": {
       "href": {
         "type": "string",
-        "description": "`HREF` of the closed ticket"
+        "description": "Closed ticket URL (HREF)"
       }
     }
   }

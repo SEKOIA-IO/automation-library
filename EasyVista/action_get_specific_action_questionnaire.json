@@ -12,12 +12,12 @@
         "type": "string"
       },
       "action_type_id": {
-        "description": "Numeric action type ID from EasyVista administration; not a GUID",
+        "description": "Action type ID (tenant-specific); not the action type GUID",
         "title": "Action Type Id",
         "type": "integer"
       },
       "action_id": {
-        "description": "ACTION_ID of the workflow action",
+        "description": "Workflow action ID (ACTION_ID)",
         "title": "Action Id",
         "type": "string"
       }
@@ -35,22 +35,22 @@
     "properties": {
       "href": {
         "type": "string",
-        "description": "`HREF` of the query"
+        "description": "Query URL (HREF)"
       },
       "record_count": {
         "type": "integer",
-        "description": "Number of items (**integer**)"
+        "description": "Number of items returned (integer)"
       },
       "total_record_count": {
         "type": "integer",
-        "description": "Total number of items"
+        "description": "Total number of items (integer)"
       },
       "results": {
         "type": "array",
         "items": {
           "type": "object"
         },
-        "description": "Items returned as is (`REQUEST_ID`, `ACTION_ID`, `ACTION_TYPE_ID`, `WORKFLOW_ID`, `QUESTION_LIST_ID`)"
+        "description": "Questionnaire items, returned unchanged: REQUEST_ID, ACTION_ID, ACTION_TYPE_ID, WORKFLOW_ID and QUESTION_LIST_ID"
       }
     }
   }

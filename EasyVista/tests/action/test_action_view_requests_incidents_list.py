@@ -1,6 +1,5 @@
-from helpers import assert_action_error, assert_action_success
-
 from easyvista_modules.action.action_view_requests_incidents_list import ViewRequestsIncidentsList
+from tests.helpers import assert_action_error, assert_action_success
 
 ACTION_CASE = (
     ViewRequestsIncidentsList,

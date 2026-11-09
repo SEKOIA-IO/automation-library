@@ -7,7 +7,7 @@
   "arguments": {
     "properties": {
       "requests": {
-        "description": "Exactly one ticket per call",
+        "description": "Ticket to create; exactly one per call",
         "items": {
           "properties": {
             "catalog_code": {
@@ -16,6 +16,7 @@
               "type": "string"
             },
             "title": {
+              "description": "Ticket title",
               "title": "Title",
               "type": "string"
             },
@@ -25,31 +26,37 @@
               "type": "string"
             },
             "urgency_id": {
+              "description": "Urgency ID (tenant-specific)",
               "title": "Urgency Id",
               "type": "integer"
             },
             "impact_id": {
+              "description": "Impact ID (e.g. \"1\")",
               "title": "Impact Id",
               "type": "string"
             },
             "recipient_name": {
+              "description": "Recipient full name",
               "title": "Recipient Name",
               "type": "string"
             },
             "recipient_mail": {
+              "description": "Recipient email",
               "title": "Recipient Mail",
               "type": "string"
             },
             "department_code": {
+              "description": "Department code",
               "title": "Department Code",
               "type": "string"
             },
             "location_id": {
+              "description": "Location ID",
               "title": "Location Id",
               "type": "integer"
             },
             "custom_fields": {
-              "description": "EasyVista field names, forwarded verbatim",
+              "description": "Additional EasyVista fields (field name: value), forwarded verbatim",
               "title": "Custom Fields",
               "additionalProperties": true,
               "type": "object"
@@ -75,11 +82,11 @@
     "properties": {
       "href": {
         "type": "string",
-        "description": "`HREF` of the created ticket (API field)"
+        "description": "Created ticket URL (HREF)"
       },
       "rfc_number": {
         "type": "string",
-        "description": "RFC number derived from the last path segment of HREF; use it to reference the created ticket in later actions."
+        "description": "Ticket RFC number, derived from the last HREF path segment; use it to reference the ticket in later actions"
       }
     }
   }

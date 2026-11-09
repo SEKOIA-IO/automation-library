@@ -1,9 +1,9 @@
 import base64
 
 import pytest
-from helpers import RFC, TICKET, assert_action_error, assert_action_success
 
 from easyvista_modules.action.action_get_request_incident_document import GetRequestIncidentDocument
+from tests.helpers import RFC, TICKET, assert_action_error, assert_action_success
 
 ACTION_CASE = (
     GetRequestIncidentDocument,
