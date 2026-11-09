@@ -117,6 +117,10 @@
 			"path": "CatoNetwork"
 		},
 		{
+			"name": "Trellix",
+			"path": "Trellix"
+    },
+    {
 			"name": "PolySwarm",
 			"path": "PolySwarm"
     },
