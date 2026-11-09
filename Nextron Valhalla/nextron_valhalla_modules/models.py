@@ -4,7 +4,7 @@ from pydantic_core.core_schema import ValidationInfo
 DEMO_API_KEY = "1" * 64
 
 
-class NextronValhallaSigmaRulesModuleConfiguration(BaseModel):
+class NextronValhallaModuleConfiguration(BaseModel):
     valhalla_api_key: str = Field(default=DEMO_API_KEY, json_schema_extra={"secret": True})
     sekoia_api_key: str = Field(..., json_schema_extra={"secret": True})
     sekoia_base_url: str = Field(default="https://api.sekoia.io")

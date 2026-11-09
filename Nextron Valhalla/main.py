@@ -1,9 +1,9 @@
-from nextron_valhalla_sigma_rules_modules import (
-    NextronValhallaSigmaRulesModule,
+from nextron_valhalla_modules import (
+    NextronValhallaModule,
     SyncSigmaRulesCatalog,
 )
 
 if __name__ == "__main__":
-    module = NextronValhallaSigmaRulesModule()
+    module = NextronValhallaModule()
     module.register(SyncSigmaRulesCatalog, "sync-sigma-rules-catalog")
     module.run()

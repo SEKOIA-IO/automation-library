@@ -1,4 +1,4 @@
-# Nextron Valhalla Sigma Rules
+# Nextron Valhalla
 
 Sekoia automation module that syncs the [Nextron Valhalla](https://valhalla.nextron-systems.com) Sigma rule feed into the [Sekoia](https://www.sekoia.io) Rules Catalog. Rules are pulled on a schedule, field names are rewritten from Sigma conventions to the ECS fields Sekoia's parsers emit, and each rule is created on first sight and updated in place on later syncs.
 
@@ -95,7 +95,7 @@ The Valhalla API URL is hardcoded to `https://valhalla.nextron-systems.com`.
 main.py                                        # entry point; registers the sync trigger
 manifest.json                                  # module manifest (version, config schema, secrets)
 trigger_sync_sigma_rules_catalog.json          # sync trigger manifest
-nextron_valhalla_sigma_rules_modules/
+nextron_valhalla_modules/
   client.py                                    # Valhalla HTTP client (retries)
   sekoia_client.py                             # Sekoia Rules Catalog HTTP client (pooled session + retries)
   sigma_mapper.py                              # Sigma YAML → Sekoia catalog payload conversion

@@ -3,8 +3,8 @@ import textwrap
 import pytest
 import yaml
 
-from nextron_valhalla_sigma_rules_modules.ecs_field_maps import RAW_TO_ECS, RAW_TO_ECS_BY_PRODUCT
-from nextron_valhalla_sigma_rules_modules.sigma_mapper import (
+from nextron_valhalla_modules.ecs_field_maps import RAW_TO_ECS, RAW_TO_ECS_BY_PRODUCT
+from nextron_valhalla_modules.sigma_mapper import (
     DEFAULT_SEVERITY,
     MARKER_TAG,
     MAX_DESCRIPTION_LENGTH,
@@ -354,7 +354,7 @@ def test_all_optional_fields_together():
 # ---------------------------------------------------------------------------
 
 
-from nextron_valhalla_sigma_rules_modules.sigma_mapper import (  # noqa: E402
+from nextron_valhalla_modules.sigma_mapper import (  # noqa: E402
     DEFAULT_ALERT_UUID,
     TAG_ALERT_UUID_MAP,
     derive_alert_type_uuid,
@@ -397,7 +397,7 @@ def test_non_string_tag_entries_are_ignored():
 
 def test_marker_tag_alone_does_not_override_default():
     # The marker tag must not accidentally match any priority-list entry.
-    from nextron_valhalla_sigma_rules_modules.sigma_mapper import MARKER_TAG
+    from nextron_valhalla_modules.sigma_mapper import MARKER_TAG
 
     assert derive_alert_type_uuid([MARKER_TAG]) == DEFAULT_ALERT_UUID
 
@@ -795,7 +795,7 @@ def test_product_picks_its_own_field_map():
 
 
 def test_product_match_is_case_insensitive():
-    from nextron_valhalla_sigma_rules_modules.ecs_field_maps import mapping_for_product
+    from nextron_valhalla_modules.ecs_field_maps import mapping_for_product
 
     assert mapping_for_product("Windows") is RAW_TO_ECS_BY_PRODUCT["windows"]
     assert mapping_for_product("okta") is RAW_TO_ECS
@@ -1235,7 +1235,7 @@ def test_hashes_bare_field_no_modifier_still_splits():
 def test_underscore_tactic_tags_are_recognised(tag, expected_label):
     """S12: ``attack.command_and_control`` is the same tactic as the
     hyphenated spelling."""
-    from nextron_valhalla_sigma_rules_modules.sigma_mapper import TAG_ALERT_UUID_MAP, derive_alert_type_uuid
+    from nextron_valhalla_modules.sigma_mapper import TAG_ALERT_UUID_MAP, derive_alert_type_uuid
 
     expected = dict(TAG_ALERT_UUID_MAP)[expected_label]
     assert derive_alert_type_uuid([tag]) == expected

@@ -1,7 +1,7 @@
 {
   "configuration": {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Nextron Valhalla Sigma Rules",
+    "title": "Nextron Valhalla",
     "type": "object",
     "properties": {
       "valhalla_api_key": {
@@ -35,9 +35,9 @@
       "sekoia_api_key"
     ]
   },
-  "description": "Nextron Valhalla Sigma Rules integration for Sekoia",
-  "name": "Nextron Valhalla Sigma Rules",
-  "slug": "nextron-valhalla-sigma-rules",
+  "description": "Nextron Valhalla integration for Sekoia",
+  "name": "Nextron Valhalla",
+  "slug": "nextron-valhalla",
   "categories": [
     "Threat Intelligence"
   ],

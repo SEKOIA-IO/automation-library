@@ -1,8 +1,8 @@
 import pytest
 import requests_mock
 
-from nextron_valhalla_sigma_rules_modules import sekoia_client
-from nextron_valhalla_sigma_rules_modules.sekoia_client import (
+from nextron_valhalla_modules import sekoia_client
+from nextron_valhalla_modules.sekoia_client import (
     LIST_PAGE_SIZE,
     MAX_LIST_PAGES,
     SekoiaAPIError,

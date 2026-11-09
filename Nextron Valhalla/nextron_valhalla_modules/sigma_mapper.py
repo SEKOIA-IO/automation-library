@@ -2,7 +2,7 @@ import re
 
 import yaml
 
-from nextron_valhalla_sigma_rules_modules.ecs_field_maps import (
+from nextron_valhalla_modules.ecs_field_maps import (
     _ECS_PASSTHROUGH_FIELDS,
     CONTEXT_AWARE_FIELDS,
     HASH_TARGETS_BY_CATEGORY,
