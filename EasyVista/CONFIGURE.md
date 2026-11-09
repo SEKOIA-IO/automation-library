@@ -84,7 +84,10 @@ HTTPS remains mandatory even when certificate verification is disabled.
 - **Closed tickets:** Update and Close read the ticket first and refuse it when `END_DATE_UT` is populated.
   This avoids an apparent API success on an already closed ticket and requires an additional read permission.
 - **Appending descriptions:** Requires EV Service Manager 2025.3 or later. Appending is not idempotent, so the
-  module never retries a request with `append=true`. Check the ticket after an uncertain timeout before trying again.
+  module never retries a PUT containing the `append` query parameter, whatever its value. EasyVista appends whenever
+  this parameter is present, even with `append=false`. The Update action sends it only when `append` is true;
+  false or unset replaces the description by omitting the parameter. Check the ticket after an uncertain timeout
+  before trying again.
 - **Other writes:** POST requests are also never retried because they can create duplicates.
 - **Suspend and restart:** These transitions are never retried automatically. After a gateway timeout, check the
   ticket state before trying again: EasyVista may already have applied the transition.
