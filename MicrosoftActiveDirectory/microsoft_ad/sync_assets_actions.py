@@ -9,28 +9,13 @@ from threading import Event, Timer
 from typing import Any
 from uuid import uuid4
 
-from ldap3.core.exceptions import LDAPInvalidDnError
-from ldap3.utils.dn import safe_dn
 from pydantic.v1 import BaseModel, Field
 from sekoia_automation.storage import PersistentJSON
 
 from microsoft_ad.actions_base import MicrosoftADAction
 from microsoft_ad.asset_connectors.exceptions import AssetConnectorPushError, AssetConnectorStoppedError
+from microsoft_ad.asset_connectors.user_assets import basedn_error
 from microsoft_ad.asset_connectors.user_assets_sync import MicrosoftADUserAssetSyncConnector
-
-
-def basedn_error(basedn: str | None) -> str | None:
-    if not basedn:
-        return "A base DN is required to synchronize Active Directory users"
-    try:
-        safe_dn(basedn)
-    except LDAPInvalidDnError:
-        message = f"The base DN '{basedn}' is not a valid distinguished name"
-        if "=" not in basedn and "." in basedn:
-            suggestion = ",".join(f"DC={part}" for part in basedn.split(".") if part)
-            message += f": use '{suggestion}' for the domain {basedn}"
-        return message
-    return None
 
 
 class SynchronizeAssetsArguments(BaseModel):

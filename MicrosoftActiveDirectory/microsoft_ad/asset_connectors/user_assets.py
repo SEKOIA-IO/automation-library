@@ -3,7 +3,8 @@ from collections.abc import Generator
 from typing import Any
 
 from ldap3 import ALL_ATTRIBUTES, ALL_OPERATIONAL_ATTRIBUTES
-from ldap3.core.exceptions import LDAPException
+from ldap3.core.exceptions import LDAPException, LDAPInvalidDnError
+from ldap3.utils.dn import safe_dn
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.group import Group
@@ -20,6 +21,20 @@ from sekoia_automation.storage import PersistentJSON
 
 from microsoft_ad.client.ldap_client import LDAPClient
 from microsoft_ad.models.common_models import LDAPUserAttributes, MicrosoftADConnectorConfiguration, MicrosoftADModule
+
+
+def basedn_error(basedn: str | None) -> str | None:
+    if not basedn:
+        return "A base DN is required to synchronize Active Directory users"
+    try:
+        safe_dn(basedn)
+    except LDAPInvalidDnError:
+        message = f"The base DN '{basedn}' is not a valid distinguished name"
+        if "=" not in basedn and "." in basedn:
+            suggestion = ",".join(f"DC={part}" for part in basedn.split(".") if part)
+            message += f": use '{suggestion}' for the domain {basedn}"
+        return message
+    return None
 
 
 class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
@@ -372,6 +387,9 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         Yields:
             Generator[UserOCSFModel]: An OCSF model representing a Microsoft AD user.
         """
+
+        if error := basedn_error(self.configuration.basedn):
+            raise ValueError(error)
 
         self.log("Start Microsoft AD user assets generator !!", level="info")
         self.log(f"Data path: {self._data_path.absolute()}", level="info")

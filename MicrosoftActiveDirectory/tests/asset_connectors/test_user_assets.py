@@ -21,6 +21,7 @@ def connector(tmp_path, mock_module):
     connector = object.__new__(MicrosoftADUserAssetConnector)
     connector.module = mock_module
     connector._configuration = mock_module.configuration
+    connector._configuration.basedn = "DC=example,DC=com"
     connector._data_path = tmp_path
     connector.log = Mock()
     connector.error = Mock()
@@ -325,6 +326,16 @@ def test_get_assets(connector):
 
     assert len(assets) == 1
     assert isinstance(assets[0], UserOCSFModel)
+
+
+def test_get_assets_refuses_an_invalid_base_dn(connector):
+    connector._configuration.basedn = "EXAMPLE.CORP"
+    connector.get_users_generator = Mock()
+
+    with pytest.raises(ValueError, match="use 'DC=EXAMPLE,DC=CORP' for the domain EXAMPLE.CORP"):
+        list(connector.get_assets())
+
+    connector.get_users_generator.assert_not_called()
 
 
 def test_get_assets_handles_exception(connector):
