@@ -1,38 +1,82 @@
 {
   "name": "Forward a message",
-  "description": "Forward a message from the user's mailbox",
+  "description": "The action that forwards a message from the user's mailbox",
   "uuid": "afb77f00-b727-5549-94e6-9f774af11fa2",
   "docker_parameters": "action_forward_message",
   "arguments": {
     "title": "ApplicationArguments",
     "type": "object",
     "required": [
-      "user",
       "message_id",
-      "recipients"
+      "recipients",
+      "user"
     ],
     "properties": {
-      "user": {
-        "description": "The identifier or the principal name of the user",
+      "comment": {
+        "description": "The optional comment included in the forwarded message",
         "type": "string"
       },
       "message_id": {
-        "description": "The identifier of the message to forward",
-        "type": "string"
-      },
-      "comment": {
-        "description": "A comment to include",
-        "type": "string"
+        "description": "The Microsoft Graph message item ID, or a message object containing message_id",
+        "type": [
+          "string",
+          "object"
+        ]
       },
       "recipients": {
-        "description": "The list of recipients of the forwarding",
+        "description": "The list of recipient email addresses",
         "type": "array",
         "items": {
-          "type": "string"
+          "type": "string",
+          "format": "email"
         }
+      },
+      "user": {
+        "description": "The user identifier or user principal name (UPN)",
+        "type": "string"
       }
     }
   },
-  "results": {},
+  "results": {
+    "title": "ForwardMessageResults",
+    "type": "object",
+    "required": [
+      "action",
+      "recipients",
+      "status",
+      "target_message_id",
+      "user"
+    ],
+    "properties": {
+      "action": {
+        "description": "The action technical identifier",
+        "type": "string"
+      },
+      "comment": {
+        "description": "The optional comment included in the forwarded message",
+        "type": "string"
+      },
+      "recipients": {
+        "description": "The recipient email addresses used by the action",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "status": {
+        "description": "The execution status",
+        "type": "string"
+      },
+      "target_message_id": {
+        "description": "The Microsoft Graph message item ID targeted by the action",
+        "type": "string"
+      },
+      "user": {
+        "description": "The echo of the user identifier used for this action",
+        "type": "string"
+      }
+    }
+  },
   "slug": "forward_message"
 }
