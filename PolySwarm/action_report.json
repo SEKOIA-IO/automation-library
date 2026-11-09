@@ -1,0 +1,185 @@
+{
+  "name": "Get Sandbox Report",
+  "description": "Fetch the sandbox report already on file for a hash and provider. Reads only: it submits nothing and spends no detonation. If nothing has been detonated for this hash and provider yet, call SandboxFile, SandboxUrl or SandboxIp to submit one, then either wait here for it to finish or use the Sandbox detonation completed trigger to be notified instead of waiting.",
+  "uuid": "afdfb95c-e31e-4cba-a635-695f019bd6c9",
+  "docker_parameters": "Report",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "sha256": {
+        "type": "string",
+        "description": "SHA256 hash of the artifact to fetch a sandbox report for"
+      },
+      "sandbox": {
+        "type": "string",
+        "description": "Sandbox provider slug (e.g. 'cape', 'triage')",
+        "default": "cape"
+      },
+      "max_wait_seconds": {
+        "type": "integer",
+        "description": "How long to wait for a detonation that is already running elsewhere to finish, in seconds, from 0 to 300. A larger value is rejected with a validation error. 0, the default, does not wait: this reads the task's current status and returns immediately. Polling backs off from a short first check up to a 60 second ceiling. This action never starts a detonation itself; submit one with SandboxFile, SandboxUrl or SandboxIp first.",
+        "default": 0,
+        "minimum": 0,
+        "maximum": 300
+      },
+      "include_raw_report": {
+        "type": "boolean",
+        "description": "Whether to return the raw sandbox report in the report field. False, the default, returns report as null, which keeps the response small: the verdict and the typed behavior fields are the same either way. Set it to true to get the report back unmodified, for a playbook that needs a field the typed behavior does not carry. A CAPE or Triage report commonly runs to several megabytes, so expect a much larger response. The report is never truncated: it is returned whole or not at all.",
+        "default": false
+      }
+    },
+    "required": [
+      "sha256"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "sandbox_task_id": {
+        "type": "string",
+        "description": "The sandbox task ID. Empty when no sandbox task has ever been created for this hash and provider"
+      },
+      "sha256": {
+        "type": "string",
+        "description": "SHA256 hash of the artifact"
+      },
+      "sandbox": {
+        "type": "string",
+        "description": "Sandbox provider used"
+      },
+      "status": {
+        "type": "string",
+        "description": "Task status (e.g. SUCCEEDED, FAILED, RUNNING). NOT_FOUND means no sandbox task has ever been created for this hash and provider"
+      },
+      "malicious": {
+        "type": [
+          "boolean",
+          "null"
+        ],
+        "description": "Whether the sample behaved maliciously in this sandbox. This is the sandbox's behavioural verdict and not the engine consensus, and the two can disagree: a file every engine flags can behave inertly under detonation and score low here. Use a hash lookup for the engine view. Null when there is no verdict to report: nothing has been detonated yet, a detonation failed, a task is still processing, or the detonation succeeded but its report carries no score this action can read, which the unscored field marks. Never inferred to be false, since that would tell a playbook a sample is clean when nobody has looked at it."
+      },
+      "behavior": {
+        "type": "object",
+        "description": "Typed slice of the report a playbook can read without knowing either sandbox provider's schema. Every field is read from the raw report underneath; anything a provider did not supply is absent or empty, never invented.",
+        "properties": {
+          "behavior_signatures": {
+            "type": "array",
+            "description": "Signature and behaviour names the sandbox fired, from both static checks and the dynamic run",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mitre_techniques": {
+            "type": "array",
+            "description": "MITRE ATT&CK technique identifiers observed, deduplicated",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contacted_hosts": {
+            "type": "array",
+            "description": "IP addresses the sample contacted during the run",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contacted_domains": {
+            "type": "array",
+            "description": "Domain names resolved or contacted during the run, including TLS SNI values",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contacted_urls": {
+            "type": "array",
+            "description": "HTTP(S) URLs the sandbox captured off the wire. Empty on an encrypted flow the provider did not decrypt, even when contacted_domains carries the same host",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dropped_file_hashes": {
+            "type": "array",
+            "description": "Sha256 hashes of files the run wrote to disk",
+            "items": {
+              "type": "string"
+            }
+          },
+          "processes": {
+            "type": "array",
+            "description": "Processes the sandbox observed, with command line evidence where the provider captured one",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pid": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "parent_pid": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "image": {
+                  "type": "string"
+                },
+                "command_line": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "report": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "description": "The raw sandbox analysis report data, unmodified, underneath the typed behavior field. Null unless include_raw_report is true, and also when there is no report to return."
+      },
+      "sandbox_artifacts": {
+        "type": "array",
+        "description": "Artifacts produced by the sandbox run",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "instance_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "mimetype": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "unscored": {
+        "type": "boolean",
+        "description": "True when a detonation succeeded and returned a report, but the report carries no score this action can read and names no malware family, so there is nothing to judge it by. An unscored report is not a clean one. Set include_raw_report to true to have the raw report returned for a human to read."
+      },
+      "behavior_unreadable": {
+        "type": "boolean",
+        "description": "True when the report came back but is not shaped the way its provider documents (for example a list where an object belongs), so the typed behavior could not be read and is empty for that reason, not because the sandbox saw nothing. The malicious verdict and the unscored flag are unaffected: a report can be unreadable and still carry a score. Set include_raw_report to true to inspect the report itself."
+      }
+    }
+  },
+  "slug": "report",
+  "outputs": {
+    "malicious": "The sample behaved maliciously in the sandbox",
+    "not malicious": "The sample was detonated and PolySwarm found nothing malicious in its behaviour",
+    "no report available": "No sandbox report is available: either no sandbox task has ever been created for this hash and provider (call SandboxFile, SandboxUrl or SandboxIp to detonate it), a submitted detonation failed, or one is still running and max_wait_seconds was 0 or was reached before it finished, or a detonation succeeded but its report could not be scored, which the unscored field marks"
+  }
+}
