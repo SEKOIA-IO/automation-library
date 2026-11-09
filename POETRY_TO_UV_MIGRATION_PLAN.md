@@ -46,7 +46,7 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 - Trellix
 
 ### Remaining scope
-- Remaining modules to migrate: 84
+- Remaining modules to migrate: 83
 - Remaining planned effort: about 380.5 hours
 - Criticity scale: 1 (easiest) to 10 (hardest)
 
@@ -156,8 +156,6 @@ Estimated wave effort: 96h
 - SkyhighSecurity
 - Sophos
 - Tenable
-- TrendMicro
-- Trellix
 - Vectra
 - Wiz
 - Zscaler
