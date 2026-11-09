@@ -48,6 +48,11 @@ class TrendMicroWorker(Thread):
         self._stop_event = Event()
         self.all_pages_fetched = False
 
+        # genTime and metadata of the events already pushed from a window whose pages could not all be fetched.
+        # The checkpoint isn't saved for such a window, so it is collected again on the next run: these events are
+        # kept in memory until the window is complete so that each retry doesn't push them again.
+        self.incomplete_window_events: list[tuple[int, dict[str, Any]]] = []
+
     def stop(self):
         self._stop_event.set()
 
@@ -170,23 +175,25 @@ class TrendMicroWorker(Thread):
                 content = self.request_logs_page(params=params)
 
             except LogsPageRequestError:
+                # the window is incomplete and will be retried on the next run, after the batch delay
                 if "token" in params:
-                    # a page behind a nextToken could not be fetched: the window is incomplete
                     self.log(
                         message=f"{self.log_type}: Failed to fetch the next page of events. The window will be retried",  # noqa: E501
                         level="warning",
                     )
-                    return
-
-                content = None
+                return
 
             if content is None:
-                self.all_pages_fetched = True
-
-                # an empty page behind a nextToken just means that there are no more events
+                # only a response without nextToken ends the window: an empty body behind a nextToken may hide
+                # unread pages, so the window is considered incomplete and will be retried
                 if "token" in params:
+                    self.log(
+                        message=f"{self.log_type}: Empty response for the next page of events. The window will be retried",  # noqa: E501
+                        level="warning",
+                    )
                     return
 
+                self.all_pages_fetched = True
                 self.log(
                     message=f"{self.log_type}: No events to forward. Waiting {self.frequency} seconds",
                     level="info",
@@ -223,8 +230,11 @@ class TrendMicroWorker(Thread):
         recent_pushed_events = {self.get_event_key(metadata) for metadata in self.get_recent_pushed_events()}
 
         # keep only the genTime and the metadata of the pushed events, not their payloads,
-        # to bound the memory used by a large catch-up window
-        pushed_events: list[tuple[int, dict[str, Any]]] = []
+        # to bound the memory used by a large catch-up window.
+        # Start from the events already pushed by the previous, incomplete, attempts of this window.
+        pushed_events: list[tuple[int, dict[str, Any]]] = self.incomplete_window_events
+        self.incomplete_window_events = []
+        recent_pushed_events.update(self.get_event_key(metadata) for _, metadata in pushed_events)
         has_fetched_events = False
 
         # Iterate through all the pages of the window and push each page as soon as it is fetched
@@ -283,6 +293,10 @@ class TrendMicroWorker(Thread):
 
             events_lag = int(time.time()) - new_timestamp
             EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).set(events_lag)
+
+        elif not self.all_pages_fetched:
+            # the window will be collected again: remember what was already pushed to avoid duplicating it
+            self.incomplete_window_events = pushed_events
 
         elif has_fetched_events and len(pushed_events) == 0:
             self.log(
