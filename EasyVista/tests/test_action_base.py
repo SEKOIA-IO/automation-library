@@ -1,5 +1,6 @@
 import base64
 import json
+from unittest.mock import Mock
 
 import pytest
 import requests
@@ -97,6 +98,14 @@ def test_unreachable(make_action, requests_mock, api_url, exception):
     requests_mock.get(api_url, exc=exception)
     assert action.run({}) is None
     assert f"EasyVista API unreachable: {type(exception).__name__}:" in action.error.call_args.args[0]
+
+
+def test_invalid_request_value_is_reported(make_action, monkeypatch):
+    action = make_action(ViewRequestsIncidentsList)
+    monkeypatch.setattr(action.client, "request", Mock(side_effect=ValueError("bad URL")))
+
+    assert action.run({}) is None
+    action.error.assert_called_once_with("bad URL")
 
 
 def test_error_redacts_credentials(make_action, requests_mock, api_url):

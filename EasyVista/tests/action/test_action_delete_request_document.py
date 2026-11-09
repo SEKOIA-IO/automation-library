@@ -1,3 +1,5 @@
+from unittest.mock import Mock
+
 import pytest
 
 from easyvista_modules.action.action_delete_request_document import DeleteRequestDocument
@@ -19,6 +21,15 @@ def test_action_success(make_action, requests_mock, api_url):
 
 def test_action_error(make_action, requests_mock, api_url):
     assert_action_error(make_action, requests_mock, api_url, *ACTION_CASE)
+
+
+def test_delete_request_failure_returns_none(make_action, monkeypatch):
+    action = make_action(DeleteRequestDocument)
+    request = Mock(return_value=None)
+    monkeypatch.setattr(action, "request", request)
+
+    assert action.run({**TICKET, "id": "doc"}) is None
+    request.assert_called_once_with("DELETE", action.request_path(RFC, "documents", "doc"), check=False)
 
 
 @pytest.mark.parametrize(
