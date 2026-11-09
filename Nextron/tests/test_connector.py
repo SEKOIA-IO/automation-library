@@ -6,6 +6,8 @@ scan seen while still running must be left un-processed so a later poll re-check
 it once it has finished.
 """
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 import requests
 
@@ -29,13 +31,23 @@ def connector(tmp_path, monkeypatch):
     monkeypatch.setattr(conn, "log", lambda *a, **k: None)
     monkeypatch.setattr(conn, "log_exception", lambda *a, **k: None)
     # Run exactly one poll iteration, then stop the loop.
-    monkeypatch.setattr("thor_cloud_modules.connector.time.sleep", lambda *_a, **_k: conn.stop())
+    monkeypatch.setattr(conn, "_wait", lambda *_a, **_k: conn.stop())
     return conn
+
+
+def _accepting_push(pushed: list[str]):
+    """Fake push that accepts every event, returning one event ID per event like the SDK."""
+
+    def push(events):
+        pushed.extend(events)
+        return [f"id-{i}" for i in range(len(events))]
+
+    return push
 
 
 def _run_once(connector, monkeypatch, scans, logs_by_scan):
     pushed: list[str] = []
-    monkeypatch.setattr(connector, "push_events_to_intakes", lambda events: pushed.extend(events))
+    monkeypatch.setattr(connector, "push_events_to_intakes", _accepting_push(pushed))
     monkeypatch.setattr(client, "fetch_scans", lambda *a, **k: scans)
 
     fetched: list[str] = []
@@ -109,6 +121,7 @@ def test_empty_api_key_is_reported_and_iteration_skipped(connector, monkeypatch)
 
 def test_fetch_scans_request_error_is_handled_and_retried(connector, monkeypatch):
     """A network error while listing scans is caught; the loop sleeps and retries."""
+
     def boom(*a, **k):
         raise requests.RequestException("boom")
 
@@ -129,7 +142,7 @@ def test_fetch_logs_request_error_does_not_mark_scan_processed(connector, monkey
 
     monkeypatch.setattr(client, "fetch_scan_logs", boom)
     pushed: list[str] = []
-    monkeypatch.setattr(connector, "push_events_to_intakes", lambda events: pushed.extend(events))
+    monkeypatch.setattr(connector, "push_events_to_intakes", _accepting_push(pushed))
 
     connector.run()
 
@@ -139,6 +152,7 @@ def test_fetch_logs_request_error_does_not_mark_scan_processed(connector, monkey
 
 def test_unexpected_error_is_caught_by_outer_handler(connector, monkeypatch):
     """A non-request exception is swallowed and delayed before the loop retries."""
+
     def kaboom(*a, **k):
         raise ValueError("unexpected")
 
@@ -181,7 +195,7 @@ def test_running_scan_is_rechecked_after_it_finishes(connector, monkeypatch):
 
     # Re-arm the loop for a second single iteration (clear the stop flag set above).
     connector._stop_event.clear()
-    monkeypatch.setattr("thor_cloud_modules.connector.time.sleep", lambda *_a, **_k: connector.stop())
+    monkeypatch.setattr(connector, "_wait", lambda *_a, **_k: connector.stop())
 
     # Poll 2: same scan has finished -> now pulled and marked processed.
     finished = [{"id": scan_id, "creation_date": 4102444800, "available_logs": ["thor.json"], "status": "successful"}]
@@ -191,3 +205,144 @@ def test_running_scan_is_rechecked_after_it_finishes(connector, monkeypatch):
     assert fetched == [scan_id]
     assert len(pushed) == 1
     assert scan_id in connector._load_processed()
+
+
+def test_partially_delivered_scan_is_not_marked_processed(connector, monkeypatch):
+    """The SDK swallows delivery errors and returns fewer event IDs: the scan must be retried."""
+    scans = [{"id": "lost-1", "creation_date": 4102444800, "available_logs": ["thor.json"], "status": "successful"}]
+    logs = {"lost-1": [{"message": "a"}, {"message": "b"}]}
+    monkeypatch.setattr(client, "fetch_scans", lambda *a, **k: scans)
+    monkeypatch.setattr(client, "fetch_scan_logs", lambda *a, **k: logs["lost-1"])
+    monkeypatch.setattr(connector, "push_events_to_intakes", lambda events: ["only-one"])
+
+    connector.run()
+
+    assert connector._load_processed() == {}
+
+
+def test_failed_scan_does_not_block_other_scans(connector, monkeypatch):
+    """Each scan is pushed and persisted on its own, so one failure doesn't affect the others."""
+    scans = [
+        {"id": "ok-1", "creation_date": 4102444800, "available_logs": ["thor.json"], "status": "successful"},
+        {"id": "lost-2", "creation_date": 4102444800, "available_logs": ["thor.json"], "status": "successful"},
+    ]
+    monkeypatch.setattr(client, "fetch_scans", lambda *a, **k: scans)
+    monkeypatch.setattr(client, "fetch_scan_logs", lambda base_url, headers, scan_id, **k: [{"scan": scan_id}])
+    pushes: list[list[str]] = []
+
+    def push(events):
+        pushes.append(events)
+        return [] if "lost-2" in events[0] else ["id"] * len(events)
+
+    monkeypatch.setattr(connector, "push_events_to_intakes", push)
+
+    connector.run()
+
+    assert len(pushes) == 2  # one push per scan, not one batch for the whole poll
+    assert set(connector._load_processed()) == {"ok-1"}
+
+
+def test_scan_with_encrypted_logs_is_skipped_without_download(connector, monkeypatch):
+    scans = [
+        {
+            "id": "enc-1",
+            "creation_date": 4102444800,
+            "available_logs": ["thor.json"],
+            "status": "successful",
+            "logs_encrypted": True,
+        }
+    ]
+
+    pushed, fetched = _run_once(connector, monkeypatch, scans, logs_by_scan={})
+
+    assert fetched == []
+    assert pushed == []
+    assert "enc-1" in connector._load_processed()
+
+
+def test_scan_with_empty_log_is_marked_processed(connector, monkeypatch):
+    scans = [{"id": "empty-1", "creation_date": 4102444800, "available_logs": ["thor.json"], "status": "successful"}]
+
+    pushed, fetched = _run_once(connector, monkeypatch, scans, logs_by_scan={"empty-1": []})
+
+    assert fetched == ["empty-1"]
+    assert pushed == []
+    assert "empty-1" in connector._load_processed()
+
+
+def test_stop_interrupts_the_scan_loop(connector, monkeypatch):
+    """Once stop() is called, remaining scans are left for the next start."""
+    scans = [
+        {"id": f"s-{i}", "creation_date": 4102444800, "available_logs": ["thor.json"], "status": "successful"}
+        for i in range(3)
+    ]
+    monkeypatch.setattr(client, "fetch_scans", lambda *a, **k: scans)
+    monkeypatch.setattr(client, "fetch_scan_logs", lambda *a, **k: [{"m": 1}])
+
+    def push_then_stop(events):
+        connector.stop()
+        return ["id"] * len(events)
+
+    monkeypatch.setattr(connector, "push_events_to_intakes", push_then_stop)
+
+    connector.run()
+
+    assert set(connector._load_processed()) == {"s-0"}
+
+
+def test_wait_returns_immediately_when_stopped(tmp_path):
+    conn = ThorCloudConnector(data_path=tmp_path)
+    conn._stop_event.set()
+
+    conn._wait(3600)  # would hang the test if it ignored the stop event
+
+
+def _poll(connector, monkeypatch, days_back, scans):
+    """Run one poll with the given Days Back and return the IDs of the forwarded scans."""
+    connector._stop_event.clear()
+    connector.configuration.days_back = days_back
+    monkeypatch.setattr(connector, "_wait", lambda *_a, **_k: connector.stop())
+    pushed, fetched = _run_once(connector, monkeypatch, scans, {s["id"]: [{"scan": s["id"]}] for s in scans})
+    return fetched
+
+
+def _finished_scan(scan_id, days_ago):
+    created = (datetime.now(timezone.utc) - timedelta(days=days_ago)).timestamp()
+    return {"id": scan_id, "creation_date": int(created), "available_logs": ["thor.json"], "status": "successful"}
+
+
+def test_raising_days_back_does_not_resend_pruned_scans(connector, monkeypatch):
+    seen = _finished_scan("seen-5d", days_ago=5)
+    never_seen = _finished_scan("never-seen-20d", days_ago=20)
+
+    # Poll 1: the scan is inside the 7-day window and is forwarded.
+    assert _poll(connector, monkeypatch, 7, [seen]) == ["seen-5d"]
+
+    # Poll 2: the window shrinks to 3 days, so the scan's entry is pruned.
+    assert _poll(connector, monkeypatch, 3, []) == []
+    assert "seen-5d" not in connector._load_processed()
+
+    # Poll 3: the window grows to 30 days. The pruned scan must not be sent again,
+    # but a scan that was never inside any window is backfilled.
+    assert _poll(connector, monkeypatch, 30, [seen, never_seen]) == ["never-seen-20d"]
+
+
+def test_pruned_range_survives_a_restart(connector, monkeypatch):
+    seen = _finished_scan("seen-5d", days_ago=5)
+    _poll(connector, monkeypatch, 7, [seen])
+    _poll(connector, monkeypatch, 3, [])
+
+    restarted = ThorCloudConnector(data_path=connector.data_path)
+    restarted.module._configuration = connector.module._configuration
+    restarted.configuration = connector.configuration
+    monkeypatch.setattr(restarted, "log", lambda *a, **k: None)
+    monkeypatch.setattr(restarted, "log_exception", lambda *a, **k: None)
+
+    assert _poll(restarted, monkeypatch, 30, [seen]) == []
+
+
+def test_undated_scans_are_not_affected_by_the_pruned_range(connector, monkeypatch):
+    connector._save_pruned_range(covered_since=0.0, pruned_until=4102444800.0)
+    undated = {"id": "undated-2", "available_logs": ["thor.json"], "status": "successful"}
+
+    assert _poll(connector, monkeypatch, 7, [undated]) == ["undated-2"]

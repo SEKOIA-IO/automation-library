@@ -45,6 +45,17 @@ def get_headers(api_key: str) -> dict:
     }
 
 
+def check_api_key(base_url: str, headers: dict) -> None:
+    """Make the cheapest call the connector depends on; raise if the key is rejected."""
+    response = requests.get(
+        urljoin(base_url, SCAN_SEARCH_PATH),
+        headers=headers,
+        params={"limit": 1},
+        timeout=30,
+    )
+    response.raise_for_status()
+
+
 def fetch_campaign(base_url: str, headers: dict, campaign_id: str) -> dict:
     """Fetch a campaign so callers can validate it before issuing a launcher."""
     response = requests.get(
