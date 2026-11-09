@@ -14,9 +14,7 @@ def action(tmp_path):
 
 
 def test_generate_windows_launcher(action, monkeypatch):
-    monkeypatch.setattr(
-        client, "fetch_campaign", lambda *_args: {"id": "camp-1", "name": "Existing", "active": True}
-    )
+    monkeypatch.setattr(client, "fetch_campaign", lambda *_args: {"id": "camp-1", "name": "Existing", "active": True})
     monkeypatch.setattr(client, "fetch_launcher_token", lambda *_args: "campaign-token")
 
     result = action.run(

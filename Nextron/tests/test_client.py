@@ -66,9 +66,10 @@ def test_fetch_scan_profiles():
     with requests_mock.Mocker() as m:
         m.get("https://thorcloud-lite.nextron-systems.com/api/v1/account/scanprofiles", json=profiles)
 
-        assert client.fetch_scan_profiles(
-            "https://thorcloud-lite.nextron-systems.com", client.get_headers("k")
-        ) == profiles
+        assert (
+            client.fetch_scan_profiles("https://thorcloud-lite.nextron-systems.com", client.get_headers("k"))
+            == profiles
+        )
 
 
 def test_fetch_launcher_token_supports_json_response():
@@ -99,9 +100,7 @@ def test_fetch_launcher_token_supports_plain_text_response():
 
 
 def test_build_launcher_url_encodes_token():
-    url = client.build_launcher_url(
-        "https://thorcloud-lite.nextron-systems.com", "token with + and /", "linux-bash"
-    )
+    url = client.build_launcher_url("https://thorcloud-lite.nextron-systems.com", "token with + and /", "linux-bash")
 
     assert url == (
         "https://thorcloud-lite.nextron-systems.com/api/v1/scan/download/launcher"

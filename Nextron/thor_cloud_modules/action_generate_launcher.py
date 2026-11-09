@@ -8,7 +8,6 @@ from sekoia_automation.action import Action
 
 from thor_cloud_modules import client
 
-
 LauncherType = Literal["windows-powershell", "linux-bash", "mac-bash"]
 Product = Literal["thor_cloud", "thor_cloud_lite"]
 
@@ -41,9 +40,7 @@ class GenerateLauncherAction(Action):
     """Generate launcher material without coupling THOR Cloud to an EDR."""
 
     name = "Generate THOR Cloud launcher"
-    description = (
-        "Link or create a THOR Cloud campaign, then generate a tokenized launcher URL and bootstrap command"
-    )
+    description = "Link or create a THOR Cloud campaign, then generate a tokenized launcher URL and bootstrap command"
 
     @staticmethod
     def _command(launcher_type: LauncherType, launcher_url: str) -> tuple[str, str]:
@@ -60,7 +57,7 @@ class GenerateLauncherAction(Action):
         command = (
             "launcher_path=$(mktemp /tmp/thor-cloud-launcher.XXXXXX); "
             f"curl --fail --location --silent --show-error '{launcher_url}' --output \"$launcher_path\"; "
-            "chmod 700 \"$launcher_path\"; \"$launcher_path\""
+            'chmod 700 "$launcher_path"; "$launcher_path"'
         )
         return filename, command
 
@@ -78,9 +75,7 @@ class GenerateLauncherAction(Action):
                     if str(profile.get("name", "")).casefold() == arguments.scan_profile.strip().casefold()
                 ]
                 if len(matching_profiles) != 1 or not isinstance(matching_profiles[0].get("index"), int):
-                    available = ", ".join(
-                        sorted(str(profile["name"]) for profile in profiles if profile.get("name"))
-                    )
+                    available = ", ".join(sorted(str(profile["name"]) for profile in profiles if profile.get("name")))
                     raise ValueError(
                         f"Unknown or ambiguous THOR Cloud scan profile {arguments.scan_profile!r}. "
                         f"Available profiles: {available or 'none'}"
