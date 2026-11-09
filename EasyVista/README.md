@@ -47,11 +47,12 @@ and tests access with `GET /requests?max_rows=1&fields=rfc_number`.
 - Each API call consumes one EasyVista user license. Update and Close perform an additional read before writing.
 - List actions return a single page. `max_rows` controls the page size; automatic pagination is unavailable in 1.0.0.
 - POST operations are never retried. A timeout can occur after the server has created an object.
-- Updates with `append=true` are never retried, since replaying them could duplicate the appended description.
+- A PUT containing the `append` query parameter is never retried, whatever its value. EasyVista appends whenever
+  it is present, even with `append=false`; the Update action omits it when false or unset to replace the description.
 - Suspend and restart are never retried. After a gateway timeout, check the ticket state before trying again.
 - For ticket updates, empty optional text arguments are omitted. To intentionally clear a field, pass its EasyVista name with an
   empty string in `custom_fields`. Explicit non-empty arguments take precedence over matching custom fields.
-- Error `590` carries EasyVista business errors. The integration reports the response body and does not retry it.
+- Error `590` carries EasyVista business errors. The integration extracts the API error message and does not retry it.
 - On some EasyVista deployments, documents uploaded through REST are created but cannot be opened through either
   REST or the UI. This is a vendor defect. Documents attached through the UI can be downloaded and deleted normally.
   When deletion returns `590`, the integration checks the document list and reports success only if the ID is absent
