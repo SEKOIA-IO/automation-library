@@ -1,7 +1,7 @@
 {
   "name": "Scan URL",
   "description": "Submit a URL to PolySwarm's engine marketplace for a fresh multi-engine verdict. Spends a scan and creates account activity; reuses an existing result unless force_rescan is set.",
-  "uuid": "d3ed3502-068f-4469-a124-8ec458497ea2",
+  "uuid": "0622062f-733b-447a-b2d3-d968d4447b22",
   "docker_parameters": "ScanUrl",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

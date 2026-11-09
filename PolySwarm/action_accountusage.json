@@ -1,7 +1,7 @@
 {
   "name": "Get Account Usage",
   "description": "Reach for this when a playbook starts failing PolySwarm actions. Reports the account, plan and remaining quota behind the configured key, so you can tell whether it is a bad key, an unsupported feature, or spent quota. Never returns the API key.",
-  "uuid": "26ab67bc-f3c6-4e08-bfa5-2e0604f2a449",
+  "uuid": "a240207a-46c7-49ff-949f-117509d94d61",
   "docker_parameters": "AccountUsage",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

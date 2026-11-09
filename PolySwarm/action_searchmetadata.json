@@ -1,7 +1,7 @@
 {
   "name": "Search Metadata",
   "description": "Run an operator supplied Lucene style query against the PolySwarm metadata index. Every other search action sends a fixed query shape for one kind of indicator; this one hands the query language itself to the playbook, so a query can combine a malware family, a tag, a polyscore threshold and a time window in whatever way the investigation needs. This action only reads the index and spends no scanning quota.",
-  "uuid": "8470d489-3b63-4799-99c0-5b834d4e9229",
+  "uuid": "58ac2b05-b318-4001-9a53-022e55248ad0",
   "docker_parameters": "SearchMetadata",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

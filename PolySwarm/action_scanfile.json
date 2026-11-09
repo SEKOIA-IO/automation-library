@@ -1,7 +1,7 @@
 {
   "name": "Scan File",
   "description": "Submit a file to PolySwarm's engine marketplace for a fresh multi-engine verdict. Spends a scan and creates account activity; reuses an existing result unless force_rescan is set. Use SearchHash for a free, read-only lookup instead.",
-  "uuid": "c8ce773f-e71b-4f9b-95a0-4b43a1b9be23",
+  "uuid": "291c6a37-c8d1-4ebd-ad8b-0208e5824d37",
   "docker_parameters": "ScanFile",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
