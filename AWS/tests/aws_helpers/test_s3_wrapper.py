@@ -2,6 +2,7 @@
 
 import datetime
 import gzip
+import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -40,7 +41,7 @@ async def test_read_key(session_faker: Faker):
 
         s3_response = {"Body": AsyncMock()}
         s3_response["Body"].__aenter__.return_value = s3_response["Body"]
-        s3_response["Body"].read = AsyncMock(return_value=text.encode("utf-8"))
+        s3_response["Body"].read = AsyncMock(side_effect=[text.encode("utf-8"), b""])
 
         mock_s3.get_object.return_value = s3_response
 
@@ -81,7 +82,7 @@ async def test_read_compressed_encoding_key(session_faker: Faker):
 
         s3_response = {"Body": AsyncMock(), "ContentEncoding": "gzip"}
         s3_response["Body"].__aenter__.return_value = s3_response["Body"]
-        s3_response["Body"].read = AsyncMock(return_value=gzip.compress(text.encode("utf-8")))
+        s3_response["Body"].read = AsyncMock(side_effect=[gzip.compress(text.encode("utf-8")), b""])
 
         mock_s3.get_object.return_value = s3_response
 
@@ -123,7 +124,7 @@ async def test_read_compressed_content_key(session_faker: Faker, content_type: s
 
         s3_response = {"Body": AsyncMock(), "ContentType": content_type}
         s3_response["Body"].__aenter__.return_value = s3_response["Body"]
-        s3_response["Body"].read = AsyncMock(return_value=gzip.compress(text.encode("utf-8")))
+        s3_response["Body"].read = AsyncMock(side_effect=[gzip.compress(text.encode("utf-8")), b""])
 
         mock_s3.get_object.return_value = s3_response
 
@@ -133,6 +134,55 @@ async def test_read_compressed_content_key(session_faker: Faker, content_type: s
         # Assert that the S3 client methods were called with the correct arguments
         mock_client.assert_called_once_with("s3")
         mock_s3.get_object.assert_called_once_with(Bucket=bucket, Key=key)
+
+
+@pytest.mark.asyncio
+async def test_read_large_key_rolls_over_to_disk(session_faker: Faker):
+    """
+    Test read_key spools big objects to disk and closes the S3 client before parsing.
+
+    Args:
+        session_faker: Faker
+    """
+    key = session_faker.file_path(depth=2, extension="gz")
+    text = "\n".join(session_faker.sentences(nb=200)).encode("utf-8")
+    compressed = gzip.compress(text)
+    chunks = [compressed[i : i + 64] for i in range(0, len(compressed), 64)]
+
+    configuration = S3Configuration(
+        aws_access_key_id=session_faker.word(),
+        aws_secret_access_key=session_faker.word(),
+        aws_region=session_faker.word(),
+        bucket=session_faker.word(),
+    )
+    s3 = S3Wrapper(configuration)
+
+    spools = []
+    original_spool = tempfile.SpooledTemporaryFile
+
+    def spy_spool(*args, **kwargs):
+        spools.append(original_spool(*args, **kwargs))
+        return spools[-1]
+
+    with (
+        patch("aws_helpers.s3_wrapper.S3Wrapper.get_client") as mock_client,
+        patch("aws_helpers.s3_wrapper.SPOOL_MAX_SIZE", 16),
+        patch("aws_helpers.s3_wrapper.DOWNLOAD_CHUNK_SIZE", 64),
+        patch("aws_helpers.s3_wrapper.tempfile.SpooledTemporaryFile", side_effect=spy_spool),
+    ):
+        mock_s3 = MagicMock()
+        mock_s3.get_object = AsyncMock()
+        mock_client.return_value.__aenter__.return_value = mock_s3
+
+        s3_response = {"Body": AsyncMock()}
+        s3_response["Body"].__aenter__.return_value = s3_response["Body"]
+        s3_response["Body"].read = AsyncMock(side_effect=[*chunks, b""])
+        mock_s3.get_object.return_value = s3_response
+
+        async with s3.read_key(key) as stream:
+            assert mock_client.return_value.__aexit__.called
+            assert spools[0]._rolled
+            assert await stream.read() == text
 
 
 @pytest.mark.asyncio

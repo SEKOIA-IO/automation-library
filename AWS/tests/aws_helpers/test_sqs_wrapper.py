@@ -1,5 +1,7 @@
 """Test the SqsWrapper class."""
 
+import gc
+import weakref
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
@@ -110,6 +112,53 @@ async def test_queue_url(sqs_wrapper, sqs_wrapper_configuration, session_faker):
 
         mock_client.assert_called_once_with("sqs")
         mock_sqs.get_queue_url.assert_called_once_with(QueueName=sqs_wrapper_configuration.queue_name)
+
+
+@pytest.mark.asyncio
+async def test_queue_url_is_memoized_per_instance(sqs_wrapper, session_faker):
+    """
+    Test queue_url is resolved only once per instance.
+
+    Args:
+        sqs_wrapper: SqsWrapper
+        session_faker: Faker
+    """
+    queue_url = session_faker.url()
+
+    with patch("aws_helpers.sqs_wrapper.SqsWrapper.get_client") as mock_client:
+        mock_sqs = MagicMock()
+        mock_sqs.get_queue_url = AsyncMock(return_value={"QueueUrl": queue_url})
+        mock_client.return_value.__aenter__.return_value = mock_sqs
+
+        assert await sqs_wrapper.queue_url() == queue_url
+        assert await sqs_wrapper.queue_url() == queue_url
+
+        mock_sqs.get_queue_url.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_queue_url_does_not_retain_instance(sqs_wrapper_configuration, session_faker):
+    """
+    Test the queue_url cache does not keep the wrapper alive (memory leak regression).
+
+    Args:
+        sqs_wrapper_configuration: SqsConfiguration
+        session_faker: Faker
+    """
+    wrapper = SqsWrapper(sqs_wrapper_configuration)
+
+    with patch("aws_helpers.sqs_wrapper.SqsWrapper.get_client") as mock_client:
+        mock_sqs = MagicMock()
+        mock_sqs.get_queue_url = AsyncMock(return_value={"QueueUrl": session_faker.url()})
+        mock_client.return_value.__aenter__.return_value = mock_sqs
+
+        await wrapper.queue_url()
+
+    ref = weakref.ref(wrapper)
+    del wrapper
+    gc.collect()
+
+    assert ref() is None
 
 
 @pytest.mark.asyncio
