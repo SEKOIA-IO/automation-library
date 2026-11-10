@@ -11,7 +11,12 @@ from loguru import logger
 from pydantic import Field
 
 from aws_helpers.client import AwsClient, AwsClientConfiguration
-from aws_helpers.utils import SPOOL_MAX_SIZE, AsyncReader, async_gzip_open, is_gzip_compressed
+from aws_helpers.utils import (
+    SPOOL_MAX_SIZE,
+    AsyncReader,
+    async_gzip_open,
+    is_gzip_compressed,
+)
 
 DOWNLOAD_CHUNK_SIZE = 1024 * 1024
 
@@ -54,7 +59,10 @@ class S3Wrapper(AwsClient[S3Configuration]):
 
     @asynccontextmanager
     async def read_key(
-        self, key: str, bucket: str | None = None, loop: asyncio.AbstractEventLoop | None = None
+        self,
+        key: str,
+        bucket: str | None = None,
+        loop: asyncio.AbstractEventLoop | None = None,
     ) -> AsyncGenerator[AsyncReader, None]:
         """
         Reads text file from S3 bucket.
