@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-10 - 1.38.11
+
+### Fixed
+
+- Fix the way to define the maximum size of spooled files 
+
 ## 2026-11-10 - 1.38.10
 
 ### Fixed
