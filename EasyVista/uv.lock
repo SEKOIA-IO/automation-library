@@ -294,7 +294,7 @@ wheels = [
 
 [[package]]
 name = "automation-module-easyvista"
-version = "1.0.0"
+version = "0.0.0"
 source = { virtual = "." }
 default-groups = ["dev", "lint"]
 dependencies = [

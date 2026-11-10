@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-10
+
+### Added
+
+- Add the user guide `docs/user_guide_easyvista_request_lifecycle_with_playbook.md`, which builds a repeatable playbook covering the full ticket lifecycle
+
+### Changed
+
+- Align the `Dockerfile` with the other automation modules: same uv install (`/uv` and `/uvx`), `uv sync` options and comments
+
+### Fixed
+
+- Fix `Read-only file system: '/tmp/tls'` error at action start by symlinking `/tmp` to `/dev/shm` in `Dockerfile`
+
 ## [1.0.0] - 2026-11-09
 
 ### Added
