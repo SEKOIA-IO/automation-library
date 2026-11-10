@@ -1,6 +1,7 @@
 import asyncio
 import gzip
 import io
+import os
 import shutil
 import tempfile
 from abc import abstractmethod
@@ -14,8 +15,8 @@ from aiofiles.threadpool.binary import AsyncBufferedReader
 
 T = TypeVar("T")
 
-# objects bigger than this are spooled to a local temp file instead of memory
-SPOOL_MAX_SIZE = 32 * 1024 * 1024
+# The maximum size of the spool in bytes. It can be set via the AWS_SPOOL_MAX_SIZE environment variable.
+SPOOL_MAX_SIZE = int(os.environ.get("AWS_SPOOL_MAX_SIZE", 0))
 
 # a Parquet file starts and ends with these bytes
 PARQUET_MAGIC = b"PAR1"
