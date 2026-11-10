@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-10 - 1.38.8
+
+### Fixed
+
+- Limit the size of the events buffered in memory by the S3 connectors
+
 ## 2026-11-03 - 1.38.7
 
 ### Changed

@@ -352,3 +352,52 @@ async def test_abstract_aws_s3_list_connector_next_batch_no_objects(
 
     assert result == (0, [])
     assert abstract_list_connector.read_marker() is None
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_list_connector_next_batch_flushes_on_max_bytes(
+    session_faker: Faker,
+    aws_module: AwsModule,
+    symphony_storage: Path,
+    mock_push_data_to_intakes: AsyncMock,
+):
+    """
+    Test that the buffered events are pushed and the marker is written as soon as their size
+    reaches the byte limit, even if the number of events is below the count limit.
+    """
+    config = AwsS3ListConfiguration(intake_key=session_faker.word(), bucket=session_faker.word())
+
+    klass = type("TestAbstractAwsS3ListConnector", (AbstractAwsS3ListConnector, AwsAccountProvider), {})
+    connector = klass(module=aws_module, data_path=symphony_storage)
+    connector.configuration = config
+    connector.push_data_to_intakes = mock_push_data_to_intakes
+    connector.limit_of_events_to_push = 10000
+    connector.max_batch_bytes = 15
+
+    async def _parse_content(stream: BinaryIO) -> AsyncGenerator[str, None]:
+        yield "x" * 10
+
+    connector._parse_content = MagicMock(side_effect=_parse_content)
+    connector.log = MagicMock()
+    connector.log_exception = MagicMock()
+
+    async def list_objects(bucket=None, prefix=None, start_after=None):
+        for key in ("file-0.log", "file-1.log", "file-2.log"):
+            yield {"Key": key, "Size": 10}
+
+    async def read_key():
+        return await async_bytesIO(b"")
+
+    mock_s3 = MagicMock()
+    mock_s3.list_objects = list_objects
+    mock_s3.read_key = MagicMock()
+    mock_s3.read_key.return_value.__aenter__.side_effect = read_key
+
+    connector_type = type(connector)
+    with patch.object(connector_type, "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3):
+        result = await connector.next_batch()
+
+    assert result[0] == 3
+    # 2 objects (20 bytes) reach the 15-byte limit, then the last object is pushed at the end
+    assert [len(call.kwargs["events"]) for call in mock_push_data_to_intakes.call_args_list] == [2, 1]
+    assert connector.read_marker() == "file-2.log"
