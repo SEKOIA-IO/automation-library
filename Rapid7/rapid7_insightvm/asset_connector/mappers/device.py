@@ -1,6 +1,6 @@
 from sekoia_automation.asset_connector.models.ocsf.device import Device, DeviceTypeId, DeviceTypeStr
+from sekoia_automation_models.hostname import split_hostname
 
-from rapid7_insightvm.asset_connector.hostname import split_hostname
 from rapid7_insightvm.asset_connector.models import Rapid7Asset
 
 ASSET_TYPE_MAP: dict[str, str] = {

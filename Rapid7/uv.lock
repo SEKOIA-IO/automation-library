@@ -298,8 +298,8 @@ version = "0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "python-dateutil" },
+    { name = "sekoia-automation-models" },
     { name = "sekoia-automation-sdk" },
-    { name = "tldextract" },
 ]
 
 [package.dev-dependencies]
@@ -319,8 +319,8 @@ lint = [
 [package.metadata]
 requires-dist = [
     { name = "python-dateutil", specifier = ">=2.8.2,<3" },
+    { name = "sekoia-automation-models", specifier = ">=1.5.0,<2" },
     { name = "sekoia-automation-sdk", specifier = ">=1.27.0,<2" },
-    { name = "tldextract", specifier = ">=5.1.0,<6" },
 ]
 
 [package.metadata.requires-dev]
