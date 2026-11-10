@@ -200,7 +200,7 @@ async def split_stream_by_separator(
 
 async def _decompress_to_spool(file: gzip.GzipFile) -> BinaryIO:
     """
-    Decompress a gzip file once into a spool (memory up to SPOOL_MAX_SIZE, then a temporary file).
+    Decompress a gzip file once into a spool.
 
     The copy runs in a thread, so that a big object does not block the event loop. A thread cannot be
     cancelled: it is waited for, however many times the task is cancelled, so that the files it uses are not

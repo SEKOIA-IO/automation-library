@@ -73,7 +73,6 @@ class S3Wrapper(AwsClient[S3Configuration]):
 
         logger.info(f"Reading object {key} from bucket {bucket}")
 
-        # bounded memory: small objects stay in RAM, bigger ones roll over to a local temp file
         with tempfile.SpooledTemporaryFile(max_size=SPOOL_MAX_SIZE) as content:
             async with self.get_client("s3") as s3:
                 response = await s3.get_object(Bucket=bucket, Key=key)
