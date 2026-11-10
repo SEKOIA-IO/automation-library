@@ -3,9 +3,13 @@
 import datetime
 import gzip
 import tempfile
-from unittest.mock import AsyncMock, MagicMock, patch
+from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, MagicMock, create_autospec, patch
 
 import pytest
+from aiobotocore.response import StreamingBody
+from aiohttp import ClientResponse, ClientSession, web
+from aiohttp.test_utils import TestServer
 from dateutil.tz import tzutc
 from faker import Faker
 
@@ -40,7 +44,7 @@ async def test_read_key(session_faker: Faker):
         mock_client.return_value.__aenter__.return_value = mock_s3
 
         s3_response = {"Body": AsyncMock()}
-        s3_response["Body"].__aenter__.return_value = s3_response["Body"]
+        s3_response["Body"].__aenter__.return_value = create_autospec(ClientResponse, instance=True)
         s3_response["Body"].read = AsyncMock(side_effect=[text.encode("utf-8"), b""])
 
         mock_s3.get_object.return_value = s3_response
@@ -81,7 +85,7 @@ async def test_read_compressed_encoding_key(session_faker: Faker):
         mock_client.return_value.__aenter__.return_value = mock_s3
 
         s3_response = {"Body": AsyncMock(), "ContentEncoding": "gzip"}
-        s3_response["Body"].__aenter__.return_value = s3_response["Body"]
+        s3_response["Body"].__aenter__.return_value = create_autospec(ClientResponse, instance=True)
         s3_response["Body"].read = AsyncMock(side_effect=[gzip.compress(text.encode("utf-8")), b""])
 
         mock_s3.get_object.return_value = s3_response
@@ -123,7 +127,7 @@ async def test_read_compressed_content_key(session_faker: Faker, content_type: s
         mock_client.return_value.__aenter__.return_value = mock_s3
 
         s3_response = {"Body": AsyncMock(), "ContentType": content_type}
-        s3_response["Body"].__aenter__.return_value = s3_response["Body"]
+        s3_response["Body"].__aenter__.return_value = create_autospec(ClientResponse, instance=True)
         s3_response["Body"].read = AsyncMock(side_effect=[gzip.compress(text.encode("utf-8")), b""])
 
         mock_s3.get_object.return_value = s3_response
@@ -175,7 +179,7 @@ async def test_read_large_key_rolls_over_to_disk(session_faker: Faker):
         mock_client.return_value.__aenter__.return_value = mock_s3
 
         s3_response = {"Body": AsyncMock()}
-        s3_response["Body"].__aenter__.return_value = s3_response["Body"]
+        s3_response["Body"].__aenter__.return_value = create_autospec(ClientResponse, instance=True)
         s3_response["Body"].read = AsyncMock(side_effect=[*chunks, b""])
         mock_s3.get_object.return_value = s3_response
 
@@ -183,6 +187,63 @@ async def test_read_large_key_rolls_over_to_disk(session_faker: Faker):
             assert mock_client.return_value.__aexit__.called
             assert spools[0]._rolled
             assert await stream.read() == text
+
+
+@asynccontextmanager
+async def _real_s3_body(payload: bytes):
+    """Yield a real aiobotocore StreamingBody over a real aiohttp response, as S3 get_object returns it."""
+
+    async def handler(request: web.Request) -> web.Response:
+        return web.Response(body=payload)
+
+    app = web.Application()
+    app.router.add_get("/", handler)
+    async with TestServer(app) as server, ClientSession() as session:
+        response = await session.get(server.make_url("/"))
+        try:
+            yield StreamingBody(response, str(len(payload)))
+        finally:
+            response.release()
+
+
+@pytest.mark.parametrize(
+    "compressed, chunk_size",
+    [(False, 1024 * 1024), (False, 64), (True, 64)],
+)
+@pytest.mark.asyncio
+async def test_read_key_with_a_real_aiobotocore_body(session_faker: Faker, compressed: bool, chunk_size: int):
+    """
+    Test read_key against the real aiobotocore body, not a mock: entering it yields the aiohttp response,
+    which cannot read a given amount of bytes.
+
+    Args:
+        session_faker: Faker
+        compressed: bool
+        chunk_size: int
+    """
+    text = "\n".join(session_faker.sentences(nb=200)).encode("utf-8")
+    payload = gzip.compress(text) if compressed else text
+
+    s3 = S3Wrapper(
+        S3Configuration(
+            aws_access_key_id=session_faker.word(),
+            aws_secret_access_key=session_faker.word(),
+            aws_region=session_faker.word(),
+            bucket=session_faker.word(),
+        )
+    )
+
+    async with _real_s3_body(payload) as body:
+        with (
+            patch("aws_helpers.s3_wrapper.S3Wrapper.get_client") as mock_client,
+            patch("aws_helpers.s3_wrapper.DOWNLOAD_CHUNK_SIZE", chunk_size),
+        ):
+            mock_s3 = MagicMock()
+            mock_s3.get_object = AsyncMock(return_value={"Body": body})
+            mock_client.return_value.__aenter__.return_value = mock_s3
+
+            async with s3.read_key(session_faker.file_path(depth=2)) as stream:
+                assert await stream.read() == text
 
 
 @pytest.mark.asyncio
