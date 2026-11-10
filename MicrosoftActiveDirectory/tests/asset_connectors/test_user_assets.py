@@ -307,6 +307,23 @@ def test_get_users_generator(connector):
     assert connector._latest_time == "20240101120000.0Z"
 
 
+def test_get_users_generator_skips_search_references(connector):
+    user = {
+        "type": "searchResEntry",
+        "dn": "CN=Test User,DC=example,DC=com",
+        "attributes": {"userPrincipalName": "test@example.com", "whenCreated": datetime(2024, 1, 1, 12, 0, 0)},
+    }
+    references = [
+        {"type": "searchResRef", "uri": [f"ldap://{partition}.example.com/DC={partition},DC=example,DC=com"]}
+        for partition in ("DomainDnsZones", "ForestDnsZones")
+    ]
+    connector.ldap_client.extend.standard.paged_search.return_value = iter([references[0], user, references[1]])
+
+    users = list(connector.get_users_generator())
+
+    assert [entry["dn"] for entry in users] == ["CN=Test User,DC=example,DC=com"]
+
+
 def test_get_assets(connector):
     mock_user = {
         "dn": "CN=Asset User,DC=example,DC=com",

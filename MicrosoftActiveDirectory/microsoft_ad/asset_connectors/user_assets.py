@@ -335,6 +335,9 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         already_seen_sids = self.seen_sids_at_checkpoint
 
         for entry in self._entries():
+            if entry.get("type") == "searchResRef":
+                self.log(f"Skipping the LDAP search reference {entry.get('uri')}", level="debug")
+                continue
             user_attributes = entry.get("attributes", {})
             if not user_attributes:
                 self.log("No user attributes found for user", level="error")

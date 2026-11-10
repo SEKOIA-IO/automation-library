@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reject an invalid base DN with a clear error that gives the reason, and suggests the DC= form for a domain name, in the cloud connector and in the on-premise synchronization
 - Show an example of base DN in the user assets connector configuration
+- Skip the search references Active Directory returns when the base DN is the domain root, instead of stopping the synchronization on them
 
 ## 2026-11-03 - 1.6.5
 
