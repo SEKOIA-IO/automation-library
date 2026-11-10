@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-10 - 2.83.0
+
+### Fixed
+
+- Improve error management on execute agent call
+
+### Added
+
+- improve `api` attribute for execute agent action to support fixing parameter and community scope.
+
+
 ## 2026-11-03 - 2.82.1
 
 ### Fixed

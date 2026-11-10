@@ -4,6 +4,7 @@ from uuid import UUID, uuid4, uuid5
 import pytest
 from requests.exceptions import HTTPError, ReadTimeout
 
+from sekoiaio.elevate.agent import AgentApiError
 from sekoiaio.elevate.execute_custom_agent import (
     AgentExecutionError,
     ExecuteCustomAgent,
@@ -355,6 +356,80 @@ def test_execute_custom_agent_run_creation_fails(requests_mock):
 
     mock_log.assert_called()
     assert mock_log.call_args.kwargs["level"] == "error"
+
+
+def api_error(code: str) -> dict:
+    return {"detail": {"message": "error of the generative API", "code": code}}
+
+
+@pytest.mark.parametrize(
+    "status_code,code,expected",
+    [
+        (404, "GE100", "does not exist"),
+        (403, "GE112", "lacks the permission"),
+        (403, "GE126", "inline"),
+        (409, "GE127", "already has an active run"),
+        (403, "GE128", "Elevate subscription"),
+        (429, "GE118", "quota"),
+    ],
+)
+def test_execute_custom_agent_run_creation_api_errors(requests_mock, status_code, code, expected):
+    """A known error of the API fails with a readable message, without retrying: an exceeded quota, for instance,
+    records a failed run and notifies the admins on each attempt."""
+    action = make_action()
+    requests_mock.get(f"{AGENTS_URL}/{SAMPLE_AGENT['uuid']}", json=SAMPLE_AGENT)
+    requests_mock.post(AGENT_RUNS_URL, status_code=status_code, json=api_error(code))
+
+    with patch.object(action, "log") as mock_log, pytest.raises(AgentApiError, match=expected):
+        action.run({"agent_uuid": SAMPLE_AGENT["uuid"]})
+
+    assert len([r for r in requests_mock.request_history if r.method == "POST"]) == 1
+    mock_log.assert_called_once()
+    assert mock_log.call_args.kwargs["level"] == "error"
+
+
+@pytest.mark.parametrize("status_code,code", [(429, "GE118"), (403, "GE128")])
+def test_execute_custom_agent_run_creation_api_errors_name_the_community(requests_mock, status_code, code):
+    action = make_action()
+    requests_mock.get(f"{AGENTS_URL}/{SAMPLE_AGENT['uuid']}", json=SAMPLE_AGENT)
+    requests_mock.post(AGENT_RUNS_URL, status_code=status_code, json=api_error(code))
+
+    with patch.object(action, "log"), pytest.raises(AgentApiError, match=PLAYBOOK_COMMUNITY_UUID):
+        action.run({"agent_uuid": SAMPLE_AGENT["uuid"]})
+
+
+@pytest.mark.parametrize("status_code,code,expected", [(404, "GE100", "does not exist"), (403, "GE112", "permission")])
+def test_execute_custom_agent_get_agent_api_errors(requests_mock, status_code, code, expected):
+    action = make_action()
+    requests_mock.get(f"{AGENTS_URL}/{SAMPLE_AGENT['uuid']}", status_code=status_code, json=api_error(code))
+
+    with patch.object(action, "log"), pytest.raises(AgentApiError, match=expected):
+        action.run({"agent_uuid": SAMPLE_AGENT["uuid"]})
+
+    assert not any(r.method == "POST" for r in requests_mock.request_history)
+
+
+@pytest.mark.parametrize(
+    "status_code,body",
+    [
+        (429, None),  # e.g. a rate limit of a gateway, without a body of the API
+        (409, api_error("GE128")),  # a known code with an unexpected status
+        (500, api_error("GE118")),
+    ],
+)
+def test_execute_custom_agent_run_creation_unknown_errors(requests_mock, status_code, body):
+    """An error the API does not describe, given its status and code, stays an HTTP error."""
+    action = make_action()
+    requests_mock.get(f"{AGENTS_URL}/{SAMPLE_AGENT['uuid']}", json=SAMPLE_AGENT)
+    if body is None:
+        requests_mock.post(AGENT_RUNS_URL, status_code=status_code, text="Too Many Requests")
+    else:
+        requests_mock.post(AGENT_RUNS_URL, status_code=status_code, json=body)
+
+    with patch.object(action, "log"), pytest.raises(HTTPError):
+        action.run({"agent_uuid": SAMPLE_AGENT["uuid"]})
+
+    assert len([r for r in requests_mock.request_history if r.method == "POST"]) == 1
 
 
 def test_execute_custom_agent_run_creation_timeout_is_not_retried(requests_mock):

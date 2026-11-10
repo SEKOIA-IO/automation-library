@@ -16,7 +16,11 @@
           "url": "/api/v1/generative/agents",
           "search_key": "search",
           "label_path": "items.name",
-          "value_path": "items.uuid"
+          "value_path": "items.uuid",
+          "scope_to_community": true,
+          "params": {
+            "custom_only": true
+          }
         }
       },
       "initial_state": {
