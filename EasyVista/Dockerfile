@@ -3,11 +3,11 @@ FROM python:3.14-bookworm
 WORKDIR /app
 
 # Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.11.13 /uv /bin/
 
 # Install dependencies
 COPY pyproject.toml uv.lock /app/
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --no-default-groups --no-install-project
 
 # Make the project virtual environment the default interpreter
 ENV PATH="/app/.venv/bin:$PATH"
