@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2026-11-09 - 1.0.2
+
+### Added
+
+- Add a README that links the user guide for the THOR Cloud integration.
+
+### Fixed
+
+- Make the arguments of the "Generate THOR Cloud launcher" action editable in the playbook form. The form now has one set of fields: fill in either Campaign ID to use an existing campaign or Campaign name to create a new one. Playbooks that still pass `campaign_mode` keep working.
+
 ## 2026-11-09 - 1.0.1
 
 ### Added

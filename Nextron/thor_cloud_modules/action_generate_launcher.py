@@ -13,7 +13,9 @@ Product = Literal["thor_cloud", "thor_cloud_lite"]
 
 
 class GenerateLauncherArguments(BaseModel):
-    campaign_mode: Literal["existing", "new"] = "existing"
+    # Inferred from campaign_id / campaign_name when omitted. The playbook form has
+    # no field for it; it is only accepted so playbooks that set it keep working.
+    campaign_mode: Literal["existing", "new"] | None = None
     campaign_id: str | None = None
     campaign_name: str | None = None
     campaign_description: str | None = None
@@ -27,6 +29,14 @@ class GenerateLauncherArguments(BaseModel):
 
     @model_validator(mode="after")
     def validate_campaign_selection(self):
+        if self.campaign_mode is None:
+            if self.campaign_id and self.campaign_name:
+                raise ValueError(
+                    "Set either campaign_id (existing campaign) or campaign_name (new campaign), not both"
+                )
+            if not self.campaign_id and not self.campaign_name:
+                raise ValueError("Set campaign_id to use an existing campaign or campaign_name to create a new one")
+            self.campaign_mode = "new" if self.campaign_name else "existing"
         if self.campaign_mode == "existing" and not self.campaign_id:
             raise ValueError("campaign_id is required when campaign_mode is existing")
         if self.campaign_mode == "new" and not self.campaign_name:

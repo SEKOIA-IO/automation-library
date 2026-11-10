@@ -6,137 +6,94 @@
   "docker_parameters": "GenerateLauncherAction",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Arguments",
     "type": "object",
+    "properties": {
+      "campaign_id": {
+        "title": "Campaign ID",
+        "type": "string",
+        "description": "UUID of an active THOR Cloud campaign to use. Fill in either Campaign ID or Campaign name."
+      },
+      "campaign_name": {
+        "title": "Campaign name",
+        "type": "string",
+        "description": "Name of a new campaign to create. Fill in either Campaign ID or Campaign name."
+      },
+      "launcher_type": {
+        "title": "Target operating system",
+        "type": "string",
+        "description": "Launcher matching the target asset operating system",
+        "enum": [
+          "windows-powershell",
+          "linux-bash",
+          "mac-bash"
+        ],
+        "enumNames": [
+          "Windows (PowerShell)",
+          "Linux (Bash)",
+          "macOS (Bash)"
+        ]
+      },
+      "product": {
+        "title": "THOR Cloud product",
+        "type": "string",
+        "default": "thor_cloud_lite",
+        "enum": [
+          "thor_cloud_lite",
+          "thor_cloud"
+        ],
+        "enumNames": [
+          "THOR Cloud Lite",
+          "THOR Cloud"
+        ],
+        "description": "THOR Cloud or THOR Cloud Lite, matching the API key of the account"
+      },
+      "campaign_description": {
+        "title": "Campaign description",
+        "type": "string",
+        "description": "Optional description of the new campaign. Only used when creating a new campaign."
+      },
+      "assigned_contract": {
+        "title": "Contract ID",
+        "type": "string",
+        "description": "Optional contract identifier used to license scans. Only used when creating a new campaign."
+      },
+      "end_date": {
+        "title": "Expiration date",
+        "type": "string",
+        "format": "date-time",
+        "description": "Optional campaign expiration in RFC 3339 format, including timezone. Only used when creating a new campaign."
+      },
+      "scan_profile": {
+        "title": "Scan profile name",
+        "type": "string",
+        "description": "Optional predefined profile name exactly as shown in THOR Cloud; it is resolved through the account scan profiles API. Only used when creating a new campaign."
+      },
+      "scan_limit": {
+        "title": "Scan limit",
+        "type": "integer",
+        "minimum": 0,
+        "description": "Optional maximum number of scans; zero means unlimited. Only used when creating a new campaign."
+      },
+      "scan_threads": {
+        "title": "Scanner threads",
+        "type": "integer",
+        "minimum": 1,
+        "description": "Optional number of scanner threads. Only used when creating a new campaign."
+      }
+    },
+    "required": [
+      "launcher_type"
+    ],
     "oneOf": [
       {
-        "title": "Use an existing campaign",
-        "properties": {
-          "campaign_mode": {
-            "title": "Campaign selection",
-            "type": "string",
-            "const": "existing",
-            "default": "existing"
-          },
-          "campaign_id": {
-            "title": "Campaign ID",
-            "type": "string",
-            "description": "UUID of an active THOR Cloud campaign"
-          },
-          "launcher_type": {
-            "title": "Target operating system",
-            "type": "string",
-            "description": "Launcher matching the target asset operating system",
-            "enum": [
-              "windows-powershell",
-              "linux-bash",
-              "mac-bash"
-            ],
-            "enumNames": [
-              "Windows (PowerShell)",
-              "Linux (Bash)",
-              "macOS (Bash)"
-            ]
-          },
-          "product": {
-            "title": "THOR Cloud product",
-            "type": "string",
-            "default": "thor_cloud_lite",
-            "enum": [
-              "thor_cloud_lite",
-              "thor_cloud"
-            ],
-            "enumNames": [
-              "THOR Cloud Lite",
-              "THOR Cloud"
-            ]
-          }
-        },
         "required": [
-          "campaign_mode",
-          "campaign_id",
-          "launcher_type"
+          "campaign_id"
         ]
       },
       {
-        "title": "Create a new campaign",
-        "properties": {
-          "campaign_mode": {
-            "title": "Campaign selection",
-            "type": "string",
-            "const": "new",
-            "default": "new"
-          },
-          "campaign_name": {
-            "title": "Campaign name",
-            "type": "string",
-            "description": "Name of the campaign to create"
-          },
-          "campaign_description": {
-            "title": "Campaign description",
-            "type": "string",
-            "description": "Optional description of the new campaign"
-          },
-          "assigned_contract": {
-            "title": "Contract ID",
-            "type": "string",
-            "description": "Optional contract identifier used to license scans"
-          },
-          "end_date": {
-            "title": "Expiration date",
-            "type": "string",
-            "format": "date-time",
-            "description": "Optional campaign expiration in RFC 3339 format, including timezone"
-          },
-          "scan_profile": {
-            "title": "Scan profile name",
-            "type": "string",
-            "description": "Optional predefined profile name exactly as shown in THOR Cloud; it is resolved through the account scan profiles API"
-          },
-          "scan_limit": {
-            "title": "Scan limit",
-            "type": "integer",
-            "minimum": 0,
-            "description": "Optional maximum number of scans; zero means unlimited"
-          },
-          "scan_threads": {
-            "title": "Scanner threads",
-            "type": "integer",
-            "minimum": 1,
-            "description": "Optional number of scanner threads"
-          },
-          "launcher_type": {
-            "title": "Target operating system",
-            "type": "string",
-            "description": "Launcher matching the target asset operating system",
-            "enum": [
-              "windows-powershell",
-              "linux-bash",
-              "mac-bash"
-            ],
-            "enumNames": [
-              "Windows (PowerShell)",
-              "Linux (Bash)",
-              "macOS (Bash)"
-            ]
-          },
-          "product": {
-            "title": "THOR Cloud product",
-            "type": "string",
-            "default": "thor_cloud_lite",
-            "enum": [
-              "thor_cloud_lite",
-              "thor_cloud"
-            ],
-            "enumNames": [
-              "THOR Cloud Lite",
-              "THOR Cloud"
-            ]
-          }
-        },
         "required": [
-          "campaign_mode",
-          "campaign_name",
-          "launcher_type"
+          "campaign_name"
         ]
       }
     ]

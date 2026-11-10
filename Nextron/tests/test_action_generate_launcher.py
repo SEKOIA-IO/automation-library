@@ -1,3 +1,7 @@
+import json
+from pathlib import Path
+
+import jsonschema
 import pytest
 from pydantic import ValidationError
 
@@ -122,9 +126,44 @@ def test_create_campaign_then_generate_launcher(action, monkeypatch):
     assert "token=campaign-token" in result["launcher_url"]
 
 
-def test_existing_mode_requires_campaign_id():
-    with pytest.raises(ValueError, match="campaign_id is required"):
+def test_campaign_id_or_name_is_required():
+    with pytest.raises(ValueError, match="Set campaign_id to use an existing campaign or campaign_name"):
         GenerateLauncherArguments(launcher_type="linux-bash")
+
+
+def test_campaign_id_and_name_are_mutually_exclusive():
+    with pytest.raises(ValueError, match="not both"):
+        GenerateLauncherArguments(campaign_id="camp-1", campaign_name="Incident scan", launcher_type="linux-bash")
+
+
+def test_mode_is_inferred_from_campaign_fields():
+    assert GenerateLauncherArguments(campaign_id="camp-1", launcher_type="linux-bash").campaign_mode == "existing"
+    assert GenerateLauncherArguments(campaign_name="Scan", launcher_type="linux-bash").campaign_mode == "new"
+
+
+def test_explicit_mode_from_older_playbooks_is_still_accepted():
+    with pytest.raises(ValueError, match="campaign_id is required"):
+        GenerateLauncherArguments(campaign_mode="existing", launcher_type="linux-bash")
+    args = GenerateLauncherArguments(campaign_mode="existing", campaign_id="camp-1", launcher_type="linux-bash")
+    assert args.campaign_mode == "existing"
+
+
+@pytest.mark.parametrize(
+    "arguments, valid",
+    [
+        ({"campaign_id": "camp-1", "launcher_type": "linux-bash"}, True),
+        ({"campaign_name": "Scan", "launcher_type": "windows-powershell", "scan_limit": 0}, True),
+        ({"campaign_id": "camp-1", "campaign_name": "Scan", "launcher_type": "linux-bash"}, False),
+        ({"launcher_type": "linux-bash"}, False),
+        ({"campaign_id": "camp-1"}, False),
+    ],
+)
+def test_manifest_schema_matches_playbook_arguments(arguments, valid):
+    """The playbook form only renders top-level properties; the schema must accept the flat arguments."""
+    schema = json.loads((Path(__file__).parent.parent / "action_generate_launcher.json").read_text())["arguments"]
+    assert "campaign_mode" not in schema["properties"]
+    assert all("properties" not in branch for branch in schema["oneOf"])
+    assert jsonschema.Draft7Validator(schema).is_valid(arguments) is valid
 
 
 def test_new_mode_requires_campaign_name():
