@@ -15,8 +15,10 @@ from aiofiles.threadpool.binary import AsyncBufferedReader
 
 T = TypeVar("T")
 
-# The maximum size of the spool in bytes. It can be set via the AWS_SPOOL_MAX_SIZE environment variable.
-SPOOL_MAX_SIZE = int(os.environ.get("AWS_SPOOL_MAX_SIZE", 0))
+# Size in bytes above which a downloaded object is spooled; 0 (default) keeps it in memory.
+# Invalid values count as 0.
+_spool_max_size = os.environ.get("AWS_SPOOL_MAX_SIZE", "").strip()
+SPOOL_MAX_SIZE = int(_spool_max_size) if _spool_max_size.isdecimal() else 0
 
 # a Parquet file starts and ends with these bytes
 PARQUET_MAGIC = b"PAR1"

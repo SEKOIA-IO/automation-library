@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import gzip
 import io
+import os
 import shutil
 import subprocess
 import sys
@@ -377,6 +378,36 @@ def test_shared_modules_do_not_load_pandas_or_pyarrow(module):
     aws_root = Path(__file__).resolve().parents[2]
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True, cwd=aws_root)
     assert result.stdout.strip() == "False"
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        (None, 0),
+        ("", 0),
+        ("   ", 0),
+        ("-1", 0),
+        ("abc", 0),
+        ("32MB", 0),
+        ("1.5", 0),
+        ("1e6", 0),
+        ("0", 0),
+        ("1048576", 1048576),
+        (" 4096 ", 4096),
+    ],
+)
+def test_spool_max_size_from_the_environment(value, expected):
+    """AWS_SPOOL_MAX_SIZE is a number of bytes: anything that is not a non-negative integer counts as 0."""
+    env = {key: val for key, val in os.environ.items() if key != "AWS_SPOOL_MAX_SIZE"}
+    if value is not None:
+        env["AWS_SPOOL_MAX_SIZE"] = value
+
+    code = "from aws_helpers.utils import SPOOL_MAX_SIZE; print(SPOOL_MAX_SIZE)"
+    aws_root = Path(__file__).resolve().parents[2]
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True, cwd=aws_root, env=env
+    )
+    assert result.stdout.strip() == str(expected)
 
 
 @pytest.mark.asyncio
