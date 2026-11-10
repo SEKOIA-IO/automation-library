@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-10 - 1.0.1
+
+### Fixed
+
+- The account form labels the API key field `Api Key`, with `API_Key` in its
+  placeholder. The configuration guide told the reader to paste the key into
+  `API Key`, which does not appear on screen. It now matches the form.
+- The screenshot of the integration page showed an event connector. The module
+  does not ship one, so the image has been replaced with the published listing.
+- The screenshot of the account form showed the field under its previous name.
+
+### Added
+
+- A support contact in the configuration guide. It previously gave the reader no
+  way to reach anyone.
+
 ## 2026-10-13 - 1.0.0
 
 ### Added
