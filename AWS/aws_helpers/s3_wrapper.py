@@ -77,8 +77,10 @@ class S3Wrapper(AwsClient[S3Configuration]):
         with tempfile.SpooledTemporaryFile(max_size=SPOOL_MAX_SIZE) as content:
             async with self.get_client("s3") as s3:
                 response = await s3.get_object(Bucket=bucket, Key=key)
-                async with response["Body"] as stream:
-                    while chunk := await stream.read(DOWNLOAD_CHUNK_SIZE):
+                # entering the body yields the aiohttp response, which cannot read a given amount: read the body
+                body = response["Body"]
+                async with body:
+                    while chunk := await body.read(DOWNLOAD_CHUNK_SIZE):
                         content.write(chunk)
 
             # the S3 client is closed here: no connection is held while the content is parsed

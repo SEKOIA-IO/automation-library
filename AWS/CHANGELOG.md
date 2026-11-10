@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-10 - 1.38.9
+
+### Fixed
+
+- Fix S3 objects failing to be read (`ClientResponse.read() takes 1 positional argument but 2 were given`) since 1.38.8
+
 ## 2026-11-05 - 1.38.8
 
 ### Fixed
