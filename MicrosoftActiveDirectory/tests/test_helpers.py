@@ -42,7 +42,17 @@ def test_retry_after_seconds(value, expected):
     assert retry_after_seconds(value, now=datetime(2026, 10, 16, 12, 0, 0, tzinfo=UTC)) == expected
 
 
-@pytest.mark.parametrize("basedn", ["DC=example,DC=com", "OU=Users,DC=example,DC=com", "CN=a@b,DC=example,DC=com"])
+@pytest.mark.parametrize(
+    "basedn",
+    [
+        "DC=example,DC=com",
+        "OU=Users,DC=example,DC=com",
+        "CN=a@b",
+        "CN=a@b,DC=example,DC=com",
+        "<GUID=7b95f0d5-a3ed-486c-919c-077b8c9731f2>",
+        "<WKGUID=a9d1ca15768811d1aded00c04fd8d5cd,DC=example,DC=com>",
+    ],
+)
 def test_basedn_error_accepts_a_distinguished_name(basedn):
     assert basedn_error(basedn) is None
 
@@ -61,9 +71,15 @@ def test_basedn_error_accepts_a_distinguished_name(basedn):
         ("ad.example.com/", "The base DN 'ad.example.com/' is not a valid distinguished name"),
         ("https://ad.example.com", "The base DN 'https://ad.example.com' is not a valid distinguished name"),
         ("example", "The base DN 'example' is not a valid distinguished name"),
+        ("<garbage>", "The base DN '<garbage>' is not a valid distinguished name"),
         (
             "DC=example, DC=com",
             "The base DN 'DC=example, DC=com' is not a valid distinguished name: "
+            "character ' ' not allowed in attribute type",
+        ),
+        (
+            "CN=user@example.com, DC=example,DC=com",
+            "The base DN 'CN=user@example.com, DC=example,DC=com' is not a valid distinguished name: "
             "character ' ' not allowed in attribute type",
         ),
     ],
