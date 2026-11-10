@@ -514,3 +514,37 @@ async def test_abstract_aws_s3_list_connector_next_batch_closes_the_parsed_event
             await abstract_list_connector.next_batch()
 
     assert closed == [True]
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_list_connector_next_batch_flushes_large_object_on_max_bytes(
+    abstract_list_connector: AbstractAwsS3ListConnector,
+    mock_push_data_to_intakes: AsyncMock,
+):
+    """The events of an object are pushed as soon as their size reaches the byte limit, below the count limit."""
+    abstract_list_connector.limit_of_events_to_push = 10000
+    abstract_list_connector.max_batch_bytes = 25
+
+    result = await _next_batch(abstract_list_connector, ["a"], [["x" * 10] * 10])
+
+    assert result[0] == 10
+    # 3 events (30 bytes) reach the 25-byte limit, the last event is pushed at the end
+    assert [len(call.kwargs["events"]) for call in mock_push_data_to_intakes.call_args_list] == [3, 3, 3, 1]
+    assert abstract_list_connector.read_marker() == "a"
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_list_connector_next_batch_flushes_across_objects_on_max_bytes(
+    abstract_list_connector: AbstractAwsS3ListConnector,
+    mock_push_data_to_intakes: AsyncMock,
+):
+    """The byte limit counts the events of the previous objects still in the batch."""
+    abstract_list_connector.limit_of_events_to_push = 10000
+    abstract_list_connector.max_batch_bytes = 15
+
+    result = await _next_batch(abstract_list_connector, ["a", "b", "c"], [["x" * 10], ["x" * 10], ["x" * 10]])
+
+    assert result[0] == 3
+    # the event of "b" brings the batch to 20 bytes: "a" and "b" are pushed, then "c" at the end
+    assert [len(call.kwargs["events"]) for call in mock_push_data_to_intakes.call_args_list] == [2, 1]
+    assert abstract_list_connector.read_marker() == "c"

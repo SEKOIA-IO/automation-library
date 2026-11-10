@@ -16,6 +16,9 @@ from aws_helpers.utils import AsyncReader, normalize_s3_key, unescape_string
 from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
 from connectors.metrics import INCOMING_EVENTS
 
+# Maximum size of the events buffered in memory before pushing them to the intake
+DEFAULT_BATCH_MAX_BYTES = 9 * 1024 * 1024
+
 
 class AwsS3QueuedConfiguration(AbstractAwsConnectorConfiguration):
     """Base configuration that contains SQS configuration to work with AwsS3QueuedConnector."""
@@ -54,6 +57,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
         super().__init__(*args, **kwargs)
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
+        self.max_batch_bytes = int(os.getenv("AWS_BATCH_MAX_BYTES", DEFAULT_BATCH_MAX_BYTES))
         self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
         self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 600))
         self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
@@ -98,6 +102,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
             tuple[int, list[int]]:
         """
         records = []
+        records_bytes = 0
         result = 0
         timestamps_to_log: list[int] = []
 
@@ -154,10 +159,12 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                         async for event in events:
                             object_records += 1
                             records.append(event)
+                            records_bytes += len(event)
 
-                            if len(records) >= self.limit_of_events_to_push:
+                            if len(records) >= self.limit_of_events_to_push or records_bytes >= self.max_batch_bytes:
                                 result += len(await self.push_data_to_intakes(events=records))
                                 records = []
+                                records_bytes = 0
 
                     logger.info(f"Parsed {object_records} records from object {normalized_key}")
 
@@ -191,6 +198,7 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
+        self.max_batch_bytes = int(os.getenv("AWS_BATCH_MAX_BYTES", DEFAULT_BATCH_MAX_BYTES))
         self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
         self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
         self.context = PersistentJSON("context.json", self.data_path)
@@ -224,6 +232,7 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
         If such an object then fails, its already pushed events are sent again on the next run.
         """
         records: list[str] = []
+        records_bytes = 0
         result = 0
         timestamps_to_log: list[int] = []
 
@@ -248,6 +257,7 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
             # events of this object stay apart from the batch until they are pushed or the object is fully read:
             # a failing object must not leave its unpushed events in the batch
             pending: list[str] = []
+            pending_bytes = 0
             object_records = 0
 
             try:
@@ -259,13 +269,19 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
                 ):
                     async for event in events:
                         pending.append(event)
+                        pending_bytes += len(event)
                         object_records += 1
 
-                        if len(records) + len(pending) >= self.limit_of_events_to_push:
+                        if (
+                            len(records) + len(pending) >= self.limit_of_events_to_push
+                            or records_bytes + pending_bytes >= self.max_batch_bytes
+                        ):
                             records.extend(pending)
                             pending = []
+                            pending_bytes = 0
                             result += await self._push_events(records)
                             records = []
+                            records_bytes = 0
 
                             # the current object is only partly read: commit up to the previous one
                             if last_processed is not None and last_processed != last_committed:
@@ -287,6 +303,7 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
             last_processed = key
             records.extend(pending)
+            records_bytes += pending_bytes
 
             INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(object_records)
 

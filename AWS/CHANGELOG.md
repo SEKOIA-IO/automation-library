@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-10 - 1.38.10
+
+### Fixed
+
+- Limit the size of the events buffered in memory by the S3 connectors: events are pushed as soon as the buffer reaches 9 MB (configurable with `AWS_BATCH_MAX_BYTES`), in addition to the 10,000-event limit (`AWS_BATCH_SIZE`)
+
 ## 2026-11-10 - 1.38.9
 
 ### Fixed
