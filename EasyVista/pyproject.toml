@@ -1,6 +1,6 @@
 [project]
 name = "automation-module-easyvista"
-version = "1.0.0"
+version = "0.0.0"
 description = "EasyVista Service Manager playbook actions"
 requires-python = ">=3.14,<4"
 dependencies = [

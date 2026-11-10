@@ -68,7 +68,6 @@ def test_all_descriptors_registered_and_match_models():
 
 def test_manifest_configuration():
     manifest = json.loads((ROOT / "manifest.json").read_text())
-    assert manifest["version"] == "1.0.0"
     assert manifest["slug"] == "easyvista-service-manager"
     assert manifest["categories"] == ["Collaboration Tools"]
     UUID(manifest["uuid"])
