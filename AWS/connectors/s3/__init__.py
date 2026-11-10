@@ -236,18 +236,48 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
             if last_modified is not None:
                 timestamps_to_log.append(int(last_modified.timestamp() * 1000))
 
+            object_records = 0
+            # position of the first buffered event of this object, to drop its events if the object fails
+            object_start = len(records)
+            object_start_bytes = records_bytes
+            pushing = False
             try:
                 stream: AsyncReader
                 async with (
                     self.s3_fetch_concurrency_sem,
                     self.s3_wrapper.read_key(bucket=self.configuration.bucket, key=normalized_key) as stream,
                 ):
-                    object_records = [event async for event in self._parse_content(stream)]
+                    # push while parsing so that a large object does not hold all its events in memory
+                    async for event in self._parse_content(stream):
+                        object_records += 1
+                        records.append(event)
+                        records_bytes += len(event)
 
-                logger.info(f"Parsed {len(object_records)} records from object {key}")
+                        if len(records) >= self.limit_of_events_to_push or records_bytes >= self.max_batch_bytes:
+                            pushing = True
+                            result += len(await self.push_data_to_intakes(events=records))
+                            pushing = False
+                            records = []
+                            records_bytes = 0
+                            object_start = 0
+                            object_start_bytes = 0
+
+                            # the objects before this one are now fully delivered
+                            if last_processed is not None and last_processed != last_committed:
+                                self.write_marker(last_processed)
+                                last_committed = last_processed
+
+                logger.info(f"Parsed {object_records} records from object {key}")
 
             except Exception as e:
-                # do not advance the marker past a failing object to avoid losing data.
+                # a failed push stops the run without advancing the marker
+                if pushing:
+                    raise
+
+                # do not advance the marker past a failing object to avoid losing data:
+                # drop its events not pushed yet, the object will be read again on the next run.
+                del records[object_start:]
+                records_bytes = object_start_bytes
                 self.log(
                     message=f"Failed to fetch content of {key}: {str(e)}",
                     level="warning",
@@ -256,17 +286,7 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
             last_processed = key
 
-            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(object_records))
-            records.extend(object_records)
-            records_bytes += sum(len(record) for record in object_records)
-
-            if len(records) >= self.limit_of_events_to_push or records_bytes >= self.max_batch_bytes:
-                result += len(await self.push_data_to_intakes(events=records))
-                records = []
-                records_bytes = 0
-                if last_processed is not None and last_processed != last_committed:
-                    self.write_marker(last_processed)
-                    last_committed = last_processed
+            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(object_records)
 
         if records:
             result += len(await self.push_data_to_intakes(events=records))

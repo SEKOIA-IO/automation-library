@@ -401,3 +401,129 @@ async def test_abstract_aws_s3_list_connector_next_batch_flushes_on_max_bytes(
     # 2 objects (20 bytes) reach the 15-byte limit, then the last object is pushed at the end
     assert [len(call.kwargs["events"]) for call in mock_push_data_to_intakes.call_args_list] == [2, 1]
     assert connector.read_marker() == "file-2.log"
+
+
+def _single_object_list_connector(
+    session_faker: Faker,
+    aws_module: AwsModule,
+    symphony_storage: Path,
+    push_data_to_intakes: AsyncMock,
+    parse_content,
+) -> tuple[AbstractAwsS3ListConnector, MagicMock]:
+    """Create a list connector reading a single object `big.log` with a 25-byte batch limit."""
+    config = AwsS3ListConfiguration(intake_key=session_faker.word(), bucket=session_faker.word())
+
+    klass = type("TestAbstractAwsS3ListConnector", (AbstractAwsS3ListConnector, AwsAccountProvider), {})
+    connector = klass(module=aws_module, data_path=symphony_storage)
+    connector.configuration = config
+    connector.push_data_to_intakes = push_data_to_intakes
+    connector.limit_of_events_to_push = 10000
+    connector.max_batch_bytes = 25
+    connector._parse_content = MagicMock(side_effect=parse_content)
+    connector.log = MagicMock()
+    connector.log_exception = MagicMock()
+
+    async def list_objects(bucket=None, prefix=None, start_after=None):
+        yield {"Key": "big.log", "Size": 100}
+
+    async def read_key():
+        return await async_bytesIO(b"")
+
+    mock_s3 = MagicMock()
+    mock_s3.list_objects = list_objects
+    mock_s3.read_key = MagicMock()
+    mock_s3.read_key.return_value.__aenter__.side_effect = read_key
+
+    return connector, mock_s3
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_list_connector_next_batch_flushes_large_object_while_parsing(
+    session_faker: Faker,
+    aws_module: AwsModule,
+    symphony_storage: Path,
+    mock_push_data_to_intakes: AsyncMock,
+):
+    """
+    Test that the events of a single large object are pushed while it is parsed, so that the object
+    is never held entirely in memory, and that the marker is written once the object is fully delivered.
+    """
+    buffered_when_yielded: list[int] = []
+
+    async def _parse_content(stream: BinaryIO) -> AsyncGenerator[str, None]:
+        for _ in range(10):
+            pushed = sum(len(call.kwargs["events"]) for call in mock_push_data_to_intakes.call_args_list)
+            buffered_when_yielded.append(len(buffered_when_yielded) - pushed)
+            yield "x" * 10
+
+    connector, mock_s3 = _single_object_list_connector(
+        session_faker, aws_module, symphony_storage, mock_push_data_to_intakes, _parse_content
+    )
+
+    with patch.object(type(connector), "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3):
+        result = await connector.next_batch()
+
+    assert result[0] == 10
+    # 3 events (30 bytes) reach the 25-byte limit while parsing, the last event is pushed at the end
+    assert [len(call.kwargs["events"]) for call in mock_push_data_to_intakes.call_args_list] == [3, 3, 3, 1]
+    # never more than 3 events buffered while parsing the object
+    assert max(buffered_when_yielded) <= 3
+    assert connector.read_marker() == "big.log"
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_list_connector_next_batch_large_object_parsing_error(
+    session_faker: Faker,
+    aws_module: AwsModule,
+    symphony_storage: Path,
+    mock_push_data_to_intakes: AsyncMock,
+):
+    """
+    Test that when a large object fails after a partial push, the marker is not advanced past it
+    and its events not pushed yet are dropped (the object is read again on the next run).
+    """
+
+    async def _parse_content(stream: BinaryIO) -> AsyncGenerator[str, None]:
+        for _ in range(4):
+            yield "x" * 10
+        raise ValueError("corrupted object")
+
+    connector, mock_s3 = _single_object_list_connector(
+        session_faker, aws_module, symphony_storage, mock_push_data_to_intakes, _parse_content
+    )
+
+    with patch.object(type(connector), "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3):
+        result = await connector.next_batch()
+
+    # the first 3 events were pushed while parsing, the 4th one was dropped
+    assert result[0] == 3
+    assert [len(call.kwargs["events"]) for call in mock_push_data_to_intakes.call_args_list] == [3]
+    assert connector.read_marker() is None
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_list_connector_next_batch_push_error_does_not_advance_marker(
+    session_faker: Faker,
+    aws_module: AwsModule,
+    symphony_storage: Path,
+):
+    """
+    Test that a failed push while parsing an object stops the run and keeps the marker.
+    """
+
+    async def _parse_content(stream: BinaryIO) -> AsyncGenerator[str, None]:
+        for _ in range(10):
+            yield "x" * 10
+
+    push = AsyncMock(side_effect=RuntimeError("intake unavailable"))
+    connector, mock_s3 = _single_object_list_connector(
+        session_faker, aws_module, symphony_storage, push, _parse_content
+    )
+    connector.write_marker("previous.log")
+
+    with patch.object(type(connector), "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3):
+        with pytest.raises(RuntimeError, match="intake unavailable"):
+            await connector.next_batch()
+
+    assert push.call_count == 1
+    assert connector.read_marker() == "previous.log"
