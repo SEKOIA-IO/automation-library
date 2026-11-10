@@ -1,0 +1,57 @@
+{
+  "name": "Get questionnaire from specific actions",
+  "description": "Get the questionnaire of the workflow step of a specific action of an incident or request",
+  "uuid": "e6cb234a-abfd-4370-9a7f-97db722dfaa2",
+  "slug": "get_specific_action_questionnaire",
+  "docker_parameters": "easyvista_get_specific_action_questionnaire",
+  "arguments": {
+    "properties": {
+      "current_incident": {
+        "description": "Ticket RFC number",
+        "title": "Current Incident",
+        "type": "string"
+      },
+      "action_type_id": {
+        "description": "Action type ID (tenant-specific); not the action type GUID",
+        "title": "Action Type Id",
+        "type": "integer"
+      },
+      "action_id": {
+        "description": "Workflow action ID (ACTION_ID)",
+        "title": "Action Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "current_incident",
+      "action_type_id",
+      "action_id"
+    ],
+    "title": "GetSpecificActionQuestionnaireArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "href": {
+        "type": "string",
+        "description": "Query URL (HREF)"
+      },
+      "record_count": {
+        "type": "integer",
+        "description": "Number of items returned (integer)"
+      },
+      "total_record_count": {
+        "type": "integer",
+        "description": "Total number of items (integer)"
+      },
+      "results": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        },
+        "description": "Questionnaire items, returned unchanged: REQUEST_ID, ACTION_ID, ACTION_TYPE_ID, WORKFLOW_ID and QUESTION_LIST_ID"
+      }
+    }
+  }
+}
