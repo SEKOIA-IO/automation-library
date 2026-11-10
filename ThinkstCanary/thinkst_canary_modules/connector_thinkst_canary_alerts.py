@@ -15,21 +15,11 @@ from sekoia_automation.storage import PersistentJSON
 
 from . import ThinkstCanaryModule
 from .client import ApiClient
-from .metrics import (
-    EVENTS_LAG,
-    FORWARD_EVENTS_DURATION,
-    INCOMING_MESSAGES,
-    OUTCOMING_EVENTS,
-)
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
 class ThinksCanaryAlertsConnectorConfiguration(DefaultConnectorConfiguration):
-    chunk_size: int = Field(
-        1000,
-        description="The max size of chunks for the batch processing",
-        ge=1,
-        le=1000,
-    )
+    chunk_size: int = Field(1000, description="The max size of chunks for the batch processing", ge=1, le=1000)
     frequency: int = Field(10, description="Batch frequency in seconds", ge=1, le=60)
     acknowledge: bool = Field(False, description="Whether to acknowledge received events")
 
@@ -49,10 +39,7 @@ class ThinkstCanaryAlertsConnector(Connector):
 
     @cached_property
     def client(self):
-        return ApiClient(
-            base_url=self.module.configuration.base_url,
-            auth_token=self.module.configuration.auth_token,
-        )
+        return ApiClient(base_url=self.module.configuration.base_url, auth_token=self.module.configuration.auth_token)
 
     @property
     def most_recent_id_seen(self) -> int:
@@ -73,10 +60,7 @@ class ThinkstCanaryAlertsConnector(Connector):
             self.log(level="info", message=f"successfully acknowledged {incident_id}")
 
         else:
-            self.log(
-                level="error",
-                message=f"error while trying to acknowledge {incident_id}",
-            )
+            self.log(level="error", message=f"error while trying to acknowledge {incident_id}")
             logger.error(
                 f"error while trying to acknowledge {incident_id}",
                 status_code=response.status_code,

@@ -1,13 +1,10 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-import requests
 import requests_mock
 
 from thinkst_canary_modules import ThinkstCanaryModule
-from thinkst_canary_modules.connector_thinkst_canary_alerts import (
-    ThinkstCanaryAlertsConnector,
-)
+from thinkst_canary_modules.connector_thinkst_canary_alerts import ThinkstCanaryAlertsConnector
 
 
 @pytest.fixture
@@ -17,15 +14,8 @@ def trigger(data_storage):
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
-    trigger.module.configuration = {
-        "auth_token": "AUTH_TOKEN",
-        "base_url": "https://example.com",
-    }
-    trigger.configuration = {
-        "intake_key": "intake_key",
-        "frequency": 60,
-        "acknowledge": False,
-    }
+    trigger.module.configuration = {"auth_token": "AUTH_TOKEN", "base_url": "https://example.com"}
+    trigger.configuration = {"intake_key": "intake_key", "frequency": 60, "acknowledge": False}
     yield trigger
 
 
@@ -125,16 +115,8 @@ def message1():
                                 },
                                 "valid": True,
                             },
-                            "headers": {
-                                "Accept": "*/*",
-                                "Host": "example.com",
-                                "User-Agent": "curl/8.7.1",
-                            },
-                            "ip_blocklist": {
-                                "is_proxy": False,
-                                "is_tor": False,
-                                "is_vpn": False,
-                            },
+                            "headers": {"Accept": "*/*", "Host": "example.com", "User-Agent": "curl/8.7.1"},
+                            "ip_blocklist": {"is_proxy": False, "is_tor": False, "is_vpn": False},
                             "request_args": {},
                             "src_host": "1.2.3.4",
                             "timestamp": 1720684212,
@@ -177,11 +159,7 @@ def test_fetch_events(trigger, message1):
     trigger.push_events_to_intakes = MagicMock()
 
     with requests_mock.Mocker() as mock_requests:
-        mock_requests.get(
-            "https://example.com/api/v1/incidents/unacknowledged",
-            status_code=200,
-            json=message1,
-        )
+        mock_requests.get("https://example.com/api/v1/incidents/unacknowledged", status_code=200, json=message1)
         events = trigger.fetch_events()
 
         assert list(events) == [trigger.extract_events(message1)]
@@ -189,10 +167,9 @@ def test_fetch_events(trigger, message1):
 
 
 def test_long_next_batch_should_not_sleep(trigger, message1):
-    with (
-        patch("thinkst_canary_modules.connector_thinkst_canary_alerts.time") as mock_time,
-        requests_mock.Mocker() as mock_requests,
-    ):
+    with patch(
+        "thinkst_canary_modules.connector_thinkst_canary_alerts.time"
+    ) as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://example.com/api/v1/incidents/unacknowledged",
             status_code=200,
@@ -210,10 +187,9 @@ def test_long_next_batch_should_not_sleep(trigger, message1):
 
 
 def test_next_batch_sleep_until_next_round(trigger, message1):
-    with (
-        patch("thinkst_canary_modules.connector_thinkst_canary_alerts.time") as mock_time,
-        requests_mock.Mocker() as mock_requests,
-    ):
+    with patch(
+        "thinkst_canary_modules.connector_thinkst_canary_alerts.time"
+    ) as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://example.com/api/v1/incidents/unacknowledged",
             status_code=200,
@@ -233,10 +209,9 @@ def test_next_batch_sleep_until_next_round(trigger, message1):
 def test_acknowledge_messages(trigger, message1):
     trigger.configuration.acknowledge = True
 
-    with (
-        patch("thinkst_canary_modules.connector_thinkst_canary_alerts.time") as mock_time,
-        requests_mock.Mocker() as mock_requests,
-    ):
+    with patch(
+        "thinkst_canary_modules.connector_thinkst_canary_alerts.time"
+    ) as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://example.com/api/v1/incidents/unacknowledged",
             status_code=200,
@@ -254,27 +229,8 @@ def test_acknowledge_messages(trigger, message1):
         assert mock_time.sleep.call_count == 1
 
 
-def test_next_batch_should_retry(trigger, message1):
-    with (
-        patch("thinkst_canary_modules.connector_thinkst_canary_alerts.time") as mock_time,
-        requests_mock.Mocker() as mock_requests,
-    ):
-        mock_requests.get(
-            "https://example.com/api/v1/incidents/unacknowledged",
-            status_code=502,
-            text="<html><body>Bad Gateway</body></html>",
-        )
-        mock_requests.get(
-            "https://example.com/api/v1/incidents/unacknowledged",
-            status_code=200,
-            json=message1,
-        )
-        batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
-        start_time = 1666711174.0
-        end_time = start_time + batch_duration
-        mock_time.time.side_effect = [start_time, end_time]
-
-        trigger.next_batch()
+URL_INCIDENTS = "https://example.com/api/v1/incidents/unacknowledged"
+BAD_GATEWAY = {"status_code": 502, "text": "<html><body>Bad Gateway</body></html>"}
 
 
 def test_next_batch_should_handle_5xx_errors(trigger):
@@ -282,14 +238,27 @@ def test_next_batch_should_handle_5xx_errors(trigger):
         patch("thinkst_canary_modules.connector_thinkst_canary_alerts.time") as mock_time,
         requests_mock.Mocker() as mock_requests,
     ):
-        mock_requests.get(
-            "https://example.com/api/v1/incidents/unacknowledged",
-            status_code=502,
-            text="<html><body>Bad Gateway</body></html>",
-        )
-        batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
-        start_time = 1666711174.0
-        end_time = start_time + batch_duration
-        mock_time.time.side_effect = [start_time, end_time]
+        mock_requests.get(URL_INCIDENTS, **BAD_GATEWAY)
+        mock_time.time.side_effect = [0.0, 1.0]
 
         trigger.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 0
+        trigger.log.assert_any_call(level="error", message="failed to fetch events")
+        assert mock_time.sleep.call_count == 1  # the polling delay is still respected
+
+
+def test_next_batch_should_recover_after_5xx_error(trigger, message1):
+    with (
+        patch("thinkst_canary_modules.connector_thinkst_canary_alerts.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_requests.get(URL_INCIDENTS, [BAD_GATEWAY, {"status_code": 200, "json": message1}])
+        mock_time.time.side_effect = [0.0, 1.0, 60.0, 61.0]
+
+        trigger.next_batch()
+        assert trigger.push_events_to_intakes.call_count == 0
+
+        trigger.next_batch()
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert mock_requests.call_count == 2

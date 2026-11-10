@@ -6,13 +6,7 @@ from .auth import ThinksCanaryAuth
 
 
 class ApiClient(requests.Session):
-    def __init__(
-        self,
-        base_url: str,
-        auth_token: str,
-        nb_retries: int = 5,
-        ratelimit_per_second: int = 10,
-    ):
+    def __init__(self, base_url: str, auth_token: str, nb_retries: int = 5, ratelimit_per_second: int = 10):
         super().__init__()
 
         if not base_url.startswith("http"):
@@ -27,6 +21,7 @@ class ApiClient(requests.Session):
                 total=nb_retries,
                 backoff_factor=1,
                 status_forcelist=[401, 403, 429, 500, 502, 503, 504],
+                raise_on_status=False,
             ),
         )
 
