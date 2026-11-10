@@ -1,0 +1,40 @@
+{
+  "name": "Get a specific Document of a Request / Incident",
+  "description": "Get a specific attached document to a request The whole file is held in memory and returned as base64; large files inflate playbook results.",
+  "uuid": "78bed86f-ddad-487b-b642-c0a6740b435c",
+  "slug": "get_request_incident_document",
+  "docker_parameters": "easyvista_get_request_incident_document",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      },
+      "id": {
+        "description": "Document ID (DOCUMENT_ID from the documents list)",
+        "title": "Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "rfc_number",
+      "id"
+    ],
+    "title": "GetRequestIncidentDocumentArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "content_type": {
+        "type": "string",
+        "description": "Response Content-Type header"
+      },
+      "content_base64": {
+        "type": "string",
+        "description": "Document content (standard base64)"
+      }
+    }
+  }
+}

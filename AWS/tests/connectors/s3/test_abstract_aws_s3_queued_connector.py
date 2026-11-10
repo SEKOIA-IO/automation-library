@@ -547,6 +547,52 @@ async def test_abstract_aws_s3_queued_connector_next_batch_does_not_delete_messa
 
 
 @pytest.mark.asyncio
+async def test_abstract_aws_s3_queued_connector_next_batch_closes_the_parsed_events_on_push_failure(
+    session_faker: Faker, abstract_queued_connector: AbstractAwsS3QueuedConnector, sqs_message: str
+):
+    """The parser is closed as soon as the object is left, not when the event loop finalizes it later."""
+    closed = []
+
+    async def parse_content(stream: BinaryIO) -> AsyncGenerator[str, None]:
+        try:
+            yield "event-1"
+            yield "event-2"
+        finally:
+            closed.append(True)
+
+    abstract_queued_connector._parse_content = MagicMock(side_effect=parse_content)
+    # the push of the first event fails (the object is abandoned), the final push succeeds
+    abstract_queued_connector.push_data_to_intakes = AsyncMock(side_effect=[RuntimeError("intake down"), []])
+
+    async def read_key():
+        return await async_bytesIO(b"data")
+
+    mock_s3 = MagicMock()
+    mock_s3.read_key = MagicMock()
+    mock_s3.read_key.return_value.__aenter__.side_effect = read_key
+
+    mock_client = MagicMock()
+    mock_client.receive_message = AsyncMock(
+        return_value={
+            "Messages": [
+                {"Body": sqs_message, "ReceiptHandle": session_faker.word(), "Attributes": {"SentTimestamp": 1}}
+            ]
+        }
+    )
+    mock_client.delete_message = AsyncMock(return_value={})
+
+    with (
+        patch.object(type(abstract_queued_connector), "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3),
+        patch.object(SqsWrapper, "queue_url", AsyncMock(return_value=session_faker.url())),
+        patch.object(SqsWrapper, "get_client") as mock_get_client,
+    ):
+        mock_get_client.return_value.__aenter__.return_value = mock_client
+        await abstract_queued_connector.next_batch()
+
+    assert closed == [True]
+
+
+@pytest.mark.asyncio
 async def test_abstract_aws_s3_queued_connector_next_batch_flushes_on_max_bytes(
     session_faker: Faker,
     aws_module: AwsModule,

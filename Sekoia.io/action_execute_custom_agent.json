@@ -18,8 +18,14 @@
           "label_path": "items.name",
           "value_path": "items.uuid"
         }
+      },
+      "initial_state": {
+        "type": [
+          "string",
+          "object"
+        ],
+        "description": "Initial state for the agent execution: a message for the agent, or the state as an object"
       }
-      
     },
     "required": [
       "agent_uuid"

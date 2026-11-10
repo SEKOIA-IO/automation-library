@@ -1,16 +1,19 @@
 """Aws s3 wrapper."""
 
 import asyncio
-import io
+import tempfile
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import IO
 
 from aiofiles.threadpool.binary import AsyncBufferedReader
 from loguru import logger
 from pydantic import Field
 
 from aws_helpers.client import AwsClient, AwsClientConfiguration
-from aws_helpers.utils import AsyncReader, async_gzip_open, is_gzip_compressed
+from aws_helpers.utils import SPOOL_MAX_SIZE, AsyncReader, async_gzip_open, is_gzip_compressed
+
+DOWNLOAD_CHUNK_SIZE = 1024 * 1024
 
 
 class S3Configuration(AwsClientConfiguration):
@@ -31,6 +34,23 @@ class S3Wrapper(AwsClient[S3Configuration]):
             configuration: AWS configuration
         """
         super().__init__(configuration)
+
+    @staticmethod
+    def _rewind_and_detect_gzip(content: IO[bytes]) -> tuple[int, bool]:
+        """
+        Rewind the downloaded content and check if it is gzip compressed.
+
+        Args:
+            content: IO[bytes]: the content, positioned at its end
+
+        Returns:
+            tuple[int, bool]: the size of the content and whether it is gzip compressed
+        """
+        size = content.tell()
+        content.seek(0)
+        compressed = is_gzip_compressed(content.read(2))
+        content.seek(0)
+        return size, compressed
 
     @asynccontextmanager
     async def read_key(
@@ -53,16 +73,20 @@ class S3Wrapper(AwsClient[S3Configuration]):
 
         logger.info(f"Reading object {key} from bucket {bucket}")
 
-        async with self.get_client("s3") as s3:
-            response = await s3.get_object(Bucket=bucket, Key=key)
-            async with response["Body"] as stream:
-                raw = await stream.read()
+        # bounded memory: small objects stay in RAM, bigger ones roll over to a local temp file
+        with tempfile.SpooledTemporaryFile(max_size=SPOOL_MAX_SIZE) as content:
+            async with self.get_client("s3") as s3:
+                response = await s3.get_object(Bucket=bucket, Key=key)
+                # entering the body yields the aiohttp response, which cannot read a given amount: read the body
+                body = response["Body"]
+                async with body:
+                    while chunk := await body.read(DOWNLOAD_CHUNK_SIZE):
+                        content.write(chunk)
 
-        # check the magic number on the raw bytes: BytesIO.getbuffer() would copy the whole object
-        compressed = is_gzip_compressed(raw)
-        logger.info(f"Read {len(raw)} bytes{' (gzip)' if compressed else ''} from object {key}")
+            # the S3 client is closed here: no connection is held while the content is parsed
+            size, compressed = self._rewind_and_detect_gzip(content)
+            logger.info(f"Read {size} bytes{' (gzip)' if compressed else ''} from object {key}")
 
-        with io.BytesIO(raw) as content:
             if compressed:
                 async_reader = await async_gzip_open(content, loop=loop)
             else:

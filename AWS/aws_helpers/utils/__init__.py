@@ -6,12 +6,17 @@ from aws_helpers.utils.flowlogs import (
 )
 from aws_helpers.utils.parquet import is_parquet_content
 from aws_helpers.utils.stream import (
+    PARQUET_MAGIC,
+    SPOOL_MAX_SIZE,
     AsyncReader,
     PeekableAsyncReader,
     async_gzip_open,
     PeekableStreamReader,
     async_islice,
     split_stream_by_separator,
+    has_parquet_footer,
+    seekable_file,
+    to_seekable_file,
 )
 
 __all__ = [
@@ -28,4 +33,9 @@ __all__ = [
     "PeekableStreamReader",
     "async_islice",
     "split_stream_by_separator",
+    "has_parquet_footer",
+    "seekable_file",
+    "to_seekable_file",
+    "SPOOL_MAX_SIZE",
+    "PARQUET_MAGIC",
 ]

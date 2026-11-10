@@ -1,0 +1,158 @@
+{
+  "malware_family": [],
+  "ttp": [
+    "T1012",
+    "T1497",
+    "T1012",
+    "T1497",
+    "T1012",
+    "T1082",
+    "T1547.001",
+    "T1112",
+    "T1012",
+    "T1082"
+  ],
+  "static": {
+    "signatures": [
+      {
+        "desc": "Checks for missing Authenticode signature.",
+        "indicators": [
+          {
+            "resource": "acrord32.exe"
+          }
+        ],
+        "label": "unsigned_pe",
+        "name": "Unsigned PE",
+        "score": 3
+      }
+    ]
+  },
+  "targets": [
+    {
+      "signatures": [
+        {
+          "indicators": [
+            {
+              "description": "Key opened",
+              "ioc": "\\REGISTRY\\MACHINE\\SOFTWARE\\Oracle\\VirtualBox Guest Additions",
+              "procid": 76
+            }
+          ],
+          "label": "identifies_vbox_guestadditions_reg",
+          "name": "Looks for VirtualBox Guest Additions in registry",
+          "score": 9,
+          "tags": [
+            "defense_evasion"
+          ],
+          "ttp": [
+            "T1012",
+            "T1497"
+          ]
+        },
+        {
+          "indicators": [
+            {
+              "description": "Key opened",
+              "ioc": "\\REGISTRY\\MACHINE\\SOFTWARE\\VMware, Inc.\\VMware Tools",
+              "procid": 76
+            }
+          ],
+          "label": "identifies_vmware_tools_reg",
+          "name": "Looks for VMWare Tools registry key",
+          "score": 8,
+          "tags": [
+            "defense_evasion"
+          ],
+          "ttp": [
+            "T1012",
+            "T1497"
+          ]
+        }
+      ]
+    }
+  ],
+  "network": {
+    "flows": [
+      {
+        "domain": "doxbin.cy",
+        "dst": "188.114.97.0:2083",
+        "id": 3,
+        "proto": "tcp",
+        "tls_sni": "doxbin.cy"
+      },
+      {
+        "domain": "doxbin.cy",
+        "dst": "188.114.97.0:2083",
+        "id": 4,
+        "proto": "tcp",
+        "tls_sni": "doxbin.cy"
+      }
+    ],
+    "ips": [
+      {
+        "asn": "AS8075",
+        "cc": "US",
+        "ip": "150.171.110.147"
+      },
+      {
+        "asn": "AS13335",
+        "cc": "US",
+        "ip": "188.114.97.0"
+      },
+      {
+        "asn": "AS8075",
+        "cc": "US",
+        "ip": "4.150.223.106"
+      },
+      {
+        "asn": "AS15169",
+        "cc": "US",
+        "ip": "8.8.8.8"
+      },
+      {
+        "asn": "AS199524",
+        "cc": "NL",
+        "ip": "93.123.17.252"
+      }
+    ]
+  },
+  "requests": [
+    {
+      "dns_request": [],
+      "dns_response": [],
+      "domain": "doxbin.cy",
+      "http_request": [],
+      "http_response": []
+    }
+  ],
+  "processes": [
+    {
+      "cmd": "\"C:\\Users\\Admin\\AppData\\Local\\Temp\\acrord32.exe\"",
+      "image": "C:\\Users\\Admin\\AppData\\Local\\Temp\\acrord32.exe",
+      "pid": 2580,
+      "ppid": 2448
+    },
+    {
+      "cmd": "\"C:\\Users\\Admin\\AppData\\Roaming\\WindowsFramehost\\RuntimeBroker.exe\"",
+      "image": "C:\\Users\\Admin\\AppData\\Roaming\\WindowsFramehost\\RuntimeBroker.exe",
+      "pid": 1388,
+      "ppid": 2580
+    }
+  ],
+  "dumped": [
+    {
+      "kind": "martian",
+      "name": "files/0x000100000002992d-18.dat",
+      "origin": "imgload",
+      "path": "C:\\Users\\Admin\\AppData\\Roaming\\WindowsFramehost\\RuntimeBroker.exe",
+      "sha256": "a861267f02af6a092d543f0334767a1a438943835dd3a62e92a346430c5284d3"
+    },
+    {
+      "kind": "martian",
+      "name": "files/0x0001000000029929-20.dat",
+      "origin": "imgload",
+      "path": "C:\\Users\\Admin\\AppData\\Local\\WindowsRecovery\\Update.exe",
+      "sha256": "6e774dc769bcf252fdba22a45fe3f55b701e8d53fa61525a26c255b10cfa2aa9"
+    }
+  ]
+}

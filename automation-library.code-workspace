@@ -117,8 +117,20 @@
 			"path": "CatoNetwork"
 		},
 		{
+			"name": "Trellix",
+			"path": "Trellix"
+    },
+    {
+			"name": "PolySwarm",
+			"path": "PolySwarm"
+    },
+    {
 			"name": "TrendMicro",
 			"path": "TrendMicro"
+		},
+		{
+			"name": "Nextron Valhalla",
+			"path": "Nextron Valhalla"
 		}
 	],
 	"settings": {

@@ -4,6 +4,7 @@ import os
 from abc import ABCMeta
 from asyncio import BoundedSemaphore
 from collections.abc import AsyncGenerator
+from contextlib import aclosing
 from typing import Any, Optional
 
 import orjson
@@ -153,11 +154,12 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                     async with (
                         self.s3_fetch_concurrency_sem,
                         self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as stream,
+                        aclosing(self._parse_content(stream)) as events,
                     ):
-                        async for event in self._parse_content(stream):
+                        async for event in events:
                             object_records += 1
                             records.append(event)
-                            records_bytes += len(event.encode("utf-8"))
+                            records_bytes += len(event)
 
                             if len(records) >= self.limit_of_events_to_push or records_bytes >= self.max_batch_bytes:
                                 result += len(await self.push_data_to_intakes(events=records))
@@ -177,6 +179,10 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                 result += len(await self.push_data_to_intakes(events=records))
 
         return result, timestamps_to_log
+
+
+class IntakePushError(Exception):
+    """Pushing events to the intake failed: not to be mistaken with a failure to fetch an S3 object."""
 
 
 class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
@@ -211,8 +217,20 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
         with self.context as cache:
             cache["marker"] = marker
 
+    async def _push_events(self, events: list[str]) -> int:
+        """Push events to the intake and return the number of pushed events."""
+        try:
+            return len(await self.push_data_to_intakes(events=events))
+        except Exception as e:
+            raise IntakePushError(f"Failed to push events to the intake: {e}") from e
+
     async def next_batch(self) -> tuple[int, list[int]]:
-        """List objects after the checkpoint, read each one and advance the marker."""
+        """
+        List objects after the checkpoint, read each one and advance the marker.
+
+        Events are pushed as soon as the batch limit is reached, even in the middle of an object.
+        If such an object then fails, its already pushed events are sent again on the next run.
+        """
         records: list[str] = []
         records_bytes = 0
         result = 0
@@ -236,48 +254,47 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
             if last_modified is not None:
                 timestamps_to_log.append(int(last_modified.timestamp() * 1000))
 
+            # events of this object stay apart from the batch until they are pushed or the object is fully read:
+            # a failing object must not leave its unpushed events in the batch
+            pending: list[str] = []
+            pending_bytes = 0
             object_records = 0
-            # position of the first buffered event of this object, to drop its events if the object fails
-            object_start = len(records)
-            object_start_bytes = records_bytes
-            pushing = False
+
             try:
                 stream: AsyncReader
                 async with (
                     self.s3_fetch_concurrency_sem,
                     self.s3_wrapper.read_key(bucket=self.configuration.bucket, key=normalized_key) as stream,
+                    aclosing(self._parse_content(stream)) as events,
                 ):
-                    # push while parsing so that a large object does not hold all its events in memory
-                    async for event in self._parse_content(stream):
+                    async for event in events:
+                        pending.append(event)
+                        pending_bytes += len(event)
                         object_records += 1
-                        records.append(event)
-                        records_bytes += len(event)
 
-                        if len(records) >= self.limit_of_events_to_push or records_bytes >= self.max_batch_bytes:
-                            pushing = True
-                            result += len(await self.push_data_to_intakes(events=records))
-                            pushing = False
+                        if (
+                            len(records) + len(pending) >= self.limit_of_events_to_push
+                            or records_bytes + pending_bytes >= self.max_batch_bytes
+                        ):
+                            records.extend(pending)
+                            pending = []
+                            pending_bytes = 0
+                            result += await self._push_events(records)
                             records = []
                             records_bytes = 0
-                            object_start = 0
-                            object_start_bytes = 0
 
-                            # the objects before this one are now fully delivered
+                            # the current object is only partly read: commit up to the previous one
                             if last_processed is not None and last_processed != last_committed:
                                 self.write_marker(last_processed)
                                 last_committed = last_processed
 
                 logger.info(f"Parsed {object_records} records from object {key}")
 
-            except Exception as e:
-                # a failed push stops the run without advancing the marker
-                if pushing:
-                    raise
+            except IntakePushError:
+                raise
 
-                # do not advance the marker past a failing object to avoid losing data:
-                # drop its events not pushed yet, the object will be read again on the next run.
-                del records[object_start:]
-                records_bytes = object_start_bytes
+            except Exception as e:
+                # do not advance the marker past a failing object to avoid losing data.
                 self.log(
                     message=f"Failed to fetch content of {key}: {str(e)}",
                     level="warning",
@@ -285,11 +302,13 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
                 break
 
             last_processed = key
+            records.extend(pending)
+            records_bytes += pending_bytes
 
             INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(object_records)
 
         if records:
-            result += len(await self.push_data_to_intakes(events=records))
+            result += await self._push_events(records)
 
         if last_processed is not None and last_processed != last_committed:
             self.write_marker(last_processed)
