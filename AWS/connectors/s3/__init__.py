@@ -157,7 +157,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                         async for event in self._parse_content(stream):
                             object_records += 1
                             records.append(event)
-                            records_bytes += len(event)
+                            records_bytes += len(event.encode("utf-8"))
 
                             if len(records) >= self.limit_of_events_to_push or records_bytes >= self.max_batch_bytes:
                                 result += len(await self.push_data_to_intakes(events=records))
