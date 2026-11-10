@@ -1,6 +1,7 @@
 import asyncio
 import gzip
 import io
+import os
 import shutil
 import tempfile
 from abc import abstractmethod
@@ -14,8 +15,10 @@ from aiofiles.threadpool.binary import AsyncBufferedReader
 
 T = TypeVar("T")
 
-# objects bigger than this are spooled to a local temp file instead of memory
-SPOOL_MAX_SIZE = 32 * 1024 * 1024
+# Size in bytes above which a downloaded object is spooled; 0 (default) keeps it in memory.
+# Invalid values count as 0.
+_spool_max_size = os.environ.get("AWS_SPOOL_MAX_SIZE", "").strip()
+SPOOL_MAX_SIZE = int(_spool_max_size) if _spool_max_size.isdecimal() else 0
 
 # a Parquet file starts and ends with these bytes
 PARQUET_MAGIC = b"PAR1"
@@ -199,7 +202,7 @@ async def split_stream_by_separator(
 
 async def _decompress_to_spool(file: gzip.GzipFile) -> BinaryIO:
     """
-    Decompress a gzip file once into a spool (memory up to SPOOL_MAX_SIZE, then a temporary file).
+    Decompress a gzip file once into a spool.
 
     The copy runs in a thread, so that a big object does not block the event loop. A thread cannot be
     cancelled: it is waited for, however many times the task is cancelled, so that the files it uses are not

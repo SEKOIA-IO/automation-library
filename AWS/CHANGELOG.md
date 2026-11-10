@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-10 - 1.38.11
+
+### Fixed
+
+- Fix the way to define the maximum size of spooled files
+
 ## 2026-11-10 - 1.38.10
 
 ### Fixed
@@ -25,8 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix memory leak caused by the SQS queue URL cache retaining AWS sessions
 - Reuse S3 and SQS wrappers (and their AWS sessions) across batches instead of recreating them for every object
-- Download S3 objects through a spooled temporary file instead of holding them fully in memory
-- Parse parquet objects (VPC flow logs, OCSF) by batches instead of loading them fully in memory
+- Parse parquet objects (VPC flow logs, OCSF) by batches
   - Integer fields nested in structs or lists that contain nulls may be serialized as floats (e.g. `443.0`) only in the batches holding a null
 - Stream text VPC flow logs line by line instead of decoding the whole object in memory
 - Flush events while reading an object in the S3 list connector instead of buffering the whole object
