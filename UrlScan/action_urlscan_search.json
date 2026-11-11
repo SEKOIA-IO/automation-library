@@ -1,0 +1,262 @@
+{
+  "uuid": "bfb19e3a-d6d6-4ecd-a58f-e78c4f6e26d4",
+  "name": "Search",
+  "description": "Search existing urlscan.io scans from an indicator (URL, domain, IP or SHA256) or an Elasticsearch Query String query, without spending a scan. Returns one page; paginate with next_search_after.",
+  "docker_parameters": "urlscan_search",
+  "slug": "search",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "indicator": {
+        "type": "string",
+        "description": "IP address, domain, URL or SHA256 to search for; provide this or query"
+      },
+      "query": {
+        "type": "string",
+        "description": "Elasticsearch Query String query, for example task.tags:\"phishing\" AND date:>now-7d; values with colons, slashes or spaces must be double-quoted; provide this or indicator"
+      },
+      "size": {
+        "type": "integer",
+        "default": 100,
+        "minimum": 1,
+        "maximum": 10000,
+        "description": "Number of results in the page"
+      },
+      "search_after": {
+        "type": "string",
+        "description": "next_search_after of the previous call, to get the next page"
+      }
+    }
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Query sent to urlscan.io, the query argument or the one built from the indicator"
+      },
+      "total": {
+        "type": "integer",
+        "description": "Number of matching scans, exact up to 10000"
+      },
+      "has_more": {
+        "type": "boolean",
+        "description": "True when more than 10000 scans match"
+      },
+      "took": {
+        "type": "integer",
+        "description": "Search time in milliseconds"
+      },
+      "search_date_limit_days": {
+        "type": [
+          "integer",
+          "null"
+        ],
+        "description": "History limit in days, set on free plans only"
+      },
+      "next_search_after": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Value to pass as search_after for the next page, null on the last page"
+      },
+      "results": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "description": "Scan UUID, input of Get scan result and Download scan screenshot"
+            },
+            "scan_time": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Scan time, ISO 8601"
+            },
+            "submitted_url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "URL scanned"
+            },
+            "visibility": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "public, unlisted or private"
+            },
+            "page_url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Final URL after redirects"
+            },
+            "page_domain": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Final domain"
+            },
+            "page_ip": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Primary IP"
+            },
+            "page_asn": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "ASN, for example AS13335"
+            },
+            "page_asn_name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "AS name"
+            },
+            "page_country": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "GeoIP country"
+            },
+            "page_title": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Page title"
+            },
+            "page_status": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "HTTP status"
+            },
+            "malicious": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "Overall verdict"
+            },
+            "score": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Overall score"
+            },
+            "report_url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "urlscan.io report, opens without an account"
+            },
+            "result_api_url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Raw JSON result"
+            },
+            "screenshot_url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Screenshot URL as given by urlscan.io, availability is not checked"
+            },
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "filename": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "File name"
+                  },
+                  "sha256": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "SHA-256 of the file"
+                  },
+                  "size": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "description": "Size in bytes"
+                  },
+                  "mime_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "MIME type"
+                  },
+                  "mime_description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "MIME type description"
+                  },
+                  "url": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "URL the file was downloaded from"
+                  },
+                  "state": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Download state"
+                  }
+                },
+                "description": "A downloaded file"
+              },
+              "description": "Files downloaded by the page"
+            }
+          },
+          "required": [
+            "uuid"
+          ],
+          "description": "A scan"
+        },
+        "description": "Scans of the page"
+      }
+    },
+    "required": [
+      "query",
+      "total",
+      "has_more",
+      "took"
+    ]
+  }
+}
