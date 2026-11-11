@@ -1,5 +1,7 @@
 """Pure functions that turn urlscan.io responses into the summaries the actions return."""
 
+import ipaddress
+import re
 from typing import Any
 
 # Summary key -> key in the urlscan.io response, one table per summary section.
@@ -33,6 +35,24 @@ DOWNLOADED_FILE_FIELDS = {
     "mime_description": "mimeDescription",
     "url": "url",
     "state": "state",
+}
+# Search row key -> path in a search hit.
+SEARCH_ROW_FIELDS = {
+    "scan_time": ("task", "time"),
+    "submitted_url": ("task", "url"),
+    "visibility": ("task", "visibility"),
+    "page_url": ("page", "url"),
+    "page_domain": ("page", "domain"),
+    "page_ip": ("page", "ip"),
+    "page_asn": ("page", "asn"),
+    "page_asn_name": ("page", "asnname"),
+    "page_country": ("page", "country"),
+    "page_title": ("page", "title"),
+    "page_status": ("page", "status"),
+    "malicious": ("verdicts", "malicious"),
+    "score": ("verdicts", "score"),
+    "result_api_url": ("result",),
+    "screenshot_url": ("screenshot",),
 }
 
 
@@ -154,3 +174,50 @@ def submitted_summary(submission: dict[str, Any], base_url: str) -> dict[str, An
 def blacklisted_summary(url: str) -> dict[str, Any]:
     """Summary returned when urlscan.io refuses to scan a blacklisted URL."""
     return empty_scan_summary() | {"status": "blacklisted", "submitted_url": url}
+
+
+def build_indicator_query(indicator: str) -> str:
+    """Search query for an IP, SHA256, URL or domain."""
+    value = indicator.strip()
+    quoted = '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    try:
+        ipaddress.ip_address(value)
+        return f"ip:{quoted}"
+    except ValueError:
+        pass
+    if re.fullmatch(r"[0-9a-fA-F]{64}", value):
+        return f"hash:{quoted}"
+    if value.startswith(("http://", "https://")):
+        return f"page.url:{quoted}"
+    return f"domain:{quoted}"
+
+
+def _search_row(hit: dict[str, Any], base_url: str) -> dict[str, Any]:
+    uuid = hit.get("_id")
+    row: dict[str, Any] = {"uuid": uuid}
+    for name, path in SEARCH_ROW_FIELDS.items():
+        source: Any = hit
+        for key in path[:-1]:
+            source = _section(source, key)
+        row[name] = source.get(path[-1]) if isinstance(source, dict) else None
+    row["report_url"] = f"{base_url}/result/{uuid}/" if uuid else None
+    row["files"] = downloaded_files(hit.get("files"))
+    return row
+
+
+def build_search_results(response: dict[str, Any], query: str, size: int, base_url: str) -> dict[str, Any]:
+    """One page of search results; `next_search_after` is None on the last page."""
+    hits = [hit for hit in _items(response, "results") if isinstance(hit, dict)]
+    sort = hits[-1].get("sort") if hits else None
+    next_search_after = None
+    if len(hits) >= size and isinstance(sort, list) and sort:
+        next_search_after = ",".join(str(value) for value in sort)
+    return {
+        "query": query,
+        "total": response.get("total"),
+        "has_more": response.get("has_more"),
+        "took": response.get("took"),
+        "search_date_limit_days": response.get("search_date_limit_days"),
+        "next_search_after": next_search_after,
+        "results": [_search_row(hit, base_url) for hit in hits],
+    }
