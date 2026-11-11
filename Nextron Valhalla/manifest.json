@@ -35,7 +35,7 @@
       "sekoia_api_key"
     ]
   },
-  "description": "Nextron Valhalla integration for Sekoia",
+  "description": "Nextron Valhalla is the rule feed of Nextron Systems, offering more than 24,000 YARA and more than 4,000 Sigma rules, curated and regularly updated by Nextron's threat researchers. This integration brings Valhalla's Sigma rules into the Sekoia Rules Catalog and keeps them up to date automatically, so new and improved detections reach your environment without manual work. You choose whether imported rules arrive enabled or disabled, so you stay in control of which detections run. Valhalla customers receive the full feed; without a subscription, the free community feed is available.",
   "name": "Nextron Valhalla",
   "slug": "nextron-valhalla",
   "categories": [
