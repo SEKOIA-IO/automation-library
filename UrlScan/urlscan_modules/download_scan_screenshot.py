@@ -18,6 +18,11 @@ class DownloadScanScreenshot(UrlScanAction):
                     f"Screenshot of scan {scan_id} was not stored by urlscan.io "
                     "(or the scan is unknown or not finished)"
                 ) from error
+            # For a body that is not JSON the SDK puts the raw text in the message: never show the PNG placeholder.
+            if "PNG" in error.message[:8]:
+                raise ActionError(
+                    f"urlscan.io API error {error.status} for the screenshot of scan {scan_id}"
+                ) from error
             raise
 
         content = screenshot.getvalue()

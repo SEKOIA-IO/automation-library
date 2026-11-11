@@ -21,14 +21,14 @@ def is_stored(fetch: Callable[[str], Any], scan_id: str) -> tuple[bool | None, i
         fetch(scan_id)
     except APIError as error:
         return (False, 404) if error.status == 404 else (None, error.status)
-    except httpx.TransportError:
+    except httpx.TransportError, KeyError:
+        # The SDK reads error["message"]: an error body without it raises KeyError.
         return None, None
     return True, None
 
 
-def apply_availability(action: UrlScanAction, client: Client, summary: dict[str, Any]) -> None:
+def apply_availability(action: UrlScanAction, client: Client, scan_id: str, summary: dict[str, Any]) -> None:
     """Fill the `*_available` flags of a summary and drop the link of an artefact that is not stored."""
-    scan_id = summary["uuid"]
     for name, fetch in (("screenshot", client.get_screenshot), ("dom", client.get_dom)):
         stored, status = is_stored(fetch, scan_id)
         summary[f"{name}_available"] = stored

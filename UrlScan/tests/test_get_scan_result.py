@@ -65,6 +65,16 @@ def test_availability_unknown(action, routes):
     assert warnings == [f"Could not check the screenshot of scan {SCAN_ID} (status 500)"]
 
 
+def test_availability_unknown_on_unexpected_error_body(action, routes):
+    routes["screenshot"].respond(500, json={})
+
+    summary = action.run({"scan_id": SCAN_ID})
+
+    assert summary["screenshot_available"] is None
+    assert summary["screenshot_url"] == f"{BASE}/screenshots/{SCAN_ID}.png"
+    assert action.error_message is None
+
+
 def test_missing_lists_refetched(action, routes, clock):
     incomplete = {key: value for key, value in result_payload().items() if key != "lists"}
     routes["result"].side_effect = [
