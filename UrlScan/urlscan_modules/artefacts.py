@@ -1,12 +1,15 @@
-"""Checks whether urlscan.io still stores the screenshot and the DOM of a scan."""
+"""Checks whether urlscan.io still stores the screenshot and the DOM of a scan, and writes the screenshot file."""
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import httpx
 from urlscan import APIError, Client
 
 from urlscan_modules.base import UrlScanAction
+
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
 def is_stored(fetch: Callable[[str], Any], scan_id: str) -> tuple[bool | None, int | None]:
@@ -36,3 +39,16 @@ def apply_availability(action: UrlScanAction, client: Client, summary: dict[str,
             label = "DOM" if name == "dom" else name
             # Only the status is logged: the body of a 404 screenshot is a binary placeholder.
             action.log(f"Could not check the {label} of scan {scan_id} ({reason})", level="warning")
+
+
+def write_screenshot(data_path: Path, scan_id: str, content: bytes) -> str:
+    """Write the PNG under `urlscan/` in the run storage and return its path relative to `data_path`.
+
+    `scan_id` must already be a validated UUID: it becomes part of the file name. `data_path` is used as given,
+    because in production it is not a local path.
+    """
+    path = data_path / "urlscan" / f"{scan_id}.png"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("wb") as file:
+        file.write(content)
+    return f"urlscan/{scan_id}.png"
