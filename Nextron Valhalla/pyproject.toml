@@ -1,6 +1,6 @@
 [project]
 name = "nextron-valhalla"
-version = "1.0.0"
+version = "1.0.1"
 description = "Syncs the Nextron Valhalla Sigma feed into the Sekoia Rules Catalog"
 authors = []
 requires-python = ">=3.14,<4"
