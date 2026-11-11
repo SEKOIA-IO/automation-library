@@ -54,7 +54,7 @@ def internal_target_reason(url: str) -> str | None:
         pass
     else:
         for candidate in _addresses_to_check(address):
-            if not candidate.is_global:
+            if not candidate.is_global or candidate.is_multicast:
                 return f"The URL host '{host}' is a {_kind(candidate)} address {SUFFIX}"
         return None
 

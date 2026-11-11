@@ -26,7 +26,7 @@ def fetch_scan_summary(
         result = action.call(client.get_result, scan_id)
 
     summary = build_scan_summary(result, action.base_url, submission)
-    apply_availability(action, client, summary)
+    apply_availability(action, client, summary["uuid"] or scan_id, summary)
     summary["comment"] = build_comment(summary)
     return summary
 
