@@ -94,9 +94,11 @@ class ScanUrl(UrlScanAction):
             raise self._retrieval_error(uuid, error) from error
         except (RateLimitRemainingError, httpx.TransportError) as error:
             raise self._retrieval_error(uuid, error) from error
+        except ActionError as error:
+            raise self._retrieval_error(uuid, error) from error
 
     @staticmethod
     def _retrieval_error(uuid: str, error: Exception) -> ActionError:
-        return ActionError(
-            f"Scan {uuid} was submitted but its result could not be retrieved ({describe_error(error)}); {HINT}"
-        )
+        # An ActionError already carries a message meant for the playbook.
+        reason = str(error) if isinstance(error, ActionError) else describe_error(error)
+        return ActionError(f"Scan {uuid} was submitted but its result could not be retrieved ({reason}); {HINT}")

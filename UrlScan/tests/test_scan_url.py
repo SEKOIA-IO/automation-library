@@ -234,3 +234,13 @@ def test_result_error_after_submission(action, routes):
         f"Scan {SCAN_ID} was submitted but its result could not be retrieved "
         f"(urlscan.io API error 500: Internal Server Error); {HINT}"
     )
+
+
+def test_unexpected_error_body_after_submission(action, routes):
+    routes["result"].respond(500, json={})
+
+    assert action.run({"url": URL}) is None
+    assert action.error_message == (
+        f"Scan {SCAN_ID} was submitted but its result could not be retrieved "
+        f"(urlscan.io returned an unexpected error response); {HINT}"
+    )

@@ -39,6 +39,16 @@ def test_not_stored(action, route, tmp_path):
     assert not any("PNG" in entry["message"] for entry in action.logs)
 
 
+def test_binary_error_body_is_not_exposed(action, route, tmp_path):
+    route.respond(410, content=PNG)
+
+    assert action.run({"scan_id": SCAN_ID}) is None
+
+    assert action.error_message == f"urlscan.io API error 410 for the screenshot of scan {SCAN_ID}"
+    assert list(tmp_path.iterdir()) == []
+    assert not any("PNG" in entry["message"] for entry in action.logs)
+
+
 def test_invalid_body(action, route, tmp_path):
     route.respond(200, content=b"<html>")
 

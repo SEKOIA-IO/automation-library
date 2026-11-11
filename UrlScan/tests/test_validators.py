@@ -6,7 +6,7 @@ from urlscan_modules.validators import internal_target_reason, valid_scan_id
 
 REFUSED = [
     "http://127.0.0.1/", "http://10.0.0.1/", "http://192.168.1.10:8080/x", "http://169.254.169.254/latest",
-    "http://100.64.0.1/", "http://0.0.0.0/", "http://[::1]/", "http://[fe80::1%25eth0]/",
+    "http://100.64.0.1/", "http://224.0.0.1/", "http://0.0.0.0/", "http://[::1]/", "http://[fe80::1%25eth0]/",
     "http://[::ffff:10.0.0.1]/", "http://[64:ff9b::10.0.0.1]/", "http://[::10.0.0.1]/", "http://[2002:0a00:0001::1]/",
     "http://127.1/", "http://2130706433/", "http://0x7f.0.0.1/", "http://10.1.1/", "http://192.168.001.001/",
     "http://localhost/", "HTTP://LOCALHOST./", "http://fileserver/", "http://printer.local/", "http://db.internal/",
@@ -42,6 +42,7 @@ def test_public_target_accepted(url):
     [
         ("http://user:pw@10.0.0.1/", f"The URL host '10.0.0.1' is a private address {SUFFIX}"),
         ("http://[64:ff9b::10.0.0.1]/", f"The URL host '64:ff9b::10.0.0.1' is a private address {SUFFIX}"),
+        ("http://224.0.0.1/", f"The URL host '224.0.0.1' is a multicast address {SUFFIX}"),
         ("http://127.1/", f"The URL host '127.1' is an IP address written in an unusual form {SUFFIX}"),
         ("http://fileserver/", f"The URL host 'fileserver' only exists inside a network {SUFFIX}"),
         ("file:///etc/passwd", f"The URL has no valid host {SUFFIX}"),

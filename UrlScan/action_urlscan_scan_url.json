@@ -73,7 +73,7 @@
       },
       "status": {
         "type": "string",
-        "description": "Scan status, done for a finished scan"
+        "description": "Scan status: done, submitted (wait_for_result false) or blacklisted (fail_on_blacklisted_url false)"
       },
       "submitted_url": {
         "type": "string",
