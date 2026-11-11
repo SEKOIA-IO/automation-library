@@ -14,11 +14,14 @@ REFUSED = [
     "http://10.0.0.1\\@example.com/", "http:\\\\10.0.0.1\\x", "http://%31%30.0.0.1/", "http://\uff11\uff10.0.0.1/",
     "http:///10.0.0.1/", "//10.0.0.1/", "file:///etc/passwd",
     "10.0.0.1/admin", " http://10.0.0.1 ", "http://user:pw@10.0.0.1/",
+    "http://10\u30020.0.1/", "http://10\uff610.0.1/", "http://169.254.169.254\u3002/", "http://10.0.0.1\u00ad/",
+    "http://10.0.0.1\u200b/", "http://printer.local\u00ad/", "http://a.b\u3002local/", "http://0x.0x.0x.0x/",
 ]  # fmt: skip
 ACCEPTED = [
     "https://example.com/", "example.com/path", " https://example.com ", "http://8.8.8.8/",
     "http://[2606:4700::6812:179a]/", "http://[::ffff:8.8.8.8]/", "http://[64:ff9b::8.8.8.8]/",
     "http://paypal.com@evil.example/login", "https://123.example.com/",
+    "https://b\u00fccher.example/",
 ]  # fmt: skip
 SUFFIX = "and will not be sent to urlscan.io"
 
