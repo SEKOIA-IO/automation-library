@@ -13,6 +13,7 @@ SUFFIX = "and will not be sent to urlscan.io"
 SCAN_ID_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 # Suffixes the standards reserve for names that only resolve inside a network.
 INTERNAL_SUFFIXES = (".localhost", ".local", ".internal", ".home.arpa")
+NUMERIC_LABEL = re.compile(r"^(?:[0-9]+|0x[0-9a-f]*)$")
 NAT64_PREFIX = ipaddress.ip_network("64:ff9b::/96")
 
 
@@ -35,7 +36,12 @@ def internal_target_reason(url: str) -> str | None:
     if "\\" in parts.netloc:
         return f"The URL has a backslash in its host part, which parsers read differently, {SUFFIX}"
 
-    host = unicodedata.normalize("NFKC", hostname or "").lower().rstrip(".")
+    # Browsers map a host through IDNA: ideographic full stops become dots and soft hyphens or zero-width
+    # spaces are dropped. Do the same, so the host checked is the host that gets fetched.
+    try:
+        host = unicodedata.normalize("NFKC", hostname or "").encode("idna").decode("ascii").lower().rstrip(".")
+    except UnicodeError:
+        return f"The URL has no valid host {SUFFIX}"
     if not host:
         return f"The URL has no valid host {SUFFIX}"
 
@@ -55,17 +61,23 @@ def internal_target_reason(url: str) -> str | None:
         return f"The URL host '{host}' is percent-encoded, which parsers read differently, {SUFFIX}"
 
     # Forms like 127.1, 2130706433 or 0x7f.0.0.1 are not literals to ipaddress but connect to the address they spell.
-    try:
-        socket.inet_aton(host)
-    except OSError, ValueError:
-        pass
-    else:
+    # inet_aton depends on the libc, so a host whose last label is a number is refused as well: that is the
+    # WHATWG rule for "ends in a number", which also covers forms such as 0x.0x.0x.0x.
+    if _inet_aton_accepts(host) or NUMERIC_LABEL.match(host.rpartition(".")[2]):
         return f"The URL host '{host}' is an IP address written in an unusual form {SUFFIX}"
 
     if host == "localhost" or "." not in host or host.endswith(INTERNAL_SUFFIXES):
         return f"The URL host '{host}' only exists inside a network {SUFFIX}"
 
     return None
+
+
+def _inet_aton_accepts(host: str) -> bool:
+    try:
+        socket.inet_aton(host)
+    except OSError, ValueError:
+        return False
+    return True
 
 
 def _addresses_to_check(
