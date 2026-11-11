@@ -16,6 +16,7 @@ REFUSED = [
     "10.0.0.1/admin", " http://10.0.0.1 ", "http://user:pw@10.0.0.1/",
     "http://10\u30020.0.1/", "http://10\uff610.0.1/", "http://169.254.169.254\u3002/", "http://10.0.0.1\u00ad/",
     "http://10.0.0.1\u200b/", "http://printer.local\u00ad/", "http://a.b\u3002local/", "http://0x.0x.0x.0x/",
+    "http://10.0.0.1\U0001bca0/", "http://10.0.0.1\U000e0100/", "http://printer\u180f.local/",
 ]  # fmt: skip
 ACCEPTED = [
     "https://example.com/", "example.com/path", " https://example.com ", "http://8.8.8.8/",
@@ -44,6 +45,7 @@ def test_public_target_accepted(url):
         ("http://127.1/", f"The URL host '127.1' is an IP address written in an unusual form {SUFFIX}"),
         ("http://fileserver/", f"The URL host 'fileserver' only exists inside a network {SUFFIX}"),
         ("file:///etc/passwd", f"The URL has no valid host {SUFFIX}"),
+        ("http://10\u30020.0.1/", f"The URL host '10.0.0.1' is a private address {SUFFIX}"),
     ],
 )
 def test_reasons(url, reason):

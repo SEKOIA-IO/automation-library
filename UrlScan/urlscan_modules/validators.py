@@ -36,10 +36,13 @@ def internal_target_reason(url: str) -> str | None:
     if "\\" in parts.netloc:
         return f"The URL has a backslash in its host part, which parsers read differently, {SUFFIX}"
 
-    # Browsers map a host through IDNA: ideographic full stops become dots and soft hyphens or zero-width
-    # spaces are dropped. Do the same, so the host checked is the host that gets fetched.
+    # Browsers map a host through UTS46: ideographic full stops become dots and invisible characters are dropped.
+    # Python's idna codec is the older IDNA2003 and misses format characters added after Unicode 3.2, so drop
+    # those first. That way the host checked is the host that gets fetched.
     try:
-        host = unicodedata.normalize("NFKC", hostname or "").encode("idna").decode("ascii").lower().rstrip(".")
+        normalized = unicodedata.normalize("NFKC", hostname or "")
+        normalized = "".join(char for char in normalized if not _is_invisible(char))
+        host = normalized.encode("idna").decode("ascii").lower().rstrip(".")
     except UnicodeError:
         return f"The URL has no valid host {SUFFIX}"
     if not host:
@@ -55,8 +58,8 @@ def internal_target_reason(url: str) -> str | None:
                 return f"The URL host '{host}' is a {_kind(candidate)} address {SUFFIX}"
         return None
 
-    # The checks below are written against the host as urlsplit reads it, so a host
-    # that a browser style parser would decode differently is refused outright.
+    # The checks below are written against the normalized host, so a host that a browser
+    # style parser would percent-decode differently is refused outright.
     if "%" in host:
         return f"The URL host '{host}' is percent-encoded, which parsers read differently, {SUFFIX}"
 
@@ -70,6 +73,16 @@ def internal_target_reason(url: str) -> str | None:
         return f"The URL host '{host}' only exists inside a network {SUFFIX}"
 
     return None
+
+
+def _is_invisible(char: str) -> bool:
+    """True for format characters and variation selectors, which a browser drops from a host."""
+    return (
+        unicodedata.category(char) == "Cf"
+        or "\u180b" <= char <= "\u180f"
+        or "\ufe00" <= char <= "\ufe0f"
+        or ("\U000e0100" <= char <= "\U000e01ef")
+    )
 
 
 def _inet_aton_accepts(host: str) -> bool:
