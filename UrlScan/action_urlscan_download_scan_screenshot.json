@@ -1,0 +1,43 @@
+{
+  "uuid": "c8d61927-1351-4977-b48b-63d0cbaec42b",
+  "name": "Download scan screenshot",
+  "description": "Download the PNG screenshot of a finished urlscan.io scan as a file of the playbook run. The file can be downloaded from the playbook run and may show victim data. Fails when urlscan.io did not store the screenshot.",
+  "docker_parameters": "urlscan_download_scan_screenshot",
+  "slug": "download_scan_screenshot",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "scan_id": {
+        "type": "string",
+        "description": "UUID of a finished scan"
+      }
+    },
+    "required": [
+      "scan_id"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "screenshot_path": {
+        "type": "string",
+        "description": "Path of the PNG, relative to the playbook run storage: urlscan/<uuid>.png"
+      },
+      "screenshot_url": {
+        "type": "string",
+        "description": "Link to the PNG on urlscan.io"
+      },
+      "size": {
+        "type": "integer",
+        "description": "Size of the PNG in bytes"
+      }
+    },
+    "required": [
+      "screenshot_path",
+      "screenshot_url",
+      "size"
+    ]
+  }
+}
