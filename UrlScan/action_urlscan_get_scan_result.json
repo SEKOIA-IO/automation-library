@@ -1,0 +1,429 @@
+{
+  "uuid": "9e9c7da3-6134-4e05-9f9f-42119215d0ac",
+  "name": "Get scan result",
+  "description": "Return the summary of an existing urlscan.io scan: verdict, final page, contacted infrastructure, links and a ready-to-post Markdown comment.",
+  "docker_parameters": "urlscan_get_scan_result",
+  "slug": "get_scan_result",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "scan_id": {
+        "type": "string",
+        "description": "UUID of a finished scan"
+      }
+    },
+    "required": [
+      "scan_id"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "uuid": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Scan UUID"
+      },
+      "status": {
+        "type": "string",
+        "description": "Scan status, done for a finished scan"
+      },
+      "submitted_url": {
+        "type": "string",
+        "description": "URL scanned, normalised by urlscan.io"
+      },
+      "visibility": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "public, unlisted or private"
+      },
+      "scan_time": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Scan time, ISO 8601"
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "User tags"
+      },
+      "verdict": {
+        "type": "object",
+        "properties": {
+          "malicious": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Overall verdict"
+          },
+          "score": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Overall score"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Verdict categories, for example phishing"
+          },
+          "brands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Targeted brands"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Verdict tags"
+          },
+          "engines_malicious": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Engines flagging the URL"
+          },
+          "engines_total": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Engines consulted"
+          },
+          "community_votes_malicious": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Community malicious votes"
+          }
+        },
+        "description": "Verdict of the scan"
+      },
+      "page": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Final URL after redirects"
+          },
+          "domain": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Final domain"
+          },
+          "apex_domain": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Registered domain"
+          },
+          "ip": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Primary IP"
+          },
+          "ptr": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "PTR record of the primary IP"
+          },
+          "asn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ASN, for example AS13335"
+          },
+          "asn_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "AS name"
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "GeoIP country"
+          },
+          "city": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "GeoIP city"
+          },
+          "server": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "HTTP Server header"
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Page title"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "HTTP status"
+          },
+          "mime_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "MIME type"
+          },
+          "redirected": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Redirect kind, for example off-domain"
+          },
+          "domain_age_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Domain age at scan time, in days"
+          },
+          "tls_issuer": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "TLS certificate issuer"
+          },
+          "tls_valid_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "TLS certificate validity, in days"
+          }
+        },
+        "description": "Final page of the scan"
+      },
+      "brand": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Detected brand"
+      },
+      "contacted": {
+        "type": "object",
+        "properties": {
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Domains contacted"
+          },
+          "ips": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "IP addresses contacted"
+          },
+          "countries": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Countries contacted"
+          },
+          "asns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "ASNs contacted"
+          }
+        },
+        "description": "Infrastructure contacted by the page"
+      },
+      "stats": {
+        "type": "object",
+        "properties": {
+          "requests": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "HTTP requests"
+          },
+          "malicious": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Malicious requests"
+          },
+          "secure_percentage": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Share of HTTPS requests"
+          }
+        },
+        "description": "Request statistics"
+      },
+      "downloaded_files": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "filename": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "File name"
+            },
+            "sha256": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "SHA-256 of the file"
+            },
+            "size": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Size in bytes"
+            },
+            "mime_type": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "MIME type"
+            },
+            "mime_description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "MIME type description"
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "URL the file was downloaded from"
+            },
+            "state": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Download state"
+            }
+          },
+          "description": "A downloaded file"
+        },
+        "description": "Files downloaded by the page"
+      },
+      "report_url": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "urlscan.io report, opens without an account"
+      },
+      "result_api_url": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Raw JSON result"
+      },
+      "screenshot_available": {
+        "type": [
+          "boolean",
+          "null"
+        ],
+        "description": "True when urlscan.io stores the screenshot, false when it does not, null when not checked"
+      },
+      "screenshot_url": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Screenshot URL, null when the screenshot is not stored"
+      },
+      "dom_available": {
+        "type": [
+          "boolean",
+          "null"
+        ],
+        "description": "True when urlscan.io stores the DOM, false when it does not, null when not checked"
+      },
+      "dom_url": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "DOM URL, null when the DOM is not stored; opens only for urlscan.io team members"
+      },
+      "comment": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Ready-to-post Markdown comment"
+      }
+    },
+    "required": [
+      "status",
+      "submitted_url"
+    ]
+  }
+}
