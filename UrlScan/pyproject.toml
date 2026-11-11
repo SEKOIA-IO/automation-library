@@ -1,0 +1,55 @@
+[project]
+name = "automation-module-urlscan"
+version = "0.0"
+description = ""
+authors = []
+requires-python = ">=3.14,<4"
+dependencies = [
+    "sekoia-automation-sdk>=1.27.0,<2",
+    "urlscan-python==2026.8.18",
+    "tenacity>=9.0,<10",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "respx>=0.22,<1",
+]
+lint = [
+    "ruff>=0.14",
+    "mypy",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "lint"]
+
+[tool.ruff]
+line-length = 119
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]
+"test_end_to_end/*" = ["ARG"]
+
+[tool.mypy]
+python_version = "3.14"
+install_types = true
+non_interactive = true
+ignore_missing_imports = true
+show_column_numbers = true
+exclude = ["tests/", "test_end_to_end/"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--cache-clear -ra"
+# The end-to-end tests call the live urlscan.io API: run them explicitly with `pytest test_end_to_end`.
+testpaths = ["tests"]
+norecursedirs = ["test_end_to_end", ".*", "*.egg", "build", "dist", "venv"]
+
+[tool.coverage.run]
+omit = ["tests/*", "test_end_to_end/*", "main.py"]
