@@ -45,9 +45,12 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 ### Wave 4 second batch completed in this session
 - Trellix
 
+### Wave 4 third batch completed
+- CrowdStrike
+
 ### Remaining scope
-- Remaining modules to migrate: 83
-- Remaining planned effort: about 380.5 hours
+- Remaining modules to migrate: 82
+- Remaining planned effort: about 376 hours
 - Criticity scale: 1 (easiest) to 10 (hardest)
 
 ## Incremental Delivery Strategy
@@ -160,7 +163,7 @@ Estimated wave effort: 96h
 - Wiz
 - Zscaler
 
-Estimated wave effort: 108h total, 103.5h remaining
+Estimated wave effort: 108h total, 99h remaining
 
 ### Wave 5: Criticity 8 (estimated 6h each)
 - Azure
