@@ -49,9 +49,12 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 - CrowdStrike
 - SentinelOneDeepVisibility
 
+### Wave 6 first batch completed
+- AWS
+
 ### Remaining scope
-- Remaining modules to migrate: 82
-- Remaining planned effort: about 376 hours
+- Remaining modules to migrate: 81
+- Remaining planned effort: about 369 hours
 - Criticity scale: 1 (easiest) to 10 (hardest)
 
 ## Incremental Delivery Strategy
@@ -186,13 +189,13 @@ Estimated wave effort: 108h total, 99h remaining
 
 Estimated wave effort: 102h
 
-### Wave 6: Criticity 9 (estimated 7h each)
-- AWS
+### Wave 6: Criticity 9 (estimated 7h each) - In progress
+- AWS (completed)
 - Github
 - MicrosoftSentinel
 - Sekoia.io
 
-Estimated wave effort: 28h
+Estimated wave effort: 28h total, 21h remaining
 
 ## Suggested Batch Size Per Session
 - Small session: 2 modules from current wave.
