@@ -1084,4 +1084,4 @@ def test_reset_checkpoint(test_aws_users_asset_connector):
 
     assert test_aws_users_asset_connector.most_recent_date_seen is None
     assert test_aws_users_asset_connector.new_most_recent_date is None
-    assert test_aws_users_asset_connector.get_mapped_fields()
+    assert test_aws_users_asset_connector.get_mapped_fields() == {}

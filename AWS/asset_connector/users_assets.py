@@ -39,7 +39,12 @@ class AwsUser:
         enrichments: Optional list of UserEnrichmentObject instances
     """
 
-    def __init__(self, user: User, date: datetime, enrichments: Optional[List[UserEnrichmentObject]] = None) -> None:
+    def __init__(
+        self,
+        user: User,
+        date: datetime,
+        enrichments: Optional[List[UserEnrichmentObject]] = None,
+    ) -> None:
         """Initialize an AwsUser instance.
 
         Args:
@@ -65,15 +70,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
 
     def get_mapped_fields(self) -> Dict[str, str]:
         """Return the IAM -> OCSF dynamic field mapping used to fingerprint the user schema."""
-        return {
-            "CreateDate": "time",
-            "UserName": "user.name",
-            "Arn": "user.uid",
-            "GroupName": "user.groups[].name",
-            "PolicyName": "user.groups[].privileges[]",
-            "MFADevices": "user.has_mfa",
-            "UserId": "user.account.uid_alt",
-        }
+        return {}
 
     def client(self) -> boto3.client:
         """Create and return a configured AWS IAM client.
@@ -102,7 +99,10 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             BotoCoreError: If there's a low-level boto3 error
         """
         if not group_name:
-            self.log("Empty group name provided, returning False for admin status", level="warning")
+            self.log(
+                "Empty group name provided, returning False for admin status",
+                level="warning",
+            )
             return []
 
         policies = []
@@ -131,7 +131,9 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             BotoCoreError: If there's a low-level boto3 error
         """
         if not user_name:
-            self.log("Empty user name provided, returning empty groups list", level="warning")
+            self.log(
+                "Empty user name provided, returning empty groups list", level="warning"
+            )
             return []
 
         self.log(f"Fetching groups for user: {user_name}", level="debug")
@@ -150,14 +152,23 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                         uid=group.Arn or "",
                         privileges=self.group_privileges(group_name),
                     )
-                    self.log(f"Fetched group: {group_obj.name} for user: {user_name}", level="debug")
+                    self.log(
+                        f"Fetched group: {group_obj.name} for user: {user_name}",
+                        level="debug",
+                    )
                     groups.append(group_obj)
                 except Exception as e:
-                    self.log(f"Failed to process group for user {user_name}: {str(e)}", level="error")
+                    self.log(
+                        f"Failed to process group for user {user_name}: {str(e)}",
+                        level="error",
+                    )
                     self.log_exception(e)
                     continue
 
-        self.log(f"Successfully fetched {len(groups)} groups for user: {user_name}", level="debug")
+        self.log(
+            f"Successfully fetched {len(groups)} groups for user: {user_name}",
+            level="debug",
+        )
         return groups
 
     def _extract_organization_from_arn(self, arn: str) -> Optional[Organization]:
@@ -182,7 +193,10 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                         uid=account_id,
                     )
         except Exception as e:
-            self.log(f"Failed to extract organization from ARN {arn}: {str(e)}", level="warning")
+            self.log(
+                f"Failed to extract organization from ARN {arn}: {str(e)}",
+                level="warning",
+            )
             self.log_exception(e)
 
         return None
@@ -202,7 +216,10 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             BotoCoreError: If there's a low-level boto3 error
         """
         if not user_name:
-            self.log("Empty user name provided, returning False for MFA status", level="warning")
+            self.log(
+                "Empty user name provided, returning False for MFA status",
+                level="warning",
+            )
             return False
 
         self.log(f"Checking MFA status for user: {user_name}", level="debug")
@@ -234,7 +251,10 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             try:
                 date_filter = isoparse(self.most_recent_date_seen)
             except (ValueError, TypeError) as e:
-                self.log(f"Invalid date format in checkpoint: {self.most_recent_date_seen}", level="warning")
+                self.log(
+                    f"Invalid date format in checkpoint: {self.most_recent_date_seen}",
+                    level="warning",
+                )
                 self.log_exception(e)
 
         user_count = 0
@@ -250,8 +270,14 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                         users.append(aws_user)
                         user_count += 1
                 except Exception as e:
-                    user_name = raw_user.get("UserName", "unknown") if isinstance(raw_user, dict) else "unknown"
-                    self.log(f"Failed to process user {user_name}: {str(e)}", level="error")
+                    user_name = (
+                        raw_user.get("UserName", "unknown")
+                        if isinstance(raw_user, dict)
+                        else "unknown"
+                    )
+                    self.log(
+                        f"Failed to process user {user_name}: {str(e)}", level="error"
+                    )
                     self.log_exception(e)
                     continue
 
@@ -271,7 +297,9 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                     return True
         return False
 
-    def _extract_user_from_iam_user(self, user: AwsApiUser, date_filter: Optional[datetime]) -> Optional[AwsUser]:
+    def _extract_user_from_iam_user(
+        self, user: AwsApiUser, date_filter: Optional[datetime]
+    ) -> Optional[AwsUser]:
         """Extract user information from an AWS IAM user.
 
         Args:
@@ -293,7 +321,9 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             # Get creation time
             created_time = user.CreateDate
             if not created_time:
-                self.log(f"User {user_name} has no creation time, skipping", level="warning")
+                self.log(
+                    f"User {user_name} has no creation time, skipping", level="warning"
+                )
                 return None
 
             # Ensure timezone is UTC
@@ -319,7 +349,10 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             if user.PasswordLastUsed:
                 enrichments.append(
                     UserEnrichmentObject(
-                        name="aws_iam", data=UserDataObject(last_logon=user.PasswordLastUsed.isoformat())
+                        name="aws_iam",
+                        data=UserDataObject(
+                            last_logon=user.PasswordLastUsed.isoformat()
+                        ),
                     )
                 )
 
@@ -327,13 +360,19 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             try:
                 groups = self.get_groups_for_user(user_name)
             except Exception as e:
-                self.log(f"Failed to fetch groups for user {user_name}: {str(e)}", level="warning")
+                self.log(
+                    f"Failed to fetch groups for user {user_name}: {str(e)}",
+                    level="warning",
+                )
                 groups = []
 
             try:
                 has_mfa = self.get_mfa_status_for_user(user_name)
             except Exception as e:
-                self.log(f"Failed to check MFA status for user {user_name}: {str(e)}", level="warning")
+                self.log(
+                    f"Failed to check MFA status for user {user_name}: {str(e)}",
+                    level="warning",
+                )
                 has_mfa = False
 
             # Extract organization from ARN
@@ -358,11 +397,18 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                 user_obj.type = UserTypeStr.USER
 
             self.log(f"Extracted user: {user_obj.name} ({user_arn})", level="debug")
-            return AwsUser(user=user_obj, date=created_time, enrichments=enrichments if enrichments else None)
+            return AwsUser(
+                user=user_obj,
+                date=created_time,
+                enrichments=enrichments if enrichments else None,
+            )
 
         except Exception as e:
             user_name = user.UserName or "unknown"
-            self.log(f"Error extracting user from IAM user {user_name}: {str(e)}", level="error")
+            self.log(
+                f"Error extracting user from IAM user {user_name}: {str(e)}",
+                level="error",
+            )
             self.log_exception(e)
             return None
 
@@ -384,7 +430,9 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                 for aws_user in aws_users:
                     try:
                         # Create product and metadata
-                        product = Product(name=self.PRODUCT_NAME, version=self.PRODUCT_VERSION)
+                        product = Product(
+                            name=self.PRODUCT_NAME, version=self.PRODUCT_VERSION
+                        )
                         metadata = Metadata(product=product, version=self.OCSF_VERSION)
 
                         # Create OCSF user inventory event
@@ -407,13 +455,19 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                         yield user_ocsf
 
                     except Exception as e:
-                        self.log(f"Failed to create OCSF event for user {aws_user.user.uid}: {str(e)}", level="error")
+                        self.log(
+                            f"Failed to create OCSF event for user {aws_user.user.uid}: {str(e)}",
+                            level="error",
+                        )
                         self.log_exception(e)
                         continue
 
             # Update checkpoint with the new date
             self.new_most_recent_date = new_most_recent_date
-            self.log(f"Asset collection completed. Generated {asset_count} user inventory events", level="info")
+            self.log(
+                f"Asset collection completed. Generated {asset_count} user inventory events",
+                level="info",
+            )
 
         except Exception as e:
             self.log(f"Error during asset collection: {str(e)}", level="error")
