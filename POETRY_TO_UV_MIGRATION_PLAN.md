@@ -45,7 +45,8 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 ### Wave 4 second batch completed in this session
 - Trellix
 
-### Wave 4 third batch completed in this session
+### Wave 4 third batch completed
+- CrowdStrike
 - SentinelOneDeepVisibility
 
 ### Remaining scope
