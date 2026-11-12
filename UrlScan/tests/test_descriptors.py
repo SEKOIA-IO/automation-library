@@ -9,12 +9,12 @@ from urlscan_modules.formatters import empty_scan_summary
 MODULE_DIR = Path(__file__).parent.parent
 
 ACTIONS = {
-    "scan_url": "action_urlscan_scan_url.json",
-    "get_scan_result": "action_urlscan_get_scan_result.json",
-    "download_scan_screenshot": "action_urlscan_download_scan_screenshot.json",
-    "search": "action_urlscan_search.json",
+    "scan_url": "action_scan_url.json",
+    "get_scan_result": "action_get_scan_result.json",
+    "download_scan_screenshot": "action_download_scan_screenshot.json",
+    "search": "action_search.json",
 }
-SUMMARY_ACTIONS = ["action_urlscan_scan_url.json", "action_urlscan_get_scan_result.json"]
+SUMMARY_ACTIONS = ["action_scan_url.json", "action_get_scan_result.json"]
 
 
 def load(name: str) -> dict[str, Any]:

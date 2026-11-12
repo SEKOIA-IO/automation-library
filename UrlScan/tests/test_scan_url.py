@@ -5,7 +5,7 @@ import pytest
 from httpx import Response
 
 from tests.payloads import BASE, PNG, SCAN_ID, result_payload, submission_payload
-from urlscan_modules.scan_url import ScanUrl
+from urlscan_modules.action.action_scan_url import ScanUrl
 
 URL = "https://example.com"
 HINT = 'retrieve it later with "Get scan result"'

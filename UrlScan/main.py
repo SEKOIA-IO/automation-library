@@ -1,9 +1,9 @@
 from urlscan_modules import UrlScanModule
 from urlscan_modules.account_validator import UrlScanAccountValidator
-from urlscan_modules.download_scan_screenshot import DownloadScanScreenshot
-from urlscan_modules.get_scan_result import GetScanResult
-from urlscan_modules.scan_url import ScanUrl
-from urlscan_modules.search import Search
+from urlscan_modules.action.action_download_scan_screenshot import DownloadScanScreenshot
+from urlscan_modules.action.action_get_scan_result import GetScanResult
+from urlscan_modules.action.action_scan_url import ScanUrl
+from urlscan_modules.action.action_search import Search
 
 if __name__ == "__main__":
     module = UrlScanModule()
