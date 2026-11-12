@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-12 - 1.2.0
+
+### Changed
+
+- Migrated module from Poetry to uv (Python 3.14, ruff, mypy, mise)
+- Upgrade dependencies
+- Migrate configuration to pydantic v2
+
 ## 2026-05-04 - 1.1.9
 
 ### Fixed
