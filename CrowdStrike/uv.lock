@@ -401,7 +401,7 @@ lint = [
 
 [[package]]
 name = "aws-automation"
-version = "0.0"
+version = "1.39.0"
 source = { directory = "../AWS" }
 dependencies = [
     { name = "aiobotocore" },
@@ -421,19 +421,37 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiobotocore", specifier = ">=3.7.0,<4.0.0" },
-    { name = "aiofiles", specifier = ">=23.1.0,<24.0.0" },
-    { name = "aiolimiter", specifier = ">=1.2.1,<2.0.0" },
-    { name = "async-lru", specifier = ">=2.3.0,<3.0.0" },
+    { name = "aiobotocore", specifier = ">=3.7.0,<4" },
+    { name = "aiofiles", specifier = ">=23.1.0,<24" },
+    { name = "aiolimiter", specifier = ">=1.2.1,<2" },
+    { name = "async-lru", specifier = ">=2.3.0,<3" },
     { name = "boto3", specifier = ">=1.43.0" },
     { name = "botocore", specifier = ">=1.43.0" },
-    { name = "ijson", specifier = ">=3.5.1,<4.0.0" },
-    { name = "loguru", specifier = ">=0.7.3,<0.8.0" },
-    { name = "orjson", specifier = ">=3.11.9,<4.0.0" },
-    { name = "pandas", specifier = ">=3.0.3,<4.0.0" },
-    { name = "pyarrow", specifier = ">=24.0.0,<25.0.0" },
+    { name = "ijson", specifier = ">=3.5.1,<4" },
+    { name = "loguru", specifier = ">=0.7.3,<0.8" },
+    { name = "orjson", specifier = ">=3.11.9,<4" },
+    { name = "pandas", specifier = ">=3.0.3,<4" },
+    { name = "pyarrow", specifier = ">=24.0.0,<25" },
     { name = "pytz", specifier = ">=2024.1" },
-    { name = "sekoia-automation-sdk", specifier = ">=1.23.1,<2.0.0" },
+    { name = "sekoia-automation-sdk", specifier = ">=1.27.0,<2" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "aioresponses" },
+    { name = "faker" },
+    { name = "mypy", specifier = ">=2.4.0" },
+    { name = "pytest", specifier = ">=9.0.3,<10" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov", specifier = ">=7.0.0,<8" },
+    { name = "pytest-env" },
+    { name = "pytest-xdist" },
+    { name = "requests" },
+    { name = "requests-mock", specifier = ">=1.12.1,<2" },
+    { name = "ruff", specifier = ">=0.14" },
+    { name = "types-aiofiles" },
+    { name = "types-python-dateutil" },
+    { name = "types-pytz" },
 ]
 
 [[package]]
