@@ -1,9 +1,13 @@
 """Tests related to AwsS3ParquetRecordsTrigger."""
 
+import gzip
 import io
+import tempfile
+from contextlib import aclosing
 from os import path
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import aiofiles
 import orjson
@@ -19,7 +23,7 @@ from connectors.s3.trigger_s3_flowlogs_parquet import (
     AwsS3FlowLogsParquetRecordsTrigger,
     AwsS3FlowLogsParquetConfiguration,
 )
-from aws_helpers.utils import check_all_ips_are_private
+from aws_helpers.utils import async_gzip_open, check_all_ips_are_private
 from tests.helpers import async_list, async_temporary_file
 
 
@@ -299,3 +303,26 @@ async def test_parse_content_rejects_invalid_parquet(
     async with async_temporary_file(b"not a parquet file") as stream:
         with pytest.raises(pyarrow.ArrowInvalid):
             await async_list(connector._parse_content(stream))
+
+
+@pytest.mark.asyncio
+async def test_parse_content_closes_the_decompressed_spool_when_the_consumer_stops_early(
+    connector: AwsS3FlowLogsParquetRecordsTrigger,
+):
+    table = pyarrow.table({"srcaddr": ["8.8.8.8"] * 3_000, "dstaddr": ["8.8.4.4"] * 3_000})
+    parquet = io.BytesIO()
+    pyarrow.parquet.write_table(table, parquet)
+    stream = await async_gzip_open(io.BytesIO(gzip.compress(parquet.getvalue())))
+
+    spools = []
+    original_spool = tempfile.SpooledTemporaryFile
+
+    def spy_spool(*args, **kwargs):
+        spools.append(original_spool(*args, **kwargs))
+        return spools[-1]
+
+    with patch("aws_helpers.utils.stream.tempfile.SpooledTemporaryFile", side_effect=spy_spool):
+        async with aclosing(connector._parse_content(stream)) as events:
+            await anext(events)
+
+    assert len(spools) == 1 and spools[0].closed
