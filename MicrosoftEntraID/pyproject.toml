@@ -32,9 +32,9 @@ exclude = ["tests/*"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-azure-identity = "^1.23.1"
+azure-identity = "^1.25.3"
 pydantic = "2.10"
-msgraph-sdk = "^1.45.0"
+msgraph-sdk = "^1.62.0"
 cachetools = "^6.2.0"
 loguru = "^0.7.3"
 httpx = "0.28.1"
