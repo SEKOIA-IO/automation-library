@@ -227,3 +227,38 @@ def test_acknowledge_messages(trigger, message1):
         assert len(ack_requests) == 2  # 1 for each incident
         assert trigger.push_events_to_intakes.call_count == 1
         assert mock_time.sleep.call_count == 1
+
+
+URL_INCIDENTS = "https://example.com/api/v1/incidents/unacknowledged"
+BAD_GATEWAY = {"status_code": 502, "text": "<html><body>Bad Gateway</body></html>"}
+
+
+def test_next_batch_should_handle_5xx_errors(trigger):
+    with (
+        patch("thinkst_canary_modules.connector_thinkst_canary_alerts.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_requests.get(URL_INCIDENTS, **BAD_GATEWAY)
+        mock_time.time.side_effect = [0.0, 1.0]
+
+        trigger.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 0
+        trigger.log.assert_any_call(level="error", message="failed to fetch events")
+        assert mock_time.sleep.call_count == 1  # the polling delay is still respected
+
+
+def test_next_batch_should_recover_after_5xx_error(trigger, message1):
+    with (
+        patch("thinkst_canary_modules.connector_thinkst_canary_alerts.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_requests.get(URL_INCIDENTS, [BAD_GATEWAY, {"status_code": 200, "json": message1}])
+        mock_time.time.side_effect = [0.0, 1.0, 60.0, 61.0]
+
+        trigger.next_batch()
+        assert trigger.push_events_to_intakes.call_count == 0
+
+        trigger.next_batch()
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert mock_requests.call_count == 2
