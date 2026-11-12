@@ -6,7 +6,7 @@ to OCSF User Inventory format for asset management and security monitoring.
 
 from collections.abc import Generator
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import boto3
 import pytz
@@ -62,6 +62,18 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
     PRODUCT_NAME: str = "AWS IAM"
     OCSF_VERSION: str = "1.6.0"
     PRODUCT_VERSION: str = "N/A"
+
+    def get_mapped_fields(self) -> Dict[str, str]:
+        """Return the IAM -> OCSF dynamic field mapping used to fingerprint the user schema."""
+        return {
+            "CreateDate": "time",
+            "UserName": "user.name",
+            "Arn": "user.uid",
+            "GroupName": "user.groups[].name",
+            "PolicyName": "user.groups[].privileges[]",
+            "MFADevices": "user.has_mfa",
+            "UserId": "user.account.uid_alt",
+        }
 
     def client(self) -> boto3.client:
         """Create and return a configured AWS IAM client.

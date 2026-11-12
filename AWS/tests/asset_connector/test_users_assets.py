@@ -1073,3 +1073,15 @@ def test_get_assets_with_exception(test_aws_users_asset_connector):
         # Verify that the method handled the error gracefully and continued processing
         test_aws_users_asset_connector.get_groups_for_user.assert_called_once_with("testuser")
         test_aws_users_asset_connector.get_mfa_status_for_user.assert_called_once_with("testuser")
+
+
+def test_reset_checkpoint(test_aws_users_asset_connector):
+    test_aws_users_asset_connector.new_most_recent_date = "2023-10-01T12:00:00+00:00"
+    test_aws_users_asset_connector.update_checkpoint()
+    assert test_aws_users_asset_connector.most_recent_date_seen is not None
+
+    test_aws_users_asset_connector.reset_checkpoint()
+
+    assert test_aws_users_asset_connector.most_recent_date_seen is None
+    assert test_aws_users_asset_connector.new_most_recent_date is None
+    assert test_aws_users_asset_connector.get_mapped_fields()

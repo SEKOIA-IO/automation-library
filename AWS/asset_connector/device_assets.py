@@ -61,6 +61,34 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
     OCSF_VERSION: str = "1.6.0"
     PRODUCT_VERSION: str = "N/A"
 
+    def get_mapped_fields(self) -> Dict[str, str]:
+        """Return the EC2 -> OCSF dynamic field mapping used to fingerprint the device schema."""
+        return {
+            "LaunchTime": "time",
+            "InstanceId": "device.uid",
+            "PublicDnsName || PrivateDnsName || InstanceId": "device.hostname",
+            "Tags[Key='Name'].Value": "device.name",
+            "PlatformDetails": "device.os.name",
+            "NetworkInterfaces[].NetworkInterfaceId": "device.network_interfaces[].uid",
+            "NetworkInterfaces[].Description": "device.network_interfaces[].name",
+            "NetworkInterfaces[].MacAddress": "device.network_interfaces[].mac",
+            "NetworkInterfaces[].PrivateIpAddress": "device.network_interfaces[].ip",
+            "NetworkInterfaces[].PrivateDnsName": "device.network_interfaces[].hostname",
+            "SecurityGroups[].GroupId": "device.groups[].uid",
+            "SecurityGroups[].GroupName": "device.groups[].name",
+            "PublicIpAddress || PrivateIpAddress": "device.ip",
+            "Placement.AvailabilityZone": "device.region",
+            "SubnetId": "device.subnet",
+            "VpcId": "device.domain",
+            "Hypervisor": "device.hypervisor",
+            "InstanceType": "device.model",
+            "BlockDeviceMappings[0].Ebs.AttachTime || LaunchTime": "device.created_time",
+            "IamInstanceProfile": "device.is_managed",
+            "Tags[Key='aws:autoscaling:groupName'].Value": "device.autoscale_uid",
+            "ImageId + State.Name": "device.desc",
+            "OwnerId": "device.org.uid",
+        }
+
     def client(self) -> boto3.client:
         """Create and return a configured AWS EC2 client.
 
