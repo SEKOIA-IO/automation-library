@@ -1,8 +1,8 @@
 import pytest
 
 from tests.payloads import BASE, search_payload
+from urlscan_modules.action.action_search import Search
 from urlscan_modules.formatters import build_indicator_query
-from urlscan_modules.search import Search
 
 FIRST_ID = "00000000-0000-0000-0000-000000000000"
 
