@@ -2,7 +2,7 @@ import pytest
 from httpx import Response
 
 from tests.payloads import BASE, PNG, SCAN_ID, result_payload
-from urlscan_modules.get_scan_result import GetScanResult
+from urlscan_modules.action.action_get_scan_result import GetScanResult
 
 START = 1_800_000_000.0
 

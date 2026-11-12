@@ -1,7 +1,7 @@
 import pytest
 
 from tests.payloads import BASE, PNG, SCAN_ID
-from urlscan_modules.download_scan_screenshot import DownloadScanScreenshot
+from urlscan_modules.action.action_download_scan_screenshot import DownloadScanScreenshot
 
 
 @pytest.fixture

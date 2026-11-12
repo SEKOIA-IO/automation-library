@@ -5,9 +5,9 @@ import httpx
 from urlscan import APIError, Client
 from urlscan.error import RateLimitRemainingError
 
+from urlscan_modules.action.action_get_scan_result import fetch_scan_summary
 from urlscan_modules.base import ActionError, UrlScanAction, describe_error
 from urlscan_modules.formatters import blacklisted_summary, submitted_summary
-from urlscan_modules.get_scan_result import fetch_scan_summary
 from urlscan_modules.validators import internal_target_reason
 
 DEFAULT_TIMEOUT = 120
