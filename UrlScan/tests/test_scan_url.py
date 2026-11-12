@@ -244,3 +244,13 @@ def test_unexpected_error_body_after_submission(action, routes):
         f"Scan {SCAN_ID} was submitted but its result could not be retrieved "
         f"(urlscan.io returned an unexpected error response); {HINT}"
     )
+
+
+def test_unreachable_after_submission(action, routes):
+    routes["result"].mock(side_effect=httpx.ConnectError("boom"))
+
+    assert action.run({"url": URL}) is None
+    assert action.error_message == (
+        f"Scan {SCAN_ID} was submitted but its result could not be retrieved "
+        f"(urlscan.io could not be reached: ConnectError); {HINT}"
+    )

@@ -114,6 +114,13 @@ def test_deleted(action, routes):
     assert action.error_message == f"Scan {SCAN_ID} has been deleted"
 
 
+def test_other_api_error(action, routes):
+    routes["result"].respond(403, json={"message": "Forbidden"})
+
+    assert action.run({"scan_id": SCAN_ID}) is None
+    assert action.error_message == "urlscan.io API error 403: Forbidden"
+
+
 def test_invalid_scan_id(action, api):
     assert action.run({"scan_id": "../x"}) is None
     assert action.error_message == "'../x' is not a valid scan UUID"
