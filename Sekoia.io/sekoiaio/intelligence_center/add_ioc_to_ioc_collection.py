@@ -96,7 +96,7 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
         ioc_collection_id = arguments.get("ioc_collection_id")
         indicator_type = arguments.get("indicator_type")
         valid_for = int(arguments.get("valid_for", 0))
-        comment = arguments.get("comment")
+        comment = arguments.get("comment", "")
 
         indicators_was_provided = "indicators" in arguments
         single_indicator_was_provided = "indicator" in arguments and single_indicator is not None
