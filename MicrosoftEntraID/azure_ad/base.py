@@ -6,7 +6,7 @@ import sentry_sdk
 from azure.identity.aio import ClientSecretCredential  # async credentials only
 from kiota_authentication_azure.azure_identity_authentication_provider import AzureIdentityAuthenticationProvider
 from msgraph import GraphRequestAdapter, GraphServiceClient
-from pydantic.v1 import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, model_validator
 from sekoia_automation.action import Action
 from sekoia_automation.module import Module
 
@@ -14,14 +14,14 @@ from sekoia_automation.module import Module
 class AzureADConfiguration(BaseModel):
     tenant_id: str = Field(..., description="ID of the Azure AD tenant")
     username: str | None = Field(default=None, description="")
-    password: str | None = Field(default=None, description="", secret=True)
+    password: str | None = Field(default=None, description="", json_schema_extra={"secret": True})
     client_id: str = Field(
         ...,
         description="Client ID. An application needs to be created in the Azure Portal and assigned relevent permissions. Its Client ID should then be used in this configuration.",  # noqa: E501
     )
     client_secret: str = Field(
         description="Client Secret associated with the registered application. Admin Consent has to be granted to the application for it to work.",  # noqa: E501
-        secret=True,
+        json_schema_extra={"secret": True},
     )
 
 
@@ -81,7 +81,8 @@ class SingleUserArguments(BaseModel):
 
 
 class RequiredSingleUserArguments(SingleUserArguments):
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def validate_id_or_userPrincipalName(cls, values):
         if not (values.get("id") or values.get("userPrincipalName")):
             raise ValueError("'id' or 'userPrincipalName' should be specified")
@@ -94,7 +95,8 @@ class RequiredTwoUserArguments(SingleUserArguments):
         description="New password required to reset the old one of course.",
     )
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def validate_two_arguments(cls, values):
         if not ((values.get("id") or values.get("userPrincipalName")) and values.get("userNewPassword")):
             raise ValueError("'userPrincipalName' and ('id' or 'userPrincipalName') should be specified")
@@ -118,7 +120,8 @@ class RequiredTwoUserArgumentsV2(SingleUserArguments):
         description="Force change password next sign in with Mfa",
     )
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def validate_values(cls, values):
         user_principal_name = values.get("id") or values.get("userPrincipalName")
         if not user_principal_name:
