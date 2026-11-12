@@ -47,6 +47,7 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 
 ### Wave 4 third batch completed
 - CrowdStrike
+- SentinelOneDeepVisibility
 
 ### Remaining scope
 - Remaining modules to migrate: 82
@@ -155,7 +156,6 @@ Estimated wave effort: 96h
 - MicrosoftWindowsServer
 - Proofpoint
 - Salesforce
-- SentinelOneDeepVisibility
 - SkyhighSecurity
 - Sophos
 - Tenable
