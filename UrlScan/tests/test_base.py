@@ -174,6 +174,11 @@ def test_unexpected_exception_propagates(action):
         action.run({"raise": RuntimeError("bug")})
 
 
+def test_perform_must_be_implemented(module, tmp_path):
+    with pytest.raises(NotImplementedError):
+        UrlScanAction(module=module, data_path=tmp_path).run({})
+
+
 def test_unknown_error_description():
     assert describe_error(ValueError("x")) == "urlscan.io error: ValueError"
 

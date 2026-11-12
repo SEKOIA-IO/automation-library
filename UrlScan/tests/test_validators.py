@@ -46,6 +46,8 @@ def test_public_target_accepted(url):
         ("http://127.1/", f"The URL host '127.1' is an IP address written in an unusual form {SUFFIX}"),
         ("http://fileserver/", f"The URL host 'fileserver' only exists inside a network {SUFFIX}"),
         ("file:///etc/passwd", f"The URL has no valid host {SUFFIX}"),
+        ("http://[::1/", f"The URL has no valid host {SUFFIX}"),
+        (f"http://{'a' * 64}.example/", f"The URL has no valid host {SUFFIX}"),
         ("http://10\u30020.0.1/", f"The URL host '10.0.0.1' is a private address {SUFFIX}"),
     ],
 )
