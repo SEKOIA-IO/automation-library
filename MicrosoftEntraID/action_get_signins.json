@@ -9,7 +9,7 @@
     "properties": {
       "id": {
         "title": "Id",
-        "description": "ID of the user. id or userPrincipalName should be specified.",
+        "description": "ID of the user. id should be specified.",
         "type": "string"
       }
     }
