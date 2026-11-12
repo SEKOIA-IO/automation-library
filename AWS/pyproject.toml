@@ -1,5 +1,9 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "automation-module-aws"
+name = "aws-automation"
 version = "1.39.0"
 description = ""
 authors = []
@@ -38,8 +42,8 @@ dev = [
 	"types-pytz",
 ]
 
-[tool.uv]
-package = false
+[tool.setuptools.packages.find]
+include = ["connectors*", "aws_helpers*", "asset_connector*"]
 
 [tool.ruff]
 line-length = 119
@@ -64,7 +68,7 @@ allow_untyped_decorators = true
 warn_return_any = true
 install_types = true
 non_interactive = true
-exclude = ["tests/"]
+exclude = ["tests/", "build/"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
