@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-12 - 2.10.30
+
+### Fixed
+
+- Clarify that Get SignIns requires a user ID in the Id field.
+- Restore compatibility of action argument validation with the SDK's Pydantic v1 models.
+
 ## 2026-08-25 - 2.10.29
 
 ### Changed

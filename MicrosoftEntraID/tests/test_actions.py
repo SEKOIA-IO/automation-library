@@ -8,7 +8,7 @@ from kiota_abstractions.base_request_configuration import RequestConfiguration
 from kiota_abstractions.request_adapter import RequestAdapter
 from msgraph import GraphServiceClient
 
-from azure_ad.base import AzureADModule, MicrosoftGraphAction
+from azure_ad.base import AzureADConfiguration, AzureADModule, MicrosoftGraphAction
 from azure_ad.delete_app import DeleteApplicationAction
 from azure_ad.get_sign_ins import GetSignInsAction, RevokeSignInsSessionsAction
 from azure_ad.get_user_authentication_methods import GetUserAuthenticationMethodsAction
@@ -25,13 +25,13 @@ def configured_action(action: Type[MicrosoftGraphAction]):
     module = AzureADModule()
     a = action(module)
 
-    a.module.configuration = {
-        "tenant_id": "azefazefazegazetazeytazeyaze",
-        "client_id": "e139c076-122f-4c2e-9d0d-azefazegazeg",
-        "client_secret": "client_secret",
-        "username": "username",
-        "password": "password",
-    }
+    a.module.configuration = AzureADConfiguration(
+        tenant_id="azefazefazegazetazeytazeyaze",
+        client_id="e139c076-122f-4c2e-9d0d-azefazegazeg",
+        client_secret="client_secret",
+        username="username",
+        password="password",
+    )
 
     return a
 
@@ -465,9 +465,12 @@ async def test_get_signins():
 
     async_mock = AsyncMock(return_value=response)
     with patch("azure_ad.get_sign_ins.GetSignInsAction.query_get_user_signin", side_effect=async_mock):
-        results = await action.run({"userPrincipalName": "test@test.test"})
+        results = await action.run({"id": "b7873f1b-547b-4605-ad9e-abc76e92f902"})
 
         assert results == value_expected
+        async_mock.assert_awaited_once()
+        request_configuration = async_mock.call_args.args[0]
+        assert request_configuration.query_parameters.filter == "userId eq 'b7873f1b-547b-4605-ad9e-abc76e92f902'"
 
 
 @pytest.mark.asyncio
