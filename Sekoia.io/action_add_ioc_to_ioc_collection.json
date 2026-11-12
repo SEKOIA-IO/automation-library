@@ -30,6 +30,10 @@
         "type": "integer",
         "description": "Validity period in days for the created indicators.",
         "minimum": 1
+      },
+      "comment": {
+        "type": "string",
+        "description": "Comment added with the indicator(s)"
       }
     },
     "oneOf": [
