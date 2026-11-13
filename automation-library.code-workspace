@@ -131,6 +131,10 @@
 		{
 			"name": "Nextron Valhalla",
 			"path": "Nextron Valhalla"
+		},
+		{
+			"name": "UrlScan",
+			"path": "UrlScan"
 		}
 	],
 	"settings": {

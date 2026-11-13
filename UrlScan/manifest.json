@@ -1,0 +1,36 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "urlscan.io",
+    "type": "object",
+    "properties": {
+      "api_key": {
+        "title": "API key",
+        "description": "urlscan.io API key. A team API key is recommended: scans submitted with it are visible to every team member",
+        "type": "string"
+      },
+      "base_url": {
+        "title": "Base URL",
+        "description": "Base URL of the urlscan.io API",
+        "type": "string",
+        "format": "uri",
+        "default": "https://urlscan.io"
+      }
+    },
+    "required": [
+      "api_key"
+    ],
+    "secrets": [
+      "api_key"
+    ]
+  },
+  "description": "urlscan.io is a sandbox for the web. It visits submitted URLs in an automated browser, records the domains, IPs, requests and files involved, takes a screenshot, gives a verdict and indexes every scan for search.",
+  "name": "urlscan.io",
+  "uuid": "7b92dd21-ceab-4450-a3bc-99d1669f2e18",
+  "slug": "urlscan",
+  "version": "1.0.0",
+  "categories": [
+    "Threat Intelligence"
+  ],
+  "supports_validation": true
+}
