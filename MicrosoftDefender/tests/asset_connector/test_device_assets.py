@@ -849,3 +849,15 @@ class TestRetryAfterFailedCycle:
 
         assert assets == []
         fetch_machines.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_reset_checkpoint(connector):
+    connector._latest_time_raw = "2024-12-01T10:00:00Z"
+    await connector.update_checkpoint()
+    assert connector.most_recent_date_seen == "2024-12-01T10:00:00Z"
+
+    await connector.reset_checkpoint()
+
+    assert connector._latest_time_raw is None
+    assert connector.most_recent_date_seen is None

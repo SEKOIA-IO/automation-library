@@ -1,6 +1,6 @@
 import pytest
 
-from easyvista.asset_connector.hostname import split_hostname
+from easyvista_modules.asset_connector.hostname import split_hostname
 
 
 @pytest.mark.parametrize(

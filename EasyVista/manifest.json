@@ -1,57 +1,66 @@
 {
+  "name": "EasyVista Service Manager",
+  "slug": "easyvista-service-manager",
+  "uuid": "090027a0-89e0-4629-9792-156e1d527971",
+  "version": "1.1.0",
+  "categories": [
+    "Collaboration Tools"
+  ],
+  "description": "Manage EasyVista Service Manager incidents, requests, documents and workflow actions, and collect its device inventory.",
+  "supports_validation": true,
   "configuration": {
-    "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "base_url": {
-        "description": "Protocol and host of the EasyVista Service Manager server, without path (e.g. https://company.easyvista.com)",
+        "description": "HTTPS protocol and host of the EasyVista server, without a path",
+        "title": "Base Url",
         "type": "string",
         "format": "uri"
       },
       "tenant_id": {
-        "description": "EasyVista account number used in the API URL (e.g. 50004)",
-        "type": "string"
+        "description": "Non-empty EasyVista account number, including any leading zeros",
+        "title": "Tenant Id",
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
       },
       "use_token": {
-        "description": "Authenticate with an access token (Bearer); otherwise with the login and password of a REST API user (Basic)",
+        "default": true,
+        "title": "Use Token",
         "type": "boolean",
-        "default": true
+        "description": "Use access token (Bearer) authentication, recommended; false: Basic authentication"
       },
       "username": {
-        "description": "Login of the REST API user. Required when use_token is false",
-        "type": "string"
+        "title": "Username",
+        "type": "string",
+        "description": "REST API user login; required when use_token is false"
       },
       "password": {
-        "description": "Password of the REST API user. Required when use_token is false",
-        "type": "string"
+        "title": "Password",
+        "type": "string",
+        "description": "REST API user password; required when use_token is false"
       },
       "token": {
-        "description": "Access token of the EasyVista Service Manager REST API. Required when use_token is true",
-        "type": "string"
+        "title": "Token",
+        "type": "string",
+        "description": "EasyVista access token; required when use_token is true"
       },
       "verify_ssl": {
-        "description": "Verify the TLS certificate of the server",
+        "default": true,
+        "title": "Verify Ssl",
         "type": "boolean",
-        "default": true
+        "description": "Verify the server TLS certificate"
       }
     },
     "required": [
       "base_url",
       "tenant_id"
     ],
-    "title": "Arguments",
+    "title": "EasyVistaConfiguration",
     "type": "object",
+    "$schema": "http://json-schema.org/draft-07/schema#",
     "secrets": [
       "password",
       "token"
     ]
-  },
-  "description": "EasyVista Service Manager is an IT service management (ITSM) platform that manages the IT assets of an organization.",
-  "name": "EasyVista Service Manager",
-  "uuid": "c0d06574-ee36-448b-bfd7-f1dd962f01e8",
-  "slug": "easyvista-service-manager",
-  "version": "1.0.0",
-  "categories": [
-    "Collaboration Tools"
-  ],
-  "supports_validation": true
+  }
 }

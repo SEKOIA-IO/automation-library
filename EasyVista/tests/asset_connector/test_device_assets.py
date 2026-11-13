@@ -2,10 +2,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 from sekoia_automation.asset_connector.models.ocsf.device import DeviceTypeId
-from sekoia_automation.module import Module
 
-from easyvista.asset_connector.device_assets import ASSET_FIELDS, KNOWN_DEVICES_KEY, EasyVistaDeviceAssetConnector
-from easyvista.asset_connector.models import EasyVistaAsset
+from easyvista_modules import EasyVistaModule
+from easyvista_modules.asset_connector.device_assets import (
+    ASSET_FIELDS,
+    KNOWN_DEVICES_KEY,
+    EasyVistaDeviceAssetConnector,
+)
+from easyvista_modules.asset_connector.models import EasyVistaAsset
 
 API_URL = "https://company.easyvista.com/api/v1/50004/assets"
 
@@ -58,7 +62,7 @@ def page(records, next_offset=None):
 
 @pytest.fixture
 def connector(tmp_path):
-    module = Module()
+    module = EasyVistaModule()
     module.configuration = {
         "base_url": "https://company.easyvista.com/",
         "tenant_id": "50004",

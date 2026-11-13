@@ -1,25 +1,34 @@
-FROM python:3.11
+FROM python:3.14
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y git nano
 
-RUN pip install poetry
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# To retrieve the AWS package locally 
+# To retrieve the AWS package locally
 RUN git clone https://github.com/SEKOIA-IO/automation-library
 
 WORKDIR /app/automation-library/build/
 
+# Install dependencies (the AWS package is resolved from ../AWS)
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+
+# Make the project virtual environment the default interpreter
+ENV PATH="/app/automation-library/build/.venv/bin:$PATH"
+
 COPY . .
 
-# Install dependencies
-RUN poetry config virtualenvs.create false && poetry install --only main
-
-# Clean /tmp from poetry installations
-RUN rm -rf /tmp/*
-
 RUN useradd -ms /bin/bash sekoiaio-runtime
+
+# The sekoia_automation SDK hardcodes writes to /tmp/tls.
+# Since the K8s environment enforces a read-only root filesystem,
+# we replace /tmp with a symlink to /dev/shm (which K8s always mounts as a writable tmpfs).
+# This transparently redirects all hardcoded /tmp writes into memory.
+RUN rm -rf /tmp && ln -s /dev/shm /tmp
+
 USER sekoiaio-runtime
 
 ENTRYPOINT [ "python", "./main.py" ]

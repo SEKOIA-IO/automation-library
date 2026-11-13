@@ -1,5 +1,6 @@
 from time import sleep, time
 from typing import Any
+from uuid import UUID, uuid5
 
 from pydantic import BaseModel
 
@@ -12,6 +13,7 @@ class AgentExecutionError(Exception):
 
 class ExecuteCustomAgentArguments(BaseModel):
     agent_uuid: str
+    initial_state: dict | str | None = None
 
 
 class ExecuteCustomAgentResults(BaseModel):
@@ -27,18 +29,10 @@ class ExecuteCustomAgentResults(BaseModel):
     output: Any = None
 
 
-class AgentRunBody(BaseModel):
-    key: str
-    instructions: str
-    tools: list
-    skill_uuids: list
-    response_format: dict
-
-
 class RunBody(BaseModel):
+    agent_uuid: str
     community_uuid: str
-    agent: AgentRunBody
-    initial_state: dict
+    initial_state: dict | str
     scope_type: str
     scope_uuid: str
 
@@ -46,25 +40,24 @@ class RunBody(BaseModel):
 class ExecuteCustomAgent(BaseAgent):
     results_model = ExecuteCustomAgentResults
 
-    def build_agent_body(self, agent: dict) -> RunBody:
-        playbook_uuid = self.module.playbook_uuid
-        playbook_run_uuid = self.module.playbook_run_uuid
-        node_run_uuid = self.module.node_run_uuid
-
-        agent_body = AgentRunBody(
-            key=f"{playbook_uuid}:{playbook_run_uuid}+{node_run_uuid}",
-            instructions=agent["instructions"],
-            tools=agent["tools"],
-            skill_uuids=agent["skill_uuids"],
-            response_format=agent["response_format"],
-        )
+    def build_run_body(self, agent: dict, initial_state: dict | str | None = None) -> RunBody:
+        # The run is for the community of the playbook: it may differ from the one owning the agent,
+        # e.g. for an agent a parent community shares with its subcommunities
+        community_uuid = self.module.community_uuid or agent["community_uuid"]
 
         return RunBody(
-            community_uuid=agent["community_uuid"],
-            agent=agent_body,
-            initial_state={},
+            # Run the catalog agent by its UUID: copying its definition inline would require
+            # fields the agent may leave unset, such as its instructions
+            agent_uuid=agent["uuid"],
+            community_uuid=community_uuid,
+            # A string is the content of a single user message; without one, the agent's instructions
+            # describe its whole task
+            initial_state=initial_state or {},
+            # The run is always scoped: outside a playbook run (e.g. a manual test of the action),
+            # it falls back to a UUID derived from the community, as the API requires a UUID
+            # but does not check that the playbook run exists
             scope_type="playbook_run",
-            scope_uuid=playbook_run_uuid,
+            scope_uuid=self.module.playbook_run_uuid or str(uuid5(UUID(community_uuid), "playbook-run")),
         )
 
     def trigger_error(self, message: str, run_uuid: str, error: Any = None) -> None:
@@ -113,9 +106,9 @@ class ExecuteCustomAgent(BaseAgent):
         self.configure_http_session()
 
         agent = self.get_agent(arguments.agent_uuid)
-        agent_body = self.build_agent_body(agent)
+        run_body = self.build_run_body(agent, arguments.initial_state)
 
-        agent_run_uuid = self.execute_agent(agent_body)
+        agent_run_uuid = self.execute_agent(run_body)
         run = self.wait_agent_run_status(agent_run_uuid, timeout=1200)
 
         return ExecuteCustomAgentResults(**run)

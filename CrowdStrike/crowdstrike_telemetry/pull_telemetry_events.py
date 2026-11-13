@@ -2,8 +2,9 @@
 
 import os
 from asyncio import BoundedSemaphore
+from collections.abc import AsyncGenerator, Generator
 from functools import cached_property
-from typing import Any, AsyncGenerator, Generator, Optional
+from typing import Any
 
 import orjson
 from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
@@ -11,7 +12,7 @@ from aws_helpers.utils import AsyncReader, normalize_s3_key
 from connectors.metrics import INCOMING_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from connectors.s3.provider import AwsAccountProvider
-from pydantic.v1 import Field
+from pydantic import Field
 
 from crowdstrike_telemetry import CrowdStrikeTelemetryModule
 
@@ -70,7 +71,7 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
     configuration: CrowdStrikeTelemetryConnectorConfig
     module: CrowdStrikeTelemetryModule
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         """Init CrowdStrikeTelemetryConnector."""
         super().__init__(*args, **kwargs)
 
@@ -127,7 +128,7 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
     #         }
     #     ]
     # }
-    def _get_object_from_notification(self, sqs_message: dict[str, Any]) -> Generator[tuple[str, str], None, None]:
+    def _get_object_from_notification(self, sqs_message: dict[str, Any]) -> Generator[tuple[str, str]]:
         """
         Extract the file information from message
         """
@@ -145,7 +146,7 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
 
             yield bucket, path
 
-    async def next_batch(self, previous_processing_end: float | None = None) -> tuple[int, list[int]]:
+    async def next_batch(self, previous_processing_end: float | None = None) -> tuple[int, list[int]]:  # noqa: ARG002
         """
         Get next batch of messages.
 
@@ -206,7 +207,7 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
 
                     except Exception as e:  # pragma: no cover
                         self.log(
-                            message=f"Failed to fetch content of {record}: {str(e)}",
+                            message=f"Failed to fetch content of {record}: {e!s}",
                             level="warning",
                         )
 
@@ -218,7 +219,7 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
 
         return result, timestamps_to_log
 
-    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
+    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str]:
         """
         Parse content from S3 bucket.
 
@@ -228,7 +229,7 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
         Returns:
              Generator:
         """
-        records: AsyncGenerator[bytes, None] = (line.rstrip(b"\n") async for line in stream)
+        records: AsyncGenerator[bytes] = (line.rstrip(b"\n") async for line in stream)
 
         async for record in records:
             if len(record) > 0:  # pragma: no cover
@@ -252,4 +253,4 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProv
 
                     yield record.decode("utf-8")
                 except Exception as e:
-                    self.log(message=f"Failed to parse a record: {str(e)}", level="warning")
+                    self.log(message=f"Failed to parse a record: {e!s}", level="warning")

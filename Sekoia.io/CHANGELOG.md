@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-03 - 2.82.1
+
+### Fixed
+
+- `Execute custom agent`: run the agent by its UUID, to support agents without instructions
+
 ## 2026-11-03 - 2.82.0
 
 ### Added

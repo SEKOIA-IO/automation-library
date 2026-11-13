@@ -1,102 +1,60 @@
-from unittest.mock import Mock
-
 import pytest
-import requests
-from sekoia_automation.module import Module
 
-from easyvista.account_validator import EasyVistaAccountValidator
-
-API_URL = "https://company.easyvista.com/api/v1/50004"
-REQUESTS_URL = f"{API_URL}/requests"
-ASSETS_URL = f"{API_URL}/assets"
+from easyvista_modules.account_validator import EasyVistaAccountValidator
+from easyvista_modules.action.action_view_requests_incidents_list import ViewRequestsIncidentsList
 
 
-def make_validator(**configuration):
-    module = Module()
-    module.configuration = {"base_url": "https://company.easyvista.com", "tenant_id": "50004", **configuration}
-    validator = EasyVistaAccountValidator(module=module)
-    validator.log = Mock()
-    validator.error = Mock()
-    return validator
+@pytest.mark.parametrize("body", ["", "null", "[]", "42"])
+def test_empty_or_non_object_response_invalidates_account(make_action, requests_mock, api_url, body):
+    requests_mock.get(api_url, text=body)
+    validator = make_action(EasyVistaAccountValidator)
+    assert validator.validate() is False
+    assert "empty or non-object response" in validator.error.call_args.args[0]
 
 
-@pytest.fixture
-def validator():
-    return make_validator(token="token")
-
-
-def test_validate_with_token(validator, requests_mock):
-    mock = requests_mock.get(REQUESTS_URL, json={"records": []})
-
-    assert validator.validate() is True
-    assert mock.last_request.headers["Authorization"] == "Bearer token"
-    assert mock.last_request.qs["max_rows"] == ["1"]
-
-
-def test_validate_with_basic_auth_and_ssl_verification_disabled(requests_mock):
-    validator = make_validator(use_token=False, username="user", password="secret", verify_ssl=False)
-    mock = requests_mock.get(REQUESTS_URL, json={"records": []})
-
-    assert validator.validate() is True
-    assert mock.last_request.headers["Authorization"].startswith("Basic ")
-    assert mock.last_request.verify is False
-
-
+@pytest.mark.parametrize("cls", [ViewRequestsIncidentsList, EasyVistaAccountValidator])
 @pytest.mark.parametrize(
-    "configuration, message",
+    "config,expected",
     [
-        ({}, "`token` is required"),
-        ({"use_token": False, "username": "user"}, "`username` and `password` are required"),
+        ({"token": None}, "`token` is required when `use_token` is true"),
+        ({"use_token": False}, "`username` and `password` are required when `use_token` is false"),
+        ({"use_token": False, "username": "user"}, "`username` and `password` are required when `use_token` is false"),
+        (
+            {"use_token": False, "password": "password"},
+            "`username` and `password` are required when `use_token` is false",
+        ),
     ],
 )
-def test_validate_missing_credentials(requests_mock, configuration, message):
-    validator = make_validator(**configuration)
-
-    assert validator.validate() is False
-    assert message in validator.error.call_args.args[0]
+def test_conditional_credentials(make_action, requests_mock, cls, config, expected):
+    action = make_action(cls, **config)
+    if cls is EasyVistaAccountValidator:
+        assert action.validate() is False
+    else:
+        assert action.run({}) is None
+    action.error.assert_called_once_with(expected)
     assert not requests_mock.called
 
 
-def test_validate_falls_back_on_assets_when_requests_are_forbidden(validator, requests_mock):
-    requests_mock.get(REQUESTS_URL, status_code=403, json={"error": "Forbidden"})
-    requests_mock.get(ASSETS_URL, json={"records": []})
-
-    assert validator.validate() is True
-
-
-def test_validate_fails_when_every_route_is_forbidden(validator, requests_mock):
-    requests_mock.get(REQUESTS_URL, status_code=403, json={"error": "Forbidden"})
-    requests_mock.get(ASSETS_URL, status_code=403, json={"error": "Forbidden"})
-
-    assert validator.validate() is False
-    assert "HTTP 403: Forbidden on GET /assets" in validator.error.call_args.args[0]
+@pytest.mark.parametrize("status,valid", [(200, True), (401, False), (404, False), (590, False)])
+def test_account_validator(make_action, requests_mock, api_url, status, valid):
+    requests_mock.get(api_url, status_code=status, json={"records": []} if valid else {"error": "Unavailable"})
+    validator = make_action(EasyVistaAccountValidator)
+    assert validator.validate() is valid
+    assert requests_mock.last_request.qs == {"max_rows": ["1"], "fields": ["rfc_number"]}
 
 
-def test_validate_invalid_token(validator, requests_mock):
-    requests_mock.get(REQUESTS_URL, status_code=401, json={"error": "Invalid Login / Password"})
-    assets = requests_mock.get(ASSETS_URL, json={"records": []})
-
-    assert validator.validate() is False
-    assert "Authentication failed" in validator.error.call_args.args[0]
-    assert not assets.called
-
-
-def test_validate_business_error_in_body(validator, requests_mock):
-    requests_mock.get(REQUESTS_URL, status_code=590, json={"error": "Bad Request"})
-
-    assert validator.validate() is False
-    assert "HTTP 590: Bad Request" in validator.error.call_args.args[0]
-
-
-def test_validate_non_json_error(validator, requests_mock):
-    requests_mock.get(REQUESTS_URL, status_code=503, text="Service unavailable")
-
-    assert validator.validate() is False
-    assert "HTTP 503: Service unavailable" in validator.error.call_args.args[0]
-
-
-def test_validate_connection_error(validator, requests_mock):
-    requests_mock.get(REQUESTS_URL, exc=requests.ConnectionError)
-
-    assert validator.validate() is False
-    validator.error.assert_called_once()
+@pytest.mark.parametrize("status,valid", [(200, True), (403, False)])
+def test_account_validator_falls_back_on_assets_when_requests_are_forbidden(
+    make_action, requests_mock, api_url, status, valid
+):
+    requests_mock.get(api_url, status_code=403, json={"error": "Forbidden"})
+    assets = requests_mock.get(
+        api_url.replace("/requests", "/assets"),
+        status_code=status,
+        json={"records": []} if valid else {"error": "Forbidden"},
+    )
+    validator = make_action(EasyVistaAccountValidator)
+    assert validator.validate() is valid
+    assert assets.last_request.qs == {"max_rows": ["1"], "fields": ["asset_id"]}
+    if not valid:
+        assert "403 on GET /api/v1/00001/assets" in validator.error.call_args.args[0]
