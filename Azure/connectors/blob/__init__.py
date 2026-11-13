@@ -23,6 +23,9 @@ from azure_helpers.io import is_gzip_compressed
 from azure_helpers.storage import AzureBlobStorageConfig, AzureBlobStorageWrapper
 from connectors.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
+# How long the reading state of a blob is kept after its last modification
+BLOB_STATE_RETENTION = timedelta(hours=6)
+
 
 class AzureBlobConnectorConfig(DefaultConnectorConfiguration):
     """Connector configuration."""
@@ -114,6 +117,61 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
             if blob.last_modified > lower_bound:
                 yield blob
 
+    def get_blob_states(self) -> dict[str, dict[str, Any]]:
+        """
+        Get the reading state saved for each blob (used by connectors that read blobs incrementally).
+
+        Returns:
+            dict[str, dict[str, Any]]:
+        """
+        with self.context as cache:
+            return dict(cache.get("blobs") or {})
+
+    async def read_blob(self, blob: BlobProperties) -> AsyncGenerator[tuple[list[str], dict[str, Any] | None], None]:
+        """
+        Read the events of a blob.
+
+        Args:
+            blob: BlobProperties
+
+        Returns:
+            AsyncGenerator[tuple[list[str], dict[str, Any] | None], None]:
+        """
+        file, content = await self.azure_blob_wrapper().download_blob(blob.name, download=True)
+
+        # process the downloaded blob
+        if file:
+            try:
+                async with aiofiles.open(file, "rb") as file_data:
+                    file_content = await file_data.read()
+
+                if is_gzip_compressed(file_content):
+                    file_content = decompress(file_content)
+
+                yield self.filter_blob_data(file_content.decode("utf-8")), None
+            finally:
+                await delete_file(file)
+
+        # process the content of the blob
+        if content:
+            yield self.filter_blob_data(content.decode("utf-8")), None
+
+    def save_blob_states(self, states: dict[str, dict[str, Any]]) -> None:
+        """
+        Save the reading state of blobs and forget the blobs not modified for a long time.
+
+        Args:
+            states: dict[str, dict[str, Any]]
+        """
+        oldest = datetime.now(timezone.utc) - BLOB_STATE_RETENTION
+
+        with self.context as cache:
+            blobs = dict(cache.get("blobs") or {})
+            blobs.update(states)
+            cache["blobs"] = {
+                name: state for name, state in blobs.items() if isoparse(state["last_modified"]) >= oldest
+            }
+
     async def get_azure_blob_data(self) -> list[str]:
         """
         Get Azure Blob Storage data.
@@ -131,6 +189,18 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
 
         records: list[str] = []
         result: list[str] = []
+        # Reading states of the blobs whose events are in `records`, saved once the records are forwarded
+        states: dict[str, dict[str, Any]] = {}
+
+        async def forward_records() -> None:
+            nonlocal records, states
+            if records:
+                result.extend(await self.push_data_to_intakes(events=records))
+            if states:
+                self.save_blob_states(states)
+
+            records = []
+            states = {}
 
         # For each blob
         async for blob in self.get_most_recent_blobs(_last_modified_date):
@@ -143,33 +213,18 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
             if _last_modified_date is None or blob.last_modified > _last_modified_date:
                 _last_modified_date = blob.last_modified
 
-            # Get the content of the current blob
-            file, content = await self.azure_blob_wrapper().download_blob(blob.name, download=True)
+            async for events, state in self.read_blob(blob):
+                records.extend(events)
+                if state is not None:
+                    states[blob.name] = state
 
-            # process the downloaded blob
-            if file:
-                async with aiofiles.open(file, "rb") as file_data:
-                    file_content = await file_data.read()
-
-                    if is_gzip_compressed(file_content):
-                        file_content = decompress(file_content)
-
-                    records.extend(self.filter_blob_data(file_content.decode("utf-8")))
-
-                await delete_file(file)
-
-            # process the content of the blob
-            if content:
-                records.extend(self.filter_blob_data(content.decode("utf-8")))
-
-            # Push the events if exceed the defined threshold
-            if len(records) >= self.limit_of_events_to_push:
-                result.extend(await self.push_data_to_intakes(events=records))
-                records = []
+                # Push the events if exceed the defined threshold
+                if len(records) >= self.limit_of_events_to_push:
+                    await forward_records()
 
         # Push the remaining events
-        if records:
-            result.extend(await self.push_data_to_intakes(events=records))
+        if records or states:
+            await forward_records()
 
         with self.context as cache:
             logger.info(
