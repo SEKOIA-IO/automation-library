@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-12 - 1.38.12
+
+### Added
+
+- Implement `reset_checkpoint` and `get_mapping_fields` for asset connectors
+
+### Changed
+
+- Upgrade sekoia-automation-sdk dependency
+
 ## 2026-11-10 - 1.38.11
 
 ### Fixed
