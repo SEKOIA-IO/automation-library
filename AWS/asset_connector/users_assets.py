@@ -131,9 +131,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             BotoCoreError: If there's a low-level boto3 error
         """
         if not user_name:
-            self.log(
-                "Empty user name provided, returning empty groups list", level="warning"
-            )
+            self.log("Empty user name provided, returning empty groups list", level="warning")
             return []
 
         self.log(f"Fetching groups for user: {user_name}", level="debug")
@@ -270,14 +268,8 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                         users.append(aws_user)
                         user_count += 1
                 except Exception as e:
-                    user_name = (
-                        raw_user.get("UserName", "unknown")
-                        if isinstance(raw_user, dict)
-                        else "unknown"
-                    )
-                    self.log(
-                        f"Failed to process user {user_name}: {str(e)}", level="error"
-                    )
+                    user_name = raw_user.get("UserName", "unknown") if isinstance(raw_user, dict) else "unknown"
+                    self.log(f"Failed to process user {user_name}: {str(e)}", level="error")
                     self.log_exception(e)
                     continue
 
@@ -297,9 +289,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                     return True
         return False
 
-    def _extract_user_from_iam_user(
-        self, user: AwsApiUser, date_filter: Optional[datetime]
-    ) -> Optional[AwsUser]:
+    def _extract_user_from_iam_user(self, user: AwsApiUser, date_filter: Optional[datetime]) -> Optional[AwsUser]:
         """Extract user information from an AWS IAM user.
 
         Args:
@@ -321,9 +311,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
             # Get creation time
             created_time = user.CreateDate
             if not created_time:
-                self.log(
-                    f"User {user_name} has no creation time, skipping", level="warning"
-                )
+                self.log(f"User {user_name} has no creation time, skipping", level="warning")
                 return None
 
             # Ensure timezone is UTC
@@ -350,9 +338,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                 enrichments.append(
                     UserEnrichmentObject(
                         name="aws_iam",
-                        data=UserDataObject(
-                            last_logon=user.PasswordLastUsed.isoformat()
-                        ),
+                        data=UserDataObject(last_logon=user.PasswordLastUsed.isoformat()),
                     )
                 )
 
@@ -430,9 +416,7 @@ class AwsUsersAssetConnector(AwsAssetsConnector):
                 for aws_user in aws_users:
                     try:
                         # Create product and metadata
-                        product = Product(
-                            name=self.PRODUCT_NAME, version=self.PRODUCT_VERSION
-                        )
+                        product = Product(name=self.PRODUCT_NAME, version=self.PRODUCT_VERSION)
                         metadata = Metadata(product=product, version=self.OCSF_VERSION)
 
                         # Create OCSF user inventory event

@@ -77,9 +77,7 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
         """
         return self.get_client("ec2")
 
-    def _extract_network_interfaces(
-        self, interfaces: List[Dict[str, Any]]
-    ) -> List[NetworkInterface]:
+    def _extract_network_interfaces(self, interfaces: List[Dict[str, Any]]) -> List[NetworkInterface]:
         """Extract network interface information from EC2 instance data.
 
         Args:
@@ -105,16 +103,12 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
                 )
                 network_interfaces.append(network_interface)
             except Exception as e:
-                self.log(
-                    f"Error extracting network interface: {str(e)}", level="warning"
-                )
+                self.log(f"Error extracting network interface: {str(e)}", level="warning")
                 continue
 
         return network_interfaces
 
-    def _extract_security_groups(
-        self, security_groups: List[Dict[str, Any]]
-    ) -> List[Group]:
+    def _extract_security_groups(self, security_groups: List[Dict[str, Any]]) -> List[Group]:
         """Extract security group information from EC2 instance data.
 
         Args:
@@ -153,9 +147,7 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
                 return tag.get("Value")
         return None
 
-    def _extract_autoscale_group_from_tags(
-        self, tags: List[Dict[str, Any]]
-    ) -> Optional[str]:
+    def _extract_autoscale_group_from_tags(self, tags: List[Dict[str, Any]]) -> Optional[str]:
         """Extract the autoscaling group name from EC2 instance tags.
 
         Args:
@@ -169,9 +161,7 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
                 return tag.get("Value")
         return None
 
-    def _extract_organization_from_owner_id(
-        self, owner_id: str
-    ) -> Optional[Organization]:
+    def _extract_organization_from_owner_id(self, owner_id: str) -> Optional[Organization]:
         """Extract organization information from AWS Owner ID (account ID).
 
         Args:
@@ -206,28 +196,18 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
             An OperatingSystem object with the detected OS information
         """
         if not platform_details:
-            return OperatingSystem(
-                name="Unknown", type=OSTypeStr.UNKNOWN, type_id=OSTypeId.UNKNOWN
-            )
+            return OperatingSystem(name="Unknown", type=OSTypeStr.UNKNOWN, type_id=OSTypeId.UNKNOWN)
 
         platform_lower = platform_details.lower()
 
         if "windows" in platform_lower:
-            return OperatingSystem(
-                name="Windows", type=OSTypeStr.WINDOWS, type_id=OSTypeId.WINDOWS
-            )
+            return OperatingSystem(name="Windows", type=OSTypeStr.WINDOWS, type_id=OSTypeId.WINDOWS)
         elif "linux" in platform_lower or "unix" in platform_lower:
-            return OperatingSystem(
-                name="Linux", type=OSTypeStr.LINUX, type_id=OSTypeId.LINUX
-            )
+            return OperatingSystem(name="Linux", type=OSTypeStr.LINUX, type_id=OSTypeId.LINUX)
         elif "macos" in platform_lower or "mac" in platform_lower:
-            return OperatingSystem(
-                name="MacOS", type=OSTypeStr.MACOS, type_id=OSTypeId.MACOS
-            )
+            return OperatingSystem(name="MacOS", type=OSTypeStr.MACOS, type_id=OSTypeId.MACOS)
         else:
-            return OperatingSystem(
-                name=platform_details, type=OSTypeStr.UNKNOWN, type_id=OSTypeId.UNKNOWN
-            )
+            return OperatingSystem(name=platform_details, type=OSTypeStr.UNKNOWN, type_id=OSTypeId.UNKNOWN)
 
     @handle_aws_errors("collecting AWS devices")
     def get_aws_devices(self) -> Generator[List[AwsDevice], None, None]:
@@ -276,9 +256,7 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
                 for instance in reservation_model.Instances:
                     try:
                         # Extract device information with proper error handling
-                        device = self._extract_device_from_instance(
-                            instance, date_filter, owner_id
-                        )
+                        device = self._extract_device_from_instance(instance, date_filter, owner_id)
                         if device:
                             devices.append(device)
                             device_count += 1
@@ -391,10 +369,7 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
             network_interfaces = self._extract_network_interfaces(ni_dicts)
 
             # Extract security groups
-            sg_dicts = [
-                {"GroupId": sg.GroupId, "GroupName": sg.GroupName}
-                for sg in instance.SecurityGroups
-            ]
+            sg_dicts = [{"GroupId": sg.GroupId, "GroupName": sg.GroupName} for sg in instance.SecurityGroups]
             groups = self._extract_security_groups(sg_dicts)
 
             # Extract primary IP address
@@ -445,9 +420,7 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
             created_timestamp = int(created_time.timestamp())
 
             # Extract organization from owner ID
-            org = (
-                self._extract_organization_from_owner_id(owner_id) if owner_id else None
-            )
+            org = self._extract_organization_from_owner_id(owner_id) if owner_id else None
 
             # Create device object with all available fields
             device_obj = Device(
@@ -510,9 +483,7 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
                 for aws_device in aws_devices:
                     try:
                         # Create product and metadata
-                        product = Product(
-                            name=self.PRODUCT_NAME, version=self.PRODUCT_VERSION
-                        )
+                        product = Product(name=self.PRODUCT_NAME, version=self.PRODUCT_VERSION)
                         metadata = Metadata(product=product, version=self.OCSF_VERSION)
 
                         # Create OCSF device inventory event
