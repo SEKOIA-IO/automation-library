@@ -86,6 +86,7 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
             except Exception as e:
                 self.log_exception(e)
             finally:
+                loop.run_until_complete(loop.shutdown_asyncgens())
                 loop.close()
 
     def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:  # pragma: no cover

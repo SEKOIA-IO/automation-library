@@ -517,6 +517,33 @@ async def test_abstract_aws_s3_list_connector_next_batch_closes_the_parsed_event
 
 
 @pytest.mark.asyncio
+async def test_abstract_aws_s3_list_connector_next_batch_closes_the_listing_on_push_failure(
+    abstract_list_connector: AbstractAwsS3ListConnector,
+    mock_push_data_to_intakes: AsyncMock,
+):
+    """The listing generator is closed explicitly when an intake failure interrupts the iteration."""
+    closed = []
+
+    async def list_objects(bucket=None, prefix=None, start_after=None):
+        try:
+            yield {"Key": "a", "LastModified": datetime.now(timezone.utc)}
+            yield {"Key": "b", "LastModified": datetime.now(timezone.utc)}
+        finally:
+            closed.append(True)
+
+    mock_push_data_to_intakes.side_effect = RuntimeError("intake down")
+    abstract_list_connector.limit_of_events_to_push = 1
+
+    mock_s3 = _mock_s3_with_objects(["a", "b"])
+    mock_s3.list_objects = list_objects
+    with patch.object(type(abstract_list_connector), "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3):
+        with pytest.raises(IntakePushError):
+            await abstract_list_connector.next_batch()
+
+    assert closed == [True]
+
+
+@pytest.mark.asyncio
 async def test_abstract_aws_s3_list_connector_next_batch_flushes_large_object_on_max_bytes(
     abstract_list_connector: AbstractAwsS3ListConnector,
     mock_push_data_to_intakes: AsyncMock,
