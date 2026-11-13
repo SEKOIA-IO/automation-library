@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-12 - 1.39.0
+
+### Changed
+
+- Migrate the module from Poetry to uv, with a `mise.toml` for test/lint/format tasks and Ruff replacing black/isort/autoflake
+- Upgrade to Python 3.14 and `sekoia-automation-sdk` 1.27
+
 ## 2026-11-12 - 1.38.12
 
 ### Added

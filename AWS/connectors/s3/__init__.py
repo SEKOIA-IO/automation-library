@@ -240,72 +240,76 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
         last_committed = marker
         last_processed = marker
 
-        async for s3_object in self.s3_wrapper.list_objects(
+        objects = self.s3_wrapper.list_objects(
             bucket=self.configuration.bucket,
             prefix=self.configuration.prefix_filter,
             start_after=marker,
-        ):
-            key = s3_object.get("Key")
-            if not key:
-                continue
+        )
 
-            normalized_key = normalize_s3_key(key)
-            last_modified = s3_object.get("LastModified")
-            if last_modified is not None:
-                timestamps_to_log.append(int(last_modified.timestamp() * 1000))
+        # close the listing (and its S3 client) when leaving early, e.g. on an intake failure
+        async with aclosing(objects):
+            async for s3_object in objects:
+                key = s3_object.get("Key")
+                if not key:
+                    continue
 
-            # events of this object stay apart from the batch until they are pushed or the object is fully read:
-            # a failing object must not leave its unpushed events in the batch
-            pending: list[str] = []
-            pending_bytes = 0
-            object_records = 0
+                normalized_key = normalize_s3_key(key)
+                last_modified = s3_object.get("LastModified")
+                if last_modified is not None:
+                    timestamps_to_log.append(int(last_modified.timestamp() * 1000))
 
-            try:
-                stream: AsyncReader
-                async with (
-                    self.s3_fetch_concurrency_sem,
-                    self.s3_wrapper.read_key(bucket=self.configuration.bucket, key=normalized_key) as stream,
-                    aclosing(self._parse_content(stream)) as events,
-                ):
-                    async for event in events:
-                        pending.append(event)
-                        pending_bytes += len(event)
-                        object_records += 1
+                # events of this object stay apart from the batch until they are pushed or the object is fully read:
+                # a failing object must not leave its unpushed events in the batch
+                pending: list[str] = []
+                pending_bytes = 0
+                object_records = 0
 
-                        if (
-                            len(records) + len(pending) >= self.limit_of_events_to_push
-                            or records_bytes + pending_bytes >= self.max_batch_bytes
-                        ):
-                            records.extend(pending)
-                            pending = []
-                            pending_bytes = 0
-                            result += await self._push_events(records)
-                            records = []
-                            records_bytes = 0
+                try:
+                    stream: AsyncReader
+                    async with (
+                        self.s3_fetch_concurrency_sem,
+                        self.s3_wrapper.read_key(bucket=self.configuration.bucket, key=normalized_key) as stream,
+                        aclosing(self._parse_content(stream)) as events,
+                    ):
+                        async for event in events:
+                            pending.append(event)
+                            pending_bytes += len(event)
+                            object_records += 1
 
-                            # the current object is only partly read: commit up to the previous one
-                            if last_processed is not None and last_processed != last_committed:
-                                self.write_marker(last_processed)
-                                last_committed = last_processed
+                            if (
+                                len(records) + len(pending) >= self.limit_of_events_to_push
+                                or records_bytes + pending_bytes >= self.max_batch_bytes
+                            ):
+                                records.extend(pending)
+                                pending = []
+                                pending_bytes = 0
+                                result += await self._push_events(records)
+                                records = []
+                                records_bytes = 0
 
-                logger.info(f"Parsed {object_records} records from object {key}")
+                                # the current object is only partly read: commit up to the previous one
+                                if last_processed is not None and last_processed != last_committed:
+                                    self.write_marker(last_processed)
+                                    last_committed = last_processed
 
-            except IntakePushError:
-                raise
+                    logger.info(f"Parsed {object_records} records from object {key}")
 
-            except Exception as e:
-                # do not advance the marker past a failing object to avoid losing data.
-                self.log(
-                    message=f"Failed to fetch content of {key}: {str(e)}",
-                    level="warning",
-                )
-                break
+                except IntakePushError:
+                    raise
 
-            last_processed = key
-            records.extend(pending)
-            records_bytes += pending_bytes
+                except Exception as e:
+                    # do not advance the marker past a failing object to avoid losing data.
+                    self.log(
+                        message=f"Failed to fetch content of {key}: {str(e)}",
+                        level="warning",
+                    )
+                    break
 
-            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(object_records)
+                last_processed = key
+                records.extend(pending)
+                records_bytes += pending_bytes
+
+                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(object_records)
 
         if records:
             result += await self._push_events(records)

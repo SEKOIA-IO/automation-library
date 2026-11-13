@@ -6,8 +6,8 @@ import shutil
 import tempfile
 from abc import abstractmethod
 from collections.abc import AsyncGenerator, AsyncIterable
-from contextlib import asynccontextmanager
 from concurrent.futures import Executor
+from contextlib import asynccontextmanager
 from functools import partial
 from typing import Any, BinaryIO, Protocol, TypeVar
 
@@ -218,7 +218,7 @@ async def _decompress_to_spool(file: gzip.GzipFile) -> BinaryIO:
     copy = asyncio.ensure_future(asyncio.to_thread(shutil.copyfileobj, file, spool))
     try:
         await asyncio.shield(copy)
-    except (asyncio.CancelledError, Exception):
+    except asyncio.CancelledError, Exception:
         while not copy.done():
             try:
                 await asyncio.wait([copy])

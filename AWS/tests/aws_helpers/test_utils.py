@@ -10,8 +10,8 @@ import subprocess
 import sys
 import tempfile
 import threading
-from pathlib import Path
 from gzip import compress
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiofiles
@@ -24,13 +24,13 @@ from aws_helpers.utils import (
     async_islice,
     get_content,
     has_parquet_footer,
-    seekable_file,
     is_gzip_compressed,
     is_parquet_content,
     normalize_s3_key,
-    unescape_string,
+    seekable_file,
     split_stream_by_separator,
     to_seekable_file,
+    unescape_string,
 )
 from tests.helpers import async_temporary_file
 

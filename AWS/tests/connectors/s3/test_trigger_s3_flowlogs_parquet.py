@@ -17,13 +17,13 @@ import pyarrow.parquet
 import pytest
 from faker import Faker
 
+from aws_helpers.utils import async_gzip_open, check_all_ips_are_private
 from connectors import AwsModule
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3.trigger_s3_flowlogs_parquet import (
-    AwsS3FlowLogsParquetRecordsTrigger,
     AwsS3FlowLogsParquetConfiguration,
+    AwsS3FlowLogsParquetRecordsTrigger,
 )
-from aws_helpers.utils import async_gzip_open, check_all_ips_are_private
 from tests.helpers import async_list, async_temporary_file
 
 

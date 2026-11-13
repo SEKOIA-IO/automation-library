@@ -1,8 +1,7 @@
 """Contains AwsS3ParquetRecordsTrigger."""
 
 import io
-from collections.abc import AsyncGenerator, Sequence
-from typing import Any
+from collections.abc import AsyncGenerator
 
 import orjson
 

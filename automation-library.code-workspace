@@ -41,6 +41,10 @@
 			"path": "Whois"
 		},
 		{
+			"name": "AWS",
+			"path": "AWS"
+		},
+		{
 			"name": "HTTP",
 			"path": "HTTP"
 		},

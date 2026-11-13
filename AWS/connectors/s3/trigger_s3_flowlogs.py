@@ -8,9 +8,9 @@ from aws_helpers.utils import (
     AsyncReader,
     PeekableStreamReader,
     async_islice,
+    filter_internal_traffic,
     has_parquet_footer,
     split_stream_by_separator,
-    filter_internal_traffic,
 )
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import (
