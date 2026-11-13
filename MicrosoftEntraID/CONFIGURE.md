@@ -31,7 +31,6 @@
     1. `Application.ReadWrite.OwnedBy` or `Application.ReadWrite.All.`
     2. `User.ReadWrite.All`
     3. `UserAuthenticationMethod.ReadWrite.All`
-    4. `Directory.ReadWrite.All`
     5. `AuditLog.Read.All`
     6. `User-PasswordProfile.ReadWrite.All`
 7. Click `Add permissions`
