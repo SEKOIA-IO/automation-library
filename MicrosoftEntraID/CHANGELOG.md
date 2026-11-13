@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-06 - 2.11.0
+
+### Changed
+
+- Move the delegated account `username` and `password` from the module configuration to the arguments of the `Reset User Password [DEPRECATED]` action, the only action using them
+
 ## 2026-08-25 - 2.10.29
 
 ### Changed
