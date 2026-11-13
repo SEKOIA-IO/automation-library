@@ -1,11 +1,12 @@
 import os
 from collections.abc import AsyncGenerator
-from typing import Any, Optional
+from typing import Any
 
 import orjson
 from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from connectors.s3.provider import AwsAccountProvider
+
 from deep_visibility.metrics import DISCARDED_EVENTS
 
 EXCLUDED_EVENT_TYPES = [
@@ -23,13 +24,13 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector, AwsAccountProvider):
     configuration: AwsS3QueuedConfiguration
     name = "DeepVisibility AWS S3 Logs"
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         """Init DeepVisibilityConnector."""
 
         super().__init__(*args, **kwargs)
         self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 300))
 
-    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
+    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str]:
         """
         Parse content from S3 bucket.
 
@@ -57,4 +58,4 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector, AwsAccountProvider):
 
                     yield record.decode("utf-8")
                 except Exception as e:
-                    self.log(message=f"Failed to parse a record: {str(e)}", level="warning")
+                    self.log(message=f"Failed to parse a record: {e!s}", level="warning")

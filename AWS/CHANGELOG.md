@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-12 - 1.39.0
+
+### Changed
+
+- Migrate the module from Poetry to uv, with a `mise.toml` for test/lint/format tasks and Ruff replacing black/isort/autoflake
+- Upgrade to Python 3.14 and `sekoia-automation-sdk` 1.27
+
+## 2026-11-12 - 1.38.12
+
+### Added
+
+- Implement `reset_checkpoint` and `get_mapping_fields` for asset connectors
+
+### Changed
+
+- Upgrade sekoia-automation-sdk dependency
+
+## 2026-11-10 - 1.38.11
+
+### Fixed
+
+- Fix the way to define the maximum size of spooled files
+
+## 2026-11-10 - 1.38.10
+
+### Fixed
+
+- Limit the size of the events buffered in memory by the S3 connectors: events are pushed as soon as the buffer reaches 9 MB (configurable with `AWS_BATCH_MAX_BYTES`), in addition to the 10,000-event limit (`AWS_BATCH_SIZE`)
+
+## 2026-11-10 - 1.38.9
+
+### Fixed
+
+- Fix S3 objects failing to be read (`ClientResponse.read() takes 1 positional argument but 2 were given`) since 1.38.8
+
+## 2026-11-05 - 1.38.8
+
+### Fixed
+
+- Fix memory leak caused by the SQS queue URL cache retaining AWS sessions
+- Reuse S3 and SQS wrappers (and their AWS sessions) across batches instead of recreating them for every object
+- Parse parquet objects (VPC flow logs, OCSF) by batches
+  - Integer fields nested in structs or lists that contain nulls may be serialized as floats (e.g. `443.0`) only in the batches holding a null
+- Stream text VPC flow logs line by line instead of decoding the whole object in memory
+- Flush events while reading an object in the S3 list connector instead of buffering the whole object
+- Serialize SQS messages as they are received instead of keeping all parsed records in memory
+- Speed up the line splitting of S3 logs: no more repeated buffer copies and rescans
+
 ## 2026-11-03 - 1.38.7
 
 ### Changed

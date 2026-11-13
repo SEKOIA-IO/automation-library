@@ -1,14 +1,12 @@
 """Contains AwsS3ParquetRecordsTrigger."""
 
 import io
-from collections.abc import AsyncGenerator, Sequence
-from typing import Any
+from collections.abc import AsyncGenerator
 
 import orjson
-import pandas
-import pyarrow.parquet
 
-from aws_helpers.utils import AsyncReader, filter_internal_traffic
+from aws_helpers.parquet import iter_parquet_dataframes
+from aws_helpers.utils import AsyncReader, filter_internal_traffic, seekable_file
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from connectors.s3.provider import AwsAccountProvider
@@ -20,32 +18,7 @@ class AwsS3FlowLogsParquetConfiguration(AwsS3QueuedConfiguration):
     filter_internal_traffic: bool = True
 
 
-def _nullable_integer_columns(parquet: pyarrow.parquet.ParquetFile) -> set[str]:
-    """Find file-wide integer nullability, even when Parquet statistics are absent."""
-    integer_columns = {field.name for field in parquet.schema_arrow if pyarrow.types.is_integer(field.type)}
-    nullable: set[str] = set()
-    unknown: set[str] = set()
-    for row_group_index in range(parquet.num_row_groups):
-        row_group = parquet.metadata.row_group(row_group_index)
-        for column_index in range(row_group.num_columns):
-            column = row_group.column(column_index)
-            if column.path_in_schema not in integer_columns:
-                continue
-            statistics = column.statistics
-            if statistics is None or statistics.null_count is None:
-                unknown.add(column.path_in_schema)
-            elif statistics.null_count > 0:
-                nullable.add(column.path_in_schema)
-
-    # Missing statistics must not silently turn a nullable integer into an integer
-    # in early batches. Scan only unresolved columns, without retaining their rows.
-    unresolved = unknown - nullable
-    if unresolved:
-        for batch in parquet.iter_batches(batch_size=1000, columns=sorted(unresolved)):
-            nullable.update(name for name in unresolved if batch.column(name).null_count > 0)
-            if unresolved <= nullable:
-                break
-    return nullable
+PARQUET_BATCH_SIZE = 1_000
 
 
 class BaseAwsS3FlowLogsParquetRecordsTrigger:
@@ -65,28 +38,14 @@ class BaseAwsS3FlowLogsParquetRecordsTrigger:
         Returns:
              Generator:
         """
-        content = await stream.read()
-        if len(content) == 0:
-            return
+        async with seekable_file(stream) as file:
+            if file.seek(0, io.SEEK_END) == 0:
+                return
+            file.seek(0)
 
-        # Keep pandas' record conversion semantics without materializing the entire
-        # decompressed file and its Python dictionaries at the same time.
-        with (
-            io.BytesIO(content) as reader,
-            pyarrow.parquet.ParquetFile(reader) as parquet,
-        ):
-            nullable_integer_columns = _nullable_integer_columns(parquet)
-            for batch in parquet.iter_batches(batch_size=1000):
-                frame = batch.to_pandas()
-                for name in nullable_integer_columns:
-                    if name not in frame.columns:
-                        continue
-                    dtype = frame[name].dtype
-                    # Preserve explicit pandas extension dtypes (e.g. Int64), but
-                    # match full-file pandas conversion for NumPy integer columns.
-                    if dtype.kind in "iu" and not isinstance(dtype, pandas.api.extensions.ExtensionDtype):
-                        frame[name] = frame[name].astype("float64")
-                for record in frame.to_dict(orient="records"):
+            # read by batches to bound memory
+            for df in iter_parquet_dataframes(file, PARQUET_BATCH_SIZE):
+                for record in df.to_dict(orient="records"):
                     if len(record) > 0:
                         if not filter_internal_traffic(
                             self.configuration.filter_internal_traffic,

@@ -17,7 +17,12 @@ class ApiClient(requests.Session):
 
         adapter = LimiterAdapter(
             per_second=ratelimit_per_second,
-            max_retries=Retry(total=nb_retries, backoff_factor=1),
+            max_retries=Retry(
+                total=nb_retries,
+                backoff_factor=1,
+                status_forcelist=[401, 403, 429, 500, 502, 503, 504],
+                raise_on_status=False,
+            ),
         )
 
         self.mount("http://", adapter)
