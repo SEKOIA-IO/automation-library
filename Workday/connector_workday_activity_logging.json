@@ -1,0 +1,50 @@
+{
+  "uuid": "e2275913-24cd-4534-a09c-46d55f11a5d6",
+  "name": "Collect activity logs from Workday",
+  "description": "Fetch activity logs from Workday Activity Logging API",
+  "docker_parameters": "workday_activity_logging",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Workday Activity Logging Configuration",
+    "properties": {
+      "intake_server": {
+        "type": "string",
+        "description": "Server of the intake server",
+        "default": "https://intake.sekoia.io"
+      },
+      "intake_key": {
+        "type": "string",
+        "description": "Intake key for authentication"
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Polling interval in seconds",
+        "default": 600,
+        "minimum": 60
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "Maximum chunk size for batch processing",
+        "default": 1000,
+        "minimum": 1
+      },
+      "limit": {
+        "type": "integer",
+        "description": "Number of records to fetch per API request",
+        "default": 1000,
+        "maximum": 1000
+      },
+      "instances_returned": {
+        "type": "integer",
+        "description": "Workday 'instancesReturned' parameter: maximum pool of activity instances per time window, expressed in units of 10,000 (1 = 10,000 records, 25 = 250,000). Defaults to 1 (most performant); raise it for high-volume tenants that exceed 10,000 events per window to avoid truncation.",
+        "default": 1,
+        "minimum": 1,
+        "maximum": 25
+      }
+    },
+    "required": [
+      "intake_key"
+    ]
+  }
+}
