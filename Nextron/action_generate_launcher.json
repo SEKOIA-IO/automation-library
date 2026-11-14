@@ -1,0 +1,148 @@
+{
+  "uuid": "a9b2367c-b039-469c-a4c8-1949e3c3ee7a",
+  "name": "Generate THOR Cloud launcher",
+  "slug": "generate_launcher",
+  "description": "Link an existing or create a new THOR Cloud campaign, then generate a launcher URL and an OS-specific download-and-run command. The returned URL and command contain a sensitive campaign token and must not be logged or shared.",
+  "docker_parameters": "GenerateLauncherAction",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Arguments",
+    "type": "object",
+    "properties": {
+      "campaign_id": {
+        "title": "Campaign ID",
+        "type": "string",
+        "description": "UUID of an active THOR Cloud campaign to use. Fill in either Campaign ID or Campaign name."
+      },
+      "campaign_name": {
+        "title": "Campaign name",
+        "type": "string",
+        "description": "Name of a new campaign to create. Fill in either Campaign ID or Campaign name."
+      },
+      "launcher_type": {
+        "title": "Target operating system",
+        "type": "string",
+        "description": "Launcher matching the target asset operating system",
+        "enum": [
+          "windows-powershell",
+          "linux-bash",
+          "mac-bash"
+        ],
+        "enumNames": [
+          "Windows (PowerShell)",
+          "Linux (Bash)",
+          "macOS (Bash)"
+        ]
+      },
+      "product": {
+        "title": "THOR Cloud product",
+        "type": "string",
+        "default": "thor_cloud_lite",
+        "enum": [
+          "thor_cloud_lite",
+          "thor_cloud"
+        ],
+        "enumNames": [
+          "THOR Cloud Lite",
+          "THOR Cloud"
+        ],
+        "description": "THOR Cloud or THOR Cloud Lite, matching the API key of the account"
+      },
+      "campaign_description": {
+        "title": "Campaign description",
+        "type": "string",
+        "description": "Optional description of the new campaign. Only used when creating a new campaign."
+      },
+      "assigned_contract": {
+        "title": "Contract ID",
+        "type": "string",
+        "description": "Optional contract identifier used to license scans. Only used when creating a new campaign."
+      },
+      "end_date": {
+        "title": "Expiration date",
+        "type": "string",
+        "format": "date-time",
+        "description": "Optional campaign expiration in RFC 3339 format, including timezone. Only used when creating a new campaign."
+      },
+      "scan_profile": {
+        "title": "Scan profile name",
+        "type": "string",
+        "description": "Optional predefined profile name exactly as shown in THOR Cloud; it is resolved through the account scan profiles API. Only used when creating a new campaign."
+      },
+      "scan_limit": {
+        "title": "Scan limit",
+        "type": "integer",
+        "minimum": 0,
+        "description": "Optional maximum number of scans; zero means unlimited. Only used when creating a new campaign."
+      },
+      "scan_threads": {
+        "title": "Scanner threads",
+        "type": "integer",
+        "minimum": 1,
+        "description": "Optional number of scanner threads. Only used when creating a new campaign."
+      }
+    },
+    "required": [
+      "launcher_type"
+    ],
+    "oneOf": [
+      {
+        "required": [
+          "campaign_id"
+        ]
+      },
+      {
+        "required": [
+          "campaign_name"
+        ]
+      }
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "campaign_id": {
+        "type": "string",
+        "description": "UUID of the THOR Cloud campaign"
+      },
+      "campaign_name": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Name of the linked or newly created campaign"
+      },
+      "campaign_created": {
+        "type": "boolean",
+        "description": "Whether this action created the campaign"
+      },
+      "launcher_type": {
+        "type": "string",
+        "description": "Generated launcher type"
+      },
+      "launcher_url": {
+        "type": "string",
+        "format": "uri",
+        "description": "Sensitive tokenized URL from which the target can download the launcher"
+      },
+      "filename": {
+        "type": "string",
+        "description": "Suggested launcher filename"
+      },
+      "command": {
+        "type": "string",
+        "description": "Sensitive OS-specific command that downloads and runs the launcher"
+      }
+    },
+    "required": [
+      "campaign_id",
+      "campaign_name",
+      "campaign_created",
+      "launcher_type",
+      "launcher_url",
+      "filename",
+      "command"
+    ]
+  }
+}
