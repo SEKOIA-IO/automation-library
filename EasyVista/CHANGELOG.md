@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-13
+
+### Added
+
+- Add the `EasyVista Devices` asset connector: collects the assets of `GET /assets` that have a usable network identifier, skips removed and recycled assets, pushes only new or changed devices and maps them to the OCSF Device Inventory Info model
+
+### Changed
+
+- Account validation reads one asset when the REST API profile is denied access to requests (`403`)
+
 ## [1.0.1] - 2026-11-10
 
 ### Added

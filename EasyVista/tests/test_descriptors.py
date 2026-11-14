@@ -43,9 +43,11 @@ def test_all_descriptors_registered_and_match_models():
     module = Mock()
     with patch.object(main, "EasyVistaModule", return_value=module):
         main.main()
-    assert len(module.register.call_args_list) == 17
+    assert len(module.register.call_args_list) == 18
     registrations = {call.args[1]: call.args[0] for call in module.register.call_args_list}
-    assert len(registrations) == 17
+    assert len(registrations) == 18
+    connector = json.loads((ROOT / "connector_easyvista_device_assets.json").read_text())
+    assert registrations[connector["docker_parameters"]] is main.EasyVistaDeviceAssetConnector
     uuids = set()
     for descriptor in descriptors:
         UUID(descriptor["uuid"])

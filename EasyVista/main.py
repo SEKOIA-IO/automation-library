@@ -19,6 +19,7 @@ from easyvista_modules.action.action_view_request_incident import ViewRequestInc
 from easyvista_modules.action.action_view_request_incident_comment import ViewRequestIncidentComment
 from easyvista_modules.action.action_view_request_incident_problem import ViewRequestIncidentProblem
 from easyvista_modules.action.action_view_requests_incidents_list import ViewRequestsIncidentsList
+from easyvista_modules.asset_connector.device_assets import EasyVistaDeviceAssetConnector
 
 
 def main():
@@ -41,6 +42,7 @@ def main():
     module.register(CreateTaskRequestIncident, "easyvista_create_task_request_incident")
     module.register(GetNonTerminatedActionsQuestionnaires, "easyvista_get_non_terminated_actions_questionnaires")
     module.register(GetSpecificActionQuestionnaire, "easyvista_get_specific_action_questionnaire")
+    module.register(EasyVistaDeviceAssetConnector, "easyvista_device_asset_connector")
     module.run()
 
 

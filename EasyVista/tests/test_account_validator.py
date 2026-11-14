@@ -35,9 +35,26 @@ def test_conditional_credentials(make_action, requests_mock, cls, config, expect
     assert not requests_mock.called
 
 
-@pytest.mark.parametrize("status,valid", [(200, True), (401, False), (403, False), (404, False), (590, False)])
+@pytest.mark.parametrize("status,valid", [(200, True), (401, False), (404, False), (590, False)])
 def test_account_validator(make_action, requests_mock, api_url, status, valid):
     requests_mock.get(api_url, status_code=status, json={"records": []} if valid else {"error": "Unavailable"})
     validator = make_action(EasyVistaAccountValidator)
     assert validator.validate() is valid
     assert requests_mock.last_request.qs == {"max_rows": ["1"], "fields": ["rfc_number"]}
+
+
+@pytest.mark.parametrize("status,valid", [(200, True), (403, False)])
+def test_account_validator_falls_back_on_assets_when_requests_are_forbidden(
+    make_action, requests_mock, api_url, status, valid
+):
+    requests_mock.get(api_url, status_code=403, json={"error": "Forbidden"})
+    assets = requests_mock.get(
+        api_url.replace("/requests", "/assets"),
+        status_code=status,
+        json={"records": []} if valid else {"error": "Forbidden"},
+    )
+    validator = make_action(EasyVistaAccountValidator)
+    assert validator.validate() is valid
+    assert assets.last_request.qs == {"max_rows": ["1"], "fields": ["asset_id"]}
+    if not valid:
+        assert "403 on GET /api/v1/00001/assets" in validator.error.call_args.args[0]
