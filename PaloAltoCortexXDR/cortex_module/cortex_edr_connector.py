@@ -24,7 +24,7 @@ class CortexEDRConfiguration(DefaultConnectorConfiguration):
 
 class CortexQueryEDRTrigger(CortexConnector):
     """
-    Cortex EDR Query reads the alerts messages exposed after quering the Cortex
+    Cortex EDR Query reads the alerts messages exposed after querying the Cortex
     API and forward it to the playbook run.
     """
 
@@ -202,7 +202,7 @@ class CortexQueryEDRTrigger(CortexConnector):
                 )
                 self._connection_issue_detected = False
 
-        except RequestsConnectionError as ex:
+        except RequestsConnectionError:
             self._connection_issue_detected = True
             self.log(
                 level="warning",
