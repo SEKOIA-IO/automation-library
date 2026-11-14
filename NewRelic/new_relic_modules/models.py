@@ -1,6 +1,6 @@
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 
 class NewRelicModuleConfiguration(BaseModel):
-    base_url: str = Field(..., description="Base URL")
-    api_key: str = Field(..., description="API key", secret=True)
+    base_url: str = Field(description="Base URL")
+    api_key: SecretStr = Field(description="API key")

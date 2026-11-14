@@ -1,11 +1,11 @@
 import uuid
 from functools import cached_property
 from posixpath import join as urljoin
-from typing import Any
+from typing import Any, Literal
 
 import orjson
 import requests
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 from sekoia_automation.action import Action
 
 from . import NewRelicModule
@@ -23,11 +23,11 @@ class NRQLQueryAction(Action):
 
     @cached_property
     def client(self) -> ApiClient:
-        return ApiClient(api_key=self.module.configuration.api_key)
+        return ApiClient(api_key=self.module.configuration.api_key.get_secret_value())
 
     def handle_response_error(self, response: requests.Response) -> None:
         if not response.ok:
-            level = "critical" if response.status_code in {401, 403} else "error"
+            level: Literal["critical", "error"] = "critical" if response.status_code in {401, 403} else "error"
             message = f"Request to NewRelic API failed with status {response.status_code} - {response.reason}"
 
             self.log(message=message, level=level)
@@ -52,7 +52,7 @@ class NRQLQueryAction(Action):
     def run(self, arguments: NRQLQueryActionArguments) -> Any:
         url = urljoin(self.module.configuration.base_url, "graphql")
 
-        payload = {
+        payload: dict = {
             "query": "query ExecuteQuery($account_ids: [Int!], $query: Nrql!) {"
             "actor { nrql( accounts: $account_ids query: $query) { results } } "
             "}",
