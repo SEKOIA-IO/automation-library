@@ -24,14 +24,21 @@ def test_append_to_blocklist_success(append_action):
             [
                 {
                     "status_code": 200,
-                    "json": {"id": 123, "name": "Test Blocklist", "data": {"type": "exact", "urls": []}},
+                    "json": {
+                        "id": 123,
+                        "name": "Test Blocklist",
+                        "data": {"type": "exact", "urls": []},
+                    },
                 },
                 {
                     "status_code": 200,
                     "json": {
                         "id": 123,
                         "name": "Test Blocklist",
-                        "data": {"type": "exact", "urls": ["malicious.com", "www.test.com"]},
+                        "data": {
+                            "type": "exact",
+                            "urls": ["malicious.com", "www.test.com"],
+                        },
                     },
                 },
             ],
@@ -56,7 +63,10 @@ def test_append_to_blocklist_success(append_action):
             status_code=200,
             json=[
                 {
-                    "data": {"type": "exact", "urls": ["www.test.com", "malicious.com"]},
+                    "data": {
+                        "type": "exact",
+                        "urls": ["www.test.com", "malicious.com"],
+                    },
                     "id": 123,
                     "modify_by": "Netskope API",
                     "modify_time": "1997-01-01 00:00:00",
@@ -207,7 +217,10 @@ def test_append_to_blocklist_should_skip_existing_and_duplicates(append_action):
                     "status_code": 200,
                     "json": {
                         "id": 123,
-                        "data": {"type": "exact", "urls": ["www.already.com", "www.new.com"]},
+                        "data": {
+                            "type": "exact",
+                            "urls": ["www.already.com", "www.new.com"],
+                        },
                     },
                 },
             ],
@@ -277,10 +290,16 @@ def test_append_to_blocklist_should_not_sort_when_sort_items_false(append_action
         mock_requests.get(
             "https://my.fake.netskope.com/api/v2/policy/urllist/123",
             [
-                {"status_code": 200, "json": {"id": 123, "data": {"type": "exact", "urls": []}}},
                 {
                     "status_code": 200,
-                    "json": {"id": 123, "data": {"type": "exact", "urls": ["www.z.com", "www.a.com"]}},
+                    "json": {"id": 123, "data": {"type": "exact", "urls": []}},
+                },
+                {
+                    "status_code": 200,
+                    "json": {
+                        "id": 123,
+                        "data": {"type": "exact", "urls": ["www.z.com", "www.a.com"]},
+                    },
                 },
             ],
         )
