@@ -1,14 +1,14 @@
 import copy
 import os
 import time
-from dateutil.parser import isoparse
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from queue import Queue
 from threading import Thread
 from unittest.mock import Mock
 
 import orjson
 import pytest
+from dateutil.parser import isoparse
 from websocket import WebSocketTimeoutException
 
 from proofpoint_modules.pod.checkpoint import Checkpoint
@@ -18,7 +18,7 @@ from tests.data import ORIGINAL_MAILLOG, ORIGINAL_MESSAGE
 
 @pytest.mark.skipif("{'PROOFPOINT_APIKEY', 'PROOFPOINT_CLUSTER_ID'}.issubset(os.environ.keys()) == False")
 def test_forward_events_integration(symphony_storage):
-    one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    one_hour_ago = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
     trigger = PoDEventsTrigger(data_path=symphony_storage)
     trigger.module.configuration = {}
     trigger.configuration = {
@@ -45,7 +45,7 @@ def test_forward_events_integration(symphony_storage):
 
 @pytest.fixture
 def trigger(symphony_storage):
-    one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    one_hour_ago = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
     trigger = PoDEventsTrigger(data_path=symphony_storage)
     trigger.module.configuration = {}
     trigger.configuration = {
@@ -160,7 +160,7 @@ def test_forward_on_message(forwarder, trigger, queue):
 
 
 def test_pod_events_on_message_maillog(symphony_storage, queue, checkpoint):
-    one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    one_hour_ago = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
     trigger = PoDEventsTrigger(data_path=symphony_storage)
     trigger.module.configuration = {}
     trigger.configuration = {
@@ -194,7 +194,7 @@ def test_event_forwarder_next_batch(forwarder, queue, checkpoint):
     message = copy.deepcopy(expected_message)
 
     nb_events = 1001
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     message_date = now - timedelta(minutes=nb_events)
     for index in range(nb_events):
         queue.put(((message_date + timedelta(minutes=index + 1)).isoformat(), message), block=False)

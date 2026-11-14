@@ -1,7 +1,7 @@
 import os
 import queue
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from functools import cached_property
 from posixpath import join as urljoin
@@ -32,7 +32,7 @@ class PODConfig(DefaultConnectorConfiguration):
 
 
 class PoDEventsConsumer(Thread):
-    def __init__(self, connector: "PoDEventsTrigger", queue: queue.Queue, checkpoint: Checkpoint):
+    def __init__(self, connector: PoDEventsTrigger, queue: queue.Queue, checkpoint: Checkpoint):
         super().__init__()
         self.connector = connector
         self.queue = queue
@@ -129,7 +129,7 @@ class PoDEventsConsumer(Thread):
 
 class EventsForwarder(Thread):
     def __init__(
-        self, connector: "PoDEventsTrigger", queue: queue.Queue, checkpoint: Checkpoint, max_batch_size: int = 20000
+        self, connector: PoDEventsTrigger, queue: queue.Queue, checkpoint: Checkpoint, max_batch_size: int = 20000
     ):
         super().__init__()
         self.connector = connector
@@ -172,7 +172,7 @@ class EventsForwarder(Thread):
             self.checkpoint.offset = most_recent_date_seen
 
             # compute the lag
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             current_lag = now - most_recent_date_seen
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
 
