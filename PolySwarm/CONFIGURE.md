@@ -24,7 +24,7 @@ If you do not have a key, the round `+` button on either section creates one, or
 
     ![The PolySwarm integration page](docs/assets/step03-integration-page.png)
 7. Give the account a name you will recognise in a playbook, for example the team the key belongs to.
-8. Paste the key into `API Key`. The field is declared as a secret, so the platform masks it.
+8. Paste the key into `Api Key`, whose placeholder reads `Type in API_Key`. The field is declared as a secret, so the platform masks it once saved.
 9. Set `Community`. It is prefilled with `default`, which is the public community and is where most keys belong. If PolySwarm issued you a key for a private community, put that community's name here instead.
 
     ![The Add new account form](docs/assets/step04-add-account.png)
@@ -91,3 +91,7 @@ for the same reason.
 ### Checking it worked
 
 The cheapest proof that the key and the community are both right is a hash search, because it is read only. Run `Search Hash` against a hash you know is malicious and confirm the engine detections come back. If it reports the artifact as not found for something the industry has certainly seen, go back to the community field.
+
+### Support
+
+Questions about the module, your key or your community: customersuccess@polyswarm.io.
