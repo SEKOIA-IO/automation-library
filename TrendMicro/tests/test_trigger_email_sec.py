@@ -1,10 +1,12 @@
 import time
 from unittest.mock import MagicMock, Mock, patch
 
+import orjson
 import pytest
 import requests_mock
 
 from trendmicro_modules import TrendMicroModule
+from trendmicro_modules.helpers import unixtime_to_iso8601
 from trendmicro_modules.trigger_email_sec import TrendMicroEmailSecurityConnector, TrendMicroWorker
 
 
@@ -145,7 +147,7 @@ def test_saving_checkpoint(trigger):
     assert result > 0
 
 
-def test_fetch_event(trigger, response_message, response_message_empty):
+def test_fetch_event(trigger, response_message):
     with (
         requests_mock.Mocker() as mock_requests,
         patch(
@@ -157,7 +159,8 @@ def test_fetch_event(trigger, response_message, response_message_empty):
     ):
         mock_requests.get(
             "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog",
-            [{"status_code": 200, "json": response_message}, {"status_code": 200, "content": response_message_empty}],
+            # the first page has a nextToken; the second one, without nextToken, ends the window
+            [{"status_code": 200, "json": response_message}, {"status_code": 200, "json": {"logs": []}}],
         )
 
         batch_duration = 16  # the batch lasts 16 seconds
@@ -206,3 +209,329 @@ def test_fetch_empty_content(trigger, response_message_empty):
 
         assert trigger.push_events_to_intakes.call_count == 0
         mock_time.sleep.assert_called_once_with(60)
+
+
+def build_log(mail_id: str, gen_time: int) -> dict:
+    return {
+        "genTime": unixtime_to_iso8601(gen_time),
+        "messageID": f"<{mail_id}@example.com>",
+        "mailID": mail_id,
+        "action": "Delivered",
+        "sender": "sender@example.com",
+        "recipient": "rcpt@example.com",
+    }
+
+
+@pytest.fixture
+def paginated_responses():
+    now = int(time.time())
+    checkpoint = now - 3600
+    max_gen_time = checkpoint + 120
+    # logs are deliberately not sorted by genTime: the most recent one is on the first page
+    pages = [
+        {
+            "nextToken": "token%2Fpage2",
+            "logs": [build_log("mail-1", checkpoint + 10), build_log("mail-2", max_gen_time)],
+        },
+        {
+            "nextToken": "token%2Fpage3",
+            "logs": [build_log("mail-3", checkpoint + 20), build_log("mail-4", checkpoint + 30)],
+        },
+        {
+            "logs": [build_log("mail-5", max_gen_time), build_log("mail-6", checkpoint + 40)],
+        },
+    ]
+    return checkpoint, max_gen_time, pages
+
+
+def test_fetch_all_pages(trigger, paginated_responses):
+    checkpoint, max_gen_time, pages = paginated_responses
+    url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
+
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    consumer.set_last_timestamp(checkpoint)
+
+    with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
+        mock_requests.get(url, [{"status_code": 200, "json": page} for page in pages])
+        consumer.next_batch()
+
+        # all the pages were requested, following the nextToken
+        assert mock_requests.call_count == 3
+        assert "token" not in mock_requests.request_history[0].qs
+        assert mock_requests.request_history[1].qs["token"] == ["token/page2"]
+        assert mock_requests.request_history[2].qs["token"] == ["token/page3"]
+
+    pushed = [
+        orjson.loads(event)["mailID"]
+        for call in trigger.push_events_to_intakes.call_args_list
+        for event in call.kwargs["events"]
+    ]
+    assert trigger.push_events_to_intakes.call_count == 3
+    assert sorted(pushed) == ["mail-1", "mail-2", "mail-3", "mail-4", "mail-5", "mail-6"]
+
+    # the checkpoint is the most recent genTime over all the pages
+    assert consumer.get_last_timestamp() == max_gen_time
+    # only the events at the checkpoint second are remembered
+    assert sorted(event["mailID"] for event in consumer.get_recent_pushed_events()) == ["mail-2", "mail-5"]
+
+    # the next run queries from the checkpoint, inclusive: the events of this second are returned again
+    trigger.push_events_to_intakes.reset_mock()
+    next_page = {"logs": [build_log("mail-5", max_gen_time), build_log("mail-2", max_gen_time)]}
+    with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
+        mock_requests.get(url, status_code=200, json=next_page)
+        consumer.next_batch()
+
+        assert mock_requests.last_request.qs["start"] == [unixtime_to_iso8601(max_gen_time).lower()]
+
+    # they are not pushed again
+    assert trigger.push_events_to_intakes.call_count == 0
+    assert consumer.get_last_timestamp() == max_gen_time
+
+    # a new event in the same second is pushed, without duplicating the previous ones
+    next_page["logs"].append(build_log("mail-7", max_gen_time))
+    with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
+        mock_requests.get(url, status_code=200, json=next_page)
+        consumer.next_batch()
+
+    assert trigger.push_events_to_intakes.call_count == 1
+    assert [orjson.loads(event)["mailID"] for event in trigger.push_events_to_intakes.call_args.kwargs["events"]] == [
+        "mail-7"
+    ]
+    assert consumer.get_last_timestamp() == max_gen_time
+    assert sorted(event["mailID"] for event in consumer.get_recent_pushed_events()) == ["mail-2", "mail-5", "mail-7"]
+
+
+def test_checkpoint_not_moved_when_a_page_fails(trigger, paginated_responses):
+    checkpoint, _max_gen_time, pages = paginated_responses
+    url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
+
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    consumer.set_last_timestamp(checkpoint)
+
+    with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
+        mock_requests.get(
+            url,
+            [{"status_code": 200, "json": pages[0]}, {"status_code": 500, "text": "Internal Server Error"}],
+        )
+        consumer.next_batch()
+
+    assert trigger.push_events_to_intakes.call_count == 1
+    # the second page was not collected: the window must be collected again on the next run
+    assert consumer.get_last_timestamp() == checkpoint
+    assert consumer.get_recent_pushed_events() == []
+
+
+def test_first_window_is_retried_from_the_same_start_when_a_page_fails(trigger):
+    url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
+    now = 1793016000
+    first_start = now - 5 * 60
+    first_page = {"nextToken": "token%2Fpage2", "logs": [build_log("mail-1", first_start + 200)]}
+
+    # no checkpoint yet: the first window starts 5 minutes ago and its second page fails
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch("trendmicro_modules.trigger_email_sec.time.time", return_value=now),
+        patch("trendmicro_modules.trigger_email_sec.time.sleep"),
+    ):
+        mock_requests.get(
+            url,
+            [{"status_code": 200, "json": first_page}, {"status_code": 500, "text": "Internal Server Error"}],
+        )
+        consumer.next_batch()
+
+        # the clock stays patched: the real one would apply the 72-hour retention limit to the checkpoint
+        assert mock_requests.request_history[0].qs["start"] == [unixtime_to_iso8601(first_start).lower()]
+        assert consumer.get_last_timestamp() == first_start
+
+    # two minutes later, the retry must start from the same lower bound, not from a new "5 minutes ago"
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch("trendmicro_modules.trigger_email_sec.time.time", return_value=now + 120),
+        patch("trendmicro_modules.trigger_email_sec.time.sleep"),
+    ):
+        mock_requests.get(url, status_code=200, json={"logs": [build_log("mail-1", first_start + 200)]})
+        consumer.next_batch()
+
+        assert mock_requests.request_history[0].qs["start"] == [unixtime_to_iso8601(first_start).lower()]
+        assert consumer.get_last_timestamp() == first_start + 200
+
+
+def test_empty_page_with_next_token_does_not_end_the_window(trigger):
+    url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
+    checkpoint = int(time.time()) - 3600
+    pages = [
+        {"nextToken": "token%2Fpage2", "logs": [build_log("mail-1", checkpoint + 100)]},
+        {"nextToken": "token%2Fpage3", "logs": []},
+        {"logs": [build_log("mail-2", checkpoint + 10)]},
+    ]
+
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    consumer.set_last_timestamp(checkpoint)
+
+    with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
+        mock_requests.get(url, [{"status_code": 200, "json": page} for page in pages])
+        consumer.next_batch()
+
+    assert mock_requests.call_count == 3
+    pushed = [
+        orjson.loads(event)["mailID"]
+        for call in trigger.push_events_to_intakes.call_args_list
+        for event in call.kwargs["events"]
+    ]
+    assert pushed == ["mail-1", "mail-2"]
+    assert consumer.get_last_timestamp() == checkpoint + 100
+
+
+def test_logs_of_the_same_mail_are_not_deduplicated(trigger):
+    url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
+    checkpoint = int(time.time()) - 3600
+    deferred_first = build_log("mail-1", checkpoint + 10) | {"action": "Deferred"}
+    deferred_again = build_log("mail-1", checkpoint + 70) | {"action": "Deferred"}
+    other_recipient = build_log("mail-1", checkpoint + 70) | {"action": "Deferred", "recipient": "other@example.com"}
+    pages = [
+        {"nextToken": "token%2Fpage2", "logs": [deferred_first, deferred_again]},
+        {"logs": [other_recipient, deferred_again]},
+    ]
+
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    consumer.set_last_timestamp(checkpoint)
+
+    with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
+        mock_requests.get(url, [{"status_code": 200, "json": page} for page in pages])
+        consumer.next_batch()
+
+    pushed = [
+        orjson.loads(event)
+        for call in trigger.push_events_to_intakes.call_args_list
+        for event in call.kwargs["events"]
+    ]
+    # the three distinct logs are pushed, the true duplicate of the second page is skipped
+    assert pushed == [deferred_first, deferred_again, other_recipient]
+
+
+def test_legacy_recent_pushed_events_do_not_drop_distinct_logs(trigger):
+    url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
+    checkpoint = int(time.time()) - 3600
+    boundary_log = build_log("mail-1", checkpoint) | {"action": "Deferred"}
+    later_deferral = build_log("mail-1", checkpoint + 60) | {"action": "Deferred"}
+    other_recipient = later_deferral | {"recipient": "other@example.com"}
+
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    consumer.set_last_timestamp(checkpoint)
+    # cache written by a previous version of the connector, without recipient and genTime
+    with trigger.context as cache:
+        cache["accepted_traffic"]["recent_pushed_events"] = [
+            {"mailID": "mail-1", "messageID": "<mail-1@example.com>", "action": "Deferred"}
+        ]
+
+    with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
+        mock_requests.get(url, status_code=200, json={"logs": [boundary_log, later_deferral, other_recipient]})
+        consumer.next_batch()
+
+    pushed = [
+        orjson.loads(event)
+        for call in trigger.push_events_to_intakes.call_args_list
+        for event in call.kwargs["events"]
+    ]
+    # the logs sharing the legacy key are not dropped; the boundary log is pushed again once
+    assert pushed == [boundary_log, later_deferral, other_recipient]
+    assert consumer.get_last_timestamp() == checkpoint + 60
+    assert consumer.get_recent_pushed_events() == [
+        TrendMicroWorker.get_event_metadata(later_deferral),
+        TrendMicroWorker.get_event_metadata(other_recipient),
+    ]
+
+
+def pushed_mail_ids(trigger) -> list[str]:
+    return [
+        orjson.loads(event)["mailID"]
+        for call in trigger.push_events_to_intakes.call_args_list
+        for event in call.kwargs["events"]
+    ]
+
+
+def test_retries_of_an_incomplete_window_do_not_push_the_same_pages_again(trigger, paginated_responses):
+    checkpoint, max_gen_time, pages = paginated_responses
+    url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
+    page_error = {"status_code": 500, "text": "Internal Server Error"}
+
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    consumer.set_last_timestamp(checkpoint)
+
+    # the second page keeps failing: the first one is pushed only once over the retries
+    for _ in range(3):
+        with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
+            mock_requests.get(url, [{"status_code": 200, "json": pages[0]}, page_error])
+            consumer.next_batch()
+
+        assert mock_requests.call_count == 2
+        assert consumer.get_last_timestamp() == checkpoint
+
+    assert pushed_mail_ids(trigger) == ["mail-1", "mail-2"]
+    trigger.log.assert_any_call(
+        message="accepted_traffic: Failed to fetch the next page of events. The window will be retried",
+        level="warning",
+    )
+
+    # the API recovers: only the remaining pages are pushed and the checkpoint covers the whole window
+    with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
+        mock_requests.get(url, [{"status_code": 200, "json": page} for page in pages])
+        consumer.next_batch()
+
+    assert pushed_mail_ids(trigger) == ["mail-1", "mail-2", "mail-3", "mail-4", "mail-5", "mail-6"]
+    assert consumer.get_last_timestamp() == max_gen_time
+    assert sorted(event["mailID"] for event in consumer.get_recent_pushed_events()) == ["mail-2", "mail-5"]
+    assert consumer.incomplete_window_events == []
+
+
+def test_empty_body_behind_a_next_token_does_not_end_the_window(trigger, paginated_responses):
+    checkpoint, max_gen_time, pages = paginated_responses
+    url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
+
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    consumer.set_last_timestamp(checkpoint)
+
+    with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
+        mock_requests.get(url, [{"status_code": 200, "json": pages[0]}, {"status_code": 200, "content": b""}])
+        consumer.next_batch()
+
+    # the remaining pages may not have been read: the checkpoint doesn't move past them
+    assert consumer.all_pages_fetched is False
+    assert consumer.get_last_timestamp() == checkpoint
+    assert consumer.get_recent_pushed_events() == []
+    trigger.log.assert_any_call(
+        message="accepted_traffic: Empty response for the next page of events. The window will be retried",
+        level="warning",
+    )
+
+    # the window is collected again, without pushing the first page twice
+    with requests_mock.Mocker() as mock_requests, patch("trendmicro_modules.trigger_email_sec.time.sleep"):
+        mock_requests.get(url, [{"status_code": 200, "json": page} for page in pages])
+        consumer.next_batch()
+
+    assert pushed_mail_ids(trigger) == ["mail-1", "mail-2", "mail-3", "mail-4", "mail-5", "mail-6"]
+    assert consumer.get_last_timestamp() == max_gen_time
+
+
+def test_first_page_error_does_not_mark_the_window_as_complete(trigger):
+    url = "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog"
+    checkpoint = int(time.time()) - 3600
+
+    consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+    consumer.set_last_timestamp(checkpoint)
+
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch("trendmicro_modules.trigger_email_sec.time.sleep") as mock_sleep,
+    ):
+        mock_requests.get(url, status_code=500, text="Internal Server Error")
+        consumer.next_batch()
+
+    assert consumer.all_pages_fetched is False
+    assert trigger.push_events_to_intakes.call_count == 0
+    assert consumer.get_last_timestamp() == checkpoint
+    # the error isn't reported as "no events", and the next attempt only waits for the batch delay
+    logged_messages = [call.kwargs["message"] for call in trigger.log.call_args_list]
+    assert not any("No events to forward" in message for message in logged_messages)
+    mock_sleep.assert_called_once()
