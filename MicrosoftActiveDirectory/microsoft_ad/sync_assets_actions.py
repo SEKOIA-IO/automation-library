@@ -15,6 +15,7 @@ from sekoia_automation.storage import PersistentJSON
 from microsoft_ad.actions_base import MicrosoftADAction
 from microsoft_ad.asset_connectors.exceptions import AssetConnectorPushError, AssetConnectorStoppedError
 from microsoft_ad.asset_connectors.user_assets_sync import MicrosoftADUserAssetSyncConnector
+from microsoft_ad.helpers import basedn_error
 
 
 class SynchronizeAssetsArguments(BaseModel):
@@ -131,7 +132,8 @@ class SynchronizeAssetsAction(MicrosoftADAction):
         stats: Counter[str] = Counter()
         has_more = False
         try:
-            if arguments.basedn:
+            error = basedn_error(arguments.basedn)
+            if error is None:
                 with self._run_lock(data_path) as acquired:
                     if acquired:
                         connector.asset_fetch_cycle()
@@ -141,10 +143,9 @@ class SynchronizeAssetsAction(MicrosoftADAction):
                             level="warning",
                         )
             else:
-                basedn_error = "A base DN is required to synchronize Active Directory users"
-                self.error(basedn_error)
+                self.error(error)
                 with self._warn_on_error("send the connector error log"):
-                    connector.log(message=basedn_error, level="error")
+                    connector.log(message=error, level="error")
         except AssetConnectorStoppedError:
             if time_limit_reached.is_set():
                 reason = f"reached the time limit of {self.MAX_DURATION // 60} minutes"

@@ -19,6 +19,7 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
 from sekoia_automation.storage import PersistentJSON
 
 from microsoft_ad.client.ldap_client import LDAPClient
+from microsoft_ad.helpers import basedn_error
 from microsoft_ad.models.common_models import LDAPUserAttributes, MicrosoftADConnectorConfiguration, MicrosoftADModule
 
 
@@ -334,6 +335,9 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         already_seen_sids = self.seen_sids_at_checkpoint
 
         for entry in self._entries():
+            if entry.get("type") == "searchResRef":
+                self.log(f"Skipping the LDAP search reference {entry.get('uri')}", level="debug")
+                continue
             user_attributes = entry.get("attributes", {})
             if not user_attributes:
                 self.log("No user attributes found for user", level="error")
@@ -372,6 +376,10 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         Yields:
             Generator[UserOCSFModel]: An OCSF model representing a Microsoft AD user.
         """
+
+        if error := basedn_error(self.configuration.basedn):
+            self.log(error, level="critical")
+            return
 
         self.log("Start Microsoft AD user assets generator !!", level="info")
         self.log(f"Data path: {self._data_path.absolute()}", level="info")

@@ -803,8 +803,20 @@ def test_connector_manifest_declares_the_on_premise_action():
 BASEDN_ERROR = "A base DN is required to synchronize Active Directory users"
 
 
-@pytest.mark.parametrize("basedn", [None, ""])
-def test_run_fails_at_once_without_a_base_dn(build_action, api, tmp_path, basedn):
+@pytest.mark.parametrize(
+    "basedn, expected",
+    [
+        (None, BASEDN_ERROR),
+        ("", BASEDN_ERROR),
+        ("  ", BASEDN_ERROR),
+        (
+            "EXAMPLE.CORP",
+            "The base DN 'EXAMPLE.CORP' is not a valid distinguished name: "
+            "use 'DC=EXAMPLE,DC=CORP' for the domain EXAMPLE.CORP",
+        ),
+    ],
+)
+def test_run_fails_at_once_without_a_valid_base_dn(build_action, api, tmp_path, basedn, expected):
     arguments = {**ARGUMENTS, "basedn": basedn}
     action = build_action()
 
@@ -812,10 +824,10 @@ def test_run_fails_at_once_without_a_base_dn(build_action, api, tmp_path, basedn
         results = action.run(arguments)
 
     assert results == {"fetched": 0, "pushed_batches": 0, "failed_batches": 0, "has_more": False}
-    assert action.error_message == BASEDN_ERROR
+    assert action.error_message == expected
     asset_fetch_cycle.assert_not_called()
     assert not requests_to(api, PUSH_URL)
-    assert any(log["level"] == "error" and log["message"] == BASEDN_ERROR for log in sent_logs(api))
+    assert any(log["level"] == "error" and log["message"] == expected for log in sent_logs(api))
     assert "most_recent_datetime" not in read_context(tmp_path / UUID)
 
 
