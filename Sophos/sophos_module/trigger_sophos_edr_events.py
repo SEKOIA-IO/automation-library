@@ -12,7 +12,7 @@ from sophos_module.base import SophosConnector
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
 from sophos_module.client.exceptions import SophosApiAuthenticationError
-from sophos_module.helper import normalize_message, parse_iso8601_timestamp
+from sophos_module.helper import latest_timestamp, normalize_message
 from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
 
 
@@ -141,22 +141,7 @@ class SophosEDREventsTrigger(SophosConnector):
         return result
 
     def _get_most_recent_timestamp_from_items(self, items: list[dict[str, Any]]) -> float | None:
-        latest_timestamp: float | None = None
-
-        for item in items:
-            item_timestamp: float | None = None
-            for key in ("created_at", "createdAt", "when"):
-                item_timestamp = parse_iso8601_timestamp(item.get(key))
-                if item_timestamp is not None:
-                    break
-
-            if item_timestamp is None:
-                continue
-
-            if latest_timestamp is None or item_timestamp > latest_timestamp:
-                latest_timestamp = item_timestamp
-
-        return latest_timestamp
+        return latest_timestamp(items, ("created_at", "createdAt", "when"))
 
     def forward_next_batches(self) -> None:
         """

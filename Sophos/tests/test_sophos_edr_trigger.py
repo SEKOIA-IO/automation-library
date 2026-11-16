@@ -1,3 +1,4 @@
+import json
 import os
 from unittest.mock import Mock
 
@@ -159,7 +160,8 @@ def test_fetch_next_events_with_created_at_camel_case(trigger):
         trigger.forward_next_batches()
 
         calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
-        assert len(calls) > 0
+        assert len(calls) == 1
+        assert json.loads(calls[0][0])["rt"] == "2019-04-01T15:11:09.984Z"
 
 
 def test_get_most_recent_timestamp_returns_none_without_parseable_fields(trigger):

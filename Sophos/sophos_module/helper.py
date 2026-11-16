@@ -1,5 +1,6 @@
 import re
-from datetime import datetime
+from collections.abc import Iterable
+from datetime import datetime, timezone
 from typing import Any
 
 MAPPING = {
@@ -41,13 +42,37 @@ def parse_iso8601_timestamp(raw: Any) -> float | None:
     if not value:
         return None
 
-    if value.endswith("Z"):
+    if value[-1] in "Zz":
         value = f"{value[:-1]}+00:00"
 
     try:
-        return datetime.fromisoformat(value).timestamp()
+        dt = datetime.fromisoformat(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.timestamp()
     except ValueError:
         return None
+
+
+def latest_timestamp(items: Iterable[dict[str, Any]], keys: Iterable[str]) -> float | None:
+    """Find the latest timestamp, using the first parseable key in each item."""
+    keys = tuple(keys)
+    most_recent: float | None = None
+    for item in items:
+        for key in keys:
+            parsed = parse_iso8601_timestamp(item.get(key))
+            if parsed is not None:
+                if most_recent is None or parsed > most_recent:
+                    most_recent = parsed
+                break
+    return most_recent
+
+
+def normalize_xdr_message(data: dict[str, Any]) -> dict[str, Any]:
+    normalized = data.copy()
+    if "calendarTime" in normalized:
+        normalized.setdefault("calendar_time", normalized.pop("calendarTime"))
+    return normalized
 
 
 THREAT_REGEX = re.compile("'(?P<detection_identity_name>.*?)'.+'(?P<filePath>.*?)'")
