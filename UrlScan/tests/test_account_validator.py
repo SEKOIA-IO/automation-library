@@ -41,3 +41,12 @@ def test_unreachable(validator: UrlScanAccountValidator, api: respx.MockRouter):
     assert validator.validate() is False
 
     validator.error.assert_called_once_with("urlscan.io could not be reached: ConnectError")
+
+
+def test_plain_http_base_url(validator: UrlScanAccountValidator, api: respx.MockRouter):
+    validator.module.configuration.base_url = "http://urlscan.io"
+
+    assert validator.validate() is False
+
+    validator.error.assert_called_once_with("The base URL of the urlscan.io API must use HTTPS")
+    assert not api.calls

@@ -179,6 +179,10 @@ def blacklisted_summary(url: str) -> dict[str, Any]:
 def build_indicator_query(indicator: str) -> str:
     """Search query for an IP, SHA256, URL or domain."""
     value = indicator.strip()
+    scheme, separator, rest = value.partition("://")
+    if separator and scheme.lower() in ("http", "https"):
+        # A scheme is case-insensitive (RFC 3986): use the lowercase form that browsers record.
+        value = f"{scheme.lower()}://{rest}"
     quoted = '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
     try:
         ipaddress.ip_address(value)

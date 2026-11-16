@@ -76,7 +76,10 @@
         "description": "Scan status: done, submitted (wait_for_result false) or blacklisted (fail_on_blacklisted_url false)"
       },
       "submitted_url": {
-        "type": "string",
+        "type": [
+          "string",
+          "null"
+        ],
         "description": "URL scanned, normalised by urlscan.io"
       },
       "visibility": {

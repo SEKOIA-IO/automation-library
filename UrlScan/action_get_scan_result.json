@@ -33,7 +33,10 @@
         "description": "Scan status, done for a finished scan"
       },
       "submitted_url": {
-        "type": "string",
+        "type": [
+          "string",
+          "null"
+        ],
         "description": "URL scanned, normalised by urlscan.io"
       },
       "visibility": {

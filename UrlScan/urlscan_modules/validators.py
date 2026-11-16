@@ -11,8 +11,13 @@ from urlscan_modules.base import ActionError
 
 SUFFIX = "and will not be sent to urlscan.io"
 SCAN_ID_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
-# Suffixes the standards reserve for names that only resolve inside a network.
-INTERNAL_SUFFIXES = (".localhost", ".local", ".internal", ".home.arpa")
+# Suffixes that never resolve on the public internet: reserved by the standards (RFC 6761, RFC 6762, RFC 8375,
+# .internal), never to be delegated by ICANN (.corp, .home, .mail), or undelegated and common on home networks (.lan).
+INTERNAL_SUFFIXES = (
+    ".localhost", ".local", ".internal", ".home.arpa",
+    ".test", ".example", ".invalid",
+    ".corp", ".home", ".mail", ".lan",
+)  # fmt: skip
 NUMERIC_LABEL = re.compile(r"^(?:[0-9]+|0x[0-9a-f]*)$")
 NAT64_PREFIX = ipaddress.ip_network("64:ff9b::/96")
 

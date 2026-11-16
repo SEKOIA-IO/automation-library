@@ -179,6 +179,26 @@ def test_perform_must_be_implemented(module, tmp_path):
         UrlScanAction(module=module, data_path=tmp_path).run({})
 
 
+@pytest.mark.parametrize("base_url", ["http://urlscan.io", "HTTP://urlscan.io", "urlscan.io", "ftp://urlscan.io"])
+def test_base_url_must_use_https(action, api, base_url):
+    action.module.configuration.base_url = base_url
+
+    assert action.run({}) is None
+    assert action.error_message == "The base URL of the urlscan.io API must use HTTPS"
+    assert not api.calls
+
+
+def test_base_url_scheme_is_case_insensitive(action, api):
+    api.get("/api/v1/quotas").respond(200, json={"scope": "team"})
+    action.module.configuration.base_url = "HTTPS://urlscan.io/"
+
+    assert action.run({}) == {"quotas": {"scope": "team"}}
+
+
+def test_action_error_description():
+    assert describe_error(ActionError("nope")) == "nope"
+
+
 def test_unknown_error_description():
     assert describe_error(ValueError("x")) == "urlscan.io error: ValueError"
 
