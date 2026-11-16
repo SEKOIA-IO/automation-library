@@ -29,13 +29,15 @@
       "tags": {
         "type": "array",
         "items": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 30
         },
         "maxItems": 10,
-        "description": "User tags, for example phishing (at most 10)"
+        "description": "User tags, for example phishing (at most 10, 30 characters each)"
       },
       "country": {
         "type": "string",
+        "pattern": "^[A-Za-z]{2}$",
         "description": "Two-letter ISO 3166-1 alpha-2 code of the country to scan from, for example fr. urlscan.io detects it when empty"
       },
       "fail_on_blacklisted_url": {
@@ -443,7 +445,7 @@
           "string",
           "null"
         ],
-        "description": "Screenshot URL, null when the screenshot is not stored"
+        "description": "Screenshot URL, opens without an account; null when the screenshot is not stored"
       },
       "dom_available": {
         "type": [
@@ -464,7 +466,7 @@
           "string",
           "null"
         ],
-        "description": "Ready-to-post Markdown comment"
+        "description": "Ready-to-post Markdown comment for Comment Alert / Comment case; embeds the screenshot when urlscan.io stores it (the image stays hosted by urlscan.io)"
       }
     },
     "required": [

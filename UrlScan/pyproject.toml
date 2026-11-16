@@ -8,6 +8,7 @@ dependencies = [
     "sekoia-automation-sdk>=1.27.0,<2",
     "urlscan-python==2026.8.18",
     "tenacity>=9.0,<10",
+    "pydantic>=2,<3",
 ]
 
 [dependency-groups]
@@ -53,3 +54,7 @@ norecursedirs = ["test_end_to_end", ".*", "*.egg", "build", "dist", "venv"]
 
 [tool.coverage.run]
 omit = ["tests/*", "test_end_to_end/*", "main.py"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100

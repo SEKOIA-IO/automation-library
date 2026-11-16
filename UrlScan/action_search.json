@@ -14,7 +14,7 @@
       },
       "query": {
         "type": "string",
-        "description": "Elasticsearch Query String query, for example task.tags:\"phishing\" AND date:>now-7d; values with colons, slashes or spaces must be double-quoted; provide this or indicator"
+        "description": "Elasticsearch Query String query, sent as the q parameter, for example task.tags:\"phishing\" AND date:>now-7d; values with colons, slashes or spaces must be double-quoted; provide this or indicator"
       },
       "size": {
         "type": "integer",
@@ -25,7 +25,7 @@
       },
       "search_after": {
         "type": "string",
-        "description": "next_search_after of the previous call, to get the next page"
+        "description": "next_search_after of the previous call (comma-separated sort values of its last result), to get the next page"
       }
     }
   },

@@ -4,12 +4,13 @@ from urlscan import APIError, Client
 
 from urlscan_modules.artefacts import PNG_SIGNATURE, write_screenshot
 from urlscan_modules.base import ActionError, UrlScanAction
+from urlscan_modules.models import ScanIdArguments
 from urlscan_modules.validators import valid_scan_id
 
 
 class DownloadScanScreenshot(UrlScanAction):
     def perform(self, client: Client, arguments: dict[str, Any]) -> dict[str, Any]:
-        scan_id = valid_scan_id(arguments.get("scan_id"))
+        scan_id = valid_scan_id(ScanIdArguments.model_validate(arguments).scan_id)
         try:
             screenshot = self.call(client.get_screenshot, scan_id)
         except APIError as error:

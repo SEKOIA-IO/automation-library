@@ -1,4 +1,3 @@
-import re
 from typing import Any
 
 import httpx
@@ -8,14 +7,10 @@ from urlscan.error import RateLimitRemainingError
 from urlscan_modules.action.action_get_scan_result import fetch_scan_summary
 from urlscan_modules.base import ActionError, UrlScanAction, describe_error
 from urlscan_modules.formatters import blacklisted_summary, submitted_summary
+from urlscan_modules.models import ScanUrlArguments
 from urlscan_modules.validators import internal_target_reason
 
-DEFAULT_TIMEOUT = 120
-MIN_TIMEOUT = 30
-MAX_TIMEOUT = 600
-MAX_TAGS = 10
 POLL_INTERVAL = 2
-VISIBILITIES = ("public", "unlisted", "private")
 HINT = 'retrieve it later with "Get scan result"'
 
 
@@ -26,31 +21,14 @@ def _is_blacklisted(error: APIError) -> bool:
 
 class ScanUrl(UrlScanAction):
     def perform(self, client: Client, arguments: dict[str, Any]) -> dict[str, Any]:
-        url = (arguments.get("url") or "").strip()
-        if not url:
-            raise ActionError('"url" is required')
+        args = ScanUrlArguments.model_validate(arguments)
+        url, tags, timeout, visibility = args.url, args.tags, args.timeout, args.visibility
+        country = (args.country or "").lower()
+        fail_on_blacklisted_url, wait_for_result = args.fail_on_blacklisted_url, args.wait_for_result
+
         reason = internal_target_reason(url)
         if reason is not None:
             raise ActionError(reason)
-
-        tags = arguments.get("tags") or []
-        if len(tags) > MAX_TAGS:
-            raise ActionError(f"At most {MAX_TAGS} tags are allowed, got {len(tags)}")
-
-        country = (arguments.get("country") or "").strip().lower()
-        if country and not re.fullmatch(r"[a-z]{2}", country):
-            raise ActionError('"country" must be a two-letter ISO 3166-1 alpha-2 code')
-
-        timeout = arguments.get("timeout") or DEFAULT_TIMEOUT
-        if not MIN_TIMEOUT <= timeout <= MAX_TIMEOUT:
-            raise ActionError(f'"timeout" must be between {MIN_TIMEOUT} and {MAX_TIMEOUT} seconds')
-
-        visibility = arguments.get("visibility") or "private"
-        if visibility not in VISIBILITIES:
-            raise ActionError(f'"visibility" must be one of {", ".join(VISIBILITIES)}')
-
-        fail_on_blacklisted_url = arguments.get("fail_on_blacklisted_url") is not False
-        wait_for_result = arguments.get("wait_for_result") is not False
 
         # A submission is not idempotent: a repeat could spend a second scan of the quota.
         try:
@@ -59,7 +37,7 @@ class ScanUrl(UrlScanAction):
                 url,
                 visibility=visibility,
                 tags=tags or None,
-                customagent=arguments.get("customagent") or None,
+                customagent=args.customagent,
                 country=country or None,
                 retry_server_errors=False,
             )

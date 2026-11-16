@@ -10,7 +10,8 @@
     "properties": {
       "scan_id": {
         "type": "string",
-        "description": "UUID of a finished scan"
+        "format": "uuid",
+        "description": "UUID of a finished scan (urlscan.io scanId)"
       }
     },
     "required": [
@@ -400,7 +401,7 @@
           "string",
           "null"
         ],
-        "description": "Screenshot URL, null when the screenshot is not stored"
+        "description": "Screenshot URL, opens without an account; null when the screenshot is not stored"
       },
       "dom_available": {
         "type": [
@@ -421,7 +422,7 @@
           "string",
           "null"
         ],
-        "description": "Ready-to-post Markdown comment"
+        "description": "Ready-to-post Markdown comment for Comment Alert / Comment case; embeds the screenshot when urlscan.io stores it (the image stays hosted by urlscan.io)"
       }
     },
     "required": [
