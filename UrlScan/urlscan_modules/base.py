@@ -3,6 +3,7 @@ import math
 import time
 from collections.abc import Callable
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 from sekoia_automation.action import Action
@@ -26,10 +27,15 @@ class ActionError(Exception):
 
 
 def new_client(configuration: UrlScanModuleConfiguration) -> Client:
+    # The API key travels in a request header: never send it over plain HTTP.
+    if urlsplit(configuration.base_url.strip()).scheme != "https":
+        raise ActionError("The base URL of the urlscan.io API must use HTTPS")
     return Client(configuration.api_key.strip(), base_url=configuration.base_url.rstrip("/"), timeout=30)
 
 
 def describe_error(error: Exception) -> str:
+    if isinstance(error, ActionError):
+        return str(error)
     if isinstance(error, RateLimitError):
         return (
             f"urlscan.io quota exceeded for this action, retry after {math.ceil(error.rate_limit_reset_after)} seconds"

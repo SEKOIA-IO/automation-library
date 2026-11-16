@@ -32,6 +32,8 @@ def params(route) -> dict[str, str]:
         ),
         (" https://example.com/ ", 'page.url:"https://example.com/"'),
         ('https://example.com/?a="b"', 'page.url:"https://example.com/?a=\\"b\\""'),
+        ("HTTPS://Example.com/Path", 'page.url:"https://Example.com/Path"'),
+        ("Http://example.com/", 'page.url:"http://example.com/"'),
         ("example.com", 'domain:"example.com"'),
     ],
 )

@@ -10,7 +10,9 @@ REFUSED = [
     "http://[::ffff:10.0.0.1]/", "http://[64:ff9b::10.0.0.1]/", "http://[::10.0.0.1]/", "http://[2002:0a00:0001::1]/",
     "http://127.1/", "http://2130706433/", "http://0x7f.0.0.1/", "http://10.1.1/", "http://192.168.001.001/",
     "http://localhost/", "HTTP://LOCALHOST./", "http://fileserver/", "http://printer.local/", "http://db.internal/",
-    "http://app.localhost/", "http://router.home.arpa/",
+    "http://app.localhost/", "http://router.home.arpa/", "http://app.test/", "http://www.example/",
+    "http://x.invalid/", "http://db.corp/", "http://nas.home/", "http://smtp.mail/", "http://printer.lan/",
+    "http://DB.CORP./",
     "http://10.0.0.1\\@example.com/", "http:\\\\10.0.0.1\\x", "http://%31%30.0.0.1/", "http://\uff11\uff10.0.0.1/",
     "http:///10.0.0.1/", "//10.0.0.1/", "file:///etc/passwd",
     "10.0.0.1/admin", " http://10.0.0.1 ", "http://user:pw@10.0.0.1/",
@@ -21,8 +23,8 @@ REFUSED = [
 ACCEPTED = [
     "https://example.com/", "example.com/path", " https://example.com ", "http://8.8.8.8/",
     "http://[2606:4700::6812:179a]/", "http://[::ffff:8.8.8.8]/", "http://[64:ff9b::8.8.8.8]/",
-    "http://paypal.com@evil.example/login", "https://123.example.com/",
-    "https://b\u00fccher.example/",
+    "http://paypal.com@evil.example.com/login", "https://123.example.com/",
+    "https://b\u00fccher.example.com/", "https://corp.example.com/", "https://mail.google.com/",
 ]  # fmt: skip
 SUFFIX = "and will not be sent to urlscan.io"
 
@@ -45,6 +47,7 @@ def test_public_target_accepted(url):
         ("http://224.0.0.1/", f"The URL host '224.0.0.1' is a multicast address {SUFFIX}"),
         ("http://127.1/", f"The URL host '127.1' is an IP address written in an unusual form {SUFFIX}"),
         ("http://fileserver/", f"The URL host 'fileserver' only exists inside a network {SUFFIX}"),
+        ("http://db.corp/", f"The URL host 'db.corp' only exists inside a network {SUFFIX}"),
         ("file:///etc/passwd", f"The URL has no valid host {SUFFIX}"),
         ("http://[::1/", f"The URL has no valid host {SUFFIX}"),
         (f"http://{'a' * 64}.example/", f"The URL has no valid host {SUFFIX}"),

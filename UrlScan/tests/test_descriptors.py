@@ -39,6 +39,12 @@ def test_docker_parameters_registered_once() -> None:
 
 
 @pytest.mark.parametrize("name", SUMMARY_ACTIONS)
+def test_submitted_url_is_nullable(name: str) -> None:
+    # build_scan_summary returns None when a result has no task.url.
+    assert load(name)["results"]["properties"]["submitted_url"]["type"] == ["string", "null"]
+
+
+@pytest.mark.parametrize("name", SUMMARY_ACTIONS)
 def test_scan_results_match_the_summary(name: str) -> None:
     properties = load(name)["results"]["properties"]
     summary = empty_scan_summary()
