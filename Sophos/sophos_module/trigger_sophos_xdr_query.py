@@ -15,7 +15,7 @@ from sophos_module.base import SophosConnector
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
 from sophos_module.client.exceptions import SophosApiAuthenticationError
-from sophos_module.helper import parse_iso8601_timestamp
+from sophos_module.helper import latest_timestamp, normalize_xdr_message
 from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
 
 
@@ -43,6 +43,7 @@ class SophosXDRQueryTrigger(SophosConnector):
         self._from_date: datetime = self.cursor.offset
         self.events_sum = 0
         self._last_query_error: dict[str, Any] | None = None
+        self._working_query_index = 0
 
     @property
     def from_date(self) -> datetime:
@@ -133,7 +134,7 @@ class SophosXDRQueryTrigger(SophosConnector):
             try:
                 payload = response.json()
                 if isinstance(payload, dict):
-                    error_message = str(payload.get("message") or payload.get("error") or response.text)
+                    error_message = str(payload)
             except ValueError:
                 pass
 
@@ -178,41 +179,25 @@ class SophosXDRQueryTrigger(SophosConnector):
         self.log(message=f"Finishing the loop with status {status} and result {result}", level="info")
 
         if result != "succeeded":
+            details = {
+                key: value
+                for key, value in result_query_status.items()
+                if key.lower().startswith("error") or key in ("message", "details")
+            }
             self._last_query_error = {
                 "status_code": response_query_status.status_code,
-                "message": f"Query execution result: {result}",
+                "message": str(details) if details else f"Query execution result: {result}",
+                "execution_failed": result == "failed" and response_query_status.status_code == 200,
             }
 
         return result, query_id
 
-    def _is_missing_ioc_detection_weight_error(self) -> bool:
-        if self._last_query_error is None:
-            return False
-
-        if self._last_query_error.get("status_code") != 400:
-            return False
-
-        message = str(self._last_query_error.get("message") or "").lower()
-        return "ioc_detection_weight" in message and "does not exist" in message
-
-    def _extract_event_timestamp(self, item: dict[str, Any]) -> float | None:
-        for key in ("calendar_time", "calendarTime", "created_at", "createdAt"):
-            parsed = parse_iso8601_timestamp(item.get(key))
-            if parsed is not None:
-                return parsed
-
-        return None
+    def should_try_next_query(self) -> bool:
+        """Subclasses may opt into compatibility retries for specific errors."""
+        return False
 
     def _observe_items_events_lag(self, items: list[dict[str, Any]]) -> None:
-        most_recent_timestamp: float | None = None
-
-        for item in items:
-            parsed = self._extract_event_timestamp(item)
-            if parsed is None:
-                continue
-
-            if most_recent_timestamp is None or parsed > most_recent_timestamp:
-                most_recent_timestamp = parsed
+        most_recent_timestamp = latest_timestamp(items, ("calendar_time", "calendarTime", "created_at", "createdAt"))
 
         if most_recent_timestamp is None:
             # cannot compute lag if API payload does not expose parseable timestamps
@@ -225,12 +210,15 @@ class SophosXDRQueryTrigger(SophosConnector):
         result: str = "failed"
         query_id: str | None = None
 
-        for index, query in enumerate(self.queries):
+        queries = self.queries
+        for index in range(self._working_query_index, len(queries)):
+            query = queries[index]
             result, query_id = self.post_query(query)
             if result == "succeeded":
+                self._working_query_index = index
                 return result, query_id
 
-            if index >= len(self.queries) - 1 or not self._is_missing_ioc_detection_weight_error():
+            if index >= len(queries) - 1 or not self.should_try_next_query():
                 break
 
             self.log(
@@ -258,7 +246,7 @@ class SophosXDRQueryTrigger(SophosConnector):
             INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
             if len(items) > 0:
-                messages = [orjson.dumps(message).decode("utf-8") for message in items]
+                messages = [orjson.dumps(normalize_xdr_message(message)).decode("utf-8") for message in items]
                 next_key = response.get("pages", {}).get("nextKey")
                 self.log(message=f"Sending the first batch of {len(messages)} messages", level="info")
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
@@ -271,7 +259,9 @@ class SophosXDRQueryTrigger(SophosConnector):
                     ).json()
 
                     next_page_items = response_next_page.get("items", [])
-                    next_messages = [orjson.dumps(message).decode("utf-8") for message in next_page_items]
+                    next_messages = [
+                        orjson.dumps(normalize_xdr_message(message)).decode("utf-8") for message in next_page_items
+                    ]
                     self._observe_items_events_lag(next_page_items)
                     self.log(message=f"Sending other batches of {len(next_messages)} messages", level="info")
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(next_messages))
@@ -289,8 +279,15 @@ class SophosXDRQueryTrigger(SophosConnector):
 
 
 class SophosXDRIOCQuery(SophosXDRQueryTrigger):
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
-        super().__init__(*args, **kwargs)
+    def should_try_next_query(self) -> bool:
+        if self._last_query_error is None:
+            return False
+
+        error = self._last_query_error
+        if error.get("status_code") != 400 and not error.get("execution_failed"):
+            return False
+
+        return "ioc_detection_weight" in str(error.get("message") or "").lower()
 
     @property
     def query(self) -> dict[str, Any]:

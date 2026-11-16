@@ -6,8 +6,8 @@ import pytest
 import requests_mock
 
 from sophos_module.base import SophosModule
-from sophos_module.trigger_sophos_xdr_query import SophosXDRQueryTrigger
-from sophos_module.trigger_sophos_xdr_query import SophosXDRIOCQuery
+from sophos_module.metrics import EVENTS_LAG
+from sophos_module.trigger_sophos_xdr_query import SophosXDRIOCQuery, SophosXDRQueryTrigger
 
 
 @pytest.fixture
@@ -361,6 +361,7 @@ def test_getting_results_with_compatibility_fallback_query(
             json=whoami_message,
         )
 
+        # Synthetic column error, not a captured Fusion tenant response.
         mock.post(
             url,
             [
@@ -368,7 +369,7 @@ def test_getting_results_with_compatibility_fallback_query(
                     "status_code": 400,
                     "json": {
                         "error": "ValidationException",
-                        "message": "column ioc_detection_weight does not exist",
+                        "message": "Unknown column ioc_detection_weight",
                     },
                 },
                 {"status_code": 200, "json": queryRun_message},
@@ -388,6 +389,11 @@ def test_getting_results_with_compatibility_fallback_query(
         assert first_query["adHocQuery"]["template"] == "SELECT * FROM xdr_ioc_view WHERE ioc_detection_weight > 3"
         assert second_query["adHocQuery"]["template"] == "SELECT * FROM xdr_ioc_view WHERE ioc_severity > 3"
         assert trigger.push_events_to_intakes.call_count == 1
+
+        trigger.getting_results("7")
+        query_calls = [call for call in mock.request_history if call.method == "POST" and call.url == url]
+        assert len(query_calls) == 3
+        assert json.loads(query_calls[2].body)["adHocQuery"]["template"] == second_query["adHocQuery"]["template"]
 
 
 def test_getting_results_does_not_fallback_on_non_compatibility_error(trigger, authorization_message, whoami_message):
@@ -470,13 +476,14 @@ def test_post_query_unsuccessful_query_result_sets_last_error(trigger, monkeypat
     assert trigger._last_query_error == {
         "status_code": 500,
         "message": "Query execution result: failed",
+        "execution_failed": False,
     }
 
 
-def test_is_missing_ioc_detection_weight_error_is_false_without_last_error(trigger):
+def test_should_try_next_query_is_false_without_last_error(trigger):
     trigger._last_query_error = None
 
-    assert trigger._is_missing_ioc_detection_weight_error() is False
+    assert trigger.should_try_next_query() is False
 
 
 def test_run_compatible_query_does_not_retry_for_other_errors(trigger):
@@ -495,7 +502,8 @@ def test_run_compatible_query_does_not_retry_for_other_errors(trigger):
     assert trigger.post_query.call_count == 1
 
 
-def test_observe_items_events_lag_with_calendar_time_camel_case(trigger):
+def test_observe_items_events_lag_with_calendar_time_camel_case(trigger, monkeypatch):
+    monkeypatch.setattr("sophos_module.trigger_sophos_xdr_query.time.time", lambda: 1688383785)
     trigger._observe_items_events_lag(
         [
             {"calendarTime": "2023-07-03T11:28:45.000Z"},
@@ -503,12 +511,14 @@ def test_observe_items_events_lag_with_calendar_time_camel_case(trigger):
         ]
     )
 
+    assert EVENTS_LAG.labels(intake_key=trigger.configuration.intake_key)._value.get() == 60
+
 
 def test_run_compatible_query_failed_after_all_templates(trigger):
     def _mock_post_query(_query):
         trigger._last_query_error = {
             "status_code": 400,
-            "message": "column ioc_detection_weight does not exist",
+            "message": "Unknown column ioc_detection_weight",
         }
         return "failed", None
 
@@ -521,20 +531,104 @@ def test_run_compatible_query_failed_after_all_templates(trigger):
     assert trigger.log.call_count >= 1
 
 
-def test_extract_event_timestamp_handles_invalid_values(trigger):
-    assert trigger._extract_event_timestamp({"createdAt": None}) is None
-    assert trigger._extract_event_timestamp({"createdAt": 123}) is None
-    assert trigger._extract_event_timestamp({"createdAt": ""}) is None
-    assert trigger._extract_event_timestamp({"createdAt": "not-a-date"}) is None
-
-
-def test_extract_event_timestamp_falls_back_to_created_at(trigger):
-    item = {"createdAt": "2023-07-03T11:28:45.000Z"}
-
-    assert trigger._extract_event_timestamp(item) is not None
-
-
 def test_base_queries_property_default_behavior(trigger):
     base_queries = SophosXDRQueryTrigger.queries.fget(trigger)
 
     assert base_queries == [trigger.query]
+
+
+@pytest.mark.parametrize("message", ["Unknown column ioc_detection_weight", "Invalid identifier IOC_DETECTION_WEIGHT"])
+def test_submission_error_wording(trigger, message):
+    # Synthetic error variants; these are not captured Fusion tenant responses.
+    trigger._last_query_error = {"status_code": 400, "message": message}
+    assert trigger.should_try_next_query()
+
+
+@pytest.mark.parametrize("status_code", [403, 429, 500])
+def test_no_fallback_for_http_errors_mentioning_column(trigger, status_code):
+    trigger._last_query_error = {"status_code": status_code, "message": "ioc_detection_weight"}
+    assert not trigger.should_try_next_query()
+
+
+@pytest.mark.parametrize(
+    "details, expected_calls",
+    [
+        ({"errorDetails": {"message": "Invalid identifier ioc_detection_weight"}}, 2),
+        ({"error": "Unknown column other_field"}, 1),
+        ({}, 1),
+    ],
+)
+def test_execution_failure_compatibility(trigger, monkeypatch, details, expected_calls):
+    # Synthetic execution errors. The echoed template alone must never trigger retry.
+    monkeypatch.setattr("sophos_module.trigger_sophos_xdr_query.time.sleep", lambda _: None)
+    trigger.client.run_query = Mock(return_value=Mock(status_code=200, json=lambda: {"id": "query-id"}))
+    failed = {
+        "status": "finished",
+        "result": "failed",
+        "template": "SELECT * FROM xdr_ioc_view WHERE ioc_detection_weight > 3",
+        **details,
+    }
+    trigger.client.get_query_status = Mock(
+        side_effect=[
+            Mock(status_code=200, json=lambda: failed),
+            Mock(status_code=200, json=lambda: {"status": "finished", "result": "succeeded"}),
+        ]
+    )
+    result, _ = trigger.run_compatible_query()
+    assert result == ("succeeded" if expected_calls == 2 else "failed")
+    assert trigger.client.run_query.call_count == expected_calls
+
+
+def test_reuses_successful_template_with_current_from_date(trigger):
+    def post(query):
+        if "ioc_detection_weight" in query["adHocQuery"]["template"]:
+            trigger._last_query_error = {"status_code": 400, "message": "ioc_detection_weight"}
+            return "failed", None
+        return "succeeded", "query-id"
+
+    trigger.post_query = Mock(side_effect=post)
+    assert trigger.run_compatible_query() == ("succeeded", "query-id")
+    assert trigger.post_query.call_count == 2
+    trigger.post_query.reset_mock()
+    trigger.from_date = datetime.now(timezone.utc)
+    assert trigger.run_compatible_query() == ("succeeded", "query-id")
+    trigger.post_query.assert_called_once_with(trigger.queries[1])
+
+
+def test_normalizes_calendar_time_on_all_pages(trigger):
+    trigger.run_compatible_query = Mock(return_value=("succeeded", "query-id"))
+    trigger.client.get_query_results = Mock(
+        side_effect=[
+            Mock(json=lambda: {"items": [{"calendarTime": "2023-07-03T11:28:45Z"}], "pages": {"nextKey": "next"}}),
+            Mock(json=lambda: {"items": [{"calendarTime": "2023-07-03T11:29:45Z"}]}),
+        ]
+    )
+    trigger.getting_results(1000)
+    assert [json.loads(call.kwargs["events"][0]) for call in trigger.push_events_to_intakes.call_args_list] == [
+        {"calendar_time": "2023-07-03T11:28:45Z"},
+        {"calendar_time": "2023-07-03T11:29:45Z"},
+    ]
+
+
+def test_base_does_not_retry_ioc_errors(trigger):
+    trigger._last_query_error = {"status_code": 400, "message": "ioc_detection_weight"}
+    assert not SophosXDRQueryTrigger.should_try_next_query(trigger)
+
+
+def test_both_templates_fail_without_forwarding_or_advancing_cursor(trigger):
+    initial_offset = trigger.cursor.offset
+    trigger.client.run_query = Mock(
+        side_effect=[
+            Mock(
+                status_code=400,
+                text="Unknown column ioc_detection_weight",
+                json=lambda: {"message": "ioc_detection_weight"},
+            ),
+            Mock(status_code=400, text="Unknown column ioc_severity", json=lambda: {"message": "ioc_severity"}),
+        ]
+    )
+    trigger.getting_results(1000)
+    assert trigger.client.run_query.call_count == 2
+    trigger.push_events_to_intakes.assert_not_called()
+    assert trigger.cursor.offset == initial_offset
+    assert trigger._working_query_index == 0
