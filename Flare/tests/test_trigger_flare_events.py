@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 import requests
+from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
 
 from flareio_modules import FlareIOModule
 from flareio_modules.trigger_flare_events import FlareEventsConnector
@@ -230,6 +231,50 @@ def test_next_batch_drops_chat_message_context(mock_sleep, data_storage):
 
     pushed_event = json.loads(trigger.push_events_to_intakes.call_args.kwargs["events"][0])
     assert pushed_event["data"] == {"message": "hello"}
+
+
+@pytest.mark.parametrize("content", ["x" * 300_000, "\n" * 200_000, "é" * 300_000])
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_cuts_oversized_content(mock_sleep, data_storage, content):
+    trigger = _build_trigger(data_storage)
+    event = _event("evt-1", event_type="blog_post")
+    event["activity"]["data"] = {"title": "post", "content": content}
+
+    _run_next_batch(trigger, _fake_client([([event], "cursor-1")]))
+
+    serialized = trigger.push_events_to_intakes.call_args.kwargs["events"][0]
+    assert len(serialized) <= EVENT_BYTES_MAX_SIZE
+    pushed_data = json.loads(serialized)["data"]
+    assert pushed_data["title"] == "post"
+    assert pushed_data["content_truncated"] is True
+    assert pushed_data["content"]
+    assert content.startswith(pushed_data["content"])
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        # Fits: unchanged
+        ({"content": "x" * 1_000}, {"content": "x" * 1_000}),
+        # Not a string: left for the SDK to discard
+        ({"content": ["x" * 300_000]}, {"content": ["x" * 300_000]}),
+        # Too big because of another field: `content` is emptied, and the SDK still discards the event
+        (
+            {"content": "x" * 1_000, "main": "y" * 300_000},
+            {"content": "", "main": "y" * 300_000, "content_truncated": True},
+        ),
+    ],
+)
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_cuts_content_only_when_needed(mock_sleep, data_storage, data, expected):
+    trigger = _build_trigger(data_storage)
+    event = _event("evt-1", event_type="ransomleak")
+    event["activity"]["data"] = data
+
+    _run_next_batch(trigger, _fake_client([([event], "cursor-1")]))
+
+    pushed_data = json.loads(trigger.push_events_to_intakes.call_args.kwargs["events"][0])["data"]
+    assert pushed_data == expected
 
 
 @patch("flareio_modules.trigger_flare_events.time.sleep")

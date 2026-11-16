@@ -9,9 +9,14 @@ from flareio import FlareApiClient
 from flareio.ratelimit import Limiter
 from sekoia_automation.checkpoint import CheckpointCursor
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
 
 from flareio_modules import FlareIOModule
 from flareio_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+
+# Added to `data` when the end of `data.content` was cut to fit the intake size limit
+TRUNCATED_FLAG = "content_truncated"
+TRUNCATED_FLAG_JSON = f',"{TRUNCATED_FLAG}":true'
 
 
 class FlareEventsConnectorConfiguration(DefaultConnectorConfiguration):
@@ -88,7 +93,19 @@ class FlareEventsConnector(Connector):
             # context, which pushes them above the intake's 250kB limit. They are not parsed.
             data.pop("olders", None)
             data.pop("newers", None)
-        return orjson.dumps(activity).decode("utf-8")
+        serialized = orjson.dumps(activity).decode("utf-8")
+
+        # The intake discards events above its size limit. Blog posts, source code or GitHub results can carry
+        # a raw `content` of several hundred kB: cut its end instead of losing the whole event.
+        excess = len(serialized) - EVENT_BYTES_MAX_SIZE
+        if excess > 0 and isinstance(data, dict) and isinstance(data.get("content"), str):
+            data[TRUNCATED_FLAG] = True
+            # Each character removed from `content` removes at least one character once serialized (more when
+            # escaped), so removing the excess plus the flag's own length is enough.
+            data["content"] = data["content"][: max(0, len(data["content"]) - excess - len(TRUNCATED_FLAG_JSON))]
+            serialized = orjson.dumps(activity).decode("utf-8")
+
+        return serialized
 
     def _push(self, events: list[str], cursor: str | None) -> int:
         self.push_events_to_intakes(events=events)

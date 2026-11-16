@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-16 - 0.6.4
+
+### Fixed
+
+- Cut the end of `data.content` (blog posts, source code, GitHub results, etc.) when an event exceeds the intake size limit, and set `data.content_truncated`, instead of letting the whole event be discarded
+
 ## 2026-11-02 - 0.6.3
 
 ### Fixed
