@@ -6,6 +6,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
+from pydantic import ValidationError
 from sekoia_automation.action import Action
 from tenacity import Retrying, retry_if_exception, stop_after_attempt, wait_exponential
 from urlscan import APIError, Client, RateLimitError
@@ -54,6 +55,14 @@ def describe_error(error: Exception) -> str:
     return f"urlscan.io error: {type(error).__name__}"
 
 
+def describe_validation_error(error: ValidationError) -> str:
+    """One line per invalid argument, named as in the JSON descriptor."""
+    details = "; ".join(
+        f'"{".".join(str(part) for part in item["loc"]) or "arguments"}": {item["msg"]}' for item in error.errors()
+    )
+    return f"Invalid arguments: {details}"[:MAX_MESSAGE_LENGTH]
+
+
 def _is_server_error(error: BaseException) -> bool:
     return isinstance(error, httpx.TransportError) or (isinstance(error, APIError) and error.status >= 500)
 
@@ -71,6 +80,8 @@ class UrlScanAction(Action):
                 return self.perform(client, arguments)
         except ActionError as error:
             self.error(str(error))
+        except ValidationError as error:
+            self.error(describe_validation_error(error))
         except (APIError, RateLimitRemainingError, httpx.TransportError) as error:
             self.error(describe_error(error))
         return None

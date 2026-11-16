@@ -7,6 +7,7 @@ from urlscan_modules.artefacts import apply_availability
 from urlscan_modules.base import ActionError, UrlScanAction
 from urlscan_modules.comment import build_comment
 from urlscan_modules.formatters import build_scan_summary
+from urlscan_modules.models import ScanIdArguments
 from urlscan_modules.validators import valid_scan_id
 
 # Right after a scan completes, urlscan.io may answer without the `lists` section.
@@ -33,7 +34,7 @@ def fetch_scan_summary(
 
 class GetScanResult(UrlScanAction):
     def perform(self, client: Client, arguments: dict[str, Any]) -> dict[str, Any]:
-        scan_id = valid_scan_id(arguments.get("scan_id"))
+        scan_id = valid_scan_id(ScanIdArguments.model_validate(arguments).scan_id)
         try:
             return fetch_scan_summary(self, client, scan_id)
         except APIError as error:

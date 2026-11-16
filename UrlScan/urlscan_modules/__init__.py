@@ -4,4 +4,4 @@ from urlscan_modules.models import UrlScanModuleConfiguration
 
 
 class UrlScanModule(Module):
-    configuration: UrlScanModuleConfiguration
+    configuration: UrlScanModuleConfiguration  # type: ignore[override]

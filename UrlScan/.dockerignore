@@ -1,7 +1,0 @@
-.venv
-htmlcov
-.pytest_cache
-__pycache__
-.coverage
-tests
-test_end_to_end

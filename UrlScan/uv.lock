@@ -311,6 +311,7 @@ version = "0.0"
 source = { virtual = "." }
 default-groups = ["dev", "lint"]
 dependencies = [
+    { name = "pydantic" },
     { name = "sekoia-automation-sdk" },
     { name = "tenacity" },
     { name = "urlscan-python" },
@@ -329,6 +330,7 @@ lint = [
 
 [package.metadata]
 requires-dist = [
+    { name = "pydantic", specifier = ">=2,<3" },
     { name = "sekoia-automation-sdk", specifier = ">=1.27.0,<2" },
     { name = "tenacity", specifier = ">=9.0,<10" },
     { name = "urlscan-python", specifier = "==2026.8.18" },

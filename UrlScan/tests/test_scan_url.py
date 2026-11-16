@@ -9,6 +9,7 @@ from urlscan_modules.action.action_scan_url import ScanUrl
 
 URL = "https://example.com"
 HINT = 'retrieve it later with "Get scan result"'
+COUNTRY_ERROR = "Invalid arguments: \"country\": String should match pattern '^[A-Za-z]{2}$'"
 BLACKLIST = {"message": "The submitted domain is on our blacklist, we will not scan it."}
 
 
@@ -80,14 +81,25 @@ def test_empty_and_null_options_use_defaults(action, routes, options):
 @pytest.mark.parametrize(
     ("arguments", "message"),
     [
-        ({"url": None}, '"url" is required'),
-        ({"url": " "}, '"url" is required'),
-        ({"url": URL, "tags": [str(i) for i in range(11)]}, "At most 10 tags are allowed, got 11"),
-        ({"url": URL, "country": "fra"}, '"country" must be a two-letter ISO 3166-1 alpha-2 code'),
-        ({"url": URL, "country": "1a"}, '"country" must be a two-letter ISO 3166-1 alpha-2 code'),
-        ({"url": URL, "timeout": 29}, '"timeout" must be between 30 and 600 seconds'),
-        ({"url": URL, "timeout": 601}, '"timeout" must be between 30 and 600 seconds'),
-        ({"url": URL, "visibility": "secret"}, '"visibility" must be one of public, unlisted, private'),
+        ({"url": None}, 'Invalid arguments: "url": Field required'),
+        ({"url": " "}, 'Invalid arguments: "url": String should have at least 1 character'),
+        (
+            {"url": URL, "tags": [str(i) for i in range(11)]},
+            'Invalid arguments: "tags": List should have at most 10 items after validation, not 11',
+        ),
+        ({"url": URL, "tags": ["x" * 31]}, 'Invalid arguments: "tags.0": String should have at most 30 characters'),
+        ({"url": URL, "country": "fra"}, COUNTRY_ERROR),
+        ({"url": URL, "country": "1a"}, COUNTRY_ERROR),
+        ({"url": URL, "timeout": 29}, 'Invalid arguments: "timeout": Input should be greater than or equal to 30'),
+        ({"url": URL, "timeout": 601}, 'Invalid arguments: "timeout": Input should be less than or equal to 600'),
+        (
+            {"url": URL, "visibility": "secret"},
+            "Invalid arguments: \"visibility\": Input should be 'public', 'unlisted' or 'private'",
+        ),
+        (
+            {"url": URL, "timeout": "abc"},
+            'Invalid arguments: "timeout": Input should be a valid integer, unable to parse string as an integer',
+        ),
         (
             {"url": "http://10.0.0.1/"},
             "The URL host '10.0.0.1' is a private address and will not be sent to urlscan.io",
@@ -254,3 +266,10 @@ def test_unreachable_after_submission(action, routes):
         f"Scan {SCAN_ID} was submitted but its result could not be retrieved "
         f"(urlscan.io could not be reached: ConnectError); {HINT}"
     )
+
+
+def test_string_arguments_are_coerced(action, routes):
+    summary = action.run({"url": URL, "timeout": "60", "wait_for_result": "false"})
+
+    assert summary["status"] == "submitted"
+    assert routes["head"].call_count == 0

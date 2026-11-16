@@ -10,7 +10,8 @@
     "properties": {
       "scan_id": {
         "type": "string",
-        "description": "UUID of a finished scan"
+        "format": "uuid",
+        "description": "UUID of a finished scan (urlscan.io scanId)"
       }
     },
     "required": [
@@ -27,7 +28,7 @@
       },
       "screenshot_url": {
         "type": "string",
-        "description": "Link to the PNG on urlscan.io"
+        "description": "Link to the PNG on urlscan.io, opens without an account even for a private scan"
       },
       "size": {
         "type": "integer",

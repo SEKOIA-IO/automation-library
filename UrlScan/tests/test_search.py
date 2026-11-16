@@ -133,11 +133,22 @@ def test_exactly_one_of_indicator_and_query(action, api, arguments):
 
 
 def test_api_validation_error(action, route):
-    route.respond(400, json={"message": 'ValidationError: "size" must be less than or equal to 10000'})
+    route.respond(400, json={"message": "Invalid query"})
 
-    assert action.run({"indicator": "example.com", "size": 10001}) is None
+    assert action.run({"query": "page.domain:("}) is None
 
-    assert action.error_message == (
-        'urlscan.io API error 400: ValidationError: "size" must be less than or equal to 10000'
-    )
-    assert params(route)["size"] == "10001"
+    assert action.error_message == "urlscan.io API error 400: Invalid query"
+
+
+@pytest.mark.parametrize(
+    ("size", "message"),
+    [
+        (0, 'Invalid arguments: "size": Input should be greater than or equal to 1'),
+        (10001, 'Invalid arguments: "size": Input should be less than or equal to 10000'),
+    ],
+)
+def test_size_out_of_range_makes_no_request(action, api, size, message):
+    assert action.run({"indicator": "example.com", "size": size}) is None
+
+    assert action.error_message == message
+    assert api.calls.call_count == 0
