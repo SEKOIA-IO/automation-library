@@ -7,16 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-09-16 - 1.20.1
+## 2026-11-16 - 1.20.1
 
 ### Fixed
 
 - Improve compatibility with potential Sophos Fusion payload updates by tolerating camelCase timestamps (`createdAt`, `calendarTime`) in EDR/XDR event processing.
-- Add fallback XDR IOC query template (`ioc_severity > 3`) when the legacy field (`ioc_detection_weight`) is not available.
+- Normalize XDR `calendarTime` to `calendar_time` before forwarding so the intake parser can build `@timestamp`.
 
-### Added
+### Changed
 
-- Add regression tests covering compatibility query fallback and timestamp format variations.
+- Fall back to `ioc_severity > 3` when `ioc_detection_weight` is unavailable at submission or execution, and reuse the successful template in subsequent collection cycles. Severity and detection weight are distinct fields: this fallback changes the set and potentially the volume of forwarded IOCs.
 
 ## 2026-07-06 - 1.20.0
 
