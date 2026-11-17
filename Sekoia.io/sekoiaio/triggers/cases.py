@@ -267,6 +267,8 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
         }
 
         # The values come from the notification, so that two updates in a row each output their own change.
+        # Its `updated` attributes are flat (`custom_status_stage`, `verdict_stage`...), unlike the case returned by
+        # `GET /cases/{uuid}` (`custom_status.stage`, `verdict.stage`...): see `update_case` in sicalert.
         # `status_uuid` is the legacy status (opened or closed): the notification never carries it, and the custom
         # status comes in `custom_status_uuid` and `custom_status_stage`.
         for key in [
