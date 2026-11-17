@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Blue41",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Blue41 secures AI agents at runtime. It observes agent traffic, raises detections on agent behaviour and keeps an audit trail of its own platform.",
+  "name": "Blue41",
+  "uuid": "342289a5-e615-406f-898b-83697a890b59",
+  "version": "1.0.0",
+  "slug": "blue41",
+  "categories": [
+    "Applicative"
+  ]
+}

@@ -1,6 +1,5 @@
-import time
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, Mock, patch
+from datetime import UTC, datetime
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests_mock
@@ -131,10 +130,11 @@ def message_1():
 
 
 def test_fetch_events(trigger, message_1):
-    trigger.cursor.offset = datetime(year=2024, month=11, day=1, tzinfo=timezone.utc)
-    with patch(
-        "trendmicro_modules.trigger_vision_one_base.time"
-    ) as mock_time, requests_mock.Mocker() as mock_requests:
+    trigger.cursor.offset = datetime(year=2024, month=11, day=1, tzinfo=UTC)
+    with (
+        patch("trendmicro_modules.trigger_vision_one_base.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
         mock_requests.register_uri("GET", "https://api.xdr.trendmicro.com/v3.0/oat/detections", json=message_1)
 
         batch_duration = 16  # the batch lasts 16 seconds
@@ -149,10 +149,11 @@ def test_fetch_events(trigger, message_1):
 
 
 def test_long_next_batch_should_not_sleep(trigger, message_1):
-    trigger.cursor.offset = datetime(year=2024, month=11, day=1, tzinfo=timezone.utc)
-    with patch(
-        "trendmicro_modules.trigger_vision_one_base.time"
-    ) as mock_time, requests_mock.Mocker() as mock_requests:
+    trigger.cursor.offset = datetime(year=2024, month=11, day=1, tzinfo=UTC)
+    with (
+        patch("trendmicro_modules.trigger_vision_one_base.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
         mock_requests.register_uri("GET", "https://api.xdr.trendmicro.com/v3.0/oat/detections", json=message_1)
 
         batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
@@ -164,3 +165,20 @@ def test_long_next_batch_should_not_sleep(trigger, message_1):
 
         assert trigger.push_events_to_intakes.call_count == 1
         assert mock_time.sleep.call_count == 0
+
+
+def test_failed_later_page_keeps_checkpoint(trigger, message_1):
+    url = "https://api.xdr.trendmicro.com/v3.0/oat/detections"
+    next_url = url + "?page=2"
+    event = {**message_1["items"][0], "detectedDateTime": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}
+    first_page = {**message_1, "items": [event], "nextLink": next_url}
+    before = trigger.cursor.offset
+    with patch("trendmicro_modules.trigger_vision_one_base.time") as mock_time, requests_mock.Mocker() as m:
+        mock_time.time.return_value = 0
+        m.register_uri("GET", url, json=first_page)
+        m.register_uri("GET", next_url, status_code=500)
+        trigger.next_batch()
+
+    assert trigger.push_events_to_intakes.call_count == 1
+    assert trigger.cursor.offset == before
+    assert mock_time.sleep.call_count == 1

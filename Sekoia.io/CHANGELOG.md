@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-11-03 - 2.84.0
+## 2026-11-17 - 2.85.0
 
 ### Fixed
 
@@ -17,6 +17,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Case Updated: add the `changed_fields` output and the `changed_fields_filter` argument, to create a run only when one of the given fields changed
 - Case Updated: add the `custom_fields_changes` output, with the custom fields added, updated or removed
+
+## 2026-11-10 - 2.83.0
+
+### Fixed
+
+- Improve error management on execute agent call
+
+### Added
+
+- improve `api` attribute for execute agent action to support fixing parameter and community scope.
+
+
+## 2026-11-03 - 2.82.1
+
+### Fixed
+
+- `Execute custom agent`: run the agent by its UUID, to support agents without instructions
 
 ## 2026-11-03 - 2.82.0
 

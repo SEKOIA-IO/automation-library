@@ -1,0 +1,6 @@
+.venv
+htmlcov
+.pytest_cache
+__pycache__
+.coverage
+tests

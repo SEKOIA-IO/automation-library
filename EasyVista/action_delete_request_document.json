@@ -1,0 +1,52 @@
+{
+  "name": "Delete a request document",
+  "description": "Delete a request document",
+  "uuid": "f3e99da5-b526-4f06-8070-b105f01a3274",
+  "slug": "delete_request_document",
+  "docker_parameters": "easyvista_delete_request_document",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      },
+      "id": {
+        "description": "Document ID (DOCUMENT_ID from the documents list)",
+        "title": "Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "rfc_number",
+      "id"
+    ],
+    "title": "DeleteRequestDocumentArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "success": {
+        "type": "boolean",
+        "description": "true when the document is deleted: 2xx response, or 590 followed by a confirmed absence from the documents list; on failure the action fails and returns nothing"
+      },
+      "status_code": {
+        "type": "integer",
+        "description": "HTTP status code of the DELETE (204, 200, or 590 when the deletion was confirmed by listing)"
+      },
+      "verified_by_listing": {
+        "type": "boolean",
+        "description": "true when the API returned 590 and the deletion was confirmed by re-listing the documents; false for a plain 2xx"
+      },
+      "api_error": {
+        "type": "string",
+        "description": "Error or message of the 590 body (e.g. Document was not found on the server), kept for troubleshooting; only when verified_by_listing is true"
+      },
+      "message": {
+        "type": "string",
+        "description": "Human-readable outcome (e.g. Document deleted)"
+      }
+    }
+  }
+}

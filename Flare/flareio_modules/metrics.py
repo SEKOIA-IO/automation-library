@@ -9,6 +9,20 @@ OUTCOMING_EVENTS = Counter(
     labelnames=["intake_key"],
 )
 
+TRUNCATED_EVENTS = Counter(
+    name="truncated_events",
+    documentation="Number of events whose biggest fields were cut to fit the intake size limit",
+    namespace=prom_namespace,
+    labelnames=["intake_key"],
+)
+
+DISCARDED_EVENTS = Counter(
+    name="discarded_events",
+    documentation="Number of events still above the intake size limit after cutting",
+    namespace=prom_namespace,
+    labelnames=["intake_key"],
+)
+
 EVENTS_LAG = Gauge(
     name="events_lags",
     documentation="The delay, in seconds, from the date of the last event",

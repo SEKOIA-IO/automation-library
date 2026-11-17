@@ -3,7 +3,6 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from async_lru import alru_cache
 from loguru import logger
 from pydantic import Field
 
@@ -32,6 +31,8 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
             configuration: AWS configuration
         """
         super().__init__(configuration)
+        # per-instance cache: alru_cache on a method pins every instance (and its session) in a class-level cache
+        self._queue_url: str | None = None
 
         logger.info(
             """
@@ -47,7 +48,6 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
             queue_url=configuration.queue_url,
         )
 
-    @alru_cache
     async def queue_url(self) -> str:
         """
         Get SQS queue url.
@@ -61,6 +61,9 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
         Returns:
             str:
         """
+        if self._queue_url:
+            return self._queue_url
+
         result: str | None = None
         if self._configuration and self._configuration.queue_url:
             result = self._configuration.queue_url
@@ -70,6 +73,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
                 result = data.get("QueueUrl")
 
         if result:
+            self._queue_url = result
             return result
 
         raise ValueError("Queue url is not defined")

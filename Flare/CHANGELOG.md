@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-17 - 0.6.7
+
+### Fixed
+
+- Cut the end of the biggest fields of an event that exceeds the intake size limit, instead of letting the whole event be discarded: attachment text, lists of IP addresses, domains or URLs, `content`, then the files, credentials and emails of stealer logs and leaks. The cut fields are listed in `data.truncated_fields`
+- Count the events cut (`truncated_events`) and the events still above the limit (`discarded_events`), and log each of them with its type, uid and cut fields
+
+## 2026-11-17 - 0.6.6
+
+### Fixed
+
+- Retry the intermittent 500 errors of the Flare API, which the SDK does not retry: each one failed the batch and delayed the collection by `frequency` (60 s by default)
+
+## 2026-11-17 - 0.6.5
+
+### Added
+
+- Add the date Flare matched the item to the tenant to the events, as `metadata.matched_at`: the item itself can be years old
+
+## 2026-11-17 - 0.6.4
+
+### Changed
+
+- Fetch the details of a page's events in parallel (new `concurrency` setting, 4 by default) and read the next page meanwhile; `throttle_seconds` now spaces the calls instead of adding a wait after each one
+
 ## 2026-11-02 - 0.6.3
 
 ### Fixed

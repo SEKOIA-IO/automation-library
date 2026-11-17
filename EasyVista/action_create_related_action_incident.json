@@ -1,0 +1,86 @@
+{
+  "name": "Create an action related to an incident",
+  "description": "Create an action related to an incident (EZV_CreateRelatedAction)",
+  "uuid": "f05c1ae0-6a5d-469a-95e1-113f1d765560",
+  "slug": "create_related_action_incident",
+  "docker_parameters": "easyvista_create_related_action_incident",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      },
+      "action": {
+        "properties": {
+          "action_type_id": {
+            "description": "Action type ID (tenant-specific); provide at least one of action_type_id, action_type_name or action_type_guid",
+            "title": "Action Type Id",
+            "type": "string"
+          },
+          "action_type_name": {
+            "description": "Action type name, in the REST API user language; provide at least one of action_type_id, action_type_name or action_type_guid",
+            "title": "Action Type Name",
+            "type": "string"
+          },
+          "action_type_guid": {
+            "description": "Action type GUID (EV SM 2023.4+); provide at least one of action_type_id, action_type_name or action_type_guid; if the API rejects the GUID, use an ID or name allowed for the ticket catalog",
+            "title": "Action Type Guid",
+            "type": "string"
+          },
+          "group_id": {
+            "description": "Assigned group ID; provide at least one of group_id, group_name or group_mail",
+            "title": "Group Id",
+            "type": "integer"
+          },
+          "group_name": {
+            "description": "Assigned group name; provide at least one of group_id, group_name or group_mail",
+            "title": "Group Name",
+            "type": "string"
+          },
+          "group_mail": {
+            "description": "Assigned group email; provide at least one of group_id, group_name or group_mail",
+            "title": "Group Mail",
+            "type": "string"
+          },
+          "description": {
+            "description": "Related action description",
+            "title": "Description",
+            "type": "string"
+          },
+          "comment": {
+            "description": "Related action comment",
+            "title": "Comment",
+            "type": "string"
+          }
+        },
+        "title": "RelatedActionItem",
+        "type": "object",
+        "description": "Action to create; provide one action type and one group"
+      }
+    },
+    "required": [
+      "rfc_number",
+      "action"
+    ],
+    "title": "CreateRelatedActionIncidentArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "success": {
+        "type": "boolean",
+        "description": "Always true when returned; on failure the action fails and returns nothing"
+      },
+      "status_code": {
+        "type": "integer",
+        "description": "HTTP status code (201)"
+      },
+      "href": {
+        "type": "string",
+        "description": "Ticket URL (HREF); only when present in the response"
+      }
+    }
+  }
+}

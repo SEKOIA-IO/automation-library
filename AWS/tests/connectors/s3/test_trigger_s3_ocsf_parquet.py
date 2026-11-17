@@ -1,12 +1,21 @@
 """Tests related to AwsS3OcsfTrigger."""
 
+import gzip
+import io
+import tempfile
+from contextlib import aclosing
 from os import path
 from pathlib import Path
+from unittest.mock import patch
 
 import aiofiles
 import orjson
+import pandas
+import pyarrow
+import pyarrow.parquet
 import pytest
 
+from aws_helpers.utils import async_gzip_open
 from connectors import AwsModule
 from connectors.s3 import AwsS3QueuedConfiguration
 from connectors.s3.trigger_s3_ocsf_parquet import AwsS3OcsfTrigger
@@ -130,3 +139,69 @@ def test_aws_s3_ocsf_trigger_get_object_from_notification(
 
     assert bucket_name == "amzn-s3-demo-bucket"
     assert object_name == "example-key"
+
+
+@pytest.mark.asyncio
+async def test_aws_s3_ocsf_trigger_parse_content_matches_full_file_conversion(connector: AwsS3OcsfTrigger):
+    current_dir = path.dirname(__file__)
+    expected = [
+        orjson.dumps(record).decode("utf-8")
+        for record in orjson.loads(pandas.read_parquet(f"{current_dir}/test_ocsf.parquet").to_json(orient="records"))
+        if len(record) > 0
+    ]
+
+    async with aiofiles.open(f"{current_dir}/test_ocsf.parquet", "rb") as f:
+        assert await async_list(connector._parse_content(f)) == expected
+
+
+@pytest.mark.asyncio
+async def test_aws_s3_ocsf_trigger_parse_content_by_small_batches(connector: AwsS3OcsfTrigger):
+    current_dir = path.dirname(__file__)
+    async with aiofiles.open(f"{current_dir}/test_ocsf.parquet", "rb") as f:
+        expected = await async_list(connector._parse_content(f))
+
+    with patch("connectors.s3.trigger_s3_ocsf_parquet.PARQUET_BATCH_SIZE", 1):
+        async with aiofiles.open(f"{current_dir}/test_ocsf.parquet", "rb") as f:
+            assert await async_list(connector._parse_content(f)) == expected
+
+
+@pytest.mark.parametrize("write_statistics", [True, False])
+@pytest.mark.asyncio
+async def test_aws_s3_ocsf_trigger_keeps_full_file_types_across_batches(
+    connector: AwsS3OcsfTrigger, tmp_path: Path, write_statistics: bool
+):
+    """An integer column with nulls in some batches only must be typed the same in every batch."""
+    file_path = tmp_path / "nullable.parquet"
+    table = pyarrow.table({"class_uid": [4001, 4001, 4001], "dst_port": [443, None, 80]})
+    pyarrow.parquet.write_table(table, file_path, write_statistics=write_statistics)
+    expected = [
+        orjson.dumps(record).decode("utf-8")
+        for record in orjson.loads(pandas.read_parquet(file_path).to_json(orient="records"))
+    ]
+
+    with patch("connectors.s3.trigger_s3_ocsf_parquet.PARQUET_BATCH_SIZE", 1):
+        async with aiofiles.open(file_path, "rb") as f:
+            assert await async_list(connector._parse_content(f)) == expected
+
+
+@pytest.mark.asyncio
+async def test_aws_s3_ocsf_trigger_closes_the_decompressed_spool_when_the_consumer_stops_early(
+    connector: AwsS3OcsfTrigger,
+):
+    table = pyarrow.table({"class_uid": [4001] * 30_000})
+    parquet = io.BytesIO()
+    pyarrow.parquet.write_table(table, parquet)
+    stream = await async_gzip_open(io.BytesIO(gzip.compress(parquet.getvalue())))
+
+    spools = []
+    original_spool = tempfile.SpooledTemporaryFile
+
+    def spy_spool(*args, **kwargs):
+        spools.append(original_spool(*args, **kwargs))
+        return spools[-1]
+
+    with patch("aws_helpers.utils.stream.tempfile.SpooledTemporaryFile", side_effect=spy_spool):
+        async with aclosing(connector._parse_content(stream)) as events:
+            await anext(events)
+
+    assert len(spools) == 1 and spools[0].closed

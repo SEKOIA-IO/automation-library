@@ -12,9 +12,7 @@ from tests.helpers import async_list, async_temporary_file
 def test_data() -> bytes:
     return r"""2024-09-11 18:46:00","Active Directory User (adusername@example.net)","Active Directory User (adusername@example.net),WIN11-SNG01-Example","10.10.1.100","24.123.132.133","Allowed","1 (A)","NOERROR","domain-visited.com.","Software/Technology,Business Services,Allow List,Infrastructure and Content Delivery Networks,SaaS and B2B,Application","AD Users","AD Users,Anyconnect Roaming Client","","506165","","8234970"
 "2024-09-11 18:46:00","Active Directory User (adusername@example.net)","Active Directory User (adusername@example.net),WIN11-SNG01-Example","10.10.1.100","24.123.132.133","Blocked","1 (A)","NOERROR","domain-visited.com.","Chat,Social Networking","AD Users","AD Users,Anyconnect Roaming Client","Social Networking","506165","","8234970"
-""".encode(
-        "utf-8"
-    )
+""".encode("utf-8")
 
 
 @pytest.fixture

@@ -3,8 +3,9 @@ from shutil import rmtree
 from tempfile import mkdtemp
 
 import pytest
-from sekoia_automation import constants
 from faker import Faker
+from sekoia_automation import constants
+
 from deep_visibility import SentinelOneDeepVisibilityConfiguration, SentinelOneDeepVisibilityModule
 
 

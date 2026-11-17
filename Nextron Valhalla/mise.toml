@@ -1,0 +1,10 @@
+# Module-specific mise config.
+# Common tools and tasks (uv, test, lint, format) are inherited from the
+# repository root mise.toml. Only the Python version and the local .venv are
+# declared here, since both are module-specific.
+
+[tools]
+python = "3.14"
+
+[env]
+_.python.venv = { path = ".venv", create = false }

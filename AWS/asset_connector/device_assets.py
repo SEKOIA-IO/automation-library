@@ -61,6 +61,10 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
     OCSF_VERSION: str = "1.6.0"
     PRODUCT_VERSION: str = "N/A"
 
+    def get_mapped_fields(self) -> Dict[str, str]:
+        """Return the EC2 -> OCSF dynamic field mapping used to fingerprint the device schema."""
+        return {}
+
     def client(self) -> boto3.client:
         """Create and return a configured AWS EC2 client.
 
@@ -175,7 +179,10 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
                 uid=owner_id,
             )
         except Exception as e:
-            self.log(f"Failed to create organization from owner ID {owner_id}: {str(e)}", level="warning")
+            self.log(
+                f"Failed to create organization from owner ID {owner_id}: {str(e)}",
+                level="warning",
+            )
             self.log_exception(e)
             return None
 
@@ -224,7 +231,10 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
             try:
                 date_filter = isoparse(self.most_recent_date_seen)
             except (ValueError, TypeError) as e:
-                self.log(f"Invalid date format in checkpoint: {self.most_recent_date_seen}", level="warning")
+                self.log(
+                    f"Invalid date format in checkpoint: {self.most_recent_date_seen}",
+                    level="warning",
+                )
                 self.log_exception(e)
 
         device_count = 0
@@ -237,7 +247,10 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
                     reservation_model = AwsReservationApi(**reservation)
                     owner_id = reservation_model.OwnerId
                 except Exception as e:
-                    self.log(f"Failed to parse reservation using AwsReservationApi: {str(e)}", level="error")
+                    self.log(
+                        f"Failed to parse reservation using AwsReservationApi: {str(e)}",
+                        level="error",
+                    )
                     continue
 
                 for instance in reservation_model.Instances:
@@ -249,7 +262,10 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
                             device_count += 1
                     except Exception as e:
                         instance_id = getattr(instance, "InstanceId", "unknown")
-                        self.log(f"Failed to process instance {instance_id}: {str(e)}", level="error")
+                        self.log(
+                            f"Failed to process instance {instance_id}: {str(e)}",
+                            level="error",
+                        )
                         self.log_exception(e)
                         continue
 
@@ -259,7 +275,10 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
         self.log(f"Successfully collected {device_count} AWS devices", level="info")
 
     def _extract_device_from_instance(
-        self, instance: AwsApiInstance, date_filter: Optional[datetime], owner_id: Optional[str] = None
+        self,
+        instance: AwsApiInstance,
+        date_filter: Optional[datetime],
+        owner_id: Optional[str] = None,
     ) -> Optional[AwsDevice]:
         """Extract device information from an AWS instance.
 
@@ -310,7 +329,10 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
                     boot_time = launch_time
 
             if not created_time:
-                self.log(f"Instance {instance_id} has no creation time, skipping", level="warning")
+                self.log(
+                    f"Instance {instance_id} has no creation time, skipping",
+                    level="warning",
+                )
                 return None
 
             # Ensure timezone is UTC
@@ -426,14 +448,20 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
                 org=org,
             )
 
-            self.log(f"Extracted device: {device_obj.hostname} ({instance_id})", level="debug")
+            self.log(
+                f"Extracted device: {device_obj.hostname} ({instance_id})",
+                level="debug",
+            )
             return AwsDevice(device=device_obj, date=created_time)
 
         except Exception as e:
             instance_id = getattr(instance, "InstanceId", "unknown")
             if isinstance(instance, dict):
                 instance_id = instance.get("InstanceId", "unknown")
-            self.log(f"Error extracting device from instance {instance_id}: {str(e)}", level="error")
+            self.log(
+                f"Error extracting device from instance {instance_id}: {str(e)}",
+                level="error",
+            )
             self.log_exception(e)
             return None
 
@@ -480,14 +508,18 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
 
                     except Exception as e:
                         self.log(
-                            f"Failed to create OCSF event for device {aws_device.device.uid}: {str(e)}", level="error"
+                            f"Failed to create OCSF event for device {aws_device.device.uid}: {str(e)}",
+                            level="error",
                         )
                         self.log_exception(e)
                         continue
 
             # Update checkpoint with the new date
             self.new_most_recent_date = new_most_recent_date
-            self.log(f"Asset collection completed. Generated {asset_count} device inventory events", level="info")
+            self.log(
+                f"Asset collection completed. Generated {asset_count} device inventory events",
+                level="info",
+            )
 
         except Exception as e:
             self.log(f"Error during asset collection: {str(e)}", level="error")

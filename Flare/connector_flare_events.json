@@ -32,6 +32,13 @@
         "default": 0.25,
         "minimum": 0
       },
+      "concurrency": {
+        "type": "integer",
+        "description": "Number of event details requested at the same time (all calls are still paced by throttle_seconds)",
+        "default": 4,
+        "minimum": 1,
+        "maximum": 10
+      },
       "intake_server": {
         "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
         "default": "https://intake.sekoia.io",

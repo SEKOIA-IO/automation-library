@@ -1,0 +1,39 @@
+[project]
+name = "automation-module-easyvista"
+version = "0.0.0"
+description = "EasyVista Service Manager playbook actions"
+requires-python = ">=3.14,<4"
+dependencies = [
+    "requests>=2.32,<3",
+    "pydantic>=2,<3",
+    "sekoia-automation-sdk>=1.27,<2",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "pytest-cov>=5,<8", "requests-mock>=1.12,<2", "jsonschema>=4,<5"]
+lint = ["ruff>=0.14", "mypy", "types-requests"]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "lint"]
+
+[tool.ruff]
+line-length = 119
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.mypy]
+python_version = "3.14"
+ignore_missing_imports = true
+exclude = ["tests/"]
+
+[tool.coverage.run]
+source = ["easyvista_modules"]
+omit = ["tests/*", "main.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--cov=easyvista_modules --cov-report=term-missing --cov-fail-under=90"
