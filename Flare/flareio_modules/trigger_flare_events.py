@@ -1,10 +1,13 @@
+import threading
 import time
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from typing import Any
 
 import orjson
+import requests
 from flareio import FlareApiClient
 from flareio.ratelimit import Limiter
 from sekoia_automation.checkpoint import CheckpointCursor
@@ -19,6 +22,19 @@ class FlareEventsConnectorConfiguration(DefaultConnectorConfiguration):
     page_size: int = 10
     initial_hours_lookback: int = 1
     throttle_seconds: float = 0.25
+    concurrency: int = 4
+
+
+class ThreadSafeLimiter:
+    """`flareio`'s `Limiter`, shared by the threads that call Flare: one call starts every `throttle_seconds`."""
+
+    def __init__(self, limiter: Limiter) -> None:
+        self._limiter = limiter
+        self._lock = threading.Lock()
+
+    def tick(self) -> None:
+        with self._lock:
+            self._limiter.tick()
 
 
 class FlareEventsConnector(Connector):
@@ -43,8 +59,8 @@ class FlareEventsConnector(Connector):
         )
 
     @cached_property
-    def limiter(self) -> Limiter:
-        return Limiter.from_seconds(self.configuration.throttle_seconds)
+    def limiter(self) -> ThreadSafeLimiter:
+        return ThreadSafeLimiter(Limiter.from_seconds(self.configuration.throttle_seconds))
 
     def _build_payload(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -59,25 +75,45 @@ class FlareEventsConnector(Connector):
 
         return payload
 
+    def _next_page(self, pages: Iterator[requests.Response]) -> requests.Response | None:
+        self.limiter.tick()
+        return next(pages, None)
+
+    def _fetch_details(self, uid: str) -> dict[str, Any] | None:
+        self.limiter.tick()
+        event_resp = self.client.get(url=self.EVENTS_DETAILS_URL, params={"uid": uid})
+        if event_resp.status_code == 404:
+            return None
+        event_resp.raise_for_status()
+        return event_resp.json()
+
     def _scroll_events(self) -> Iterator[tuple[dict[str, Any] | None, str | None]]:
         """
-        Yield `(event, next_cursor)` for every event of the tenant feed.
+        Yield `(event, next_cursor)` for every event of the tenant feed, in the feed's order.
 
         Replaces `FlareApiClient.scroll_events`, which raises on the first event whose details
         are gone (404). Such events are yielded as `None` so the caller can skip them.
+
+        The search only returns the events' metadata, so each event needs its own details call. These calls
+        run `concurrency` at a time, and the next page is read meanwhile; the limiter still paces every call.
         """
-        self.limiter.tick()
-        for page_resp in self.client.scroll(method="POST", url=self.EVENTS_PAGES_URL, json=self._build_payload()):
-            page = page_resp.json()
-            for item in page["items"]:
-                self.limiter.tick()
-                event_resp = self.client.get(url=self.EVENTS_DETAILS_URL, params={"uid": item["metadata"]["uid"]})
-                if event_resp.status_code == 404:
-                    yield None, page["next"]
-                    continue
-                event_resp.raise_for_status()
-                yield event_resp.json(), page["next"]
-            self.limiter.tick()
+        pages = iter(self.client.scroll(method="POST", url=self.EVENTS_PAGES_URL, json=self._build_payload()))
+        page_executor = ThreadPoolExecutor(max_workers=1)
+        details_executor = ThreadPoolExecutor(max_workers=max(1, self.configuration.concurrency))
+        try:
+            next_page = page_executor.submit(self._next_page, pages)
+            while (page_resp := next_page.result()) is not None:
+                page = page_resp.json()
+                next_page = page_executor.submit(self._next_page, pages)
+                uids = [item["metadata"]["uid"] for item in page["items"]]
+                # `map` returns the results in the order of `uids`, whatever the order the calls complete in
+                for event in details_executor.map(self._fetch_details, uids):
+                    yield event, page["next"]
+        finally:
+            # On an error, don't wait for the calls still running (the prefetched page, the page's other
+            # details): the error reaches `run()` at once. Their results are not used.
+            page_executor.shutdown(wait=False, cancel_futures=True)
+            details_executor.shutdown(wait=False, cancel_futures=True)
 
     @staticmethod
     def _serialize(event: dict[str, Any]) -> str:

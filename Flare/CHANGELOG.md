@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-17 - 0.6.4
+
+### Changed
+
+- Fetch the details of a page's events in parallel (new `concurrency` setting, 4 by default) and read the next page meanwhile; `throttle_seconds` now spaces the calls instead of adding a wait after each one
+
 ## 2026-11-02 - 0.6.3
 
 ### Fixed

@@ -1,11 +1,18 @@
 import json
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 import requests
 
 from flareio_modules import FlareIOModule
-from flareio_modules.trigger_flare_events import FlareEventsConnector
+from flareio_modules.trigger_flare_events import FlareEventsConnector, ThreadSafeLimiter
+
+# `time.sleep` is patched in the connector's module by most tests; keep the real ones for the timing tests
+real_sleep = time.sleep
+real_monotonic = time.monotonic
 
 
 def _build_trigger(data_storage):
@@ -230,6 +237,77 @@ def test_next_batch_drops_chat_message_context(mock_sleep, data_storage):
 
     pushed_event = json.loads(trigger.push_events_to_intakes.call_args.kwargs["events"][0])
     assert pushed_event["data"] == {"message": "hello"}
+
+
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_fetches_details_concurrently_in_feed_order(mock_sleep, data_storage):
+    trigger = _build_trigger(data_storage)
+    trigger.configuration.concurrency = 4
+    events = [_event(f"evt-{index}") for index in range(10)]
+    fake_client = _fake_client([(events, "cursor-1")])
+    answer = fake_client.get.side_effect
+    in_flight, max_in_flight, lock = 0, 0, threading.Lock()
+
+    def slow_get(url, params):
+        nonlocal in_flight, max_in_flight
+        with lock:
+            in_flight += 1
+            max_in_flight = max(max_in_flight, in_flight)
+        # The first events answer last
+        real_sleep(0.05 * (10 - int(params["uid"].rsplit("-", 1)[1])) / 10)
+        with lock:
+            in_flight -= 1
+        return answer(url, params)
+
+    fake_client.get.side_effect = slow_get
+
+    _run_next_batch(trigger, fake_client)
+
+    pushed_events = trigger.push_events_to_intakes.call_args.kwargs["events"]
+    pushed = [json.loads(event)["header"]["uid"] for event in pushed_events]
+    assert pushed == [f"evt-{index}" for index in range(10)]
+    assert 1 < max_in_flight <= 4
+
+
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_fails_without_waiting_for_running_calls(mock_sleep, data_storage):
+    trigger = _build_trigger(data_storage)
+    trigger.configuration.concurrency = 2
+    fake_client = _fake_client([([_event("evt-1"), _event("evt-2")], "cursor-1")])
+    answer = fake_client.get.side_effect
+    hanging, release = threading.Event(), threading.Event()
+
+    def get(url, params):
+        if params["uid"] == "uid-0-0":
+            hanging.wait(timeout=5)
+            return _response(429)
+        hanging.set()
+        release.wait(timeout=10)  # a call that hangs
+        return answer(url, params)
+
+    fake_client.get.side_effect = get
+
+    started = real_monotonic()
+    try:
+        with pytest.raises(requests.HTTPError):
+            _run_next_batch(trigger, fake_client)
+        assert real_monotonic() - started < 5
+    finally:
+        release.set()
+
+
+def test_limiter_is_shared_by_threads(data_storage):
+    trigger = _build_trigger(data_storage)
+    trigger.configuration.throttle_seconds = 0.01
+
+    limiter = trigger.limiter
+    start = real_monotonic()
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        list(executor.map(lambda _: limiter.tick(), range(8)))
+
+    assert isinstance(limiter, ThreadSafeLimiter)
+    # The first tick is immediate, then one every 10 ms whatever the number of threads
+    assert real_monotonic() - start >= 0.07
 
 
 @patch("flareio_modules.trigger_flare_events.time.sleep")
