@@ -18,3 +18,9 @@ curl -s -H "API-Key: $API_KEY" https://urlscan.io/api/v1/quotas    # "scope": "t
 ```
 
 `401` means the key is invalid or disabled. Key activity: `Last Activity` column, or `GET https://urlscan.io/api/v1/activity/user` / `activity/team`.
+
+## Confidentiality
+
+- The `screenshot_url` and `report_url` of a `private` scan open **without a urlscan.io account**. Once posted in an alert or case comment, they are visible to every user who can read it. Treat them as sensitive.
+- The `comment` result embeds the screenshot: the reader's browser loads it from urlscan.io. The image disappears when urlscan.io deletes the scan.
+- *Download scan screenshot* writes the PNG to the playbook run. Users who can view playbook runs can download it until the run is deleted (8 days on FRA1, 7 days on the other regions). A phishing screenshot may show victim data.
