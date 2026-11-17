@@ -10,9 +10,11 @@ import orjson
 import requests
 from flareio import FlareApiClient
 from flareio.ratelimit import Limiter
+from requests.adapters import HTTPAdapter
 from sekoia_automation.checkpoint import CheckpointCursor
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
+from urllib3.util import Retry
 
 from flareio_modules import FlareIOModule
 from flareio_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
@@ -58,11 +60,29 @@ class FlareEventsConnector(Connector):
 
     @cached_property
     def client(self) -> FlareApiClient:
-        # The SDK builds its own session with retries on 429/502/503/504, scoped to the tenant.
         return FlareApiClient(
             api_key=self.module.configuration.api_key,
             tenant_id=self.module.configuration.tenant_id,
+            session=self._create_session(),
         )
+
+    @staticmethod
+    def _create_session() -> requests.Session:
+        """
+        The SDK's session retries 429, 502, 503 and 504 only, while Flare also answers intermittent 500s to both the
+        search and the details: without a retry, each one fails the batch and costs a `frequency` wait in `run()`.
+        Same retries as the SDK's otherwise.
+        """
+        session = requests.Session()
+        retry = Retry(
+            total=5,
+            backoff_factor=2,
+            backoff_max=15,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods={"GET", "POST"},
+        )
+        session.mount("https://", HTTPAdapter(max_retries=retry))
+        return session
 
     @cached_property
     def limiter(self) -> ThreadSafeLimiter:

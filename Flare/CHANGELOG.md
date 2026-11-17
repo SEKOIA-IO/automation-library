@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-11-17 - 0.6.6
+## 2026-11-17 - 0.6.7
 
 ### Fixed
 
 - Cut the end of the biggest fields of an event that exceeds the intake size limit, instead of letting the whole event be discarded: attachment text, lists of IP addresses, domains or URLs, `content`, then the files, credentials and emails of stealer logs and leaks. The cut fields are listed in `data.truncated_fields`
+
+## 2026-11-17 - 0.6.6
+
+### Fixed
+
+- Retry the intermittent 500 errors of the Flare API, which the SDK does not retry: each one failed the batch and delayed the collection by `frequency` (60 s by default)
 
 ## 2026-11-17 - 0.6.5
 
