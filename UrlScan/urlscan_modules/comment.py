@@ -8,7 +8,8 @@ from typing import Any
 
 EMPTY = "—"
 NEWLINES = re.compile(r"\r\n|\r|\n")
-MARKDOWN_SPECIALS = re.compile(r"([\\|`\[\]<>])")
+# Emphasis and strikethrough delimiters too: a page title must not format the comment.
+MARKDOWN_SPECIALS = re.compile(r"([\\|`\[\]<>*_~])")
 # Characters that would end or break a link destination.
 DESTINATION_ESCAPES = {ord(char): f"%{ord(char):02X}" for char in " ()<>\\\r\n\t"}
 
