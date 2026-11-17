@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-11-16 - 0.6.4
+## 2026-11-17 - 0.6.5
 
 ### Fixed
 
 - Cut the end of the biggest fields of an event that exceeds the intake size limit, instead of letting the whole event be discarded: attachment text, lists of IP addresses, domains or URLs, `content`, then the files, credentials and emails of stealer logs and leaks. The cut fields are listed in `data.truncated_fields`
+
+## 2026-11-17 - 0.6.4
+
+### Changed
+
+- Fetch the details of a page's events in parallel (new `concurrency` setting, 4 by default) and read the next page meanwhile; `throttle_seconds` now spaces the calls instead of adding a wait after each one
 
 ## 2026-11-02 - 0.6.3
 
