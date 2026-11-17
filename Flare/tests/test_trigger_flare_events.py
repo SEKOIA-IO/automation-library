@@ -269,6 +269,33 @@ def test_next_batch_fetches_details_concurrently_in_feed_order(mock_sleep, data_
     assert 1 < max_in_flight <= 4
 
 
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_fails_without_waiting_for_running_calls(mock_sleep, data_storage):
+    trigger = _build_trigger(data_storage)
+    trigger.configuration.concurrency = 2
+    fake_client = _fake_client([([_event("evt-1"), _event("evt-2")], "cursor-1")])
+    answer = fake_client.get.side_effect
+    hanging, release = threading.Event(), threading.Event()
+
+    def get(url, params):
+        if params["uid"] == "uid-0-0":
+            hanging.wait(timeout=5)
+            return _response(429)
+        hanging.set()
+        release.wait(timeout=10)  # a call that hangs
+        return answer(url, params)
+
+    fake_client.get.side_effect = get
+
+    started = real_monotonic()
+    try:
+        with pytest.raises(requests.HTTPError):
+            _run_next_batch(trigger, fake_client)
+        assert real_monotonic() - started < 5
+    finally:
+        release.set()
+
+
 def test_limiter_is_shared_by_threads(data_storage):
     trigger = _build_trigger(data_storage)
     trigger.configuration.throttle_seconds = 0.01

@@ -98,10 +98,9 @@ class FlareEventsConnector(Connector):
         run `concurrency` at a time, and the next page is read meanwhile; the limiter still paces every call.
         """
         pages = iter(self.client.scroll(method="POST", url=self.EVENTS_PAGES_URL, json=self._build_payload()))
-        with (
-            ThreadPoolExecutor(max_workers=1) as page_executor,
-            ThreadPoolExecutor(max_workers=max(1, self.configuration.concurrency)) as details_executor,
-        ):
+        page_executor = ThreadPoolExecutor(max_workers=1)
+        details_executor = ThreadPoolExecutor(max_workers=max(1, self.configuration.concurrency))
+        try:
             next_page = page_executor.submit(self._next_page, pages)
             while (page_resp := next_page.result()) is not None:
                 page = page_resp.json()
@@ -110,6 +109,11 @@ class FlareEventsConnector(Connector):
                 # `map` returns the results in the order of `uids`, whatever the order the calls complete in
                 for event in details_executor.map(self._fetch_details, uids):
                     yield event, page["next"]
+        finally:
+            # On an error, don't wait for the calls still running (the prefetched page, the page's other
+            # details): the error reaches `run()` at once. Their results are not used.
+            page_executor.shutdown(wait=False, cancel_futures=True)
+            details_executor.shutdown(wait=False, cancel_futures=True)
 
     @staticmethod
     def _serialize(event: dict[str, Any]) -> str:
