@@ -15,9 +15,17 @@ def test_run_starts_without_a_current_event_loop(connector_class, data_storage):
     module.configuration = {"base_url": "https://example.com", "apikey": "fake_okta_api_key"}
     connector = connector_class(module=module, data_path=data_storage)
     connector.log = Mock()
+    try:
+        previous_loop = asyncio.get_event_loop()
+    except RuntimeError:
+        previous_loop = None
     asyncio.set_event_loop(None)
 
-    with patch.object(connector_class, "async_run", new_callable=AsyncMock) as async_run:
-        connector.run()
+    try:
+        with patch.object(connector_class, "async_run", new_callable=AsyncMock) as async_run:
+            connector.run()
+    finally:
+        # The other tests keep the event loop they had
+        asyncio.set_event_loop(previous_loop)
 
     async_run.assert_awaited_once()
