@@ -11,7 +11,6 @@ from urllib.parse import urlencode
 
 from dateutil.parser import isoparse
 from okta.client import Client as OktaClient
-from sekoia_automation.asset_connector import AsyncAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.device import (
     Device,
@@ -28,6 +27,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 from sekoia_automation.storage import PersistentJSON
 
 from okta_modules import OktaModule
+from okta_modules.asset_connector import OktaAsyncAssetConnector
 from okta_modules.asset_connector.device_models import (
     OktaDevice,
     OktaDeviceDisplayName,
@@ -48,7 +48,7 @@ __all__ = [
 ]
 
 
-class OktaDeviceAssetConnector(AsyncAssetConnector):
+class OktaDeviceAssetConnector(OktaAsyncAssetConnector):
     """Asset connector for collecting device data from Okta.
 
     This connector fetches device information from Okta and formats it
