@@ -1,0 +1,51 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "SSH Remote Execution",
+    "type": "object",
+    "properties": {
+      "host": {
+        "description": "Hostname or IP address of the SSH server",
+        "type": "string"
+      },
+      "port": {
+        "description": "Port of the SSH server",
+        "type": "integer",
+        "default": 22
+      },
+      "username": {
+        "description": "User used to log in",
+        "type": "string"
+      },
+      "private_key": {
+        "description": "Private key in OpenSSH or PEM format (RSA, ECDSA or Ed25519), including the BEGIN/END lines",
+        "type": "string"
+      },
+      "passphrase": {
+        "description": "Passphrase of the private key, if it is encrypted",
+        "type": "string"
+      },
+      "password": {
+        "description": "Password, used when no private key is given",
+        "type": "string"
+      },
+      "host_key_fingerprint": {
+        "description": "Expected SHA256 fingerprint of the server's host key (e.g. SHA256:abc...). Leave empty to accept any host key; the observed fingerprint is returned in the action results so you can pin it.",
+        "type": "string"
+      },
+      "connect_timeout": {
+        "description": "Connection timeout, in seconds",
+        "type": "integer",
+        "default": 15
+      }
+    },
+    "required": ["host", "username"],
+    "secrets": ["private_key", "passphrase", "password"]
+  },
+  "description": "Run commands and scripts on remote hosts over SSH. Designed to be executed on-premises with a playbook runner.",
+  "name": "SSH Remote Execution",
+  "slug": "ssh-remote-execution",
+  "uuid": "3fb9e929-626c-4e9c-9d88-a56737222519",
+  "version": "0.1.0",
+  "categories": ["Applicative"]
+}

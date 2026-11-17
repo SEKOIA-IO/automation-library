@@ -1,0 +1,45 @@
+{
+  "name": "Run SSH script",
+  "description": "Run a multi-line script on a remote host over SSH. The script is sent on the standard input of the interpreter, so nothing is written to the remote disk.",
+  "uuid": "33e96d05-4c68-4a53-97b6-f557244f50fa",
+  "docker_parameters": "run_ssh_script",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "script": {
+        "description": "Content of the script to run",
+        "type": "string"
+      },
+      "interpreter": {
+        "description": "Interpreter reading the script on its standard input",
+        "type": "string",
+        "default": "/bin/bash -s"
+      },
+      "host": {
+        "description": "Overrides the host set in the account",
+        "type": "string"
+      },
+      "timeout": {
+        "description": "Maximum execution time, in seconds",
+        "type": "integer",
+        "default": 300
+      },
+      "fail_on_error": {
+        "description": "Mark the action as failed when the exit code is not 0",
+        "type": "boolean",
+        "default": true
+      }
+    },
+    "required": ["script"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "host": {"type": "string", "description": "Host the script ran on"},
+      "exit_code": {"type": "integer", "description": "Exit code of the script"},
+      "stdout": {"type": "string", "description": "Standard output"},
+      "stderr": {"type": "string", "description": "Standard error"},
+      "host_key_fingerprint": {"type": "string", "description": "SHA256 fingerprint of the server's host key"}
+    }
+  }
+}
