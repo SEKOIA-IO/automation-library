@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-17 - 2.10.30
+
+### Fixed
+
+- Support both user IDs and userPrincipalNames (UPNs) in the Get SignIns Id field.
+
 ## 2026-08-25 - 2.10.29
 
 ### Changed

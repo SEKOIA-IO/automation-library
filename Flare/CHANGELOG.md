@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-11-17 - 0.6.5
+## 2026-11-17 - 0.6.6
 
 ### Fixed
 
 - Cut the end of the biggest fields of an event that exceeds the intake size limit, instead of letting the whole event be discarded: attachment text, lists of IP addresses, domains or URLs, `content`, then the files, credentials and emails of stealer logs and leaks. The cut fields are listed in `data.truncated_fields`
+
+## 2026-11-17 - 0.6.5
+
+### Added
+
+- Add the date Flare matched the item to the tenant to the events, as `metadata.matched_at`: the item itself can be years old
 
 ## 2026-11-17 - 0.6.4
 

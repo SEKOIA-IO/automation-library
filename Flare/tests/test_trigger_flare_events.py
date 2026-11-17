@@ -58,7 +58,7 @@ def _fake_client(pages):
         items = []
         for event_index, event in enumerate(events):
             uid = f"uid-{page_index}-{event_index}"
-            items.append({"metadata": {"uid": uid}})
+            items.append({"metadata": {"uid": uid, "matched_at": f"2026-11-16T14:38:{event_index:02d}Z"}})
             details[uid] = _response(404) if event is None else _response(200, event)
         scroll_pages.append(_response(200, {"items": items, "next": next_cursor}))
 
@@ -106,6 +106,24 @@ def test_next_batch_first_run_builds_initial_filter(mock_sleep, data_storage):
     fake_client.get.assert_any_call(url="/firework/v2/activities/", params={"uid": "uid-0-0"})
     # Pages and events are throttled by the connector's single limiter.
     assert fake_limiter.tick.called
+
+
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_adds_match_date(mock_sleep, data_storage):
+    trigger = _build_trigger(data_storage)
+    old_item = {"activity": {"header": {"uid": "evt-1"}, "metadata": {"estimated_created_at": "2021-11-25T18:26:18Z"}}}
+    no_metadata = {"activity": {"header": {"uid": "evt-3"}, "metadata": None}}
+    fake_client = _fake_client([([old_item, _event("evt-2"), no_metadata], "cursor-1")])
+
+    _run_next_batch(trigger, fake_client)
+
+    pushed = [json.loads(event) for event in trigger.push_events_to_intakes.call_args.kwargs["events"]]
+    assert pushed[0]["metadata"] == {
+        "estimated_created_at": "2021-11-25T18:26:18Z",
+        "matched_at": "2026-11-16T14:38:00Z",
+    }
+    assert pushed[1]["metadata"] == {"matched_at": "2026-11-16T14:38:01Z"}
+    assert pushed[2]["metadata"] == {"matched_at": "2026-11-16T14:38:02Z"}
 
 
 @patch("flareio_modules.trigger_flare_events.time.sleep")

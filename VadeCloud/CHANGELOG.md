@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-30 - 1.5.3
+
+### Fixed
+
+- Keep a separate checkpoint for the inbound and outbound streams
+- Collect the last 5 minutes on the first run instead of the last 7 days
+
 ## 2025-02-28 - 1.5.2
 
 ### Changed
