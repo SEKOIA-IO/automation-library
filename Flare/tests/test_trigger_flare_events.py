@@ -342,3 +342,14 @@ def test_run_logs_exception_when_batch_fails(mock_sleep, data_storage):
     trigger.log_exception.assert_called()
     # Back off for one period after a failure.
     mock_sleep.assert_called_once_with(60)
+
+
+def test_client_retries_flare_server_errors(data_storage):
+    trigger = _build_trigger(data_storage)
+
+    retry = trigger.client._session.get_adapter("https://api.flare.io").max_retries
+
+    # Flare answers intermittent 500s, which the SDK's session does not retry
+    assert all(retry.is_retry(method, status) for method in ("GET", "POST") for status in (429, 500, 502, 503, 504))
+    assert not retry.is_retry("GET", 404)
+    assert retry.total == 5
