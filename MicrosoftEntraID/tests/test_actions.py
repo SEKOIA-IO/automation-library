@@ -454,7 +454,25 @@ SIGN_INS: list[dict] = [
 
 
 @pytest.mark.asyncio
-async def test_get_signins():
+@pytest.mark.parametrize(
+    "user_identifier, expected_filter",
+    [
+        (
+            "00000000-0000-4000-8000-000000000001",
+            "userId eq '00000000-0000-4000-8000-000000000001' "
+            "or userPrincipalName eq '00000000-0000-4000-8000-000000000001'",
+        ),
+        (
+            "test@example.com",
+            "userId eq 'test@example.com' or userPrincipalName eq 'test@example.com'",
+        ),
+        (
+            "o'connor@example.com",
+            "userId eq 'o''connor@example.com' or userPrincipalName eq 'o''connor@example.com'",
+        ),
+    ],
+)
+async def test_get_signins(user_identifier, expected_filter):
     action = configured_action(GetSignInsAction)
 
     expected = {"value": SIGN_INS}
@@ -465,12 +483,12 @@ async def test_get_signins():
 
     async_mock = AsyncMock(return_value=response)
     with patch("azure_ad.get_sign_ins.GetSignInsAction.query_get_user_signin", side_effect=async_mock):
-        results = await action.run({"id": "b7873f1b-547b-4605-ad9e-abc76e92f902"})
+        results = await action.run({"id": user_identifier})
 
         assert results == value_expected
         async_mock.assert_awaited_once()
-        request_configuration = async_mock.call_args.args[0]
-        assert request_configuration.query_parameters.filter == "userId eq 'b7873f1b-547b-4605-ad9e-abc76e92f902'"
+        request_configuration = async_mock.await_args.args[0]
+        assert request_configuration.query_parameters.filter == expected_filter
 
 
 @pytest.mark.asyncio
