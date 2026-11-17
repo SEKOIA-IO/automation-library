@@ -15,7 +15,6 @@ from okta.models.role import Role as OktaRole
 from okta.models.role_status import RoleStatus as OktaRoleStatus
 from okta.models.user import User as OktaUser
 from okta.models.user_status import UserStatus as OktaUserStatus
-from sekoia_automation.asset_connector import AsyncAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.asset_connector.models.ocsf.user import (
@@ -33,9 +32,10 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
 from sekoia_automation.storage import PersistentJSON
 
 from okta_modules import OktaModule
+from okta_modules.asset_connector import OktaAsyncAssetConnector
 
 
-class OktaUserAssetConnector(AsyncAssetConnector):
+class OktaUserAssetConnector(OktaAsyncAssetConnector):
     """Asset connector for collecting user data from Okta.
 
     This connector fetches user information from Okta and formats it
