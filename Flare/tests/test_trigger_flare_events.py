@@ -110,7 +110,8 @@ def test_next_batch_first_run_builds_initial_filter(mock_sleep, data_storage):
 def test_next_batch_adds_match_date(mock_sleep, data_storage):
     trigger = _build_trigger(data_storage)
     old_item = {"activity": {"header": {"uid": "evt-1"}, "metadata": {"estimated_created_at": "2021-11-25T18:26:18Z"}}}
-    fake_client = _fake_client([([old_item, _event("evt-2")], "cursor-1")])
+    no_metadata = {"activity": {"header": {"uid": "evt-3"}, "metadata": None}}
+    fake_client = _fake_client([([old_item, _event("evt-2"), no_metadata], "cursor-1")])
 
     _run_next_batch(trigger, fake_client)
 
@@ -120,6 +121,7 @@ def test_next_batch_adds_match_date(mock_sleep, data_storage):
         "matched_at": "2026-11-16T14:38:00Z",
     }
     assert pushed[1]["metadata"] == {"matched_at": "2026-11-16T14:38:01Z"}
+    assert pushed[2]["metadata"] == {"matched_at": "2026-11-16T14:38:02Z"}
 
 
 @patch("flareio_modules.trigger_flare_events.time.sleep")

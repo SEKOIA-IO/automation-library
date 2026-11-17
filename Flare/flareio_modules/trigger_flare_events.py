@@ -88,7 +88,8 @@ class FlareEventsConnector(Connector):
         event = event_resp.json()
         # The date Flare matched the item to the tenant is only in the search results; the parser uses it as the
         # event's date, since the item can be years old (e.g. the history Flare matches when a tenant is created)
-        event.get("activity", event).setdefault("metadata", {})["matched_at"] = item_metadata.get("matched_at")
+        activity = event.get("activity", event)
+        activity["metadata"] = {**(activity.get("metadata") or {}), "matched_at": item_metadata.get("matched_at")}
         return event
 
     def _scroll_events(self) -> Iterator[tuple[dict[str, Any] | None, str | None]]:
