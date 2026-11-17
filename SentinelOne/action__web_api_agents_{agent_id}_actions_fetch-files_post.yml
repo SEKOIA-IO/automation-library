@@ -1,0 +1,90 @@
+uuid: 7b66b854-c0b8-598a-9c08-d854ada35d7b
+slug: '_web_api_agents_{agent_id}_actions_fetch-files_post'
+name: Fetch Files Agents By Agent ID
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/agents/{{inputs.agent_id}}/actions/fetch-files'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        data: '{{inputs.data}}'
+    asserts:
+      error_404:
+        predicate: '{{response.status_code != 404}}'
+        fail: Agent not found
+      error_403:
+        predicate: '{{response.status_code != 403}}'
+        fail: User has insufficient permissions to perform the requested action
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Fetch files from endpoints (up to 10 MB for each command) to analyze
+  the root of threats (that come from files - of course, this does not help for fileless
+  threats). Set the pathnames in the body of the request. <BR>Regular expressions
+  and metacharacters are not allowed. Spaces are allowed.<BR>You must enter a new
+  password, which you will use to open the archive of downloaded files. The password
+  must be 10 or more characters with a mix of upper and lower case letters, numbers,
+  and symbols.<BR>This command collects the file and uploads them to the Management.
+  To get the files, download them from the Management.<BR>FedRAMP-compliant and other
+  Managements in GovCloud require a Support ticket to enable this feature.
+inputs:
+  data:
+    type: object
+    properties:
+      files:
+        type: array
+        items:
+          type: string
+        description: List of files to fetch (absolute paths, up to 10 files)
+      password:
+        type: string
+        description: File encryption password
+    required:
+    - files
+    - password
+    description: Data
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  agent_id:
+    type: string
+    description: 'Agent ID. Example: "225494730938493804".'
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          success:
+            type: boolean
+            description: Indicates a successful operation
+        description: Response data
+    description: Success

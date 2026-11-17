@@ -1,0 +1,491 @@
+uuid: e6cb8f39-edc9-51d3-8e03-e2c000c0e065
+slug: '_web_api_firewall-control_{firewall_rule_category}_post'
+name: Create Firewall Control By Firewall Rule Category
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/firewall-control/{{inputs.firewall_rule_category}}'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        data: '{{inputs.data}}'
+        filter: '{{inputs.filter}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Create a Firewall Control rule for a scope specified by ID (run "accounts",
+  "sites", "groups", or set "tenant" to "true") and specific OS, to allow or block
+  network traffic to matching endpoints.<br>You can create one clean-up rule, with
+  the Action of Allow or Block and with no other parameters defined explicitly. Make
+  this the default rule at the end of your rule list. Traffic that does not match
+  other rules first will match this rule. If you do not have a clean-up rule to match
+  all traffic, the default Firewall Control behavior is to allow traffic that is not
+  explicitly blocked.<br>Firewall Control requires Control SKU.
+inputs:
+  filter:
+    type: object
+    properties:
+      accountIds:
+        type: array
+        items:
+          type: string
+        description: List of Account IDs to filter by
+      siteIds:
+        type: array
+        items:
+          type: string
+        description: List of Site IDs to filter by
+      groupIds:
+        type: array
+        items:
+          type: string
+        description: List of Group IDs to filter by
+      tenant:
+        type: boolean
+        description: Indicates a tenant scope request
+    description: Filter
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  data:
+    type: object
+    properties:
+      direction:
+        type: string
+        description: Defines the Direction of the Firewall rule.
+        enum:
+        - any
+        - inbound
+        - outbound
+      osType:
+        type: string
+        description: '[DEPRECATED] Please use os_types since multiple os types are
+          supported.This field will return the first os_type, not necessarily the
+          only one.'
+        enum:
+        - windows
+        - linux
+        - windows_legacy
+        - macos
+      osTypes:
+        type: array
+        items:
+          type: string
+          description: List of the rule's os types
+          enum:
+          - windows
+          - linux
+          - windows_legacy
+          - macos
+        description: Os types
+      tag:
+        type: string
+        description: '[DEPRECATED] Free text to describe the rule. Please use description
+          instead.'
+      application:
+        type: object
+        properties:
+          type:
+            type: string
+            description: Type of the application
+            enum:
+            - any
+            - path
+            - sha1
+            - system
+          values:
+            type: array
+            items:
+              type: string
+            description: Value of the application
+        description: Application for the rule
+      name:
+        type: string
+        description: The name of the firewall rule.
+      protocol:
+        type: string
+        description: The protocol
+      localHost:
+        type: object
+        properties:
+          type:
+            type: string
+            description: Type of the host
+            enum:
+            - any
+            - cidr
+            - range
+            - addresses
+            - fqdn
+          values:
+            type: array
+            items:
+              type: string
+            description: Value of the host
+        description: Local host structure with a type and a set of values
+      localPort:
+        type: object
+        properties:
+          type:
+            type: string
+            description: Type of the ports
+            enum:
+            - any
+            - ports
+            - range
+          values:
+            type: array
+            items:
+              type: integer
+            description: A list of port numbers
+        description: Local ports structure with a type and a set of values
+      remoteHost:
+        type: object
+        properties:
+          type:
+            type: string
+            description: Type of the host
+            enum:
+            - any
+            - cidr
+            - range
+            - addresses
+            - fqdn
+          values:
+            type: array
+            items:
+              type: string
+            description: Value of the host
+        description: '[DEPRECATED] Please use remote_hosts.Remote host structure with
+          a type and a set of values.'
+      remoteHosts:
+        type: array
+        items:
+          type: object
+          properties:
+            type:
+              type: string
+              description: Type of the host
+              enum:
+              - any
+              - cidr
+              - range
+              - addresses
+              - fqdn
+            values:
+              type: array
+              items:
+                type: string
+              description: Value of the host
+        description: List of remote hosts, each structured with a type and a set of
+          values
+      remotePort:
+        type: object
+        properties:
+          type:
+            type: string
+            description: Type of the ports
+            enum:
+            - any
+            - ports
+            - range
+          values:
+            type: array
+            items:
+              type: integer
+            description: A list of port numbers
+        description: Remote ports structure with a type and a set of values
+      location:
+        type: object
+        properties:
+          type:
+            type: string
+            description: Location type
+            enum:
+            - all
+            - specific
+            - fallback
+          values:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Location ID
+                name:
+                  type: string
+                  description: Location name
+                scope:
+                  type: string
+                  description: Location scope
+                  enum:
+                  - site
+                  - group
+                  - global
+                  - account
+              required:
+              - id
+            description: Location IDs (applicable for the "specific" location type
+              only)
+        required:
+        - type
+        description: Location structure with a type and a set of values
+      action:
+        type: string
+        description: Defines if agent shall Block or Allow use of firewalls which
+          matches the rule parameters.
+        enum:
+        - Allow
+        - Block
+      status:
+        type: string
+        description: Defines if rule is Enabled or Disabled
+        enum:
+        - Enabled
+        - Disabled
+      tagIds:
+        type: array
+        items:
+          type: string
+          description: List of tag IDs this firewall rule is linked to
+        description: Tag ids
+      description:
+        type: string
+        description: Description
+    required:
+    - action
+    - name
+    - status
+    description: Data
+  firewall_rule_category:
+    type: string
+    description: To affect Network Quarantine use network-quarantine
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Rule ID
+          order:
+            type: integer
+            description: Position in the list of rules
+          direction:
+            type: string
+            description: Defines the Direction of the Firewall rule.
+            enum:
+            - any
+            - inbound
+            - outbound
+          osType:
+            type: string
+            description: '[DEPRECATED] Please use os_types since multiple os types
+              are supported.This field will return the first os_type, not necessarily
+              the only one.'
+            enum:
+            - windows
+            - linux
+            - windows_legacy
+            - macos
+          osTypes:
+            type: array
+            items:
+              type: string
+              description: List of the rule's os types
+              enum:
+              - windows
+              - linux
+              - windows_legacy
+              - macos
+            description: Os types
+          tag:
+            type: string
+            description: '[DEPRECATED] Free text to describe the rule. Please use
+              description instead.'
+          application:
+            type: string
+            description: Application for the rule
+          name:
+            type: string
+            description: The name of the firewall rule.
+          protocol:
+            type: string
+            description: The protocol.
+          productId:
+            type: string
+            description: Product identifier. Unique for a specific product module,
+              per vendor ID, Interface.
+          localHost:
+            type: string
+            description: Local host
+          localPort:
+            type: string
+            description: Local ports
+          remoteHost:
+            type: string
+            description: '[DEPRECATED] First remote host in the rule. Full list in
+              remote_hosts'
+          remoteHosts:
+            type: array
+            items:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: Type of the host
+                  enum:
+                  - any
+                  - cidr
+                  - range
+                  - addresses
+                  - fqdn
+                values:
+                  type: array
+                  items:
+                    type: string
+                  description: Value of the host
+            description: List of remote hosts
+          remotePort:
+            type: string
+            description: Remote ports
+          location:
+            type: object
+            properties:
+              type:
+                type: string
+                description: Location type
+                enum:
+                - all
+                - specific
+                - fallback
+              values:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: Location ID
+                    name:
+                      type: string
+                      description: Location name
+                    scope:
+                      type: string
+                      description: Location scope
+                      enum:
+                      - site
+                      - group
+                      - global
+                      - account
+                  required:
+                  - id
+                description: Location IDs (applicable for the "specific" location
+                  type only)
+            required:
+            - type
+            description: Location associated with the rule
+          action:
+            type: string
+            description: Defines if agent shall Block or Allow use of firewalls which
+              matches the rule parameters.
+            enum:
+            - Allow
+            - Block
+          status:
+            type: string
+            description: Defines if rule is Enabled or Disabled
+            enum:
+            - Enabled
+            - Disabled
+          scope:
+            type: string
+            description: Scope of the rule
+            enum:
+            - site
+            - group
+            - global
+            - account
+          scopeId:
+            type: string
+            description: The group or site id depending on the scope. null if it is
+              global.
+          editable:
+            type: boolean
+            description: True if the rule can be modified at this scope level
+          createdAt:
+            type: string
+            description: Date of rule creation
+          updatedAt:
+            type: string
+            description: Date of last update
+          creator:
+            type: string
+            description: Full name of the creating user
+          creatorId:
+            type: string
+            description: Id of the creating user
+          tags:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                id:
+                  type: string
+              description: List of tag IDs and names linked to this rule
+            description: Tags
+          tagIds:
+            type: array
+            items:
+              type: string
+              description: List of tag IDs this firewall rule is linked to
+            description: Tag ids
+          tagNames:
+            type: array
+            items:
+              type: string
+              description: List of tag names this firewall rule is linked to
+            description: Tag names
+          description:
+            type: string
+            description: Description
+          ruleCategory:
+            type: string
+            description: Network quarantine rule or standard firewall rule
+            enum:
+            - firewall
+            - network_quarantine
+        description: Response data
+    description: Success

@@ -1,0 +1,946 @@
+uuid: dea3b0d1-a09c-5a97-bbcc-ce0d9e336b58
+slug: '_web_api_cloud-detection_alerts_get'
+name: Get Cloud Detection Alerts
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/cloud-detection/alerts'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        skip: '{{inputs.skip}}'
+        limit: '{{inputs.limit}}'
+        cursor: '{{inputs.cursor}}'
+        countOnly: '{{inputs.countOnly}}'
+        skipCount: '{{inputs.skipCount}}'
+        sortBy: '{{inputs.sortBy}}'
+        sortOrder: '{{inputs.sortOrder}}'
+        accountIds: '{{inputs.accountIds}}'
+        siteIds: '{{inputs.siteIds}}'
+        groupIds: '{{inputs.groupIds}}'
+        tenant: '{{inputs.tenant}}'
+        ids: '{{inputs.ids}}'
+        scopes: '{{inputs.scopes}}'
+        createdAt__lt: '{{inputs.createdAt__lt}}'
+        createdAt__gt: '{{inputs.createdAt__gt}}'
+        createdAt__lte: '{{inputs.createdAt__lte}}'
+        createdAt__gte: '{{inputs.createdAt__gte}}'
+        reportedAt__lt: '{{inputs.reportedAt__lt}}'
+        reportedAt__gt: '{{inputs.reportedAt__gt}}'
+        reportedAt__lte: '{{inputs.reportedAt__lte}}'
+        reportedAt__gte: '{{inputs.reportedAt__gte}}'
+        incidentStatus: '{{inputs.incidentStatus}}'
+        severity: '{{inputs.severity}}'
+        origAgentOsRevision__contains: '{{inputs.origAgentOsRevision__contains}}'
+        origAgentVersion__contains: '{{inputs.origAgentVersion__contains}}'
+        origAgentUuid__contains: '{{inputs.origAgentUuid__contains}}'
+        origAgentName__contains: '{{inputs.origAgentName__contains}}'
+        sourceProcessName__contains: '{{inputs.sourceProcessName__contains}}'
+        ruleName__contains: '{{inputs.ruleName__contains}}'
+        sourceProcessStoryline__contains: '{{inputs.sourceProcessStoryline__contains}}'
+        sourceProcessStoryline__equals: '{{inputs.sourceProcessStoryline__equals}}'
+        sourceProcessCommandline__contains: '{{inputs.sourceProcessCommandline__contains}}'
+        sourceProcessFileHashSha1__contains: '{{inputs.sourceProcessFileHashSha1__contains}}'
+        sourceProcessFileHashSha256__contains: '{{inputs.sourceProcessFileHashSha256__contains}}'
+        sourceProcessFileHashMd5__contains: '{{inputs.sourceProcessFileHashMd5__contains}}'
+        sourceProcessFilePath__contains: '{{inputs.sourceProcessFilePath__contains}}'
+        k8sCluster__contains: '{{inputs.k8sCluster__contains}}'
+        k8sNode__contains: '{{inputs.k8sNode__contains}}'
+        k8sNamespaceName__contains: '{{inputs.k8sNamespaceName__contains}}'
+        k8sNamespaceLabels__contains: '{{inputs.k8sNamespaceLabels__contains}}'
+        k8sControllerName__contains: '{{inputs.k8sControllerName__contains}}'
+        k8sControllerLabels__contains: '{{inputs.k8sControllerLabels__contains}}'
+        k8sPod__contains: '{{inputs.k8sPod__contains}}'
+        k8sPodLabels__contains: '{{inputs.k8sPodLabels__contains}}'
+        containerName__contains: '{{inputs.containerName__contains}}'
+        containerImageName__contains: '{{inputs.containerImageName__contains}}'
+        containerLabels__contains: '{{inputs.containerLabels__contains}}'
+        query: '{{inputs.query}}'
+        analystVerdict: '{{inputs.analystVerdict}}'
+        machineType: '{{inputs.machineType}}'
+        osType: '{{inputs.osType}}'
+        disablePagination: '{{inputs.disablePagination}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get a list of alerts for a given scope
+inputs:
+  cursor:
+    type: string
+    description: 'Cursor position returned by the last request. Use to iterate over
+      more than 1000 items. Example: "YWdlbnRfaWQ6NTgwMjkzODE=".'
+    default: null
+  sortOrder:
+    type: string
+    description: 'Sort direction. Example: "asc".'
+    enum:
+    - asc
+    - desc
+    default: null
+  ids:
+    type: array
+    items:
+      type: string
+    description: 'A list of Alert IDs. Example: "225494730938493804,225494730938493915".'
+  createdAt__lt:
+    type: string
+    description: 'Created at lesser than. Example: "2018-02-27T04:49:26.257525Z".'
+  sourceProcessStoryline__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by source storyline. Example: "rule1".'
+  accountIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Account IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  k8sControllerName__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the endpoint Kubernetes controller name (supports
+      multiple values)
+  containerName__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the endpoint container name (supports multiple
+      values)
+  query:
+    type: string
+    description: Full text search for all fields
+  osType:
+    type: array
+    items:
+      type: string
+      enum:
+      - linux
+      - windows
+      - macos
+      - windows_legacy
+    description: Included OS types
+  sourceProcessFilePath__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by source file path. Example: "rule1".'
+  tenant:
+    type: boolean
+    description: Indicates a tenant scope request
+  reportedAt__gt:
+    type: string
+    description: 'Reported at greater than. Example: "2018-02-27T04:49:26.257525Z".'
+  sourceProcessCommandline__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by source commandline. Example: "rule1".'
+  createdAt__gt:
+    type: string
+    description: 'Created at greater than. Example: "2018-02-27T04:49:26.257525Z".'
+  origAgentUuid__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by agent UUID. Example: "win7".'
+  countOnly:
+    type: boolean
+    description: If true, only total number of items will be returned, without any
+      of the actual objects.
+    default: false
+  siteIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Site IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  sourceProcessFileHashMd5__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by source md5. Example: "rule1".'
+  containerLabels__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the endpoint container labels (supports multiple
+      values)
+  hostname:
+    type: string
+    description: Base URL for the API
+  scopes:
+    type: array
+    items:
+      type: string
+      enum:
+      - site
+      - account
+      - group
+      - global
+    description: 'Filter results by scope. Example: "site".'
+  origAgentName__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by agent name. Example: "ilia".'
+  k8sCluster__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the endpoint Kubernetes cluster name (supports
+      multiple values)
+  reportedAt__lt:
+    type: string
+    description: 'Reported at lesser than. Example: "2018-02-27T04:49:26.257525Z".'
+  origAgentOsRevision__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by agent OS revision. Example: "win7".'
+  sourceProcessFileHashSha256__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by source sha255. Example: "rule1".'
+  sourceProcessName__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by source process name. Example: "proc1.exe".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  limit:
+    type: integer
+    description: 'Limit number of returned items (1-1000). Example: "10".'
+    default: 10
+  k8sPod__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the endpoint Kubernetes pod name (supports multiple
+      values)
+  sourceProcessFileHashSha1__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by source sha1. Example: "rule1".'
+  analystVerdict:
+    type: array
+    items:
+      type: string
+      enum:
+      - UNDEFINED
+      - TRUE_POSITIVE
+      - FALSE_POSITIVE
+      - SUSPICIOUS
+    description: 'Filter threats by a analyst verdict. Example: "TRUE_POSITIVE".'
+  k8sControllerLabels__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the endpoint Kubernetes controller labels (supports
+      multiple values)
+  k8sPodLabels__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the endpoint Kubernetes pod labels (supports
+      multiple values)
+  k8sNamespaceLabels__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the endpoint Kubernetes namespace labels (supports
+      multiple values)
+  ruleName__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by rule name. Example: "rule1".'
+  sourceProcessStoryline__equals:
+    type: string
+    description: 'Filter by exact source storyline. Example: "3F2504E0-4F89-41D3-9A0C-0305E82C3301".'
+  machineType:
+    type: array
+    items:
+      type: string
+    description: agent machine type
+  createdAt__gte:
+    type: string
+    description: 'Created at greater or equal than. Example: "2018-02-27T04:49:26.257525Z".'
+  k8sNode__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the endpoint Kubernetes node name (supports multiple
+      values)
+  incidentStatus:
+    type: array
+    items:
+      type: string
+      enum:
+      - UNRESOLVED
+      - IN_PROGRESS
+      - RESOLVED
+    description: 'Filter threats by a incident status. Example: "IN_PROGRESS".'
+  sortBy:
+    type: string
+    description: 'The column to sort the results by. Example: "id".'
+    enum:
+    - id
+    - machineType
+    - osName
+    - incidentStatus
+    - analystVerdict
+    - severity
+    - agentDetectionInfoMachineType
+    - agentDetectionInfoName
+    - agentDetectionInfoOsFamily
+    - agentDetectionInfoOsName
+    - agentDetectionInfoOsRevision
+    - agentDetectionInfoSiteId
+    - agentDetectionInfoUuid
+    - agentDetectionInfoVersion
+    - alertInfoAlertId
+    - alertInfoAnalystVerdict
+    - alertInfoCreatedAt
+    - alertInfoDvEventId
+    - alertInfoEventType
+    - alertInfoHitType
+    - alertInfoIncidentStatus
+    - alertInfoReportedAt
+    - alertInfoSource
+    - containerInfoId
+    - containerInfoImage
+    - containerInfoLabels
+    - containerInfoName
+    - kubernetesInfoCluster
+    - kubernetesInfoControllerKind
+    - kubernetesInfoControllerLabels
+    - kubernetesInfoControllerName
+    - kubernetesInfoNamespace
+    - kubernetesInfoNamespaceLabels
+    - kubernetesInfoNode
+    - kubernetesInfoPod
+    - kubernetesInfoPodLabels
+    - ruleInfoDescription
+    - ruleInfoId
+    - ruleInfoName
+    - ruleInfoScopeLevel
+    - ruleInfoSeverity
+    - ruleInfoTreatAsThreat
+    - sourceParentProcessInfoCommandline
+    - sourceParentProcessInfoFileHashMd5
+    - sourceParentProcessInfoFileHashSha1
+    - sourceParentProcessInfoFileHashSha256
+    - sourceParentProcessInfoFilePath
+    - sourceParentProcessInfoFileSignerIdentity
+    - sourceParentProcessInfoName
+    - sourceParentProcessInfoPid
+    - sourceParentProcessInfoPidStarttime
+    - sourceParentProcessInfoStoryline
+    - sourceParentProcessInfoIntegrityLevel
+    - sourceParentProcessInfoSubsystem
+    - sourceParentProcessInfoUser
+    - sourceProcessInfoCommandline
+    - sourceProcessInfoFileHashMd5
+    - sourceProcessInfoFileHashSha1
+    - sourceProcessInfoFileHashSha256
+    - sourceProcessInfoFilePath
+    - sourceProcessInfoFileSignerIdentity
+    - sourceProcessInfoName
+    - sourceProcessInfoPid
+    - sourceProcessInfoPidStarttime
+    - sourceProcessInfoStoryline
+    - sourceProcessInfoIntegrityLevel
+    - sourceProcessInfoSubsystem
+    - sourceProcessInfoUser
+    default: null
+  reportedAt__lte:
+    type: string
+    description: 'Reported at lesser or equal than. Example: "2018-02-27T04:49:26.257525Z".'
+  disablePagination:
+    type: boolean
+    description: If true, all rules for requested scope will be returned
+  createdAt__lte:
+    type: string
+    description: 'Created at lesser or equal than. Example: "2018-02-27T04:49:26.257525Z".'
+  skipCount:
+    type: boolean
+    description: If true, total number of items will not be calculated, which speeds
+      up execution time.
+    default: null
+  severity:
+    type: array
+    items:
+      type: string
+      enum:
+      - Info
+      - Low
+      - Medium
+      - High
+      - Critical
+    description: 'Severity. Example: "Low".'
+  k8sNamespaceName__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the endpoint Kubernetes namespace name (supports
+      multiple values)
+  containerImageName__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the endpoint container image name (supports multiple
+      values)
+  skip:
+    type: integer
+    description: 'Skip first number of items (0-1000). To iterate over more than 1000
+      items,  use "cursor". Example: "150".'
+    default: null
+  origAgentVersion__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by agent OS version. Example: "7.11".'
+  groupIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Group IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  reportedAt__gte:
+    type: string
+    description: 'Reported at greater or equal than. Example: "2018-02-27T04:49:26.257525Z".'
+outputs:
+  result:
+    type: object
+    properties:
+      pagination:
+        type: object
+        properties:
+          nextCursor:
+            type: string
+            description: Pass this value as "cursor" on your next request, to get
+              the next page of results (Will be "null" when last page reached)
+            default: null
+          totalItems:
+            type: integer
+            description: Total number of items found matching your query
+        required:
+        - totalItems
+        description: Pagination information
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: array
+        items:
+          type: object
+          properties:
+            alertInfo:
+              type: object
+              properties:
+                createdAt:
+                  type: string
+                  description: Timestamp alert sent for detection
+                reportedAt:
+                  type: string
+                  description: Timestamp of alert creation in STAR
+                updatedAt:
+                  type: string
+                  description: Date of alert updated in Star MMS
+                eventType:
+                  type: string
+                  description: Event type
+                isEdr:
+                  type: boolean
+                  description: True if the event is edr event
+                dvEventId:
+                  type: string
+                  description: Deep Visibility event ID
+                alertId:
+                  type: string
+                  description: Alert ID
+                source:
+                  type: string
+                  description: Source reported from the Agent.
+                hitType:
+                  type: string
+                  description: Type of hit reported from the Agent
+                  enum:
+                  - Events
+                  - Correlation
+                  - UEBAFirstSeen
+                  - Scheduled
+                analystVerdict:
+                  type: string
+                  description: Analyst verdict
+                  enum:
+                  - Undefined
+                  - True positive
+                  - False positive
+                  - Suspicious
+                incidentStatus:
+                  type: string
+                  description: Incident status
+                  enum:
+                  - Unresolved
+                  - In progress
+                  - Resolved
+                srcIp:
+                  type: string
+                  description: Get the IP address of the traffic source.
+                srcPort:
+                  type: string
+                  description: Get the port number of the traffic source.
+                dstIp:
+                  type: string
+                  description: Get the IP address of the destination.
+                dstPort:
+                  type: string
+                  description: Get the port number of the destination.
+                netEventDirection:
+                  type: string
+                  description: Get the direction of the connection attempt (incoming
+                    or outgoing).
+                tiIndicatorValue:
+                  type: string
+                  description: Get the value of the identified Threat Intelligence
+                    indicator.
+                tiIndicatorType:
+                  type: string
+                  description: Get the type of the identified Threat Intelligence
+                    indicator.
+                tiIndicatorComparisonMethod:
+                  type: string
+                  description: Get the comparison method used by SentinelOne to trigger
+                    the event.
+                tiIndicatorSource:
+                  type: string
+                  description: Get the source of the identified Threat Intelligence
+                    indicator.
+                dnsRequest:
+                  type: string
+                  description: Get the DNS name.
+                dnsResponse:
+                  type: string
+                  description: 'Get the DNS response information (examples: IP address,
+                    DNS, data type).'
+                indicatorName:
+                  type: string
+                  description: Get the Indicator names for this process.
+                indicatorCategory:
+                  type: string
+                  description: Get the Indicator categories for this process.
+                indicatorDescription:
+                  type: string
+                  description: Get the description of the Indicator.
+                modulePath:
+                  type: string
+                  description: Get the paths of modules loaded by this process.
+                moduleSha1:
+                  type: string
+                  description: Get the SHA1 signatures for modules loaded by this
+                    process.
+                loginsUserName:
+                  type: string
+                  description: Get the login username.
+                srcMachineIp:
+                  type: string
+                  description: Get the IP address of the endpoint performing the login
+                    attempt.
+                loginIsSuccessful:
+                  type: string
+                  description: Check if the login attempt succeeded.
+                loginType:
+                  type: string
+                  description: Get the type of login that was performed.
+                loginIsAdministratorEquivalent:
+                  type: string
+                  description: See if the login attempt was performed by an administrator
+                    equivalent.
+                loginAccountSid:
+                  type: string
+                  description: Get the SID of the account that attempted to log in.
+                loginAccountDomain:
+                  type: string
+                  description: Get the domain or computer name for which the login
+                    attempt was performed.
+                registryPath:
+                  type: string
+                  description: Get the full path location of the registry key entry.
+                registryKeyPath:
+                  type: string
+                  description: Get the full paths of registry entries modified by
+                    this process.
+                registryValue:
+                  type: string
+                  description: Get the registry value
+                registryOldValueType:
+                  type: string
+                  description: Get the previous registry value type if it was modified.
+                registryOldValue:
+                  type: string
+                  description: Get the previous registry value if it was modified.
+              description: Alert information
+            ruleInfo:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Rule ID for the STAR alert
+                name:
+                  type: string
+                  description: Rule name for the STAR alert
+                description:
+                  type: string
+                  description: Rule description for the STAR alert
+                s1ql:
+                  type: string
+                  description: The query
+                queryLang:
+                  type: string
+                  description: Defines the s1ql version query language of the rule
+                    (1.0/2.0)
+                  enum:
+                  - '1.0'
+                  - '2.0'
+                queryType:
+                  type: string
+                  description: The query type
+                  enum:
+                  - events
+                  - correlation
+                  - uebafirstseen
+                  - scheduled
+                severity:
+                  type: string
+                  description: Rule severity
+                  enum:
+                  - Info
+                  - Low
+                  - Medium
+                  - High
+                  - Critical
+                scopeLevel:
+                  type: string
+                  description: Scope level
+                  enum:
+                  - group
+                  - site
+                  - account
+                  - global
+                treatAsThreat:
+                  type: string
+                  description: Rule treat as threat type
+                  enum:
+                  - UNDEFINED
+                  - Suspicious
+                  - Malicious
+              required:
+              - s1ql
+              description: Custom Detection rules like STAR indicators information
+            containerInfo:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Id
+                name:
+                  type: string
+                  description: Name
+                image:
+                  type: string
+                  description: Image
+                labels:
+                  type: string
+                  description: Labels
+              description: Alert container information
+            kubernetesInfo:
+              type: object
+              properties:
+                cluster:
+                  type: string
+                  description: Cluster
+                namespace:
+                  type: string
+                  description: Namespace
+                pod:
+                  type: string
+                  description: Pod
+                node:
+                  type: string
+                  description: Node
+                namespaceLabels:
+                  type: string
+                  description: Namespace labels
+                podLabels:
+                  type: string
+                  description: Pod labels
+                controllerKind:
+                  type: string
+                  description: Controller kind
+                controllerName:
+                  type: string
+                  description: Controller name
+                controllerLabels:
+                  type: string
+                  description: Controller labels
+              description: Alert kubernetes information
+            agentDetectionInfo:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name
+                siteId:
+                  type: string
+                  description: Site id
+                accountId:
+                  type: string
+                  description: Account id
+                uuid:
+                  type: string
+                  description: UUID of the agent
+                osFamily:
+                  type: string
+                  description: Os family
+                osRevision:
+                  type: string
+                  description: Os revision
+                osName:
+                  type: string
+                  description: Os name
+                version:
+                  type: string
+                  description: Version
+                machineType:
+                  type: string
+                  description: Machine type
+              description: Agent detection time information
+            sourceProcessInfo:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name
+                fileSignerIdentity:
+                  type: string
+                  description: File signer identity
+                filePath:
+                  type: string
+                  description: File path
+                pidStarttime:
+                  type: string
+                  description: Pid starttime
+                commandline:
+                  type: string
+                  description: Commandline
+                pid:
+                  type: string
+                  description: Pid
+                storyline:
+                  type: string
+                  description: Storyline
+                fileHashSha1:
+                  type: string
+                  description: File hash sha1
+                fileHashSha256:
+                  type: string
+                  description: File hash sha256
+                fileHashMd5:
+                  type: string
+                  description: File hash md5
+                user:
+                  type: string
+                  description: User
+                effectiveUser:
+                  type: string
+                  description: Effective user
+                realUser:
+                  type: string
+                  description: Real user
+                loginUser:
+                  type: string
+                  description: Login user
+                integrityLevel:
+                  type: string
+                  description: Integrity level
+                  enum:
+                  - unknown
+                  - untrusted
+                  - low
+                  - medium
+                  - high
+                  - system
+                subsystem:
+                  type: string
+                  description: Subsystem
+                  enum:
+                  - unknown
+                  - wsl
+                  - sys_win32
+                uniqueId:
+                  type: string
+                  description: Unique id
+              required:
+              - integrityLevel
+              - subsystem
+              description: Source process info
+            sourceParentProcessInfo:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name
+                fileSignerIdentity:
+                  type: string
+                  description: File signer identity
+                filePath:
+                  type: string
+                  description: File path
+                pidStarttime:
+                  type: string
+                  description: Pid starttime
+                commandline:
+                  type: string
+                  description: Commandline
+                pid:
+                  type: string
+                  description: Pid
+                storyline:
+                  type: string
+                  description: Storyline
+                fileHashSha1:
+                  type: string
+                  description: File hash sha1
+                fileHashSha256:
+                  type: string
+                  description: File hash sha256
+                fileHashMd5:
+                  type: string
+                  description: File hash md5
+                user:
+                  type: string
+                  description: User
+                effectiveUser:
+                  type: string
+                  description: Effective user
+                realUser:
+                  type: string
+                  description: Real user
+                loginUser:
+                  type: string
+                  description: Login user
+                integrityLevel:
+                  type: string
+                  description: Integrity level
+                  enum:
+                  - unknown
+                  - untrusted
+                  - low
+                  - medium
+                  - high
+                  - system
+                subsystem:
+                  type: string
+                  description: Subsystem
+                  enum:
+                  - unknown
+                  - wsl
+                  - sys_win32
+                uniqueId:
+                  type: string
+                  description: Unique id
+              required:
+              - integrityLevel
+              - subsystem
+              description: Source parent process info
+            targetProcessInfo:
+              type: object
+              properties:
+                tgtFilePath:
+                  type: string
+                  description: Path and filename
+                tgtFileId:
+                  type: string
+                  description: Unique ID of file
+                tgtFileHashSha1:
+                  type: string
+                  description: SHA1 Signature of File
+                tgtFileHashSha256:
+                  type: string
+                  description: SHA256 Signature of File
+                tgtFileCreatedAt:
+                  type: string
+                  description: Date and Time of File Creation
+                tgtFileModifiedAt:
+                  type: string
+                  description: Date and time file was modified
+                tgtFileIsSigned:
+                  type: string
+                  description: Is file signed
+                tgtFileOldPath:
+                  type: string
+                  description: Old path before 'Rename'
+                tgtProcName:
+                  type: string
+                  description: Target Process Name
+                tgtProcStorylineId:
+                  type: string
+                  description: Target Process StoryLine ID
+                tgtProcCmdLine:
+                  type: string
+                  description: Target Process Command Line
+                tgtProcPid:
+                  type: string
+                  description: Target Process ID (PID)
+                tgtProcessStartTime:
+                  type: string
+                  description: Target Process Start Time
+                tgtProcImagePath:
+                  type: string
+                  description: Target Process Image path
+                tgtProcUid:
+                  type: string
+                  description: Target Process Unique ID
+                tgtProcIntegrityLevel:
+                  type: string
+                  description: 'Integrity level of target process '
+                  enum:
+                  - unknown
+                  - untrusted
+                  - low
+                  - medium
+                  - high
+                  - system
+                tgtProcSignedStatus:
+                  type: string
+                  description: Target Process Signed Status
+              description: Target process info
+        description: Response data
+    required:
+    - pagination
+    description: Success

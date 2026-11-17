@@ -1,0 +1,334 @@
+uuid: ef27e8d1-a16a-53a0-9086-e76f9f55a28a
+slug: '_web_api_cloud-detection_rules_disable_put'
+name: Update Cloud Detection Rules Disable
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: PUT
+      url: '{{inputs.hostname}}/web/api/v2.1/cloud-detection/rules/disable'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        filter: '{{inputs.filter}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Disable Custom Detection Rules based on a filter.
+inputs:
+  filter:
+    type: object
+    properties:
+      siteIds:
+        type: array
+        items:
+          type: string
+        description: List of Site IDs to filter by
+      accountIds:
+        type: array
+        items:
+          type: string
+        description: List of Account IDs to filter by
+      groupIds:
+        type: array
+        items:
+          type: string
+        description: List of Group IDs to filter by
+      platformRuleIds:
+        type: array
+        items:
+          type: string
+        description: platform rule ids
+      excludeIds:
+        type: array
+        items:
+          type: string
+        description: List of entity ids to exclude from select_all
+      scopeId:
+        type: string
+        description: The API ignores this field. It's kept for backward compatibility
+          only, and will be removed in a future release.
+      scopeLevel:
+        type: string
+        description: To filter by scope, enter one or more scopes, separated by commas.
+        enum:
+        - site
+        - account
+        - group
+        - global
+      severities:
+        type: array
+        items:
+          type: string
+          enum:
+          - Info
+          - Low
+          - Medium
+          - High
+          - Critical
+        description: The API ignores this field. It's kept for backward compatibility
+          only, and will be removed in a future release.
+      attackSurfaces:
+        type: array
+        items:
+          type: string
+        description: The API ignores this field. It's kept for backward compatibility
+          only, and will be removed in a future release.
+      sources:
+        type: array
+        items:
+          type: string
+        description: The API ignores this field. It's kept for backward compatibility
+          only, and will be removed in a future release.
+      statuses:
+        type: array
+        items:
+          type: string
+          enum:
+          - Activating
+          - Active
+          - Disabling
+          - Disabled
+        description: The API ignores this field. It's kept for backward compatibility
+          only, and will be removed in a future release.
+      mitreTactics:
+        type: array
+        items:
+          type: string
+        description: The API ignores this field. It's kept for backward compatibility
+          only, and will be removed in a future release.
+      s1qlSubstring:
+        type: string
+        description: The API ignores this field. It's kept for backward compatibility
+          only, and will be removed in a future release.
+      descriptionSubstring:
+        type: string
+        description: The API ignores this field. It's kept for backward compatibility
+          only, and will be removed in a future release.
+      nameSubstring:
+        type: string
+        description: The API ignores this field. It's kept for backward compatibility
+          only, and will be removed in a future release.
+      tags:
+        type: array
+        items:
+          type: string
+        description: The API ignores this field. It's kept for backward compatibility
+          only, and will be removed in a future release.
+      categories:
+        type: array
+        items:
+          type: string
+          enum:
+          - Events
+          - Correlation
+          - UEBAFirstSeen
+          - Scheduled
+        description: The API ignores this field. It's kept for backward compatibility
+          only, and will be removed in a future release.
+      hideQuery:
+        type: string
+        description: The API ignores this field. It's kept for backward compatibility
+          only, and will be removed in a future release.
+        enum:
+        - Shown
+        - Hidden
+      labels:
+        type: array
+        items:
+          type: string
+        description: The API ignores this field. It's kept for backward compatibility
+          only, and will be removed in a future release.
+      activeResponse:
+        type: boolean
+        description: The active response status for the rule.
+      ids:
+        type: array
+        items:
+          type: string
+        description: To filter by Rule ID, enter one or more Rule IDs, separated by
+          commas.
+      scopes:
+        type: array
+        items:
+          type: string
+          enum:
+          - site
+          - account
+          - group
+          - global
+        description: To filter by scope, enter one or more scopes, separated by commas.
+      status:
+        type: array
+        items:
+          type: string
+          enum:
+          - Draft
+          - Activating
+          - Active
+          - Disabling
+          - Disabled
+          - Deleted
+          - Deleting
+        description: To filter by status, enter one or more statuses, separated by
+          commas.
+      severity:
+        type: array
+        items:
+          type: string
+          enum:
+          - Info
+          - Low
+          - Medium
+          - High
+          - Critical
+        description: To filter by severity, enter one or more severities, separated
+          by commas.
+      expirationMode:
+        type: string
+        description: The expiration mode.
+        enum:
+        - Permanent
+        - Temporary
+      expired:
+        type: boolean
+        description: Rule expired or not.
+      reachedLimit:
+        type: boolean
+        description: Rule reached limit or not.
+      queryType:
+        type: array
+        items:
+          type: string
+          description: The query type.
+          enum:
+          - events
+          - correlation
+          - uebafirstseen
+          - scheduled
+        description: Enter a list of query types.
+      queryLang:
+        type: array
+        items:
+          type: string
+          enum:
+          - '1.0'
+          - '2.0'
+        description: To filter by query language, enter one or more values (e.g. 1.0,
+          2.0), separated by commas.
+      exclusionIds:
+        type: array
+        items:
+          type: string
+        description: Filter by attached Detection Exclusion IDs. Returns rules attached
+          to any of the specified exclusions.
+      name__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by rule name. You can enter multiple values,
+          separated by commas.
+      description__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by rule description. You can enter multiple
+          values, separated by commas.
+      creator__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by rule creator. You can enter multiple values,
+          separated by commas.
+      updater__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by last modifier. You can enter multiple values,
+          separated by commas.
+      scopeName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by scope name. You can enter multiple values,
+          separated by commas.
+      s1ql__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by S1 query. You can enter multiple values,
+          separated by commas.
+      query:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by S1 query. You can enter multiple values,
+          separated by commas.
+      createdAt__between:
+        type: string
+        description: 'Filter by created-at time range. Format: {start_ms}-{end_ms}
+          (millisecond epoch timestamps).'
+      createdAt__gte:
+        type: string
+        description: Filter by created-at greater than or equal to a datetime.
+      createdAt__lte:
+        type: string
+        description: Filter by created-at less than or equal to a datetime.
+      updatedAt__between:
+        type: string
+        description: 'Filter by last-modified time range. Format: {start_ms}-{end_ms}
+          (millisecond epoch timestamps).'
+      updatedAt__gte:
+        type: string
+        description: Filter by last-modified greater than or equal to a datetime.
+      updatedAt__lte:
+        type: string
+        description: Filter by last-modified less than or equal to a datetime.
+      filterBy:
+        type: string
+        description: The API ignores this field. It's kept for backward compatibility
+          only, and will be removed in a future release.
+        enum:
+        - Template
+        - Platform
+    description: Filter
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          affected:
+            type: integer
+            description: Number of entities affected by the requested operation
+        description: Response data
+    description: Success

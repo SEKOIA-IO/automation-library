@@ -1,0 +1,1232 @@
+uuid: c20c1c06-6212-5f07-9aa4-6627319f4e28
+slug: '_web_api_agents_actions_start-remote-shell_post'
+name: Start Remote Shell Agents
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/agents/actions/start-remote-shell'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        filter: '{{inputs.filter}}'
+        data: '{{inputs.data}}'
+    asserts:
+      error_403:
+        predicate: '{{response.status_code != 403}}'
+        fail: Insufficient permissions
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: 'Remote shell is an opened websocket between the browser and the Agent,
+  with a proprietary communication protocol that requires an unreasonable effort to
+  run from the API. We recommend that you not use this call.<BR><BR> If you do want
+  to use this API, you must have permission through your user role (not IT or Viewer),
+  specific Remote Shell permissions, 2FA enabled on the username with a valid code
+  in the twoFaCode parameter, valid code in the twoFaCode parameter, and permissions
+  for the Account, Site, or Group on whose policy Remote Shell is enabled. To make
+  sure you have permission to start Remote Shell, use the "can-start-remote-shell"
+  command. Best practice: Use the UUID filter to run Remote Shell on a specific endpoint.
+  To get the UUID, run the "agents" command. <BR>In the body of this command, the
+  data parameter set is mandatory. <BR>Remote Shell requires a Control SKU.'
+inputs:
+  filter:
+    type: object
+    properties:
+      siteIds:
+        type: array
+        items:
+          type: string
+        description: List of Site IDs to filter by
+      accountIds:
+        type: array
+        items:
+          type: string
+        description: List of Account IDs to filter by
+      groupIds:
+        type: array
+        items:
+          type: string
+        description: List of Group IDs to filter by
+      filteredGroupIds:
+        type: array
+        items:
+          type: string
+        description: List of Group IDs to filter by
+      filteredSiteIds:
+        type: array
+        items:
+          type: string
+        description: List of Site IDs to filter by
+      registeredAt__between:
+        type: string
+        description: 'Date range for first registration time (format: <from_timestamp>-<to_timestamp>,
+          inclusive)'
+      lastActiveDate__between:
+        type: string
+        description: 'Date range for last active date(format: <from_timestamp>-<to_timestamp>,
+          inclusive)'
+      lastSuccessfulScanDate__between:
+        type: string
+        description: 'Date range for last successful full disk scan(format: <from_timestamp>-<to_timestamp>,
+          inclusive)'
+      isActive:
+        type: array
+        items:
+          type: boolean
+        description: Include only active Agents
+      isPendingUninstall:
+        type: array
+        items:
+          type: boolean
+        description: Include only Agents with pending uninstall requests
+      infected:
+        type: boolean
+        description: Include only Agents with at least one active threat
+      isUpToDate:
+        type: array
+        items:
+          type: boolean
+        description: Include only Agents with updated software
+      query:
+        type: string
+        description: 'A free-text search term, will match applicable attributes (sub-string
+          match). Note: Device''s physical addresses will be matched if they start
+          with the search term only (no match if they contain the term).'
+      agentVersions:
+        type: array
+        items:
+          type: string
+        description: Agent versions to include
+      agentVersionsNin:
+        type: array
+        items:
+          type: string
+        description: Agent versions not to include
+      rangerVersions:
+        type: array
+        items:
+          type: string
+        description: Network Scanner versions to include
+      rangerVersionsNin:
+        type: array
+        items:
+          type: string
+        description: Network Scanner versions not to include
+      osArch:
+        type: string
+        description: OS architecture
+        enum:
+        - 32 bit
+        - 64 bit
+        - ARM64
+      osArches:
+        type: array
+        items:
+          type: string
+          enum:
+          - 32 bit
+          - 64 bit
+          - ARM64
+        description: OS architectures to include
+      osArchesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - 32 bit
+          - 64 bit
+          - ARM64
+        description: OS architectures not to include
+      osTypes:
+        type: array
+        items:
+          type: string
+          description: OS type
+          enum:
+          - windows
+          - linux
+          - windows_legacy
+          - macos
+        description: Included OS types
+      osTypesNin:
+        type: array
+        items:
+          type: string
+          description: OS type
+          enum:
+          - windows
+          - linux
+          - windows_legacy
+          - macos
+        description: Not included OS types
+      scanStatuses:
+        type: array
+        items:
+          type: string
+          enum:
+          - none
+          - started
+          - aborted
+          - finished
+        description: Included scan statuses
+      scanStatusesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - none
+          - started
+          - aborted
+          - finished
+        description: Not included scan statuses
+      machineTypes:
+        type: array
+        items:
+          type: string
+          enum:
+          - unknown
+          - desktop
+          - laptop
+          - server
+          - kubernetes node
+          - storage
+          - kubernetes pod
+          - ecs task
+          - kubernetes helper
+        description: Included machine types
+      machineTypesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - unknown
+          - desktop
+          - laptop
+          - server
+          - kubernetes node
+          - storage
+          - kubernetes pod
+          - ecs task
+          - kubernetes helper
+        description: Not included machine types
+      storageTypes:
+        type: array
+        items:
+          type: string
+        description: Included storage types
+      storageTypesNin:
+        type: array
+        items:
+          type: string
+        description: Excluded storage types
+      networkStatuses:
+        type: array
+        items:
+          type: string
+          enum:
+          - connected
+          - disconnected
+          - connecting
+          - disconnecting
+        description: Included network statuses
+      networkStatusesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - connected
+          - disconnected
+          - connecting
+          - disconnecting
+        description: Included network statuses
+      domains:
+        type: array
+        items:
+          type: string
+        description: Included network domains
+      domainsNin:
+        type: array
+        items:
+          type: string
+        description: Not included network domains
+      encryptedApplications:
+        type: array
+        items:
+          type: boolean
+        description: Disk encryption status
+      totalMemory__between:
+        type: string
+        description: Total memory range (GB, inclusive)
+      coreCount__between:
+        type: string
+        description: Possible number of CPU cores (inclusive)
+      cpuCount__between:
+        type: string
+        description: Possible number of CPU cores (inclusive)
+      userActionsNeeded:
+        type: array
+        items:
+          type: string
+          enum:
+          - none
+          - user_action_needed
+          - reboot_needed
+          - upgrade_needed
+          - incompatible_os
+          - unprotected
+          - rebootless_without_dynamic_detection
+          - extended_exclusions_partially_accepted
+          - reboot_required
+          - pending_deprecation
+          - ne_not_running
+          - ne_cf_not_active
+          - pending_performance_insights
+          - prompt_security_certificate_missing
+          - prompt_security_certificate_expired
+          - reboot_category
+          - missing_permissions_category
+          - agent_suppressed_category
+          - incompatible_os_category
+          - unprotected_category
+          - partial_functionality
+          - performance_insights
+        description: Included pending user actions
+      missingPermissions:
+        type: array
+        items:
+          type: string
+          enum:
+          - user_action_needed_fda
+          - user_action_needed_rs_fda
+          - user_action_needed_fda_helper
+          - user_action_needed_fda_sentineld
+          - user_action_needed_bluetooth_per
+          - user_action_needed_network
+          - user_action_needed_notifications
+        description: Included missing permissions
+      userActionsNeededNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - none
+          - user_action_needed
+          - reboot_needed
+          - upgrade_needed
+          - incompatible_os
+          - unprotected
+          - rebootless_without_dynamic_detection
+          - extended_exclusions_partially_accepted
+          - reboot_required
+          - pending_deprecation
+          - ne_not_running
+          - ne_cf_not_active
+          - pending_performance_insights
+          - prompt_security_certificate_missing
+          - prompt_security_certificate_expired
+          - reboot_category
+          - missing_permissions_category
+          - agent_suppressed_category
+          - incompatible_os_category
+          - unprotected_category
+          - partial_functionality
+          - performance_insights
+        description: Excluded pending user actions
+      missingPermissionsNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - user_action_needed_fda
+          - user_action_needed_rs_fda
+          - user_action_needed_fda_helper
+          - user_action_needed_fda_sentineld
+          - user_action_needed_bluetooth_per
+          - user_action_needed_network
+          - user_action_needed_notifications
+        description: Excluded missing permissions
+      adQuery:
+        type: string
+        description: An Active Directory query string
+      hasLocalConfiguration:
+        type: boolean
+        description: Agent has a local configuration set
+      consoleMigrationStatuses:
+        type: array
+        items:
+          type: string
+          enum:
+          - N/A
+          - Pending
+          - Migrated
+          - Failed
+        description: Migration status in
+      consoleMigrationStatusesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - N/A
+          - Pending
+          - Migrated
+          - Failed
+        description: Migration status nin
+      agentOperatingModes:
+        type: array
+        items:
+          type: string
+          enum:
+          - optimized
+          - standard
+        description: Agent operating mode in
+      agentOperatingModesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - optimized
+          - standard
+        description: Agent operating mode nin
+      appsVulnerabilityStatuses:
+        type: array
+        items:
+          type: string
+          enum:
+          - patch_required
+          - up_to_date
+          - not_applicable
+        description: Apps vulnerability status in
+      appsVulnerabilityStatusesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - patch_required
+          - up_to_date
+          - not_applicable
+        description: Apps vulnerability status nin
+      locationIds:
+        type: array
+        items:
+          type: string
+        description: Include only Agents reporting these locations
+      locationIdsNin:
+        type: array
+        items:
+          type: string
+        description: Do not include only Agents reporting these locations
+      installerTypes:
+        type: array
+        items:
+          type: string
+          enum:
+          - .msi
+          - .exe
+          - .deb
+          - .rpm
+          - .bsx
+          - .pkg
+          - .img
+          - unknown
+          - .tar
+          - .zip
+          - .gz
+          - .xz
+        description: Include only Agents installed with these package types
+      installerTypesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - .msi
+          - .exe
+          - .deb
+          - .rpm
+          - .bsx
+          - .pkg
+          - .img
+          - unknown
+          - .tar
+          - .zip
+          - .gz
+          - .xz
+        description: Exclude Agents installed with these package types
+      operationalStates:
+        type: array
+        items:
+          type: string
+        description: Agent operational state
+      operationalStatesNin:
+        type: array
+        items:
+          type: string
+        description: Do not include these Agent operational states
+      remoteProfilingStates:
+        type: array
+        items:
+          type: string
+        description: Agent remote profiling state
+      remoteProfilingStatesNin:
+        type: array
+        items:
+          type: string
+        description: Do not include these Agent remote profiling states
+      rangerStatuses:
+        type: array
+        items:
+          type: string
+          enum:
+          - NotApplicable
+          - Enabled
+          - Disabled
+        description: Status of Network Discovery
+      rangerStatusesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - NotApplicable
+          - Enabled
+          - Disabled
+        description: Do not include these Network Scanner Statuses
+      rangerStatus:
+        type: string
+        description: '[DEPRECATED] Use rangerStatuses.'
+        enum:
+        - NotApplicable
+        - Enabled
+        - Disabled
+      threatRebootRequired:
+        type: array
+        items:
+          type: boolean
+        description: Has at least one threat with at least one mitigation action pending
+          reboot to succeed
+      networkQuarantineEnabled:
+        type: array
+        items:
+          type: boolean
+        description: The agents supports Network Quarantine Control and its enabled
+          for the agent's group
+      firewallEnabled:
+        type: array
+        items:
+          type: boolean
+        description: The agents supports Firewall Control and it is enabled for the
+          agent's group
+      locationEnabled:
+        type: array
+        items:
+          type: boolean
+        description: The agents supports Location Awareness and it is enabled for
+          the agent's group
+      cloudProvider:
+        type: array
+        items:
+          type: string
+        description: Agents from which cloud provider
+      cloudProviderNin:
+        type: array
+        items:
+          type: string
+        description: Exclude Agents from these cloud provider
+      tagsData:
+        type: string
+        description: Filter agents by their assigned tags. Given in form of a JSON
+          where each key represents a tag key, and each value represents a list of
+          string values to filter by. To filter by unassigned tag values, use __nin
+          suffix in the tag key.
+      hasTags:
+        type: boolean
+        description: Include only Agents that have any tags assigned if True, or none
+          if False
+      isAdConnector:
+        type: array
+        items:
+          type: boolean
+        description: The agents that are ADConnectors if True, or not if False
+      isHyperAutomate:
+        type: array
+        items:
+          type: boolean
+        description: The agents has Hyper Automate PNA enabled if True, or not if
+          False
+      activeProtection:
+        type: array
+        items:
+          type: string
+          enum:
+          - edr
+          - idr
+        description: Included agent active protections
+      containerizedWorkloadCounts:
+        type: object
+        properties:
+          podsCount:
+            type: integer
+            description: Number of K8s pods the agent is currently protecting
+          containersCount:
+            type: integer
+            description: Number of containers the agent is currently protecting
+          tasksCount:
+            type: integer
+            description: Number of tasks the agent is currently protecting
+        description: Containerized workload counts
+      hasContainerizedWorkload:
+        type: array
+        items:
+          type: boolean
+        description: Indicates whether the agent protects containerized workload at
+          the moment
+      pacFileUsage:
+        type: array
+        items:
+          type: string
+        description: Include only Agents using PAC file for proxy configuration. Accepts
+          true, false, or none (for not reported).
+      proxyMethod:
+        type: array
+        items:
+          type: string
+        description: 'Filter by proxy method: Auto, System, User, Custom, None, Not
+          Reported.'
+      proxyMethodNin:
+        type: array
+        items:
+          type: string
+        description: 'Exclude by proxy method: Auto, System, User, Custom, None, Not
+          Reported.'
+      isMgmtProxyEnabled:
+        type: array
+        items:
+          type: string
+        description: Include only Agents using mgmt proxy. Accepts true, false, or
+          none (for not reported).
+      isEventSearchProxyEnabled:
+        type: array
+        items:
+          type: string
+        description: Include only Agents using event search proxy. Accepts true, false,
+          or none (for not reported).
+      externalIp__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by visible IP (supports multiple values)
+      computerName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by computer name (supports multiple values)
+      networkInterfaceInet__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by local IP (supports multiple values)
+      networkInterfacePhysical__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by MAC address (supports multiple values)
+      networkInterfaceGatewayMacAddress__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Gateway MAC address (supports multiple values)
+      lastLoggedInUserName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by username (supports multiple values)
+      osVersion__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by OS full name and version (supports multiple
+          values)
+      adQuery__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Active Directory string (supports multiple
+          values)
+      adUserName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Active Directory username string (supports
+          multiple values)
+      adUserMember__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Active Directory user groups string (supports
+          multiple values)
+      adUserQuery__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Active Directory computer name or its groups
+          (supports multiple values)
+      adComputerName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Active Directory computer name string (supports
+          multiple values)
+      adComputerMember__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Active Directory computer groups string (supports
+          multiple values)
+      adComputerQuery__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Active Directory computer name or its groups
+          (supports multiple values)
+      uuid__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Agent UUID (supports multiple values)
+      externalId__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by external ID (Customer ID)
+      awsRole__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by aws role(supports multiple values)
+      awsSecurityGroups__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by aws securityGroups(supports multiple values)
+      awsSubnetIds__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by aws subnet ids (supports multiple values)
+      agentNamespace__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by agent namespace (supports multiple values)
+      agentPodName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by agent pod name (supports multiple values)
+      azureResourceGroup__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by azure resource group(supports multiple values)
+      cloudAccount__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by cloud account (supports multiple values)
+      cloudImage__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by cloud image (supports multiple values)
+      cloudInstanceId__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by cloud instance id(supports multiple values)
+      cloudInstanceSize__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by cloud instance size(supports multiple values)
+      cloudLocation__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by cloud location (supports multiple values)
+      cloudNetwork__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by cloud network (supports multiple values)
+      cloudTags__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by cloud tags (supports multiple values)
+      clusterName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by cluster name (supports multiple values)
+      gcpServiceAccount__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by gcp service account (supports multiple values)
+      k8sNodeLabels__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by K8s node labels (supports multiple values)
+      k8sNodeName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by K8s node name (supports multiple values)
+      k8sType__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by K8s type(supports multiple values)
+      k8sVersion__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by K8s version (supports multiple values)
+      liveUpdateId__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by live update ID (supports multiple values)
+      serialNumber__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Serial Number (supports multiple values)
+      entraId__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Entra ID (supports multiple values)
+      agentOperatingMode__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Agent Operating Mode (supports multiple values)
+      cpuId__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by CPU name (supports multiple values)
+      ecsType__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by ECS type
+      ecsVersion__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by ECS version
+      ecsClusterName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by ECS cluster name
+      ecsTaskArn__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by ECS task arn
+      ecsTaskAvailabilityZone__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by ECS task availability zone
+      ecsServiceName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by ECS service name
+      ecsServiceArn__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by ECS service arn
+      ecsTaskDefinitionFamily__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by ECS task definition family
+      ecsTaskDefinitionRevision__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by ECS task definition revision
+      ecsTaskDefinitionArn__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by ECS task definition arn
+      isDecommissioned:
+        type: array
+        items:
+          type: boolean
+        description: Include active, decommissioned or both
+      isUninstalled:
+        type: array
+        items:
+          type: boolean
+        description: Include installed, uninstalled or both
+      computerNameOrUuid__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by computer name or uuid (supports multiple
+          values)
+      ids:
+        type: array
+        items:
+          type: string
+        description: Included Agent IDs
+      idsNin:
+        type: array
+        items:
+          type: string
+        description: Excluded Agent IDs
+      filterId:
+        type: string
+        description: Include all Agents matching this saved filter
+      decommissionedAt__gte:
+        type: string
+        description: Agents decommissioned after or at this timestamp
+      decommissionedAt__lt:
+        type: string
+        description: Agents decommissioned before this timestamp
+      decommissionedAt__lte:
+        type: string
+        description: Agents decommissioned before this timestamp
+      decommissionedAt__gt:
+        type: string
+        description: Agents decommissioned after this timestamp
+      decommissionedAt__between:
+        type: string
+        description: 'Date range for decommission time (format: <from_timestamp>-<to_timestamp>,
+          inclusive)'
+      createdAt__lt:
+        type: string
+        description: Agents created before this timestamp
+      createdAt__lte:
+        type: string
+        description: Agents created before or at this timestamp
+      createdAt__gt:
+        type: string
+        description: Agents created after this timestamp
+      createdAt__gte:
+        type: string
+        description: Agents created after or at this timestamp
+      createdAt__between:
+        type: string
+        description: 'Date range for creation time (format: <from_timestamp>-<to_timestamp>,
+          inclusive)'
+      updatedAt__lt:
+        type: string
+        description: Agents updated before this timestamp
+      updatedAt__lte:
+        type: string
+        description: Agents updated before or at this timestamp
+      updatedAt__gt:
+        type: string
+        description: Agents updated after this timestamp
+      updatedAt__gte:
+        type: string
+        description: Agents updated after or at this timestamp
+      updatedAt__between:
+        type: string
+        description: 'Date range for update time (format: <from_timestamp>-<to_timestamp>,
+          inclusive)'
+      computerName__like:
+        type: string
+        description: Match computer name partially (substring)
+      computerName:
+        type: string
+        description: Computer name
+      agentVersion__lt:
+        type: string
+        description: Agents versions less than given version
+      agentVersion__lte:
+        type: string
+        description: Agents versions less than or equal to given version
+      agentVersion__gt:
+        type: string
+        description: Agents versions greater than given version
+      agentVersion__gte:
+        type: string
+        description: Agents versions greater than or equal to given version
+      agentVersion__between:
+        type: string
+        description: 'Version range for agent version (format: <from_version>-<to_version>,
+          inclusive)'
+      uuid:
+        type: string
+        description: Agent's universally unique identifier
+      uuids:
+        type: array
+        items:
+          type: string
+        description: A list of included UUIDs
+      scanStatus:
+        type: string
+        description: Scan status
+        enum:
+        - none
+        - started
+        - aborted
+        - finished
+      threatMitigationStatus:
+        type: string
+        description: Include only Agents that have threats with this mitigation status
+        enum:
+        - mitigated
+        - blocked
+        - active
+        - suspicious
+        - pending
+        - suspicious_resolved
+      threatResolved:
+        type: boolean
+        description: Include only Agents with at least one resolved threat
+      threatHidden:
+        type: boolean
+        description: Include only Agents with at least one hidden threat
+      threatContentHash:
+        type: string
+        description: Include only Agents that have at least one threat with this content
+          hash
+      threatCreatedAt__lt:
+        type: string
+        description: Agents with threats reported before this time
+      threatCreatedAt__lte:
+        type: string
+        description: Agents with threats reported before or at this time
+      threatCreatedAt__gt:
+        type: string
+        description: Agents with threats reported after this time
+      threatCreatedAt__gte:
+        type: string
+        description: Agents with threats reported after or at this time
+      threatCreatedAt__between:
+        type: string
+        description: 'Agents with threats reported in a date range (format: <from_timestamp>-<to_timestamp>,
+          inclusive)'
+      activeThreats:
+        type: integer
+        description: Include Agents with this amount of active threats
+      activeThreats__gt:
+        type: integer
+        description: Include Agents with at least this amount of active threats
+      mitigationMode:
+        type: string
+        description: Agent mitigation mode policy
+        enum:
+        - detect
+        - protect
+      mitigationModeSuspicious:
+        type: string
+        description: Mitigation mode policy for suspicious activity
+        enum:
+        - detect
+        - protect
+      registeredAt__lt:
+        type: string
+        description: Agents registered before this time
+      registeredAt__lte:
+        type: string
+        description: Agents registered before or at this time
+      registeredAt__gt:
+        type: string
+        description: Agents registered after this time
+      registeredAt__gte:
+        type: string
+        description: Agents registered after or at this time
+      lastActiveDate__lt:
+        type: string
+        description: Agents last active before this time
+      lastActiveDate__lte:
+        type: string
+        description: Agents last active before or at this time
+      lastActiveDate__gt:
+        type: string
+        description: Agents last active after this time
+      lastActiveDate__gte:
+        type: string
+        description: Agents last active after or at this time
+      lastSuccessfulScanDate__lt:
+        type: string
+        description: Agents last successful full disk scan before this time
+      lastSuccessfulScanDate__lte:
+        type: string
+        description: Agents last successful full disk scan before or at this time
+      lastSuccessfulScanDate__gt:
+        type: string
+        description: Agents last successful full disk scan after this time
+      lastSuccessfulScanDate__gte:
+        type: string
+        description: Agents last successful full disk scan after or at this time
+      coreCount__lt:
+        type: integer
+        description: CPU cores (less than)
+      coreCount__lte:
+        type: integer
+        description: CPU cores (less than or equal)
+      coreCount__gt:
+        type: integer
+        description: CPU cores (more than)
+      coreCount__gte:
+        type: integer
+        description: CPU cores (more than or equal)
+      cpuCount__lt:
+        type: integer
+        description: Number of CPUs (less than)
+      cpuCount__lte:
+        type: integer
+        description: Number of CPUs (less than or equal)
+      cpuCount__gt:
+        type: integer
+        description: Number of CPUs (more than)
+      cpuCount__gte:
+        type: integer
+        description: Number of CPUs (more than or equal)
+      totalMemory__lt:
+        type: integer
+        description: Memory size (MB, less than)
+      totalMemory__lte:
+        type: integer
+        description: Memory size (MB, less than or equal)
+      totalMemory__gt:
+        type: integer
+        description: Memory size (MB, more than)
+      totalMemory__gte:
+        type: integer
+        description: Memory size (MB, more than or equal)
+      migrationStatus:
+        type: string
+        description: Migration status
+        enum:
+        - N/A
+        - Pending
+        - Migrated
+        - Failed
+      gatewayIp:
+        type: string
+        description: Gateway ip
+      csvFilterId:
+        type: string
+        description: The ID of the CSV file to filter by
+      rsoLevel:
+        type: string
+        description: Supported Remote Script Orchestration level
+        enum:
+        - none
+        - pro
+        - ars
+      remoteOpsForensicsSupported:
+        type: boolean
+        description: Include only agents that has Remote Ops Forensicsfeature supported
+      windowsOsRevision__gte:
+        type: integer
+        description: Agents os revision than or equal to given version
+      windowsOsRevision__lte:
+        type: integer
+        description: Agents os revision lower than or equal to given version
+      rsoLevels:
+        type: array
+        items:
+          type: string
+        description: A list of included rso_levels
+    description: Applied filter - only matched Agents will be affected by the requested
+      action. Leave empty to apply the action on all applicable Agents.
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  data:
+    type: object
+    properties:
+      historyPassword:
+        type: string
+        description: Password to zip the shell history file at end of session
+      passwordFromScope:
+        type: object
+        properties:
+          scopeLevel:
+            type: string
+            description: User scope
+            enum:
+            - tenant
+            - account
+            - site
+          scopeId:
+            type: string
+            description: string repr. of scope id
+        required:
+        - scopeLevel
+        description: Used to specify execution where a generic password is used
+      twoFaCode:
+        type: string
+        description: '[DEPRECATED] The 2FA code to authenticate the user.Use only
+          if remote_shell_risky_actions GS is disabled.'
+      columns:
+        type: integer
+        description: Number of columns of the console shell
+      rows:
+        type: integer
+        description: Number of rows of the console shell
+    required:
+    - columns
+    - rows
+    description: Data
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: array
+        items:
+          type: object
+          properties:
+            channelId:
+              type: string
+              description: Name of the channel that will be used to communicate with
+                the Agent
+            agentId:
+              type: string
+              description: Agent that matched the filter
+            supportsResize:
+              type: boolean
+              description: Whether the agent supports terminal resize capability
+        description: Response data
+    description: Success

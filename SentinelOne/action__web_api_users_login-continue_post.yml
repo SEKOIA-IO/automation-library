@@ -1,0 +1,89 @@
+uuid: 5f920e4a-41e7-522d-a68d-0dd22478efb9
+slug: '_web_api_users_login-continue_post'
+name: Create Users Login Continue
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/users/login-continue'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        data: '{{inputs.data}}'
+    asserts:
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized. <br>In password expiration flow, a temporary token might
+          be provided to do the required next step. The error code defines the cause
+          and the next step. <br>Error codes:<ul><li>4010010 - invalid token,</li><li>4010094
+          - change password with /users/login/set-password</li></ul>
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: For SSO 2FA setup tokens, allows users to skip setting up the 2FA and
+  proceed with their login.<br>Accepts a temporary token from SSO login flow with
+  error code 4010035.<br><br>For password expiration tokens, allows users to decide
+  if they want to change their soon to expire password now or later. <br>Users can
+  also choose not to receive the notification again for this password cycle. <br>Accepts
+  a temporary token from /users/login with error code 4010093.<br>For users eligible
+  to be onboarded to global identity allows to decide if they want to skip and finish
+  their login
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  data:
+    type: object
+    properties:
+      token:
+        type: string
+        description: Temporary JWT
+      resetPassword:
+        type: boolean
+        description: Indicates if the user wants to change the password
+        default: false
+      dontShowAgain:
+        type: boolean
+        description: Indicates if the user wants to skip the continue next time
+    required:
+    - token
+    description: Data
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          token:
+            type: string
+            description: Generated authentication token
+          csrf:
+            type: string
+            description: Generated csrf token
+        required:
+        - token
+        description: Response data
+    description: Login can continue

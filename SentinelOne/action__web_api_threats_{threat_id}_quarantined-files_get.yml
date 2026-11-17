@@ -1,0 +1,131 @@
+uuid: 604eeaf8-5d5d-500b-9f36-d16edc7600e2
+slug: '_web_api_threats_{threat_id}_quarantined-files_get'
+name: Get Threats By Threat ID Quarantined Files
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/threats/{{inputs.threat_id}}/quarantined-files'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        siteIds: '{{inputs.siteIds}}'
+        accountIds: '{{inputs.accountIds}}'
+        groupIds: '{{inputs.groupIds}}'
+        skip: '{{inputs.skip}}'
+        limit: '{{inputs.limit}}'
+        cursor: '{{inputs.cursor}}'
+        countOnly: '{{inputs.countOnly}}'
+        skipCount: '{{inputs.skipCount}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get quarantined files for a single threat by alert ID with pagination.
+inputs:
+  countOnly:
+    type: boolean
+    description: If true, only total number of items will be returned, without any
+      of the actual objects.
+    default: false
+  siteIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Site IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  limit:
+    type: integer
+    description: 'Limit number of returned items (1-1000). Example: "10".'
+    default: 10
+  cursor:
+    type: string
+    description: 'Cursor position returned by the last request. Use to iterate over
+      more than 1000 items. Example: "YWdlbnRfaWQ6NTgwMjkzODE=".'
+    default: null
+  skipCount:
+    type: boolean
+    description: If true, total number of items will not be calculated, which speeds
+      up execution time.
+    default: null
+  accountIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Account IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  skip:
+    type: integer
+    description: 'Skip first number of items (0-1000). To iterate over more than 1000
+      items,  use "cursor". Example: "150".'
+    default: null
+  groupIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Group IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  threat_id:
+    type: string
+    description: 'Threat ID. Example: "225494730938493804".'
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      pagination:
+        type: object
+        properties:
+          nextCursor:
+            type: string
+            description: Pass this value as "cursor" on your next request, to get
+              the next page of results (Will be "null" when last page reached)
+            default: null
+          totalItems:
+            type: integer
+            description: Total number of items found matching your query
+        required:
+        - totalItems
+        description: Pagination information
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: array
+        items:
+          type: object
+          properties:
+            filePath:
+              type: string
+              description: Path of the quarantined file
+            fileName:
+              type: string
+              description: Name of the quarantined file
+            fileSize:
+              type: integer
+              description: Size of the quarantined file in bytes
+        description: Response data
+    required:
+    - pagination
+    description: List of quarantined files for the threat

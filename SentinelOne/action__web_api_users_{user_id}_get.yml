@@ -1,0 +1,297 @@
+uuid: b52caa14-be41-5a60-b087-2c4cf1e12a79
+slug: '_web_api_users_{user_id}_get'
+name: Get Users By User ID
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/users/{{inputs.user_id}}'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+    asserts:
+      error_404:
+        predicate: '{{response.status_code != 404}}'
+        fail: Could not retrieve user.
+      error_403:
+        predicate: '{{response.status_code != 403}}'
+        fail: Insufficient permissions.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get a user by ID.
+inputs:
+  user_id:
+    type: string
+    description: 'User ID. Example: "225494730938493804".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id
+          source:
+            type: string
+            description: Source
+          globalUserId:
+            type: string
+            description: Global user id
+            default: null
+          globalOrganizationId:
+            type: string
+            description: Global organization id
+            default: null
+          email:
+            type: string
+            description: Email
+            pattern: (^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-011\013\014\016-\177])*")@(?:[A-Z0-9](?:[A-Z0-9(-|_).]{0,259}[A-Z0-9])?)$
+            default: null
+          emailReadOnly:
+            type: boolean
+            description: True if email cannot be modified
+          fullName:
+            type: string
+            description: Full name
+            default: null
+          fullNameReadOnly:
+            type: boolean
+            description: True if full name cannot be modified
+          firstLogin:
+            type: string
+            description: First login
+          lastLogin:
+            type: string
+            description: Last login
+          dateJoined:
+            type: string
+            description: Date joined
+          lowestRole:
+            type: string
+            description: '[DEPRECATED] in RBAC there''s no ''lowest'' role. Returns
+              Admin if user has admin permission on all sites, otherwise a different
+              role.'
+          groupsReadOnly:
+            type: boolean
+            description: '[Deprecated]'
+          twoFaEnabled:
+            type: boolean
+            description: Two fa enabled
+          primaryTwoFaMethod:
+            type: string
+            description: Primary two fa method
+          emailVerified:
+            type: boolean
+            description: True if user verification completed successfully
+          scope:
+            type: string
+            description: User Scope
+            enum:
+            - tenant
+            - account
+            - site
+          apiToken:
+            type: object
+            properties:
+              createdAt:
+                type: string
+                description: Created at
+              expiresAt:
+                type: string
+                description: Expires at
+            description: Api token
+          twoFaEnabledReadOnly:
+            type: boolean
+            description: True if two fa option cannot be modified
+          agreedEula:
+            type: boolean
+            description: True if EULA was agreed for user's sites
+          agreementUrl:
+            type: string
+            description: Link to EULA agreement if it was not agreed yet
+          allowRemoteShell:
+            type: boolean
+            description: '[DEPRECATED] Unused field. The user''s role will determine
+              if it is allowed to use remote_shell.'
+          twoFaConfigured:
+            type: boolean
+            description: User 2FA Auth is configured
+          scopeRoles:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Scope ID
+                roles:
+                  type: array
+                  items:
+                    type: string
+                  description: '[DEPRECATED] List containing the desired role name
+                    in this scope. Use role_id or role_name instead.'
+                roleName:
+                  type: string
+                  description: '[DEPRECATED] Name of the role, will work only for
+                    predefined roles'
+                roleId:
+                  type: string
+                  description: ID of the wanted role
+                name:
+                  type: string
+                  description: Scope name
+                accountName:
+                  type: string
+                  description: Scope name
+              required:
+              - accountName
+              - name
+            description: Roles of the scope user
+          isSystem:
+            type: boolean
+          isExternalLoginUser:
+            type: boolean
+            description: Is external login user
+          canGenerateApiToken:
+            type: boolean
+            description: Can generate api token
+          elevatedSessionDurationMinutes:
+            type: integer
+            description: Defines for how many minutes can the user call protected
+              actions once their session is elevated.
+          twoFaStatus:
+            type: string
+            description: State of 2FA setup
+            enum:
+            - configured
+            - not_configured
+            - enrolled
+            - enrollment_expired
+          tenantRoles:
+            type: array
+            items:
+              type: string
+            description: '[DEPRECATED] Role ids for the tenant user. Using scopeRoles
+              is more consistent.'
+            default: []
+          siteRoles:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Site ID
+                name:
+                  type: string
+                  description: Site name
+                roles:
+                  type: array
+                  items:
+                    type: string
+                  description: '[DEPRECATED] List containing the desired role name
+                    in this scope. Use role_id instead.'
+                roleName:
+                  type: string
+                  description: '[DEPRECATED] Name of the role, will work only for
+                    predefined roles'
+                roleId:
+                  type: string
+                  description: ID of the wanted role
+              required:
+              - id
+              - name
+            description: '[DEPRECATED] Role and site ids for the user. Using scopeRoles
+              is more consistent.'
+          pages:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name
+                identifier:
+                  type: string
+                  description: Identifier
+                permissions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      identifier:
+                        type: string
+                        description: Identifier
+                      title:
+                        type: string
+                        description: Title
+                      value:
+                        type: boolean
+                        description: Value
+                      description:
+                        type: string
+                        description: Description
+                      additionalDescription:
+                        type: string
+                        description: Additional description
+                      type:
+                        type: string
+                        description: Type
+                      dependsOn:
+                        type: array
+                        items:
+                          type: string
+                        description: Depends on
+                      groupName:
+                        type: string
+                        description: Group name
+                      disabledReason:
+                        type: string
+                        description: Disabled reason
+                      disabledReasonCode:
+                        type: string
+                        description: Disabled reason code
+                  description: Permissions
+            description: Pages
+          account:
+            type: object
+            properties:
+              id:
+                type: string
+                description: The id of the account
+              name:
+                type: string
+                description: The name of the account
+            description: Relevant if the user is a site level user or single account
+            default: null
+        required:
+        - scope
+        description: Response data
+    description: User retrieved successfully.

@@ -1,0 +1,126 @@
+uuid: e7e52658-d078-56e9-83ad-a379c1aa109b
+slug: '_web_api_dv_init-query_post'
+name: Create Deep Visibility Init Query
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/dv/init-query'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        accountIds: '{{inputs.accountIds}}'
+        siteIds: '{{inputs.siteIds}}'
+        query: '{{inputs.query}}'
+        queryType: '{{inputs.queryType}}'
+        fromDate: '{{inputs.fromDate}}'
+        toDate: '{{inputs.toDate}}'
+        timeFrame: '{{inputs.timeFrame}}'
+        limit: '{{inputs.limit}}'
+        isVerbose: '{{inputs.isVerbose}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: 'Start a Deep Visibility Query and get the queryId. You can use the queryId
+  for other commands, such as Get Events and Get Query Status. For complete query
+  syntax, see Query Syntax in the Knowledge Base (community.sentinelone.com) or the
+  Console Help. Only SentinelOne Deep Visibility Query Language (S1QL 1.0) syntax
+  is supported. SentinelOne Deep Visibility extends the ActiveEDR capabilities, with
+  full visibility into endpoint data and threat hunting.  Its kernel-based monitoring
+  searches across endpoints for all indicators of compromise (IOC). <br>Note: From
+  Management version Rio (February 2022) the default of "isVerbose" is "false" instead
+  of "true".<br>Deep Visibility requires Complete SKU.'
+inputs:
+  siteIds:
+    type: array
+    items:
+      type: string
+    description: List of Site IDs to filter by
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  limit:
+    type: integer
+    description: Limit number of returned items (1-100000)
+  fromDate:
+    type: string
+    description: Events created after this timestamp
+  isVerbose:
+    type: boolean
+    description: Show all fields or just priority fields
+  accountIds:
+    type: array
+    items:
+      type: string
+    description: List of Account IDs to filter by
+  query:
+    type: string
+    description: Events matching the query search term will be returned
+  timeFrame:
+    type: string
+    description: Time frame that the query was performed on, when omitted defaults
+      to "Last 48 Hours"
+    default: Last 48 Hours
+  toDate:
+    type: string
+    description: Events created before or at this timestamp
+  queryType:
+    type: array
+    items:
+      type: string
+      enum:
+      - events
+      - processState
+    description: Query Search Type - only one is allowed
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          queryId:
+            type: string
+            description: A query unique identifier
+          queryModeInfo:
+            type: object
+            properties:
+              mode:
+                type: string
+                description: The query mode
+              lastActivatedAt:
+                type: string
+                description: The query mode last_activated_at date
+            required:
+            - mode
+            description: Query mode info
+        required:
+        - queryId
+        description: Response data
+    description: Success

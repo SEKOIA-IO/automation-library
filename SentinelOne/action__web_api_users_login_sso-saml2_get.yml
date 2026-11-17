@@ -1,0 +1,43 @@
+uuid: 5fd829a1-9097-5f19-94dc-89f4eb4fb22c
+slug: '_web_api_users_login_sso-saml2_get'
+name: Get Users Login SSO SAML2
+pipeline:
+- name: http
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/users/login/sso-saml2'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        email: '{{inputs.email}}'
+        scopeId: '{{inputs.scopeId}}'
+    asserts:
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Not authenticated user.
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      success:
+        predicate: '{{(response.status_code >= 200 and response.status_code <= 299)}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+description: If SSO is enabled for a deployment or scope, and a user attempts to log
+  in with name and password, this command redirects the login to SSO.
+inputs:
+  hostname:
+    type: string
+    description: Base URL for the API
+  scopeId:
+    type: string
+    description: 'The scope the desired SSO IdP is configured on. email is irrelevant
+      when using scope_id. If both are provided, email is ignored. Example: "225494730938493804".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  email:
+    type: string
+    description: 'Email address of the user trying to log in. Example: "me@sentinelone.com".'

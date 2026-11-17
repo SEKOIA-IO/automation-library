@@ -1,0 +1,93 @@
+uuid: 21358a6c-59ad-5b2b-ba86-fba6f873892a
+slug: '_web_api_threats_dv-add-to-blacklist_post'
+name: Create Threats Deep Visibility Add To Blacklist
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/threats/dv-add-to-blacklist'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        data: '{{inputs.data}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: 'From Deep Visibility results, add a SHA1 hash to the Blocklist. Set
+  the scope of the Blocklist: Global, Account, Site, or Group. The SHA1 and the Agent
+  ID are required (see Deep Visibility > Get Events). Your role must have permissions
+  to change the Blocklist - Admin, IR Team, SOC - and your user scope access must
+  include the scope of the Agent. The target scope is the Group, Site, or Account
+  of the Agent. <BR> Deep Visibility requires Complete SKU.'
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  data:
+    type: object
+    properties:
+      hashes:
+        type: array
+        items:
+          type: object
+          properties:
+            agentId:
+              type: string
+              description: Agent that reported the DV event
+            hash:
+              type: string
+              description: Hash to add to Restrictions
+              default: null
+          required:
+          - agentId
+        description: List of hashes with their source agents
+      targetScope:
+        type: string
+        description: Scope of Restrictions to which each hash is added
+        enum:
+        - site
+        - group
+        - global
+        - account
+    required:
+    - hashes
+    - targetScope
+    description: Data
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          affected:
+            type: integer
+            description: Number of entities affected by the requested operation
+        description: Response data
+    description: Success

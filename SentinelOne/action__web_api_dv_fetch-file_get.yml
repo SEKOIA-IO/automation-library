@@ -1,0 +1,67 @@
+uuid: 7c1d9bd0-fdd1-5ab0-8269-ebad5d9d6619
+slug: '_web_api_dv_fetch-file_get'
+name: Get Deep Visibility Fetch File
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/dv/fetch-file'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        downloadToken: '{{inputs.downloadToken}}'
+    asserts:
+      error_404:
+        predicate: '{{response.status_code != 404}}'
+        fail: File not found
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Download the source process file associated with a Deep Visibility event.
+inputs:
+  hostname:
+    type: string
+    description: Base URL for the API
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  downloadToken:
+    type: string
+    description: Download token
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          downloadUrl:
+            type: string
+            description: Download link
+          fileName:
+            type: string
+            description: File name
+        description: Response data
+    description: Success

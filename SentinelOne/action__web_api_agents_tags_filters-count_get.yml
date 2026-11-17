@@ -1,0 +1,170 @@
+uuid: 1eedf9a3-fa0f-51a3-a947-84963bbfcf19
+slug: '_web_api_agents_tags_filters-count_get'
+name: Get Agents Tags Filters Count
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/agents/tags/filters-count'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        siteIds: '{{inputs.siteIds}}'
+        accountIds: '{{inputs.accountIds}}'
+        groupIds: '{{inputs.groupIds}}'
+        includeParents: '{{inputs.includeParents}}'
+        includeChildren: '{{inputs.includeChildren}}'
+        ids: '{{inputs.ids}}'
+        key__contains: '{{inputs.key__contains}}'
+        query: '{{inputs.query}}'
+        key: '{{inputs.key}}'
+        value: '{{inputs.value}}'
+        description: '{{inputs.description}}'
+        scopePath: '{{inputs.scopePath}}'
+        createdBy: '{{inputs.createdBy}}'
+        updatedBy: '{{inputs.updatedBy}}'
+        value__contains: '{{inputs.value__contains}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get endpoint Tags filter counts.
+inputs:
+  description:
+    type: string
+    description: Tag description
+  key:
+    type: string
+    description: Tag key
+  value__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by tag value. Example: "server".'
+  siteIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Site IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  ids:
+    type: array
+    items:
+      type: string
+    description: 'List of tag IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  updatedBy:
+    type: string
+    description: Updated by
+  accountIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Account IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  query:
+    type: string
+    description: Free text search on fields key, value, description
+  includeParents:
+    type: boolean
+    description: Return tags from parent scope levels
+    default: false
+  value:
+    type: string
+    description: Tag value
+  includeChildren:
+    type: boolean
+    description: Return tags from children scope levels
+    default: false
+  groupIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Group IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  hostname:
+    type: string
+    description: Base URL for the API
+  key__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by tag key. Example: "server".'
+  scopePath:
+    type: string
+    description: Scope path
+  createdBy:
+    type: string
+    description: Created by
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: array
+        items:
+          type: object
+          properties:
+            key:
+              type: string
+              description: Filter argument key
+            title:
+              type: string
+              description: Filter description
+            values:
+              type: array
+              items:
+                type: object
+                properties:
+                  title:
+                    type: string
+                    description: Value description
+                  value:
+                    type: string
+                    description: Value
+                  count:
+                    type: integer
+                    description: Number of entities matching this value
+              description: A list of filter values with their count
+            enableNegation:
+              type: boolean
+              description: This flag indicates whether the negation query is enabled
+                for this filter key or not
+            disableSorting:
+              type: boolean
+              description: A flag to disable the UI filter values sorting by counts,
+                and instead display values in the provided order.
+            hiddenFilter:
+              type: boolean
+              description: This flag indicates whether the filter is hidden in the
+                UI filters but it may remain for grouping.
+            hiddenGroupBy:
+              type: boolean
+              description: This flag indicates whether the filter is hidden in the
+                UI group by but it may remain for filtering.
+            type:
+              type: string
+              description: Filter type
+        description: Response data
+    description: Success

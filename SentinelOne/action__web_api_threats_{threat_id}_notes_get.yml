@@ -1,0 +1,149 @@
+uuid: 78700736-8e10-507c-8c5e-c42722fcebe5
+slug: '_web_api_threats_{threat_id}_notes_get'
+name: Get Threats By Threat ID Notes
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/threats/{{inputs.threat_id}}/notes'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        skip: '{{inputs.skip}}'
+        limit: '{{inputs.limit}}'
+        cursor: '{{inputs.cursor}}'
+        countOnly: '{{inputs.countOnly}}'
+        skipCount: '{{inputs.skipCount}}'
+        sortBy: '{{inputs.sortBy}}'
+        sortOrder: '{{inputs.sortOrder}}'
+        creator__like: '{{inputs.creator__like}}'
+        creatorId: '{{inputs.creatorId}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get the threat notes that match the filter.
+inputs:
+  sortBy:
+    type: string
+    description: 'The column to sort the results by. Example: "id".'
+    enum:
+    - createdAt
+    - updatedAt
+    default: null
+  countOnly:
+    type: boolean
+    description: If true, only total number of items will be returned, without any
+      of the actual objects.
+    default: false
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  limit:
+    type: integer
+    description: 'Limit number of returned items (1-1000). Example: "10".'
+    default: 10
+  cursor:
+    type: string
+    description: 'Cursor position returned by the last request. Use to iterate over
+      more than 1000 items. Example: "YWdlbnRfaWQ6NTgwMjkzODE=".'
+    default: null
+  sortOrder:
+    type: string
+    description: 'Sort direction. Example: "asc".'
+    enum:
+    - asc
+    - desc
+    default: null
+  skipCount:
+    type: boolean
+    description: If true, total number of items will not be calculated, which speeds
+      up execution time.
+    default: null
+  creator__like:
+    type: string
+    description: 'Threat Note creator name (partially or full). Example: "John".'
+  creatorId:
+    type: string
+    description: 'Threat Note creator ID. Example: "225494730938493804".'
+  skip:
+    type: integer
+    description: 'Skip first number of items (0-1000). To iterate over more than 1000
+      items,  use "cursor". Example: "150".'
+    default: null
+  threat_id:
+    type: string
+    description: 'Threat ID. Example: "225494730938493804".'
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      pagination:
+        type: object
+        properties:
+          nextCursor:
+            type: string
+            description: Pass this value as "cursor" on your next request, to get
+              the next page of results (Will be "null" when last page reached)
+            default: null
+          totalItems:
+            type: integer
+            description: Total number of items found matching your query
+        required:
+        - totalItems
+        description: Pagination information
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: array
+        items:
+          type: object
+          properties:
+            createdAt:
+              type: string
+              description: Timestamp of date creation
+            updatedAt:
+              type: string
+              description: Timestamp of last update
+            edited:
+              type: boolean
+              description: Identify if the the note changed
+            id:
+              type: string
+              description: Threat Note ID
+            text:
+              type: string
+              description: Threat Note text
+            creator:
+              type: string
+              description: Threat Note creator name
+            creatorId:
+              type: string
+              description: Threat Note creator id
+        description: Response data
+    required:
+    - pagination
+    description: Success

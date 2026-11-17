@@ -1,0 +1,833 @@
+uuid: df31f5bb-bc20-5153-8fd2-dd862af59ebd
+slug: '_web_api_cloud-detection_rules_get'
+name: Get Cloud Detection Rules
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/cloud-detection/rules'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        skip: '{{inputs.skip}}'
+        limit: '{{inputs.limit}}'
+        cursor: '{{inputs.cursor}}'
+        countOnly: '{{inputs.countOnly}}'
+        skipCount: '{{inputs.skipCount}}'
+        sortBy: '{{inputs.sortBy}}'
+        sortOrder: '{{inputs.sortOrder}}'
+        siteIds: '{{inputs.siteIds}}'
+        accountIds: '{{inputs.accountIds}}'
+        groupIds: '{{inputs.groupIds}}'
+        platformRuleIds: '{{inputs.platformRuleIds}}'
+        excludeIds: '{{inputs.excludeIds}}'
+        scopeId: '{{inputs.scopeId}}'
+        scopeLevel: '{{inputs.scopeLevel}}'
+        severities: '{{inputs.severities}}'
+        attackSurfaces: '{{inputs.attackSurfaces}}'
+        sources: '{{inputs.sources}}'
+        statuses: '{{inputs.statuses}}'
+        mitreTactics: '{{inputs.mitreTactics}}'
+        s1qlSubstring: '{{inputs.s1qlSubstring}}'
+        descriptionSubstring: '{{inputs.descriptionSubstring}}'
+        nameSubstring: '{{inputs.nameSubstring}}'
+        tags: '{{inputs.tags}}'
+        categories: '{{inputs.categories}}'
+        hideQuery: '{{inputs.hideQuery}}'
+        labels: '{{inputs.labels}}'
+        activeResponse: '{{inputs.activeResponse}}'
+        ids: '{{inputs.ids}}'
+        scopes: '{{inputs.scopes}}'
+        status: '{{inputs.status}}'
+        severity: '{{inputs.severity}}'
+        expirationMode: '{{inputs.expirationMode}}'
+        expired: '{{inputs.expired}}'
+        reachedLimit: '{{inputs.reachedLimit}}'
+        queryType: '{{inputs.queryType}}'
+        queryLang: '{{inputs.queryLang}}'
+        exclusionIds: '{{inputs.exclusionIds}}'
+        name__contains: '{{inputs.name__contains}}'
+        description__contains: '{{inputs.description__contains}}'
+        creator__contains: '{{inputs.creator__contains}}'
+        updater__contains: '{{inputs.updater__contains}}'
+        scopeName__contains: '{{inputs.scopeName__contains}}'
+        s1ql__contains: '{{inputs.s1ql__contains}}'
+        query: '{{inputs.query}}'
+        createdAt__gte: '{{inputs.createdAt__gte}}'
+        createdAt__lte: '{{inputs.createdAt__lte}}'
+        updatedAt__gte: '{{inputs.updatedAt__gte}}'
+        updatedAt__lte: '{{inputs.updatedAt__lte}}'
+        filterBy: '{{inputs.filterBy}}'
+        disablePagination: '{{inputs.disablePagination}}'
+        isLegacy: '{{inputs.isLegacy}}'
+        includeHiddenLogicRules: '{{inputs.includeHiddenLogicRules}}'
+        platformRuleId: '{{inputs.platformRuleId}}'
+        ruleOrigin: '{{inputs.ruleOrigin}}'
+        scopeInclusion: '{{inputs.scopeInclusion}}'
+        includeScheduledRules: '{{inputs.includeScheduledRules}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: 'Get a list of Custom Detection Rules for a given scope. <br>Note:  You
+  can create and see rules only for your highest available scope. For example, if
+  your username has an access level of scope Account, you cannot see rules created
+  for the Global scope or rules created for a specific Site.'
+inputs:
+  sources:
+    type: array
+    items:
+      type: string
+    description: The API ignores this field. It's kept for backward compatibility
+      only, and will be removed in a future release.
+  cursor:
+    type: string
+    description: 'Cursor position returned by the last request. Use to iterate over
+      more than 1000 items. Example: "YWdlbnRfaWQ6NTgwMjkzODE=".'
+    default: null
+  sortOrder:
+    type: string
+    description: 'Sort direction. Example: "asc".'
+    enum:
+    - asc
+    - desc
+    default: null
+  ids:
+    type: array
+    items:
+      type: string
+    description: 'To filter by Rule ID, enter one or more Rule IDs, separated by commas.
+      Example: "225494730938493804,225494730938493915".'
+  tags:
+    type: array
+    items:
+      type: string
+    description: The API ignores this field. It's kept for backward compatibility
+      only, and will be removed in a future release.
+  accountIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Account IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  scopeId:
+    type: string
+    description: 'The API ignores this field. It''s kept for backward compatibility
+      only, and will be removed in a future release. Example: "225494730938493804".'
+  query:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by S1 query. You can enter multiple values, separated
+      by commas. Example: "Service Pack 1".'
+  ruleOrigin:
+    type: string
+    description: 'The origin of the rules: "custom" for rules created by the user,
+      "platform" for rules created from a Detection Library (platform) rule. When
+      omitted, only custom rules are returned. Example: "custom".'
+    enum:
+    - custom
+    - platform
+  expired:
+    type: boolean
+    description: Rule expired or not.
+  status:
+    type: array
+    items:
+      type: string
+      enum:
+      - Draft
+      - Activating
+      - Active
+      - Disabling
+      - Disabled
+      - Deleted
+      - Deleting
+    description: 'To filter by status, enter one or more statuses, separated by commas.
+      Example: "Draft".'
+  description__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by rule description. You can enter multiple values,
+      separated by commas. Example: "Service Pack 1".'
+  queryType:
+    type: array
+    items:
+      type: string
+      enum:
+      - events
+      - correlation
+      - uebafirstseen
+      - scheduled
+    description: 'Enter a list of query types. Example: "events".'
+  hostname:
+    type: string
+    description: Base URL for the API
+  creator__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by rule creator. You can enter multiple values,
+      separated by commas. Example: "Service Pack 1".'
+  countOnly:
+    type: boolean
+    description: If true, only total number of items will be returned, without any
+      of the actual objects.
+    default: false
+  siteIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Site IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  updatedAt__lte:
+    type: string
+    description: 'Filter by last-modified less than or equal to a datetime. Example:
+      "2018-02-27T04:49:26.257525Z".'
+  updatedAt__gte:
+    type: string
+    description: 'Filter by last-modified greater than or equal to a datetime. Example:
+      "2018-02-27T04:49:26.257525Z".'
+  reachedLimit:
+    type: boolean
+    description: Rule reached limit or not.
+  includeHiddenLogicRules:
+    type: boolean
+    description: If True and isLegacy is True, include rules whose logic is hidden.
+      The query content will still be masked for non-privileged users.
+    default: false
+  scopes:
+    type: array
+    items:
+      type: string
+      enum:
+      - site
+      - account
+      - group
+      - global
+    description: 'To filter by scope, enter one or more scopes, separated by commas.
+      Example: "site".'
+  scopeInclusion:
+    type: string
+    description: 'Which scopes to return rules from, relative to the requested scope:
+      "all" returns the requested scope and everything above and below it, "selfAndDescendants"
+      returns the requested scope and every level below it. When omitted, behaves
+      as "all". Example: "all".'
+    enum:
+    - all
+    - selfAndDescendants
+  scopeLevel:
+    type: string
+    description: 'To filter by scope, enter one or more scopes, separated by commas.
+      Example: "site".'
+    enum:
+    - site
+    - account
+    - group
+    - global
+  queryLang:
+    type: array
+    items:
+      type: string
+      enum:
+      - '1.0'
+      - '2.0'
+    description: 'To filter by query language, enter one or more values (e.g. 1.0,
+      2.0), separated by commas. Example: "1.0".'
+  excludeIds:
+    type: array
+    items:
+      type: string
+    description: 'List of entity ids to exclude from select_all. Example: "225494730938493804,225494730938493915".'
+  scopeName__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by scope name. You can enter multiple values, separated
+      by commas. Example: "my-account".'
+  statuses:
+    type: array
+    items:
+      type: string
+      enum:
+      - Activating
+      - Active
+      - Disabling
+      - Disabled
+    description: 'The API ignores this field. It''s kept for backward compatibility
+      only, and will be removed in a future release. Example: "Activating".'
+  exclusionIds:
+    type: array
+    items:
+      type: string
+    description: 'Filter by attached Detection Exclusion IDs. Returns rules attached
+      to any of the specified exclusions. Example: "225494730938493804,225494730938493915".'
+  includeScheduledRules:
+    type: boolean
+    description: If True, includes scheduled rules. Requires isLegacy=false.
+    default: null
+  attackSurfaces:
+    type: array
+    items:
+      type: string
+    description: The API ignores this field. It's kept for backward compatibility
+      only, and will be removed in a future release.
+  s1qlSubstring:
+    type: string
+    description: The API ignores this field. It's kept for backward compatibility
+      only, and will be removed in a future release.
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  limit:
+    type: integer
+    description: 'Limit number of returned items (1-1000). Example: "10".'
+    default: 10
+  hideQuery:
+    type: string
+    description: 'The API ignores this field. It''s kept for backward compatibility
+      only, and will be removed in a future release. Example: "Shown".'
+    enum:
+    - Shown
+    - Hidden
+  labels:
+    type: array
+    items:
+      type: string
+    description: The API ignores this field. It's kept for backward compatibility
+      only, and will be removed in a future release.
+  platformRuleId:
+    type: array
+    items:
+      type: string
+    description: 'To filter by the platform rule the rules were created from, enter
+      one or more platform rule IDs, separated by commas. Example: "225494730938493804,225494730938493915".'
+  platformRuleIds:
+    type: array
+    items:
+      type: string
+    description: 'platform rule ids. Example: "225494730938493804,225494730938493915".'
+  nameSubstring:
+    type: string
+    description: The API ignores this field. It's kept for backward compatibility
+      only, and will be removed in a future release.
+  categories:
+    type: array
+    items:
+      type: string
+      enum:
+      - Events
+      - Correlation
+      - UEBAFirstSeen
+      - Scheduled
+    description: 'The API ignores this field. It''s kept for backward compatibility
+      only, and will be removed in a future release. Example: "Events".'
+  createdAt__gte:
+    type: string
+    description: 'Filter by created-at greater than or equal to a datetime. Example:
+      "2018-02-27T04:49:26.257525Z".'
+  s1ql__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by S1 query. You can enter multiple values, separated
+      by commas. Example: "Service Pack 1".'
+  isLegacy:
+    type: boolean
+    description: If True, alertsCount will be retrieved from Star and not from UAM.
+    default: true
+  descriptionSubstring:
+    type: string
+    description: The API ignores this field. It's kept for backward compatibility
+      only, and will be removed in a future release.
+  sortBy:
+    type: string
+    description: 'The column to sort the results by. Example: "id".'
+    enum:
+    - id
+    - name
+    - status
+    - expirationMode
+    - expired
+    - queryType
+    - reachedLimit
+    - statusReason
+    - severity
+    - expiration
+    - createdAt
+    - updatedAt
+    - generatedAlerts
+    - description
+    - scopeHierarchy
+    - scope
+    - activeResponse
+    - lastAlertTime
+    - queryLang
+    default: null
+  activeResponse:
+    type: boolean
+    description: The active response status for the rule.
+  disablePagination:
+    type: boolean
+    description: If True, all rules for the requested scope will be returned.
+  createdAt__lte:
+    type: string
+    description: 'Filter by created-at less than or equal to a datetime. Example:
+      "2018-02-27T04:49:26.257525Z".'
+  skipCount:
+    type: boolean
+    description: If true, total number of items will not be calculated, which speeds
+      up execution time.
+    default: null
+  expirationMode:
+    type: string
+    description: 'The expiration mode. Example: "Permanent".'
+    enum:
+    - Permanent
+    - Temporary
+  filterBy:
+    type: string
+    description: 'The API ignores this field. It''s kept for backward compatibility
+      only, and will be removed in a future release. Example: "Template".'
+    enum:
+    - Template
+    - Platform
+  severity:
+    type: array
+    items:
+      type: string
+      enum:
+      - Info
+      - Low
+      - Medium
+      - High
+      - Critical
+    description: 'To filter by severity, enter one or more severities, separated by
+      commas. Example: "Info".'
+  skip:
+    type: integer
+    description: 'Skip first number of items (0-1000). To iterate over more than 1000
+      items,  use "cursor". Example: "150".'
+    default: null
+  mitreTactics:
+    type: array
+    items:
+      type: string
+    description: The API ignores this field. It's kept for backward compatibility
+      only, and will be removed in a future release.
+  groupIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Group IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  name__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by rule name. You can enter multiple values, separated
+      by commas. Example: "Service Pack 1".'
+  severities:
+    type: array
+    items:
+      type: string
+      enum:
+      - Info
+      - Low
+      - Medium
+      - High
+      - Critical
+    description: 'The API ignores this field. It''s kept for backward compatibility
+      only, and will be removed in a future release. Example: "Info".'
+  updater__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by last modifier. You can enter multiple values,
+      separated by commas. Example: "john@example.com".'
+outputs:
+  result:
+    type: object
+    properties:
+      pagination:
+        type: object
+        properties:
+          nextCursor:
+            type: string
+            description: Pass this value as "cursor" on your next request, to get
+              the next page of results (Will be "null" when last page reached)
+            default: null
+          totalItems:
+            type: integer
+            description: Total number of items found matching your query
+        required:
+        - totalItems
+        description: Pagination information
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Rule ID
+            name:
+              type: string
+              description: The name of the custom detection rule.
+            description:
+              type: string
+              description: The description of the custom detection rule.
+            severity:
+              type: string
+              description: The rule severity in your environment.
+              enum:
+              - Info
+              - Low
+              - Medium
+              - High
+              - Critical
+            expirationMode:
+              type: string
+              description: Whether the rule is Temporary or Permanent.
+              enum:
+              - Permanent
+              - Temporary
+            expiration:
+              type: string
+              description: If Temporary, the expiration date for the rule.
+              default: null
+            queryType:
+              type: string
+              description: The query type - Correlation (made of multiple subqueries),
+                Event (single query).
+              enum:
+              - events
+              - correlation
+              - uebafirstseen
+              - scheduled
+            s1ql:
+              type: string
+              description: The query.
+            status:
+              type: string
+              description: Current rule lifecycle status. Active rules send alerts
+                when triggered; Disabled rules do not. For tenant-scoped UEBA First-Seen
+                rules, this value reflects activation state for the requested scope.
+              enum:
+              - Draft
+              - Activating
+              - Active
+              - Disabling
+              - Disabled
+              - Deleted
+              - Deleting
+            scope:
+              type: string
+              description: The scope of the rule. Can be Global, Account, Site, or
+                Group.
+              enum:
+              - site
+              - account
+              - group
+              - global
+            scopeId:
+              type: array
+              items:
+                type: string
+              description: The Account, Site, or Group ID, depending on the scope.
+                Null if the scope is Global.
+            editable:
+              type: boolean
+              description: True if the rule can be modified at this scope level.
+            createdAt:
+              type: string
+              description: The date the rule was created.
+            updatedAt:
+              type: string
+              description: The date the rule was last updated.
+            creator:
+              type: string
+              description: The email of the user that created the rule.
+            creatorId:
+              type: string
+              description: The ID of the user that created the rule.
+            updaterId:
+              type: string
+              description: The ID of the user that last updated the rule.
+            expired:
+              type: boolean
+              description: True if the Rule has expired.
+            reachedLimit:
+              type: boolean
+              description: True if the Rule reached the 5k/hour or 10k/day alert limit.
+                If the limit has been reached, the Rule is disabled.
+            statusReason:
+              type: string
+              description: The reason why the Rule has its current status.
+            networkQuarantine:
+              type: boolean
+              description: True if the network quarantine is on.
+            treatAsThreat:
+              type: string
+              description: The Treat as threat auto response - UNDEFINED/suspicious/malicious
+              enum:
+              - UNDEFINED
+              - Suspicious
+              - Malicious
+            queryLang:
+              type: string
+              description: The s1ql version query language of the rule. Can be 1.0
+                or 2.0.
+              enum:
+              - '1.0'
+              - '2.0'
+              default: '1.0'
+            correlationParams:
+              type: object
+              properties:
+                subQueries:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      subQuery:
+                        type: string
+                        description: A subquery
+                      matchesRequired:
+                        type: integer
+                        description: The number of times a subquery must match.
+                    required:
+                    - matchesRequired
+                    - subQuery
+                  description: The list of subqueries for the custom detection rule.
+                entity:
+                  type: string
+                  description: A common entity used to group matching events.
+                  enum:
+                  - user
+                  - process
+                  - ip
+                  - endpoint
+                  - storyline
+                  - custom
+                  - none
+                matchInOrder:
+                  type: boolean
+                  description: Set to True to require subqueries to match in sequence
+                    to trigger an alert.
+                timeWindow:
+                  type: object
+                  properties:
+                    windowMinutes:
+                      type: integer
+                      description: The period of time in minutes in which subqueries
+                        must match to trigger an alert.
+                      enum:
+                      - 10
+                      - 30
+                      - 60
+                      - 240
+                      - 480
+                      - 720
+                  description: The period of time in minutes in which subqueries must
+                    match to trigger an alert.
+                  default:
+                    windowMinutes: 480
+                entitiesAndFields:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      type: string
+                  description: Entity field aliases in Conjunctive Normal Form (AND
+                    of ORs). Each inner array is an OR-group; the outer array ANDs
+                    them together. The product of the group sizes (aliases in group
+                    1 x aliases in group 2 x ...) must not be more than the configured
+                    limit, because the engine tracks at most that many entities per
+                    event. The live limit is in the /cloud-detection/rules/config
+                    response. Required when entity is Custom; must be omitted otherwise.
+              required:
+              - entity
+              - matchInOrder
+              description: Correlation params
+            scheduledParams:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: The PowerQuery to run
+                runIntervalMinutes:
+                  type: integer
+                  description: How often the alert is evaluated, in minutes. If used
+                    with coolOffSettings then it must be a denominator of renotifyMinutes.
+                    If the lookbackWindowMinutes is less than 60 (1 hour), the minimum
+                    is 1 minute. For a window between 1 and 360 (6 hours), 5 minutes.
+                    For a window between 360 (6 hours) and 10080 (7 days), 15 minutes.
+                    For a window between 10080 (7 days) and 43200 (30 days), 60 minutes.
+                lookbackWindowMinutes:
+                  type: integer
+                  description: Sets the evaluation lookback window in minutes. For
+                    example, set to 5 evaluates the alert over the past five minutes.
+                threshold:
+                  type: object
+                  properties:
+                    value:
+                      type: integer
+                      description: Defines the threshold value that in combination
+                        with operator and the query sets the threshold condition for
+                        an alert to be triggered. The default value is 0
+                      default: 0
+                    operator:
+                      type: string
+                      description: Defines the operator to use in combination with
+                        the query and thresholdValue to set the threshold condition
+                        for an alert to trigger The default value is Greater
+                      enum:
+                      - Greater
+                      - Less
+                      - Equal
+                      default: Greater
+                  description: Receive an alert only if the number of rows in the
+                    result of the query matches the condition in the threshold
+                  default:
+                    value: 0
+                    operator: Greater
+                alertPerRow:
+                  type: boolean
+                  description: If True, an alert will be generated for each row detected
+                    in the defined lookback window. If False (default), get one alert
+                    for all detected events matched in the defined lookback window.
+                  default: null
+                disableStreaksLogic:
+                  type: boolean
+                  description: If True (default), disables streak counting logic for
+                    scheduled rules. If False, streak counting logic is enabled.
+                  default: null
+              required:
+              - lookbackWindowMinutes
+              - query
+              - runIntervalMinutes
+              description: Scheduled params
+            uebaParams:
+              type: object
+              properties:
+                windowMinutes:
+                  type: integer
+                  description: Lookback window in minutes. Between 1 and 30 days.
+                entitiesAndFields:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      type: string
+                  description: Entity key in Conjunctive Normal Form (AND of ORs).
+                    Each inner array is one key component's interchangeable aliases;
+                    the outer array ANDs the components together.
+              required:
+              - entitiesAndFields
+              - windowMinutes
+              description: Ueba params
+            templateRuleId:
+              type: string
+              description: Rule Id of template rule from which this rule was created.
+            coolOffSettings:
+              type: object
+              properties:
+                renotifyMinutes:
+                  type: integer
+                  description: The period of time in minutes in which alerts will
+                    be suppressed after the rule has been triggered. 0 disables cool-off.
+              required:
+              - renotifyMinutes
+              description: Receive only one alert and suppress additional alerts when
+                a rule is triggered multiple times during the cool-off period. Mitigation
+                actions set in the rule will not be applied to suppressed alerts.
+            hideLogic:
+              type: boolean
+              description: If true, this rule's logic is hidden from non-privileged
+                users.
+            entityMappings:
+              type: array
+              items:
+                type: object
+                properties:
+                  columnName:
+                    type: string
+                    description: Unique case insensitive column name from PowerQuery
+                      table result (required for Scheduled rules)
+                  identifierType:
+                    type: string
+                    description: Identifier type for UAIP asset lookup routing.
+              description: List of OCSF entity mappings to associate alerts with specific
+                assets.
+            platformRuleId:
+              type: string
+              description: Id of the platform rule from which this rule was created.
+            generatedAlerts:
+              type: integer
+              description: The number of alerts that have been generated for the Rule.
+            lastAlertTime:
+              type: string
+              description: The time of the last alert for the Rule.
+            activeResponse:
+              type: boolean
+              description: The Active Response status of the Rule.
+            source:
+              type: string
+              description: The source of the rule. Present for Detection-as-Code managed
+                rules.
+              enum:
+              - DAC
+            siteId:
+              type: string
+              description: The site ID.
+            siteName:
+              type: string
+              description: The name of the site.
+            accountId:
+              type: string
+              description: The account ID.
+            accountName:
+              type: string
+              description: The name of the account.
+            updater:
+              type: string
+              description: The email of the user that last updated the rule.
+            scopeName:
+              type: string
+              description: The display name of the rule scope.
+            exclusionIds:
+              type: array
+              items:
+                type: string
+              description: IDs of Detection Exclusions attached to this rule. Only
+                present for Single Event, Correlation and Scheduled rules.
+          required:
+          - expirationMode
+          - name
+          - severity
+          - status
+        description: Response data
+    required:
+    - pagination
+    description: Success

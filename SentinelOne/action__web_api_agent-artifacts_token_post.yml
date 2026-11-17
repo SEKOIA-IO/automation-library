@@ -1,0 +1,89 @@
+uuid: f3db68ec-356b-5e14-9bc1-1f0e222fab34
+slug: '_web_api_agent-artifacts_token_post'
+name: Create Agent Artifacts Token
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/agent-artifacts/token'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        description: '{{inputs.description}}'
+        scope_id: '{{inputs.scope_id}}'
+        scope_level: '{{inputs.scope_level}}'
+        title: '{{inputs.title}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid request
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized
+      error_500:
+        predicate: '{{response.status_code != 500}}'
+        fail: Internal Error
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Creates an access token for the S1 Agent Artifacts Repository, which
+  is needed for pulling artifacts
+inputs:
+  description:
+    type: string
+    description: Token description
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  title:
+    type: string
+    description: Token title
+  scope_level:
+    type: string
+    description: Scope Level of the token e.g. `account`, `site`
+  scope_id:
+    type: string
+    description: Scope ID of the specified account or site
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      created_at:
+        type: string
+        description: Created At timestamp of the token
+      description:
+        type: string
+        description: Token description
+      id:
+        type: integer
+        description: Access token ID
+      scope_id:
+        type: string
+        description: Scope ID
+      scope_level:
+        type: string
+        description: Scope level of the token
+      title:
+        type: string
+        description: Token name
+      token:
+        type: string
+        description: Access token - seen only once
+      username:
+        type: string
+        description: Username of the token
+    description: OK

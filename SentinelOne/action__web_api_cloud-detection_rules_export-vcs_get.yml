@@ -1,0 +1,244 @@
+uuid: c80e443b-315a-54f1-8ea3-12e1f5af47d4
+slug: '_web_api_cloud-detection_rules_export-vcs_get'
+name: Get Cloud Detection Rules Export VCS
+pipeline:
+- name: http
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/cloud-detection/rules/export-vcs'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        skip: '{{inputs.skip}}'
+        limit: '{{inputs.limit}}'
+        cursor: '{{inputs.cursor}}'
+        countOnly: '{{inputs.countOnly}}'
+        skipCount: '{{inputs.skipCount}}'
+        siteIds: '{{inputs.siteIds}}'
+        accountIds: '{{inputs.accountIds}}'
+        groupIds: '{{inputs.groupIds}}'
+        ids: '{{inputs.ids}}'
+        scopes: '{{inputs.scopes}}'
+        status: '{{inputs.status}}'
+        severity: '{{inputs.severity}}'
+        expirationMode: '{{inputs.expirationMode}}'
+        expired: '{{inputs.expired}}'
+        reachedLimit: '{{inputs.reachedLimit}}'
+        queryType: '{{inputs.queryType}}'
+        queryLang: '{{inputs.queryLang}}'
+        exclusionIds: '{{inputs.exclusionIds}}'
+        name__contains: '{{inputs.name__contains}}'
+        description__contains: '{{inputs.description__contains}}'
+        creator__contains: '{{inputs.creator__contains}}'
+        updater__contains: '{{inputs.updater__contains}}'
+        scopeName__contains: '{{inputs.scopeName__contains}}'
+        s1ql__contains: '{{inputs.s1ql__contains}}'
+        query: '{{inputs.query}}'
+        createdAt__gte: '{{inputs.createdAt__gte}}'
+        createdAt__lte: '{{inputs.createdAt__lte}}'
+        updatedAt__gte: '{{inputs.updatedAt__gte}}'
+        updatedAt__lte: '{{inputs.updatedAt__lte}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+description: Export custom detection rules to a ZIP file that contains YAML files.
+  Commit these YAML files in a version control system (VCS) repository and manage
+  them as Detection-as-Code (DAC) rules.<br>Without filters, the API exports all the
+  custom rules except rules managed as DAC. The API omits the queries for rules with
+  hidden query logic.<br>The response is a ZIP file with one YAML file per rule, grouped
+  in folders by scope under "rules/", and an "export-summary.json" file.
+inputs:
+  cursor:
+    type: string
+    description: 'Cursor position returned by the last request. Use to iterate over
+      more than 1000 items. Example: "YWdlbnRfaWQ6NTgwMjkzODE=".'
+    default: null
+  ids:
+    type: array
+    items:
+      type: string
+    description: 'To filter by Rule ID, enter one or more Rule IDs, separated by commas.
+      Example: "225494730938493804,225494730938493915".'
+  accountIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Account IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  query:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by S1 query. You can enter multiple values, separated
+      by commas. Example: "Service Pack 1".'
+  expired:
+    type: boolean
+    description: Rule expired or not.
+  status:
+    type: array
+    items:
+      type: string
+      enum:
+      - Draft
+      - Activating
+      - Active
+      - Disabling
+      - Disabled
+      - Deleted
+      - Deleting
+    description: 'To filter by status, enter one or more statuses, separated by commas.
+      Example: "Draft".'
+  description__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by rule description. You can enter multiple values,
+      separated by commas. Example: "Service Pack 1".'
+  queryType:
+    type: array
+    items:
+      type: string
+      enum:
+      - events
+      - correlation
+      - uebafirstseen
+      - scheduled
+    description: 'Enter a list of query types. Example: "events".'
+  hostname:
+    type: string
+    description: Base URL for the API
+  creator__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by rule creator. You can enter multiple values,
+      separated by commas. Example: "Service Pack 1".'
+  countOnly:
+    type: boolean
+    description: If true, only total number of items will be returned, without any
+      of the actual objects.
+    default: false
+  siteIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Site IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  updatedAt__lte:
+    type: string
+    description: 'Filter by last-modified less than or equal to a datetime. Example:
+      "2018-02-27T04:49:26.257525Z".'
+  updatedAt__gte:
+    type: string
+    description: 'Filter by last-modified greater than or equal to a datetime. Example:
+      "2018-02-27T04:49:26.257525Z".'
+  reachedLimit:
+    type: boolean
+    description: Rule reached limit or not.
+  scopes:
+    type: array
+    items:
+      type: string
+      enum:
+      - site
+      - account
+      - group
+      - global
+    description: 'To filter by scope, enter one or more scopes, separated by commas.
+      Example: "site".'
+  queryLang:
+    type: array
+    items:
+      type: string
+      enum:
+      - '1.0'
+      - '2.0'
+    description: 'To filter by query language, enter one or more values (e.g. 1.0,
+      2.0), separated by commas. Example: "1.0".'
+  scopeName__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by scope name. You can enter multiple values, separated
+      by commas. Example: "my-account".'
+  exclusionIds:
+    type: array
+    items:
+      type: string
+    description: 'Filter by attached Detection Exclusion IDs. Returns rules attached
+      to any of the specified exclusions. Example: "225494730938493804,225494730938493915".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  limit:
+    type: integer
+    description: 'Limit number of returned items (1-500). Example: "10".'
+    default: 500
+  createdAt__gte:
+    type: string
+    description: 'Filter by created-at greater than or equal to a datetime. Example:
+      "2018-02-27T04:49:26.257525Z".'
+  s1ql__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by S1 query. You can enter multiple values, separated
+      by commas. Example: "Service Pack 1".'
+  createdAt__lte:
+    type: string
+    description: 'Filter by created-at less than or equal to a datetime. Example:
+      "2018-02-27T04:49:26.257525Z".'
+  skipCount:
+    type: boolean
+    description: If true, total number of items will not be calculated, which speeds
+      up execution time.
+    default: null
+  expirationMode:
+    type: string
+    description: 'The expiration mode. Example: "Permanent".'
+    enum:
+    - Permanent
+    - Temporary
+  severity:
+    type: array
+    items:
+      type: string
+      enum:
+      - Info
+      - Low
+      - Medium
+      - High
+      - Critical
+    description: 'To filter by severity, enter one or more severities, separated by
+      commas. Example: "Info".'
+  skip:
+    type: integer
+    description: 'Skip first number of items (0-1000). To iterate over more than 1000
+      items,  use "cursor". Example: "150".'
+    default: null
+  name__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by rule name. You can enter multiple values, separated
+      by commas. Example: "Service Pack 1".'
+  groupIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Group IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  updater__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by last modifier. You can enter multiple values,
+      separated by commas. Example: "john@example.com".'

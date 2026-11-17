@@ -1,0 +1,35 @@
+uuid: 1211ec29-0b8c-502d-ab0a-3842a674002c
+slug: '_web_api_users_sso-saml2_re-auth_get'
+name: Get Users SSO SAML2 Re Auth
+pipeline:
+- name: http
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/users/sso-saml2/re-auth'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+    asserts:
+      error_500:
+        predicate: '{{response.status_code != 500}}'
+        fail: Error in SAML handler initialization.
+      error_403:
+        predicate: '{{response.status_code != 403}}'
+        fail: User is not allowed to re-authenticate with their IDP
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{(response.status_code >= 200 and response.status_code <= 299)}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+description: Initiates re-authentication with user's identity provider.
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  hostname:
+    type: string
+    description: Base URL for the API

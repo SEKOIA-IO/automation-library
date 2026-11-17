@@ -1,0 +1,78 @@
+uuid: b283fbc4-cc9b-5609-8ff4-e848dee0617c
+slug: '_web_api_agents_applications_get'
+name: Get Agents Applications
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/agents/applications'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        ids: '{{inputs.ids}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get the installed applications for a specific Agent. <BR>To get the Agent
+  ID, run "agents".
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  ids:
+    type: array
+    items:
+      type: string
+    description: 'Agent ID list. Example: "225494730938493804,225494730938493915".'
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Name
+            size:
+              type: integer
+              description: Size
+            version:
+              type: string
+              description: Version
+            publisher:
+              type: string
+              description: Publisher
+            installedDate:
+              type: string
+              description: Installed date
+        description: Response data
+    description: Success

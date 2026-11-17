@@ -1,0 +1,273 @@
+uuid: 79ac1955-95d4-5172-a049-80033adb454e
+slug: '_web_api_agents_tags_get'
+name: Get Agents Tags
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/agents/tags'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        skip: '{{inputs.skip}}'
+        limit: '{{inputs.limit}}'
+        cursor: '{{inputs.cursor}}'
+        countOnly: '{{inputs.countOnly}}'
+        skipCount: '{{inputs.skipCount}}'
+        sortBy: '{{inputs.sortBy}}'
+        sortOrder: '{{inputs.sortOrder}}'
+        siteIds: '{{inputs.siteIds}}'
+        accountIds: '{{inputs.accountIds}}'
+        groupIds: '{{inputs.groupIds}}'
+        includeParents: '{{inputs.includeParents}}'
+        includeChildren: '{{inputs.includeChildren}}'
+        ids: '{{inputs.ids}}'
+        key__contains: '{{inputs.key__contains}}'
+        query: '{{inputs.query}}'
+        key: '{{inputs.key}}'
+        value: '{{inputs.value}}'
+        description: '{{inputs.description}}'
+        scopePath: '{{inputs.scopePath}}'
+        createdBy: '{{inputs.createdBy}}'
+        updatedBy: '{{inputs.updatedBy}}'
+        value__contains: '{{inputs.value__contains}}'
+        includeEndpointCounters: '{{inputs.includeEndpointCounters}}'
+        includeExclusionCounters: '{{inputs.includeExclusionCounters}}'
+        isDecommissioned: '{{inputs.isDecommissioned}}'
+        isUninstalled: '{{inputs.isUninstalled}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get endpoint Tags.
+inputs:
+  description:
+    type: string
+    description: Tag description
+  cursor:
+    type: string
+    description: 'Cursor position returned by the last request. Use to iterate over
+      more than 1000 items. Example: "YWdlbnRfaWQ6NTgwMjkzODE=".'
+    default: null
+  sortOrder:
+    type: string
+    description: 'Sort direction. Example: "asc".'
+    enum:
+    - asc
+    - desc
+    default: null
+  ids:
+    type: array
+    items:
+      type: string
+    description: 'List of tag IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  includeEndpointCounters:
+    type: boolean
+    description: Include endpoint counters
+  accountIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Account IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  isUninstalled:
+    type: array
+    items:
+      type: boolean
+    description: 'Filter endpoint counts by uninstalled status: [False] for installed
+      only, [True] for uninstalled only, [True, False] for both. Example: "True,False".'
+  query:
+    type: string
+    description: Free text search on fields key, value, description
+  includeParents:
+    type: boolean
+    description: Return tags from parent scope levels
+    default: false
+  scopePath:
+    type: string
+    description: Scope path
+  hostname:
+    type: string
+    description: Base URL for the API
+  countOnly:
+    type: boolean
+    description: If true, only total number of items will be returned, without any
+      of the actual objects.
+    default: false
+  siteIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Site IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  value:
+    type: string
+    description: Tag value
+  includeChildren:
+    type: boolean
+    description: Return tags from children scope levels
+    default: false
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  limit:
+    type: integer
+    description: 'Limit number of returned items (1-1000). Example: "10".'
+    default: 10
+  includeExclusionCounters:
+    type: boolean
+    description: Include exclusion counters
+  sortBy:
+    type: string
+    description: 'The column to sort the results by. Example: "id".'
+    enum:
+    - key
+    - value
+    - description
+    - updatedAt
+    - createdBy
+    - updatedBy
+    - scopePath
+    default: null
+  key:
+    type: string
+    description: Tag key
+  value__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by tag value. Example: "server".'
+  skipCount:
+    type: boolean
+    description: If true, total number of items will not be calculated, which speeds
+      up execution time.
+    default: null
+  updatedBy:
+    type: string
+    description: Updated by
+  isDecommissioned:
+    type: array
+    items:
+      type: boolean
+    description: 'Filter endpoint counts by decommissioned status: [False] for active
+      only, [True] for decommissioned only, [True, False] for both. Example: "True,False".'
+  skip:
+    type: integer
+    description: 'Skip first number of items (0-1000). To iterate over more than 1000
+      items,  use "cursor". Example: "150".'
+    default: null
+  groupIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Group IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  key__contains:
+    type: array
+    items:
+      type: string
+    description: 'Free-text filter by tag key. Example: "server".'
+  createdBy:
+    type: string
+    description: Created by
+outputs:
+  result:
+    type: object
+    properties:
+      pagination:
+        type: object
+        properties:
+          nextCursor:
+            type: string
+            description: Pass this value as "cursor" on your next request, to get
+              the next page of results (Will be "null" when last page reached)
+            default: null
+          totalItems:
+            type: integer
+            description: Total number of items found matching your query
+        required:
+        - totalItems
+        description: Pagination information
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Tag ID
+            key:
+              type: string
+              description: Tag key
+            value:
+              type: string
+              description: tag value
+            description:
+              type: string
+              description: Tag description
+            type:
+              type: string
+              description: Tag type
+            allowEdit:
+              type: boolean
+              description: indicate if user can/cant edit the tag
+            scopePath:
+              type: string
+              description: tag scope path
+            scopeLevel:
+              type: string
+              description: Scope level
+              enum:
+              - site
+              - group
+              - global
+              - account
+            scopeId:
+              type: string
+              description: Scope id
+            createdAt:
+              type: string
+              description: Timestamp of creation
+            updatedAt:
+              type: string
+              description: Timestamp of last update
+            createdBy:
+              type: string
+              description: Tag creator name
+            updatedBy:
+              type: string
+              description: Tag updater name
+            totalEndpoints:
+              type: integer
+              description: The total number of endpoints that have this tag     (not
+                present if includeEndpointCounters=false)
+            endpointsInCurrentScope:
+              type: integer
+              description: The number of endpoints in this scope that have this tag     (not
+                present if includeEndpointCounters=false)
+            totalExclusions:
+              type: integer
+              description: Number of exclusions with this tag.
+        description: Response data
+    required:
+    - pagination
+    description: Success
