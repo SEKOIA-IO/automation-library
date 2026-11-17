@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import orjson
 import pytest
 import requests
+from prometheus_client import REGISTRY
 from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
 
 from flareio_modules import FlareIOModule
@@ -372,6 +373,37 @@ def test_next_batch_cuts_fields_only_when_needed(mock_sleep, data_storage, data,
     serialized = _push_one(data_storage, data, event_type="ransomleak")
 
     assert json.loads(serialized)["data"] == expected
+
+
+def _counter(name):
+    return REGISTRY.get_sample_value(f"symphony_module_flare_{name}_total", {"intake_key": "intake_key"}) or 0
+
+
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_reports_cut_and_discarded_events(mock_sleep, data_storage):
+    trigger = _build_trigger(data_storage)
+    small = _event("evt-small")
+    cut = _event("evt-cut", "paste")
+    cut["activity"]["data"] = {"content": "x" * 300_000}
+    # `main` is not cut: the event stays above the limit
+    still_oversized = _event("evt-big", "ransomleak")
+    still_oversized["activity"]["data"] = {"main": "y" * 300_000}
+    truncated_before, discarded_before = _counter("truncated_events"), _counter("discarded_events")
+
+    _run_next_batch(trigger, _fake_client([([small, cut, still_oversized], "cursor-1")]))
+
+    assert _counter("truncated_events") - truncated_before == 1
+    assert _counter("discarded_events") - discarded_before == 1
+    trigger.log.assert_any_call(
+        "Cut the fields content of the paste event evt-cut to fit the intake size limit", level="info"
+    )
+    pushed = trigger.push_events_to_intakes.call_args.kwargs["events"]
+    assert len(pushed) == 3
+    size = len(pushed[2].encode("utf-8"))
+    trigger.log.assert_any_call(
+        f"The ransomleak event evt-big is still above the intake size limit ({size} bytes) and will be discarded",
+        level="warning",
+    )
 
 
 @patch("flareio_modules.trigger_flare_events.time.sleep")

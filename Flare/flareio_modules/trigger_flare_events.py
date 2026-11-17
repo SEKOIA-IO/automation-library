@@ -4,7 +4,7 @@ from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from typing import Any
+from typing import Any, NamedTuple
 
 import orjson
 import requests
@@ -17,12 +17,25 @@ from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
 from urllib3.util import Retry
 
 from flareio_modules import FlareIOModule
-from flareio_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from flareio_modules.metrics import (
+    DISCARDED_EVENTS,
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    OUTCOMING_EVENTS,
+    TRUNCATED_EVENTS,
+)
 
 # Added to `data`: the fields that were cut to fit the intake size limit, e.g. ["extracted_content", "files"]
 TRUNCATED_FIELDS = "truncated_fields"
 # `features` lists the parser reads in full; of the other lists, it only reads the first item
 FULLY_PARSED_FEATURES = frozenset({"emails", "usernames"})
+
+
+class SerializedEvent(NamedTuple):
+    text: str
+    # In UTF-8 bytes, as the intake measures it
+    size: int
+    truncated_fields: list[str]
 
 
 class FlareEventsConnectorConfiguration(DefaultConnectorConfiguration):
@@ -147,7 +160,7 @@ class FlareEventsConnector(Connector):
             details_executor.shutdown(wait=False, cancel_futures=True)
 
     @staticmethod
-    def _serialize(event: dict[str, Any]) -> str:
+    def _serialize(event: dict[str, Any]) -> SerializedEvent:
         activity = event.get("activity", event)
         data = activity.get("data")
         if isinstance(data, dict):
@@ -157,9 +170,11 @@ class FlareEventsConnector(Connector):
             data.pop("newers", None)
         serialized = orjson.dumps(activity)
         # Measured in UTF-8 bytes: at least the number of characters the SDK counts, and what the intake receives
+        truncated_fields: list[str] = []
         if len(serialized) > EVENT_BYTES_MAX_SIZE and isinstance(data, dict):
             serialized = FlareEventsConnector._cut_oversized_fields(activity, data, serialized)
-        return serialized.decode("utf-8")
+            truncated_fields = data.get(TRUNCATED_FIELDS, [])
+        return SerializedEvent(serialized.decode("utf-8"), len(serialized), truncated_fields)
 
     @staticmethod
     def _oversized_fields(data: dict[str, Any]) -> Iterator[tuple[str, dict[str, Any], str, int]]:
@@ -167,7 +182,7 @@ class FlareEventsConnector(Connector):
         Yield `(name, parent, key, items_to_keep)` for the fields that may be cut, least useful first:
         - `extracted_content`, the text of an attachment, which the parser does not read;
         - the lists of `features` the parser only reads the first item of (IP addresses, domains, URLs…);
-        - `content`, kept as raw text;
+        - `content`, copied as-is into `flare.events.<type>.content`: analysts see its beginning;
         - `files`, the file list of stealer logs and ransomware leaks;
         - `credentials` of stealer logs (`header.credential_count` keeps their number);
         - the `features` lists the parser reads in full (emails, usernames), e.g. leaks of thousands of emails.
@@ -237,6 +252,25 @@ class FlareEventsConnector(Connector):
             self.cursor.offset = cursor
         return len(events)
 
+    def _report_oversized(self, event: dict[str, Any], serialized: SerializedEvent) -> None:
+        if not serialized.truncated_fields and serialized.size <= EVENT_BYTES_MAX_SIZE:
+            return
+
+        header = event.get("activity", event).get("header") or {}
+        description = f"{header.get('type')} event {header.get('uid')}"
+        intake_key = self.configuration.intake_key
+        if serialized.truncated_fields:
+            TRUNCATED_EVENTS.labels(intake_key=intake_key).inc()
+            fields = ", ".join(serialized.truncated_fields)
+            self.log(f"Cut the fields {fields} of the {description} to fit the intake size limit", level="info")
+        if serialized.size > EVENT_BYTES_MAX_SIZE:
+            DISCARDED_EVENTS.labels(intake_key=intake_key).inc()
+            self.log(
+                f"The {description} is still above the intake size limit ({serialized.size} bytes) "
+                "and will be discarded",
+                level="warning",
+            )
+
     def next_batch(self) -> None:
         batch_start_time = time.time()
 
@@ -264,7 +298,9 @@ class FlareEventsConnector(Connector):
                     # Details no longer available on Flare's side: skip the event.
                     not_found += 1
                 elif isinstance(event, dict):
-                    batch.append(self._serialize(event))
+                    serialized = self._serialize(event)
+                    self._report_oversized(event, serialized)
+                    batch.append(serialized.text)
         except Exception:
             # Keep the progress made on fully read pages before failing (e.g. rate limited).
             if complete:
