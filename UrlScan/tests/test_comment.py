@@ -59,6 +59,12 @@ def test_comment_escapes_page_values():
     assert "| Page title | a\\|b \\`c\\` \\[x\\](http://evil) \\<img\\> next |" in comment.splitlines()
 
 
+def test_comment_escapes_emphasis_in_page_title():
+    comment = build_comment(summary_with(page={"title": "**TRUSTED** _verified_ ~~warning~~"}))
+
+    assert "| Page title | \\*\\*TRUSTED\\*\\* \\_verified\\_ \\~\\~warning\\~\\~ |" in comment.splitlines()
+
+
 def test_comment_keeps_urls_inert():
     evil = "https://evil.example/`](https://x) |\nb"
     inert = "https://evil.example/%60](https://x) %7Cb"
