@@ -14,9 +14,10 @@ from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
 from flareio_modules import FlareIOModule
 from flareio_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
-# Added to `data` when the end of `data.content` was cut to fit the intake size limit
-TRUNCATED_FLAG = "content_truncated"
-TRUNCATED_FLAG_JSON = f',"{TRUNCATED_FLAG}":true'
+# Added to `data`: the fields that were cut to fit the intake size limit, e.g. ["extracted_content", "files"]
+TRUNCATED_FIELDS = "truncated_fields"
+# `features` lists the parser reads in full; of the other lists, it only reads the first item
+FULLY_PARSED_FEATURES = frozenset({"emails", "usernames"})
 
 
 class FlareEventsConnectorConfiguration(DefaultConnectorConfiguration):
@@ -94,17 +95,71 @@ class FlareEventsConnector(Connector):
             data.pop("olders", None)
             data.pop("newers", None)
         serialized = orjson.dumps(activity).decode("utf-8")
+        if len(serialized) > EVENT_BYTES_MAX_SIZE and isinstance(data, dict):
+            serialized = FlareEventsConnector._cut_oversized_fields(activity, data)
+        return serialized
 
-        # The intake discards events above its size limit. Blog posts, source code or GitHub results can carry
-        # a raw `content` of several hundred kB: cut its end instead of losing the whole event.
-        excess = len(serialized) - EVENT_BYTES_MAX_SIZE
-        if excess > 0 and isinstance(data, dict) and isinstance(data.get("content"), str):
-            data[TRUNCATED_FLAG] = True
-            # Each character removed from `content` removes at least one character once serialized (more when
-            # escaped), so removing the excess plus the flag's own length is enough.
-            data["content"] = data["content"][: max(0, len(data["content"]) - excess - len(TRUNCATED_FLAG_JSON))]
+    @staticmethod
+    def _oversized_fields(data: dict[str, Any]) -> Iterator[tuple[str, dict[str, Any], str, int]]:
+        """
+        Yield `(name, parent, key, items_to_keep)` for the fields that may be cut, least useful first:
+        - `extracted_content`, the text of an attachment, which the parser does not read;
+        - the lists of `features` the parser only reads the first item of (IP addresses, domains, URLs…);
+        - `content`, kept as raw text;
+        - `files`, the file list of stealer logs and ransomware leaks;
+        - `credentials` of stealer logs (`header.credential_count` keeps their number);
+        - the `features` lists the parser reads in full (emails, usernames), e.g. leaks of thousands of emails.
+        """
+        yield "extracted_content", data, "extracted_content", 0
+        features = data.get("features")
+        lists: list[str] = []
+        if isinstance(features, dict):
+            lists = sorted(
+                (key for key, value in features.items() if isinstance(value, list)),
+                key=lambda key: len(orjson.dumps(features[key])),
+                reverse=True,
+            )
+            for key in lists:
+                if key not in FULLY_PARSED_FEATURES:
+                    yield f"features.{key}", features, key, 1
+        yield "content", data, "content", 0
+        yield "files", data, "files", 0
+        yield "credentials", data, "credentials", 0
+        for key in lists:
+            if key in FULLY_PARSED_FEATURES and isinstance(features, dict):
+                yield f"features.{key}", features, key, 0
+
+    @staticmethod
+    def _cut_oversized_fields(activity: dict[str, Any], data: dict[str, Any]) -> str:
+        """
+        Cut the end of the event's biggest fields until it fits the intake size limit, which otherwise discards
+        the whole event: attachments, blog posts, source code or stealer logs can carry several hundred kB.
+        The names of the cut fields are listed in `data.truncated_fields`.
+        """
+        truncated: list[str] = []
+        serialized = orjson.dumps(activity).decode("utf-8")
+        for name, parent, key, keep in FlareEventsConnector._oversized_fields(data):
+            if len(serialized) <= EVENT_BYTES_MAX_SIZE:
+                break
+            value = parent.get(key)
+            if not (isinstance(value, str) and value) and not (isinstance(value, list) and len(value) > keep):
+                continue
+
+            truncated.append(name)
+            data[TRUNCATED_FIELDS] = truncated
+            # Measured with the field's name listed, so that the list itself fits too
+            excess = len(orjson.dumps(activity).decode("utf-8")) - EVENT_BYTES_MAX_SIZE
+            if isinstance(value, str):
+                # Each character removed removes at least one character once serialized (more when escaped)
+                parent[key] = value[: max(0, len(value) - excess)]
+            else:
+                end, removed = len(value), 0
+                while end > keep and removed < excess:
+                    end -= 1
+                    # The item, and the comma before it unless it is the first one
+                    removed += len(orjson.dumps(value[end]).decode("utf-8")) + (end > 0)
+                parent[key] = value[:end]
             serialized = orjson.dumps(activity).decode("utf-8")
-
         return serialized
 
     def _push(self, events: list[str], cursor: str | None) -> int:
