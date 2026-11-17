@@ -1,6 +1,7 @@
 import json
 from unittest.mock import MagicMock, PropertyMock, patch
 
+import orjson
 import pytest
 import requests
 from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
@@ -246,12 +247,15 @@ def _push_one(data_storage, data: dict, event_type: str = "blog_post") -> str:
 def test_next_batch_cuts_oversized_content(mock_sleep, data_storage, content):
     serialized = _push_one(data_storage, {"title": "post", "content": content})
 
-    assert len(serialized) <= EVENT_BYTES_MAX_SIZE
-    pushed_data = json.loads(serialized)["data"]
-    assert pushed_data["title"] == "post"
-    assert pushed_data["truncated_fields"] == ["content"]
-    assert pushed_data["content"]
-    assert content.startswith(pushed_data["content"])
+    assert len(serialized.encode("utf-8")) <= EVENT_BYTES_MAX_SIZE
+    pushed = json.loads(serialized)
+    assert pushed["data"]["title"] == "post"
+    assert pushed["data"]["truncated_fields"] == ["content"]
+    kept = pushed["data"]["content"]
+    assert content.startswith(kept)
+    # As much content as fits: one more character would not
+    pushed["data"]["content"] = content[: len(kept) + 1]
+    assert len(orjson.dumps(pushed)) > EVENT_BYTES_MAX_SIZE
 
 
 @patch("flareio_modules.trigger_flare_events.time.sleep")
@@ -266,7 +270,7 @@ def test_next_batch_cuts_least_useful_fields_first(mock_sleep, data_storage):
 
     serialized = _push_one(data_storage, data, event_type="attachment")
 
-    assert len(serialized) <= EVENT_BYTES_MAX_SIZE
+    assert len(serialized.encode("utf-8")) <= EVENT_BYTES_MAX_SIZE
     pushed_data = json.loads(serialized)["data"]
     assert pushed_data["truncated_fields"] == [
         "extracted_content",
@@ -292,12 +296,14 @@ def test_next_batch_cuts_oversized_file_list(mock_sleep, data_storage, count):
 
     serialized = _push_one(data_storage, {"files": files, "credentials": credentials}, event_type="stealer_log")
 
-    assert len(serialized) <= EVENT_BYTES_MAX_SIZE
+    assert len(serialized.encode("utf-8")) <= EVENT_BYTES_MAX_SIZE
     pushed_data = json.loads(serialized)["data"]
     assert pushed_data["truncated_fields"] == ["files"]
     assert files[: len(pushed_data["files"])] == pushed_data["files"]
     # As close to the limit as whole items allow
-    assert len(serialized) + len(json.dumps(files[len(pushed_data["files"])])) + 1 > EVENT_BYTES_MAX_SIZE
+    assert (
+        len(serialized.encode("utf-8")) + len(json.dumps(files[len(pushed_data["files"])])) + 1 > EVENT_BYTES_MAX_SIZE
+    )
     assert pushed_data["credentials"] == credentials
 
 
@@ -310,7 +316,7 @@ def test_next_batch_cuts_parsed_lists_last(mock_sleep, data_storage):
 
     serialized = _push_one(data_storage, data, event_type="stealer_log")
 
-    assert len(serialized) <= EVENT_BYTES_MAX_SIZE
+    assert len(serialized.encode("utf-8")) <= EVENT_BYTES_MAX_SIZE
     pushed_data = json.loads(serialized)["data"]
     assert pushed_data["truncated_fields"] == ["files", "credentials", "features.emails"]
     assert pushed_data["files"] == []

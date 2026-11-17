@@ -94,10 +94,11 @@ class FlareEventsConnector(Connector):
             # context, which pushes them above the intake's 250kB limit. They are not parsed.
             data.pop("olders", None)
             data.pop("newers", None)
-        serialized = orjson.dumps(activity).decode("utf-8")
+        serialized = orjson.dumps(activity)
+        # Measured in UTF-8 bytes: at least the number of characters the SDK counts, and what the intake receives
         if len(serialized) > EVENT_BYTES_MAX_SIZE and isinstance(data, dict):
             serialized = FlareEventsConnector._cut_oversized_fields(activity, data)
-        return serialized
+        return serialized.decode("utf-8")
 
     @staticmethod
     def _oversized_fields(data: dict[str, Any]) -> Iterator[tuple[str, dict[str, Any], str, int]]:
@@ -130,14 +131,14 @@ class FlareEventsConnector(Connector):
                 yield f"features.{key}", features, key, 0
 
     @staticmethod
-    def _cut_oversized_fields(activity: dict[str, Any], data: dict[str, Any]) -> str:
+    def _cut_oversized_fields(activity: dict[str, Any], data: dict[str, Any]) -> bytes:
         """
         Cut the end of the event's biggest fields until it fits the intake size limit, which otherwise discards
         the whole event: attachments, blog posts, source code or stealer logs can carry several hundred kB.
         The names of the cut fields are listed in `data.truncated_fields`.
         """
         truncated: list[str] = []
-        serialized = orjson.dumps(activity).decode("utf-8")
+        serialized = orjson.dumps(activity)
         for name, parent, key, keep in FlareEventsConnector._oversized_fields(data):
             if len(serialized) <= EVENT_BYTES_MAX_SIZE:
                 break
@@ -148,19 +149,30 @@ class FlareEventsConnector(Connector):
             truncated.append(name)
             data[TRUNCATED_FIELDS] = truncated
             # Measured with the field's name listed, so that the list itself fits too
-            excess = len(orjson.dumps(activity).decode("utf-8")) - EVENT_BYTES_MAX_SIZE
+            excess = len(orjson.dumps(activity)) - EVENT_BYTES_MAX_SIZE
             if isinstance(value, str):
-                # Each character removed removes at least one character once serialized (more when escaped)
-                parent[key] = value[: max(0, len(value) - excess)]
+                parent[key] = value[: FlareEventsConnector._longest_prefix(value, len(orjson.dumps(value)) - excess)]
             else:
                 end, removed = len(value), 0
                 while end > keep and removed < excess:
                     end -= 1
                     # The item, and the comma before it unless it is the first one
-                    removed += len(orjson.dumps(value[end]).decode("utf-8")) + (end > 0)
+                    removed += len(orjson.dumps(value[end])) + (end > 0)
                 parent[key] = value[:end]
-            serialized = orjson.dumps(activity).decode("utf-8")
+            serialized = orjson.dumps(activity)
         return serialized
+
+    @staticmethod
+    def _longest_prefix(value: str, max_size: int) -> int:
+        """Length of the longest prefix of `value` whose serialized form (quotes, escapes) fits `max_size`."""
+        low, high = 0, len(value)
+        while low < high:
+            middle = (low + high + 1) // 2
+            if len(orjson.dumps(value[:middle])) <= max_size:
+                low = middle
+            else:
+                high = middle - 1
+        return low
 
     def _push(self, events: list[str], cursor: str | None) -> int:
         self.push_events_to_intakes(events=events)
