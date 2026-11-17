@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-17 - 0.6.5
+
+### Added
+
+- Add the date Flare matched the item to the tenant to the events, as `metadata.matched_at`: the item itself can be years old
+
 ## 2026-11-17 - 0.6.4
 
 ### Changed
