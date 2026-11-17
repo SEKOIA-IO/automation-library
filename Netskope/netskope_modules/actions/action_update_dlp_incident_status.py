@@ -24,7 +24,4 @@ class UpdateDlpIncidentStatusAction(NetskopeAction):
 
         self.execute_request("PATCH", f"api/v2/dlp/incident/{args.incident_id}", json=payload)
 
-        self.log(
-            level="info",
-            message=f'Successfully updated DLP incident "{args.incident_id}" to "{args.status}"',
-        )
+        self.log(level="info", message=f'Successfully updated DLP incident "{args.incident_id}" to "{args.status}"')

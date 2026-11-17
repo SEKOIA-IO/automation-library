@@ -3,22 +3,12 @@ from netskope_modules.actions.action_append_to_blocklist import AppendToBlocklis
 from netskope_modules.actions.action_deploy_url_policy import DeployUrlPolicyAction
 from netskope_modules.actions.action_get_blocklist import GetBlocklistAction
 from netskope_modules.actions.action_quarantine_file import QuarantineFileAction
-from netskope_modules.actions.action_remove_from_blocklist import (
-    RemoveFromBlocklistAction,
-)
-from netskope_modules.actions.action_restrict_file_shares import (
-    RestrictFileSharesAction,
-)
-from netskope_modules.actions.action_restrict_user_to_group import (
-    RestrictUserToGroupAction,
-)
-from netskope_modules.actions.action_revoke_user_sessions import (
-    RevokeUserSessionsAction,
-)
+from netskope_modules.actions.action_remove_from_blocklist import RemoveFromBlocklistAction
 from netskope_modules.actions.action_replace_blocklist import ReplaceBlocklistAction
-from netskope_modules.actions.action_update_dlp_incident_status import (
-    UpdateDlpIncidentStatusAction,
-)
+from netskope_modules.actions.action_restrict_file_shares import RestrictFileSharesAction
+from netskope_modules.actions.action_restrict_user_to_group import RestrictUserToGroupAction
+from netskope_modules.actions.action_revoke_user_sessions import RevokeUserSessionsAction
+from netskope_modules.actions.action_update_dlp_incident_status import UpdateDlpIncidentStatusAction
 from netskope_modules.connectors.connector_pubsub_lite import PubSubLite
 from netskope_modules.connectors.connector_pull_events_v2 import NetskopeEventConnector
 

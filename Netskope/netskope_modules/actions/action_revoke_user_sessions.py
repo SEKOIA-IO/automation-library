@@ -18,7 +18,4 @@ class RevokeUserSessionsAction(NetskopeAction):
 
         self.execute_request("POST", "api/v2/events/token/revoke", json={"userName": args.user_name})
 
-        self.log(
-            level="info",
-            message=f'Successfully revoked active Netskope sessions for "{args.user_name}"',
-        )
+        self.log(level="info", message=f'Successfully revoked active Netskope sessions for "{args.user_name}"')

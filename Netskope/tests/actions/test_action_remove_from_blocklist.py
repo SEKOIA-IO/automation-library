@@ -3,9 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 import requests_mock
 
-from netskope_modules.actions.action_remove_from_blocklist import (
-    RemoveFromBlocklistAction,
-)
+from netskope_modules.actions.action_remove_from_blocklist import RemoveFromBlocklistAction
 
 
 @pytest.fixture

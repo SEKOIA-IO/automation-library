@@ -59,10 +59,7 @@ class NetskopeAction(Action):
         """
         Retrieve the current blocklist payload from Netskope.
         """
-        return cast(
-            dict[str, Any],
-            self.execute_request("GET", f"api/v2/policy/urllist/{blocklist_id}"),
-        )
+        return cast(dict[str, Any], self.execute_request("GET", f"api/v2/policy/urllist/{blocklist_id}"))
 
     @cached_property
     def base_url(self) -> str:

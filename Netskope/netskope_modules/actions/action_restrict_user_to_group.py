@@ -18,9 +18,7 @@ class RestrictUserToGroupAction(NetskopeAction):
         self.initialize_action_arguments(args)
 
         search_result = self.execute_request(
-            "GET",
-            "api/v2/scim/Users",
-            params={"filter": f'userName eq "{args.user_name}"'},
+            "GET", "api/v2/scim/Users", params={"filter": f'userName eq "{args.user_name}"'}
         )
         users = search_result.get("Resources", []) or search_result.get("resources", [])
         if not users:
