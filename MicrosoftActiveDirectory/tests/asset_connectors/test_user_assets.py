@@ -21,6 +21,7 @@ def connector(tmp_path, mock_module):
     connector = object.__new__(MicrosoftADUserAssetConnector)
     connector.module = mock_module
     connector._configuration = mock_module.configuration
+    connector._configuration.basedn = "DC=example,DC=com"
     connector._data_path = tmp_path
     connector.log = Mock()
     connector.error = Mock()
@@ -306,6 +307,23 @@ def test_get_users_generator(connector):
     assert connector._latest_time == "20240101120000.0Z"
 
 
+def test_get_users_generator_skips_search_references(connector):
+    user = {
+        "type": "searchResEntry",
+        "dn": "CN=Test User,DC=example,DC=com",
+        "attributes": {"userPrincipalName": "test@example.com", "whenCreated": datetime(2024, 1, 1, 12, 0, 0)},
+    }
+    references = [
+        {"type": "searchResRef", "uri": [f"ldap://{partition}.example.com/DC={partition},DC=example,DC=com"]}
+        for partition in ("DomainDnsZones", "ForestDnsZones")
+    ]
+    connector.ldap_client.extend.standard.paged_search.return_value = iter([references[0], user, references[1]])
+
+    users = list(connector.get_users_generator())
+
+    assert [entry["dn"] for entry in users] == ["CN=Test User,DC=example,DC=com"]
+
+
 def test_get_assets(connector):
     mock_user = {
         "dn": "CN=Asset User,DC=example,DC=com",
@@ -325,6 +343,20 @@ def test_get_assets(connector):
 
     assert len(assets) == 1
     assert isinstance(assets[0], UserOCSFModel)
+
+
+def test_get_assets_refuses_an_invalid_base_dn(connector):
+    connector._configuration.basedn = "EXAMPLE.CORP"
+    connector.get_users_generator = Mock()
+
+    assert list(connector.get_assets()) == []
+
+    connector.get_users_generator.assert_not_called()
+    connector.log.assert_called_once_with(
+        "The base DN 'EXAMPLE.CORP' is not a valid distinguished name: "
+        "use 'DC=EXAMPLE,DC=CORP' for the domain EXAMPLE.CORP",
+        level="critical",
+    )
 
 
 def test_get_assets_handles_exception(connector):
