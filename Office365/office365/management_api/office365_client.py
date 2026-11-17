@@ -8,6 +8,7 @@ from urllib.parse import urlencode, urlparse, urlunsplit
 
 import msal
 from aiohttp.client import ClientSession
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from .constants import OFFICE365_ACTIVE_SUBSCRIPTION_STATUS, OFFICE365_AUTHORITY_DEFAULT, OFFICE365_URL_BASE
 from .errors import (
@@ -18,6 +19,7 @@ from .errors import (
     FailedToListO365Subscriptions,
     SessionClosedError,
 )
+from .helpers import is_transient_content_error, log_content_retry
 from .logging import get_logger
 
 logger = get_logger()
@@ -246,9 +248,18 @@ class Office365API:
 
             yield contents
 
+    @retry(
+        retry=retry_if_exception(is_transient_content_error),
+        wait=wait_exponential(multiplier=2, max=60),
+        stop=stop_after_attempt(5),
+        before_sleep=log_content_retry,
+        reraise=True,
+    )
     async def get_content(self, content_uri: str) -> list[dict[str, Any]]:
         """
         Return a content
+
+        Transient HTTP errors (429, 502, 503, 504) are retried with an exponential backoff
 
         :param str content_uri: The uri of the content to pull
         :return: The list of events from the content

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-17 - 2.20.8
+
+### Fixed
+
+- Retry the download of an audit content on transient HTTP errors (429, 502, 503, 504) instead of replaying the whole time range
+
 ## 2026-07-02 - 2.20.7
 
 ### Fixed
