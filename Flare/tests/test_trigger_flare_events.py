@@ -4,8 +4,11 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import MagicMock, PropertyMock, patch
 
+import orjson
 import pytest
 import requests
+from prometheus_client import REGISTRY
+from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
 
 from flareio_modules import FlareIOModule
 from flareio_modules.trigger_flare_events import FlareEventsConnector, ThreadSafeLimiter
@@ -255,6 +258,152 @@ def test_next_batch_drops_chat_message_context(mock_sleep, data_storage):
 
     pushed_event = json.loads(trigger.push_events_to_intakes.call_args.kwargs["events"][0])
     assert pushed_event["data"] == {"message": "hello"}
+
+
+def _push_one(data_storage, data: dict, event_type: str = "blog_post") -> str:
+    trigger = _build_trigger(data_storage)
+    event = _event("evt-1", event_type=event_type)
+    event["activity"]["data"] = data
+    _run_next_batch(trigger, _fake_client([([event], "cursor-1")]))
+    return trigger.push_events_to_intakes.call_args.kwargs["events"][0]
+
+
+@pytest.mark.parametrize("content", ["x" * 300_000, "\n" * 200_000, "é" * 300_000])
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_cuts_oversized_content(mock_sleep, data_storage, content):
+    serialized = _push_one(data_storage, {"title": "post", "content": content})
+
+    assert len(serialized.encode("utf-8")) <= EVENT_BYTES_MAX_SIZE
+    pushed = json.loads(serialized)
+    assert pushed["data"]["title"] == "post"
+    assert pushed["data"]["truncated_fields"] == ["content"]
+    kept = pushed["data"]["content"]
+    assert content.startswith(kept)
+    # As much content as fits: one more character would not
+    pushed["data"]["content"] = content[: len(kept) + 1]
+    assert len(orjson.dumps(pushed)) > EVENT_BYTES_MAX_SIZE
+
+
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_cuts_least_useful_fields_first(mock_sleep, data_storage):
+    # Like a Telegram attachment: a big extracted text, and the same long IP list twice
+    ips = [f"10.0.{i // 256}.{i % 256}" for i in range(20_000)]
+    data = {
+        "extracted_content": "x" * 200_000,
+        "features": {"ip_addresses": ips, "ip_addresses_cidr": list(ips), "emails": ["a@b.c"], "domains": ["d.e"]},
+        "content": "kept",
+    }
+
+    serialized = _push_one(data_storage, data, event_type="attachment")
+
+    assert len(serialized.encode("utf-8")) <= EVENT_BYTES_MAX_SIZE
+    pushed_data = json.loads(serialized)["data"]
+    assert pushed_data["truncated_fields"] == [
+        "extracted_content",
+        "features.ip_addresses",
+        "features.ip_addresses_cidr",
+    ]
+    assert pushed_data["extracted_content"] == ""
+    # Lists keep their first item, which is the one the parser reads
+    assert pushed_data["features"]["ip_addresses"] == ips[:1]
+    kept_cidrs = pushed_data["features"]["ip_addresses_cidr"]
+    assert kept_cidrs == ips[: len(kept_cidrs)]
+    assert len(kept_cidrs) > 1
+    assert pushed_data["features"]["emails"] == ["a@b.c"]
+    assert pushed_data["features"]["domains"] == ["d.e"]
+    assert pushed_data["content"] == "kept"
+
+
+@pytest.mark.parametrize("count", [3, 20_000])
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_cuts_oversized_file_list(mock_sleep, data_storage, count):
+    files = [f"Browsers/Edge/{i:06d}/" + "f" * (300_000 // count) for i in range(count)]
+    credentials = [{"url": "https://example.com", "username": "user"}]
+
+    serialized = _push_one(data_storage, {"files": files, "credentials": credentials}, event_type="stealer_log")
+
+    assert len(serialized.encode("utf-8")) <= EVENT_BYTES_MAX_SIZE
+    pushed_data = json.loads(serialized)["data"]
+    assert pushed_data["truncated_fields"] == ["files"]
+    kept = len(pushed_data["files"])
+    assert files[:kept] == pushed_data["files"]
+    # As close to the limit as whole items allow
+    assert len(serialized.encode("utf-8")) + len(orjson.dumps(files[kept])) + 1 > EVENT_BYTES_MAX_SIZE
+    assert pushed_data["credentials"] == credentials
+
+
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_cuts_parsed_lists_last(mock_sleep, data_storage):
+    # Like a stealer log with thousands of credentials, or a leak listing thousands of emails
+    credentials = [{"url": f"https://site-{i}.example", "username": "user", "password": "p****"} for i in range(2_000)]
+    emails = [f"user{i}@example.com" for i in range(15_000)]
+    data = {"files": ["a.txt"], "credentials": credentials, "features": {"emails": emails, "usernames": ["u"]}}
+
+    serialized = _push_one(data_storage, data, event_type="stealer_log")
+
+    assert len(serialized.encode("utf-8")) <= EVENT_BYTES_MAX_SIZE
+    pushed_data = json.loads(serialized)["data"]
+    assert pushed_data["truncated_fields"] == ["files", "credentials", "features.emails"]
+    assert pushed_data["files"] == []
+    assert pushed_data["credentials"] == []
+    kept_emails = pushed_data["features"]["emails"]
+    assert kept_emails == emails[: len(kept_emails)]
+    assert kept_emails
+    assert pushed_data["features"]["usernames"] == ["u"]
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        # Fits: unchanged
+        ({"content": "x" * 1_000}, {"content": "x" * 1_000}),
+        # Not a string or a list: left for the SDK to discard
+        ({"content": {"x": "x" * 300_000}}, {"content": {"x": "x" * 300_000}}),
+        # Too big because of a field that is not cut: the SDK still discards the event
+        (
+            {"content": "x" * 1_000, "extracted_content": "", "main": "y" * 300_000},
+            {"content": "", "extracted_content": "", "main": "y" * 300_000, "truncated_fields": ["content"]},
+        ),
+        ({"features": {"emails": "a" * 300_000}}, {"features": {"emails": "a" * 300_000}}),
+        ({"features": ["a" * 300_000]}, {"features": ["a" * 300_000]}),
+    ],
+)
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_cuts_fields_only_when_needed(mock_sleep, data_storage, data, expected):
+    serialized = _push_one(data_storage, data, event_type="ransomleak")
+
+    assert json.loads(serialized)["data"] == expected
+
+
+def _counter(name):
+    return REGISTRY.get_sample_value(f"symphony_module_flare_{name}_total", {"intake_key": "intake_key"}) or 0
+
+
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_reports_cut_and_discarded_events(mock_sleep, data_storage):
+    trigger = _build_trigger(data_storage)
+    small = _event("evt-small")
+    cut = _event("evt-cut", "paste")
+    cut["activity"]["data"] = {"content": "x" * 300_000}
+    # `main` is not cut: the event stays above the limit
+    still_oversized = _event("evt-big", "ransomleak")
+    still_oversized["activity"]["data"] = {"main": "y" * 300_000}
+    truncated_before, discarded_before = _counter("truncated_events"), _counter("discarded_events")
+
+    _run_next_batch(trigger, _fake_client([([small, cut, still_oversized], "cursor-1")]))
+
+    assert _counter("truncated_events") - truncated_before == 1
+    assert _counter("discarded_events") - discarded_before == 1
+    trigger.log.assert_any_call(
+        "Cut the fields content of the paste event evt-cut to fit the intake size limit", level="info"
+    )
+    pushed = trigger.push_events_to_intakes.call_args.kwargs["events"]
+    assert len(pushed) == 3
+    size = len(pushed[2].encode("utf-8"))
+    trigger.log.assert_any_call(
+        f"The ransomleak event evt-big is still above the intake size limit ({size} bytes) and will be discarded",
+        level="warning",
+    )
 
 
 @patch("flareio_modules.trigger_flare_events.time.sleep")

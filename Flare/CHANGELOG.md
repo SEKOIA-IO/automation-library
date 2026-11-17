@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-17 - 0.6.7
+
+### Fixed
+
+- Cut the end of the biggest fields of an event that exceeds the intake size limit, instead of letting the whole event be discarded: attachment text, lists of IP addresses, domains or URLs, `content`, then the files, credentials and emails of stealer logs and leaks. The cut fields are listed in `data.truncated_fields`
+- Count the events cut (`truncated_events`) and the events still above the limit (`discarded_events`), and log each of them with its type, uid and cut fields
+
 ## 2026-11-17 - 0.6.6
 
 ### Fixed
