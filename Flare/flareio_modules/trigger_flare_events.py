@@ -79,13 +79,18 @@ class FlareEventsConnector(Connector):
         self.limiter.tick()
         return next(pages, None)
 
-    def _fetch_details(self, uid: str) -> dict[str, Any] | None:
+    def _fetch_details(self, item_metadata: dict[str, Any]) -> dict[str, Any] | None:
         self.limiter.tick()
-        event_resp = self.client.get(url=self.EVENTS_DETAILS_URL, params={"uid": uid})
+        event_resp = self.client.get(url=self.EVENTS_DETAILS_URL, params={"uid": item_metadata["uid"]})
         if event_resp.status_code == 404:
             return None
         event_resp.raise_for_status()
-        return event_resp.json()
+        event = event_resp.json()
+        # The date Flare matched the item to the tenant is only in the search results; the parser uses it as the
+        # event's date, since the item can be years old (e.g. the history Flare matches when a tenant is created)
+        activity = event.get("activity", event)
+        activity["metadata"] = {**(activity.get("metadata") or {}), "matched_at": item_metadata.get("matched_at")}
+        return event
 
     def _scroll_events(self) -> Iterator[tuple[dict[str, Any] | None, str | None]]:
         """
@@ -105,9 +110,9 @@ class FlareEventsConnector(Connector):
             while (page_resp := next_page.result()) is not None:
                 page = page_resp.json()
                 next_page = page_executor.submit(self._next_page, pages)
-                uids = [item["metadata"]["uid"] for item in page["items"]]
-                # `map` returns the results in the order of `uids`, whatever the order the calls complete in
-                for event in details_executor.map(self._fetch_details, uids):
+                items_metadata = [item["metadata"] for item in page["items"]]
+                # `map` returns the results in the order of the items, whatever the order the calls complete in
+                for event in details_executor.map(self._fetch_details, items_metadata):
                     yield event, page["next"]
         finally:
             # On an error, don't wait for the calls still running (the prefetched page, the page's other
