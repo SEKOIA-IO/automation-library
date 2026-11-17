@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-17 - 2.11.1
+
+### Fixed
+
+- Fix the device and user asset connectors stopping at start with "There is no current event loop in thread 'MainThread'" on Python 3.14: they now run their main loop in a new event loop
+
 ## 2026-09-10 - 2.11.0
 
 ### Changed
