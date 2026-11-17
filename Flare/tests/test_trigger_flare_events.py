@@ -306,11 +306,10 @@ def test_next_batch_cuts_oversized_file_list(mock_sleep, data_storage, count):
     assert len(serialized.encode("utf-8")) <= EVENT_BYTES_MAX_SIZE
     pushed_data = json.loads(serialized)["data"]
     assert pushed_data["truncated_fields"] == ["files"]
-    assert files[: len(pushed_data["files"])] == pushed_data["files"]
+    kept = len(pushed_data["files"])
+    assert files[:kept] == pushed_data["files"]
     # As close to the limit as whole items allow
-    assert (
-        len(serialized.encode("utf-8")) + len(json.dumps(files[len(pushed_data["files"])])) + 1 > EVENT_BYTES_MAX_SIZE
-    )
+    assert len(serialized.encode("utf-8")) + len(orjson.dumps(files[kept])) + 1 > EVENT_BYTES_MAX_SIZE
     assert pushed_data["credentials"] == credentials
 
 

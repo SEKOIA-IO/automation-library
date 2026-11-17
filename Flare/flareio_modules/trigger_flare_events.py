@@ -133,7 +133,7 @@ class FlareEventsConnector(Connector):
         serialized = orjson.dumps(activity)
         # Measured in UTF-8 bytes: at least the number of characters the SDK counts, and what the intake receives
         if len(serialized) > EVENT_BYTES_MAX_SIZE and isinstance(data, dict):
-            serialized = FlareEventsConnector._cut_oversized_fields(activity, data)
+            serialized = FlareEventsConnector._cut_oversized_fields(activity, data, serialized)
         return serialized.decode("utf-8")
 
     @staticmethod
@@ -149,59 +149,54 @@ class FlareEventsConnector(Connector):
         """
         yield "extracted_content", data, "extracted_content", 0
         features = data.get("features")
-        lists: list[str] = []
-        if isinstance(features, dict):
-            lists = sorted(
-                (key for key, value in features.items() if isinstance(value, list)),
-                key=lambda key: len(orjson.dumps(features[key])),
-                reverse=True,
-            )
-            for key in lists:
-                if key not in FULLY_PARSED_FEATURES:
-                    yield f"features.{key}", features, key, 1
+        if not isinstance(features, dict):
+            features = {}
+        lists = sorted(
+            (key for key, value in features.items() if isinstance(value, list)),
+            key=lambda key: len(orjson.dumps(features[key])),
+            reverse=True,
+        )
+        for key in lists:
+            if key not in FULLY_PARSED_FEATURES:
+                yield f"features.{key}", features, key, 1
         yield "content", data, "content", 0
         yield "files", data, "files", 0
         yield "credentials", data, "credentials", 0
         for key in lists:
-            if key in FULLY_PARSED_FEATURES and isinstance(features, dict):
+            if key in FULLY_PARSED_FEATURES:
                 yield f"features.{key}", features, key, 0
 
     @staticmethod
-    def _cut_oversized_fields(activity: dict[str, Any], data: dict[str, Any]) -> bytes:
+    def _cut_oversized_fields(activity: dict[str, Any], data: dict[str, Any], serialized: bytes) -> bytes:
         """
         Cut the end of the event's biggest fields until it fits the intake size limit, which otherwise discards
         the whole event: attachments, blog posts, source code or stealer logs can carry several hundred kB.
         The names of the cut fields are listed in `data.truncated_fields`.
         """
         truncated: list[str] = []
-        serialized = orjson.dumps(activity)
         for name, parent, key, keep in FlareEventsConnector._oversized_fields(data):
             if len(serialized) <= EVENT_BYTES_MAX_SIZE:
                 break
             value = parent.get(key)
-            if not (isinstance(value, str) and value) and not (isinstance(value, list) and len(value) > keep):
+            if not isinstance(value, (str, list)) or len(value) <= keep:
                 continue
 
             truncated.append(name)
             data[TRUNCATED_FIELDS] = truncated
             # Measured with the field's name listed, so that the list itself fits too
             excess = len(orjson.dumps(activity)) - EVENT_BYTES_MAX_SIZE
-            if isinstance(value, str):
-                parent[key] = value[: FlareEventsConnector._longest_prefix(value, len(orjson.dumps(value)) - excess)]
-            else:
-                end, removed = len(value), 0
-                while end > keep and removed < excess:
-                    end -= 1
-                    # The item, and the comma before it unless it is the first one
-                    removed += len(orjson.dumps(value[end])) + (end > 0)
-                parent[key] = value[:end]
+            prefix = FlareEventsConnector._longest_prefix(value, len(orjson.dumps(value)) - excess)
+            parent[key] = value[: max(keep, prefix)]
             serialized = orjson.dumps(activity)
         return serialized
 
     @staticmethod
-    def _longest_prefix(value: str, max_size: int) -> int:
-        """Length of the longest prefix of `value` whose serialized form (quotes, escapes) fits `max_size`."""
-        low, high = 0, len(value)
+    def _longest_prefix(value: str | list[Any], max_size: int) -> int:
+        """
+        Length of the longest prefix of `value` whose serialized form (quotes and escapes, or brackets and commas)
+        fits `max_size`. Every character or item takes at least one byte, so no prefix longer than `max_size` fits.
+        """
+        low, high = 0, min(len(value), max_size)
         while low < high:
             middle = (low + high + 1) // 2
             if len(orjson.dumps(value[:middle])) <= max_size:
