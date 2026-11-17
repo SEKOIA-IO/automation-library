@@ -16,6 +16,15 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 DEFAULT_TIMEOUT: int = 60
+
+# Every PolySwarm API call from this module identifies itself with this
+# User-Agent, so usage of the Sekoia integration can be measured on our side.
+# The name never changes once shipped; only the version moves, and a test keeps
+# MODULE_VERSION equal to the version in manifest.json and pyproject.toml.
+# The Sekoia platform version is not readable from inside a module, so the
+# parenthesised host carries the platform name only.
+MODULE_VERSION: str = "1.0.1"
+USER_AGENT: str = f"PolySwarm-Sekoia/{MODULE_VERSION} (Sekoia.io)"
 RETRY_TOTAL: int = 3
 RETRY_BACKOFF: float = 1.0
 # 429 is deliberately absent: a spent quota does not clear within a playbook run,
@@ -41,6 +50,9 @@ CLIENT_ERRORS: tuple[type[Exception], ...] = (ps_exceptions.PolyswarmException, 
 def build_client(configuration: Any, timeout: int = DEFAULT_TIMEOUT) -> PolyswarmAPI:
     """Build a PolySwarm client from module configuration, with retries enabled.
 
+    This is the only place the module creates a client, so the User-Agent set
+    here covers every action, the trigger and the account check.
+
     The timeout is deliberately higher than the library default of 30 seconds:
     several PolySwarm endpoints answer slowly enough to trip it, and a timeout
     inside a playbook reads to an analyst as a broken integration.
@@ -49,6 +61,7 @@ def build_client(configuration: Any, timeout: int = DEFAULT_TIMEOUT) -> Polyswar
         key=configuration.API_Key,
         community=configuration.community,
         timeout=timeout,
+        user_agent=USER_AGENT,
     )
     install_retries(api)
     return api

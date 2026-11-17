@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A support contact in the configuration guide. It previously gave the reader no
   way to reach anyone.
+- Every request to PolySwarm now identifies the module with its own User-Agent,
+  `PolySwarm-Sekoia/1.0.1 (Sekoia.io)`, instead of the client library default.
+  It is set once where the client is built, and a test fails if any other file
+  creates a client or makes a raw HTTP call.
 
 ## 2026-10-13 - 1.0.0
 
