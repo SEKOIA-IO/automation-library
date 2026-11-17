@@ -16,7 +16,7 @@
         "default": "/bin/bash -s"
       },
       "host": {
-        "description": "Overrides the host set in the account",
+        "description": "Run on this host instead of the account's host. It must be listed in the account's allowed hosts",
         "type": "string"
       },
       "timeout": {
@@ -30,16 +30,33 @@
         "default": true
       }
     },
-    "required": ["script"]
+    "required": [
+      "script"
+    ]
   },
   "results": {
     "type": "object",
     "properties": {
-      "host": {"type": "string", "description": "Host the script ran on"},
-      "exit_code": {"type": "integer", "description": "Exit code of the script"},
-      "stdout": {"type": "string", "description": "Standard output"},
-      "stderr": {"type": "string", "description": "Standard error"},
-      "host_key_fingerprint": {"type": "string", "description": "SHA256 fingerprint of the server's host key"}
+      "host": {
+        "type": "string",
+        "description": "Host the script ran on"
+      },
+      "exit_code": {
+        "type": "integer",
+        "description": "Exit code of the script"
+      },
+      "stdout": {
+        "type": "string",
+        "description": "Standard output"
+      },
+      "stderr": {
+        "type": "string",
+        "description": "Standard error"
+      },
+      "host_key_fingerprint": {
+        "type": "string",
+        "description": "SHA256 fingerprint of the server's host key"
+      }
     }
   }
 }

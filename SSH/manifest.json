@@ -18,7 +18,7 @@
         "type": "string"
       },
       "private_key": {
-        "description": "Private key in OpenSSH or PEM format (RSA, ECDSA or Ed25519), including the BEGIN/END lines",
+        "description": "Private key (RSA, ECDSA or Ed25519) in OpenSSH, PEM (PKCS#1/SEC1) or PKCS#8 format, including the BEGIN/END lines",
         "type": "string"
       },
       "passphrase": {
@@ -30,8 +30,21 @@
         "type": "string"
       },
       "host_key_fingerprint": {
-        "description": "Expected SHA256 fingerprint of the server's host key (e.g. SHA256:abc...). Leave empty to accept any host key; the observed fingerprint is returned in the action results so you can pin it.",
+        "description": "Expected SHA256 fingerprint of the server's host key, as printed by `ssh-keygen -lf` (e.g. SHA256:abc...). Separate several fingerprints with commas when the actions target several hosts. Required unless accept_unknown_host_keys is enabled; if it is missing, the action fails and its error shows the server's fingerprint.",
         "type": "string"
+      },
+      "accept_unknown_host_keys": {
+        "description": "Accept any host key when no fingerprint is set. Insecure: an attacker able to intercept the connection could impersonate the server. Use only for testing.",
+        "type": "boolean",
+        "default": false
+      },
+      "allowed_hosts": {
+        "description": "Other hosts the actions may target through their host argument. Overrides to hosts outside this list (and the account's host) are refused.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "default": []
       },
       "connect_timeout": {
         "description": "Connection timeout, in seconds",
@@ -39,13 +52,34 @@
         "default": 15
       }
     },
-    "required": ["host", "username"],
-    "secrets": ["private_key", "passphrase", "password"]
+    "required": [
+      "host",
+      "username"
+    ],
+    "anyOf": [
+      {
+        "required": [
+          "private_key"
+        ]
+      },
+      {
+        "required": [
+          "password"
+        ]
+      }
+    ],
+    "secrets": [
+      "private_key",
+      "passphrase",
+      "password"
+    ]
   },
   "description": "Run commands and scripts on remote hosts over SSH. Designed to be executed on-premises with a playbook runner.",
   "name": "SSH Remote Execution",
   "slug": "ssh-remote-execution",
   "uuid": "3fb9e929-626c-4e9c-9d88-a56737222519",
   "version": "0.1.0",
-  "categories": ["Applicative"]
+  "categories": [
+    "Applicative"
+  ]
 }

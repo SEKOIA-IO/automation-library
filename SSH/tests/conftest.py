@@ -7,6 +7,7 @@ command locally with /bin/sh, piping stdin/stdout/stderr through the channel.
 import socket
 import subprocess
 import threading
+import time
 from shutil import rmtree
 from tempfile import mkdtemp
 
@@ -48,6 +49,9 @@ class _Server(paramiko.ServerInterface):
         return paramiko.AUTH_SUCCESSFUL if username == "tester" and password == self.password else paramiko.AUTH_FAILED
 
     def check_channel_exec_request(self, channel, command):
+        if command == b"__hang__":
+            # Simulate a server that never answers the exec request
+            time.sleep(5)
         self.command = command
         self.event.set()
         return True
