@@ -75,6 +75,9 @@ class ThinkstCanaryAlertsConnector(Connector):
                 content=response.text,
             )
             self.log(level="error", message="failed to fetch events")
+            return True
+
+        return False
 
     def fetch_pages(self, from_id: int | None) -> Generator[dict, None, None]:
         # Iterate through pages
@@ -87,7 +90,8 @@ class ThinkstCanaryAlertsConnector(Connector):
         response = self.client.get(url=url, params=params)
 
         while self.running:
-            self._handle_response_error(response)
+            if self._handle_response_error(response):
+                return
 
             page = response.json()
 

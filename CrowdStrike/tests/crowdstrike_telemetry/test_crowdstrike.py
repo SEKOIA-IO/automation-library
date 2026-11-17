@@ -3,10 +3,11 @@
 import asyncio
 import io
 import json
+from collections.abc import AsyncIterable
 from concurrent.futures import Executor
 from contextlib import asynccontextmanager
 from functools import partial
-from typing import Any, AsyncIterable
+from typing import Any
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import aiofiles
@@ -21,7 +22,7 @@ from crowdstrike_telemetry.pull_telemetry_events import (
 )
 
 
-async def async_bytesIO(
+async def async_bytesIO(  # noqa: N802
     data: bytes,
     *,
     loop: asyncio.AbstractEventLoop | None = None,
@@ -173,6 +174,6 @@ async def test_crowdstrike_next_batch(
         patch.object(CrowdStrikeTelemetryConnector, "sqs_wrapper", new_callable=PropertyMock, return_value=mock_sqs),
         patch.object(CrowdStrikeTelemetryConnector, "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3),
     ):
-        total_events, times_to_log = await connector.next_batch()
+        total_events, _ = await connector.next_batch()
 
     assert total_events == amount_of_messages * 2  # 2 events in test_data

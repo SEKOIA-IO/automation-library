@@ -1,0 +1,51 @@
+{
+  "name": "Get Questionnaires from non terminated actions",
+  "description": "Get the questionnaires of the not completed workflow actions of the given action type on an incident or request",
+  "uuid": "b6ff38ee-b779-4198-811c-c29becdcefb4",
+  "slug": "get_non_terminated_actions_questionnaires",
+  "docker_parameters": "easyvista_get_non_terminated_actions_questionnaires",
+  "arguments": {
+    "properties": {
+      "current_incident": {
+        "description": "Ticket RFC number",
+        "title": "Current Incident",
+        "type": "string"
+      },
+      "action_type_id": {
+        "description": "Action type ID (tenant-specific); not the action type GUID",
+        "title": "Action Type Id",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "current_incident",
+      "action_type_id"
+    ],
+    "title": "GetNonTerminatedActionsQuestionnairesArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "href": {
+        "type": "string",
+        "description": "Query URL (HREF)"
+      },
+      "record_count": {
+        "type": "integer",
+        "description": "Number of items returned (integer)"
+      },
+      "total_record_count": {
+        "type": "integer",
+        "description": "Total number of items (integer)"
+      },
+      "results": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        },
+        "description": "Questionnaire items, returned unchanged: REQUEST_ID, ACTION_ID, ACTION_TYPE_ID, WORKFLOW_ID (strings) and QUESTION_LIST_ID (string or null); may contain duplicates; to read a questionnaire, use the EasyVista GET /questionnaires/{QUESTION_LIST_ID} endpoint, not exposed by this module"
+      }
+    }
+  }
+}

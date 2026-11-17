@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-03 - 1.1.1
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.27.0: a rate limited push (HTTP 429) stops the cycle and pauses the connector for the Retry-After delay, instead of pushing the remaining batches
+- Declare the mapped fields: a mapping change resets the checkpoint and fetches all open findings again
+
 ## 2026-10-26 - 1.1.0
 
 ### Fixed

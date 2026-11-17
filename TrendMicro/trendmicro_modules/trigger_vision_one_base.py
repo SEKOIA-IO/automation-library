@@ -1,12 +1,13 @@
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Generator
 from datetime import datetime, timedelta
 from functools import cached_property
-from typing import Generator
+from typing import Literal
 
 import orjson
 import requests
-from pydantic.v1 import Field
+from pydantic import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from .client import TrendMicroVisionApiClient
@@ -16,44 +17,61 @@ from .metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 logger = get_logger()
 
 
+class VisionOneFetchError(Exception):
+    """A page walk failed: the checkpoint must not advance."""
+
+
 class TrendMicroVisionOneBaseConfiguration(DefaultConnectorConfiguration):
     base_url: str = Field(..., description="Base URL")
-    api_key: str = Field(..., description="API key", secret=True)
+    api_key: str = Field(..., description="API key", json_schema_extra={"secret": True})
     frequency: int = Field(60, description="Batch frequency in seconds", ge=1)
 
 
 class TrendMicroVisionOneBaseConnector(Connector, ABC):
-    configuration: TrendMicroVisionOneBaseConfiguration
+    configuration: TrendMicroVisionOneBaseConfiguration  # type: ignore[override]
 
     CONNECTOR_METRICS_LABEL: str
     CONNECTOR_TITLE: str
+
+    AUTH_ERROR_THRESHOLD = 10  # consecutive 401/403 before logging critical (critical stops the connector)
+    _auth_errors = 0
 
     @cached_property
     def client(self) -> TrendMicroVisionApiClient:
         return TrendMicroVisionApiClient(api_key=self.configuration.api_key)
 
-    def handle_response_error(self, response: requests.Response) -> None:  # pragma: no cover
-        if not response.ok:
-            message = (
-                f"Request on Trend Micro Vision One API to fetch events failed with status "
-                f"{response.status_code} - {response.reason}"
+    def handle_response_error(self, response: requests.Response) -> None:
+        """Log a failed response and raise VisionOneFetchError so the page walk stops."""
+        if response.ok:
+            return
+
+        message = (
+            f"Request on Trend Micro Vision One API to fetch events failed with status "
+            f"{response.status_code} - {response.reason}"
+        )
+        level: Literal["error", "critical"] = "error"
+        if response.status_code in [401, 403]:
+            self._auth_errors += 1
+            if self._auth_errors >= self.AUTH_ERROR_THRESHOLD:
+                level = "critical"
+        else:
+            self._auth_errors = 0
+
+        # enrich error logs with detail from the Vision One API
+        try:
+            error = response.json()["error"]
+            logger.error(
+                message,
+                error_code=error.get("code"),
+                error_message=error.get("message"),
+                error_number=error.get("number"),
             )
-            level = "critical" if response.status_code in [401, 403] else "error"
 
-            # enrich error logs with detail from the Okta API
-            try:
-                error = response.json()["error"]
-                logger.error(
-                    message,
-                    error_code=error.get("code"),
-                    error_message=error.get("message"),
-                    error_number=error.get("number"),
-                )
+        except Exception:
+            pass
 
-            except Exception as e:
-                pass
-
-            self.log(message, level=level)
+        self.log(message, level=level)
+        raise VisionOneFetchError(message)
 
     @staticmethod
     def get_upper_second(time: datetime) -> datetime:
@@ -67,7 +85,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
         return (time + timedelta(seconds=1)).replace(microsecond=0)
 
     @abstractmethod
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list]:
         pass
 
     def next_batch(self):

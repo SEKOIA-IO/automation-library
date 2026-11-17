@@ -1,0 +1,71 @@
+[project]
+name = "automation-module-rapid7-insightvm"
+version = "0.0"
+description = ""
+authors = []
+requires-python = ">=3.14,<4"
+dependencies = [
+  "sekoia-automation-sdk>=1.27.0,<2",
+  "python-dateutil>=2.8.2,<3",
+  "sekoia-automation-models>=1.5.0,<2",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=7.0",
+  "pytest-cov",
+  "requests-mock",
+  "pyyaml",
+  "types-python-dateutil",
+  "types-PyYAML",
+]
+lint = [
+  "ruff>=0.14",
+  "mypy",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "lint"]
+
+[tool.ruff]
+line-length = 119
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = false
+ignore_missing_imports = true
+allow_subclassing_any = true
+allow_untyped_calls = true
+pretty = true
+show_error_codes = true
+implicit_reexport = true
+exclude = ["tests/", "main.py"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests"]
+filterwarnings = [
+  "error",
+  "ignore::DeprecationWarning",
+  "ignore:.*unclosed.*:ResourceWarning",
+]
+addopts = """
+    --strict-markers
+    --tb=short
+    --cov=rapid7_insightvm
+    --cov-branch
+    --cov-report=term-missing:skip-covered
+    --cov-fail-under=90
+    -ra
+"""
+
+[tool.coverage.run]
+omit = ["tests/*", "main.py"]

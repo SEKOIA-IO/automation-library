@@ -40,9 +40,8 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
     def run(self) -> None:  # pragma: no cover
         """Run the connector."""
         while self.running:
+            loop = asyncio.new_event_loop()
             try:
-                loop = asyncio.get_event_loop()
-
                 while self.running:
                     processing_start = time.time()
                     current_lag: int = 0
@@ -86,6 +85,9 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
 
             except Exception as e:
                 self.log_exception(e)
+            finally:
+                loop.run_until_complete(loop.shutdown_asyncgens())
+                loop.close()
 
     def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:  # pragma: no cover
         """

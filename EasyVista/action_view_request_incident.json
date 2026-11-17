@@ -1,0 +1,34 @@
+{
+  "name": "View Request / Incident",
+  "description": "Returns the specified incident or request",
+  "uuid": "6a809ab2-897a-4348-9632-454be1d56a84",
+  "slug": "view_request_incident",
+  "docker_parameters": "easyvista_view_request_incident",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      }
+    },
+    "required": [
+      "rfc_number"
+    ],
+    "title": "ViewRequestIncidentArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "href": {
+        "type": "string",
+        "description": "Ticket URL (HREF)"
+      },
+      "record": {
+        "type": "object",
+        "description": "Full ticket record: RFC_NUMBER, STATUS (STATUS_EN, STATUS_GUID), RECIPIENT, REQUESTOR, LOCATION, DEPARTMENT, dates, E_* fields; COMMENT and DESCRIPTION are links ({HREF}), not text: use View Request / Incident Comment for the comment"
+      }
+    }
+  }
+}

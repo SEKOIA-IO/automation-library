@@ -1,0 +1,55 @@
+{
+  "name": "Close Request / Incident",
+  "description": "Close an incident or request.",
+  "uuid": "58e0bbdf-58f3-46b7-9c72-a4411cf151b7",
+  "slug": "close_request_incident",
+  "docker_parameters": "easyvista_close_request_incident",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      },
+      "status_guid": {
+        "description": "Final status GUID; defaults to the Closed meta-status",
+        "title": "Status Guid",
+        "type": "string"
+      },
+      "comment": {
+        "description": "Closing action comment",
+        "title": "Comment",
+        "type": "string"
+      },
+      "end_date": {
+        "description": "Closing date of the ongoing actions and of the closing action (MM/DD/YYYY HH:MM:SS); defaults to now",
+        "title": "End Date",
+        "type": "string"
+      },
+      "catalog_guid": {
+        "description": "Catalog (topic) GUID; only needed to requalify the ticket before closing",
+        "title": "Catalog Guid",
+        "type": "string"
+      },
+      "delete_actions": {
+        "description": "Delete the ongoing actions of the ticket",
+        "title": "Delete Actions",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "rfc_number"
+    ],
+    "title": "CloseRequestIncidentArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "href": {
+        "type": "string",
+        "description": "Closed ticket URL (HREF)"
+      }
+    }
+  }
+}

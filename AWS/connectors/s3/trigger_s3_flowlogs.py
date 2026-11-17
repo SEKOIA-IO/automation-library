@@ -1,11 +1,17 @@
 """Contains AwsS3FlowLogsTrigger."""
 
-import ipaddress
-from collections.abc import AsyncGenerator, Generator
-from itertools import islice
+from collections.abc import AsyncGenerator
 from typing import Any, cast
 
-from aws_helpers.utils import AsyncReader, is_parquet_content
+from aws_helpers.utils import (
+    PARQUET_MAGIC,
+    AsyncReader,
+    PeekableStreamReader,
+    async_islice,
+    filter_internal_traffic,
+    has_parquet_footer,
+    split_stream_by_separator,
+)
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import (
     AbstractAwsS3QueuedConnector,
@@ -14,11 +20,15 @@ from connectors.s3 import (
 )
 from connectors.s3.provider import AwsAccountProvider
 
+# reads go through a thread pool: bigger chunks than the helper default avoid one round-trip per KB
+READ_CHUNK_SIZE = 64 * 1024
+
 
 class AwsS3FlowLogsConfiguration(AwsS3QueuedConfiguration, AwsS3LogsBaseConfiguration):
     """AwsS3FlowLogsTrigger configuration."""
 
     ignore_comments: bool = False
+    filter_internal_traffic: bool = True
 
 
 class BaseAwsS3FlowLogsTrigger:
@@ -38,39 +48,21 @@ class BaseAwsS3FlowLogsTrigger:
             level="warning",
         )
 
-    @staticmethod
-    def check_all_ips_are_private(input_str: str) -> bool:
+    async def _read_content(self, stream: PeekableStreamReader) -> AsyncGenerator[str, None]:
         """
-        Check if all IPs in the input string are private
+        Read the content of the S3 Object, record by record
 
         Args:
-            input_str: str
+            stream: PeekableStreamReader
 
         Returns:
-            bool:
+            AsyncGenerator[str, None]: The content as a generator of strings
         """
-        ips = []
-        for ip in input_str.split(" "):
-            try:
-                ips.append(ipaddress.ip_address(ip))
-            except ValueError:  # if substring is not IP then just omit it
-                pass
-
-        return all([ip.is_private for ip in ips])
-
-    def _read_content(self, content: bytes) -> Generator[str, None, None]:
-        """
-        Read the content of the S3 Object
-
-        Args:
-            content: bytes
-
-        Returns:
-            Generator[str, None, None]: The content as a generator of strings
-        """
-        for record in content.decode("utf-8").split(self.configuration.sep):
+        separator = self.configuration.sep.encode("utf-8")
+        async for chunk in split_stream_by_separator(stream, separator, chunk_size=READ_CHUNK_SIZE):
+            record = chunk.decode("utf-8")
             if len(record) > 0:
-                if not self.check_all_ips_are_private(record):
+                if not filter_internal_traffic(self.configuration.filter_internal_traffic, record.split(" ")):
                     yield record
                 else:
                     DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
@@ -85,17 +77,18 @@ class BaseAwsS3FlowLogsTrigger:
         Returns:
              AsyncGenerator[str, None]:
         """
-        content = await stream.read()
+        reader = PeekableStreamReader(stream)
 
-        if is_parquet_content(content):
+        # a complete Parquet file starts and ends with the magic bytes: anything else is parsed as text
+        if await reader.peek(len(PARQUET_MAGIC)) == PARQUET_MAGIC and await has_parquet_footer(stream):
             self._warn_parquet_content()
             return
 
-        records: Generator[str, None, None] = self._read_content(content)
+        records = self._read_content(reader)
         if self.configuration.ignore_comments:  # pragma: no cover
-            records = (record for record in records if not record.strip().startswith("#"))
+            records = (record async for record in records if not record.strip().startswith("#"))
 
-        for record in islice(records, self.configuration.skip_first, None):
+        async for record in async_islice(records, self.configuration.skip_first, None):
             yield record
 
 
