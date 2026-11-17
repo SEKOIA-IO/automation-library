@@ -5,12 +5,19 @@ from unittest.mock import MagicMock, Mock, PropertyMock, patch
 import pytest
 import requests_mock
 from netskope_api.iterator.netskope_iterator import NetskopeIterator
+from netskope_api.iterator.netskope_iterator_client import NetskopeIteratorClient
 from requests.exceptions import ConnectionError
 from sekoia_automation.exceptions import ModuleConfigurationError
 
 from netskope_modules.connectors.connector_pull_events_v2 import NetskopeEventConsumer
 from netskope_modules.constants import MESSAGE_CANNOT_CONSUME_SERVICE
 from netskope_modules.types import NetskopeAlertType, NetskopeEventType
+
+
+@pytest.fixture(autouse=True)
+def no_sdk_token_error_wait(monkeypatch):
+    # The Netskope SDK sleeps 30 seconds on every 401/403 response before returning it
+    monkeypatch.setattr(NetskopeIteratorClient, "TOKEN_ERROR_WAIT_TIME", 0)
 
 
 def test_user_agent(trigger):
