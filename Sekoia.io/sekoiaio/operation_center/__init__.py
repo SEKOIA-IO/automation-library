@@ -196,6 +196,7 @@ ListsCases = type(
             "match[assignees]",
             "match[created_by]",
             "match[community_uuid]",
+            "match[type]",
             "sort",
             "direction",
         ],

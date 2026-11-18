@@ -6,6 +6,8 @@ from .action_base import MicrosoftGraphActionBase
 
 
 class SendMessageArguments(BaseModel):
+    """Represent validated inputs for the send message action."""
+
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     user: str
@@ -22,11 +24,9 @@ class SendMessageArguments(BaseModel):
 
 
 class SendMessageAction(MicrosoftGraphActionBase):
-    @staticmethod
-    def generate_recipient(email: str) -> dict[str, Any]:
-        return {"emailAddress": {"name": email, "address": email}}
-
     def run(self, arguments: Any) -> Any:
+        """Execute the send message action and return normalized results."""
+
         validated_arguments = SendMessageArguments.model_validate(arguments)
         user_id_or_principal_name = validated_arguments.user
         save_to_sent_items = validated_arguments.save_to_sent_items
@@ -41,21 +41,36 @@ class SendMessageAction(MicrosoftGraphActionBase):
         recipients = validated_arguments.recipients
         importance = validated_arguments.importance
 
+        self.log(
+            message=(
+                "Start send message action "
+                f"user={user_id_or_principal_name!r} "
+                f"recipient_count={len(recipients)!r} "
+                f"cc_count={len(cc or [])!r} "
+                f"bcc_count={len(bcc or [])!r} "
+                f"save_to_sent_items={save_to_sent_items!r}"
+            ),
+            level="debug",
+        )
+
         message: dict[str, Any] = {
             "body": {"content": content, "contentType": content_type},
-            "toRecipients": [self.generate_recipient(r) for r in recipients],
-            "sender": self.generate_recipient(sender),
-            "from": self.generate_recipient(mailbox_owner),
+            "toRecipients": [self._generate_recipient(r) for r in recipients],
+            "sender": self._generate_recipient(sender),
+            "from": self._generate_recipient(mailbox_owner),
             "subject": subject,
         }
         if cc:
-            message["ccRecipients"] = [self.generate_recipient(c) for c in cc]
+            message["ccRecipients"] = [self._generate_recipient(c) for c in cc]
         if bcc:
-            message["bccRecipients"] = [self.generate_recipient(b) for b in bcc]
+            message["bccRecipients"] = [self._generate_recipient(b) for b in bcc]
         if importance:
             message["importance"] = importance
 
-        payload: dict[str, Any] = {"message": message, "saveToSentItems": save_to_sent_items}
+        payload: dict[str, Any] = {
+            "message": message,
+            "saveToSentItems": save_to_sent_items,
+        }
 
         response = self.client.post(
             f"https://graph.microsoft.com/v1.0/users/{user_id_or_principal_name}/sendMail",
@@ -74,9 +89,27 @@ class SendMessageAction(MicrosoftGraphActionBase):
             response_data = {}
 
         target_message_id = response_data.get("id") if isinstance(response_data.get("id"), str) else None
+        self.log(
+            message=(
+                "Completed send message action "
+                f"user={user_id_or_principal_name!r} "
+                f"recipient_count={len(recipients)!r} "
+                f"target_message_id={target_message_id!r}"
+            ),
+            level="debug",
+        )
         return {
-            **response_data,
             "status": "sent",
             "action": "send_message",
+            "bcc": bcc,
+            "cc": cc,
+            "content_type": content_type,
+            "from": mailbox_owner,
+            "importance": importance,
+            "save_to_sent_items": save_to_sent_items,
+            "sender": sender,
+            "subject": subject,
             "target_message_id": target_message_id,
+            "user": user_id_or_principal_name,
+            "recipients": recipients,
         }

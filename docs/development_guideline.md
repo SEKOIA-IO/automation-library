@@ -32,8 +32,15 @@ Understanding configuration scopes is critical:
 #### Command
 
 ```bash
-poetry add --group dev mypy
-poetry run mypy --install-types --non-interactive --ignore-missing-imports --show-column-numbers --hide-error-context .
+uv add --dev mypy pip
+uv run mypy --install-types --non-interactive --ignore-missing-imports --show-column-numbers --hide-error-context .
+```
+
+CI also runs Ruff on uv-based modules; run it locally before pushing:
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
 ```
 
 #### Requirements
@@ -186,7 +193,7 @@ See [Testing documentation](testing.md) for details.
 ### Before Submitting
 
 - [ ] Run mypy type checking
-- [ ] Run all tests (`poetry run pytest tests/`)
+- [ ] Run all tests (`uv run pytest tests/`)
 - [ ] Update version in `manifest.json`
 - [ ] Update `CHANGELOG.md`
 - [ ] Update documentation if needed
@@ -262,14 +269,22 @@ class MyAction(Action):
 
 1. Add to `pyproject.toml`:
    ```toml
-   [tool.poetry.dependencies]
-   python = "^3.10"
-   new-package = "^1.0.0"
+   [project]
+   requires-python = ">=3.11,<4"
+   dependencies = [
+       "new-package>=1.0.0,<2",
+   ]
+
+   [tool.uv]
+   package = false
    ```
 
-2. Lock dependencies:
+   Or let uv edit the file for you: `uv add "new-package>=1.0.0,<2"` (use `--dev` for development-only tools).
+
+2. Lock and sync dependencies:
    ```bash
-   poetry lock
+   uv lock
+   uv sync --frozen
    ```
 
 3. Document reason for new dependency

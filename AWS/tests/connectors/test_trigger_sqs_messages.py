@@ -245,3 +245,28 @@ def test_is_aws_notification(message: dict, expected: bool, connector: AwsSqsMes
         connector: AwsSqsMessagesTrigger
     """
     assert connector.is_aws_notification(message) is expected
+
+
+@pytest.mark.asyncio
+async def test_trigger_sqs_messages_pushes_serialized_events(
+    connector: AwsSqsMessagesTrigger, mock_push_data_to_intakes: AsyncMock
+):
+    """Notifications and raw messages are pushed as serialized strings, one per record."""
+    notification = {"Records": [{"id": 1}, {"id": 2, "nested": {"a": [1, 2]}}]}
+    raw = {"event": "raw", "value": 3}
+    messages = [(orjson.dumps(notification).decode("utf-8"), 1), (orjson.dumps(raw).decode("utf-8"), 2)]
+
+    mock_sqs_wrapper = MagicMock()
+    mock_sqs_wrapper.receive_messages = MagicMock()
+    mock_sqs_wrapper.receive_messages.return_value.__aenter__.return_value = messages
+
+    with patch.object(type(connector), "sqs_wrapper", new_callable=PropertyMock, return_value=mock_sqs_wrapper):
+        assert await connector.next_batch() == (3, [1, 2])
+
+    events = mock_push_data_to_intakes.call_args.kwargs["events"]
+    assert events == [
+        orjson.dumps(notification["Records"][0]).decode("utf-8"),
+        orjson.dumps(notification["Records"][1]).decode("utf-8"),
+        orjson.dumps(raw).decode("utf-8"),
+    ]
+    assert all(isinstance(event, str) for event in events)

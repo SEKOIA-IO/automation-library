@@ -1,9 +1,8 @@
 """Additional programmatic configuration for pytest."""
 
-import asyncio
 from shutil import rmtree
 from tempfile import mkdtemp
-from typing import Any, List
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -21,7 +20,7 @@ from client.token_refresher import TrellixTokenRefresher
 
 
 @pytest.fixture(scope="session")
-def faker_locale() -> List[str]:
+def faker_locale() -> list[str]:
     """
     Configure Faker to use correct locale.
 
@@ -43,7 +42,7 @@ def faker_seed() -> int:
 
 
 @pytest.fixture(scope="session")
-def session_faker(faker_locale: List[str], faker_seed: int) -> Faker:
+def session_faker(faker_locale: list[str], faker_seed: int) -> Faker:
     """
     Configure session lvl Faker to use correct seed and locale.
 
@@ -297,19 +296,3 @@ def edr_affectedhost_event_response(session_faker) -> TrellixResponse[EdrAffecte
             host={session_faker.word(): session_faker.word(), session_faker.word(): session_faker.pyint()},
         ),
     )
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """
-    Create event loop for pytest.mark.asyncio.
-
-    Yields:
-        loop:
-    """
-    policy = asyncio.get_event_loop_policy()
-    loop = policy.new_event_loop()
-
-    yield loop
-
-    loop.close()

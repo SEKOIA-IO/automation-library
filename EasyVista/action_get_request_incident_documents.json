@@ -1,0 +1,41 @@
+{
+  "name": "Get the list of Documents of a Request / Incident",
+  "description": "Returns the list of documents attached to the specified incident or request",
+  "uuid": "3f7ce920-61be-42be-9c6c-a830026b1ce1",
+  "slug": "get_request_incident_documents",
+  "docker_parameters": "easyvista_get_request_incident_documents",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      }
+    },
+    "required": [
+      "rfc_number"
+    ],
+    "title": "GetRequestIncidentDocumentsArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "parent_href": {
+        "type": "string",
+        "description": "Ticket URL (PARENT_HREF)"
+      },
+      "href": {
+        "type": "string",
+        "description": "Documents collection URL (HREF)"
+      },
+      "documents": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        },
+        "description": "Document records, returned unchanged: HREF, PARENT_HREF, DOCUMENT_ID, DOCUMENT (file name) and DDL_HREF (download link); use DOCUMENT_ID to download or delete; HREF is a web UI link and does not return the file content"
+      }
+    }
+  }
+}

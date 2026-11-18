@@ -1,30 +1,19 @@
 from functools import cached_property
 
-from ldap3 import Connection, Server
+from ldap3 import Connection
 from ldap3.utils.conv import escape_filter_chars
 from sekoia_automation.action import Action
 
+from microsoft_ad.client.ldap_client import LDAPClient
 from microsoft_ad.models.common_models import MicrosoftADModule
 
 
-class MicrosoftADAction(Action):
+class MicrosoftADAction(Action, LDAPClient):
     module: MicrosoftADModule
 
     @cached_property
-    def client(self):
-        server = Server(
-            host=self.module.configuration.servername,
-            port=636,
-            use_ssl=True,
-        )
-        conn = Connection(
-            server,
-            auto_bind=True,
-            user=self.module.configuration.admin_username,
-            password=self.module.configuration.admin_password,
-        )
-
-        return conn
+    def client(self) -> Connection:
+        return self._create_ldap_connection()
 
     def search_userdn_query(self, username, basedn, email=None):
         has_username = bool(username)

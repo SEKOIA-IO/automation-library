@@ -7,16 +7,16 @@ Docs: https://developer.tenable.com/reference/exports-assets-download-chunk
 
 from typing import List, Optional
 
-from pydantic import BaseModel
+from tenable_conn.asset_connector.models.base import TenableBaseModel
 
 
-class AssetSource(BaseModel):
+class AssetSource(TenableBaseModel):
     name: str
     first_seen: Optional[str] = None
     last_seen: Optional[str] = None
 
 
-class AssetTag(BaseModel):
+class AssetTag(TenableBaseModel):
     uuid: str
     key: str
     value: str
@@ -24,12 +24,12 @@ class AssetTag(BaseModel):
     added_at: Optional[str] = None
 
 
-class ResourceTag(BaseModel):
+class ResourceTag(TenableBaseModel):
     key: str
     value: str
 
 
-class OpenPort(BaseModel):
+class OpenPort(TenableBaseModel):
     port: Optional[int] = None
     protocol: Optional[str] = None
     service_names: List[str] = []
@@ -37,20 +37,20 @@ class OpenPort(BaseModel):
     last_seen: Optional[str] = None
 
 
-class AcrScore(BaseModel):
+class AcrScore(TenableBaseModel):
     score: Optional[float] = None
 
 
-class AesScore(BaseModel):
+class AesScore(TenableBaseModel):
     score: Optional[float] = None
 
 
-class Ratings(BaseModel):
+class Ratings(TenableBaseModel):
     acr: Optional[AcrScore] = None
     aes: Optional[AesScore] = None
 
 
-class NetworkInterfaceV2(BaseModel):
+class NetworkInterfaceV2(TenableBaseModel):
     name: Optional[str] = None
     mac_addresses: List[str] = []
     ipv4s: List[str] = []
@@ -60,7 +60,7 @@ class NetworkInterfaceV2(BaseModel):
     aliased: Optional[bool] = None
 
 
-class AssetNetwork(BaseModel):
+class AssetNetwork(TenableBaseModel):
     network_id: Optional[str] = None
     network_name: Optional[str] = None
     bios_uuid: Optional[str] = None
@@ -75,7 +75,7 @@ class AssetNetwork(BaseModel):
     open_ports: List[OpenPort] = []
 
 
-class AssetTimestamps(BaseModel):
+class AssetTimestamps(TenableBaseModel):
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
     deleted_at: Optional[str] = None
@@ -84,7 +84,7 @@ class AssetTimestamps(BaseModel):
     last_seen: Optional[str] = None
 
 
-class AssetScan(BaseModel):
+class AssetScan(TenableBaseModel):
     first_scan_time: Optional[str] = None
     last_scan_time: Optional[str] = None
     last_authenticated_scan_date: Optional[str] = None
@@ -97,7 +97,7 @@ class AssetScan(BaseModel):
     last_scan_target: Optional[str] = None
 
 
-class AwsCloud(BaseModel):
+class AwsCloud(TenableBaseModel):
     ec2_instance_ami_id: Optional[str] = None
     ec2_instance_id: Optional[str] = None
     owner_id: Optional[str] = None
@@ -112,24 +112,25 @@ class AwsCloud(BaseModel):
     ec2_name: Optional[str] = None
 
 
-class AzureCloud(BaseModel):
+class AzureCloud(TenableBaseModel):
     vm_id: Optional[str] = None
     resource_id: Optional[str] = None
+    location: Optional[str] = None
 
 
-class GcpCloud(BaseModel):
+class GcpCloud(TenableBaseModel):
     project_id: Optional[str] = None
     zone: Optional[str] = None
     instance_id: Optional[str] = None
 
 
-class AssetCloud(BaseModel):
+class AssetCloud(TenableBaseModel):
     aws: Optional[AwsCloud] = None
     azure: Optional[AzureCloud] = None
     gcp: Optional[GcpCloud] = None
 
 
-class ThirdPartyIds(BaseModel):
+class ThirdPartyIds(TenableBaseModel):
     mcafee_epo_guid: Optional[str] = None
     mcafee_epo_agent_guid: Optional[str] = None
     servicenow_sysid: Optional[str] = None
@@ -139,17 +140,18 @@ class ThirdPartyIds(BaseModel):
     symantec_ep_hardware_keys: List[str] = []
 
 
-class CustomAttribute(BaseModel):
+class CustomAttribute(TenableBaseModel):
     id: Optional[str] = None
     value: Optional[str] = None
 
 
-class AssetExportV2(BaseModel):
+class AssetExportV2(TenableBaseModel):
     """
     Asset record from the Export assets v2 chunk.
     """
 
     id: str
+    name: Optional[str] = None  # Not sent by the Export Assets v2 endpoint; filled by the details adapter
     has_agent: Optional[bool] = None
     has_plugin_results: Optional[bool] = None
     agent_uuid: Optional[str] = None

@@ -20,6 +20,19 @@ class AwsAccountProvider(OidcAwsMixin, AwsProvider):
 
     module: AwsModule
     configuration: AwsS3QueuedConfiguration
+    # one wrapper (and AWS session) per connector, rebuilt only when its configuration changes
+    _s3_wrapper: S3Wrapper | None = None
+    _sqs_wrapper: SqsWrapper | None = None
+
+    def _reuse_s3_wrapper(self, config: S3Configuration) -> S3Wrapper:
+        if self._s3_wrapper is None or self._s3_wrapper._configuration != config:
+            self._s3_wrapper = S3Wrapper(config)
+        return self._s3_wrapper
+
+    def _reuse_sqs_wrapper(self, config: SqsConfiguration) -> SqsWrapper:
+        if self._sqs_wrapper is None or self._sqs_wrapper._configuration != config:
+            self._sqs_wrapper = SqsWrapper(config)
+        return self._sqs_wrapper
 
     @property
     def s3_wrapper(self) -> S3Wrapper:
@@ -38,13 +51,13 @@ class AwsAccountProvider(OidcAwsMixin, AwsProvider):
                 aws_region=aws_config.aws_region,
                 aws_session_token=aws_config.aws_session_token,
             )
-            return S3Wrapper(config)
+            return self._reuse_s3_wrapper(config)
         config = S3Configuration(
             aws_access_key_id=self.module.configuration.aws_access_key,
             aws_secret_access_key=self.module.configuration.aws_secret_access_key,
             aws_region=self.module.configuration.aws_region_name,
         )
-        return S3Wrapper(config)
+        return self._reuse_s3_wrapper(config)
 
     @property
     def sqs_wrapper(self) -> SqsWrapper:
@@ -66,7 +79,7 @@ class AwsAccountProvider(OidcAwsMixin, AwsProvider):
                 aws_region=aws_config.aws_region,
                 aws_session_token=aws_config.aws_session_token,
             )
-            return SqsWrapper(config)
+            return self._reuse_sqs_wrapper(config)
 
         config = SqsConfiguration(
             frequency=self.configuration.sqs_frequency,
@@ -76,4 +89,4 @@ class AwsAccountProvider(OidcAwsMixin, AwsProvider):
             aws_secret_access_key=self.module.configuration.aws_secret_access_key,
             aws_region=self.module.configuration.aws_region_name,
         )
-        return SqsWrapper(config)
+        return self._reuse_sqs_wrapper(config)

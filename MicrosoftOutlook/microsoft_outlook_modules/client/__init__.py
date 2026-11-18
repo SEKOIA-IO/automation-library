@@ -6,6 +6,8 @@ from .retry import Retry
 
 
 class ApiClient(requests.Session):
+    """Provide a requests session configured for Microsoft Graph access."""
+
     def __init__(
         self,
         app_id: str,
@@ -14,6 +16,8 @@ class ApiClient(requests.Session):
         nb_retries: int = 5,
         ratelimit_per_minute: int = 45,
     ):
+        """Initialize authentication, retry behavior, and rate limiting adapters."""
+
         super().__init__()
         self.auth = GraphApiAuthentication(
             app_id=app_id,

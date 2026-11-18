@@ -69,7 +69,7 @@ class ApplicationArguments(BaseModel):
 
 
 class IdArguments(BaseModel):
-    id: str | None = Field(default=None, description="ID of the user. id should be specified.")
+    id: str | None = Field(default=None, description="ID or userPrincipalName (UPN) of the user.")
 
 
 class SingleUserArguments(BaseModel):

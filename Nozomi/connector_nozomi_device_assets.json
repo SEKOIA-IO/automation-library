@@ -27,6 +27,7 @@
         "type": "integer",
         "description": "Number of assets to process in one batch",
         "minimum": 1,
+        "maximum": 1000,
         "default": 100
       }
     },

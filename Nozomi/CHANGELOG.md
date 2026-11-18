@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-30 - 1.2.2
+
+### Fixed
+
+- Send the asset name as hostname only when the asset management API accepts it, split into `hostname` and `domain` when fully qualified; never fall back on the asset id. Skip an asset without usable hostname
+
+## 2026-10-21 - 1.2.1
+
+### Added
+
+- Add explicit maximum thresholds for Nozomi Vantage and Nozomi Device Assets batch/chunk sizes in connector schemas, and enforce Vantage chunk size limits in runtime configuration.
+
+### Fixed
+
+- Enable the account validation in the manifest (`supports_validation`)
+- Report the cause of account validation failures (client/server error, timeout, network error)
+
 ## 2026-09-16 - 1.2.0
 
 ### Added

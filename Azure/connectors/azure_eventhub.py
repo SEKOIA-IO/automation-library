@@ -1,6 +1,7 @@
 import asyncio
 import os
 import time
+from collections import Counter
 from datetime import datetime, timezone
 from functools import cached_property
 from hashlib import sha1
@@ -161,6 +162,7 @@ class AzureEventsHubTrigger(AsyncConnector):
         start = time.time()
 
         records = []
+        skipped_categories: Counter[str] = Counter()
         for message in messages:
             body, body_type = self.get_records_from_message(message)
             for record in body:
@@ -172,10 +174,10 @@ class AzureEventsHubTrigger(AsyncConnector):
                             and isinstance(record, dict)
                             and record.get("category") not in self.configuration.categories
                         ):
-                            self.log(
-                                message=f"Skip record as its category {record.get('category')} not in allowed categories {self.configuration.categories}",
-                                level="debug",
-                            )
+                            # Count skipped records instead of logging each one: logs are sent to the API
+                            # with a blocking call, so a log per record stalls the event loop.
+                            # The category is stringified as it may be unhashable (list, object)
+                            skipped_categories[str(record.get("category"))] += 1
                             continue
 
                         # Dump the record into a JSON document
@@ -198,6 +200,15 @@ class AzureEventsHubTrigger(AsyncConnector):
 
                         # Add the record to the batch of events
                         records.append(record)
+
+        if skipped_categories:
+            self.log(
+                message=(
+                    f"Skip {skipped_categories.total()} records as their categories are not in allowed categories "
+                    f"{self.configuration.categories}: {dict(skipped_categories)}"
+                ),
+                level="debug",
+            )
 
         if len(records) > 0:
             self.log(f"Forward {len(records)} events")

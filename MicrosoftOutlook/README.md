@@ -7,34 +7,35 @@ Run all commands below from the project root.
 ### Prerequisites
 
 ```bash
-poetry install
+uv sync
 ```
 
 ### Check Linters
 
 ```bash
-poetry run black --check .
-poetry run isort --check-only .
-poetry run mypy .
-poetry run ruff check .
+uv run ruff format --check .
+uv run ruff check --no-fix .
+uv run mypy .
+uv run python ../linter.py check --changes
 ```
 
 ### Auto-fix When Possible
 
 ```bash
-poetry run black .
-poetry run isort .
-poetry run ruff check . --fix
+uv run ruff format .
+uv run ruff check --fix .
+uv run mypy .
+uv run python ../linter.py fix --changes
 ```
 
 ### Single Command (Full Validation)
 
 ```bash
-poetry run black --check . && poetry run isort --check-only . && poetry run mypy . && poetry run ruff check .
+uv run ruff format --check . && uv run ruff check --no-fix . && uv run mypy . && uv run python ../linter.py check --changes
 ```
 
 ### Run Tests
 
 ```bash
-poetry run python -m pytest --junit-xml=junit.xml --cov-report term --cov-report xml:coverage.xml --cov . --cov-config pyproject.toml -vv
+uv run python -m pytest --junit-xml=junit.xml --cov-report term --cov-report xml:coverage.xml --cov . --cov-config pyproject.toml -vv
 ```

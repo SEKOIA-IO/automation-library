@@ -16,7 +16,13 @@
       "status": {
         "type": "string",
         "description": "Name or UUID of the status to update the alert to (native or custom)",
-        "in": "body"
+        "in": "body",
+        "api": {
+          "type": "request",
+          "url": "/api/v1/sic/custom_statuses",
+          "label_path": "items.label",
+          "value_path": "items.uuid"
+        }
       },
       "comment": {
         "type": "string",

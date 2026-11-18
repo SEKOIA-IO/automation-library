@@ -29,7 +29,7 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
         super().__init__(*args, **kwargs)
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
         self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
-        self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 60))
+        self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 600))
 
     def is_aws_notification(self, message: Any) -> bool:
         """
@@ -51,13 +51,14 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
         Returns:
             tuple[list[str], list[int]]:
         """
-        records = []
+        records: list[str] = []
         timestamps_to_log: list[int] = []
 
         continue_receiving = True
         while continue_receiving:
             async with self.sqs_wrapper.receive_messages(
-                max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
+                max_messages=self.sqs_max_messages,
+                visibility_timeout=self.sqs_visibility_timeout,
             ) as messages:
                 if not messages:
                     continue_receiving = False
@@ -68,22 +69,26 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
                     timestamps_to_log.append(message_timestamp)
                     try:
                         content = orjson.loads(message)
+                        # records are serialized right away: keeping parsed dicts would multiply the memory used
                         if self.is_aws_notification(content):
                             # The message is an AWS notification, we extract the Records field
-                            records.extend(content.get("Records", []))
+                            records.extend(
+                                orjson.dumps(record).decode("utf-8") for record in content.get("Records", [])
+                            )
                         else:
                             # The message is a raw message, we add it as is
-                            records.append(content)
+                            records.append(orjson.dumps(content).decode("utf-8"))
                     except ValueError as e:
-                        self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
+                        self.log_exception(
+                            e,
+                            message=f"Invalid JSON in message.\nInvalid message is: {message}",
+                        )
 
             if len(records) >= self.limit_of_events_to_push or not records:
                 continue_receiving = False
 
         self.log(message=f"Forwarding {len(records)} messages", level="info")
 
-        result: list[str] = await self.push_data_to_intakes(
-            events=[orjson.dumps(record).decode("utf-8") for record in records],
-        )
+        result: list[str] = await self.push_data_to_intakes(events=records)
 
         return len(result), timestamps_to_log

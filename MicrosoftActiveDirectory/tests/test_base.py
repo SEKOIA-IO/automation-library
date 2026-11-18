@@ -1,8 +1,10 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
 from microsoft_ad.actions_base import MicrosoftADAction
+from microsoft_ad.client.ldap_client import LDAPClient
+from microsoft_ad.models.common_models import MicrosoftADModule
 
 
 class ConcreteMicrosoftADAction(MicrosoftADAction):
@@ -223,3 +225,19 @@ class TestSearchUserdnQuery:
         result = action.search_userdn_query("user", "DC=example,DC=com")
 
         assert len(result) == 2
+
+
+def test_client_uses_the_ldap_receive_timeout():
+    action = object.__new__(ConcreteMicrosoftADAction)
+    action.module = MicrosoftADModule()
+    action.module.configuration = {
+        "servername": "ad.example.com",
+        "admin_username": "admin",
+        "admin_password": "password",
+    }
+
+    with patch("microsoft_ad.client.ldap_client.Connection") as connection:
+        assert action.client is connection.return_value
+
+    assert connection.call_args.kwargs["receive_timeout"] == LDAPClient.RECEIVE_TIMEOUT
+    assert connection.call_args.kwargs["user"] == "admin"

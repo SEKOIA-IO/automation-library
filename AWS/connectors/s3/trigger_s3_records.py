@@ -18,7 +18,7 @@ class BaseAwsS3RecordsTrigger:
 
     _events_prefixes = {
         "s3.amazonaws.com": {
-            # If eventSource is "s3" then we should collect logs only if the event name starts with one of the following
+            # If eventSource is "s3" then we should collect logs only if the event name starts with one of these
             "supported": [
                 "Delete",
                 "Create",

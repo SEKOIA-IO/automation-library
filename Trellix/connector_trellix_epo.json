@@ -37,6 +37,13 @@
         "description": "Number of records to fetch per 1 request",
         "default": 100,
         "type": "integer"
+      },
+      "timeshift": {
+        "description": "Number of minutes, before the most recent collected event, during which events received late are still collected. Each fetch reads this period again and skips the events already forwarded, so a higher value costs more requests. 0 disables it",
+        "default": 0,
+        "minimum": 0,
+        "maximum": 60,
+        "type": "integer"
       }
     },
     "required": [

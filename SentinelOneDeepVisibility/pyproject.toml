@@ -1,43 +1,59 @@
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
-name = "Automation Module for SentinelOne"
-description = ""
+[project]
+name = "automation-module-sentinelone-deepvisibility"
 version = "0.0"
+description = "Sekoia.io Automation Module to collect SentinelOne DeepVisibility events through AWS S3"
 authors = []
-package-mode = false
-[[tool.poetry.packages]]
-include = "deep_visibility"
+requires-python = ">=3.14,<4"
+dependencies = [
+    "sekoia-automation-sdk>=1.27.0,<2",
+    "aws-automation",
+]
 
-[tool.black]
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "requests",
+    "requests-mock",
+    "Faker",
+]
+lint = [
+    "ruff>=0.14",
+    "mypy",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "lint"]
+
+[tool.uv.sources]
+aws-automation = { path = "../AWS" }
+
+[tool.ruff]
 line-length = 119
-target-version = ["py38"]
-include = "\\.pyi?$"
+target-version = "py314"
 
-[tool.isort]
-profile = "black"
-line_length = 119
+[tool.ruff.lint]
+select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
+# E501 only hits long comments and test data
+ignore = ["E501"]
 
-[tool.poetry.dependencies]
-python = ">=3.11,<3.12"
-sekoia-automation-sdk = "^1.22.5"
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]
 
-[tool.poetry.dev-dependencies]
-pytest = "*"
-pytest-asyncio = "*"
-pytest-cov = "*"
-requests = "*"
-requests-mock = "*"
+[tool.mypy]
+python_version = "3.14"
+strict = true
+ignore_missing_imports = true
+allow_subclassing_any = true
+allow_untyped_calls = true
+pretty = true
+show_error_codes = true
+implicit_reexport = true
+allow_untyped_decorators = true
+warn_return_any = true
+exclude = ["tests/"]
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]
-
-[tool.poetry.dependencies.aws-automation]
-path = "../AWS"
-develop = false
-
-[tool.poetry.group.dev.dependencies]
-mypy = "^0.990"
-Faker = "^13.12.0"

@@ -38,9 +38,23 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 - CertificateTransparency
 - Duo
 
+### Wave 4 first batch completed in this session
+- CatoNetwork
+- TrendMicro
+
+### Wave 4 second batch completed in this session
+- Trellix
+
+### Wave 4 third batch completed
+- CrowdStrike
+- SentinelOneDeepVisibility
+
+### Wave 6 first batch completed
+- AWS
+
 ### Remaining scope
-- Remaining modules to migrate: 86
-- Remaining planned effort: about 385.0 hours
+- Remaining modules to migrate: 81
+- Remaining planned effort: about 369 hours
 - Criticity scale: 1 (easiest) to 10 (hardest)
 
 ## Incremental Delivery Strategy
@@ -133,7 +147,6 @@ Estimated wave effort: 96h
 ### Wave 4: Criticity 7 (estimated 4.5h each)
 - AzureMonitor
 - BeyondTrust
-- CatoNetwork
 - Checkpoint
 - CrowdStrike
 - Darktrace
@@ -146,17 +159,14 @@ Estimated wave effort: 96h
 - MicrosoftWindowsServer
 - Proofpoint
 - Salesforce
-- SentinelOneDeepVisibility
 - SkyhighSecurity
 - Sophos
 - Tenable
-- TrendMicro
-- Trellix
 - Vectra
 - Wiz
 - Zscaler
 
-Estimated wave effort: 108h
+Estimated wave effort: 108h total, 99h remaining
 
 ### Wave 5: Criticity 8 (estimated 6h each)
 - Azure
@@ -179,13 +189,13 @@ Estimated wave effort: 108h
 
 Estimated wave effort: 102h
 
-### Wave 6: Criticity 9 (estimated 7h each)
-- AWS
+### Wave 6: Criticity 9 (estimated 7h each) - In progress
+- AWS (completed)
 - Github
 - MicrosoftSentinel
 - Sekoia.io
 
-Estimated wave effort: 28h
+Estimated wave effort: 28h total, 21h remaining
 
 ## Suggested Batch Size Per Session
 - Small session: 2 modules from current wave.

@@ -1,24 +1,52 @@
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
-name = "Sekoia.io Automation Module to work with AWS S3 through SQS for CrowdStrike"
+[project]
+name = "automation-module-crowdstrike"
 version = "0.0"
 description = ""
 authors = []
-package-mode = false
+requires-python = ">=3.14,<4"
+dependencies = [
+    "sekoia-automation-sdk>=1.26.0,<2",
+    "aws-automation",
+    "python-dateutil>=2.8.2,<3",
+    "async-lru>=2.0.2,<3",
+    "aiolimiter>=1.1.0,<2",
+]
 
-[tool.black]
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "pytest-asyncio",
+    "pytest-xdist",
+    "pytest-env",
+    "Faker",
+    "aioresponses>=0.7.4",
+    "gevent>=23.9",
+]
+lint = [
+    "ruff>=0.14",
+    "mypy",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "lint"]
+
+[tool.uv.sources]
+aws-automation = { path = "../AWS" }
+
+[tool.ruff]
 line-length = 119
-target-version = ["py310"]
-include = "\\.pyi?$"
+target-version = "py314"
 
-[tool.isort]
-profile = "black"
-line_length = 119
+[tool.ruff.lint]
+select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]
 
 [tool.mypy]
+python_version = "3.14"
 strict = true
 ignore_missing_imports = true
 allow_subclassing_any = true
@@ -30,27 +58,6 @@ allow_untyped_decorators = true
 warn_return_any = true
 exclude = ["tests/*"]
 
-[tool.poetry.dependencies]
-python = ">=3.11,<3.12"
-python-dateutil = "^2.8.2"
-async-lru = "^2.0.2"
-aiolimiter = "^1.1.0"
-sekoia-automation-sdk = "^1.18.3"
-
-[tool.poetry.dev-dependencies]
-pytest = "*"
-pytest-cov = "*"
-pytest-asyncio = "*"
-pytest-xdist = "*"
-pytest-env = "*"
-pytest-flake8 = "*"
-Faker = "^13.12.0"
-autoflake = "^1.4"
-isort = "^5.10.1"
-mypy = "^0.991"
-poetry = "^1.5.1"
-gevent = "^23.9"
-
 [tool.pytest.ini_options]
 minversion = "6.0"
 testpaths = ["tests"]
@@ -59,37 +66,8 @@ filterwarnings = [
   "ignore::DeprecationWarning",
   "ignore:.*unclosed.*:ResourceWarning",
 ]
-addopts = "  --strict-markers\n  --tb=short\n  --asyncio-mode=auto\n  --cov=crowdstrike_telemetry\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=90\n  --numprocesses=auto\n"
+addopts = "  --strict-markers\n  --tb=short\n  --asyncio-mode=auto\n  --cov=crowdstrike_telemetry\n  --cov-branch\n  --cache-clear\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=90\n  --numprocesses=auto\n"
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py", "crowdstrike_telemetry/metrics.py"]
 concurrency = ["gevent"]
-
-[tool.poetry.dependencies.aws-automation]
-path = "../AWS"
-develop = false
-
-[tool.poetry.dev-dependencies.black]
-version = "^24.3.0"
-extras = ["colorama"]
-
-[tool.poetry.dev-dependencies.poethepoet]
-version = "^0.16.5"
-extras = ["poetry_plugin"]
-
-[tool.poe.tasks.lint]
-help = "Make code linting and formatting."
-[[tool.poe.tasks.lint.sequence]]
-cmd = "poetry run autoflake --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables */**/*.py"
-
-[[tool.poe.tasks.lint.sequence]]
-cmd = "poetry run black ."
-
-[[tool.poe.tasks.lint.sequence]]
-cmd = "poetry run isort ."
-
-[[tool.poe.tasks.lint.sequence]]
-cmd = "poetry run mypy ."
-
-[tool.poetry.group.dev.dependencies]
-aioresponses = "^0.7.4"

@@ -13,7 +13,7 @@
         "type": "string"
       },
       "alternative_url": {
-        "description": "The alternative url to contact the TEHTRIS instance",
+        "description": "The base URL of the TEHTRIS API, to set only if it differs from the default one (https://{tenant_id}.api.tehtris.net/api). Provide the full API URL, including the API path (e.g. https://myinstance.api.tehtris.net/api)",
         "type": "string"
       }
     },
@@ -29,7 +29,7 @@
   "name": "TEHTRIS",
   "uuid": "1528d749-d353-4e38-ab1b-6e01d7595569",
   "slug": "tehtris",
-  "version": "1.16.1",
+  "version": "1.16.2",
   "categories": [
     "Endpoint"
   ]
