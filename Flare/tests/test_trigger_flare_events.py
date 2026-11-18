@@ -11,7 +11,8 @@ from prometheus_client import REGISTRY
 from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
 
 from flareio_modules import FlareIOModule
-from flareio_modules.trigger_flare_events import FlareEventsConnector, ThreadSafeLimiter, TimeoutHTTPAdapter
+from flareio_modules.http import REQUEST_TIMEOUT, TimeoutHTTPAdapter
+from flareio_modules.trigger_flare_events import FlareEventsConnector, ThreadSafeLimiter
 
 # `time.sleep` is patched in the connector's module by most tests; keep the real ones for the timing tests
 real_sleep = time.sleep
@@ -504,7 +505,7 @@ def test_client_retries_flare_server_errors(data_storage):
     assert retry.total == 5
 
 
-@pytest.mark.parametrize(("timeout", "expected"), [(None, FlareEventsConnector.REQUEST_TIMEOUT), (5, 5)])
+@pytest.mark.parametrize(("timeout", "expected"), [(None, REQUEST_TIMEOUT), (5, 5)])
 def test_client_calls_have_a_timeout(data_storage, monkeypatch, timeout, expected):
     trigger = _build_trigger(data_storage)
     sent = {}
