@@ -11,7 +11,7 @@ from prometheus_client import REGISTRY
 from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
 
 from flareio_modules import FlareIOModule
-from flareio_modules.trigger_flare_events import FlareEventsConnector, ThreadSafeLimiter
+from flareio_modules.trigger_flare_events import FlareEventsConnector, ThreadSafeLimiter, TimeoutHTTPAdapter
 
 # `time.sleep` is patched in the connector's module by most tests; keep the real ones for the timing tests
 real_sleep = time.sleep
@@ -502,3 +502,22 @@ def test_client_retries_flare_server_errors(data_storage):
     assert all(retry.is_retry(method, status) for method in ("GET", "POST") for status in (429, 500, 502, 503, 504))
     assert not retry.is_retry("GET", 404)
     assert retry.total == 5
+
+
+@pytest.mark.parametrize(("timeout", "expected"), [(None, FlareEventsConnector.REQUEST_TIMEOUT), (5, 5)])
+def test_client_calls_have_a_timeout(data_storage, monkeypatch, timeout, expected):
+    trigger = _build_trigger(data_storage)
+    sent = {}
+
+    def fake_send(self, request, stream, timeout, verify, cert, proxies):
+        sent["timeout"] = timeout
+        return requests.Response()
+
+    monkeypatch.setattr(requests.adapters.HTTPAdapter, "send", fake_send)
+    adapter = trigger.client._session.get_adapter("https://api.flare.io")
+    assert isinstance(adapter, TimeoutHTTPAdapter)
+
+    # The SDK sends its requests without a timeout
+    adapter.send(requests.Request("GET", "https://api.flare.io/").prepare(), timeout=timeout)
+
+    assert sent["timeout"] == expected

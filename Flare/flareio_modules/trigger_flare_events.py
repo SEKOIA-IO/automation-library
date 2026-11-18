@@ -46,6 +46,28 @@ class FlareEventsConnectorConfiguration(DefaultConnectorConfiguration):
     concurrency: int = 4
 
 
+class TimeoutHTTPAdapter(HTTPAdapter):
+    """
+    Gives a timeout to the calls that have none: the SDK sets none, so a call Flare never answers blocked the
+    connector until the connection broke (16 minutes once). A timed out call is then retried like a 5xx.
+    """
+
+    def __init__(self, timeout: tuple[float, float], **kwargs: Any) -> None:
+        self.timeout = timeout
+        super().__init__(**kwargs)
+
+    def send(
+        self,
+        request: requests.PreparedRequest,
+        stream: bool = False,
+        timeout: float | tuple[float | None, float | None] | None = None,
+        verify: bool | str = True,
+        cert: str | tuple[str, str] | None = None,
+        proxies: dict[str, str] | None = None,
+    ) -> requests.Response:
+        return super().send(request, stream, self.timeout if timeout is None else timeout, verify, cert, proxies)
+
+
 class ThreadSafeLimiter:
     """`flareio`'s `Limiter`, shared by the threads that call Flare: one call starts every `throttle_seconds`."""
 
@@ -66,6 +88,8 @@ class FlareEventsConnector(Connector):
     EVENTS_DETAILS_URL = "/firework/v2/activities/"
     MAX_PAGE_SIZE = 10
     BATCH_SIZE = 100
+    # (connect, read) in seconds: a page usually answers in about 1 s
+    REQUEST_TIMEOUT = (10.0, 60.0)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -79,8 +103,8 @@ class FlareEventsConnector(Connector):
             session=self._create_session(),
         )
 
-    @staticmethod
-    def _create_session() -> requests.Session:
+    @classmethod
+    def _create_session(cls) -> requests.Session:
         """
         The SDK's session retries 429, 502, 503 and 504 only, while Flare also answers intermittent 500s to both the
         search and the details: without a retry, each one fails the batch and costs a `frequency` wait in `run()`.
@@ -94,7 +118,7 @@ class FlareEventsConnector(Connector):
             status_forcelist=[429, 500, 502, 503, 504],
             allowed_methods={"GET", "POST"},
         )
-        session.mount("https://", HTTPAdapter(max_retries=retry))
+        session.mount("https://", TimeoutHTTPAdapter(timeout=cls.REQUEST_TIMEOUT, max_retries=retry))
         return session
 
     @cached_property
