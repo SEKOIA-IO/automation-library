@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.13.2 - 2026-11-13
+
+### Fixed
+
+- Fix the module configuration with a missing field
+
+## 1.13.1 - 2026-11-12
+
+### Changed
+
+- Upgrade AWS dependency
+
+## 1.13.0 - 2026-11-12
+
+### Changed
+
+- Migrate the module from Poetry to uv, Ruff and Python 3.14
+- Migrate the configuration models to Pydantic v2
+- Upgrade dependencies
+
+## 1.12.5 - 2026-04-10
+
+### Fixed
+
+- Fix the autimation module following changes in the AWS automation module
+
+## 1.12.4 - 2026-02-18
+
+### Changed
+
+- Upgrade AWS dependency
+
+## 1.12.3 - 2025-10-23
+
+### Added
+
+- Add the ability to define the SQS message visibility timeout through env variable
+
 ## 1.12.2 - 2025-10-23
 
 ### Fixed
