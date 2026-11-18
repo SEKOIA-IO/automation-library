@@ -3,17 +3,15 @@
 from pathlib import Path
 
 import pytest
-from faker import Faker
 
+from deep_visibility import SentinelOneDeepVisibilityConfiguration, SentinelOneDeepVisibilityModule
 from deep_visibility.connector_s3_logs import DeepVisibilityConnector
-from deep_visibility import SentinelOneDeepVisibilityModule, SentinelOneDeepVisibilityConfiguration
-
 from tests.helpers import async_list, async_temporary_file
 
 
 @pytest.fixture
 def test_data() -> bytes:
-    return """
+    return b"""
 
 {"message":"EPP Device Collected","dataSource.vendor":"SentinelOne","timestamp":"2024-04-30T09:06:28.629Z"}
 {"src.process.parent.isStorylineRoot":false,"event.category":"indicators","indicator.category":"InfoStealer","event.type":"Behavioral Indicators"}
@@ -21,7 +19,7 @@ def test_data() -> bytes:
 {"src.process.parent.isStorylineRoot":false,"event.category":"file","indicator.category":"InfoStealer","event.type":"File Scan"}
 2 111111111111 eni-0a479835a7588c9ca 188.114.116.1 172.31.39.167 123 44789 17 1 76 1645469669 1645469724 ACCEPT OK
 
-""".encode("utf-8")
+"""
 
 
 @pytest.fixture
