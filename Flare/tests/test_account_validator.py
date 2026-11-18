@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 from flareio_modules import FlareIOModule
 from flareio_modules.account_validator import FlareAccountValidator
+from flareio_modules.http import TimeoutHTTPAdapter
 from flareio_modules.models import FlareIOModuleConfiguration
 
 
@@ -55,3 +56,9 @@ def test_validate_account_failure_exception(mock_client_cls):
 
     assert validator.validate() is False
     validator.log.assert_called()
+
+
+def test_validator_client_calls_have_a_timeout():
+    validator = _build_validator()
+
+    assert isinstance(validator.client._session.get_adapter("https://api.flare.io"), TimeoutHTTPAdapter)
