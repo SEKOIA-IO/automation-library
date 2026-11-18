@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 from azure.core.exceptions import ClientAuthenticationError
 
-from azure_ad.delegated_credential import ConfidentialUsernamePasswordCredential
+from azure_ad.delegated_credential import DEFAULT_EXPIRES_IN_SECONDS, ConfidentialUsernamePasswordCredential
 from azure_ad.user import ResetUserPasswordAction
 from tests.test_actions import configured_action
 
@@ -48,7 +48,7 @@ def test_client_uses_confidential_credential_when_client_secret_is_set():
 
 def test_client_falls_back_to_public_client_without_client_secret():
     action = configured_action(ResetUserPasswordAction)
-    action.module.configuration = {**action.module.configuration.model_dump(), "client_secret": ""}
+    action.module.configuration = action.module.configuration.model_copy(update={"client_secret": ""})
 
     with (
         patch("azure_ad.user.ConfidentialUsernamePasswordCredential") as confidential_credential,
@@ -81,6 +81,19 @@ def test_credential_gets_delegated_token_as_confidential_client():
     application.acquire_token_for_client.assert_not_called()
     assert first_token.token == "token"
     assert second_token is first_token
+
+
+def test_credential_uses_default_lifetime_when_expires_in_is_missing():
+    with (
+        patch("azure_ad.delegated_credential.msal.ConfidentialClientApplication") as application_class,
+        patch("azure_ad.delegated_credential.time.time", return_value=1000.0),
+    ):
+        application_class.return_value.acquire_token_by_username_password.return_value = {"access_token": "token"}
+
+        token = build_credential().get_token(SCOPE)
+
+    assert token.token == "token"
+    assert token.expires_on == 1000 + DEFAULT_EXPIRES_IN_SECONDS
 
 
 def test_credential_requests_new_token_on_claims_challenge():

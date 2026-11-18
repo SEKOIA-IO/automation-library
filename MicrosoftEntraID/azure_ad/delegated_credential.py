@@ -18,6 +18,9 @@ AADSTS_HINTS = {
 # Renew the token a bit before its real expiration
 EXPIRATION_MARGIN_SECONDS = 300
 
+# Token lifetime used when the response doesn't provide `expires_in`
+DEFAULT_EXPIRES_IN_SECONDS = 1800
+
 
 def format_authentication_error(result: dict) -> str:
     """
@@ -69,5 +72,6 @@ class ConfidentialUsernamePasswordCredential:
         if "access_token" not in result:
             raise ClientAuthenticationError(message=format_authentication_error(result))
 
-        self._access_token = AccessToken(result["access_token"], int(time.time()) + int(result["expires_in"]))
+        expires_in = int(result.get("expires_in", DEFAULT_EXPIRES_IN_SECONDS))
+        self._access_token = AccessToken(result["access_token"], int(time.time()) + expires_in)
         return self._access_token
