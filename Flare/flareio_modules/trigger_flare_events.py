@@ -262,7 +262,8 @@ class FlareEventsConnector(Connector):
         if serialized.truncated_fields:
             TRUNCATED_EVENTS.labels(intake_key=intake_key).inc()
             fields = ", ".join(serialized.truncated_fields)
-            self.log(f"Cut the fields {fields} of the {description} to fit the intake size limit", level="info")
+            # Not in the intake's logs, shown to the user: a backfill can cut hundreds of events
+            self._logger.info(f"Cut the fields {fields} of the {description} to fit the intake size limit")
         if serialized.size > EVENT_BYTES_MAX_SIZE:
             DISCARDED_EVENTS.labels(intake_key=intake_key).inc()
             self.log(

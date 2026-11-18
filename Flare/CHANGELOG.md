@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-18 - 0.6.8
+
+### Changed
+
+- Log the events cut to fit the intake size limit only in the connector's output, not in the intake's logs: a first sync can cut hundreds of them. The events still above the limit are still logged in the intake's logs
+
 ## 2026-11-17 - 0.6.7
 
 ### Fixed
