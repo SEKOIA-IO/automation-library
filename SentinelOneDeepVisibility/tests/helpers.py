@@ -1,6 +1,5 @@
-import io
+from collections.abc import AsyncIterable
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterable
 
 import aiofiles
 
