@@ -10,6 +10,7 @@
     "cloud",
     "on_premise"
   ],
+  "feature_flags": [],
   "on_premise_action": "8109d625-424c-4edb-bafc-81261932c898",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -44,7 +45,7 @@
       "basedn": {
         "type": "string",
         "title": "Base DN",
-        "description": "The base distinguished name (DN) to use for LDAP queries"
+        "description": "The base distinguished name (DN) to use for LDAP queries (e.g DC=example-domain,DC=com)"
       }
     },
     "required": [
