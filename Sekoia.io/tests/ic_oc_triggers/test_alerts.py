@@ -226,6 +226,31 @@ def test_single_event_triggers_status_changed(
         trigger.send_event.assert_called_once()
 
 
+def test_single_event_triggers_status_changed_with_hidden_verdict(
+    sample_sicalertapi,
+    module_configuration,
+    symphony_storage,
+    samplenotif_alert_status_changed,
+    requests_mock,
+):
+    # The Alert API returns a null verdict when the API key cannot read AI investigations
+    alert = {**sample_sicalertapi, "verdict": None}
+    requests_mock.get(f"http://fake.url/api/v1/sic/alerts/{alert['uuid']}", json=alert)
+
+    trigger = AlertStatusChangedTrigger()
+    trigger.configuration = {}
+    trigger._data_path = symphony_storage
+    trigger.module.configuration = module_configuration
+    trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+    trigger.send_event = MagicMock()
+
+    trigger.handle_event(samplenotif_alert_status_changed)
+
+    trigger.send_event.assert_called_once()
+    event = trigger.send_event.call_args.kwargs["event"]
+    assert event["verdict"] == {"name": None, "level": None, "stage": None, "uuid": alert.get("verdict_uuid")}
+
+
 def test_single_event_triggers_comments_added(
     alert_created_trigger,
     sample_sicalertapi,
@@ -701,6 +726,23 @@ class TestAlertEventsThresholdTrigger:
 
             # Should trigger because volume threshold is met (150 >= 100)
             assert threshold_trigger.send_event.called
+
+
+def test_threshold_trigger_with_hidden_verdict(threshold_trigger, sample_threshold_alert):
+    # The Alert API returns a null verdict when the API key cannot read AI investigations
+    threshold_trigger.configuration["event_count_threshold"] = 100
+    alert = {**sample_threshold_alert, "verdict": None}
+    message = {
+        "type": "alert",
+        "action": "updated",
+        "attributes": {"uuid": alert["uuid"], "updated": {"similar": 150}},
+    }
+
+    with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
+        threshold_trigger.handle_event(message)
+
+    threshold_trigger.send_event.assert_called_once()
+    assert threshold_trigger.send_event.call_args.kwargs["event"]["verdict"]["name"] is None
 
 
 class TestAlertLockManagement:

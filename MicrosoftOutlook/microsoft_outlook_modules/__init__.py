@@ -4,4 +4,6 @@ from .models import MicrosoftOutlookModuleConfiguration
 
 
 class MicrosoftOutlookModule(Module):
+    """Represent the Microsoft Outlook automation module."""
+
     configuration: MicrosoftOutlookModuleConfiguration

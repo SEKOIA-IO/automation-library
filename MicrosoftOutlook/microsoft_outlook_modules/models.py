@@ -2,6 +2,8 @@ from pydantic import BaseModel, Field, SecretStr
 
 
 class MicrosoftOutlookModuleConfiguration(BaseModel):
+    """Represent configuration values required to authenticate to Microsoft Graph."""
+
     tenant_id: str = Field(..., description="ID of the Azure AD tenant")
     client_id: str = Field(
         ...,

@@ -108,6 +108,13 @@ class AwsAssetsConnector(OidcAwsMixin, AssetConnector):
             self.log(f"Failed to update checkpoint: {str(e)}", level="error")
             self.log_exception(e)
 
+    def reset_checkpoint(self) -> None:
+        """Clear the checkpoint so every asset is collected again on the next cycle."""
+        with self.context as cache:
+            cache.pop("most_recent_date_seen", None)
+        self.new_most_recent_date = None
+        self.log("Checkpoint reset - a full re-collection will occur on the next cycle", level="info")
+
     def get_client(self, service_name: str) -> boto3.client:
         """Create and return a configured AWS service client."""
         try:

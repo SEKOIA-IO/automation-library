@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-09 - 1.6.6
+
+### Fixed
+
+- Reject an invalid base DN with a clear error that gives the reason, and suggests the DC= form for a domain name, in the cloud connector and in the on-premise synchronization
+- Show an example of base DN in the user assets connector configuration
+- Skip the search references Active Directory returns when the base DN is the domain root, instead of stopping the synchronization on them
+
+## 2026-11-03 - 1.6.5
+
+### Fixed
+
+- Add feature flags with empty list
+
+## 2026-11-03 - 1.6.4
+
+### Fixed
+
+- Front issue: delete the `reveal-local-runners` feature flag gating for the user assets connector
+
+## 2026-11-02 - 1.6.3
+
+### Fixed
+
+- Gate the user assets connector behind the `reveal-local-runners` feature flag
+
+## 2026-11-02 - 1.6.2
+
+### Added
+
+- Add feature flag for revealing beta connectors
+
+## 2026-10-19 - 1.6.1
+
+### Fixed
+
+- Fall back on `sAMAccountName` for the user name when there is no given name or surname, and for the account name when there is no UPN, a blank value counting as none, so built-in accounts such as `Guest` and `krbtgt` are no longer merged into a single `Unknown` asset
+
+## 2026-10-16 - 1.6.0
+
+### Added
+
+- Add an internal action that runs one fetch cycle of the Microsoft AD user asset connector on an on-premise runner. It returns `has_more` when interrupted, so the platform runs it again.
+- Declare the `cloud` and `on_premise` execution modes on the Microsoft AD user asset connector
+
+### Changed
+
+- Set a 120-second receive timeout on LDAP connections, so a hung Active Directory server cannot block an action or a connector forever
+
 ## 2026-07-13 - 1.5.8
 
 ### Fixed

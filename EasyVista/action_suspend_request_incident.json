@@ -1,0 +1,40 @@
+{
+  "name": "Suspend Request / Incident",
+  "description": "Suspend (place on hold) an incident or request, with an optional comment.",
+  "uuid": "7e33ace8-dbbd-42cf-a122-95683145df29",
+  "slug": "suspend_request_incident",
+  "docker_parameters": "easyvista_suspend_request_incident",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      },
+      "comment": {
+        "description": "Suspend action comment; does not change the ticket comment",
+        "title": "Comment",
+        "type": "string"
+      },
+      "done_by_id": {
+        "description": "Employee ID recorded as the author",
+        "title": "Done By Id",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "rfc_number"
+    ],
+    "title": "SuspendRequestIncidentArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "href": {
+        "type": "string",
+        "description": "Suspended ticket URL (HREF)"
+      }
+    }
+  }
+}

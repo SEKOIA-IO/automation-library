@@ -1,0 +1,76 @@
+{
+  "name": "Update Request / Incident",
+  "description": "Update an incident or request.",
+  "uuid": "16395168-e36f-48b3-a120-53500304b1a4",
+  "slug": "update_request_incident",
+  "docker_parameters": "easyvista_update_request_incident",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      },
+      "append": {
+        "description": "Append description to the existing text, separated by <br><br> (EV SM 2025.3+); false or unset: replace it",
+        "title": "Append",
+        "type": "boolean"
+      },
+      "description": {
+        "description": "Ticket description, stored in the COMMENT field; replaced unless append is true",
+        "title": "Description",
+        "type": "string"
+      },
+      "urgency_id": {
+        "description": "Urgency ID (tenant-specific)",
+        "title": "Urgency Id",
+        "type": "string"
+      },
+      "external_reference": {
+        "description": "External reference (e.g. the Sekoia alert ID)",
+        "title": "External Reference",
+        "type": "string"
+      },
+      "asset": {
+        "description": "Asset tag",
+        "title": "Asset",
+        "type": "string"
+      },
+      "asset_serial": {
+        "description": "Asset serial number",
+        "title": "Asset Serial",
+        "type": "string"
+      },
+      "ci": {
+        "description": "Configuration item name",
+        "title": "Ci",
+        "type": "string"
+      },
+      "ci_id": {
+        "description": "Configuration item ID",
+        "title": "Ci Id",
+        "type": "integer"
+      },
+      "custom_fields": {
+        "description": "Additional EasyVista fields (field name: value), forwarded verbatim",
+        "title": "Custom Fields",
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    "required": [
+      "rfc_number"
+    ],
+    "title": "UpdateRequestIncidentArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "href": {
+        "type": "string",
+        "description": "Updated ticket URL (HREF)"
+      }
+    }
+  }
+}

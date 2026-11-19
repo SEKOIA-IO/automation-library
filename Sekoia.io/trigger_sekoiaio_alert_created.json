@@ -4,7 +4,14 @@
     "properties": {
       "rule_filter": {
         "type": "string",
-        "description": "Create a run only for alerts matching a rule name"
+        "description": "Create a run only for alerts matching a rule name",
+        "api": {
+          "type": "request",
+          "url": "/api/v1/sic/conf/rules-catalog/multi-tenant/rules",
+          "search_key": "match[search]",
+          "label_path": "items.name",
+          "value_path": "items.uuid"
+        }
       },
       "rule_names_filter": {
         "type": "array",

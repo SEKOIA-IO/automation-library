@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-10-30
+
+### Fixed
+
+- Send a hostname the asset management API accepts: split a fully qualified name into `hostname` and `domain`, fall back on the device name, and skip a device without usable hostname instead of sending an empty one
+
+## [1.3.4] - 2026-10-09
+
+### Fixed
+
+- Keep findings with many CVEs under the push item size limit
+- Set the vulnerability title and description on the vulnerability details only, not on each CVE
+
 ## [1.3.3] - 2026-09-09
 
 ### Fixed

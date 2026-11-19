@@ -4,6 +4,7 @@ from flareio import FlareApiClient
 from sekoia_automation.account_validator import AccountValidator
 
 from flareio_modules import FlareIOModule
+from flareio_modules.http import create_session
 
 
 class FlareAccountValidator(AccountValidator):
@@ -14,6 +15,7 @@ class FlareAccountValidator(AccountValidator):
         return FlareApiClient(
             api_key=self.module.configuration.api_key,
             tenant_id=self.module.configuration.tenant_id,
+            session=create_session(),
         )
 
     def validate(self) -> bool:

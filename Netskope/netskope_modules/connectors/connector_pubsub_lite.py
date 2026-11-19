@@ -76,7 +76,7 @@ class PubSubLite(AsyncConnector):
         await self.context_lock.acquire()
 
         with self.context as cache:
-            cache["last_timestamp"] = self.last_seen_timestamp.replace(tzinfo=datetime.timezone.utc).timestamp()
+            cache["last_timestamp"] = self.last_seen_timestamp.replace(tzinfo=datetime.UTC).timestamp()
 
         self.context_lock.release()
 
@@ -158,10 +158,8 @@ class PubSubLite(AsyncConnector):
         async with AsyncSubscriberClient() as subscriber_client:
             if self.last_seen_timestamp:
                 admin_client = AdminClient(CloudRegion(self.configuration.cloud_region))
-                ts_datetime = self.last_seen_timestamp.astimezone(datetime.timezone.utc) + datetime.timedelta(
-                    microseconds=1
-                )
-                self.log("Getting events from %s" % ts_datetime.isoformat())
+                ts_datetime = self.last_seen_timestamp.astimezone(datetime.UTC) + datetime.timedelta(microseconds=1)
+                self.log(f"Getting events from {ts_datetime.isoformat()}")
 
                 ts = PublishTime(ts_datetime)
                 admin_client.seek_subscription(self.subscription_path, ts)
@@ -215,7 +213,7 @@ class PubSubLite(AsyncConnector):
 
                     except Exception as ex:
                         self.log_exception(ex, message="Failed to consume messages")
-                        raise ex
+                        raise
 
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")

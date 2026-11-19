@@ -19,9 +19,13 @@
         "type": "string"
       },
       "consumer_group": {
-        "description": "A unique name to track event consumption (default empty for auto-generated one)",
+        "description": "A unique name to track event consumption. It must not be shared with another connector. A dedicated index is derived from it for each event type (default empty for auto-generated one)",
         "type": "string",
         "default": ""
+      },
+      "start_timestamp": {
+        "description": "Epoch timestamp (in seconds) from which to start the collection. It is applied once; changing it restarts the collection from the new timestamp. Without it, Netskope starts a new consumer group from the oldest available events",
+        "type": "integer"
       },
       "security_check_only": {
         "description": "Collect only security-check alerts (malware, malsite, DLP)",

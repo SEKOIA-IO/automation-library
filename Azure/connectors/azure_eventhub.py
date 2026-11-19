@@ -1,8 +1,10 @@
 import asyncio
 import os
 import time
+from collections import Counter
 from datetime import datetime, timezone
 from functools import cached_property
+from hashlib import sha1
 from typing import Any, Optional, Union, cast
 
 import orjson
@@ -14,7 +16,10 @@ from azure.storage.blob.aio import BlobServiceClient
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
+from .logger import get_logger
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, MESSAGES_AGE, OUTCOMING_EVENTS
+
+logger = get_logger()
 
 
 class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
@@ -77,6 +82,12 @@ class AzureEventsHubTrigger(AsyncConnector):
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "10"), 10)  # 10 seconds default
         self._frequency = int(os.environ.get("FREQUENCY_MAX_TIME", "10"), 10)
         self._has_more_events = True
+        self._log_record_checksum = os.getenv("AZURE_LOG_RECORDS_CHECKSUM", "false").lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
 
     @cached_property
     def client(self) -> Client:
@@ -151,6 +162,7 @@ class AzureEventsHubTrigger(AsyncConnector):
         start = time.time()
 
         records = []
+        skipped_categories: Counter[str] = Counter()
         for message in messages:
             body, body_type = self.get_records_from_message(message)
             for record in body:
@@ -162,15 +174,41 @@ class AzureEventsHubTrigger(AsyncConnector):
                             and isinstance(record, dict)
                             and record.get("category") not in self.configuration.categories
                         ):
-                            self.log(
-                                message=f"Skip record as its category {record.get('category')} not in allowed categories {self.configuration.categories}",
-                                level="debug",
-                            )
+                            # Count skipped records instead of logging each one: logs are sent to the API
+                            # with a blocking call, so a log per record stalls the event loop.
+                            # The category is stringified as it may be unhashable (list, object)
+                            skipped_categories[str(record.get("category"))] += 1
                             continue
 
-                        records.append(orjson.dumps(record).decode("utf-8"))
+                        # Dump the record into a JSON document
+                        content = orjson.dumps(record)
+
+                        # If requested, log the checksum (SHA1) of the record
+                        if self._log_record_checksum:
+                            logger.info("Collect record", checksum=sha1(content, usedforsecurity=False).hexdigest())
+
+                        # Add the record to the batch of events
+                        records.append(content.decode("utf-8"))
+
                     else:
+                        # If requested, log the checksum (SHA1) of the record
+                        if self._log_record_checksum:
+                            logger.info(
+                                "Collect record",
+                                checksum=sha1(record.encode("utf-8"), usedforsecurity=False).hexdigest(),
+                            )
+
+                        # Add the record to the batch of events
                         records.append(record)
+
+        if skipped_categories:
+            self.log(
+                message=(
+                    f"Skip {skipped_categories.total()} records as their categories are not in allowed categories "
+                    f"{self.configuration.categories}: {dict(skipped_categories)}"
+                ),
+                level="debug",
+            )
 
         if len(records) > 0:
             self.log(f"Forward {len(records)} events")

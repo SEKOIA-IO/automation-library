@@ -1,6 +1,6 @@
 import asyncio
 import gzip
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 
 import pytest
@@ -67,7 +67,7 @@ def test_execute_calls_set_credentials_and_super_execute(trigger):
 
 
 def test_load_checkpoint_updates_last_seen_timestamp(trigger):
-    expected_ts = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc).timestamp()
+    expected_ts = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC).timestamp()
     with trigger.context as cache:
         cache["last_timestamp"] = expected_ts
 
@@ -87,7 +87,7 @@ def test_load_checkpoint_without_cache_keeps_existing_timestamp(trigger):
 
 
 def test_save_checkpoint_persists_last_seen_timestamp(trigger):
-    trigger.last_seen_timestamp = datetime(2026, 2, 3, 4, 5, 6, tzinfo=timezone.utc)
+    trigger.last_seen_timestamp = datetime(2026, 2, 3, 4, 5, 6, tzinfo=UTC)
 
     asyncio.run(trigger.save_checkpoint())
 

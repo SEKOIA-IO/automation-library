@@ -2,6 +2,7 @@
 
 import os
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import BinaryIO
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
@@ -452,3 +453,196 @@ async def test_abstract_aws_s3_queued_connector_next_batch_without_prefix_filter
 
     # Both messages should be processed
     assert result[0] == 2
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_queued_connector_next_batch_pushes_before_deleting_messages(
+    session_faker: Faker, abstract_queued_connector: AbstractAwsS3QueuedConnector, sqs_message: str
+):
+    """
+    Test that the events of a receive are pushed before its messages are deleted, even when fewer
+    events than the batch size are collected, and that the batch ends after a single receive.
+    """
+    abstract_queued_connector.limit_of_events_to_push = 10000
+    sqs_messages = [(sqs_message, session_faker.pyint(min_value=1, max_value=1000)) for _ in range(10)]
+    data_content = session_faker.word()
+    calls: list[str] = []
+
+    @asynccontextmanager
+    async def receive_messages(**kwargs):
+        calls.append("receive")
+        yield sqs_messages
+        calls.append("delete")
+
+    async def push_data_to_intakes(events: list[str]) -> list[str]:
+        calls.append("push")
+        return events
+
+    abstract_queued_connector.push_data_to_intakes = push_data_to_intakes
+
+    async def read_key():
+        return await async_bytesIO(data_content.encode("utf-8"))
+
+    mock_sqs = MagicMock()
+    mock_sqs.receive_messages = MagicMock(side_effect=receive_messages)
+
+    mock_s3 = MagicMock()
+    mock_s3.read_key = MagicMock()
+    mock_s3.read_key.return_value.__aenter__.side_effect = read_key
+
+    connector_type = type(abstract_queued_connector)
+    with (
+        patch.object(connector_type, "sqs_wrapper", new_callable=PropertyMock, return_value=mock_sqs),
+        patch.object(connector_type, "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3),
+    ):
+        result = await abstract_queued_connector.next_batch()
+
+    assert calls == ["receive", "push", "delete"]
+    assert result == (len(sqs_messages), [timestamp for _, timestamp in sqs_messages])
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_queued_connector_next_batch_does_not_delete_messages_on_push_failure(
+    session_faker: Faker, abstract_queued_connector: AbstractAwsS3QueuedConnector, sqs_message: str
+):
+    """
+    Test that the messages are not deleted when pushing the events to the intake fails.
+    """
+    abstract_queued_connector.limit_of_events_to_push = 10000
+    sqs_messages = [(sqs_message, session_faker.pyint(min_value=1, max_value=1000))]
+    data_content = session_faker.word()
+
+    abstract_queued_connector.push_data_to_intakes = AsyncMock(side_effect=RuntimeError("intake unavailable"))
+
+    async def read_key():
+        return await async_bytesIO(data_content.encode("utf-8"))
+
+    mock_s3 = MagicMock()
+    mock_s3.read_key = MagicMock()
+    mock_s3.read_key.return_value.__aenter__.side_effect = read_key
+
+    mock_client = MagicMock()
+    mock_client.receive_message = AsyncMock(
+        return_value={
+            "Messages": [
+                {"Body": body, "ReceiptHandle": session_faker.word(), "Attributes": {"SentTimestamp": timestamp}}
+                for body, timestamp in sqs_messages
+            ]
+        }
+    )
+    mock_client.delete_message = AsyncMock(return_value={})
+
+    connector_type = type(abstract_queued_connector)
+    with (
+        patch.object(connector_type, "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3),
+        patch.object(SqsWrapper, "queue_url", AsyncMock(return_value=session_faker.url())),
+        patch.object(SqsWrapper, "get_client") as mock_get_client,
+    ):
+        mock_get_client.return_value.__aenter__.return_value = mock_client
+
+        with pytest.raises(RuntimeError):
+            await abstract_queued_connector.next_batch()
+
+    mock_client.delete_message.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_queued_connector_next_batch_closes_the_parsed_events_on_push_failure(
+    session_faker: Faker, abstract_queued_connector: AbstractAwsS3QueuedConnector, sqs_message: str
+):
+    """The parser is closed as soon as the object is left, not when the event loop finalizes it later."""
+    closed = []
+
+    async def parse_content(stream: BinaryIO) -> AsyncGenerator[str, None]:
+        try:
+            yield "event-1"
+            yield "event-2"
+        finally:
+            closed.append(True)
+
+    abstract_queued_connector._parse_content = MagicMock(side_effect=parse_content)
+    # the push of the first event fails (the object is abandoned), the final push succeeds
+    abstract_queued_connector.push_data_to_intakes = AsyncMock(side_effect=[RuntimeError("intake down"), []])
+
+    async def read_key():
+        return await async_bytesIO(b"data")
+
+    mock_s3 = MagicMock()
+    mock_s3.read_key = MagicMock()
+    mock_s3.read_key.return_value.__aenter__.side_effect = read_key
+
+    mock_client = MagicMock()
+    mock_client.receive_message = AsyncMock(
+        return_value={
+            "Messages": [
+                {"Body": sqs_message, "ReceiptHandle": session_faker.word(), "Attributes": {"SentTimestamp": 1}}
+            ]
+        }
+    )
+    mock_client.delete_message = AsyncMock(return_value={})
+
+    with (
+        patch.object(type(abstract_queued_connector), "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3),
+        patch.object(SqsWrapper, "queue_url", AsyncMock(return_value=session_faker.url())),
+        patch.object(SqsWrapper, "get_client") as mock_get_client,
+    ):
+        mock_get_client.return_value.__aenter__.return_value = mock_client
+        await abstract_queued_connector.next_batch()
+
+    assert closed == [True]
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_queued_connector_next_batch_flushes_on_max_bytes(
+    session_faker: Faker,
+    aws_module: AwsModule,
+    symphony_storage: Path,
+    mock_push_data_to_intakes: AsyncMock,
+):
+    """
+    Test that the buffered events are pushed as soon as their size reaches the byte limit,
+    even if the number of events is below the count limit.
+    """
+    config = AwsS3QueuedConfiguration(intake_key=session_faker.word(), queue_name=session_faker.word())
+
+    klass = type("TestConnector", (AbstractAwsS3QueuedConnector, AwsAccountProvider), {})
+    connector = klass(module=aws_module, data_path=symphony_storage)
+    connector.configuration = config
+    connector.push_data_to_intakes = mock_push_data_to_intakes
+    connector.limit_of_events_to_push = 10000
+    connector.max_batch_bytes = 25
+
+    events = ["x" * 10] * 5
+
+    async def _parse_content(stream: BinaryIO) -> AsyncGenerator[str, None]:
+        for event in events:
+            yield event
+
+    connector._parse_content = MagicMock(side_effect=_parse_content)
+    connector.log = MagicMock()
+    connector.log_exception = MagicMock()
+
+    message = orjson.dumps(
+        {"Records": [{"s3": {"bucket": {"name": session_faker.word()}, "object": {"key": "file.log"}}}]}
+    ).decode("utf-8")
+    mock_sqs = MagicMock()
+    mock_sqs.receive_messages = MagicMock()
+    mock_sqs.receive_messages.return_value.__aenter__.return_value = [(message, 1)]
+
+    async def read_key():
+        return await async_bytesIO(b"")
+
+    mock_s3 = MagicMock()
+    mock_s3.read_key = MagicMock()
+    mock_s3.read_key.return_value.__aenter__.side_effect = read_key
+
+    connector_type = type(connector)
+    with (
+        patch.object(connector_type, "sqs_wrapper", new_callable=PropertyMock, return_value=mock_sqs),
+        patch.object(connector_type, "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3),
+    ):
+        result = await connector.next_batch()
+
+    assert result[0] == 5
+    # 3 events (30 bytes) reach the 25-byte limit, then the 2 remaining events are pushed at the end
+    assert [len(call.kwargs["events"]) for call in mock_push_data_to_intakes.call_args_list] == [3, 2]

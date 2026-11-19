@@ -1,0 +1,45 @@
+{
+  "name": "View Request / Incident Problem",
+  "description": "Returns the problems linked to the specified incident or request",
+  "uuid": "d6c1bfb7-485d-4613-b71e-67e1748613cc",
+  "slug": "view_request_incident_problem",
+  "docker_parameters": "easyvista_view_request_incident_problem",
+  "arguments": {
+    "properties": {
+      "rfc_number": {
+        "description": "Ticket RFC number",
+        "title": "Rfc Number",
+        "type": "string"
+      }
+    },
+    "required": [
+      "rfc_number"
+    ],
+    "title": "ViewRequestIncidentProblemArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "href": {
+        "type": "string",
+        "description": "Query URL (HREF)"
+      },
+      "record_count": {
+        "type": "string",
+        "description": "Number of problems returned (string)"
+      },
+      "total_record_count": {
+        "type": "string",
+        "description": "Total number of linked problems (string)"
+      },
+      "records": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        },
+        "description": "Problem records (RFC_NUMBER, TITLE, STATUS_ID, ...), returned unchanged"
+      }
+    }
+  }
+}

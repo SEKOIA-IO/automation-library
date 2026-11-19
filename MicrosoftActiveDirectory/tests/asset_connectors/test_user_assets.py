@@ -21,6 +21,7 @@ def connector(tmp_path, mock_module):
     connector = object.__new__(MicrosoftADUserAssetConnector)
     connector.module = mock_module
     connector._configuration = mock_module.configuration
+    connector._configuration.basedn = "DC=example,DC=com"
     connector._data_path = tmp_path
     connector.log = Mock()
     connector.error = Mock()
@@ -197,6 +198,55 @@ def test_user_ocsf_object(connector):
     assert user_ocsf.email_addr == "john.doe@example.com"
 
 
+@pytest.mark.parametrize("sam_account_name", ["Guest", "krbtgt"])
+def test_user_ocsf_object_without_names_or_upn(connector, sam_account_name):
+    # Built-in accounts must not share a placeholder name, or they are merged into one asset
+    user_attr = LDAPUserAttributes(sAMAccountName=sam_account_name, objectSid="S-1-5-21-501")
+
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.name == sam_account_name
+    assert user_ocsf.account.name == sam_account_name
+
+
+def test_user_ocsf_object_without_names_with_upn(connector):
+    user_attr = LDAPUserAttributes(
+        sAMAccountName="svc-backup", userPrincipalName="svc-backup@example.com", objectSid="S-1-5-21-1001"
+    )
+
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.name == "svc-backup"
+    assert user_ocsf.account.name == "svc-backup@example.com"
+
+
+def test_user_ocsf_object_keeps_inner_spaces_of_names(connector):
+    # The name is the asset atom: an existing user must keep the same one
+    user_attr = LDAPUserAttributes(givenName="John ", sn="Doe", objectSid="S-1-5-21-1002")
+
+    assert connector.user_ocsf_object(user_attr).name == "John  Doe"
+
+
+def test_user_ocsf_object_with_blank_names(connector):
+    user_attr = LDAPUserAttributes(
+        givenName=" ", sn="", userPrincipalName="  ", sAMAccountName="Guest", objectSid="S-1-5-21-501"
+    )
+
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.name == "Guest"
+    assert user_ocsf.account.name == "Guest"
+
+
+def test_user_ocsf_object_without_any_name(connector):
+    user_attr = LDAPUserAttributes(objectSid="S-1-5-21-999")
+
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.name == "Unknown"
+    assert user_ocsf.account.name == "Unknown"
+
+
 def test_user_ocsf_object_machine_account_email_not_set(connector):
     # AD UPN-style mail values (local part ends with '$') must not be stored as email_addr
     user_attr = LDAPUserAttributes(
@@ -257,6 +307,23 @@ def test_get_users_generator(connector):
     assert connector._latest_time == "20240101120000.0Z"
 
 
+def test_get_users_generator_skips_search_references(connector):
+    user = {
+        "type": "searchResEntry",
+        "dn": "CN=Test User,DC=example,DC=com",
+        "attributes": {"userPrincipalName": "test@example.com", "whenCreated": datetime(2024, 1, 1, 12, 0, 0)},
+    }
+    references = [
+        {"type": "searchResRef", "uri": [f"ldap://{partition}.example.com/DC={partition},DC=example,DC=com"]}
+        for partition in ("DomainDnsZones", "ForestDnsZones")
+    ]
+    connector.ldap_client.extend.standard.paged_search.return_value = iter([references[0], user, references[1]])
+
+    users = list(connector.get_users_generator())
+
+    assert [entry["dn"] for entry in users] == ["CN=Test User,DC=example,DC=com"]
+
+
 def test_get_assets(connector):
     mock_user = {
         "dn": "CN=Asset User,DC=example,DC=com",
@@ -278,6 +345,20 @@ def test_get_assets(connector):
     assert isinstance(assets[0], UserOCSFModel)
 
 
+def test_get_assets_refuses_an_invalid_base_dn(connector):
+    connector._configuration.basedn = "EXAMPLE.CORP"
+    connector.get_users_generator = Mock()
+
+    assert list(connector.get_assets()) == []
+
+    connector.get_users_generator.assert_not_called()
+    connector.log.assert_called_once_with(
+        "The base DN 'EXAMPLE.CORP' is not a valid distinguished name: "
+        "use 'DC=EXAMPLE,DC=CORP' for the domain EXAMPLE.CORP",
+        level="critical",
+    )
+
+
 def test_get_assets_handles_exception(connector):
     mock_user = {"dn": "CN=Invalid User,DC=example,DC=com", "attributes": {}}
 
@@ -286,6 +367,7 @@ def test_get_assets_handles_exception(connector):
     assets = list(connector.get_assets())
 
     assert len(assets) == 0
+    assert connector.skipped_users == 1
 
 
 @pytest.fixture

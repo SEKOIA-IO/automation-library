@@ -69,7 +69,7 @@ class ApplicationArguments(BaseModel):
 
 
 class IdArguments(BaseModel):
-    id: str | None = Field(default=None, description="ID of the user. id should be specified.")
+    id: str | None = Field(default=None, description="ID or userPrincipalName (UPN) of the user.")
 
 
 class SingleUserArguments(BaseModel):
@@ -99,7 +99,7 @@ class RequiredTwoUserArguments(SingleUserArguments):
     @classmethod
     def validate_two_arguments(cls, values):
         if not ((values.get("id") or values.get("userPrincipalName")) and values.get("userNewPassword")):
-            raise ValueError("'userPrincipalName' and ('id' or 'userPrincipalName') should be specified")
+            raise ValueError("'userNewPassword' and either 'id' or 'userPrincipalName' must be specified")
 
         return values
 

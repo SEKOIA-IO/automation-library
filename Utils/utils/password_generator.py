@@ -1,6 +1,7 @@
+import random
 import secrets
 import string
-import random
+
 from sekoia_automation.action import Action
 
 

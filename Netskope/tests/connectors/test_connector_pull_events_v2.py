@@ -1,6 +1,6 @@
 import time
 from threading import Thread
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 import pytest
 import requests_mock
@@ -322,6 +322,36 @@ def test_next_batch_403_service_with_json_error_message(trigger):
         )
 
 
+def test_next_batch_concurrency_conflict(trigger):
+    trigger.configuration.consumer_group = "shared-group"
+
+    with (
+        patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_requests.get(
+            "https://my.fake.sekoia/api/v2/events/dataexport/alerts/dlp",
+            status_code=409,
+            json={"message": "Concurrency conflict"},
+        )
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+        consumer = trigger.create_consumer("alert-dlp", iterator)
+        mock_time.time.return_value = 1666711174.0
+
+        consumer.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 0
+        assert consumer.running
+        trigger.log.assert_any_call(
+            message=(
+                "Concurrency conflict for alert-dlp on the index shared-group-alert-dlp: "
+                "another consumer is using the same consumer group. "
+                "Each connector must use its own consumer group."
+            ),
+            level="warning",
+        )
+
+
 def test_create_iterators(trigger):
     iterators = trigger.create_iterators(trigger.dataexports)
 
@@ -352,12 +382,149 @@ def test_configuration_uuid_prefers_connector_configuration_uuid(trigger):
     assert trigger.configuration_uuid == "connector-uuid"
 
 
+def test_configuration_uuid_raises_when_no_uuid_is_defined(trigger):
+    trigger.__dict__.pop("configuration_uuid", None)
+
+    with (
+        patch.object(
+            type(trigger.module), "connector_configuration_uuid", new_callable=PropertyMock, return_value=None
+        ),
+        patch.object(type(trigger.module), "trigger_configuration_uuid", new_callable=PropertyMock, return_value=None),
+        pytest.raises(ValueError, match="Neither connector nor trigger configuration UUID is defined"),
+    ):
+        _ = trigger.configuration_uuid
+
+
 def test_get_index_name_uses_consumer_group_when_set(trigger):
     trigger.configuration.consumer_group = "shared-group"
 
-    index_name = trigger.get_index_name(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+    assert trigger.get_index_name(NetskopeEventType.ALERT, NetskopeAlertType.DLP) == "shared-group-alert-dlp"
+    assert trigger.get_index_name(NetskopeEventType.PAGE, None) == "shared-group-page"
 
-    assert index_name == "shared-group"
+
+def test_get_index_name_is_unique_per_dataexport_with_consumer_group(trigger):
+    trigger.configuration.consumer_group = "shared-group"
+
+    index_names = [trigger.get_index_name(event_type, alert_type) for event_type, alert_type in trigger.dataexports]
+
+    assert len(set(index_names)) == len(trigger.dataexports)
+
+
+def test_get_index_name_is_unique_per_dataexport_without_consumer_group(trigger):
+    index_names = [trigger.get_index_name(event_type, alert_type) for event_type, alert_type in trigger.dataexports]
+
+    assert len(set(index_names)) == len(trigger.dataexports)
+
+
+def test_create_consumer_without_start_timestamp(trigger):
+    iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+
+    consumer = trigger.create_consumer("alert-dlp", iterator)
+
+    assert consumer.start_timestamp is None
+    assert consumer.index_name == trigger.get_index_name(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+
+
+def test_next_batch_seeks_start_timestamp_on_first_call_only(trigger):
+    trigger.configuration.consumer_group = "my-group"
+    trigger.configuration.start_timestamp = 1760000000
+
+    with (
+        patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_time.time.return_value = 1760000100.0
+        mock_requests.get(
+            "https://my.fake.sekoia/api/v2/events/dataexport/alerts/dlp",
+            status_code=200,
+            json={"ok": 1, "result": [{"timestamp": 1760000001, "_id": "1"}], "wait_time": 0},
+        )
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+        consumer = trigger.create_consumer("alert-dlp", iterator)
+
+        consumer.next_batch()
+        consumer.next_batch()
+
+        queries = [request.qs for request in mock_requests.request_history]
+        assert queries[0]["index"] == ["my-group-alert-dlp"]
+        assert queries[0]["operation"] == ["1760000000"]
+        assert queries[1]["operation"] == ["next"]
+        assert consumer.start_timestamp is None
+
+    # a restarted consumer must not seek again
+    restarted_consumer = trigger.create_consumer("alert-dlp", iterator)
+    assert restarted_consumer.start_timestamp is None
+
+
+def test_next_batch_keeps_start_timestamp_when_seek_fails(trigger):
+    trigger.configuration.consumer_group = "my-group"
+    trigger.configuration.start_timestamp = 1760000000
+
+    with (
+        patch("netskope_modules.connectors.connector_pull_events_v2.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_time.time.return_value = 1760000100.0
+        mock_requests.get(
+            "https://my.fake.sekoia/api/v2/events/dataexport/alerts/dlp",
+            status_code=500,
+            text="Internal error",
+        )
+        iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
+        consumer = trigger.create_consumer("alert-dlp", iterator)
+
+        consumer.next_batch()
+
+    assert consumer.start_timestamp == 1760000000
+    assert trigger.create_consumer("alert-dlp", iterator).start_timestamp == 1760000000
+
+
+def test_start_timestamp_applies_to_new_consumer_group(trigger):
+    trigger.configuration.start_timestamp = 1760000000
+    trigger.configuration.consumer_group = "old-group"
+    trigger.mark_index_as_initialized(trigger.get_index_name(NetskopeEventType.PAGE, None), 1760000000)
+
+    assert (
+        trigger.create_consumer("page", trigger.create_iterator(NetskopeEventType.PAGE, None)).start_timestamp is None
+    )
+
+    trigger.configuration.consumer_group = "new-group"
+    consumer = trigger.create_consumer("page", trigger.create_iterator(NetskopeEventType.PAGE, None))
+
+    assert consumer.start_timestamp == 1760000000
+
+
+def test_start_timestamp_change_repositions_initialized_index(trigger):
+    trigger.configuration.consumer_group = "my-group"
+    trigger.configuration.start_timestamp = 1760000000
+    index_name = trigger.get_index_name(NetskopeEventType.PAGE, None)
+    trigger.mark_index_as_initialized(index_name, 1760000000)
+
+    assert trigger.get_start_timestamp(index_name) is None
+
+    # a new starting timestamp must reposition the index
+    trigger.configuration.start_timestamp = 1770000000
+    assert trigger.get_start_timestamp(index_name) == 1770000000
+
+    trigger.mark_index_as_initialized(index_name, 1770000000)
+    assert trigger.get_start_timestamp(index_name) is None
+
+    # removing the starting timestamp continues from the current position
+    trigger.configuration.start_timestamp = None
+    assert trigger.get_start_timestamp(index_name) is None
+
+
+def test_start_timestamp_with_legacy_context(trigger):
+    trigger.configuration.consumer_group = "my-group"
+    trigger.configuration.start_timestamp = 1760000000
+    index_name = trigger.get_index_name(NetskopeEventType.PAGE, None)
+    with trigger.context as cache:
+        cache["initialized_indexes"] = [index_name]
+
+    assert trigger.get_start_timestamp(index_name) == 1760000000
+
+    trigger.mark_index_as_initialized(index_name, 1760000000)
+    assert trigger.get_start_timestamp(index_name) is None
 
 
 def test_create_iterator_alert_requires_alert_type(trigger):
@@ -470,7 +637,7 @@ def test_run_logs_exception_when_consumer_start_fails(trigger):
     trigger.log_exception.assert_called_once()
 
 
-@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}" ".issubset(os.environ.keys()) == False")
+@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}.issubset(os.environ.keys()) == False")
 def test_fetch_next_batch_integration(integration_trigger):
     trigger = integration_trigger
     iterator = trigger.create_iterator(NetskopeEventType.ALERT, NetskopeAlertType.DLP)
@@ -484,7 +651,7 @@ def test_fetch_next_batch_integration(integration_trigger):
     assert len(calls) > 0
 
 
-@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}" ".issubset(os.environ.keys()) == False")
+@pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}.issubset(os.environ.keys()) == False")
 def test_run_integration(integration_trigger):
     trigger = integration_trigger
     main_thread = Thread(target=trigger.run)

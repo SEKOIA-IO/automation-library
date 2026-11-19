@@ -9,7 +9,7 @@ class ApiClient(requests.Session):
         self,
         auth: AuthBase,
         nb_retries: int = 5,
-        ratelimit_per_minute: int = 50,
+        ratelimit_per_minute: int = 1,
         default_headers: dict[str, str] | None = None,
     ):
         super().__init__()

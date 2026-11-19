@@ -7,6 +7,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-12 - 1.39.0
+
+### Changed
+
+- Migrate the module from Poetry to uv, with a `mise.toml` for test/lint/format tasks and Ruff replacing black/isort/autoflake
+- Upgrade to Python 3.14 and `sekoia-automation-sdk` 1.27
+
+## 2026-11-12 - 1.38.12
+
+### Added
+
+- Implement `reset_checkpoint` and `get_mapping_fields` for asset connectors
+
+### Changed
+
+- Upgrade sekoia-automation-sdk dependency
+
+## 2026-11-10 - 1.38.11
+
+### Fixed
+
+- Fix the way to define the maximum size of spooled files
+
+## 2026-11-10 - 1.38.10
+
+### Fixed
+
+- Limit the size of the events buffered in memory by the S3 connectors: events are pushed as soon as the buffer reaches 9 MB (configurable with `AWS_BATCH_MAX_BYTES`), in addition to the 10,000-event limit (`AWS_BATCH_SIZE`)
+
+## 2026-11-10 - 1.38.9
+
+### Fixed
+
+- Fix S3 objects failing to be read (`ClientResponse.read() takes 1 positional argument but 2 were given`) since 1.38.8
+
+## 2026-11-05 - 1.38.8
+
+### Fixed
+
+- Fix memory leak caused by the SQS queue URL cache retaining AWS sessions
+- Reuse S3 and SQS wrappers (and their AWS sessions) across batches instead of recreating them for every object
+- Parse parquet objects (VPC flow logs, OCSF) by batches
+  - Integer fields nested in structs or lists that contain nulls may be serialized as floats (e.g. `443.0`) only in the batches holding a null
+- Stream text VPC flow logs line by line instead of decoding the whole object in memory
+- Flush events while reading an object in the S3 list connector instead of buffering the whole object
+- Serialize SQS messages as they are received instead of keeping all parsed records in memory
+- Speed up the line splitting of S3 logs: no more repeated buffer copies and rescans
+
+## 2026-11-03 - 1.38.7
+
+### Changed
+
+- Allow to enable or disable the internal traffic filter for VPC flowlogs events.
+
+## 2026-11-02 - 1.38.6
+
+### Fixed
+
+- Increase the default SQS message timeout visibility to 10 minutes (instead of 1 minute).
+
+## 2026-11-02 - 1.38.5
+
+### Fixed
+
+- Process VPC Flow Logs Parquet files in batches of 1,000 rows instead of materializing the entire decoded file and its Python records at once, reducing peak memory usage. The compressed S3 object is still read into memory.
+- Preserve file-wide nullable-integer serialization across Parquet batches, including files without null-count statistics and explicit pandas nullable integer dtypes.
+
+## 2026-11-02 - 1.38.4
+
+### Changed
+
+- Increase the default SQS message timeout visibility to 10 minutes (instead of 1 minute).
+
+## 2026-10-01 - 1.38.3
+
+### Changed
+
+- Optimize several connector methods to reduce memory usage and improve performance when processing large S3 objects, especially for CloudTrail and VPC Flowlogs events. This includes streaming data processing and more efficient event extraction.
+- Use ijson for parsing JSON events in S3 objects, which is more memory-efficient for large datasets.
+
+## 2026-09-29 - 1.38.2
+
+### Changed
+
+- S3 connectors: log the size of each fetched S3 object and the number of records parsed from it
+- Avoid an extra in-memory copy of S3 objects when detecting gzip compression
+
+### Fixed
+
+- SQS-based S3 connectors: push the events of each SQS receive before deleting the messages, instead of
+  accumulating events over several receives until 10,000 were collected (delayed events and data loss on restart)
+- SQS: keep the consumed messages in the queue when their processing fails (e.g. intake push error), so they are
+  redelivered instead of being deleted and lost
+
 ## 2026-09-04 - 1.38.1
 
 ### Fixed

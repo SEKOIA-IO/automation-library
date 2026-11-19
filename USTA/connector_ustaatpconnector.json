@@ -22,7 +22,9 @@
       },
       "max_historical_days": {
         "title": "Max Historical Days",
+        "description": "Number of days of history collected on the first run, and maximum lag caught up after an interruption",
         "default": 180,
+        "minimum": 1,
         "type": "integer"
       }
     },

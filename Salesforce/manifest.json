@@ -21,7 +21,8 @@
       },
       "base_url": {
         "description": "Url of salesforce instance. Consists of https://<instance>.salesforce.com",
-        "type": "string"
+        "type": "string",
+	"format": "uri"
       }
     },
     "required": [
@@ -39,7 +40,7 @@
   "name": "Salesforce",
   "uuid": "f811e134-2548-11ee-be56-0242ac120002",
   "slug": "salesforce",
-  "version": "1.8.4",
+  "version": "1.8.5",
   "categories": [
     "Applicative"
   ]

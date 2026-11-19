@@ -6,6 +6,8 @@ import argparse
 import logging
 from pathlib import Path
 
+from pydantic import Field
+
 from netskope_modules.connectors.connector_pubsub_lite import PubSubLite, PubSubLiteConfig
 
 logging.basicConfig(
@@ -36,7 +38,7 @@ if __name__ == "__main__":
     location = parts[3].split("-")
 
     class DumbConnectorConfiguration(PubSubLiteConfig):
-        credentials: dict = {"project_id": parts[1]}
+        credentials: dict = Field(default_factory=lambda: {"project_id": parts[1]})
         cloud_region = location[0] + "-" + location[1]
         zone_id = location[2] if len(location) > 2 else None
         subscription_id = parts[5]

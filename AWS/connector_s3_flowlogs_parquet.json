@@ -19,6 +19,11 @@
         "description": "The size of chunks for the batch processing",
         "default": 10000
       },
+      "filter_internal_traffic": {
+        "type": "boolean",
+        "description": "Flag to filter out network traffics between your VPC instances (default: true)",
+        "default": true
+      },
       "intake_server": {
         "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
         "default": "https://intake.sekoia.io",

@@ -58,6 +58,11 @@
         "description": "Custom status of the alert",
         "type": "string",
         "in": "body"
+      },
+      "assignee": {
+        "description": "UUID of the user assigned to the alert",
+        "type": "string",
+        "in": "body"
       }
     },
     "required": [
@@ -351,6 +356,10 @@
       },
       "target": {
         "type": "string"
+      },
+      "assignee": {
+        "type": "string",
+        "format": "uuid"
       }
     }
   },

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-09-22 - 2.10.30
+## 2026-11-19 - 2.10.32
 
 ### Fixed
 
@@ -18,6 +18,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stop skipping users created in the same second as the last one collected. The checkpoint
   is now the exact creation date of that user, and the users already collected at that date
   are skipped by id instead of by a one second offset.
+
+## 2026-11-18 - 2.10.31
+
+### Changed
+
+- Reset User Password [DEPRECATED]: when a client secret is configured, authenticate the application as a confidential client in the delegated username/password flow, so that "Allow public client flows" is no longer required on the app registration. The token remains a delegated token. Without client secret, the previous public client flow is kept. If "Allow public client flows" was enabled to work around `AADSTS7000218`, make sure the configured client secret is valid, otherwise the action now fails with `AADSTS7000215`
+- Reset User Password [DEPRECATED]: report authentication errors (AADSTS codes) explicitly
+
+### Fixed
+
+- Fix the misleading validation message of the Reset User Password [DEPRECATED] action
+
+## 2026-11-17 - 2.10.30
+
+### Fixed
+
+- Support both user IDs and userPrincipalNames (UPNs) in the Get SignIns Id field.
 
 ## 2026-08-25 - 2.10.29
 

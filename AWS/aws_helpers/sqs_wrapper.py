@@ -3,7 +3,6 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from async_lru import alru_cache
 from loguru import logger
 from pydantic import Field
 
@@ -32,6 +31,8 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
             configuration: AWS configuration
         """
         super().__init__(configuration)
+        # per-instance cache: alru_cache on a method pins every instance (and its session) in a class-level cache
+        self._queue_url: str | None = None
 
         logger.info(
             """
@@ -47,7 +48,6 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
             queue_url=configuration.queue_url,
         )
 
-    @alru_cache
     async def queue_url(self) -> str:
         """
         Get SQS queue url.
@@ -61,6 +61,9 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
         Returns:
             str:
         """
+        if self._queue_url:
+            return self._queue_url
+
         result: str | None = None
         if self._configuration and self._configuration.queue_url:
             result = self._configuration.queue_url
@@ -70,6 +73,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
                 result = data.get("QueueUrl")
 
         if result:
+            self._queue_url = result
             return result
 
         raise ValueError("Queue url is not defined")
@@ -85,7 +89,8 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
         """
         Receive SQS messages.
 
-        After processing messages they will be deleted from queue if delete_consumed_messages is True.
+        After processing messages they will be deleted from queue if delete_consumed_messages is True
+        and the context exits without raising an exception.
 
         Example of usage:
         with sqs.receive_messages() as messages:
@@ -129,16 +134,15 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
 
             result = []
 
-            try:
+            for message in response.get("Messages", []):
+                result.append((message["Body"], int(message["Attributes"]["SentTimestamp"])))
+
+            logger.info(f"Received {len(result)} messages from sqs queue {self._configuration.queue_name}")
+
+            yield result
+
+            # Only reached when the caller's block exits without raising: on failure, messages are redelivered
+            if delete_consumed_messages and response.get("Messages", []):
+                logger.info("Deleting consumed messages from sqs")
                 for message in response.get("Messages", []):
-                    result.append((message["Body"], int(message["Attributes"]["SentTimestamp"])))
-
-                logger.info(f"Received {len(result)} messages from sqs queue {self._configuration.queue_name}")
-
-                yield result
-            finally:
-                # We should delete messages from queue after releasing context manager if it is configured
-                if delete_consumed_messages and response.get("Messages", []):
-                    logger.info("Deleting consumed messages from sqs")
-                    for message in response.get("Messages", []):
-                        await sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=message["ReceiptHandle"])
+                    await sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=message["ReceiptHandle"])

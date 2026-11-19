@@ -1,6 +1,6 @@
 {
   "name": "Search messages",
-  "description": "Search messages in a user's mailbox using InternetMessageId and/or NetworkMessageId",
+  "description": "The action that searches messages in a user's mailbox using InternetMessageId and/or NetworkMessageId",
   "uuid": "9cd0dbfd-1ceb-40bf-a49f-28ca70e61165",
   "docker_parameters": "action_search_messages",
   "arguments": {
@@ -29,12 +29,17 @@
         "description": "The message identifier mapped from email.message_id (Graph internetMessageId / Internet Message-ID RFC 5322)",
         "type": "string"
       },
-      "top": {
-        "description": "Maximum number of messages to return",
+      "max_messages_to_return": {
+        "description": "The maximum number of messages to return",
         "type": "integer",
         "minimum": 1,
         "maximum": 100,
         "default": 10
+      },
+      "return_most_recent_first": {
+        "description": "The option to return candidates sorted by receivedDateTime descending when true",
+        "type": "boolean",
+        "default": false
       },
       "user": {
         "description": "The user identifier or user principal name (UPN)",
@@ -45,35 +50,62 @@
   "results": {
     "title": "SearchMessagesResults",
     "type": "object",
+    "required": [
+      "user",
+      "query_type",
+      "query_value",
+      "message_ids",
+      "messages",
+      "total_results",
+      "returned_count",
+      "has_more",
+      "scan_limit_reached"
+    ],
     "properties": {
+      "has_more": {
+        "description": "The indicator that is true when Graph indicates additional pages may exist",
+        "type": "boolean"
+      },
+      "message_ids": {
+        "description": "The list of Microsoft Graph message item IDs extracted from returned messages",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
       "messages": {
-        "description": "List of matching messages",
+        "description": "The list of matching messages",
         "type": "array",
         "items": {
           "type": "object",
           "properties": {
             "from": {
-              "description": "Sender information",
+              "description": "The sender information",
               "type": "object"
-            },
-            "message_id": {
-              "description": "The Microsoft Graph message item ID",
-              "type": "string"
             },
             "internet_message_id": {
               "description": "The Internet Message-ID (RFC 5322)",
               "type": "string"
             },
-            "received_date_time": {
-              "description": "Message reception timestamp",
+            "message_id": {
+              "description": "The Microsoft Graph message item ID",
               "type": "string"
             },
+            "network_message_id": {
+              "description": "The NetworkMessageId extracted from Graph extended properties when available",
+              "type": "string"
+            },
+            "received_date_time": {
+              "description": "The message reception timestamp",
+              "type": "string",
+              "format": "date-time"
+            },
             "subject": {
-              "description": "Message subject",
+              "description": "The message subject",
               "type": "string"
             },
             "to_recipients": {
-              "description": "List of recipients",
+              "description": "The list of recipients",
               "type": "array",
               "items": {
                 "type": "object"
@@ -81,6 +113,35 @@
             }
           }
         }
+      },
+      "query_type": {
+        "description": "The identifier type used for the search",
+        "type": "string",
+        "enum": [
+          "email_message_id",
+          "email_local_id",
+          "combined"
+        ]
+      },
+      "query_value": {
+        "description": "The search identifier value, or concatenated values when both identifiers are provided",
+        "type": "string"
+      },
+      "returned_count": {
+        "description": "The alias of total_results for explicit count-based playbook conditions",
+        "type": "integer"
+      },
+      "scan_limit_reached": {
+        "description": "The indicator that is true when fallback scanning stops at the max scanned-messages budget",
+        "type": "boolean"
+      },
+      "total_results": {
+        "description": "The number of messages returned in this response",
+        "type": "integer"
+      },
+      "user": {
+        "description": "The echo of the user identifier used for this action, reusable in downstream playbook nodes",
+        "type": "string"
       }
     }
   },

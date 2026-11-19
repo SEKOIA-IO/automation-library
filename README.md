@@ -23,4 +23,4 @@ so that others can benefit from your work as well. Together, we can build even m
 
 ## Documentation
 
-Documentation is in the [doc](docs/README.md) directory.
+To assist you develop a new automation module, please take a look at [docs.sekoia.io](https://docs.sekoia.com/integration/develop_integration/automation/overview/).

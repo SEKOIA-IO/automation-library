@@ -1,0 +1,544 @@
+from collections.abc import Callable
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+from polyswarm_modules.base import PolyswarmAction
+from polyswarm_modules.client import CLIENT_ERRORS, MISSING_RESULT, build_client, failure_kind
+from polyswarm_modules.coerce import as_score
+from polyswarm_modules.sandbox import MAX_WAIT_SECONDS_CEILING, TERMINAL_STATUSES, poll_until_terminal
+from polyswarm_modules.validators import invalid_hash_reason
+
+# Synthetic status for a hash and provider that has never had a sandbox task
+# created for it at all, distinct from every real provider status.
+NOT_FOUND_STATUS: str = "NOT_FOUND"
+
+# A slow provider should not be hammered every few seconds for the whole wait.
+# This action polls a task it did not start, so it backs off further than the
+# Sandbox actions do after submitting one.
+POLL_INTERVAL_CEILING: float = 60.0
+SHA256_LENGTH: int = 64
+
+# Lowest provider score reported as malicious. Neither number is something the
+# platform returns or documents in this repository, so both are deliberately
+# strict: a sample is only called malicious on a score that is clearly high.
+# Triage scores run 1 to 10, with 1 meaning no malicious behaviour, and its
+# own published bands read: 10 known bad, 8 and 9 likely malicious, 5 to 7
+# suspicious behaviour that also has common benign uses, 2 to 4 likely benign,
+# 1 nothing malicious seen. So the malicious line sits at 8, and a 7 is a
+# reason to look rather than a verdict. CAPE publishes no comparable band; 6
+# is the lowest score a known malicious sample (the captured cryptominer
+# below) received here, so nothing lower has evidence behind it. The CAPE
+# number is a floor taken from one sample and wants a benign corpus to tune.
+# Measured against the live service on 2026-10-16: the industry test file,
+# which every engine flags and which scores 1.0 on the engine side, detonates
+# inertly and scores cape_malscore 0.25 and a Triage dynamic 3. A low sandbox
+# score therefore says the sample did nothing here, not that it is safe. Forty
+# consecutive feed artifacts carried no sandbox report at all, so a benign
+# corpus cannot be mined from existing reports and has to be detonated on
+# purpose, which is metered.
+TRIAGE_MALICIOUS_SCORE: float = 8.0
+CAPE_MALICIOUS_SCORE: float = 6.0
+
+
+class ReportArguments(BaseModel):
+    sha256: str = Field(..., description="SHA256 hash of the artifact to fetch a sandbox report for")
+    sandbox: str = Field(default="cape", description="Sandbox provider slug (e.g. 'cape', 'triage')")
+    max_wait_seconds: int = Field(
+        default=0,
+        ge=0,
+        le=MAX_WAIT_SECONDS_CEILING,
+        description=(
+            "How long to wait for a detonation that is already running elsewhere to finish, in seconds, "
+            f"from 0 to {MAX_WAIT_SECONDS_CEILING}. A larger value is rejected with a validation error. "
+            "The wait can run past this by one status check, about a minute at worst. "
+            "0, the default, does not wait: this reads the task's current status and returns immediately, "
+            "which is why the SandboxCompleted trigger exists, so nobody has to sit here waiting. Polling "
+            "backs off from a short first check up to a 60 second ceiling. This action never starts a "
+            "detonation itself; submit one with SandboxFile, SandboxUrl or SandboxIp first."
+        ),
+    )
+    include_raw_report: bool = Field(
+        default=False,
+        description=(
+            "Whether to return the raw sandbox report in the report field. False, the default, returns "
+            "report as null, which keeps the response small: the verdict and the typed behavior fields are "
+            "the same either way. Set it to true to get the report back unmodified, for a playbook that "
+            "needs a field the typed behavior does not carry. A CAPE or Triage report commonly runs to "
+            "several megabytes, so expect a much larger response. The report is never truncated: it is "
+            "returned whole or not at all."
+        ),
+    )
+
+
+class ProcessEvidence(BaseModel):
+    """One process the sandbox observed, normalised to the facts both providers carry."""
+
+    pid: int | None = None
+    parent_pid: int | None = None
+    image: str = ""
+    command_line: str = ""
+
+
+class SandboxBehavior(BaseModel):
+    """Typed slice of the sandbox report a playbook can act on without knowing either provider's schema.
+
+    Every field here is read out of the raw report, never inferred or
+    invented: a field a provider did not populate is absent or empty. CAPE
+    and Hatching Triage disagree in shape for all of these, and each
+    accessor in this module documents what was normalised to fill it.
+    """
+
+    behavior_signatures: list[str] = Field(default_factory=list)
+    mitre_techniques: list[str] = Field(default_factory=list)
+    contacted_hosts: list[str] = Field(default_factory=list)
+    contacted_domains: list[str] = Field(default_factory=list)
+    contacted_urls: list[str] = Field(default_factory=list)
+    dropped_file_hashes: list[str] = Field(default_factory=list)
+    processes: list[ProcessEvidence] = Field(default_factory=list)
+
+
+class ReportResponse(BaseModel):
+    sandbox_task_id: str
+    sha256: str
+    sandbox: str
+    status: str
+    # None means PolySwarm produced no verdict to report: nothing has been
+    # detonated yet, a detonation failed, or a task is still processing. It
+    # is never inferred to be False, since that would tell a playbook a
+    # sample is clean when nobody has looked at it.
+    malicious: bool | None
+    # True when the task succeeded and produced a report but no readable
+    # score and no named malware family, so there is nothing to base a
+    # verdict on. malicious is None in that case and the "no report
+    # available" branch fires: an unscored report is not a clean one.
+    unscored: bool = False
+    # True when the report could not be read into the typed behavior, so
+    # behavior is empty because of its shape and not because the sandbox saw
+    # nothing. Independent of unscored, which is about the verdict only.
+    behavior_unreadable: bool = False
+    behavior: SandboxBehavior
+    # None when the caller turned include_raw_report off. The verdict and the
+    # behavior fields are computed from the report before it is dropped.
+    report: Any
+    sandbox_artifacts: list[dict[str, Any]]
+
+
+class _UnreadableReportError(ValueError):
+    """The vendor report is not shaped the way its provider documents."""
+
+
+def _dict(value: Any, where: str) -> dict[str, Any]:
+    """The value as a dict, empty when absent, an error when it is anything else."""
+    if value is None or value == "" or value == []:
+        return {}
+    if not isinstance(value, dict):
+        raise _UnreadableReportError(f"{where} is {type(value).__name__}, expected an object")
+    return value
+
+
+def _entries(value: Any, where: str) -> list[dict[str, Any]]:
+    """A list of objects, empty when absent. A non-list, or a non-object element, is an error."""
+    if value is None or value == "" or value == {}:
+        return []
+    if not isinstance(value, list):
+        raise _UnreadableReportError(f"{where} is {type(value).__name__}, expected a list")
+    for entry in value:
+        if not isinstance(entry, dict):
+            raise _UnreadableReportError(f"{where} holds a {type(entry).__name__}, expected an object")
+    return value
+
+
+def _strings(value: Any, where: str) -> list[str]:
+    """A list of non-empty strings, empty when absent. Anything unhashable or non-text is an error."""
+    if value is None or value == "" or value == {}:
+        return []
+    if not isinstance(value, list):
+        raise _UnreadableReportError(f"{where} is {type(value).__name__}, expected a list")
+    for entry in value:
+        if entry and not isinstance(entry, str):
+            raise _UnreadableReportError(f"{where} holds a {type(entry).__name__}, expected text")
+    return [entry for entry in value if entry]
+
+
+def _text(entry: dict[str, Any], key: str, where: str) -> str:
+    """A string field, empty when absent or null. Any other type is an error."""
+    value = entry.get(key)
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise _UnreadableReportError(f"{where}.{key} is {type(value).__name__}, expected text")
+    return value
+
+
+def _unique(values: list[str]) -> list[str]:
+    """Deduplicate while keeping the first occurrence, for lists built from nested loops."""
+    seen: set[str] = set()
+    unique: list[str] = []
+    for value in values:
+        if value not in seen:
+            seen.add(value)
+            unique.append(value)
+    return unique
+
+
+def _signature_names(provider: str, report: dict[str, Any]) -> list[str]:
+    """Signature and behaviour names PolySwarm's sandbox fired, normalised across providers.
+
+    CAPE ships a flat, already deduplicated signature_names list. Triage has
+    no equivalent: names live nested under static.signatures (static PE
+    checks) and under each entry in targets[].signatures (behavioural,
+    technique linked signatures), so both are walked and deduplicated here
+    to land in the same shape CAPE gives for free.
+    """
+    if provider == "cape":
+        return _unique(_strings(report.get("signature_names"), "signature_names"))
+
+    names: list[str] = []
+    static = _dict(report.get("static"), "static")
+    for signature in _entries(static.get("signatures"), "static.signatures"):
+        name = _text(signature, "name", "static.signatures")
+        if name:
+            names.append(name)
+    for target in _entries(report.get("targets"), "targets"):
+        for signature in _entries(target.get("signatures"), "targets.signatures"):
+            name = _text(signature, "name", "targets.signatures")
+            if name:
+                names.append(name)
+    return _unique(names)
+
+
+def _mitre_techniques(report: dict[str, Any]) -> list[str]:
+    """MITRE ATT&CK technique identifiers, deduplicated.
+
+    Both providers carry a top-level ttp list under the same key. Triage
+    repeats an identifier once per signature that raised it, so a plain read
+    would double count a single technique seen on several signatures.
+    """
+    return _unique(_strings(report.get("ttp"), "ttp"))
+
+
+def _network_indicators(provider: str, report: dict[str, Any]) -> tuple[list[str], list[str], list[str]]:
+    """Contacted hosts, domains and URLs, normalised across providers.
+
+    CAPE carries all three under report.network (hosts, domains, dns, http).
+    Triage splits the same information across report.network (ips, flows)
+    and report.requests (per domain request records). A URL is only ever
+    populated when a provider actually captured one off the wire; on a
+    TLS flow Triage did not decrypt, contacted_urls is legitimately empty
+    even though contacted_domains carries the SNI.
+    """
+    hosts: list[str] = []
+    domains: list[str] = []
+    urls: list[str] = []
+    network = _dict(report.get("network"), "network")
+
+    if provider == "cape":
+        for host in _entries(network.get("hosts"), "network.hosts"):
+            ip = _text(host, "ip", "network.hosts")
+            if ip:
+                hosts.append(ip)
+        for domain_entry in _entries(network.get("domains"), "network.domains"):
+            name = _text(domain_entry, "domain", "network.domains")
+            if name:
+                domains.append(name)
+        for entry in _entries(network.get("dns"), "network.dns"):
+            request = _text(entry, "request", "network.dns")
+            if request:
+                domains.append(request)
+        for entry in _entries(network.get("http"), "network.http"):
+            uri = _text(entry, "uri", "network.http") or _text(entry, "url", "network.http")
+            if uri:
+                urls.append(uri)
+    else:
+        for ip_entry in _entries(network.get("ips"), "network.ips"):
+            ip = _text(ip_entry, "ip", "network.ips")
+            if ip:
+                hosts.append(ip)
+        for flow in _entries(network.get("flows"), "network.flows"):
+            domain = _text(flow, "domain", "network.flows") or _text(flow, "tls_sni", "network.flows")
+            if domain:
+                domains.append(domain)
+        for entry in _entries(report.get("requests"), "requests"):
+            domain = _text(entry, "domain", "requests")
+            if domain:
+                domains.append(domain)
+            for http_entry in _entries(entry.get("http_request"), "requests.http_request"):
+                url = _text(http_entry, "url", "requests.http_request") or _text(
+                    http_entry, "uri", "requests.http_request"
+                )
+                if url:
+                    urls.append(url)
+
+    return _unique(hosts), _unique(domains), _unique(urls)
+
+
+def _dropped_file_hashes(provider: str, report: dict[str, Any]) -> list[str]:
+    """Sha256 hashes of files the run wrote to disk.
+
+    CAPE lists these under dropped. Triage lists everything the run wrote
+    under dumped, which is broader than a CAPE drop (it also catches loaded
+    modules and log files), but every entry that carries a sha256 is kept on
+    the same reasoning CAPE uses: an analyst reading this field wants every
+    file the sandbox pulled out of the run, not a claim about which of them
+    are malicious.
+    """
+    key = "dropped" if provider == "cape" else "dumped"
+    hashes = [_text(entry, "sha256", key) for entry in _entries(report.get(key), key)]
+    return _unique([h for h in hashes if h])
+
+
+def _int_or_none(entry: dict[str, Any], key: str, where: str) -> int | None:
+    value = entry.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise _UnreadableReportError(f"{where}.{key} is {type(value).__name__}, expected an integer")
+    return value
+
+
+def _processes(provider: str, report: dict[str, Any]) -> list[ProcessEvidence]:
+    """Process and command line evidence, normalised across providers.
+
+    CAPE nests the command line inside behavior.processes[].environ.
+    CommandLine, with the parent id at parent_id and the binary path at
+    module_path. Triage carries the same three facts flat, as cmd, ppid and
+    image. Both are read into the same shape here.
+    """
+    processes: list[ProcessEvidence] = []
+
+    if provider == "cape":
+        behavior = _dict(report.get("behavior"), "behavior")
+        where = "behavior.processes"
+        for proc in _entries(behavior.get("processes"), where):
+            environ = _dict(proc.get("environ"), f"{where}.environ")
+            processes.append(
+                ProcessEvidence(
+                    pid=_int_or_none(proc, "process_id", where),
+                    parent_pid=_int_or_none(proc, "parent_id", where),
+                    image=_text(proc, "module_path", where),
+                    command_line=_text(environ, "CommandLine", f"{where}.environ"),
+                )
+            )
+    else:
+        for proc in _entries(report.get("processes"), "processes"):
+            processes.append(
+                ProcessEvidence(
+                    pid=_int_or_none(proc, "pid", "processes"),
+                    parent_pid=_int_or_none(proc, "ppid", "processes"),
+                    image=_text(proc, "image", "processes"),
+                    command_line=_text(proc, "cmd", "processes"),
+                )
+            )
+
+    return processes
+
+
+def _typed_behavior(provider: str, report: Any, log: Callable[..., Any] | None = None) -> tuple[SandboxBehavior, bool]:
+    """The typed behaviour and whether the report could be read.
+
+    A report that is not shaped the way its provider documents yields an
+    empty behaviour and False, never an exception: the lookup succeeded, and
+    the verdict must not be lost to a field this module cannot read. The
+    reason is logged, never the report content.
+    """
+    try:
+        if not isinstance(report, dict):
+            raise _UnreadableReportError(f"the report is {type(report).__name__}, expected an object")
+        hosts, domains, urls = _network_indicators(provider, report)
+        return (
+            SandboxBehavior(
+                behavior_signatures=_signature_names(provider, report),
+                mitre_techniques=_mitre_techniques(report),
+                contacted_hosts=hosts,
+                contacted_domains=domains,
+                contacted_urls=urls,
+                dropped_file_hashes=_dropped_file_hashes(provider, report),
+                processes=_processes(provider, report),
+            ),
+            True,
+        )
+    except ValueError as exc:  # includes _UnreadableReportError and pydantic ValidationError
+        if log is not None:
+            kind = "unexpected shape" if isinstance(exc, _UnreadableReportError) else "failed validation"
+            detail = str(exc) if isinstance(exc, _UnreadableReportError) else type(exc).__name__
+            log(f"The {provider or 'sandbox'} report has an {kind} ({detail}); behavior left empty", level="warning")
+        return SandboxBehavior(), False
+
+
+def _is_malicious(provider: str, report: dict[str, Any], config: dict[str, Any] | None) -> bool | None:
+    """Decide the malicious / not malicious branch from the provider's own score.
+
+    CAPE stores its overall verdict score on the task config as
+    cape_malscore. Triage stores two: the dynamic run score and
+    triage_static_score (static analysis only, sometimes the only one
+    populated). The live service spells the dynamic key "traige_analysis_score",
+    measured on a real completed task on 2026-10-16, so that misspelling is
+    theirs and not ours. The correct spelling is read as well, so a fix on
+    their side cannot silently drop every detonation to the static score.
+
+    A non-zero score is not a verdict. Triage scores run from 1 to 10 and 1
+    means no malicious behaviour was seen, and CAPE scores plenty of benign
+    software above zero, so each provider is held to its own threshold. The
+    scores are coerced first: a string would otherwise raise on comparison.
+    When no readable score is present, a report that named a malware family
+    stands in for it. Behaviour signatures do not: benign installers fire
+    anti-VM and environment query signatures all the time, so their mere
+    presence says nothing about intent.
+
+    Returns None when there is neither a readable score nor a named family
+    (a missing config, a missing score key, an unknown provider, or a score
+    that does not coerce). No score is not a clean verdict, so the caller
+    must not report it as one.
+    """
+    config = config or {}
+    score: float | None = None
+    threshold: float | None = None
+
+    if provider == "cape":
+        score = as_score(config.get("cape_malscore"))
+        threshold = CAPE_MALICIOUS_SCORE
+    elif provider == "triage":
+        score = as_score(config.get("traige_analysis_score"))
+        if score is None:
+            score = as_score(config.get("triage_analysis_score"))
+        if score is None:
+            score = as_score(config.get("triage_static_score"))
+        threshold = TRIAGE_MALICIOUS_SCORE
+
+    if score is not None and threshold is not None:
+        return score >= threshold
+
+    if report.get("malware_family"):
+        return True
+    return None
+
+
+class Report(PolyswarmAction):
+    """Fetch the sandbox report already on file for a hash and provider.
+
+    This action reads only: it submits nothing and spends no detonation.
+    Activates one of three branches: malicious, not malicious, or no report
+    available. The last covers every case that leaves nothing to report a
+    verdict on: no sandbox task has ever been created for this hash and
+    provider, a submitted detonation failed, one is still running and
+    either no wait was requested or the wait ceiling was reached first, or
+    the task succeeded but its report carries no readable score and no
+    malware family (flagged by unscored being true, with malicious null). To
+    create a report, call SandboxFile, SandboxUrl or SandboxIp; this action
+    never does.
+    """
+
+    def run(self, arguments: dict[str, Any]) -> dict[str, Any] | None:
+        args = ReportArguments(**arguments)
+
+        # Refused before a request is spent: the platform would reject a
+        # malformed hash anyway, and a shorter MD5 or SHA1 would pass the
+        # general hash rule but is not what this action looks a report up by.
+        reason = invalid_hash_reason(args.sha256)
+        if reason is None and len(args.sha256.strip()) != SHA256_LENGTH:
+            reason = f"'{args.sha256}' is not a SHA256 hash: expected 64 hexadecimal characters"
+        if reason is not None:
+            self.error(f"Refusing to look up a sandbox report: {reason}.")
+            return None
+
+        api = build_client(self.module.configuration)
+
+        try:
+            task = api.sandbox_task_latest(args.sha256.strip(), sandbox=args.sandbox)
+        except MISSING_RESULT:
+            task = None
+        except CLIENT_ERRORS as exc:
+            # Never quote the client's own message: it renders the request,
+            # which carries the key.
+            self.error(f"PolySwarm could not be reached to look up the sandbox report ({failure_kind(exc)}).")
+            return None
+
+        if not task:
+            return self._not_found_response(args)
+
+        if args.max_wait_seconds > 0 and task.status not in TERMINAL_STATUSES:
+            task = poll_until_terminal(api, task, args.max_wait_seconds, POLL_INTERVAL_CEILING, self.log)
+
+        return self._respond(task, args.include_raw_report)
+
+    def _not_found_response(self, args: ReportArguments) -> dict[str, Any] | None:
+        self.log(
+            f"No sandbox task has ever been created for {args.sha256} on {args.sandbox}; "
+            "call SandboxFile, SandboxUrl or SandboxIp to detonate it",
+            level="info",
+        )
+        self.set_output("no report available", True)
+        return ReportResponse(
+            sandbox_task_id="",
+            sha256=args.sha256,
+            sandbox=args.sandbox,
+            status=NOT_FOUND_STATUS,
+            malicious=None,
+            behavior=SandboxBehavior(),
+            report=None,
+            sandbox_artifacts=[],
+        ).model_dump()
+
+    def _respond(self, task: Any, include_raw_report: bool = False) -> dict[str, Any] | None:
+        provider = (getattr(task, "sandbox", "") or "").lower()
+
+        if task.status != "SUCCEEDED" or not task.report:
+            if task.status == "FAILED":
+                self.log(f"Sandbox task {task.id} failed to produce a report for {task.sha256}", level="warning")
+            elif task.status != "SUCCEEDED":
+                self.log(
+                    f"Sandbox task {task.id} for {task.sha256} is still processing (status {task.status})",
+                    level="warning",
+                )
+            else:
+                self.log(f"Sandbox task {task.id} succeeded but PolySwarm returned no report content", level="warning")
+
+            self.set_output("no report available", True)
+            return ReportResponse(
+                sandbox_task_id=str(task.id),
+                sha256=task.sha256,
+                sandbox=task.sandbox,
+                status=task.status,
+                malicious=None,
+                behavior=SandboxBehavior(),
+                report=task.report if include_raw_report else None,
+                sandbox_artifacts=[],
+            ).model_dump()
+
+        report = task.report
+        malicious = (
+            _is_malicious(provider, report, getattr(task, "config", None)) if isinstance(report, dict) else None
+        )
+        behavior, readable = _typed_behavior(provider, report, self.log)
+        if malicious is None:
+            self.log(
+                f"Sandbox task {task.id} for {task.sha256} succeeded with a report but no readable score "
+                f"or malware family on {provider or 'an unknown provider'}, so no verdict was reached",
+                level="warning",
+            )
+            self.set_output("no report available", True)
+        else:
+            self.set_output("malicious" if malicious else "not malicious", True)
+
+        return ReportResponse(
+            sandbox_task_id=str(task.id),
+            sha256=task.sha256,
+            sandbox=task.sandbox,
+            status=task.status,
+            malicious=malicious,
+            unscored=malicious is None,
+            behavior_unreadable=not readable,
+            behavior=behavior,
+            report=task.report if include_raw_report else None,
+            sandbox_artifacts=[
+                {
+                    "id": a.id,
+                    "instance_id": a.instance_id,
+                    "name": a.name,
+                    "type": a.type,
+                    "mimetype": a.mimetype,
+                }
+                for a in task.sandbox_artifacts
+            ],
+        ).model_dump()

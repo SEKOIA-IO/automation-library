@@ -19,7 +19,7 @@ def symphony_storage():
     constants.SYMPHONY_STORAGE = original_storage
 
 
-def testGetCurrentTime():
+def test_get_current_time():
     action = GetCurrentTimeAction()
     request = Arguments(selectedTimezone="UTC 0")
     reponse = action.run(request)

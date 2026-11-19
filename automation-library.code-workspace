@@ -41,6 +41,10 @@
 			"path": "Whois"
 		},
 		{
+			"name": "AWS",
+			"path": "AWS"
+		},
+		{
 			"name": "HTTP",
 			"path": "HTTP"
 		},
@@ -107,6 +111,34 @@
 		{
 			"name": "Okta",
 			"path": "Okta"
+		},
+		{
+			"name": "Netskope",
+			"path": "Netskope"
+		},
+		{
+			"name": "CatoNetwork",
+			"path": "CatoNetwork"
+		},
+		{
+			"name": "Trellix",
+			"path": "Trellix"
+    },
+    {
+			"name": "PolySwarm",
+			"path": "PolySwarm"
+    },
+    {
+			"name": "TrendMicro",
+			"path": "TrendMicro"
+		},
+		{
+			"name": "Nextron Valhalla",
+			"path": "Nextron Valhalla"
+		},
+		{
+			"name": "UrlScan",
+			"path": "UrlScan"
 		}
 	],
 	"settings": {

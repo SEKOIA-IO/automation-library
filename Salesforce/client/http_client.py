@@ -4,6 +4,7 @@ import csv
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
+from posixpath import join as urljoin
 from typing import Any, AsyncGenerator, Dict, Tuple
 from urllib.parse import urlencode
 
@@ -194,7 +195,7 @@ class SalesforceHttpClient(object):
             "q": self._query_to_http_param(query),
         }
 
-        return URL("{0}/services/data/v58.0/query".format(self.base_url)).with_query(
+        return URL(urljoin(str(self.base_url), "services/data/v58.0/query")).with_query(
             urlencode(params, safe=">+,'=:<", encoding="utf-8")
         )
 
@@ -339,7 +340,7 @@ class SalesforceHttpClient(object):
         Returns:
             Tuple[str, str]:
         """
-        url = URL("{0}{1}".format(self.base_url, log_file.LogFile))
+        url = URL(urljoin(str(self.base_url), log_file.LogFile.lstrip("/")))
         _tmp_dir = temp_dir if temp_dir is not None else "/tmp"
 
         logger.info("Start to process log file from Salesforce. Log file is {0}", log_file.Id)
