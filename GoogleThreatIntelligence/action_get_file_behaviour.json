@@ -1,0 +1,354 @@
+{
+  "uuid": "d4b8a1e4-9c7f-44c1-9a53-2f0b8a3d99c3",
+  "name": "Get File Behaviour",
+  "description": "Retrieve sandbox behaviour for a file hash from Google Threat Intelligence",
+  "docker_parameters": "get_file_behaviour",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "file_hash": {
+        "type": "string",
+        "description": "File hash to query (MD5, SHA1, or SHA256)"
+      }
+    },
+    "required": [
+      "file_hash"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Get File Behaviour Results",
+    "properties": {
+      "success": {
+        "type": "boolean"
+      },
+      "file_hash": {
+        "type": "string",
+        "description": "The file hash that was queried"
+      },
+      "behaviours_count": {
+        "type": "integer",
+        "description": "Total number of sandbox behaviour reports retrieved"
+      },
+      "sandbox_names": {
+        "type": "array",
+        "description": "List of sandbox names that analyzed the file",
+        "items": {
+          "type": "string"
+        }
+      },
+      "verdicts": {
+        "type": "array",
+        "description": "Merged list of verdicts from all sandboxes",
+        "items": {
+          "type": "string"
+        }
+      },
+      "tags": {
+        "type": "array",
+        "description": "Merged list of tags categorizing the observed behavior",
+        "items": {
+          "type": "string"
+        }
+      },
+      "ip_traffic": {
+        "type": "array",
+        "description": "Merged network traffic observed during execution",
+        "items": {
+          "type": "object",
+          "properties": {
+            "destination_ip": {
+              "type": "string",
+              "description": "Destination IP address"
+            },
+            "destination_port": {
+              "type": "integer",
+              "description": "Destination port number"
+            },
+            "transport_layer_protocol": {
+              "type": "string",
+              "description": "Protocol used (TCP/UDP/ICMP)"
+            }
+          }
+        }
+      },
+      "dns_lookups": {
+        "type": "array",
+        "description": "Merged DNS queries performed during execution",
+        "items": {
+          "type": "object",
+          "properties": {
+            "hostname": {
+              "type": "string",
+              "description": "Hostname queried"
+            },
+            "resolved_ips": {
+              "type": "array",
+              "description": "IPs resolved from the DNS query",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "http_conversations": {
+        "type": "array",
+        "description": "Merged HTTP conversations observed",
+        "items": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "request_method": {
+              "type": "string"
+            },
+            "response_status_code": {
+              "type": "integer"
+            }
+          }
+        }
+      },
+      "command_executions": {
+        "type": "array",
+        "description": "Merged list of command-line executions observed",
+        "items": {
+          "type": "string"
+        }
+      },
+      "files_opened": {
+        "type": "array",
+        "description": "Merged list of files accessed during execution",
+        "items": {
+          "type": "string"
+        }
+      },
+      "files_written": {
+        "type": "array",
+        "description": "Merged list of files written to disk",
+        "items": {
+          "type": "string"
+        }
+      },
+      "files_deleted": {
+        "type": "array",
+        "description": "Merged list of files deleted during execution",
+        "items": {
+          "type": "string"
+        }
+      },
+      "files_copied": {
+        "type": "array",
+        "description": "Merged list of files copied during execution",
+        "items": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string"
+            },
+            "destination": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "files_dropped": {
+        "type": "array",
+        "description": "Merged list of files dropped during execution",
+        "items": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "sha256": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "registry_keys_opened": {
+        "type": "array",
+        "description": "Merged list of Windows registry keys accessed",
+        "items": {
+          "type": "string"
+        }
+      },
+      "registry_keys_set": {
+        "type": "array",
+        "description": "Merged list of registry keys modified",
+        "items": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "registry_keys_deleted": {
+        "type": "array",
+        "description": "Merged list of registry keys deleted",
+        "items": {
+          "type": "string"
+        }
+      },
+      "modules_loaded": {
+        "type": "array",
+        "description": "Merged list of DLLs and modules loaded during execution",
+        "items": {
+          "type": "string"
+        }
+      },
+      "mitre_attack_techniques": {
+        "type": "array",
+        "description": "Merged MITRE ATT&CK techniques observed in the behavior",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "MITRE technique ID (e.g., 'T1055')"
+            },
+            "signature_description": {
+              "type": "string",
+              "description": "Description of the observed technique"
+            },
+            "severity": {
+              "type": "string",
+              "description": "Severity level of the technique"
+            }
+          }
+        }
+      },
+      "processes_tree": {
+        "type": "array",
+        "description": "Merged tree structure of processes created during execution",
+        "items": {
+          "type": "object",
+          "properties": {
+            "process_id": {
+              "type": "string",
+              "description": "Process ID (PID)"
+            },
+            "name": {
+              "type": "string",
+              "description": "Process name and command line"
+            },
+            "children": {
+              "type": "array",
+              "description": "Child processes spawned by this process"
+            }
+          }
+        }
+      },
+      "processes_terminated": {
+        "type": "array",
+        "description": "Merged list of processes terminated during execution",
+        "items": {
+          "type": "string"
+        }
+      },
+      "processes_injected": {
+        "type": "array",
+        "description": "Merged list of processes injected during execution",
+        "items": {
+          "type": "string"
+        }
+      },
+      "processes_created": {
+        "type": "integer",
+        "description": "Total number of processes created across all sandboxes"
+      },
+      "text_highlighted": {
+        "type": "array",
+        "description": "Merged important strings or patterns highlighted in the analysis",
+        "items": {
+          "type": "string"
+        }
+      },
+      "sigma_analysis_results": {
+        "type": "array",
+        "description": "Merged results from Sigma rule matching",
+        "items": {
+          "type": "object",
+          "properties": {
+            "rule_title": {
+              "type": "string"
+            },
+            "rule_level": {
+              "type": "string"
+            },
+            "rule_id": {
+              "type": "string"
+            },
+            "rule_source": {
+              "type": "string"
+            },
+            "match_context": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "services_opened": {
+        "type": "array",
+        "description": "Merged list of Windows services opened",
+        "items": {
+          "type": "string"
+        }
+      },
+      "services_created": {
+        "type": "array",
+        "description": "Merged list of Windows services created",
+        "items": {
+          "type": "string"
+        }
+      },
+      "services_started": {
+        "type": "array",
+        "description": "Merged list of Windows services started",
+        "items": {
+          "type": "string"
+        }
+      },
+      "mutexes_opened": {
+        "type": "array",
+        "description": "Merged list of mutexes opened",
+        "items": {
+          "type": "string"
+        }
+      },
+      "mutexes_created": {
+        "type": "array",
+        "description": "Merged list of mutexes created",
+        "items": {
+          "type": "string"
+        }
+      },
+      "calls_highlighted": {
+        "type": "array",
+        "description": "Merged list of highlighted API calls",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "success",
+      "file_hash",
+      "behaviours_count",
+      "sandbox_names"
+    ]
+  },
+  "slug": "get_file_behaviour_in_gti"
+}
