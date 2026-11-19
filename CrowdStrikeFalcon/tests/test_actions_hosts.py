@@ -1,3 +1,4 @@
+import pytest
 import requests_mock
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
@@ -70,3 +71,16 @@ def test_deisolate_hosts_action():
         history = mock.request_history
         assert mock.call_count == 2  # One call to OAUTH2 token, one call to isolate hosts
         assert "action_name=lift_containment" in history[1].url
+
+
+@pytest.mark.parametrize("action_class", [CrowdstrikeActionIsolateHosts, CrowdstrikeActionDeIsolateHosts])
+@pytest.mark.parametrize("arguments", [{}, {"ids": []}])
+def test_host_action_without_ids(action_class, arguments):
+    action = configured_action(action_class)
+
+    with requests_mock.Mocker() as mock:
+        action.run(arguments)
+
+        assert mock.call_count == 0
+
+    assert action._error == "List of ID`s should not be empty."

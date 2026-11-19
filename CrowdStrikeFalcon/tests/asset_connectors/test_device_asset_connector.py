@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
@@ -619,3 +620,67 @@ def test_asset_fetch_cycle_replays_an_interrupted_backfill(connector):
     connector.asset_fetch_cycle()
 
     assert pushed == []
+
+
+def test_client_is_configured_from_the_module_configuration(connector):
+    connector.module.configuration = SimpleNamespace(
+        base_url="https://api.fake", client_id="fake_client_id", client_secret="fake_client_secret"
+    )
+    connector.module.manifest = {"slug": "crowdstrike-falcon", "version": "1.2.3"}
+
+    client = connector.client
+
+    assert client.get_url("/devices/entities/devices/v2") == "https://api.fake/devices/entities/devices/v2"
+    assert client.headers["User-Agent"] == "sekoiaio-connector/crowdstrike-falcon-1.2.3"
+    assert connector.client is client
+
+
+def test_get_groups_ignores_group_details_without_identifier(connector):
+    device = CrowdStrikeDevice(groups=["group1"])
+
+    mock_client = Mock()
+    mock_client.get_host_groups.return_value = [{"name": "No identifier"}, {"id": "group1", "name": "Group One"}]
+    connector.client = mock_client
+
+    groups = connector.get_groups(device)
+
+    assert groups == [Group(uid="group1", name="Group One", desc=None)]
+
+
+def test_get_groups_without_groups(connector):
+    connector.client = Mock()
+
+    assert connector.get_groups(CrowdStrikeDevice(groups=["", ""])) is None
+    connector.client.get_host_groups.assert_not_called()
+
+
+@pytest.mark.parametrize("zone_group,expected_country", [("eu-west-1a", "EU"), ("a", None)])
+def test_get_location(connector, zone_group, expected_country):
+    location = connector.get_location(CrowdStrikeDevice(zone_group=zone_group))
+
+    assert location is not None
+    assert location.country == expected_country
+
+
+def test_get_location_without_zone_group(connector):
+    assert connector.get_location(CrowdStrikeDevice()) is None
+
+
+def test_get_enrichments_with_fqdn_and_last_user(connector):
+    device = CrowdStrikeDevice(hostname="host1", machine_domain="corp.example.com", last_login_user="alice")
+
+    enrichments = connector.get_enrichments(device)
+
+    assert enrichments[0].data.Full_qualified_domain_name == "host1.corp.example.com"
+    assert enrichments[0].data.Users == ["alice"]
+
+
+def test_map_device_fields_skips_device_without_id(connector):
+    assert connector.map_device_fields(CrowdStrikeDevice(hostname="host1")) is None
+    connector.log.assert_called_once()
+    assert connector.log.call_args.kwargs["level"] == "warning"
+
+
+def test_map_device_fields_skips_device_without_hostname(connector):
+    assert connector.map_device_fields(CrowdStrikeDevice(device_id="dev1")) is None
+    connector.log.assert_called_once_with("Skipping device dev1: missing hostname", level="warning")

@@ -30,3 +30,18 @@ def test_ratelimit_retry_after_header_sleep():
         retry.sleep(response)
 
         sleep_mock.assert_called_with(3600)
+
+
+def test_ratelimit_retry_after_in_the_past_returns_none():
+    retry = Retry()
+
+    with patch("time.time", return_value=1664389951):
+        response = HTTPResponse(status=429, headers={"X-RateLimit-RetryAfter": "1664389000"})
+
+        assert retry.get_retry_after(response) is None
+
+
+def test_get_retry_after_without_headers_returns_none():
+    retry = Retry()
+
+    assert retry.get_retry_after(HTTPResponse(status=429, headers={})) is None

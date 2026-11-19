@@ -316,3 +316,144 @@ def test_list_devices_uuids_stops_on_a_repeated_scroll_token():
 
         # The stuck page is dropped, not replayed
         assert list(client.list_devices_uuids(limit=1, sort="first_seen.desc")) == ["u1"]
+
+
+BASE_URL = "https://my.fake.sekoia"
+GRAPHQL_URL = f"{BASE_URL}/identity-protection/combined/graphql/v1"
+IDENTITY_QUERY = "query { entities(first: 2 {cursor}) { nodes { entityId } pageInfo { hasNextPage endCursor } } }"
+
+
+@pytest.fixture
+def falcon_client(requests_mock):
+    requests_mock.post(
+        f"{BASE_URL}/oauth2/token",
+        json={"access_token": "foo-token", "token_type": "bearer", "expires_in": 1799},
+    )
+    return CrowdstrikeFalconClient(BASE_URL, "foo", "bar", default_headers={"User-Agent": "test-agent"})
+
+
+def test_request_endpoint_error_with_a_non_dict_json_body(falcon_client, requests_mock):
+    requests_mock.get(f"{BASE_URL}/devices/entities/host-groups/v1", status_code=500, json=["unexpected"])
+
+    with pytest.raises(HTTPError) as exc_info:
+        list(falcon_client.get_host_groups(["group1"]))
+
+    assert "500" in str(exc_info.value)
+    assert "The API returns the following errors" not in str(exc_info.value)
+
+
+def test_get_devices_infos(falcon_client, requests_mock):
+    requests_mock.post(
+        f"{BASE_URL}/devices/entities/devices/v2",
+        json={"errors": [], "meta": {}, "resources": [{"device_id": "dev1"}, {"device_id": "dev2"}]},
+    )
+
+    assert list(falcon_client.get_devices_infos(["dev1", "dev2"])) == [{"device_id": "dev1"}, {"device_id": "dev2"}]
+    assert requests_mock.last_request.json() == {"ids": ["dev1", "dev2"]}
+    assert requests_mock.last_request.headers["User-Agent"] == "test-agent"
+    assert requests_mock.last_request.headers["Authorization"] == "Bearer foo-token"
+
+
+def test_request_endpoint_stops_when_the_offset_reaches_the_total(falcon_client, requests_mock):
+    requests_mock.get(
+        f"{BASE_URL}/iocs/queries/indicators/v1",
+        json={"errors": [], "meta": {"pagination": {"offset": 1, "limit": 1, "total": 1}}, "resources": ["ioc1"]},
+    )
+
+    assert list(falcon_client.find_indicators("source:Sekoia.io")) == ["ioc1"]
+    assert requests_mock.call_count == 2  # token + a single page
+
+
+def test_request_graphql_endpoint_follows_the_cursor(falcon_client, requests_mock):
+    requests_mock.post(
+        GRAPHQL_URL,
+        [
+            {
+                "json": {
+                    "data": {
+                        "entities": {
+                            "nodes": [{"entityId": "1"}, {"entityId": "2"}],
+                            "pageInfo": {"hasNextPage": True, "endCursor": "cursor-1"},
+                        }
+                    }
+                }
+            },
+            {
+                "json": {
+                    "data": {
+                        "entities": {
+                            "nodes": [{"entityId": "3"}],
+                            "pageInfo": {"hasNextPage": False, "endCursor": "cursor-2"},
+                        }
+                    }
+                }
+            },
+        ],
+    )
+
+    entities = list(falcon_client.list_identity_entities(IDENTITY_QUERY))
+
+    assert entities == [{"entityId": "1"}, {"entityId": "2"}, {"entityId": "3"}]
+    graphql_requests = [request for request in requests_mock.request_history if request.url == GRAPHQL_URL]
+    assert len(graphql_requests) == 2
+    assert "{cursor}" not in graphql_requests[0].json()["query"]
+    assert "after:" not in graphql_requests[0].json()["query"]
+    assert 'after: "cursor-1"' in graphql_requests[1].json()["query"]
+
+
+def test_request_graphql_endpoint_stops_without_an_end_cursor(falcon_client, requests_mock):
+    requests_mock.post(
+        GRAPHQL_URL,
+        json={
+            "data": {
+                "entities": {
+                    "nodes": [{"entityId": "1"}],
+                    "pageInfo": {"hasNextPage": True, "endCursor": None},
+                }
+            }
+        },
+    )
+
+    assert list(falcon_client.list_identity_entities(IDENTITY_QUERY)) == [{"entityId": "1"}]
+    assert requests_mock.call_count == 2  # token + a single page
+
+
+def test_request_graphql_endpoint_with_unexpected_data_shape(falcon_client, requests_mock):
+    requests_mock.post(GRAPHQL_URL, json={"data": {"entities": "unexpected"}})
+
+    assert list(falcon_client.list_identity_entities(IDENTITY_QUERY)) == []
+
+
+def test_request_graphql_endpoint_with_explicit_page_info_path(falcon_client, requests_mock):
+    requests_mock.post(
+        GRAPHQL_URL,
+        json={"data": {"items": [{"id": "1"}], "paging": {"hasNextPage": False}}},
+    )
+
+    result = falcon_client.request_graphql_endpoint(
+        "/identity-protection/combined/graphql/v1",
+        "query { {cursor} }",
+        data_path=["items"],
+        page_info_path=["paging"],
+    )
+
+    assert list(result) == [{"id": "1"}]
+
+
+def test_request_graphql_endpoint_raises_on_graphql_errors(falcon_client, requests_mock):
+    requests_mock.post(GRAPHQL_URL, json={"errors": [{"message": "invalid query"}, {"code": "E42"}]})
+
+    with pytest.raises(HTTPError) as exc_info:
+        list(falcon_client.list_identity_entities(IDENTITY_QUERY))
+
+    assert "invalid query" in str(exc_info.value)
+    assert "E42" in str(exc_info.value)
+
+
+def test_request_graphql_endpoint_raises_on_http_errors(falcon_client, requests_mock):
+    requests_mock.post(GRAPHQL_URL, status_code=403, text="Forbidden")
+
+    with pytest.raises(HTTPError) as exc_info:
+        list(falcon_client.list_identity_entities(IDENTITY_QUERY))
+
+    assert exc_info.value.response.status_code == 403

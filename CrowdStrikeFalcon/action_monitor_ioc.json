@@ -4,7 +4,8 @@
     "properties": {
       "value": {
         "description": "The value of the IOC to monitor",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "type": {
         "description": "Type of the IOC to monitor: md5, sha256, domain, ipv4, ipv6",
