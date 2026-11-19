@@ -15,6 +15,7 @@ from sophos_module.base import SophosConnector
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
 from sophos_module.client.exceptions import SophosApiAuthenticationError
+from sophos_module.helper import latest_timestamp, normalize_xdr_message
 from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
 
 
@@ -41,6 +42,8 @@ class SophosXDRQueryTrigger(SophosConnector):
         )
         self._from_date: datetime = self.cursor.offset
         self.events_sum = 0
+        self._last_query_error: dict[str, Any] | None = None
+        self._working_query_index = 0
 
     @property
     def from_date(self) -> datetime:
@@ -60,6 +63,10 @@ class SophosXDRQueryTrigger(SophosConnector):
     def query(self) -> dict[str, Any]:
         """Return the Sophos XDR query definition."""
         raise NotImplementedError
+
+    @property
+    def queries(self) -> list[dict[str, Any]]:
+        return [self.query]
 
     @cached_property
     def pagination_limit(self) -> int:
@@ -116,12 +123,22 @@ class SophosXDRQueryTrigger(SophosConnector):
     def post_query(self, query: dict[str, Any]) -> tuple[str, str | None]:
         # It's the first step of our query treatment.
         # Posting the query
+        self._last_query_error = None
         self.log(
             message=f"Querying the Sophos data lake at {self.from_date.strftime('%Y-%m-%d %H:%M:%S')}", level="info"
         )
 
         response = self.client.run_query(json_query=query)
         if response.status_code >= 400:
+            error_message = response.text
+            try:
+                payload = response.json()
+                if isinstance(payload, dict):
+                    error_message = str(payload)
+            except ValueError:
+                pass
+
+            self._last_query_error = {"status_code": response.status_code, "message": error_message}
             self.log(
                 message=f"Failed to post the query. Status code: {response.status_code}, response: {response.text}",
                 level="error",
@@ -134,6 +151,10 @@ class SophosXDRQueryTrigger(SophosConnector):
         query_id = result.get("id")
 
         if query_id is None:
+            self._last_query_error = {
+                "status_code": response.status_code,
+                "message": "Missing query id in response",
+            }
             return "failed", query_id
 
         status = ""
@@ -157,30 +178,60 @@ class SophosXDRQueryTrigger(SophosConnector):
 
         self.log(message=f"Finishing the loop with status {status} and result {result}", level="info")
 
+        if result != "succeeded":
+            details = {
+                key: value
+                for key, value in result_query_status.items()
+                if key.lower().startswith("error") or key in ("message", "details")
+            }
+            self._last_query_error = {
+                "status_code": response_query_status.status_code,
+                "message": str(details) if details else f"Query execution result: {result}",
+                "execution_failed": result == "failed" and response_query_status.status_code == 200,
+            }
+
         return result, query_id
 
+    def should_try_next_query(self) -> bool:
+        """Subclasses may opt into compatibility retries for specific errors."""
+        return False
+
     def _observe_items_events_lag(self, items: list[dict[str, Any]]) -> None:
-        def _extract_timestamp(item: dict[str, Any]) -> float:
-            RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-            return datetime.strptime(item["calendar_time"], RFC3339_STRICT_FORMAT).timestamp()
+        most_recent_timestamp = latest_timestamp(items, ("calendar_time", "calendarTime", "created_at", "createdAt"))
 
-        if len(items) == 0:
+        if most_recent_timestamp is None:
+            # cannot compute lag if API payload does not expose parseable timestamps
             return
-
-        if "calendar_time" not in items[0]:
-            # can't measure lag, because there's no timestamp
-            return
-
-        most_recent_item: dict[str, Any] = max(items, key=lambda item: item["calendar_time"])  # type: ignore
-        most_recent_timestamp = _extract_timestamp(most_recent_item)
 
         events_lag = int(time.time() - most_recent_timestamp)
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
 
+    def run_compatible_query(self) -> tuple[str, str | None]:
+        result: str = "failed"
+        query_id: str | None = None
+
+        queries = self.queries
+        for index in range(self._working_query_index, len(queries)):
+            query = queries[index]
+            result, query_id = self.post_query(query)
+            if result == "succeeded":
+                self._working_query_index = index
+                return result, query_id
+
+            if index >= len(queries) - 1 or not self.should_try_next_query():
+                break
+
+            self.log(
+                message="XDR query template failed, trying next compatibility template",
+                level="warning",
+            )
+
+        return result, query_id
+
     def getting_results(self, pagination: int) -> None:
         now = datetime.now(timezone.utc)
 
-        result, query_id = self.post_query(self.query)
+        result, query_id = self.run_compatible_query()
 
         if result != "succeeded":
             self.log(
@@ -195,7 +246,7 @@ class SophosXDRQueryTrigger(SophosConnector):
             INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
             if len(items) > 0:
-                messages = [orjson.dumps(message).decode("utf-8") for message in items]
+                messages = [orjson.dumps(normalize_xdr_message(message)).decode("utf-8") for message in items]
                 next_key = response.get("pages", {}).get("nextKey")
                 self.log(message=f"Sending the first batch of {len(messages)} messages", level="info")
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
@@ -208,7 +259,9 @@ class SophosXDRQueryTrigger(SophosConnector):
                     ).json()
 
                     next_page_items = response_next_page.get("items", [])
-                    next_messages = [orjson.dumps(message).decode("utf-8") for message in next_page_items]
+                    next_messages = [
+                        orjson.dumps(normalize_xdr_message(message)).decode("utf-8") for message in next_page_items
+                    ]
                     self._observe_items_events_lag(next_page_items)
                     self.log(message=f"Sending other batches of {len(next_messages)} messages", level="info")
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(next_messages))
@@ -226,12 +279,31 @@ class SophosXDRQueryTrigger(SophosConnector):
 
 
 class SophosXDRIOCQuery(SophosXDRQueryTrigger):
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
-        super().__init__(*args, **kwargs)
+    def should_try_next_query(self) -> bool:
+        if self._last_query_error is None:
+            return False
+
+        error = self._last_query_error
+        if error.get("status_code") != 400 and not error.get("execution_failed"):
+            return False
+
+        return "ioc_detection_weight" in str(error.get("message") or "").lower()
 
     @property
     def query(self) -> dict[str, Any]:
-        return {
-            "adHocQuery": {"template": "SELECT * FROM xdr_ioc_view WHERE ioc_detection_weight > 3"},
-            "from": self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        }
+        return self.queries[0]
+
+    @property
+    def queries(self) -> list[dict[str, Any]]:
+        templates = (
+            "SELECT * FROM xdr_ioc_view WHERE ioc_detection_weight > 3",
+            "SELECT * FROM xdr_ioc_view WHERE ioc_severity > 3",
+        )
+
+        return [
+            {
+                "adHocQuery": {"template": template},
+                "from": self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            }
+            for template in templates
+        ]
