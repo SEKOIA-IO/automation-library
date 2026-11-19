@@ -1,0 +1,40 @@
+{
+  "logs": [
+    {
+      "action": "auth-ip-add-new-ip",
+      "date": "2026-08-13T13:09:00Z",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:153.0) Gecko/20100101 Firefox/153.0",
+      "user_email": "user@company.com",
+      "user_ip": "123.123.123.123"
+    },
+    {
+      "action": "delete_apiv3_key",
+      "date": "2026-08-13T13:06:18Z",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:153.0) Gecko/20100101 Firefox/153.0",
+      "user_email": "user@company.com",
+      "user_ip": "123.123.123.123"
+    },
+    {
+      "action": "create_apiv3_key",
+      "date": "2026-08-13T13:06:09Z",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:153.0) Gecko/20100101 Firefox/153.0",
+      "user_email": "user@company.com",
+      "user_ip": "123.123.123.123"
+    },
+    {
+      "action": "create_apiv3_key",
+      "date": "2026-08-13T12:39:40Z",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:153.0) Gecko/20100101 Firefox/153.0",
+      "user_email": "user@company.com",
+      "user_ip": "123.123.123.123"
+    },
+    {
+      "action": "organization-accessed",
+      "date": "2026-08-13T08:27:20Z",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:153.0) Gecko/20100101 Firefox/153.0",
+      "user_email": "user@company.com",
+      "user_ip": "123.123.123.123"
+    }
+  ],
+  "count": 5
+}
