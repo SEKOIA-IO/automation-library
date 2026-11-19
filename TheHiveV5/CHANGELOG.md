@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-07-09 - 1.1.4
+
+### Fixed
+
+- Validate TheHive v5 add observable, upload logs, and add comment action arguments with Pydantic v2, rejecting missing or empty alert IDs, comment messages, and upload file paths before any API call.
+- Declare `minLength: 1` on these required string arguments and the `events` argument as an array in the action manifests, matching the runtime validation.
+- Reject upload logs file paths that point outside the action data directory (`..` traversal or absolute paths).
+- Bump `sekoia-automation-sdk` to 1.23.1.
+
 ## 2026-03-20 - 1.1.3
 
 ### Fixed
