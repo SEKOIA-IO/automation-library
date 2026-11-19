@@ -1,0 +1,460 @@
+{
+  "uuid": "10716a61-ca1b-4b28-9398-e44e6fadee17",
+  "name": "Iris Investigate Reverse IP",
+  "description": "Query DomainTools Iris Investigate API to find domains associated with an IP address. Returns comprehensive domain intelligence including risk scores, WHOIS data, SSL certificates, DNS records, and infrastructure details for threat hunting and investigation.",
+  "docker_parameters": "get_iris_reverse_ip",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "ip": {
+        "description": "The IP address to search for associated domains (e.g., 199.30.228.112)",
+        "type": "string"
+      }
+    },
+    "required": [
+      "ip"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "limit_exceeded": {
+        "type": "boolean",
+        "description": "Indicates if the API response limit per page has been exceeded"
+      },
+      "has_more_results": {
+        "type": "boolean",
+        "description": "Indicates if additional results are available beyond the current response"
+      },
+      "message": {
+        "type": "string",
+        "description": "Status message from DomainTools API"
+      },
+      "results_count": {
+        "type": "integer",
+        "description": "Number of domains returned in the current response"
+      },
+      "total_count": {
+        "type": "integer",
+        "description": "Total number of domains associated with the IP address"
+      },
+      "results": {
+        "type": "array",
+        "description": "Array of domain investigation results with comprehensive intelligence data",
+        "items": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "description": "The domain name"
+            },
+            "whois_url": {
+              "type": "string",
+              "description": "URL to the WHOIS record for this domain"
+            },
+            "active": {
+              "type": "boolean",
+              "description": "Whether the domain is currently active"
+            },
+            "popularity_rank": {
+              "type": "integer",
+              "description": "Domain popularity ranking"
+            },
+            "domain_risk": {
+              "type": "object",
+              "description": "Domain risk assessment",
+              "properties": {
+                "risk_score": {
+                  "type": "integer",
+                  "description": "Overall risk score (0-100, higher = more risk)"
+                },
+                "components": {
+                  "type": "array",
+                  "description": "Risk score breakdown by category",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Risk component name (e.g., 'proximity', 'threat_profile')"
+                      },
+                      "risk_score": {
+                        "type": "integer",
+                        "description": "Risk score for this component"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "registrar": {
+              "type": "object",
+              "description": "Domain registrar information",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Registrar name"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains with this registrar"
+                }
+              }
+            },
+            "registrant_name": {
+              "type": "object",
+              "description": "Domain registrant name",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Registrant name"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains with this registrant"
+                }
+              }
+            },
+            "registrant_org": {
+              "type": "object",
+              "description": "Domain registrant organization",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Organization name"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains with this organization"
+                }
+              }
+            },
+            "create_date": {
+              "type": "object",
+              "description": "Domain creation date",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Creation date (YYYY-MM-DD)"
+                },
+                "count": {
+                  "type": "integer"
+                }
+              }
+            },
+            "expiration_date": {
+              "type": "object",
+              "description": "Domain expiration date",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Expiration date (YYYY-MM-DD)"
+                },
+                "count": {
+                  "type": "integer"
+                }
+              }
+            },
+            "ip": {
+              "type": "array",
+              "description": "IP addresses associated with the domain",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "address": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "IP address"
+                      },
+                      "count": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "asn": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "integer",
+                          "description": "Autonomous System Number"
+                        },
+                        "count": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  },
+                  "country_code": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Country code (e.g., 'us', 'fr')"
+                      },
+                      "count": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "isp": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Internet Service Provider name"
+                      },
+                      "count": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "mx": {
+              "type": "array",
+              "description": "Mail exchanger (MX) records",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "host": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "MX hostname"
+                      },
+                      "count": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "domain": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "MX domain"
+                      },
+                      "count": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "priority": {
+                    "type": "integer",
+                    "description": "MX priority"
+                  }
+                }
+              }
+            },
+            "name_server": {
+              "type": "array",
+              "description": "Name server records",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "host": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Nameserver hostname"
+                      },
+                      "count": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "domain": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Nameserver domain"
+                      },
+                      "count": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "ssl_info": {
+              "type": "array",
+              "description": "SSL certificate information",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "hash": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Certificate hash"
+                      },
+                      "count": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "subject": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Certificate subject"
+                      },
+                      "count": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "issuer_common_name": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Certificate issuer common name"
+                      },
+                      "count": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "not_after": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "integer",
+                        "description": "Certificate expiration date (YYYYMMDD)"
+                      },
+                      "count": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "not_before": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "integer",
+                        "description": "Certificate start date (YYYYMMDD)"
+                      },
+                      "count": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "tld": {
+              "type": "string",
+              "description": "Top-level domain (e.g., 'com', 'fr')"
+            },
+            "website_response": {
+              "type": "integer",
+              "description": "HTTP response code from the website"
+            },
+            "website_title": {
+              "type": "object",
+              "description": "Website HTML title",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Title text"
+                },
+                "count": {
+                  "type": "integer"
+                }
+              }
+            },
+            "server_type": {
+              "type": "object",
+              "description": "Web server type",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Server software (e.g., 'nginx', 'Apache')"
+                },
+                "count": {
+                  "type": "integer"
+                }
+              }
+            },
+            "first_seen": {
+              "type": "object",
+              "description": "When the domain was first observed",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "First seen timestamp (ISO 8601)"
+                },
+                "count": {
+                  "type": "integer"
+                }
+              }
+            },
+            "admin_contact": {
+              "type": "object",
+              "description": "Administrative contact information from WHOIS"
+            },
+            "registrant_contact": {
+              "type": "object",
+              "description": "Registrant contact information from WHOIS"
+            },
+            "technical_contact": {
+              "type": "object",
+              "description": "Technical contact information from WHOIS"
+            },
+            "email_domain": {
+              "type": "array",
+              "description": "Email domains associated with the domain",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "count": {
+                    "type": "integer"
+                  }
+                }
+              }
+            },
+            "soa_email": {
+              "type": "array",
+              "description": "SOA record email addresses",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "count": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "missing_domains": {
+        "type": "array",
+        "description": "Domains that were queried but not found"
+      }
+    },
+    "title": "Results",
+    "type": "object"
+  },
+  "slug": "get_iris_reverse_ip_in_domaintools"
+}
