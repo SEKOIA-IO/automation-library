@@ -1,11 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
 import pytest
 import requests_mock
 
 from sophos_module.base import SophosModule
-from sophos_module.trigger_sophos_xdr_query import SophosXDRIOCQuery
+from sophos_module.trigger_sophos_xdr_query import SophosXDRIOCQuery, SophosXDRQueryTrigger
 
 
 @pytest.fixture
@@ -334,3 +334,85 @@ def test_getting_next_results(
         assert trigger.events_sum == 8
         assert trigger.cursor.offset.date() == datetime.now(timezone.utc).date()
         assert trigger.query["from"] == trigger.from_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _response(status_code=200, payload=None, text=""):
+    response = Mock()
+    response.status_code = status_code
+    response.text = text
+    response.json.return_value = payload
+    return response
+
+
+def test_from_date_is_capped_to_thirty_days(trigger):
+    trigger.from_date = datetime(2000, 1, 1, tzinfo=timezone.utc)
+
+    expected = datetime.now(timezone.utc) - timedelta(days=30)
+    assert abs((trigger.from_date - expected).total_seconds()) < 60
+
+
+def test_base_query_is_abstract(trigger):
+    with pytest.raises(NotImplementedError):
+        SophosXDRQueryTrigger.query.fget(trigger)
+
+
+@pytest.mark.parametrize("chunk_size, expected", [(1, 1000), (5000, 5000)])
+def test_pagination_limit(trigger, chunk_size, expected):
+    trigger.configuration = {"intake_key": "0123456789", "chunk_size": chunk_size}
+
+    assert trigger.pagination_limit == expected
+
+
+def test_post_query_fails_on_http_error(trigger):
+    trigger.client = Mock()
+    trigger.client.run_query.return_value = _response(status_code=400, text="Bad request")
+
+    assert trigger.post_query({"adHocQuery": {}}) == ("failed", None)
+    trigger.client.get_query_status.assert_not_called()
+    trigger.log.assert_called_with(
+        message="Failed to post the query. Status code: 400, response: Bad request", level="error"
+    )
+
+
+def test_post_query_keeps_polling_after_status_error(trigger, monkeypatch, queryStatus_message):
+    monkeypatch.setattr("sophos_module.trigger_sophos_xdr_query.time.sleep", lambda _: None)
+    query_id = "7d00cf17-a987-4d07-ac88-93d4df89fa73"
+    trigger.client = Mock()
+    trigger.client.run_query.return_value = _response(payload={"id": query_id})
+    trigger.client.get_query_status.side_effect = [
+        _response(status_code=404, payload={"error": "notFound"}, text="Not found"),
+        _response(payload=queryStatus_message),
+    ]
+
+    assert trigger.post_query({"adHocQuery": {}}) == ("succeeded", query_id)
+    assert trigger.client.get_query_status.call_count == 2
+    trigger.log.assert_any_call(
+        message="Failed to get the query status. Status code: 404, response: Not found", level="error"
+    )
+
+
+def test_getting_results_when_query_failed(trigger):
+    previous_offset = trigger.cursor.offset
+    trigger.post_query = Mock(return_value=("failed", None))
+    trigger.client = Mock()
+
+    trigger.getting_results(7)
+
+    trigger.client.get_query_results.assert_not_called()
+    trigger.push_events_to_intakes.assert_not_called()
+    assert trigger.cursor.offset == previous_offset
+
+
+def test_getting_results_without_items(trigger):
+    previous_offset = trigger.cursor.offset
+    trigger.post_query = Mock(return_value=("succeeded", "query-id"))
+    trigger.client = Mock()
+    trigger.client.get_query_results.return_value = _response(payload={"items": []})
+
+    trigger.getting_results(7)
+
+    trigger.client.get_query_results.assert_called_once_with("query-id", 7)
+    trigger.push_events_to_intakes.assert_not_called()
+    trigger.log.assert_called_with(message="No messages to forward", level="info")
+    assert trigger.cursor.offset == previous_offset
+    assert trigger.events_sum == 0

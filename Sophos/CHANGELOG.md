@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-12 - 1.20.1
+
+### Fixed
+
+- Validate `endpoint_id` as a UUID with Pydantic models in the Sophos EDR deisolate, isolate and run scan actions; a missing or malformed value is now rejected before any API call instead of being read directly from the arguments
+- Isolate and de-isolate endpoint actions: raise non-400 API errors instead of returning an empty result (a 400 is still reported as an isolation status changed too recently)
+
 ## 2026-07-06 - 1.20.0
 
 ### Changed

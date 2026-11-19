@@ -50,3 +50,20 @@ def test_extract_info():
         "file_size": "36",
         "file_path": "C:\\Users\\Sophos\\Desktop\\test.txt",
     }
+
+
+def test_extract_info_uses_description_as_name():
+    assert extract_info({"description": "Some description"}) == {
+        "description": "Some description",
+        "name": "Some description",
+    }
+
+
+def test_extract_info_without_type_keeps_data_unchanged():
+    assert extract_info({"name": "Threat 'EICAR' in 'myfile.com' "}) == {"name": "Threat 'EICAR' in 'myfile.com' "}
+
+
+def test_extract_info_with_unmatched_message_keeps_data_unchanged():
+    data = {"type": "Event::Endpoint::Threat::Detected", "name": "Unexpected message format"}
+
+    assert extract_info(dict(data)) == data
