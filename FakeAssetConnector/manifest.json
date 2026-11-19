@@ -1,0 +1,28 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Asset Connector Configuration",
+    "type": "object",
+    "properties": {
+      "len_data_to_send": {
+        "description": "Length of the data to send",
+        "type": "integer",
+        "default": 1000
+      },
+      "time_sleep": {
+        "description": "Time to sleep between each batch in seconds",
+        "type": "integer",
+        "default": 3600
+      }
+    }
+  },
+  "description": "Fake asset connector is used to push fake assets to sekoia.io for tests purpose.",
+  "categories": [
+    "Network"
+  ],
+  "slug": "fake_asset_connector",
+  "name": "Fake Asset Connector",
+  "uuid": "61cc14ee-8dd4-4ebd-9cdb-179f1e888d4c",
+  "version": "1.2.0",
+  "supports_validation": true
+}
