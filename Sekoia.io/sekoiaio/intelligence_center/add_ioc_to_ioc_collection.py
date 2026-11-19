@@ -14,12 +14,15 @@ IP_ADDRESS_ADAPTER: TypeAdapter[ipaddress.IPv4Address | ipaddress.IPv6Address] =
 
 
 class AddIOCtoIOCCollectionAction(InThreatBaseAction):
-    def perform_request(self, indicators, ioc_collection_id, indicator_type, valid_for):
+    def perform_request(self, indicators, ioc_collection_id, indicator_type, valid_for, comment):
         """Post indicators to the IOC collection text endpoint."""
         data = {"format": indicator_type, "indicators": "\n".join(indicators)}
         if valid_for:
             data["valid_until"] = datetime_to_str(datetime.now(UTC) + timedelta(days=valid_for))
 
+        if comment:
+            data["description"] = comment
+        
         result = requests.post(
             self.url("ioc-collections/" + ioc_collection_id + "/indicators/text"), json=data, headers=self.headers
         )
@@ -39,7 +42,7 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
 
         return [str(indicators)]
 
-    def add_IP_action(self, indicators, ioc_collection_id, valid_for):
+    def add_IP_action(self, indicators, ioc_collection_id, valid_for, comment):
         """Split IP indicators by version and submit them in dedicated requests.
 
         Valid anonymized examples: 198.51.100.10, 203.0.113.7, 2001:db8::1
@@ -75,9 +78,9 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
             raise ValueError("No valid IP indicators were provided")
 
         if ipv4:
-            self.perform_request(ipv4, ioc_collection_id, "ipv4-addr.value", valid_for)
+            self.perform_request(ipv4, ioc_collection_id, "ipv4-addr.value", valid_for, comment)
         if ipv6:
-            self.perform_request(ipv6, ioc_collection_id, "ipv6-addr.value", valid_for)
+            self.perform_request(ipv6, ioc_collection_id, "ipv6-addr.value", valid_for, comment)
 
     def run(self, arguments: dict):
         """Resolve input indicators and dispatch the matching IOC creation flow."""
@@ -93,6 +96,7 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
         ioc_collection_id = arguments.get("ioc_collection_id")
         indicator_type = arguments.get("indicator_type")
         valid_for = int(arguments.get("valid_for", 0))
+        comment = arguments.get("comment", "")
 
         indicators_was_provided = "indicators" in arguments
         single_indicator_was_provided = "indicator" in arguments and single_indicator is not None
@@ -108,9 +112,9 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
             if not isinstance(indicators, list) and not single_indicator:
                 raise ValueError("Indicators should be list type, or you should provide a single indicator value")
 
-            self.add_IP_action(result_indicators, ioc_collection_id, valid_for)
+            self.add_IP_action(result_indicators, ioc_collection_id, valid_for, comment)
         else:
             if _type := indicator_type_mapping.get(str(indicator_type)):
-                self.perform_request(result_indicators, ioc_collection_id, _type, valid_for)
+                self.perform_request(result_indicators, ioc_collection_id, _type, valid_for, comment)
             else:
                 self.error(f"Improper indicator type {indicator_type}")
