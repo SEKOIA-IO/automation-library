@@ -2,19 +2,20 @@ import requests_mock
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.action import CrowdstrikeAction
+from crowdstrike_falcon.models import CrowdStrikeFalconModuleConfiguration
 from crowdstrike_falcon.alert_actions import CrowdstrikeActionCommentAlert, CrowdstrikeActionUpdateAlertStatus
 from crowdstrike_falcon.host_actions import CrowdstrikeActionDeIsolateHosts
 
 
-def configured_action(action: CrowdstrikeAction):
+def configured_action(action: type[CrowdstrikeAction]):
     module = CrowdStrikeFalconModule()
     a = action(module)
 
-    a.module.configuration = {
-        "base_url": "https://my.fake.sekoia",
-        "client_id": "my-client-id",
-        "client_secret": "my-client-secret",
-    }
+    a.module.configuration = CrowdStrikeFalconModuleConfiguration(
+        base_url="https://my.fake.sekoia",
+        client_id="my-client-id",
+        client_secret="my-client-secret",
+    )
 
     return a
 
