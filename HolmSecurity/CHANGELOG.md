@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.6] - 2026-11-19
+
+### Fixed
+
+- Declare the feature flag of the vulnerability asset connector under `feature_flags` and set it to `reveal-application-discovery`: the `feature-flag` key was ignored. Remove that key from the device asset connector, which is available to every community
+
 ## [1.3.5] - 2026-10-30
 
 ### Fixed
