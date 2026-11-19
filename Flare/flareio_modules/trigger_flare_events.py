@@ -40,9 +40,9 @@ class SerializedEvent(NamedTuple):
 class FlareEventsConnectorConfiguration(DefaultConnectorConfiguration):
     frequency: int = 60
     page_size: int = 10
-    initial_hours_lookback: int = 1
-    throttle_seconds: float = 0.25
-    concurrency: int = 4
+    initial_hours_lookback: int = 24
+    throttle_seconds: float = 0
+    concurrency: int = 8
 
 
 class ThreadSafeLimiter:

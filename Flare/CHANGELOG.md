@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-19 - 0.6.10
+
+### Changed
+
+- New default settings, for the new connectors: 8 event details requested at the same time instead of 4, no delay between calls instead of 0.25 s (the connector retries when Flare rate limits), and 24 hours of initial lookback instead of 1
+
 ## 2026-11-18 - 0.6.9
 
 ### Changed
