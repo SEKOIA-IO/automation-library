@@ -24,8 +24,9 @@
   "name": "Flare.io",
   "slug": "flare-io",
   "uuid": "90ec90da-8065-4229-ab3c-298ffe140772",
-  "version": "0.6.11",
+  "version": "0.7.1",
   "supports_validation": true,
+  "is_intelligence": true,
   "categories": [
     "Threat Intelligence"
   ]
