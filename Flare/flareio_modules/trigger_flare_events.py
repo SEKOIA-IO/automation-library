@@ -312,7 +312,7 @@ class FlareEventsConnector(Connector):
             time.sleep(delta_sleep)
 
     def run(self) -> None:  # pragma: no cover
-        self.log(message="Start fetching Flare events", level="info")
+        self.log(message="Started fetching Flare events", level="info")
 
         while self.running:
             try:
