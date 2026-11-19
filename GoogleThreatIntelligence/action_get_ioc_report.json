@@ -1,0 +1,157 @@
+{
+  "uuid": "4b6ebd76-076f-4f35-9cd1-36953f14df88",
+  "name": "Get IoC Report",
+  "description": "Get threat intelligence report for an IP address, domain, URL, or file hash from Google Threat Intelligence (VirusTotal)",
+  "docker_parameters": "get_ioc_report",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Arguments",
+    "properties": {
+      "ip": {
+        "type": "string",
+        "description": "IP address to query (e.g., 8.8.8.8)"
+      },
+      "domain": {
+        "type": "string",
+        "description": "Domain name to query (e.g., google.com)"
+      },
+      "url": {
+        "type": "string",
+        "description": "URL to query (e.g., https://example.com/path)"
+      },
+      "file_hash": {
+        "type": "string",
+        "description": "File hash to query (MD5, SHA1, or SHA256)"
+      }
+    },
+    "oneOf": [
+      {
+        "required": [
+          "ip"
+        ]
+      },
+      {
+        "required": [
+          "domain"
+        ]
+      },
+      {
+        "required": [
+          "url"
+        ]
+      },
+      {
+        "required": [
+          "file_hash"
+        ]
+      }
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Results",
+    "properties": {
+      "success": {
+        "type": "boolean",
+        "description": "Whether the operation was successful"
+      },
+      "data": {
+        "type": "object",
+        "description": "IoC report data",
+        "properties": {
+          "entity_type": {
+            "type": "string",
+            "description": "Type of entity queried (ip_addresses, domains, urls, files)"
+          },
+          "entity": {
+            "type": "string",
+            "description": "The entity value that was queried"
+          },
+          "id": {
+            "type": "string",
+            "description": "VirusTotal object ID"
+          },
+          "reputation": {
+            "type": "integer",
+            "description": "Reputation score"
+          },
+          "last_analysis_stats": {
+            "type": "object",
+            "description": "Statistics from last analysis",
+            "properties": {
+              "harmless": {
+                "type": "integer"
+              },
+              "malicious": {
+                "type": "integer"
+              },
+              "suspicious": {
+                "type": "integer"
+              },
+              "undetected": {
+                "type": "integer"
+              }
+            }
+          },
+          "detections": {
+            "type": "object",
+            "description": "Detection summary",
+            "properties": {
+              "harmless": {
+                "type": "integer"
+              },
+              "malicious": {
+                "type": "integer"
+              },
+              "suspicious": {
+                "type": "integer"
+              },
+              "undetected": {
+                "type": "integer"
+              }
+            }
+          },
+          "country": {
+            "type": "string",
+            "description": "Country code (for IPs)"
+          },
+          "asn": {
+            "type": "integer",
+            "description": "Autonomous System Number (for IPs)"
+          },
+          "as_owner": {
+            "type": "string",
+            "description": "AS owner name (for IPs)"
+          },
+          "categories": {
+            "type": "object",
+            "description": "Domain categories"
+          },
+          "sha256": {
+            "type": "string",
+            "description": "SHA256 hash (for files)"
+          },
+          "md5": {
+            "type": "string",
+            "description": "MD5 hash (for files)"
+          },
+          "sha1": {
+            "type": "string",
+            "description": "SHA1 hash (for files)"
+          },
+          "size": {
+            "type": "integer",
+            "description": "File size in bytes (for files)"
+          },
+          "type_description": {
+            "type": "string",
+            "description": "File type description (for files)"
+          }
+        }
+      }
+    }
+  },
+  "slug": "get_ioc_report_in_gti"
+}
