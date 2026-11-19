@@ -4,4 +4,4 @@ from new_relic_modules.models import NewRelicModuleConfiguration
 
 
 class NewRelicModule(Module):
-    configuration: NewRelicModuleConfiguration
+    configuration: NewRelicModuleConfiguration  # type: ignore[override]
