@@ -7,12 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-11-19 - 2.10.32
+## 2026-11-19 - 2.11.0
 
 ### Added
 
 - `refresh_users_per_cycle` configuration of the user asset connector: number of already
   collected users re-fetched per run, 0 to disable the refresh.
+
+### Changed
+
+- Bump `sekoia-automation-sdk` to `^1.27.2`, which checks the outcome of each asset push
+  and logs whether the assets were ingested.
 
 ### Fixed
 
