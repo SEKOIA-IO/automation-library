@@ -1,0 +1,79 @@
+{
+  "name": "Slack Audit Logs",
+  "description": "Collect audit events from the Slack Audit Logs API",
+  "uuid": "72523535-3ae5-55d1-8ce5-223fa38813cd",
+  "docker_parameters": "SlackAuditLogsConnector",
+  "arguments": {
+    "properties": {
+      "intake_server": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Intake Server"
+      },
+      "intake_key": {
+        "title": "Intake Key",
+        "type": "string"
+      },
+      "frequency": {
+        "default": 60,
+        "description": "Seconds to wait between two collections of new events",
+        "maximum": 3600,
+        "minimum": 10,
+        "title": "Frequency",
+        "type": "integer"
+      },
+      "limit": {
+        "default": 1000,
+        "description": "Maximum number of events fetched per request to Slack (Slack caps this at 9999)",
+        "maximum": 9999,
+        "minimum": 1,
+        "title": "Limit",
+        "type": "integer"
+      },
+      "ratelimit_per_minute": {
+        "default": 30,
+        "description": "Maximum requests sent to Slack per minute. Slack allows 50 for the whole organization, shared with your other Slack apps",
+        "maximum": 50,
+        "minimum": 1,
+        "title": "Ratelimit Per Minute",
+        "type": "integer"
+      },
+      "timebuffer": {
+        "default": 60,
+        "description": "Seconds to wait before collecting a new event, so that events Slack publishes with a delay are not missed",
+        "maximum": 3600,
+        "minimum": 1,
+        "title": "Timebuffer",
+        "type": "integer"
+      },
+      "lookback_seconds": {
+        "default": 3600,
+        "description": "How far back in time the very first collection goes, in seconds. Ignored once the connector has collected at least once",
+        "minimum": 60,
+        "title": "Lookback Seconds",
+        "type": "integer"
+      },
+      "excluded_actions": {
+        "default": [],
+        "description": "Slack actions to drop instead of forwarding, for example file_downloaded. Leave empty to collect everything. An action added here stops being collected from now on and cannot be recovered later without re-collecting the whole period",
+        "items": {
+          "type": "string"
+        },
+        "title": "Excluded Actions",
+        "type": "array"
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "title": "SlackAuditLogsConnectorConfiguration",
+    "type": "object"
+  }
+}
