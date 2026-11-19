@@ -1,8 +1,8 @@
 import pytest
+from pydantic import ValidationError
 from generic_onyphe_tests import *  # noqa: F401, F403
 
 from onyphe.action_onyphe_reverse import OnypheReverseAction
-from onyphe.errors import InvalidArgument
 
 
 @pytest.fixture
@@ -28,9 +28,11 @@ def arguments():
 @pytest.fixture
 def bad_arguments():
     return [
-        (InvalidArgument, {"ip": "8.8.8"}),
-        (InvalidArgument, {"ip": 8}),
-        (TypeError, {}),
+        (ValidationError, {"ip": "8.8.8"}),
+        (ValidationError, {"ip": 8}),
+        (ValidationError, {}),
+        (ValidationError, {"ip": "211.72.19.210", "budget": -1}),
+        (ValidationError, {"ip": "211.72.19.210", "first_page": 0}),
     ]
 
 

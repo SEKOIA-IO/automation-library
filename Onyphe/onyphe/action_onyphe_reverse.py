@@ -2,7 +2,8 @@ from posixpath import join as urljoin
 
 from sekoia_automation.action import Action
 
-from onyphe.utils import get_arg_ip, get_with_paging
+from onyphe.models import OnyphePagedIPArguments
+from onyphe.utils import get_with_paging
 
 
 class OnypheReverseAction(Action):
@@ -16,12 +17,10 @@ class OnypheReverseAction(Action):
     > stored in this information category.
     """
 
-    def run(self, arguments) -> dict:
+    def run(self, arguments: OnyphePagedIPArguments) -> dict:
         url: str = "https://www.onyphe.io/api/v2/simple/"
-        ip = get_arg_ip(arguments)
-        get_url: str = urljoin(url, "reverse/" + ip)
+        get_url: str = urljoin(url, "reverse/" + str(arguments.ip))
 
-        budget = arguments.get("budget", 1)
-        params = {"page": arguments.get("first_page", 1)}
+        params = {"page": arguments.first_page}
 
-        return get_with_paging(get_url, self.module.configuration, budget, params)
+        return get_with_paging(get_url, self.module.configuration, arguments.budget, params)
