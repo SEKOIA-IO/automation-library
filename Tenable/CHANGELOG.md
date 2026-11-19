@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-11 - 1.1.2
+
+### Fixed
+
+- An item refused for its size (HTTP 413) no longer blocks the connector: it is logged and dropped, the batch is sent again without it and the checkpoint moves on
+- Keep findings with many CVEs under the push item size limit: at most 1000 CVEs per finding, the title, description and references on the first CVE only when repeating them would weigh too much, and at most 10 network interfaces per device
+
 ## 2026-11-03 - 1.1.1
 
 ### Changed

@@ -30,6 +30,8 @@ class TenableDeviceMapper:
     """
 
     UNKNOWN_HOSTNAME: str = "unknown"
+    # What the platform keeps for a device; it does not cap the device of a vulnerability finding.
+    MAX_NETWORK_INTERFACES: int = 10
 
     def __init__(self, asset_info: AssetExportV2) -> None:
         self.asset_info = asset_info
@@ -111,11 +113,11 @@ class TenableDeviceMapper:
 
     def build_asset_network_interfaces(self) -> list[NetworkInterface] | None:
         """
-        Build the NetworkInterface list of the asset.
+        Build the NetworkInterface list of the asset, at most MAX_NETWORK_INTERFACES.
         :return: The list of NetworkInterface objects, or None when the asset reports no usable interface.
         """
         interfaces = self.network.network_interfaces if self.network else []
-        return self.build_network_interfaces(interfaces) or None
+        return self.build_network_interfaces(interfaces)[: self.MAX_NETWORK_INTERFACES] or None
 
     @classmethod
     def build_network_interfaces(cls, interfaces_data: list[TenableNetworkInterface]) -> list[NetworkInterface]:
