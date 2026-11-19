@@ -3,13 +3,24 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Varonis",
     "type": "object",
-    "properties": {},
-    "required": []
+    "properties": {
+      "base_url": {
+        "description": "Base URL (looks like https://YOUR_TENANT.varonis.io)",
+        "type": "string",
+        "format": "uri"
+      },
+      "api_key": {
+        "description": "API key",
+        "type": "string"
+      }
+    },
+    "required": ["base_url", "api_key"],
+    "secrets": ["api_key"]
   },
   "description": "Varonis is a software company providing solutions to track, analyze and protect data.",
   "name": "Varonis",
   "uuid": "dc637598-de55-4c8d-8a38-5f613bce2d3c",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "slug": "varonis",
   "categories": [
     "IAM"
