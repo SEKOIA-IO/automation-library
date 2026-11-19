@@ -1,0 +1,59 @@
+name: viewHost
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.base_url}}/v2/hosts/{{inputs.ip}}'
+      auth:
+        basic:
+          username: '{{inputs.username}}'
+          password: '{{inputs.password}}'
+      params:
+        at_time: '{{inputs.at_time}}'
+    asserts:
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: You must authenticate with a valid API ID and secret.
+      error_422:
+        predicate: '{{response.status_code != 422}}'
+        fail: Invalid IP address.
+      error_429:
+        predicate: '{{response.status_code != 429}}'
+        fail: Too many requests.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Fetches the entire host entity by IP address and returns the most recent
+  Censys view of the host and its services.
+inputs:
+  ip:
+    type: string
+    description: The IP Address of the requested host.
+  at_time:
+    type: string
+    description: "Fetches the Censys view of a host and its services at the specified\
+      \ point in time. Requires historical API access. \nNanosecond precision is allowed.\
+      \ Uses RFC3339 Timestamp."
+  password:
+    type: string
+    description: The password for basic authentication
+    default: '{{password}}'
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://search.censys.io/api
+  username:
+    type: string
+    description: The username for basic authentication
+    default: '{{username}}'
