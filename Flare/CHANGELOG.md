@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fix the wording of the log shown when the connector starts: "Started fetching Flare events"
+- Fix the wording of the log shown when the connector starts: "Starting to fetch Flare events"
 
 ## 2026-11-18 - 0.6.9
 
