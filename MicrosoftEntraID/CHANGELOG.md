@@ -9,15 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2026-11-19 - 2.10.32
 
+### Added
+
+- `refresh_users_per_cycle` configuration of the user asset connector: number of already
+  collected users re-fetched per run, 0 to disable the refresh.
+
 ### Fixed
 
 - Re-fetch already collected users, a slice per run and oldest first, so that changes to
   their account status, groups, admin roles, MFA or profile reach the asset inventory.
   `createdDateTime` never changes, so the incremental query alone never saw them again.
-  The slice size is the `refresh_users_per_cycle` configuration, 0 to disable it.
+  A full pass over the inventory starts at most once per `frequency`, and users without a
+  creation date are re-fetched at the start of each pass.
+- A new user lost because its push failed is now picked up by the next refresh pass.
 - Stop skipping users created in the same second as the last one collected. The checkpoint
   is now the exact creation date of that user, and the users already collected at that date
   are skipped by id instead of by a one second offset.
+- Skip and log a user whose groups, admin roles or MFA cannot be read instead of aborting
+  the run, which retried the same user in a loop.
 
 ## 2026-11-18 - 2.10.31
 

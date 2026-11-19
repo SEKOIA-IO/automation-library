@@ -1,4 +1,5 @@
 import datetime
+import time
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
@@ -1079,10 +1080,14 @@ def test_get_mapped_fields_failed(test_entra_id_asset_connector):
     assert test_entra_id_asset_connector.get_mapped_fields() != not_expected
 
 
-def mock_list_users(users, captured=None):
-    """Replaces EntraIDAssetConnector.list_users with a fixed, filter-agnostic listing."""
+def mock_list_users(users, captured=None, undated_users=()):
+    """Replaces EntraIDAssetConnector.list_users with a fixed listing, agnostic to the date filters."""
 
     async def _list_users(user_filter, limit=None):
+        if user_filter == "createdDateTime eq null":
+            for user in undated_users:
+                yield user
+            return
         if captured is not None:
             captured["filter"] = user_filter
             captured["limit"] = limit
@@ -1369,3 +1374,249 @@ async def test_list_users_stops_at_the_limit_across_pages(test_entra_id_asset_co
     # Assert
     assert [user.id for user in users] == ["user1", "user2"]
     mock_users.with_url.assert_called_once_with("https://next")
+
+
+def failing_fetch_user_for(*failing_ids):
+    """fetch_user raising for the given user ids, as Graph does on a 403 or a deleted user."""
+
+    async def _fetch_user(user):
+        if user.id in failing_ids:
+            raise ValueError("Error fetching user MFA: 403")
+        return await mock_fetch_user(user)
+
+    return _fetch_user
+
+
+@pytest.mark.asyncio
+async def test_fetch_refreshed_users_waits_a_frequency_before_starting_a_new_walk(test_entra_id_asset_connector):
+    """A walk completed less than `frequency` ago is not restarted, so the cycle yields nothing."""
+    # Arrange
+    configure_refresh(test_entra_id_asset_connector, 2)
+    with test_entra_id_asset_connector.context as cache:
+        cache["last_refresh_completed_at"] = time.time()
+    test_entra_id_asset_connector.list_users = Mock(side_effect=AssertionError("Graph must not be queried"))
+
+    # Act
+    assets = [asset async for asset in test_entra_id_asset_connector.fetch_refreshed_users(set())]
+
+    # Assert
+    assert assets == []
+
+
+@pytest.mark.asyncio
+async def test_fetch_refreshed_users_continues_a_walk_in_progress(test_entra_id_asset_connector):
+    """A walk in progress goes on whatever the time of the last completed walk."""
+    # Arrange
+    configure_refresh(test_entra_id_asset_connector, 2)
+    with test_entra_id_asset_connector.context as cache:
+        cache["last_refresh_completed_at"] = time.time()
+        cache["refresh_cursor_date"] = "2024-01-01T00:00:00+00:00"
+    test_entra_id_asset_connector.list_users = mock_list_users(
+        [make_graph_user("user1", datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc))]
+    )
+    test_entra_id_asset_connector.fetch_user = mock_fetch_user
+
+    # Act
+    assets = [asset async for asset in test_entra_id_asset_connector.fetch_refreshed_users(set())]
+
+    # Assert
+    assert uids(assets) == ["user1"]
+
+
+@pytest.mark.asyncio
+async def test_fetch_refreshed_users_records_the_end_of_the_walk(test_entra_id_asset_connector):
+    """Reaching the end of the inventory stores the completion time once the push succeeds."""
+    # Arrange
+    configure_refresh(test_entra_id_asset_connector, 5)
+    test_entra_id_asset_connector.list_users = mock_list_users(
+        [make_graph_user("user1", datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc))]
+    )
+    test_entra_id_asset_connector.fetch_user = mock_fetch_user
+    before = time.time()
+
+    # Act
+    assets = [asset async for asset in test_entra_id_asset_connector.fetch_refreshed_users(set())]
+
+    # Assert: not saved before the push
+    assert uids(assets) == ["user1"]
+    assert test_entra_id_asset_connector.last_refresh_completed_at == 0.0
+
+    await test_entra_id_asset_connector.update_checkpoint()
+    assert test_entra_id_asset_connector.last_refresh_completed_at >= before
+    assert test_entra_id_asset_connector.refresh_cursor_date is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_refreshed_users_lists_users_without_creation_date_at_the_start_of_a_walk(
+    test_entra_id_asset_connector,
+):
+    """Users without creation date get their own pass; the dated walk never sees them."""
+    # Arrange
+    configure_refresh(test_entra_id_asset_connector, 2)
+    captured: dict = {}
+    test_entra_id_asset_connector.list_users = mock_list_users(
+        [
+            make_graph_user("user1", datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)),
+            make_graph_user("user2", datetime.datetime(2024, 3, 1, tzinfo=datetime.timezone.utc)),
+        ],
+        captured,
+        undated_users=[make_graph_user("undated", None)],
+    )
+    test_entra_id_asset_connector.fetch_user = mock_fetch_user
+
+    # Act
+    assets = [asset async for asset in test_entra_id_asset_connector.fetch_refreshed_users(set())]
+    await test_entra_id_asset_connector.update_checkpoint()
+
+    # Assert
+    assert uids(assets) == ["undated", "user1", "user2"]
+    assert captured["filter"] == f"createdDateTime ge {EntraIDAssetConnector.REFRESH_WALK_START}"
+    assert test_entra_id_asset_connector.refresh_cursor_date == "2024-03-01T00:00:00+00:00"
+
+
+@pytest.mark.asyncio
+async def test_fetch_refreshed_users_skips_users_without_creation_date_mid_walk(test_entra_id_asset_connector):
+    """The pass on users without creation date runs once per walk, not on every slice."""
+    # Arrange
+    configure_refresh(test_entra_id_asset_connector, 2)
+    with test_entra_id_asset_connector.context as cache:
+        cache["refresh_cursor_date"] = "2024-01-01T00:00:00+00:00"
+    test_entra_id_asset_connector.list_users = mock_list_users(
+        [make_graph_user("user1", datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc))],
+        undated_users=[make_graph_user("undated", None)],
+    )
+    test_entra_id_asset_connector.fetch_user = mock_fetch_user
+
+    # Act
+    assets = [asset async for asset in test_entra_id_asset_connector.fetch_refreshed_users(set())]
+
+    # Assert
+    assert uids(assets) == ["user1"]
+
+
+@pytest.mark.asyncio
+async def test_fetch_refreshed_users_skips_a_user_that_cannot_be_read(test_entra_id_asset_connector):
+    """A failing user is logged and skipped; the walk still moves past it."""
+    # Arrange
+    configure_refresh(test_entra_id_asset_connector, 3)
+    last_date = datetime.datetime(2024, 4, 1, tzinfo=datetime.timezone.utc)
+    test_entra_id_asset_connector.list_users = mock_list_users(
+        [
+            make_graph_user("user1", datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)),
+            make_graph_user("restricted", datetime.datetime(2024, 3, 1, tzinfo=datetime.timezone.utc)),
+            make_graph_user("deleted", last_date),
+        ]
+    )
+    test_entra_id_asset_connector.fetch_user = failing_fetch_user_for("restricted", "deleted")
+
+    # Act
+    assets = [asset async for asset in test_entra_id_asset_connector.fetch_refreshed_users(set())]
+    await test_entra_id_asset_connector.update_checkpoint()
+
+    # Assert: the end-of-slice cursor rides with the last asset actually yielded
+    assert uids(assets) == ["user1"]
+    assert test_entra_id_asset_connector.refresh_cursor_date == last_date.isoformat()
+    logged = [call.kwargs["message"] for call in test_entra_id_asset_connector.log.call_args_list]
+    assert any("restricted" in message for message in logged)
+    assert any("deleted" in message for message in logged)
+
+
+@pytest.mark.asyncio
+async def test_fetch_refreshed_users_saves_the_cursor_when_every_user_fails(test_entra_id_asset_connector):
+    """A slice where no user can be read pushes nothing, so its cursor is saved right away."""
+    # Arrange
+    configure_refresh(test_entra_id_asset_connector, 1)
+    test_entra_id_asset_connector.list_users = mock_list_users(
+        [make_graph_user("restricted", datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc))]
+    )
+    test_entra_id_asset_connector.fetch_user = failing_fetch_user_for("restricted")
+
+    # Act
+    assets = [asset async for asset in test_entra_id_asset_connector.fetch_refreshed_users(set())]
+
+    # Assert
+    assert assets == []
+    assert test_entra_id_asset_connector.refresh_cursor_date == "2024-02-01T00:00:00+00:00"
+
+
+@pytest.mark.asyncio
+async def test_fetch_new_users_skips_a_user_that_cannot_be_read(test_entra_id_asset_connector):
+    """A failing new user is skipped but the checkpoint still moves past it."""
+    # Arrange
+    restricted_date = datetime.datetime(2024, 3, 1, tzinfo=datetime.timezone.utc)
+    test_entra_id_asset_connector.list_users = mock_list_users(
+        [
+            make_graph_user("user1", datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)),
+            make_graph_user("restricted", restricted_date),
+        ]
+    )
+    test_entra_id_asset_connector.fetch_user = failing_fetch_user_for("restricted")
+
+    # Act
+    assets = [asset async for asset in test_entra_id_asset_connector.fetch_new_users()]
+    await test_entra_id_asset_connector.update_checkpoint()
+
+    # Assert
+    assert uids(assets) == ["user1"]
+    assert test_entra_id_asset_connector.most_recent_date_seen == restricted_date.isoformat()
+    assert test_entra_id_asset_connector.most_recent_date_seen_ids == ["restricted"]
+
+
+@pytest.mark.asyncio
+async def test_get_assets_drops_the_refresh_progress_of_a_failed_push(test_entra_id_asset_connector):
+    """A push that failed without raising leaves pending progress: it must not be saved by the next push."""
+    # Arrange
+    test_entra_id_asset_connector._pending_refresh_cursor = "2030-01-01T00:00:00+00:00"
+    test_entra_id_asset_connector._pending_refresh_completed_at = time.time()
+    test_entra_id_asset_connector.fetch_new_users = empty_async_generator
+    test_entra_id_asset_connector.fetch_refreshed_users = empty_async_generator
+
+    # Act
+    [asset async for asset in test_entra_id_asset_connector.get_assets()]
+    await test_entra_id_asset_connector.update_checkpoint()
+
+    # Assert
+    assert test_entra_id_asset_connector.refresh_cursor_date is None
+    assert test_entra_id_asset_connector.last_refresh_completed_at == 0.0
+
+
+@pytest.mark.asyncio
+async def test_asset_fetch_cycle_sleeps_once_the_walk_is_complete(test_entra_id_asset_connector, monkeypatch):
+    """Cycles run back to back while a walk is in progress, then the connector sleeps."""
+    # Arrange
+    connector = test_entra_id_asset_connector
+    configure_refresh(connector, 2)
+    dates = [datetime.datetime(2024, month, 1, tzinfo=datetime.timezone.utc) for month in (1, 2, 3)]
+    tenant = [make_graph_user(f"user{index}", date) for index, date in enumerate(dates, start=1)]
+    with connector.context as cache:
+        cache["most_recent_date_seen"] = dates[-1].isoformat()
+        cache["most_recent_date_seen_ids"] = ["user3"]
+
+    async def list_users(user_filter, limit=None):
+        if user_filter == "createdDateTime eq null":
+            return
+        since = datetime.datetime.fromisoformat(user_filter.removeprefix("createdDateTime ge "))
+        for user in [user for user in tenant if user.created_date_time >= since][:limit]:
+            yield user
+
+    async def fetch_user(user):
+        return connector.map_fields(user, False, [], False)
+
+    async def successful_push(batch):
+        await connector.update_checkpoint()
+
+    connector.list_users = list_users
+    connector.fetch_user = fetch_user
+    connector.push_assets_to_sekoia = AsyncMock(side_effect=successful_push)
+    connector.close_client = AsyncMock()
+    sleep = AsyncMock()
+    monkeypatch.setattr("sekoia_automation.asset_connector.async_connector.asyncio.sleep", sleep)
+
+    # Act / Assert: user1-user2, then user2-user3, then user3 alone ends the walk
+    for _ in range(3):
+        await connector.asset_fetch_cycle()
+        sleep.assert_not_awaited()
+
+    await connector.asset_fetch_cycle()
+    sleep.assert_awaited_once()
+    assert connector.push_assets_to_sekoia.await_count == 3

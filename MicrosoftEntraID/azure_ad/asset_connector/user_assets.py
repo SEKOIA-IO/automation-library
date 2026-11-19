@@ -1,3 +1,4 @@
+import time
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta, timezone
 
@@ -56,6 +57,8 @@ class EntraIDAssetConnector(AsyncAssetConnector):
     MAX_PAGE_SIZE = 999
     # Users kept next to the creation-date checkpoint, to skip the ones already collected at that date
     MAX_CHECKPOINT_IDS = 1000
+    # Lower bound of the refresh walk: a date filter keeps users without a creation date out of it
+    REFRESH_WALK_START = "1970-01-01T00:00:00+00:00"
     USER_SELECT_FIELDS = [
         "id",
         "displayName",
@@ -85,6 +88,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         self._latest_date: str | None = None
         self._latest_date_ids: list[str] = []
         self._pending_refresh_cursor: str | None = None
+        self._pending_refresh_completed_at: float | None = None
 
     @property
     def most_recent_date_seen(self) -> str | None:
@@ -113,6 +117,14 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             refresh_cursor_date: str | None = cache.get("refresh_cursor_date", None) or None
 
             return refresh_cursor_date
+
+    @property
+    def last_refresh_completed_at(self) -> float:
+        """Time the last refresh walk reached the end of the inventory, 0 if none did."""
+        with self.context as cache:
+            last_refresh_completed_at: float = cache.get("last_refresh_completed_at", 0.0)
+
+            return last_refresh_completed_at
 
     @property
     def client(self) -> GraphServiceClient:
@@ -147,25 +159,34 @@ class EntraIDAssetConnector(AsyncAssetConnector):
 
         return date.astimezone(timezone.utc).replace(microsecond=0).isoformat()
 
-    async def update_checkpoint(self) -> None:
-        if self._latest_date is None and self._pending_refresh_cursor is None:
+    def save_refresh_progress(self, cursor: str | None, completed_at: float | None) -> None:
+        if cursor is None and completed_at is None:
             return
         with self.context as cache:
-            if self._latest_date is not None:
+            if cursor is not None:
+                cache["refresh_cursor_date"] = cursor
+            if completed_at is not None:
+                cache["last_refresh_completed_at"] = completed_at
+
+    async def update_checkpoint(self) -> None:
+        if self._latest_date is not None:
+            with self.context as cache:
                 cache["most_recent_date_seen"] = self._latest_date
                 cache["most_recent_date_seen_ids"] = self._latest_date_ids
-            if self._pending_refresh_cursor is not None:
-                cache["refresh_cursor_date"] = self._pending_refresh_cursor
-                self._pending_refresh_cursor = None
+        self.save_refresh_progress(self._pending_refresh_cursor, self._pending_refresh_completed_at)
+        self._pending_refresh_cursor = None
+        self._pending_refresh_completed_at = None
 
     async def reset_checkpoint(self) -> None:
         with self.context as cache:
             cache.pop("most_recent_date_seen", None)
             cache.pop("most_recent_date_seen_ids", None)
             cache.pop("refresh_cursor_date", None)
+            cache.pop("last_refresh_completed_at", None)
         self._latest_date = None
         self._latest_date_ids = []
         self._pending_refresh_cursor = None
+        self._pending_refresh_completed_at = None
 
     def get_mapped_fields(self) -> dict[str, str]:
         return {
@@ -371,6 +392,19 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             is_admin = await self.fetch_user_admin_roles(user.id)
         return self.map_fields(user, user_mfa, user_groups, is_admin)
 
+    async def fetch_user_or_skip(self, user: User) -> UserOCSFModel | None:
+        """Fetch a user's details, None when they cannot be read.
+
+        A user whose enrichment fails (403 on a management-restricted account, user deleted
+        since the listing) must not abort the cycle: the next one would retry it right away.
+        No fallback asset either, a wrong `has_mfa=False` is worse than a stale one.
+        """
+        try:
+            return await self.fetch_user(user)
+        except Exception as e:
+            self.log(message=f"Skipping user {user.id}: {e}", level="error")
+            return None
+
     async def list_users(self, user_filter: str | None, limit: int | None = None) -> AsyncGenerator[User, None]:
         """
         List users from Microsoft Entra ID, oldest first, following pagination.
@@ -433,11 +467,13 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                     continue
 
                 # Fetch user details including MFA status
-                new_user = await self.fetch_user(user)
+                new_user = await self.fetch_user_or_skip(user)
                 # Recorded before the yield: the consumer checkpoints the batch holding
-                # this user before asking for another one
+                # this user before asking for another one. A skipped user is recorded too,
+                # the refresh walk retries it.
                 self.record_new_user(user)
-                yield new_user
+                if new_user is not None:
+                    yield new_user
         except Exception as e:
             raise ValueError(f"Error fetching users: {e}") from e
 
@@ -473,36 +509,63 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         `createdDateTime` never changes, so the incremental query never returns a user
         twice. Without this walk, changes to account status, groups, admin roles or MFA
         would never reach the inventory. One slice per cycle keeps the sync incremental.
+
+        A walk starts at most once per `frequency`. The SDK only sleeps after a cycle that
+        yielded nothing, so a walk restarting as soon as it ends would never let it sleep.
         """
         slice_size = self.configuration.refresh_users_per_cycle
         if slice_size <= 0:
             return
 
         cursor = self.refresh_cursor_date
+        if cursor is None and time.time() - self.last_refresh_completed_at < self.frequency:
+            return
+
         try:
+            # Graph does not document where users without a creation date sort, and a date
+            # cursor cannot reach them: they get their own pass at the start of each walk.
+            # ponytail: listed in one go, page them with their own cursor if a tenant has thousands
+            undated_users = [] if cursor else [user async for user in self.list_users("createdDateTime eq null")]
             users = [
                 user
-                async for user in self.list_users(f"createdDateTime ge {cursor}" if cursor else None, limit=slice_size)
+                async for user in self.list_users(
+                    f"createdDateTime ge {cursor or self.REFRESH_WALK_START}", limit=slice_size
+                )
             ]
         except Exception as e:
             raise ValueError(f"Error fetching users to refresh: {e}") from e
 
-        next_cursor = self.next_refresh_cursor(users, cursor, slice_size)
-        to_refresh = [user for user in users if user.id not in excluded_user_ids]
-        if not to_refresh:
-            with self.context as cache:
-                cache["refresh_cursor_date"] = next_cursor
-            return
+        if undated_users:
+            self.log(message=f"{len(undated_users)} users have no creation date", level="info")
 
-        for user in to_refresh[:-1]:
-            self._pending_refresh_cursor = self.checkpoint_date(user.created_date_time)
-            yield await self.fetch_user(user)
+        next_cursor = self.next_refresh_cursor(users, cursor, slice_size)
+        completed_at = time.time() if next_cursor == "" else None
+
+        # One asset behind: the cursor that ends the slice must ride with the last asset
+        # actually yielded, which is only known once every later user was fetched or skipped
+        previous: tuple[str | None, UserOCSFModel] | None = None
+        for user in undated_users + users:
+            if user.id in excluded_user_ids:
+                continue
+            asset = await self.fetch_user_or_skip(user)
+            if asset is None:
+                continue
+            if previous is not None:
+                self._pending_refresh_cursor = previous[0]
+                yield previous[1]
+            previous = (self.checkpoint_date(user.created_date_time), asset)
+
+        if previous is None:
+            # Nothing to push, so no push to save the progress
+            self.save_refresh_progress(next_cursor, completed_at)
+            return
 
         # Set before the last yield, not after: the consumer pushes the batch holding that
         # user before asking for another asset, and asks for none when the refreshed users
         # exactly fill it. update_checkpoint saves the cursor when that push succeeds.
         self._pending_refresh_cursor = next_cursor
-        yield await self.fetch_user(to_refresh[-1])
+        self._pending_refresh_completed_at = completed_at
+        yield previous[1]
 
     async def get_assets(self) -> AsyncGenerator[UserOCSFModel, None]:
         """Fetch user assets from Microsoft Graph API.
@@ -514,6 +577,9 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         last_run_date: str | None = self.most_recent_date_seen
         self._latest_date = last_run_date
         self._latest_date_ids = self.most_recent_date_seen_ids
+        # Left over by a push that failed without raising: must not ride with the next one
+        self._pending_refresh_cursor = None
+        self._pending_refresh_completed_at = None
         try:
             sent_user_ids: set[str] = set()
             async for user in self.fetch_new_users(last_run_date=last_run_date):
