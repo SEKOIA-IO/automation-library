@@ -1,5 +1,6 @@
 import copy
 import json
+import logging
 import os
 from contextlib import contextmanager
 from pathlib import Path
@@ -8,7 +9,9 @@ from tempfile import mkdtemp
 from unittest.mock import patch
 
 import pytest
+import requests
 import requests_mock
+from sekoia_automation.exceptions import SendEventError
 
 from virustotal.livehunt_notification_files_trigger import LivehuntNotificationFilesTrigger
 
@@ -133,3 +136,93 @@ def test_no_meaningful_name(send_event, symphony_storage, trigger, livehunt_resp
 
     _, event, _ = get_name_event_and_notification(symphony_storage, send_event)
     assert "name" not in event
+
+
+class StopTrigger(Exception):
+    pass
+
+
+def test_sleep_time_defaults_to_300(trigger):
+    assert trigger.sleep_time == 300
+
+
+def test_sleep_time_from_configuration(trigger):
+    trigger.configuration = {"sleep_time": "60"}
+
+    assert trigger.sleep_time == 60
+
+
+def test_run_keeps_polling_after_errors(trigger, monkeypatch, caplog):
+    outcomes = iter([None, SendEventError("failed to send"), ValueError("boom")])
+
+    def get_new_notifications():
+        outcome = next(outcomes)
+        if outcome is not None:
+            raise outcome
+
+    sleeps: list[float] = []
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        if len(sleeps) == 3:
+            raise StopTrigger()
+
+    trigger.configuration = {"sleep_time": 10}
+    monkeypatch.setattr(trigger, "get_new_notifications", get_new_notifications)
+    monkeypatch.setattr("virustotal.livehunt_notification_files_trigger.time.sleep", sleep)
+
+    with caplog.at_level(logging.ERROR), pytest.raises(StopTrigger):
+        trigger.run()
+
+    assert sleeps == [10, 10, 10]
+    errors = [record for record in caplog.records if record.levelno == logging.ERROR]
+    assert len(errors) == 1
+    assert "ValueError: boom" in errors[0].getMessage()
+
+
+def test_get_notifications_raises_on_http_error(trigger, requests_mock):
+    requests_mock.get(
+        "https://www.virustotal.com/api/v3/intelligence/hunting_notification_files",
+        status_code=401,
+    )
+
+    with pytest.raises(requests.HTTPError):
+        trigger.get_notifications()
+
+    assert requests_mock.last_request.headers["x-apikey"] == "fake_api_key"
+
+
+@patch.object(LivehuntNotificationFilesTrigger, "send_event")
+def test_get_new_notifications_without_data(send_event, trigger, requests_mock):
+    requests_mock.get(
+        "https://www.virustotal.com/api/v3/intelligence/hunting_notification_files",
+        json={"data": [], "meta": {}},
+    )
+
+    trigger.get_new_notifications()
+
+    send_event.assert_not_called()
+    assert requests_mock.call_count == 1
+
+
+@patch.object(LivehuntNotificationFilesTrigger, "send_event")
+def test_get_new_notifications_stops_at_older_notification(send_event, trigger, livehunt_response):
+    with mock_vtapi(livehunt_response):
+        trigger.get_new_notifications()
+    send_event.assert_called_once()
+
+    newer = copy.deepcopy(livehunt_response["data"][0])
+    newer["context_attributes"]["notification_id"] = "newer_id"
+    newer["context_attributes"]["notification_date"] += 10
+    older = copy.deepcopy(livehunt_response["data"][0])
+    older["context_attributes"]["notification_id"] = "older_id"
+    older["context_attributes"]["notification_date"] -= 10
+    response = {"data": [newer, older], "meta": {}}
+
+    send_event.reset_mock()
+    with mock_vtapi(response):
+        trigger.get_new_notifications()
+
+    send_event.assert_called_once()
+    _, event, _ = send_event.call_args.args
+    assert event["notification_id"] == "newer_id"

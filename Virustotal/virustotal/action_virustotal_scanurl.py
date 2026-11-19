@@ -2,11 +2,21 @@ import time
 from posixpath import join as urljoin
 
 import requests
+from pydantic import AliasChoices, BaseModel, Field, HttpUrl
 from requests import Response
 from sekoia_automation.action import Action
 
 from virustotal.errors import RequestLimitError
 from virustotal.utils import virustotal_detection_outputs
+
+
+class VirusTotalScanURLArguments(BaseModel):
+    url: HttpUrl = Field(..., description="URL to scan")
+    detect_threshold: int = Field(
+        default=1,
+        validation_alias=AliasChoices("detect_threshold", "detect_treshold"),
+        description="Number of positives to consider the URL detected",
+    )
 
 
 class VirusTotalScanURLAction(Action):
@@ -19,12 +29,14 @@ class VirusTotalScanURLAction(Action):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def run(self, arguments) -> dict:
+    def run(self, arguments: VirusTotalScanURLArguments) -> dict:
+        url_value = str(arguments.url)
+
         url: str = "https://www.virustotal.com/vtapi/v2/"
         get_url: str = urljoin(url, "url/report")
         params: dict = {
             "apikey": self.module.configuration.get("apikey"),
-            "resource": arguments["url"],
+            "resource": url_value,
             "scan": 1,
         }
 
@@ -45,7 +57,7 @@ class VirusTotalScanURLAction(Action):
                 time.sleep((2**count_error) * self.sleep_multiplier)
                 response = requests.get(
                     get_url,
-                    params={"apikey": params["apikey"], "resource": arguments["url"]},
+                    params={"apikey": params["apikey"], "resource": url_value},
                 )
                 if response.status_code == 200:
                     count_error = 0
@@ -65,7 +77,7 @@ class VirusTotalScanURLAction(Action):
         virustotal_detection_outputs(
             action=self,
             vt_response=vt_response,
-            threshold=arguments.get("detect_threshold", 1),
+            threshold=arguments.detect_threshold,
         )
 
         return vt_response
