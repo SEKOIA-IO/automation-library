@@ -1,8 +1,20 @@
 import json
 
 import requests
+from pydantic import AliasChoices, BaseModel, Field
 from requests import Response
 from sekoia_automation.action import Action
+
+
+class FortigateAddFQDNArguments(BaseModel):
+    name: str = Field(..., min_length=1, description="the fw address object name")
+    fqdn: str = Field(..., min_length=1, description="the fqdn to be blocked, (for ex: 'example.domain.com')")
+    associated_interface: str = Field(
+        default="",
+        validation_alias=AliasChoices("associated-interface", "associated_interface"),
+        description="interface of the object, leave blank for 'Any'",
+    )
+    comment: str = Field(default="", description="comment")
 
 
 class FortigateAddFQDNAction(Action):
@@ -10,7 +22,7 @@ class FortigateAddFQDNAction(Action):
     Action to Add an IP Address on a remote fortigate
     """
 
-    def run(self, arguments: dict) -> dict:
+    def run(self, arguments: FortigateAddFQDNArguments) -> dict:
         """
         Parameters
         ----------
@@ -23,10 +35,10 @@ class FortigateAddFQDNAction(Action):
         -------
         Http status code: 200 if ok, 4xx if an error occurs
         """
-        name = arguments["name"]
-        fqdn = arguments["fqdn"]
-        associated_interface = arguments.get("associated_interface", "")
-        comment = arguments.get("comment", "")
+        name = arguments.name
+        fqdn = arguments.fqdn
+        associated_interface = arguments.associated_interface
+        comment = arguments.comment
 
         payload: dict = {
             "json": {
