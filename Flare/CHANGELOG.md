@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-19 - 0.7.0
+
+### Changed
+
+- Mark the module as an Intelligence module, so the platform lists it as an Intelligence connector and opens it to Intelligence-only communities
+
 ## 2026-11-19 - 0.6.10
 
 ### Fixed
