@@ -1,0 +1,77 @@
+name: get_api_v1_accounts_accountId_tasks_type_taskId_jobs_jobId_results
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.base_url}}/api/v1/accounts/{{inputs.accountId}}/tasks/{{inputs.type}}/{{inputs.taskId}}/jobs/{{inputs.jobId}}/results'
+      auth:
+        bearer:
+          token: '{{inputs.token}}'
+          scheme: Bearer
+      headers:
+        WatchGuard-API-Key: '{{apikey}}'
+      params:
+        top: '{{inputs.top}}'
+        skip: '{{inputs.skip}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: BAD REQUEST.
+      error_403:
+        predicate: '{{response.status_code != 403}}'
+        fail: ACCESS DENIED.
+      error_404:
+        predicate: '{{response.status_code != 404}}'
+        fail: NOT FOUND.
+      error_405:
+        predicate: '{{response.status_code != 405}}'
+        fail: METHOD NOT ALLOWED.
+      error_500:
+        predicate: '{{response.status_code != 500}}'
+        fail: INTERNAL ERROR.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Retrieves the results of a task specific repetition.
+inputs:
+  type:
+    type: integer
+    description: Type of configuration to return. Currently, only 2-Workstations and
+      servers or 3-Android are supported types for this operation.
+  taskId:
+    type: string
+    description: Task unique identifier.
+  accountId:
+    type: string
+    description: Your WatchGuard Cloud account ID.
+  jobId:
+    type: string
+    description: Identifier of the task specific repetition.
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://api.usa.cloud.watchguard.com/rest/endpoint-security/management
+    - https://api.deu.cloud.watchguard.com/rest/endpoint-security/management
+    - https://api.jpn.cloud.watchguard.com/rest/endpoint-security/management
+  skip:
+    type: integer
+    description: Bypasses the specified number of objects in the results returned.
+  token:
+    type: string
+    description: The bearer token for authentication
+    default: '{{token}}'
+  top:
+    type: integer
+    description: Specifies the number of objects to retrieve (there is a maximum supported
+      by the server).
