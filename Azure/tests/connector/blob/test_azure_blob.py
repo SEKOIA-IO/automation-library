@@ -331,12 +331,50 @@ async def test_azure_blob_resume_after_failure_without_duplicates(
 
 @pytest.mark.asyncio
 async def test_azure_blob_gzip_blob_with_appended_member(connector: AzureBlobConnector, storage):
-    """A gzip blob growing with a new gzip member: only the new lines are forwarded."""
-    storage.write("PT1H.json.gz", gzip_lines(b"a", b"b"))
+    """A gzip blob growing with a new gzip member: only the new member is downloaded and forwarded."""
+    first_member = gzip_lines(b"a", b"b")
+    storage.write("PT1H.json.gz", first_member)
     assert await connector.get_azure_blob_data() == ["a", "b"]
 
+    storage.downloads.clear()
     storage.append("PT1H.json.gz", gzip_lines(b"c"))
     assert await connector.get_azure_blob_data() == ["c"]
+    assert [offset for _, offset, _ in storage.downloads] == [len(first_member)]
+
+    # The next member is read from its own offset too
+    storage.downloads.clear()
+    storage.append("PT1H.json.gz", gzip_lines(b"d"))
+    assert await connector.get_azure_blob_data() == ["d"]
+    assert [offset for _, offset, _ in storage.downloads] == [len(first_member) + len(gzip_lines(b"c"))]
+
+
+@pytest.mark.asyncio
+async def test_azure_blob_gzip_member_without_trailing_newline(connector: AzureBlobConnector, storage):
+    """A gzip member ending without newline is a complete line: the next member is not merged with it."""
+    storage.write("PT1H.json.gz", gzip.compress(b'{"id": 1}'))
+    assert await connector.get_azure_blob_data() == ['{"id": 1}']
+
+    storage.append("PT1H.json.gz", gzip.compress(b'{"id": 2}\n'))
+    assert await connector.get_azure_blob_data() == ['{"id": 2}']
+
+
+@pytest.mark.asyncio
+async def test_azure_blob_gzip_truncated_member_resumes_from_member_start(connector: AzureBlobConnector, storage):
+    """An incomplete gzip member (blob being written) is read again from its start, skipping the forwarded lines."""
+    first_member = gzip_lines(b"a")
+    lines = make_lines(300)
+    second_member = gzip_lines(*lines)
+    storage.write("PT1H.json.gz", first_member + second_member[: len(second_member) // 2])
+
+    forwarded = await connector.get_azure_blob_data()
+    assert forwarded[0] == "a"
+    assert 0 < len(forwarded) - 1 < len(lines)
+    assert forwarded[1:] == [line.decode() for line in lines[: len(forwarded) - 1]]
+
+    storage.downloads.clear()
+    storage.write("PT1H.json.gz", first_member + second_member)
+    assert await connector.get_azure_blob_data() == [line.decode() for line in lines[len(forwarded) - 1 :]]
+    assert [offset for _, offset, _ in storage.downloads] == [len(first_member)]
 
 
 @pytest.mark.asyncio

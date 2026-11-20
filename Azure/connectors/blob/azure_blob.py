@@ -83,20 +83,31 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
             yield data
 
     @staticmethod
-    async def _gunzip(chunks: AsyncGenerator[bytes, None], state: dict[str, Any]) -> AsyncGenerator[bytes, None]:
+    async def _gunzip(
+        chunks: AsyncGenerator[bytes, None], state: dict[str, Any]
+    ) -> AsyncGenerator[bytes | None, None]:
         """
         Decompress a gzip stream (possibly made of several gzip members), with bounded output chunks.
 
+        `None` is yielded at the end of each gzip member, with `state["offset"]` set to the compressed offset
+        following the member (`state["offset"]` is the compressed offset of the first chunk on input).
         `state["eof"]` tells, at the end, whether the last gzip member is complete.
         """
+        position = state["offset"]
         decompressor = zlib.decompressobj(wbits=GZIP_WBITS)
         async for data in chunks:
+            position += len(data)
             while data:
                 if decompressor.eof:
                     decompressor = zlib.decompressobj(wbits=GZIP_WBITS)
 
                 yield decompressor.decompress(data, READ_CHUNK_SIZE)
-                data = decompressor.unused_data if decompressor.eof else decompressor.unconsumed_tail
+                if decompressor.eof:
+                    data = decompressor.unused_data
+                    state["offset"] = position - len(data)
+                    yield None
+                else:
+                    data = decompressor.unconsumed_tail
 
         yield decompressor.flush()
         state["eof"] = decompressor.eof
@@ -182,13 +193,29 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
         if state.get("size") == blob.size:
             return
 
-        lines_to_skip = state["lines"]
-        index = 0
+        # Compressed offset of the gzip member being read, and the number of its lines already forwarded
+        offset, lines_to_skip = state["offset"], state["lines"]
 
+        # The blob was overwritten with a smaller content: read it again from the start
+        if blob.size < offset:
+            offset, lines_to_skip = 0, 0
+
+        index = 0
         batch: list[str] = []
         buffer = b""
-        gunzip_state: dict[str, Any] = {}
-        async for data in self._gunzip(self._download(blob, 0), gunzip_state):
+        gunzip_state: dict[str, Any] = {"offset": offset}
+        async for data in self._gunzip(self._download(blob, offset), gunzip_state):
+            # End of a gzip member: it always ends a line, and the next member is read from its own offset
+            if data is None:
+                if buffer:
+                    index += 1
+                    if index > lines_to_skip:
+                        batch.append(buffer.decode("utf-8"))
+                    buffer = b""
+
+                offset, lines_to_skip, index = gunzip_state["offset"], 0, 0
+                continue
+
             *lines, buffer = (buffer + data).split(b"\n")
             for line in lines:
                 index += 1
@@ -199,17 +226,12 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
                     batch.append(line.decode("utf-8"))
 
                 if len(batch) >= self.limit_of_events_to_push:
-                    yield batch, {**state, "lines": index, "size": None}
+                    yield batch, {**state, "offset": offset, "lines": index, "size": None}
                     batch = []
 
-        # The gzip stream is truncated (blob being written): wait for the rest
+        # The last gzip member is truncated (blob being written): its remaining lines are read next time
         if not gunzip_state["eof"]:
-            yield batch, {**state, "lines": max(index, lines_to_skip), "size": None}
+            yield batch, {**state, "offset": offset, "lines": max(index, lines_to_skip), "size": None}
             return
 
-        if buffer:
-            index += 1
-            if index > lines_to_skip:
-                batch.append(buffer.decode("utf-8"))
-
-        yield batch, {**state, "lines": max(index, lines_to_skip), "size": blob.size}
+        yield batch, {**state, "offset": offset, "lines": index, "size": blob.size}
