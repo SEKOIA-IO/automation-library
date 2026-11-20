@@ -5,9 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [Unreleased]
 
-## 2026-10-13 - 1.16.1
+## [1.17.0] - 2026-11-17
+
+### Added
+
+- Add playbook remediation actions:
+  - `deploy_url_policy`
+  - `quarantine_file`
+  - `restrict_file_shares`
+  - `restrict_user_to_group`
+  - `revoke_user_sessions`
+  - `update_dlp_incident_status`
+
+## [1.16.1] - 2026-10-13
 
 ### Fixed
 
@@ -15,24 +27,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add an optional `start_timestamp` parameter to start the collection of a new consumer group from a given date. Changing it repositions the existing indexes at the new date
+- Add an optional `start_timestamp` parameter to start the collection of a new consumer group from a given date; changing it repositions the existing indexes at the new date
 - Log an explicit warning when Netskope reports a concurrency conflict (409) on an index
 
-## 2026-10-13 - 1.16.0
+## [1.16.0] - 2026-10-13
 
 ### Changed
 
-- Migrated module from Poetry to uv
+- Migrate module from Poetry to uv
 
-## 2026-07-16 - 1.15.0
+## [1.15.0] - 2026-07-16
 
 ### Added
 
 - Add blocklist management actions:
-    - `append_to_blocklist`
-    - `get_blocklist`
-    - `remove_from_blocklist`
-    - `replace_blocklist`
+  - `append_to_blocklist`
+  - `get_blocklist`
+  - `remove_from_blocklist`
+  - `replace_blocklist`
 
 ### Changed
 
@@ -40,29 +52,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgrade `sekoia-automation-sdk` package version
 - Regenerate _poetry.lock_ file
 
-## 2026-06-10 - 1.14.0
+## [1.14.0] - 2026-06-10
 
 ### Added
 
-- New `security_check_only` option on the Netskope Events connector to collect only security-check alerts (malware, malsite, DLP).
+- Add a `security_check_only` option on the Netskope Events connector to collect only security-check alerts (malware, malsite, DLP)
 
 ### Changed
 
-- Removed the standalone `netskope_security_check_connector` (UUID `9e292f7e-146f-4839-926e-dac6ba8a6275`). Enable the `security_check_only` option on the Netskope Events connector instead.
+- Remove the standalone `netskope_security_check_connector` (UUID `9e292f7e-146f-4839-926e-dac6ba8a6275`); enable the `security_check_only` option on the Netskope Events connector instead
 
-## 2026-06-09 - 1.13.1
+## [1.13.1] - 2026-06-09
 
 ### Fixed
 
-- Added trigger configuration for security check.
+- Add trigger configuration for security check
 
-## 2026-05-11 - 1.13.0
+## [1.13.0] - 2026-05-11
 
 ### Added
 
-- New `netskope_security_check_connector` that collects Netskope sandbox / security-check
+- Add a `netskope_security_check_connector` that collects Netskope sandbox / security-check alerts
 
-## 2026-04-23 - 1.12.0
+## [1.12.0] - 2026-04-23
 
 ### Fixed
 
@@ -70,82 +82,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Upgrade sekoia-automation-sdk
+- Upgrade `sekoia-automation-sdk`
 
-## 2024-12-13 - 1.11.1
+## [1.11.1] - 2024-12-13
 
 ### Fixed
 
 - Fix generating index name
 
-## 2024-10-30 - 1.11.0
+## [1.11.0] - 2024-10-30
 
 ### Changed
 
-- Upgrade sekoia-automation-sdk
+- Upgrade `sekoia-automation-sdk`
 
-## 2024-08-02 - 1.10.5
+## [1.10.5] - 2024-08-02
 
 ### Added
 
-- add additional logger
+- Add an additional logger
 
 ### Fixed
 
-- Handle when failing to decode the incoming message
+- Handle failures when decoding the incoming message
 
-## 2024-07-10 - 1.10.4
+## [1.10.4] - 2024-07-10
 
 ### Fixed
 
-- Change the way to compute the event lag
+- Change the way the event lag is computed
 
-## 2024-07-02 - 1.10.3
+## [1.10.3] - 2024-07-02
 
 ### Added
 
 - Add the user-agent to the Netskope Events connector
 
-## 2024-04-23 - 1.10.2
+## [1.10.2] - 2024-04-23
 
 ### Fixed
 
-- Add interceptor on connection timeout for Netskope Events connector.
+- Add an interceptor on connection timeout for the Netskope Events connector
 
-
-## 2024-02-13 - 1.10.1
+## [1.10.1] - 2024-02-13
 
 ### Changed
 
-- Change event_lags metrics from Histogram to Gauge
+- Change `event_lags` metrics from Histogram to Gauge
 
-## 2024-01-02 - 1.9.3
+## [1.9.3] - 2024-01-02
 
 ### Changed
 
 - Set `base_url` property as nullable and update the Netskope Events connector to check this property
 
-## 2023-12-22 - 1.9.0
+## [1.9.0] - 2023-12-22
 
 ### Added
 
-- New connector for the Netskope Transaction events
+- Add a connector for the Netskope Transaction events
 
-## 2023-11-22 - 1.8.0
-
-### Changed
-
-- Upgrade dependencies: Sekoia-automation-SDK 1.8.1
-
-## 2023-11-15 - 1.7.1
+## [1.8.0] - 2023-11-22
 
 ### Changed
 
-- Update `netskopesdk` dependency to the latest upstream version.
+- Upgrade `sekoia-automation-sdk` to 1.8.1
 
-## 2023-06-27 - 1.4.0
+## [1.7.1] - 2023-11-15
 
 ### Changed
 
-- Update `netskopesdk` dependency to the latest upstream version.
-- Update PIP requirements.
+- Update `netskopesdk` dependency to the latest upstream version
+
+## [1.4.0] - 2023-06-27
+
+### Changed
+
+- Update `netskopesdk` dependency to the latest upstream version
+- Update PIP requirements
