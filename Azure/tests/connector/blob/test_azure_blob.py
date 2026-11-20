@@ -476,6 +476,25 @@ async def test_azure_blob_interrupted_gzip_blob_older_than_the_window_is_resumed
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "name,encode",
+    [
+        ("0-invalid.json", lambda content: content),
+        ("0-invalid.json.gz", lambda content: gzip.compress(content)),
+    ],
+)
+async def test_azure_blob_invalid_utf8_does_not_block_the_cycle(connector: AzureBlobConnector, storage, name, encode):
+    """A line with invalid UTF-8 bytes is forwarded with replacement characters: the other blobs are still read."""
+    storage.write(name, encode(b'{"user": "caf\xe9"}\n'))
+    storage.write("1-other.json", b"b\n")
+
+    assert await connector.get_azure_blob_data() == ['{"user": "caf\ufffd"}', "b"]
+
+    # Not forwarded again
+    assert await connector.get_azure_blob_data() == []
+
+
+@pytest.mark.asyncio
 async def test_azure_blob_recreated_blob_is_read_from_start(connector: AzureBlobConnector, storage):
     """A blob deleted and created again with the same name is read from the start."""
     storage.write("PT1H.json", b"a\nb\n")

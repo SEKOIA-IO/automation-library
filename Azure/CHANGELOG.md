@@ -7,11 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-11-13 - 2.9.6
+## 2026-11-20 - 2.9.6
 
 ### Fixed
 
-- Azure Blob Storage: read blobs incrementally and by chunks, to stop duplicates, missed lines, memory exhaustion and `412 ConditionNotMet` errors on growing blobs
+- Azure Blob Storage: read blobs by chunks and forward only the new lines of a growing blob, to fix memory exhaustion, duplicates and `412 ConditionNotMet` errors
+- Azure Blob Storage: a corrupted gzip blob or invalid UTF-8 bytes no longer block the collection of the other blobs
+
+### Changed
+
+- Azure Blob Storage: a blob appended more than 6 hours after its last modification is forwarded again from its start
 
 ## 2026-10-30 - 2.9.5
 

@@ -16,6 +16,8 @@ READ_CHUNK_SIZE = 4 * 1024 * 1024
 # A last line without a trailing newline is forwarded once the blob is not modified for this long
 SETTLED_DELAY = timedelta(minutes=5)
 
+# Lines are decoded with `errors="replace"`: an invalid UTF-8 byte must not fail the cycle (and block the other blobs)
+
 # Decompress gzip blobs in gzip format (header + trailer)
 GZIP_WBITS = 16 + zlib.MAX_WBITS
 
@@ -190,7 +192,7 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
             for line in lines:
                 offset += len(line) + 1
                 if line:
-                    batch.append(line.decode("utf-8"))
+                    batch.append(line.decode("utf-8", errors="replace"))
 
                 if len(batch) >= self.limit_of_events_to_push:
                     yield batch, {**state, "offset": offset}
@@ -199,7 +201,7 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
         # The last line has no trailing newline: it may still be written
         if buffer and self._is_last_line_complete(buffer, blob):
             offset += len(buffer)
-            batch.append(buffer.decode("utf-8"))
+            batch.append(buffer.decode("utf-8", errors="replace"))
 
         yield batch, {**state, "offset": offset}
 
@@ -228,7 +230,7 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
                     if buffer:
                         index += 1
                         if index > lines_to_skip:
-                            batch.append(buffer.decode("utf-8"))
+                            batch.append(buffer.decode("utf-8", errors="replace"))
                         buffer = b""
 
                     offset, lines_to_skip, index = gunzip_state["offset"], 0, 0
@@ -241,7 +243,7 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
                         continue
 
                     if line:
-                        batch.append(line.decode("utf-8"))
+                        batch.append(line.decode("utf-8", errors="replace"))
 
                     if len(batch) >= self.limit_of_events_to_push:
                         yield batch, {**state, "offset": offset, "lines": index, "size": None}
