@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-09 - 1.7.2
+
+### Fixed
+
+- Trend Micro Email Security: collect all the pages of results instead of only the first one
+- Trend Micro Email Security: persist the checkpoint once all the pages are pushed and deduplicate events across pages and runs
+- Trend Micro Email Security: retry the window when a page behind a `nextToken` fails or is empty, without pushing the pages already collected again
+- Trend Micro Email Security: convert the API dates as UTC instead of the local time of the container
+- Trend Micro Email Security: accept event dates with fractional seconds
+- Fix the type annotation of `intake_key` in the development runner for Pydantic v2
+
 ## 2026-11-05 - 1.7.1
 
 ### Changed
