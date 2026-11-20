@@ -633,3 +633,48 @@ def test_triggers_log_exception_when_case_api_fails(request, trigger_fixture, me
 
     trigger.send_event.assert_not_called()
     trigger.log_exception.assert_called_once()
+
+
+def test_case_created_trigger_outputs_the_assignees(case_created_trigger, samplenotif_case_created, sample_siccaseapi):
+    case_created_trigger.send_event = MagicMock()
+    case = {
+        **sample_siccaseapi,
+        "subscribers": [
+            {"avatar_uuid": "bed24c33-9044-41b5-96c5-024eb9b0c439", "type": "assignee"},
+            {"avatar_uuid": "3c1a9a40-5b25-4c8e-9a54-0f3f0f2b6c11", "type": "watcher"},
+            {"avatar_uuid": None, "type": "assignee"},
+        ],
+    }
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"http://fake.url/api/v1/sic/cases/{case['uuid']}", json=case)
+        case_created_trigger.handle_event(samplenotif_case_created)
+
+    event = case_created_trigger.send_event.call_args.kwargs["event"]
+    assert event["assignees"] == ["bed24c33-9044-41b5-96c5-024eb9b0c439"]
+
+
+def test_case_comment_created_trigger_outputs_the_author_type_and_the_tags(
+    case_comment_created_trigger, samplenotif_case_comment_created, sample_siccaseapi
+):
+    case_comment_created_trigger.send_event = MagicMock()
+    case = {**sample_siccaseapi, "tags": ["ext:INC001"]}
+    comment_uuid = samplenotif_case_comment_created["attributes"]["uuid"]
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"http://fake.url/api/v1/sic/cases/{case['uuid']}", json=case)
+        mock.get(
+            f"http://fake.url/api/v1/sic/cases/{case['uuid']}/comments/{comment_uuid}",
+            json={
+                "uuid": comment_uuid,
+                "content": "Synced to ServiceNow",
+                "created_at": "2025-03-17T15:06:04.858932+00:00",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
+                "created_by_type": "apikey",
+            },
+        )
+        case_comment_created_trigger.handle_event(samplenotif_case_comment_created)
+
+    event = case_comment_created_trigger.send_event.call_args.kwargs["event"]
+    assert event["comment"]["created_by_type"] == "apikey"
+    assert event["tags"] == ["ext:INC001"]
