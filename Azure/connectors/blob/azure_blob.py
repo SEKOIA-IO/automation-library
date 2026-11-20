@@ -55,14 +55,17 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
 
         async for blob in self.azure_blob_wrapper().list_blobs():
             state = states.get(blob.name)
-            has_pending_line = (
+
+            # A blob read partially (interrupted cycle, last line still being written) is listed again
+            has_pending_content = (
                 state is not None
-                and not state.get("compressed")
                 and state.get("created") == self._creation_time(blob)
-                and state.get("offset", 0) < blob.size
+                and (state.get("size") != blob.size if state.get("compressed") else state.get("offset", 0) < blob.size)
             )
 
-            if blob.last_modified > lower_bound or has_pending_line:
+            # Azure gives last_modified to the second: a blob modified again within the second of the checkpoint
+            # is listed again (`>=`), its reading state makes that free
+            if blob.last_modified >= lower_bound or has_pending_content:
                 yield blob
 
     @staticmethod
@@ -95,17 +98,27 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
         """
         position = state["offset"]
         decompressor = zlib.decompressobj(wbits=GZIP_WBITS)
+        new_member = True
         async for data in chunks:
             position += len(data)
             while data:
-                if decompressor.eof:
-                    decompressor = zlib.decompressobj(wbits=GZIP_WBITS)
+                if new_member:
+                    # Zero padding before a member (some writers pad to a block size) is skipped, like `gzip` does
+                    data = data.lstrip(b"\x00")
+                    state["offset"] = position - len(data)
+                    if not data:
+                        break
+
+                    if decompressor.eof:
+                        decompressor = zlib.decompressobj(wbits=GZIP_WBITS)
+                    new_member = False
 
                 yield decompressor.decompress(data, READ_CHUNK_SIZE)
                 if decompressor.eof:
                     data = decompressor.unused_data
                     state["offset"] = position - len(data)
                     yield None
+                    new_member = True
                 else:
                     data = decompressor.unconsumed_tail
 
@@ -166,6 +179,10 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
         if blob.size < offset:
             offset = 0
 
+        # The whole blob was already forwarded
+        if blob.size == offset:
+            return
+
         batch: list[str] = []
         buffer = b""
         async for data in self._download(blob, offset):
@@ -204,34 +221,46 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
         batch: list[str] = []
         buffer = b""
         gunzip_state: dict[str, Any] = {"offset": offset}
-        async for data in self._gunzip(self._download(blob, offset), gunzip_state):
-            # End of a gzip member: it always ends a line, and the next member is read from its own offset
-            if data is None:
-                if buffer:
-                    index += 1
-                    if index > lines_to_skip:
-                        batch.append(buffer.decode("utf-8"))
-                    buffer = b""
+        try:
+            async for data in self._gunzip(self._download(blob, offset), gunzip_state):
+                # End of a gzip member: it always ends a line, and the next member is read from its own offset
+                if data is None:
+                    if buffer:
+                        index += 1
+                        if index > lines_to_skip:
+                            batch.append(buffer.decode("utf-8"))
+                        buffer = b""
 
-                offset, lines_to_skip, index = gunzip_state["offset"], 0, 0
-                continue
-
-            *lines, buffer = (buffer + data).split(b"\n")
-            for line in lines:
-                index += 1
-                if index <= lines_to_skip:
+                    offset, lines_to_skip, index = gunzip_state["offset"], 0, 0
                     continue
 
-                if line:
-                    batch.append(line.decode("utf-8"))
+                *lines, buffer = (buffer + data).split(b"\n")
+                for line in lines:
+                    index += 1
+                    if index <= lines_to_skip:
+                        continue
 
-                if len(batch) >= self.limit_of_events_to_push:
-                    yield batch, {**state, "offset": offset, "lines": index, "size": None}
-                    batch = []
+                    if line:
+                        batch.append(line.decode("utf-8"))
+
+                    if len(batch) >= self.limit_of_events_to_push:
+                        yield batch, {**state, "offset": offset, "lines": index, "size": None}
+                        batch = []
+
+        except zlib.error as error:
+            # Corrupted gzip data: the lines decoded so far are forwarded, the rest of the blob is skipped
+            self.log(
+                message=f"Blob {blob.name} is not a valid gzip stream after offset {offset} ({error}): "
+                "its remaining content is skipped",
+                level="error",
+            )
+            yield batch, {**state, "offset": offset, "lines": index, "size": blob.size}
+            return
 
         # The last gzip member is truncated (blob being written): its remaining lines are read next time
         if not gunzip_state["eof"]:
             yield batch, {**state, "offset": offset, "lines": max(index, lines_to_skip), "size": None}
             return
 
-        yield batch, {**state, "offset": offset, "lines": index, "size": blob.size}
+        # Every member is complete: the next one starts after the last member and its padding
+        yield batch, {**state, "offset": gunzip_state["offset"], "lines": 0, "size": blob.size}
