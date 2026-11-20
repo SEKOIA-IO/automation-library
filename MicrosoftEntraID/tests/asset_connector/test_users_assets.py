@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 import requests_mock
+from kiota_abstractions.api_error import APIError
 from msgraph.generated.models.user import User
 from sekoia_automation.module import Module
 
@@ -1321,9 +1322,14 @@ async def test_fetch_refreshed_users_error_handling(test_entra_id_asset_connecto
 
     test_entra_id_asset_connector.list_users = failing_list_users
 
-    # Act / Assert
-    with pytest.raises(ValueError, match="Error fetching users to refresh: API Error"):
-        [asset async for asset in test_entra_id_asset_connector.fetch_refreshed_users(set())]
+    # Act
+    assets = [asset async for asset in test_entra_id_asset_connector.fetch_refreshed_users(set())]
+
+    # Assert: the refresh stops, the cycle goes on
+    assert assets == []
+    assert test_entra_id_asset_connector.refresh_cursor_date is None
+    logged = [call.kwargs["message"] for call in test_entra_id_asset_connector.log.call_args_list]
+    assert "Error fetching users to refresh: API Error" in logged
 
 
 @pytest.mark.asyncio
@@ -1376,12 +1382,15 @@ async def test_list_users_stops_at_the_limit_across_pages(test_entra_id_asset_co
     mock_users.with_url.assert_called_once_with("https://next")
 
 
-def failing_fetch_user_for(*failing_ids):
-    """fetch_user raising for the given user ids, as Graph does on a 403 or a deleted user."""
+def failing_fetch_user_for(*failing_ids, status=403):
+    """fetch_user raising for the given user ids the way fetch_user_mfa wraps a Graph error."""
 
     async def _fetch_user(user):
         if user.id in failing_ids:
-            raise ValueError("Error fetching user MFA: 403")
+            try:
+                raise APIError(message="Graph error", response_status_code=status)
+            except APIError as e:
+                raise ValueError(f"Error fetching user MFA: {e}") from e
         return await mock_fetch_user(user)
 
     return _fetch_user
@@ -1620,3 +1629,125 @@ async def test_asset_fetch_cycle_sleeps_once_the_walk_is_complete(test_entra_id_
     await connector.asset_fetch_cycle()
     sleep.assert_awaited_once()
     assert connector.push_assets_to_sekoia.await_count == 3
+
+
+@pytest.mark.asyncio
+async def test_fetch_user_or_skip_raises_on_errors_not_about_the_user(test_entra_id_asset_connector):
+    """Only 403 and 404 skip a user: an outage or throttling must not move the checkpoints."""
+    # Arrange
+    user = make_graph_user("user1", datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc))
+    test_entra_id_asset_connector.fetch_user = failing_fetch_user_for("user1", status=503)
+
+    # Act / Assert
+    with pytest.raises(ValueError, match="Error fetching user MFA"):
+        await test_entra_id_asset_connector.fetch_user_or_skip(user)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [403, 404])
+async def test_fetch_user_or_skip_skips_users_graph_refuses(test_entra_id_asset_connector, status):
+    # Arrange
+    user = make_graph_user("user1", datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc))
+    test_entra_id_asset_connector.fetch_user = failing_fetch_user_for("user1", status=status)
+
+    # Act / Assert
+    assert await test_entra_id_asset_connector.fetch_user_or_skip(user) is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_refreshed_users_stops_before_a_user_failing_on_an_outage(test_entra_id_asset_connector):
+    """An outage stops the walk at the failing user: the cursor does not move past it."""
+    # Arrange
+    configure_refresh(test_entra_id_asset_connector, 3)
+    test_entra_id_asset_connector.list_users = mock_list_users(
+        [
+            make_graph_user("user1", datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)),
+            make_graph_user("user2", datetime.datetime(2024, 3, 1, tzinfo=datetime.timezone.utc)),
+            make_graph_user("user3", datetime.datetime(2024, 4, 1, tzinfo=datetime.timezone.utc)),
+        ]
+    )
+    test_entra_id_asset_connector.fetch_user = failing_fetch_user_for("user2", status=503)
+
+    # Act
+    assets = [asset async for asset in test_entra_id_asset_connector.fetch_refreshed_users(set())]
+    await test_entra_id_asset_connector.update_checkpoint()
+
+    # Assert
+    assert uids(assets) == ["user1"]
+    assert test_entra_id_asset_connector.refresh_cursor_date == "2024-02-01T00:00:00+00:00"
+    assert test_entra_id_asset_connector.last_refresh_completed_at == 0.0
+
+
+@pytest.mark.asyncio
+async def test_fetch_refreshed_users_walks_on_when_users_without_creation_date_cannot_be_listed(
+    test_entra_id_asset_connector,
+):
+    """A rejected `createdDateTime eq null` query must not hold back the dated walk."""
+    # Arrange
+    configure_refresh(test_entra_id_asset_connector, 2)
+    dated = mock_list_users([make_graph_user("user1", datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc))])
+
+    async def list_users(user_filter, limit=None):
+        if user_filter == "createdDateTime eq null":
+            raise Exception("Unsupported query")
+        async for user in dated(user_filter, limit):
+            yield user
+
+    test_entra_id_asset_connector.list_users = list_users
+    test_entra_id_asset_connector.fetch_user = mock_fetch_user
+
+    # Act
+    assets = [asset async for asset in test_entra_id_asset_connector.fetch_refreshed_users(set())]
+
+    # Assert
+    assert uids(assets) == ["user1"]
+    assert test_entra_id_asset_connector.log.call_args_list[0].kwargs["level"] == "warning"
+
+
+@pytest.mark.asyncio
+async def test_get_assets_keeps_the_new_users_when_the_refresh_listing_fails(test_entra_id_asset_connector):
+    """A refresh listing error stops the refresh only, not the cycle."""
+    # Arrange
+    configure_refresh(test_entra_id_asset_connector, 2)
+    new_user = make_graph_user("new", datetime.datetime(2024, 5, 1, tzinfo=datetime.timezone.utc))
+
+    async def list_users(user_filter, limit=None):
+        if user_filter is None:
+            yield new_user
+            return
+        raise Exception("Graph outage")
+
+    test_entra_id_asset_connector.list_users = list_users
+    test_entra_id_asset_connector.fetch_user = mock_fetch_user
+    test_entra_id_asset_connector.close_client = AsyncMock()
+
+    # Act
+    assets = [asset async for asset in test_entra_id_asset_connector.get_assets()]
+
+    # Assert
+    assert uids(assets) == ["new"]
+
+
+@pytest.mark.asyncio
+async def test_get_assets_holds_the_walk_back_after_a_failed_push(test_entra_id_asset_connector):
+    """Progress left pending means its push failed: the walk sits the next cycle out."""
+    # Arrange
+    test_entra_id_asset_connector._pending_refresh_cursor = "2024-02-01T00:00:00+00:00"
+    test_entra_id_asset_connector.fetch_new_users = empty_async_generator
+    refreshed = AsyncMock()
+
+    async def fetch_refreshed_users(excluded_user_ids):
+        await refreshed()
+        return
+        yield
+
+    test_entra_id_asset_connector.fetch_refreshed_users = fetch_refreshed_users
+    test_entra_id_asset_connector.close_client = AsyncMock()
+
+    # Act / Assert: the held-back cycle yields nothing, so the SDK sleeps
+    assert [asset async for asset in test_entra_id_asset_connector.get_assets()] == []
+    refreshed.assert_not_awaited()
+
+    # Act / Assert: the following cycle resumes the walk
+    [asset async for asset in test_entra_id_asset_connector.get_assets()]
+    refreshed.assert_awaited_once()

@@ -3,6 +3,7 @@ from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta, timezone
 
 from azure.identity.aio import ClientSecretCredential  # async credentials only
+from kiota_abstractions.api_error import APIError
 from kiota_abstractions.base_request_configuration import RequestConfiguration
 from kiota_authentication_azure.azure_identity_authentication_provider import AzureIdentityAuthenticationProvider
 from msgraph import GraphRequestAdapter, GraphServiceClient
@@ -59,6 +60,9 @@ class EntraIDAssetConnector(AsyncAssetConnector):
     MAX_CHECKPOINT_IDS = 1000
     # Lower bound of the refresh walk: a date filter keeps users without a creation date out of it
     REFRESH_WALK_START = "1970-01-01T00:00:00+00:00"
+    # Graph answers a user that cannot be read with 403 (management-restricted account)
+    # or 404 (deleted since the listing). Any other error is not about the user.
+    UNREADABLE_USER_STATUSES = (403, 404)
     USER_SELECT_FIELDS = [
         "id",
         "displayName",
@@ -392,16 +396,28 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             is_admin = await self.fetch_user_admin_roles(user.id)
         return self.map_fields(user, user_mfa, user_groups, is_admin)
 
-    async def fetch_user_or_skip(self, user: User) -> UserOCSFModel | None:
-        """Fetch a user's details, None when they cannot be read.
+    @classmethod
+    def is_unreadable_user_error(cls, error: BaseException) -> bool:
+        cause: BaseException | None = error
+        while cause is not None:
+            if isinstance(cause, APIError):
+                return cause.response_status_code in cls.UNREADABLE_USER_STATUSES
+            cause = cause.__cause__
+        return False
 
-        A user whose enrichment fails (403 on a management-restricted account, user deleted
-        since the listing) must not abort the cycle: the next one would retry it right away.
-        No fallback asset either, a wrong `has_mfa=False` is worse than a stale one.
+    async def fetch_user_or_skip(self, user: User) -> UserOCSFModel | None:
+        """Fetch a user's details, None when Graph refuses to read that user.
+
+        A user that cannot be read must not abort the cycle: the next one would retry it
+        right away. No fallback asset either, a wrong `has_mfa=False` is worse than a stale
+        one. Other errors (outage, throttling) are raised: skipping on them would move the
+        checkpoints past users that are readable.
         """
         try:
             return await self.fetch_user(user)
         except Exception as e:
+            if not self.is_unreadable_user_error(e):
+                raise
             self.log(message=f"Skipping user {user.id}: {e}", level="error")
             return None
 
@@ -521,11 +537,20 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         if cursor is None and time.time() - self.last_refresh_completed_at < self.frequency:
             return
 
+        # Graph does not document where users without a creation date sort, and a date
+        # cursor cannot reach them: they get their own pass at the start of each walk.
+        # Best effort: a failure there must not hold back the dated walk.
+        # ponytail: listed in one go, page them with their own cursor if a tenant has thousands
+        undated_users: list[User] = []
+        if not cursor:
+            try:
+                undated_users = [user async for user in self.list_users("createdDateTime eq null")]
+            except Exception as e:
+                self.log(message=f"Error fetching users without creation date: {e}", level="warning")
+
+        # An error stops the refresh only: the new users of the cycle are still pushed,
+        # and the walk resumes from the same cursor on the next cycle
         try:
-            # Graph does not document where users without a creation date sort, and a date
-            # cursor cannot reach them: they get their own pass at the start of each walk.
-            # ponytail: listed in one go, page them with their own cursor if a tenant has thousands
-            undated_users = [] if cursor else [user async for user in self.list_users("createdDateTime eq null")]
             users = [
                 user
                 async for user in self.list_users(
@@ -533,7 +558,8 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 )
             ]
         except Exception as e:
-            raise ValueError(f"Error fetching users to refresh: {e}") from e
+            self.log(message=f"Error fetching users to refresh: {e}", level="error")
+            return
 
         if undated_users:
             self.log(message=f"{len(undated_users)} users have no creation date", level="info")
@@ -547,7 +573,15 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         for user in undated_users + users:
             if user.id in excluded_user_ids:
                 continue
-            asset = await self.fetch_user_or_skip(user)
+            try:
+                asset = await self.fetch_user_or_skip(user)
+            except Exception as e:
+                # Stop at this user, not past it: the walk resumes from the last asset yielded
+                self.log(message=f"Refresh stopped at user {user.id}: {e}", level="error")
+                if previous is not None:
+                    self._pending_refresh_cursor = previous[0]
+                    yield previous[1]
+                return
             if asset is None:
                 continue
             if previous is not None:
@@ -577,7 +611,12 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         last_run_date: str | None = self.most_recent_date_seen
         self._latest_date = last_run_date
         self._latest_date_ids = self.most_recent_date_seen_ids
-        # Left over by a push that failed without raising: must not ride with the next one
+        # Left over by a push that failed without raising: must not ride with the next one.
+        # The walk also sits this cycle out, so a failing push does not re-enrich the same
+        # slice right away; with no new users the cycle yields nothing and the SDK sleeps.
+        refresh_push_failed = (
+            self._pending_refresh_cursor is not None or self._pending_refresh_completed_at is not None
+        )
         self._pending_refresh_cursor = None
         self._pending_refresh_completed_at = None
         try:
@@ -586,6 +625,10 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 if user.user.uid:
                     sent_user_ids.add(user.user.uid)
                 yield user
+
+            if refresh_push_failed:
+                self.log(message="Last refresh push failed: refresh resumes on the next cycle", level="warning")
+                return
 
             async for user in self.fetch_refreshed_users(sent_user_ids):
                 yield user

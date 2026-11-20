@@ -30,8 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stop skipping users created in the same second as the last one collected. The checkpoint
   is now the exact creation date of that user, and the users already collected at that date
   are skipped by id instead of by a one second offset.
-- Skip and log a user whose groups, admin roles or MFA cannot be read instead of aborting
-  the run, which retried the same user in a loop.
+- Skip and log a user whose groups, admin roles or MFA Graph refuses to read (403, 404)
+  instead of aborting the run, which retried the same user in a loop. Other Graph errors
+  stop the refresh at that user without dropping the new users of the run, and a refresh
+  whose push failed waits for the next run.
 
 ## 2026-11-18 - 2.10.31
 
