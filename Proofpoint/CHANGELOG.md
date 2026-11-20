@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-10-26 - 1.17.0
+
+### Changed
+
+- Migrated module from Poetry to uv (Python 3.14, ruff, mypy, mise)
+- Upgrade sekoia-automation-sdk to `1.27.0` (constraint `>=1.14.0,<2`)
+- TAP: configuration migrated to pydantic v2 (annotated `frequency` field)
+
+### Fixed
+
+- TAP: persist the checkpoint (`queryEndTime`) so that collection resumes from the last retrieved date after a restart
+- TAP: only advance the checkpoint once the events have been pushed to the intake
+
 ## 2026-02-13 - 1.16.1
 
 ### Fixed

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 import pytest
@@ -14,7 +14,7 @@ def checkpoint(symphony_storage):
 
 
 def test_load(checkpoint, symphony_storage):
-    date = datetime(2023, 3, 22, 11, 56, 28, tzinfo=timezone.utc)
+    date = datetime(2023, 3, 22, 11, 56, 28, tzinfo=UTC)
     most_recent_date_requested = date - timedelta(days=6)
     context = PersistentJSON("context.json", symphony_storage)
 
@@ -22,14 +22,14 @@ def test_load(checkpoint, symphony_storage):
         cache["most_recent_date_seen"] = most_recent_date_requested.isoformat()
 
     with patch("proofpoint_modules.pod.checkpoint.datetime") as mock_datetime:
-        mock_datetime.now.return_value = datetime(2023, 3, 22, 11, 56, 28, tzinfo=timezone.utc)
+        mock_datetime.now.return_value = datetime(2023, 3, 22, 11, 56, 28, tzinfo=UTC)
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
         assert checkpoint.offset == most_recent_date_requested
 
 
 def test_load_with_cursor_older_than_30_days(checkpoint, symphony_storage):
-    date = datetime(2023, 3, 22, 11, 56, 28, tzinfo=timezone.utc)
+    date = datetime(2023, 3, 22, 11, 56, 28, tzinfo=UTC)
     most_recent_date_requested = date - timedelta(days=40)
     expected_date = date - timedelta(days=30)
     context = PersistentJSON("context.json", symphony_storage)
@@ -38,7 +38,7 @@ def test_load_with_cursor_older_than_30_days(checkpoint, symphony_storage):
         cache["most_recent_date_seen"] = most_recent_date_requested.isoformat()
 
     with patch("proofpoint_modules.pod.checkpoint.datetime") as mock_datetime:
-        mock_datetime.now.return_value = datetime(2023, 3, 22, 11, 56, 28, tzinfo=timezone.utc)
+        mock_datetime.now.return_value = datetime(2023, 3, 22, 11, 56, 28, tzinfo=UTC)
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
         assert checkpoint.offset == expected_date
@@ -52,7 +52,7 @@ def test_load_without_cursor(checkpoint, symphony_storage):
         cache["most_recent_date_seen"] = None
 
     with patch("proofpoint_modules.pod.checkpoint.datetime") as mock_datetime:
-        mock_datetime.now.return_value = datetime(2023, 3, 22, 11, 56, 28, tzinfo=timezone.utc)
+        mock_datetime.now.return_value = datetime(2023, 3, 22, 11, 56, 28, tzinfo=UTC)
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
         assert checkpoint.offset is None
@@ -77,7 +77,7 @@ def test_save_without_cursor(checkpoint, symphony_storage):
 
 def test_save_replace_existing_date(checkpoint, symphony_storage):
     with patch("proofpoint_modules.pod.checkpoint.datetime") as mock_datetime:
-        mock_datetime.now.return_value = datetime(2023, 5, 11, 13, 56, 28, tzinfo=timezone.utc)
+        mock_datetime.now.return_value = datetime(2023, 5, 11, 13, 56, 28, tzinfo=UTC)
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
         last_message_date_str = "2023-04-27T11:34:56+00:00"
