@@ -234,6 +234,9 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
                         buffer = b""
 
                     offset, lines_to_skip, index = gunzip_state["offset"], 0, 0
+                    if len(batch) >= self.limit_of_events_to_push:
+                        yield batch, {**state, "offset": offset, "lines": 0, "size": None}
+                        batch = []
                     continue
 
                 *lines, buffer = (buffer + data).split(b"\n")

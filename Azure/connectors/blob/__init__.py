@@ -158,7 +158,7 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
 
     def save_blob_states(self, states: dict[str, dict[str, Any]]) -> None:
         """
-        Save the reading state of blobs and forget the blobs not modified for a long time.
+        Save the reading state of blobs and forget the other blobs not modified for a long time.
 
         Args:
             states: dict[str, dict[str, Any]]
@@ -168,8 +168,11 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
         with self.context as cache:
             blobs = dict(cache.get("blobs") or {})
             blobs.update(states)
+            # The states being saved are kept whatever their age: an old blob may still be read (after an outage)
             cache["blobs"] = {
-                name: state for name, state in blobs.items() if isoparse(state["last_modified"]) >= oldest
+                name: state
+                for name, state in blobs.items()
+                if name in states or isoparse(state["last_modified"]) >= oldest
             }
 
     async def get_azure_blob_data(self) -> list[str]:

@@ -495,6 +495,55 @@ async def test_azure_blob_invalid_utf8_does_not_block_the_cycle(connector: Azure
 
 
 @pytest.mark.asyncio
+async def test_azure_blob_gzip_members_without_newline_are_pushed_by_batches(connector: AzureBlobConnector, storage):
+    """Many gzip members, each ending without newline, are forwarded by bounded batches with a checkpoint."""
+    connector.limit_of_events_to_push = 10
+    lines = make_lines(25)
+    members = [gzip.compress(line) for line in lines]
+    storage.write("PT1H.json.gz", b"".join(members))
+
+    connector.push_data_to_intakes = AsyncMock(side_effect=[lines[:10], ConnectionError("intake unavailable")])
+    with pytest.raises(ConnectionError):
+        await connector.get_azure_blob_data()
+
+    assert [len(call.kwargs["events"]) for call in connector.push_data_to_intakes.call_args_list] == [10, 10]
+    assert connector.get_blob_states()["PT1H.json.gz"]["offset"] == sum(len(member) for member in members[:10])
+
+    connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
+    assert await connector.get_azure_blob_data() == [line.decode() for line in lines[10:]]
+
+
+@pytest.mark.asyncio
+async def test_azure_blob_unfinished_old_blob_keeps_its_state(connector: AzureBlobConnector, storage):
+    """
+    A blob older than the retention, still being read (after a long outage), keeps its reading state:
+    a failure in the middle of it does not lose its remaining events.
+    """
+    connector.limit_of_events_to_push = 10
+    lines = make_lines(35)
+    storage.write("PT1H.json", b"".join(line + b"\n" for line in lines))
+
+    connector.push_data_to_intakes = AsyncMock(side_effect=[lines[:10], ConnectionError("intake unavailable")])
+    with pytest.raises(ConnectionError):
+        await connector.get_azure_blob_data()
+
+    # Long outage: the blob is now older than the retention and outside the one-hour window
+    old = datetime.now(timezone.utc) - timedelta(hours=8)
+    storage.blobs["PT1H.json"].last_modified = old
+    storage.blobs["PT1H.json"].creation_time = old
+    with connector.context as cache:
+        cache["blobs"]["PT1H.json"]["created"] = old.isoformat()
+        cache["last_event_date"] = datetime.now(timezone.utc).isoformat()
+
+    connector.push_data_to_intakes = AsyncMock(side_effect=[lines[10:20], ConnectionError("intake unavailable")])
+    with pytest.raises(ConnectionError):
+        await connector.get_azure_blob_data()
+
+    connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
+    assert await connector.get_azure_blob_data() == [line.decode() for line in lines[20:]]
+
+
+@pytest.mark.asyncio
 async def test_azure_blob_recreated_blob_is_read_from_start(connector: AzureBlobConnector, storage):
     """A blob deleted and created again with the same name is read from the start."""
     storage.write("PT1H.json", b"a\nb\n")
