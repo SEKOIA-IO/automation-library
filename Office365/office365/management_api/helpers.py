@@ -1,6 +1,14 @@
 from collections.abc import Generator
 from datetime import datetime, timedelta
 
+from tenacity import RetryCallState
+
+from .constants import OFFICE365_RETRYABLE_STATUS_CODES
+from .errors import FailedToGetO365AuditContent
+from .logging import get_logger
+
+logger = get_logger()
+
 
 def split_date_range(
     start_date: datetime, end_date: datetime, delta: timedelta
@@ -35,3 +43,21 @@ def split_date_range(
 
     # Yield the last interval
     yield (lower_date, end_date)
+
+
+def is_transient_content_error(error: BaseException) -> bool:
+    """Tell if the download of an audit content failed on a transient HTTP error"""
+    return (
+        isinstance(error, FailedToGetO365AuditContent)
+        and error.context.get("status_code") in OFFICE365_RETRYABLE_STATUS_CODES
+    )
+
+
+def log_content_retry(retry_state: RetryCallState) -> None:
+    """Log a failed attempt to download an audit content before the next retry"""
+    error = retry_state.outcome.exception() if retry_state.outcome else None
+    logger.warning(
+        "Failed to get the audit content, retrying",
+        attempt=retry_state.attempt_number,
+        status_code=getattr(error, "context", {}).get("status_code"),
+    )
