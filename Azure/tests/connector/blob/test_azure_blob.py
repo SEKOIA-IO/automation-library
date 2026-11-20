@@ -144,6 +144,11 @@ def storage(connector) -> FakeBlobStorage:
     return fake_storage
 
 
+def resume_offset(offset: int) -> int:
+    """A blob is downloaded again from the bytes checked against the fingerprint of its reading state."""
+    return max(0, offset - azure_blob.FINGERPRINT_SIZE)
+
+
 def pushed_events(connector) -> list[str]:
     return [event for call in connector.push_data_to_intakes.call_args_list for event in call.kwargs["events"]]
 
@@ -208,7 +213,7 @@ async def test_azure_blob_growing_blob_is_not_forwarded_twice(connector: AzureBl
     assert await connector.get_azure_blob_data() == [line.decode() for line in new_lines]
     assert pushed_events(connector) == [line.decode() for line in first_lines + new_lines]
     # Only the appended bytes are downloaded
-    assert [offset for _, offset, _ in storage.downloads] == [len(first_content)]
+    assert [offset for _, offset, _ in storage.downloads] == [resume_offset(len(first_content))]
 
     # Nothing new: nothing forwarded, nothing downloaded
     storage.downloads.clear()
@@ -284,9 +289,15 @@ async def test_azure_blob_large_gzip_blob_read_by_chunks_and_pushed_by_batches(
 
     # Already forwarded and unchanged: not downloaded again
     storage.downloads.clear()
-    storage.blobs["PT1H.json.gz"].last_modified = datetime.now(timezone.utc)
     assert await connector.get_azure_blob_data() == []
     assert storage.downloads == []
+
+    # Modified without a new size: only the bytes of the fingerprint are downloaded, once
+    storage.blobs["PT1H.json.gz"].last_modified = datetime.now(timezone.utc)
+    assert await connector.get_azure_blob_data() == []
+    assert [length for _, _, length in storage.downloads] == [azure_blob.FINGERPRINT_SIZE]
+    assert await connector.get_azure_blob_data() == []
+    assert len(storage.downloads) == 1
 
 
 @pytest.mark.asyncio
@@ -339,13 +350,13 @@ async def test_azure_blob_gzip_blob_with_appended_member(connector: AzureBlobCon
     storage.downloads.clear()
     storage.append("PT1H.json.gz", gzip_lines(b"c"))
     assert await connector.get_azure_blob_data() == ["c"]
-    assert [offset for _, offset, _ in storage.downloads] == [len(first_member)]
+    assert [offset for _, offset, _ in storage.downloads] == [resume_offset(len(first_member))]
 
     # The next member is read from its own offset too
     storage.downloads.clear()
     storage.append("PT1H.json.gz", gzip_lines(b"d"))
     assert await connector.get_azure_blob_data() == ["d"]
-    assert [offset for _, offset, _ in storage.downloads] == [len(first_member) + len(gzip_lines(b"c"))]
+    assert [offset for _, offset, _ in storage.downloads] == [resume_offset(len(first_member) + len(gzip_lines(b"c")))]
 
 
 @pytest.mark.asyncio
@@ -374,7 +385,7 @@ async def test_azure_blob_gzip_truncated_member_resumes_from_member_start(connec
     storage.downloads.clear()
     storage.write("PT1H.json.gz", first_member + second_member)
     assert await connector.get_azure_blob_data() == [line.decode() for line in lines[len(forwarded) - 1 :]]
-    assert [offset for _, offset, _ in storage.downloads] == [len(first_member)]
+    assert [offset for _, offset, _ in storage.downloads] == [resume_offset(len(first_member))]
 
 
 @pytest.mark.asyncio
@@ -388,7 +399,7 @@ async def test_azure_blob_gzip_zero_padding_is_skipped(connector: AzureBlobConne
     storage.downloads.clear()
     storage.append("PT1H.json.gz", gzip_lines(b"b"))
     assert await connector.get_azure_blob_data() == ["b"]
-    assert [offset for _, offset, _ in storage.downloads] == [len(padded)]
+    assert [offset for _, offset, _ in storage.downloads] == [resume_offset(len(padded))]
 
 
 @pytest.mark.asyncio
@@ -528,7 +539,7 @@ async def test_azure_blob_unfinished_old_blob_keeps_its_state(connector: AzureBl
         await connector.get_azure_blob_data()
 
     # Long outage: the blob is now older than the retention and outside the one-hour window
-    old = datetime.now(timezone.utc) - timedelta(hours=8)
+    old = datetime.now(timezone.utc) - timedelta(days=8)
     storage.blobs["PT1H.json"].last_modified = old
     storage.blobs["PT1H.json"].creation_time = old
     with connector.context as cache:
@@ -544,6 +555,55 @@ async def test_azure_blob_unfinished_old_blob_keeps_its_state(connector: AzureBl
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "name,encode",
+    [
+        ("PT1H.json", lambda lines: b"".join(l + b"\n" for l in lines)),
+        ("PT1H.json.gz", lambda lines: gzip_lines(*lines)),
+    ],
+)
+@pytest.mark.parametrize("new_lines", [[b"c", b"d"], [b"c", b"d", b"e"]], ids=["same size", "larger"])
+async def test_azure_blob_overwritten_blob_is_read_from_start(
+    connector: AzureBlobConnector, storage, name, encode, new_lines
+):
+    """
+    A blob overwritten with another content, of the same size or larger and with the same creation time,
+    is read again from its start (and not from the offset of the previous content).
+    """
+    storage.write(name, encode([b"a", b"b"]))
+    assert await connector.get_azure_blob_data() == ["a", "b"]
+
+    storage.write(name, encode(new_lines))
+    assert await connector.get_azure_blob_data() == [line.decode() for line in new_lines]
+
+    # Not forwarded again
+    assert await connector.get_azure_blob_data() == []
+
+
+@pytest.mark.asyncio
+async def test_azure_blob_overwritten_with_another_compression(connector: AzureBlobConnector, storage):
+    """A plain blob overwritten with a larger gzip content is detected as gzip again."""
+    storage.write("PT1H.json", b"a\n")
+    assert await connector.get_azure_blob_data() == ["a"]
+
+    storage.write("PT1H.json", gzip_lines(b"b", b"c"))
+    assert await connector.get_azure_blob_data() == ["b", "c"]
+
+
+@pytest.mark.asyncio
+async def test_azure_blob_state_without_fingerprint_is_resumed(connector: AzureBlobConnector, storage):
+    """A reading state saved without fingerprint is resumed from its offset."""
+    storage.write("PT1H.json", b"a\nb\n")
+    assert await connector.get_azure_blob_data() == ["a", "b"]
+    with connector.context as cache:
+        del cache["blobs"]["PT1H.json"]["tail"]
+
+    storage.append("PT1H.json", b"c\n")
+    assert await connector.get_azure_blob_data() == ["c"]
+    assert "tail" in connector.get_blob_states()["PT1H.json"]
+
+
+@pytest.mark.asyncio
 async def test_azure_blob_recreated_blob_is_read_from_start(connector: AzureBlobConnector, storage):
     """A blob deleted and created again with the same name is read from the start."""
     storage.write("PT1H.json", b"a\nb\n")
@@ -556,7 +616,7 @@ async def test_azure_blob_recreated_blob_is_read_from_start(connector: AzureBlob
 @pytest.mark.asyncio
 async def test_azure_blob_old_blob_states_are_forgotten(connector: AzureBlobConnector, storage):
     """The reading state of blobs not modified for a long time is removed from the context."""
-    old = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    old = (datetime.now(timezone.utc) - timedelta(days=8)).isoformat()
     with connector.context as cache:
         cache["blobs"] = {
             "old.json": {"created": old, "compressed": False, "offset": 10, "lines": 0, "last_modified": old}
@@ -566,6 +626,72 @@ async def test_azure_blob_old_blob_states_are_forgotten(connector: AzureBlobConn
     await connector.get_azure_blob_data()
 
     assert set(connector.get_blob_states()) == {"PT1H.json"}
+
+
+@pytest.mark.asyncio
+async def test_azure_blob_idle_blob_appended_is_not_forwarded_twice(connector: AzureBlobConnector, storage):
+    """A blob appended after hours without modification keeps its reading state: only the new lines are forwarded."""
+    storage.write("idle.json", b"a\nb\n")
+    assert await connector.get_azure_blob_data() == ["a", "b"]
+
+    # The blob was read 7 hours ago
+    idle = datetime.now(timezone.utc) - timedelta(hours=7)
+    storage.blobs["idle.json"].last_modified = idle
+    with connector.context as cache:
+        cache["blobs"]["idle.json"]["last_modified"] = idle.isoformat()
+
+    # Other blobs are read in the meantime
+    storage.write("PT1H.json", b"x\n")
+    assert await connector.get_azure_blob_data() == ["x"]
+
+    storage.append("idle.json", b"c\n")
+    assert await connector.get_azure_blob_data() == ["c"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "name,encode",
+    [
+        ("PT1H.json", lambda content: content),
+        ("PT1H.json.gz", gzip.compress),
+    ],
+)
+async def test_azure_blob_too_long_line_is_skipped(connector: AzureBlobConnector, storage, monkeypatch, name, encode):
+    """A line longer than the maximum size is skipped, and the lines around it are forwarded once."""
+    monkeypatch.setattr(azure_blob, "READ_CHUNK_SIZE", 128)
+    monkeypatch.setattr(azure_blob, "MAX_LINE_SIZE", 100)
+    connector.log = MagicMock()
+
+    storage.write(name, encode(b"a\n" + b"x" * 1000 + b"\nb\n"))
+    assert await connector.get_azure_blob_data() == ["a", "b"]
+    assert [call.kwargs["level"] for call in connector.log.call_args_list] == ["warning"]
+
+    storage.append(name, encode(b"c\n"))
+    assert await connector.get_azure_blob_data() == ["c"]
+    assert pushed_events(connector) == ["a", "b", "c"]
+
+
+@pytest.mark.asyncio
+async def test_azure_blob_too_long_last_line_is_skipped_once_settled(
+    connector: AzureBlobConnector, storage, monkeypatch
+):
+    """A too long last line without newline is skipped once the blob is no longer modified."""
+    monkeypatch.setattr(azure_blob, "MAX_LINE_SIZE", 100)
+    now = datetime.now(timezone.utc)
+    storage.write("logs.txt", b"a\n" + b"x" * 1000, modified_at=now)
+
+    assert await connector.get_azure_blob_data() == ["a"]
+    assert connector.get_blob_states()["logs.txt"]["offset"] == 2
+
+    storage.blobs["logs.txt"].last_modified = now - timedelta(minutes=10)
+    with connector.context as cache:
+        cache["last_event_date"] = now.isoformat()
+
+    assert await connector.get_azure_blob_data() == []
+    assert connector.get_blob_states()["logs.txt"]["offset"] == 1002
+
+    storage.append("logs.txt", b"\nb\n")
+    assert await connector.get_azure_blob_data() == ["b"]
 
 
 @pytest.mark.asyncio

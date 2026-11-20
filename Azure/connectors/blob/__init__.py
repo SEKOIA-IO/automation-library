@@ -24,7 +24,7 @@ from azure_helpers.storage import AzureBlobStorageConfig, AzureBlobStorageWrappe
 from connectors.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 # How long the reading state of a blob is kept after its last modification
-BLOB_STATE_RETENTION = timedelta(hours=6)
+BLOB_STATE_RETENTION = timedelta(days=7)
 
 
 class AzureBlobConnectorConfig(DefaultConnectorConfiguration):
@@ -158,21 +158,30 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
 
     def save_blob_states(self, states: dict[str, dict[str, Any]]) -> None:
         """
-        Save the reading state of blobs and forget the other blobs not modified for a long time.
+        Save the reading state of blobs.
 
         Args:
             states: dict[str, dict[str, Any]]
         """
+        with self.context as cache:
+            cache["blobs"] = {**(cache.get("blobs") or {}), **states}
+
+    def forget_old_blob_states(self, keep: set[str]) -> None:
+        """
+        Forget the reading state of the blobs not modified for BLOB_STATE_RETENTION, except the blobs in `keep`.
+
+        A blob appended after its state is forgotten is forwarded again from its start.
+
+        Args:
+            keep: set[str]
+        """
         oldest = datetime.now(timezone.utc) - BLOB_STATE_RETENTION
 
         with self.context as cache:
-            blobs = dict(cache.get("blobs") or {})
-            blobs.update(states)
-            # The states being saved are kept whatever their age: an old blob may still be read (after an outage)
             cache["blobs"] = {
                 name: state
-                for name, state in blobs.items()
-                if name in states or isoparse(state["last_modified"]) >= oldest
+                for name, state in (cache.get("blobs") or {}).items()
+                if name in keep or isoparse(state["last_modified"]) >= oldest
             }
 
     async def get_azure_blob_data(self) -> list[str]:
@@ -226,8 +235,7 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
                     await forward_records()
 
         # Push the remaining events
-        if records or states:
-            await forward_records()
+        await forward_records()
 
         with self.context as cache:
             logger.info(

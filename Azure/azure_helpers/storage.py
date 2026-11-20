@@ -1,6 +1,5 @@
 """Configs and wrapper to work with Azure Blob Storage."""
 
-import os
 from typing import Tuple
 
 import aiofiles
@@ -8,6 +7,7 @@ from azure.core.async_paging import AsyncItemPaged
 from azure.storage.blob import BlobProperties
 from azure.storage.blob.aio import ContainerClient
 from pydantic import BaseModel
+from sekoia_automation.aio.helpers.files.utils import delete_file
 
 
 class AzureBlobStorageConfig(BaseModel):
@@ -92,7 +92,7 @@ class AzureBlobStorageWrapper(object):
                     async for chunk in stream.chunks():
                         await file.write(chunk)
                 except BaseException:
-                    os.remove(file_name)
+                    await delete_file(file_name)
                     raise
 
                 return file_name, None
