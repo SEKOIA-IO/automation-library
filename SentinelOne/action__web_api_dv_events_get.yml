@@ -1,0 +1,408 @@
+uuid: 228f09e9-2adf-5eab-84b4-0c5cf99e4965
+slug: '_web_api_dv_events_get'
+name: Get Deep Visibility Events
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/dv/events'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        skip: '{{inputs.skip}}'
+        limit: '{{inputs.limit}}'
+        cursor: '{{inputs.cursor}}'
+        subQuery: '{{inputs.subQuery}}'
+        queryId: '{{inputs.queryId}}'
+        sortBy: '{{inputs.sortBy}}'
+        sortOrder: '{{inputs.sortOrder}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get all Deep Visibility events from a queryId. You can use this command
+  to send a sub-query, a new query to run on these events. Get the ID from "init-query".
+  See "Create Query and get QueryId". <br>For complete documentation, see Query Syntax
+  in the Knowledge Base (support.sentinelone.com) or the Console Help.
+inputs:
+  sortBy:
+    type: string
+    description: 'Events sorted by field. Example: "createdAt".'
+  queryId:
+    type: string
+    description: 'QueryId obtained when creating a query under Create Query. Example:
+      "q1xx2xx3".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  limit:
+    type: integer
+    description: 'Limit number of returned items (1-1000). Example: "10".'
+    default: 10
+  cursor:
+    type: string
+    description: Cursor position returned by the last request. Should be used instead
+      of skip. cursor currently supports sort by with createdAt, pid, processStartTime
+    default: null
+  sortOrder:
+    type: string
+    description: 'Event sorting order. Example: "asc".'
+    enum:
+    - asc
+    - desc
+    default: null
+  subQuery:
+    type: string
+    description: Create a sub query to run on the data that was already pulled
+  skip:
+    type: integer
+    description: 'Skip first number of items (0-1000). To iterate over more than 1000
+      items,  use "cursor". Example: "150".'
+    default: null
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      pagination:
+        type: object
+        properties:
+          nextCursor:
+            type: string
+            description: Pass this value as "cursor" on your next request, to get
+              the next page of results (Will be "null" when last page reached)
+            default: null
+          totalItems:
+            type: integer
+            description: Total number of items found matching your query
+        required:
+        - totalItems
+        description: Pagination information
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Id
+            objectType:
+              type: string
+              description: Object type
+            user:
+              type: string
+              description: User
+            createdAt:
+              type: string
+              description: Created at
+            processName:
+              type: string
+              description: Process name
+            agentName:
+              type: string
+              description: Agent name
+            agentDomain:
+              type: string
+              description: Agent domain
+            agentGroupId:
+              type: string
+              description: Agent group id
+            agentId:
+              type: string
+              description: Agent id
+            agentInfected:
+              type: boolean
+              description: Agent infected
+            agentIp:
+              type: string
+              description: Agent ip
+            agentIsActive:
+              type: boolean
+              description: Agent is active
+            agentIsDecommissioned:
+              type: boolean
+              description: Agent is decommissioned
+            agentMachineType:
+              type: string
+              description: Agent machine type
+            agentNetworkStatus:
+              type: string
+              description: Agent network status
+            agentOs:
+              type: string
+              description: OS type
+              enum:
+              - windows
+              - linux
+              - windows_legacy
+              - macos
+            agentVersion:
+              type: string
+              description: Agent version
+            agentUuid:
+              type: string
+              description: Agent uuid
+            siteName:
+              type: string
+              description: Site name
+            pid:
+              type: string
+              description: Pid
+            srcIp:
+              type: string
+              description: Src ip
+            srcPort:
+              type: integer
+              description: Src port
+            dstIp:
+              type: string
+              description: Dst ip
+            dstPort:
+              type: integer
+              description: Dst port
+            fileSha1:
+              type: string
+              description: File sha1
+            fileSha256:
+              type: string
+              description: File sha256
+            fileMd5:
+              type: string
+              description: File md5
+            oldFileSha1:
+              type: string
+              description: Old file sha1
+            oldFileSha256:
+              type: string
+              description: Old file sha256
+            oldFileMd5:
+              type: string
+              description: Old file md5
+            publisher:
+              type: string
+              description: Publisher
+            signatureSignedInvalidReason:
+              type: string
+              description: Signature signed invalid reason
+            signedStatus:
+              type: string
+              description: Signed status
+            verifiedStatus:
+              type: string
+              description: Verified status
+            sha1:
+              type: string
+              description: Sha1
+            sha256:
+              type: string
+              description: Sha256
+            md5:
+              type: string
+              description: Md5
+            fileFullName:
+              type: string
+              description: File full name
+            oldFileName:
+              type: string
+              description: Old file name
+            tid:
+              type: string
+              description: Tid
+            rpid:
+              type: string
+              description: Rpid
+            dnsRequest:
+              type: string
+              description: Dns request
+            dnsResponse:
+              type: string
+              description: Dns response
+            processCmd:
+              type: string
+              description: Process cmd
+            processGroupId:
+              type: string
+              description: Process group id
+            processImagePath:
+              type: string
+              description: Process image path
+            processUserName:
+              type: string
+              description: Process user name
+            processImageSha1Hash:
+              type: string
+              description: Process image sha1 hash
+            processIsMalicious:
+              type: boolean
+              description: Process is malicious
+            processUniqueKey:
+              type: string
+              description: Process unique key
+            processStartTime:
+              type: string
+              description: Process start time
+            processSubSystem:
+              type: string
+              description: Process sub system
+            processSessionId:
+              type: string
+              description: Process session id
+            processIntegrityLevel:
+              type: string
+              description: Process integrity level
+            processDisplayName:
+              type: string
+              description: Process display name
+            processIsWow64:
+              type: string
+              description: Process is wow64
+            processIsRedirectedCommandProcessor:
+              type: string
+              description: Process is redirected command processor
+            processRoot:
+              type: string
+              description: Process root
+            parentProcessGroupId:
+              type: string
+              description: Parent process group id
+            parentProcessIsMalicious:
+              type: boolean
+              description: Parent process is malicious
+            parentProcessName:
+              type: string
+              description: Parent process name
+            parentPid:
+              type: string
+              description: Parent pid
+            parentProcessStartTime:
+              type: string
+              description: Parent process start time
+            parentProcessUniqueKey:
+              type: string
+              description: Parent process unique key
+            networkMethod:
+              type: string
+              description: Network method
+            networkSource:
+              type: string
+              description: Network source
+            networkUrl:
+              type: string
+              description: Network url
+            direction:
+              type: string
+              description: Direction
+            eventType:
+              type: string
+              description: Event type
+            registryPath:
+              type: string
+              description: Registry path
+            registryId:
+              type: string
+              description: Registry id
+            taskName:
+              type: string
+              description: Task name
+            taskPath:
+              type: string
+              description: Task path
+            trueContext:
+              type: string
+              description: True context
+            fileId:
+              type: string
+              description: File id
+            relatedToThreat:
+              type: string
+              description: Related to threat
+            forensicUrl:
+              type: string
+              description: Forensic url
+            threatStatus:
+              type: string
+              description: Threat status
+            loginsUserName:
+              type: string
+              description: Logins user name
+            loginsBaseType:
+              type: string
+              description: Logins base type
+            indicatorCategory:
+              type: string
+              description: Indicator category
+            indicatorDescription:
+              type: string
+              description: Indicator description
+            indicatorMetadata:
+              type: string
+              description: Indicator metadata
+            indicatorName:
+              type: string
+              description: Indicator name
+            connectionStatus:
+              type: string
+              description: Connection status
+            fileSize:
+              type: string
+              description: File size
+            fileType:
+              type: string
+              description: File type
+            srcProcDownloadToken:
+              type: string
+              description: Src proc download token
+            isAgentVersionFullySupportedForPg:
+              type: boolean
+              description: Is agent version fully supported for pg
+            isAgentVersionFullySupportedForPgMessage:
+              type: string
+              description: Is agent version fully supported for pg message
+          required:
+          - agentDomain
+          - agentGroupId
+          - agentId
+          - agentInfected
+          - agentIp
+          - agentIsActive
+          - agentIsDecommissioned
+          - agentMachineType
+          - agentName
+          - agentNetworkStatus
+          - agentOs
+          - agentUuid
+          - agentVersion
+          - createdAt
+          - id
+          - objectType
+          - processName
+          - siteName
+          - user
+        description: Response data
+    required:
+    - pagination
+    description: Success

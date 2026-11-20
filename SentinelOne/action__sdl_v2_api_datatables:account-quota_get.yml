@@ -1,0 +1,91 @@
+uuid: 1035f61b-3759-58bc-9a29-04f2fed009ef
+slug: '_sdl_v2_api_datatables:account-quota_get'
+name: Get Datatables Account Quota
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/sdl/v2/api/datatables:account-quota'
+      headers:
+        x-request-id: '{{inputs.x_request_id}}'
+        S1-Scope: '{{inputs.S1_Scope}}'
+        Authorization: '{{inputs.api_token}}'
+    asserts:
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized. Authentication is required or the provided credentials
+          are invalid.
+      error_403:
+        predicate: '{{response.status_code != 403}}'
+        fail: Forbidden. Either the user does not have the Manage Datatables permission,
+          or the Datatables REST API has not been enabled for this account.
+      error_500:
+        predicate: '{{response.status_code != 500}}'
+        fail: Internal Server Error. An unexpected error occurred while processing
+          the request.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Returns the account's datatable storage, count quota, and the maximum
+  file upload size. Results reflects account-level limits rather than per-datatable
+  visibility.
+inputs:
+  x_request_id:
+    type: string
+    description: Optional caller-supplied trace id. When present, it is used as the
+      request's correlation id and is always included in the logged event attributes
+      for this request.
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  S1_Scope:
+    type: string
+    description: Optional scope override, of the form `<accountScopeId>:<siteScopeId>`
+      or just `<accountScopeId>`. Determines whether the operation applies at global,
+      account, or site scope.
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      fileUpload:
+        type: object
+        properties:
+          maxSizeBytes:
+            type: integer
+            description: Maximum size in bytes accepted for a single file upload.
+        description: Limits applied to individual file uploads.
+      datatables:
+        type: object
+        properties:
+          maxCount:
+            type: integer
+            description: Maximum number of datatables allowed for the account.
+          currentCount:
+            type: integer
+            description: Current number of datatables in the account.
+          maxStorageBytes:
+            type: integer
+            description: Maximum total datatable storage in bytes allowed for the
+              account.
+          currentStorageBytes:
+            type: integer
+            description: Current total datatable storage in bytes used by the account.
+        description: Account-wide datatable count and storage limits.
+    required:
+    - fileUpload
+    - datatables
+    description: Account-level datatable storage and count quota.

@@ -1,0 +1,61 @@
+uuid: 2f8fa786-392d-5020-85a9-a52b6f3a9d32
+slug: '_sdl_v2_api_queries_{id}_delete'
+name: Delete Queries By ID
+pipeline:
+- name: http
+stages:
+  http:
+    kind: http
+    properties:
+      method: DELETE
+      url: '{{inputs.hostname}}/sdl/v2/api/queries/{{inputs.id}}'
+      headers:
+        X-Dataset-Query-Forward-Tag: '{{inputs.X_Dataset_Query_Forward_Tag}}'
+        Authorization: '{{inputs.api_token}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Bad Request. Invalid query parameters.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized. Authentication is required or the provided credentials
+          are invalid.
+      error_403:
+        predicate: '{{response.status_code != 403}}'
+        fail: Forbidden. The authenticated user does not have permission to delete
+          this query.
+      error_404:
+        predicate: '{{response.status_code != 404}}'
+        fail: Not Found. No launched query found for the specified query id.
+      error_429:
+        predicate: '{{response.status_code != 429}}'
+        fail: Too Many Requests. Rate limit exceeded for this user, account, or IP
+          address.
+      error_500:
+        predicate: '{{response.status_code != 500}}'
+        fail: Internal Server Error. An unexpected error occurred while processing
+          the request.
+      success:
+        predicate: '{{response.status_code == 204}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+description: "Remove query from the list of launched queries. Clients are required\
+  \ to call this after their query is complete. Subsequent polls using specified token\
+  \ will return not found response. The `X-Dataset-Query-Forward-Tag` header value\
+  \ from the launch query response must be applied for routing. \nAuthorization is\
+  \ accomplished via a Bearer service token in the request header. Service tokens\
+  \ are not tied to a specific user. Learn more about service users here: https://community.sentinelone.com/s/article/000005290.\
+  \ \nDue to limitations, clicking \"Run on console\" may not work as expected"
+inputs:
+  X_Dataset_Query_Forward_Tag:
+    type: string
+    description: routing header
+  id:
+    type: string
+    description: The unique query identifier
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  hostname:
+    type: string
+    description: Base URL for the API

@@ -1,0 +1,84 @@
+uuid: 0b6f218c-a1e7-5774-b992-9aae9b9ccfea
+slug: '_sdl_v2_api_datatables_get'
+name: Get Datatables
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/sdl/v2/api/datatables'
+      headers:
+        x-request-id: '{{inputs.x_request_id}}'
+        S1-Scope: '{{inputs.S1_Scope}}'
+        Authorization: '{{inputs.api_token}}'
+    asserts:
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized. Authentication is required or the provided credentials
+          are invalid.
+      error_403:
+        predicate: '{{response.status_code != 403}}'
+        fail: Forbidden. Either the user does not have the View Datatables permission,
+          or the Datatables REST API has not been enabled for this account.
+      error_500:
+        predicate: '{{response.status_code != 500}}'
+        fail: Internal Server Error. An unexpected error occurred while processing
+          the request.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Lists metadata for all datatables visible to the current user and given
+  scope.
+inputs:
+  x_request_id:
+    type: string
+    description: Optional caller-supplied trace id. When present, it is used as the
+      request's correlation id and is always included in the logged event attributes
+      for this request.
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  S1_Scope:
+    type: string
+    description: Optional scope override, of the form `<accountScopeId>:<siteScopeId>`
+      or just `<accountScopeId>`. Determines whether the operation applies at global,
+      account, or site scope.
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: array
+    items:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the datatable.
+        description:
+          type: string
+          description: Description of the datatable.
+        sizeBytes:
+          type: integer
+          description: Size of the datatable content in bytes.
+        createdAt:
+          type: string
+          description: UTC timestamp when the datatable was created.
+        updatedAt:
+          type: string
+          description: UTC timestamp when the datatable was last updated.
+      required:
+      - id
+      - createdAt
+      description: Metadata for a datatable.
+    description: List of datatable metadata retrieved successfully.

@@ -1,0 +1,319 @@
+uuid: ea032538-0590-51b7-be74-4ed5aa68b1b2
+slug: '_web_api_cloud-detection_alerts_analyst-verdict_post'
+name: Create Cloud Detection Alerts Analyst Verdict
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/cloud-detection/alerts/analyst-verdict'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        data: '{{inputs.data}}'
+        filter: '{{inputs.filter}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Change the verdict of an alert
+inputs:
+  filter:
+    type: object
+    properties:
+      accountIds:
+        type: array
+        items:
+          type: string
+        description: List of Account IDs to filter by
+      siteIds:
+        type: array
+        items:
+          type: string
+        description: List of Site IDs to filter by
+      groupIds:
+        type: array
+        items:
+          type: string
+        description: List of Group IDs to filter by
+      tenant:
+        type: boolean
+        description: Indicates a tenant scope request
+      ids:
+        type: array
+        items:
+          type: string
+        description: A list of Alert IDs
+      scopes:
+        type: array
+        items:
+          type: string
+          enum:
+          - site
+          - account
+          - group
+          - global
+        description: Filter results by scope
+      createdAt__lt:
+        type: string
+        description: Created at lesser than.
+      createdAt__gt:
+        type: string
+        description: Created at greater than.
+      createdAt__lte:
+        type: string
+        description: Created at lesser or equal than.
+      createdAt__gte:
+        type: string
+        description: Created at greater or equal than.
+      reportedAt__lt:
+        type: string
+        description: Reported at lesser than.
+      reportedAt__gt:
+        type: string
+        description: Reported at greater than.
+      reportedAt__lte:
+        type: string
+        description: Reported at lesser or equal than.
+      reportedAt__gte:
+        type: string
+        description: Reported at greater or equal than.
+      incidentStatus:
+        type: array
+        items:
+          type: string
+          enum:
+          - UNRESOLVED
+          - IN_PROGRESS
+          - RESOLVED
+        description: Filter threats by a incident status
+      severity:
+        type: array
+        items:
+          type: string
+          enum:
+          - Info
+          - Low
+          - Medium
+          - High
+          - Critical
+        description: Severity
+      origAgentOsRevision__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by agent OS revision
+      origAgentVersion__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by agent OS version
+      origAgentUuid__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by agent UUID
+      origAgentName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by agent name
+      sourceProcessName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by source process name
+      ruleName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by rule name
+      sourceProcessStoryline__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by source storyline
+      sourceProcessStoryline__equals:
+        type: string
+        description: Filter by exact source storyline
+      sourceProcessCommandline__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by source commandline
+      sourceProcessFileHashSha1__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by source sha1
+      sourceProcessFileHashSha256__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by source sha255
+      sourceProcessFileHashMd5__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by source md5
+      sourceProcessFilePath__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by source file path
+      k8sCluster__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes cluster name (supports
+          multiple values)
+      k8sNode__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes node name (supports
+          multiple values)
+      k8sNamespaceName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes namespace name (supports
+          multiple values)
+      k8sNamespaceLabels__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes namespace labels
+          (supports multiple values)
+      k8sControllerName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes controller name (supports
+          multiple values)
+      k8sControllerLabels__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes controller labels
+          (supports multiple values)
+      k8sPod__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes pod name (supports
+          multiple values)
+      k8sPodLabels__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes pod labels (supports
+          multiple values)
+      containerName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint container name (supports multiple
+          values)
+      containerImageName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint container image name (supports
+          multiple values)
+      containerLabels__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint container labels (supports multiple
+          values)
+      query:
+        type: string
+        description: Full text search for all fields
+      analystVerdict:
+        type: array
+        items:
+          type: string
+          enum:
+          - UNDEFINED
+          - TRUE_POSITIVE
+          - FALSE_POSITIVE
+          - SUSPICIOUS
+        description: Filter threats by a analyst verdict
+      machineType:
+        type: array
+        items:
+          type: string
+        description: agent machine type
+      osType:
+        type: array
+        items:
+          type: string
+          description: OS type
+          enum:
+          - linux
+          - windows
+          - macos
+          - windows_legacy
+        description: Included OS types
+      limit:
+        type: integer
+        description: Limit
+    description: Filter
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  data:
+    type: object
+    properties:
+      analystVerdict:
+        type: string
+        description: Analyst verdict
+        enum:
+        - undefined
+        - UNDEFINED
+        - true_positive
+        - TRUE_POSITIVE
+        - false_positive
+        - FALSE_POSITIVE
+        - suspicious
+        - SUSPICIOUS
+    required:
+    - analystVerdict
+    description: Data
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          affected:
+            type: integer
+            description: Number of entities affected by the requested operation
+        description: Response data
+    description: Threats incident successfully updated

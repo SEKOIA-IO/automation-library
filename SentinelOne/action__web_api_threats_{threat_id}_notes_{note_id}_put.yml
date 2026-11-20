@@ -1,0 +1,91 @@
+uuid: fd452673-cbfe-5fc6-8a38-c68e0106f2d0
+slug: '_web_api_threats_{threat_id}_notes_{note_id}_put'
+name: Update Threats By Threat ID Notes By Note ID
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: PUT
+      url: '{{inputs.hostname}}/web/api/v2.1/threats/{{inputs.threat_id}}/notes/{{inputs.note_id}}'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        data: '{{inputs.data}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Change the text of a threat note.
+inputs:
+  note_id:
+    type: string
+    description: 'Threat Note ID. Example: "225494730938493804".'
+  data:
+    type: object
+    properties:
+      text:
+        type: string
+        description: Threat Note text
+    required:
+    - text
+    description: Data
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  threat_id:
+    type: string
+    description: 'Threat ID. Example: "225494730938493804".'
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          createdAt:
+            type: string
+            description: Timestamp of date creation
+          updatedAt:
+            type: string
+            description: Timestamp of last update
+          edited:
+            type: boolean
+            description: Identify if the the note changed
+          id:
+            type: string
+            description: Threat Note ID
+          text:
+            type: string
+            description: Threat Note text
+          creator:
+            type: string
+            description: Threat Note creator name
+          creatorId:
+            type: string
+            description: Threat Note creator id
+        description: Response data
+    description: Threat note successfully updated

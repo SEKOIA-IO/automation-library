@@ -1,0 +1,32 @@
+uuid: 0c010b34-85ba-540f-ba71-16c72680759d
+slug: '_web_api_threats_mitigation-report_{report_id}_get'
+name: Get Threats Mitigation Report By Report ID
+pipeline:
+- name: http
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/threats/mitigation-report/{{inputs.report_id}}'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+    asserts:
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+description: Export the mitigation report as a CSV file.
+inputs:
+  hostname:
+    type: string
+    description: Base URL for the API
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  report_id:
+    type: string
+    description: 'Mitigation report ID. Example: "225494730938493804".'

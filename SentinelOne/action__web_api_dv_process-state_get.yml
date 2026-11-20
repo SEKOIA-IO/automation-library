@@ -1,0 +1,68 @@
+uuid: 7c49aefd-0fd3-5655-9027-8e56211d3de9
+slug: '_web_api_dv_process-state_get'
+name: Get Deep Visibility Process State
+pipeline:
+- name: http
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/dv/process-state'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        skip: '{{inputs.skip}}'
+        limit: '{{inputs.limit}}'
+        cursor: '{{inputs.cursor}}'
+        queryId: '{{inputs.queryId}}'
+        sortBy: '{{inputs.sortBy}}'
+        sortOrder: '{{inputs.sortOrder}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{(response.status_code >= 200 and response.status_code <= 299)}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+description: Get details of all Deep Visibility processes from a queryId.To get the
+  ID from "init-query". See "Create Query and get QueryId".
+inputs:
+  sortBy:
+    type: string
+    description: 'Events sorted by field. Example: "SrcProcStartTime".'
+  queryId:
+    type: string
+    description: 'QueryId obtained when creating a query under Create Query. Example:
+      "q1xx2xx3".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  limit:
+    type: integer
+    description: 'Limit number of returned items (1-1000). Example: "10".'
+    default: 10
+  cursor:
+    type: string
+    description: 'Cursor position returned by the last request. Use to iterate over
+      more than 1000 items. Example: "YWdlbnRfaWQ6NTgwMjkzODE=".'
+    default: null
+  sortOrder:
+    type: string
+    description: 'Event sorting order. Example: "asc".'
+    enum:
+    - asc
+    - desc
+    default: null
+  skip:
+    type: integer
+    description: 'Skip first number of items (0-1000). To iterate over more than 1000
+      items,  use "cursor". Example: "150".'
+    default: null
+  hostname:
+    type: string
+    description: Base URL for the API

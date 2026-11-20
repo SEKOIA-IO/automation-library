@@ -1,0 +1,98 @@
+uuid: 07fe4e9d-c7a5-51d7-96d9-3866808a3059
+slug: '_web_api_users_auth_app_post'
+name: Create Users Auth App
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/users/auth/app'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        data: '{{inputs.data}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Authenticate a user with a third-party app, such as DUO or Google Authenticator,
+  for deployments that require Two Factor Authentication.
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  data:
+    type: object
+    properties:
+      code:
+        type: string
+        description: Code
+      rememberMe:
+        type: boolean
+        description: User should be remembered across sessions
+        default: null
+    description: Data
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          token:
+            type: string
+            description: Generated authentication token
+          status:
+            type: string
+            description: User verification status
+            enum:
+            - verified
+            - temporary
+            - pending
+            - incorrect
+            - expired
+            - no_permissions
+            - temporary_token_is_older_than_password
+            - too_many_sessions
+            - session_hijacking
+            - elevated_session_required
+            - elevated_session_setup_required
+            - two_fa_enrollment_expired
+            - two_fa_not_enrolled
+          twoFaMethod:
+            type: string
+            description: Two-factor authentication method (if enabled)
+            enum:
+            - sms
+            - application
+          csrf:
+            type: string
+            description: Generated csrf token
+        required:
+        - token
+        description: Response data
+    description: Authenticated

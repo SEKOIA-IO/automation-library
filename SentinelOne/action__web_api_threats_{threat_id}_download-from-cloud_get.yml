@@ -1,0 +1,59 @@
+uuid: 5915d3c1-59d4-5c28-9306-2db64bb14dc8
+slug: '_web_api_threats_{threat_id}_download-from-cloud_get'
+name: Get Threats By Threat ID Download From Cloud
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/threats/{{inputs.threat_id}}/download-from-cloud'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+    asserts:
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Download threat file from cloud.
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  threat_id:
+    type: string
+    description: 'Threat ID. Example: "225494730938493804".'
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          downloadUrl:
+            type: string
+            description: Threat file download URL
+          fileName:
+            type: string
+            description: Threat file name
+        description: Response data
+    description: Success

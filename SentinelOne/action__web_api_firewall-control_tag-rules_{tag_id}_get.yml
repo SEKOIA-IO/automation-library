@@ -1,0 +1,484 @@
+uuid: 9df556d0-6d21-5497-a61a-ded8fa340683
+slug: '_web_api_firewall-control_tag-rules_{tag_id}_get'
+name: Get Firewall Control Tag Rules By Tag ID
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/firewall-control/tag-rules/{{inputs.tag_id}}'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        skip: '{{inputs.skip}}'
+        limit: '{{inputs.limit}}'
+        cursor: '{{inputs.cursor}}'
+        countOnly: '{{inputs.countOnly}}'
+        skipCount: '{{inputs.skipCount}}'
+        sortBy: '{{inputs.sortBy}}'
+        sortOrder: '{{inputs.sortOrder}}'
+        accountIds: '{{inputs.accountIds}}'
+        siteIds: '{{inputs.siteIds}}'
+        groupIds: '{{inputs.groupIds}}'
+        tenant: '{{inputs.tenant}}'
+        query: '{{inputs.query}}'
+        scopes: '{{inputs.scopes}}'
+        applications: '{{inputs.applications}}'
+        name: '{{inputs.name}}'
+        protocols: '{{inputs.protocols}}'
+        osTypes: '{{inputs.osTypes}}'
+        directions: '{{inputs.directions}}'
+        actions: '{{inputs.actions}}'
+        statuses: '{{inputs.statuses}}'
+        createdAt__lt: '{{inputs.createdAt__lt}}'
+        createdAt__gt: '{{inputs.createdAt__gt}}'
+        createdAt__lte: '{{inputs.createdAt__lte}}'
+        createdAt__gte: '{{inputs.createdAt__gte}}'
+        createdAt__between: '{{inputs.createdAt__between}}'
+        ids: '{{inputs.ids}}'
+        locationIds: '{{inputs.locationIds}}'
+        tagIds: '{{inputs.tagIds}}'
+        name__contains: '{{inputs.name__contains}}'
+        tagName__contains: '{{inputs.tagName__contains}}'
+        application__contains: '{{inputs.application__contains}}'
+        protocol__contains: '{{inputs.protocol__contains}}'
+        service__contains: '{{inputs.service__contains}}'
+        disablePagination: '{{inputs.disablePagination}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get all Firewall rules linked to tag, regardless of inheritance mode.
+  <br>To get the ID of a tag, run the firewall-control API (see Get Firewall Rules)
+  and see tagIDs in the response.
+inputs:
+  service__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by service (supports multiple values)
+  cursor:
+    type: string
+    description: 'Cursor position returned by the last request. Use to iterate over
+      more than 1000 items. Example: "YWdlbnRfaWQ6NTgwMjkzODE=".'
+    default: null
+  sortOrder:
+    type: string
+    description: 'Sort direction. Example: "asc".'
+    enum:
+    - asc
+    - desc
+    default: null
+  createdAt__lt:
+    type: string
+    description: 'Return firewall rules created before this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  ids:
+    type: array
+    items:
+      type: string
+    description: 'List of ids to filter by. Example: "225494730938493804,225494730938493915".'
+  accountIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Account IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  osTypes:
+    type: array
+    items:
+      type: string
+      enum:
+      - windows
+      - linux
+      - windows_legacy
+      - macos
+    description: 'Return firewall rules with the filtered os_type. Example: "windows".'
+  query:
+    type: string
+    description: Free text search on name, tag, application, protocol
+  protocols:
+    type: array
+    items:
+      type: string
+    description: Return firewall rules with the filtered protocols.
+  application__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by application (supports multiple values)
+  tenant:
+    type: boolean
+    description: Indicates a tenant scope request
+  createdAt__between:
+    type: string
+    description: 'Return firewall rules created within this range (inclusive). Example:
+      "1514978764288-1514978999999".'
+  hostname:
+    type: string
+    description: Base URL for the API
+  createdAt__gt:
+    type: string
+    description: 'Return firewall rules created after this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  countOnly:
+    type: boolean
+    description: If true, only total number of items will be returned, without any
+      of the actual objects.
+    default: false
+  siteIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Site IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  scopes:
+    type: array
+    items:
+      type: string
+      enum:
+      - site
+      - group
+      - global
+      - account
+    description: 'Return only firewall rules in this scope. Example: "site".'
+  tag_id:
+    type: string
+    description: 'Rule ID. Example: "225494730938493804".'
+  statuses:
+    type: array
+    items:
+      type: string
+      enum:
+      - Enabled
+      - Disabled
+    description: 'Return firewall rules with the filtered status. Example: "Enabled".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  limit:
+    type: integer
+    description: 'Limit number of returned items (1-1000). Example: "10".'
+    default: 10
+  applications:
+    type: array
+    items:
+      type: string
+    description: Return firewall rules with the filtered firewall class.
+  actions:
+    type: array
+    items:
+      type: string
+      enum:
+      - Allow
+      - Block
+    description: 'Return firewall rules with the filtered action. Example: "Allow".'
+  name:
+    type: string
+    description: Return firewall rules with the filtered name.
+  createdAt__gte:
+    type: string
+    description: 'Return firewall rules created after or at this timestamp. Example:
+      "2018-02-27T04:49:26.257525Z".'
+  sortBy:
+    type: string
+    description: 'The column to sort the results by. Example: "id".'
+    enum:
+    - id
+    - name
+    - action
+    - status
+    - order
+    default: null
+  tagName__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the Tag name (supports multiple values)
+  disablePagination:
+    type: boolean
+    description: If true, all rules for requested scope will be returned
+  createdAt__lte:
+    type: string
+    description: 'Return firewall rules created before or at this timestamp. Example:
+      "2018-02-27T04:49:26.257525Z".'
+  skipCount:
+    type: boolean
+    description: If true, total number of items will not be calculated, which speeds
+      up execution time.
+    default: null
+  directions:
+    type: array
+    items:
+      type: string
+      enum:
+      - any
+      - inbound
+      - outbound
+    description: 'Return firewall rules with the filtered directions. Example: "any".'
+  protocol__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by protocol (supports multiple values)
+  skip:
+    type: integer
+    description: 'Skip first number of items (0-1000). To iterate over more than 1000
+      items,  use "cursor". Example: "150".'
+    default: null
+  name__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the Rule name (supports multiple values)
+  groupIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Group IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  tagIds:
+    type: array
+    items:
+      type: string
+    description: 'Filter by associated tags. Example: "225494730938493804,225494730938493915".'
+  locationIds:
+    type: array
+    items:
+      type: string
+    description: 'Filter by associated locations. Example: "225494730938493804,225494730938493915".'
+outputs:
+  result:
+    type: object
+    properties:
+      pagination:
+        type: object
+        properties:
+          nextCursor:
+            type: string
+            description: Pass this value as "cursor" on your next request, to get
+              the next page of results (Will be "null" when last page reached)
+            default: null
+          totalItems:
+            type: integer
+            description: Total number of items found matching your query
+        required:
+        - totalItems
+        description: Pagination information
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Rule ID
+            order:
+              type: integer
+              description: Position in the list of rules
+            direction:
+              type: string
+              description: Defines the Direction of the Firewall rule.
+              enum:
+              - any
+              - inbound
+              - outbound
+            osType:
+              type: string
+              description: '[DEPRECATED] Please use os_types since multiple os types
+                are supported.This field will return the first os_type, not necessarily
+                the only one.'
+              enum:
+              - windows
+              - linux
+              - windows_legacy
+              - macos
+            osTypes:
+              type: array
+              items:
+                type: string
+                description: List of the rule's os types
+                enum:
+                - windows
+                - linux
+                - windows_legacy
+                - macos
+              description: Os types
+            tag:
+              type: string
+              description: '[DEPRECATED] Free text to describe the rule. Please use
+                description instead.'
+            application:
+              type: string
+              description: Application for the rule
+            name:
+              type: string
+              description: The name of the firewall rule.
+            protocol:
+              type: string
+              description: The protocol.
+            productId:
+              type: string
+              description: Product identifier. Unique for a specific product module,
+                per vendor ID, Interface.
+            localHost:
+              type: string
+              description: Local host
+            localPort:
+              type: string
+              description: Local ports
+            remoteHost:
+              type: string
+              description: '[DEPRECATED] First remote host in the rule. Full list
+                in remote_hosts'
+            remoteHosts:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    description: Type of the host
+                    enum:
+                    - any
+                    - cidr
+                    - range
+                    - addresses
+                    - fqdn
+                  values:
+                    type: array
+                    items:
+                      type: string
+                    description: Value of the host
+              description: List of remote hosts
+            remotePort:
+              type: string
+              description: Remote ports
+            location:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: Location type
+                  enum:
+                  - all
+                  - specific
+                  - fallback
+                values:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Location ID
+                      name:
+                        type: string
+                        description: Location name
+                      scope:
+                        type: string
+                        description: Location scope
+                        enum:
+                        - site
+                        - group
+                        - global
+                        - account
+                    required:
+                    - id
+                  description: Location IDs (applicable for the "specific" location
+                    type only)
+              required:
+              - type
+              description: Location associated with the rule
+            action:
+              type: string
+              description: Defines if agent shall Block or Allow use of firewalls
+                which matches the rule parameters.
+              enum:
+              - Allow
+              - Block
+            status:
+              type: string
+              description: Defines if rule is Enabled or Disabled
+              enum:
+              - Enabled
+              - Disabled
+            scope:
+              type: string
+              description: Scope of the rule
+              enum:
+              - site
+              - group
+              - global
+              - account
+            scopeId:
+              type: string
+              description: The group or site id depending on the scope. null if it
+                is global.
+            editable:
+              type: boolean
+              description: True if the rule can be modified at this scope level
+            createdAt:
+              type: string
+              description: Date of rule creation
+            updatedAt:
+              type: string
+              description: Date of last update
+            creator:
+              type: string
+              description: Full name of the creating user
+            creatorId:
+              type: string
+              description: Id of the creating user
+            tags:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  id:
+                    type: string
+                description: List of tag IDs and names linked to this rule
+              description: Tags
+            tagIds:
+              type: array
+              items:
+                type: string
+                description: List of tag IDs this firewall rule is linked to
+              description: Tag ids
+            tagNames:
+              type: array
+              items:
+                type: string
+                description: List of tag names this firewall rule is linked to
+              description: Tag names
+            description:
+              type: string
+              description: Description
+            ruleCategory:
+              type: string
+              description: Network quarantine rule or standard firewall rule
+              enum:
+              - firewall
+              - network_quarantine
+        description: Response data
+    required:
+    - pagination
+    description: Success

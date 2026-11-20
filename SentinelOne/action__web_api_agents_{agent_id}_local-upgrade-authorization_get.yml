@@ -1,0 +1,59 @@
+uuid: a17a7251-3d9e-53ac-9279-084d101165a0
+slug: '_web_api_agents_{agent_id}_local-upgrade-authorization_get'
+name: Get Agents By Agent ID Local Upgrade Authorization
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/agents/{{inputs.agent_id}}/local-upgrade-authorization'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+    asserts:
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get the time when authorization of local upgrades/downgrades expires
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  agent_id:
+    type: string
+    description: 'Agent ID. Example: "225494730938493804".'
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          agentAuthorization:
+            type: string
+            description: Agent authorization
+          siteAuthorization:
+            type: string
+            description: Site authorization
+        description: Response data
+    description: Success

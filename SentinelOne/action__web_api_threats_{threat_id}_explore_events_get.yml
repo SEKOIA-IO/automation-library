@@ -1,0 +1,655 @@
+uuid: 107fa7f5-cb9c-50cc-9670-5b999af02522
+slug: '_web_api_threats_{threat_id}_explore_events_get'
+name: Get Threats By Threat ID Explore Events
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/threats/{{inputs.threat_id}}/explore/events'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        skip: '{{inputs.skip}}'
+        limit: '{{inputs.limit}}'
+        cursor: '{{inputs.cursor}}'
+        countOnly: '{{inputs.countOnly}}'
+        skipCount: '{{inputs.skipCount}}'
+        sortBy: '{{inputs.sortBy}}'
+        sortOrder: '{{inputs.sortOrder}}'
+        eventTypes: '{{inputs.eventTypes}}'
+        eventSubTypes: '{{inputs.eventSubTypes}}'
+        eventId: '{{inputs.eventId}}'
+        processName__like: '{{inputs.processName__like}}'
+        aiSessionId: '{{inputs.aiSessionId}}'
+        aiPromptId: '{{inputs.aiPromptId}}'
+        aiToolCallId: '{{inputs.aiToolCallId}}'
+        aiToolName: '{{inputs.aiToolName}}'
+        aiVerdict: '{{inputs.aiVerdict}}'
+        aiSkillIds: '{{inputs.aiSkillIds}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get all threat events.
+inputs:
+  cursor:
+    type: string
+    description: 'Cursor position returned by the last request. Use to iterate over
+      more than 1000 items. Example: "YWdlbnRfaWQ6NTgwMjkzODE=".'
+    default: null
+  sortOrder:
+    type: string
+    description: 'Sort direction. Example: "asc".'
+    enum:
+    - asc
+    - desc
+    default: null
+  hostname:
+    type: string
+    description: Base URL for the API
+  countOnly:
+    type: boolean
+    description: If true, only total number of items will be returned, without any
+      of the actual objects.
+    default: false
+  aiToolCallId:
+    type: string
+    description: Filter AI agent events by tool call ID (also includes its prompt)
+  threat_id:
+    type: string
+    description: 'Threat ID. Example: "225494730938493804".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  limit:
+    type: integer
+    description: 'Limit number of returned items (1-1000). Example: "10".'
+    default: 10
+  eventSubTypes:
+    type: array
+    items:
+      type: string
+      enum:
+      - PROCESSCREATION
+      - PROCESSTERMINATION
+      - PROCESSMODIFICATION
+      - TCPV4
+      - TCPV6
+      - TCPV4LISTEN
+      - TCPV6LISTEN
+      - FILEMODIFICATION
+      - FILESCAN
+      - FILECREATION
+      - FILEDELETION
+      - FILERENAME
+      - LOGIN
+      - LOGOUT
+      - HTTP
+      - DNS
+      - SCHEDTASKREGISTER
+      - SCHEDTASKSTART
+      - SCHEDTASKUPDATE
+      - SCHEDTASKTRIGGER
+      - SCHEDTASKDELETE
+      - REGKEYCREATE
+      - REGKEYRENAME
+      - REGKEYDELETE
+      - REGKEYEXPORT
+      - REGKEYSECURITYCHANGED
+      - REGKEYIMPORT
+      - REGVALUEMODIFIED
+      - REGVALUECREATE
+      - REGISTRYACTION
+      - BEHAVIORALINDICATORS
+      - MODULE
+      - AIAGENTSESSIONSTART
+      - AIAGENTSESSIONEND
+      - AIAGENTPROMPTSUBMIT
+      - AIAGENTPROMPTCOMPLETE
+      - AIAGENTTOOLCALLINVOKE
+      - AIAGENTTOOLCALLCOMPLETE
+      - AIAGENTSKILLLOADED
+      - AIAGENTTOOLCREATEDPROCESS
+    description: 'Filter events by sub-type. Example: "PROCESSCREATION".'
+  aiSkillIds:
+    type: array
+    items:
+      type: string
+    description: Filter AI agent events by skill ID, comma-separated (also includes
+      their session)
+  aiSessionId:
+    type: string
+    description: Filter AI agent events by session ID
+  aiVerdict:
+    type: string
+    description: Filter AI agent events by verdict
+  eventTypes:
+    type: array
+    items:
+      type: string
+      enum:
+      - events
+      - file
+      - ip
+      - url
+      - dns
+      - process
+      - registry
+      - scheduled_task
+      - logins
+      - indicators
+      - module
+      - ai_agent
+    description: 'Filter events by type. Example: "events".'
+  sortBy:
+    type: string
+    description: 'The column to sort the results by. Example: "id".'
+    enum:
+    - id
+    - createdAt
+    - eventType
+    - fileSize
+    - fileType
+    - registryPath
+    - registryId
+    - registryClassification
+    - pid
+    - processName
+    default: null
+  aiToolName:
+    type: string
+    description: Filter AI agent events by tool name
+  processName__like:
+    type: string
+    description: Filter by process name (substring)
+  skipCount:
+    type: boolean
+    description: If true, total number of items will not be calculated, which speeds
+      up execution time.
+    default: null
+  skip:
+    type: integer
+    description: 'Skip first number of items (0-1000). To iterate over more than 1000
+      items,  use "cursor". Example: "150".'
+    default: null
+  aiPromptId:
+    type: string
+    description: Filter AI agent events by prompt ID (also includes its session and
+      its loaded skills)
+  eventId:
+    type: string
+    description: Filter by a specific process key and its children
+outputs:
+  result:
+    type: object
+    properties:
+      pagination:
+        type: object
+        properties:
+          nextCursor:
+            type: string
+            description: Pass this value as "cursor" on your next request, to get
+              the next page of results (Will be "null" when last page reached)
+            default: null
+          totalItems:
+            type: integer
+            description: Total number of items found matching your query
+        required:
+        - totalItems
+        description: Pagination information
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Id
+            objectType:
+              type: string
+              description: Object type
+              enum:
+              - events
+              - file
+              - ip
+              - url
+              - dns
+              - process
+              - registry
+              - scheduled_task
+              - logins
+              - indicators
+              - module
+              - ai_agent
+            createdAt:
+              type: string
+              description: Created at
+            processName:
+              type: string
+              description: Process name
+            agentName:
+              type: string
+              description: Agent name
+            agentGroupId:
+              type: string
+              description: Agent group id
+            agentId:
+              type: string
+              description: Agent id
+            agentIsActive:
+              type: boolean
+              description: Agent is active
+            agentIsDecommissioned:
+              type: boolean
+              description: Agent is decommissioned
+            agentMachineType:
+              type: string
+              description: Agent machine type
+            agentNetworkStatus:
+              type: string
+              description: Agent network status
+            agentOs:
+              type: string
+              description: OS type
+              enum:
+              - windows
+              - linux
+              - windows_legacy
+              - macos
+            agentVersion:
+              type: string
+              description: Agent version
+            agentUuid:
+              type: string
+              description: Agent uuid
+            siteId:
+              type: string
+              description: Site id
+            siteName:
+              type: string
+              description: Site name
+            pid:
+              type: string
+              description: Pid
+            srcIp:
+              type: string
+              description: Src ip
+            srcPort:
+              type: integer
+              description: Src port
+            dstIp:
+              type: string
+              description: Dst ip
+            dstPort:
+              type: integer
+              description: Dst port
+            fileSha1:
+              type: string
+              description: File sha1
+            fileSha256:
+              type: string
+              description: File sha256
+            fileMd5:
+              type: string
+              description: File md5
+            oldFileSha1:
+              type: string
+              description: Old file sha1
+            oldFileSha256:
+              type: string
+              description: Old file sha256
+            oldFileMd5:
+              type: string
+              description: Old file md5
+            signatureSignedInvalidReason:
+              type: string
+              description: Signature signed invalid reason
+            verifiedStatus:
+              type: string
+              description: Verified status
+            signedStatus:
+              type: string
+              description: Signed status
+            sha256:
+              type: string
+              description: Sha256
+            sha1:
+              type: string
+              description: Sha1
+            md5:
+              type: string
+              description: Md5
+            fileFullName:
+              type: string
+              description: File full name
+            oldFileName:
+              type: string
+              description: Old file name
+            tid:
+              type: string
+              description: Tid
+            rpid:
+              type: string
+              description: Rpid
+            dnsRequest:
+              type: string
+              description: Dns request
+            dnsResponse:
+              type: string
+              description: Dns response
+            processCmd:
+              type: string
+              description: Process cmd
+            processGroupId:
+              type: string
+              description: Process group id
+            processImagePath:
+              type: string
+              description: Process image path
+            processUserName:
+              type: string
+              description: Process user name
+            processImageSha1Hash:
+              type: string
+              description: Process image sha1 hash
+            processUniqueKey:
+              type: string
+              description: Process unique key
+            processStartTime:
+              type: string
+              description: Process start time
+            processSubSystem:
+              type: string
+              description: Process sub system
+            processSessionId:
+              type: string
+              description: Process session id
+            processIntegrityLevel:
+              type: string
+              description: Process integrity level
+            processDisplayName:
+              type: string
+              description: Process display name
+            processIsWow64:
+              type: string
+              description: Process is wow64
+            processIsRedirectedCommandProcessor:
+              type: string
+              description: Process is redirected command processor
+            processRoot:
+              type: string
+              description: Process root
+            parentProcessName:
+              type: string
+              description: Parent process name
+            parentPid:
+              type: string
+              description: Parent pid
+            parentProcessUniqueKey:
+              type: string
+              description: Parent process unique key
+            networkSource:
+              type: string
+              description: Network source
+            networkUrl:
+              type: string
+              description: Network url
+            networkMethod:
+              type: string
+              description: Network method
+            direction:
+              type: string
+              description: Direction
+            eventType:
+              type: string
+              description: Event type
+            registryPath:
+              type: string
+              description: Registry path
+            registryId:
+              type: string
+              description: Registry id
+            registryClassification:
+              type: string
+              description: Registry classification
+            taskName:
+              type: string
+              description: Task name
+            taskPath:
+              type: string
+              description: Task path
+            trueContext:
+              type: string
+              description: '[DEPRECATED] Use "storyline" instead'
+            storyline:
+              type: string
+              description: Storyline
+            fileId:
+              type: string
+              description: File id
+            loginsUserName:
+              type: string
+              description: Logins user name
+            loginsBaseType:
+              type: string
+              description: Logins base type
+            indicatorCategory:
+              type: string
+              description: Indicator category
+            indicatorDescription:
+              type: string
+              description: Indicator description
+            indicatorMetadata:
+              type: string
+              description: Indicator metadata
+            indicatorName:
+              type: string
+              description: Indicator name
+            connectionStatus:
+              type: string
+              description: Connection status
+            publisher:
+              type: string
+              description: Publisher
+            agentInfected:
+              type: boolean
+              description: Agent infected
+            agentDomain:
+              type: string
+              description: Agent domain
+            agentIp:
+              type: string
+              description: Agent ip
+            user:
+              type: string
+              description: User
+            relatedToThreat:
+              type: boolean
+              description: Related to threat
+            threatStatus:
+              type: string
+              description: Threat status
+            protocol:
+              type: string
+              description: Protocol
+            hasActiveContent:
+              type: boolean
+              description: Has active content
+            activeContentFileId:
+              type: string
+              description: Active content file id
+            activeContentPath:
+              type: string
+              description: Active content path
+            activeContentHash:
+              type: string
+              description: Active content hash
+            aiSessionId:
+              type: string
+              description: Ai session id
+            aiPromptId:
+              type: string
+              description: Ai prompt id
+            aiToolCallId:
+              type: string
+              description: Ai tool call id
+            aiSkillId:
+              type: string
+              description: Ai skill id
+            aiAgentName:
+              type: string
+              description: Ai agent name
+            aiAgentVersion:
+              type: string
+              description: Ai agent version
+            aiUserName:
+              type: string
+              description: Ai user name
+            aiTitle:
+              type: string
+              description: Ai title
+            aiRole:
+              type: string
+              description: Ai role
+            aiWorkingDirectory:
+              type: string
+              description: Ai working directory
+            aiTranscriptPath:
+              type: string
+              description: Ai transcript path
+            aiStartReason:
+              type: string
+              description: Ai start reason
+            aiPermissionMode:
+              type: string
+              description: Ai permission mode
+            aiEndReason:
+              type: string
+              description: Ai end reason
+            aiPromptText:
+              type: string
+              description: Ai prompt text
+            aiResponseText:
+              type: string
+              description: Ai response text
+            aiStatus:
+              type: string
+              description: Ai status
+            aiToolType:
+              type: string
+              description: Ai tool type
+            aiToolName:
+              type: string
+              description: Ai tool name
+            aiMcpServerName:
+              type: string
+              description: Ai mcp server name
+            aiArgumentsJson:
+              type: string
+              description: Ai arguments json
+            aiResultJson:
+              type: string
+              description: Ai result json
+            aiNativeCallId:
+              type: string
+              description: Ai native call id
+            aiTargetReadPaths:
+              type: string
+              description: Ai target read paths
+            aiTargetWritePaths:
+              type: string
+              description: Ai target write paths
+            aiSkillName:
+              type: string
+              description: Ai skill name
+            aiSkillPath:
+              type: string
+              description: Ai skill path
+            aiSkillHash:
+              type: string
+              description: Ai skill hash
+            aiScriptPaths:
+              type: string
+              description: Ai script paths
+            aiVerdict:
+              type: string
+              description: Ai verdict
+            aiAction:
+              type: string
+              description: Ai action
+            aiFindingCategories:
+              type: string
+              description: Ai finding categories
+            aiFindingNames:
+              type: string
+              description: Ai finding names
+            aiFindingScores:
+              type: string
+              description: Ai finding scores
+            aiFindingDetails:
+              type: string
+              description: Ai finding details
+            aiTruncated:
+              type: boolean
+              description: Ai truncated
+            processIsMalicious:
+              type: boolean
+              description: Process is malicious
+            parentProcessGroupId:
+              type: string
+              description: Parent process group id
+            parentProcessIsMalicious:
+              type: boolean
+              description: Parent process is malicious
+            fileSize:
+              type: string
+              description: File size
+            fileType:
+              type: string
+              description: File type
+          required:
+          - agentDomain
+          - agentGroupId
+          - agentId
+          - agentInfected
+          - agentIp
+          - agentIsActive
+          - agentIsDecommissioned
+          - agentMachineType
+          - agentName
+          - agentNetworkStatus
+          - agentOs
+          - agentUuid
+          - agentVersion
+          - createdAt
+          - id
+          - objectType
+          - processName
+          - siteId
+          - siteName
+        description: Response data
+    required:
+    - pagination
+    description: Success

@@ -1,0 +1,67 @@
+uuid: 55df1323-5d0f-5bca-add9-71fc66f0bd5b
+slug: '_web_api_users_api-token-details_post'
+name: Create Users API Token Details
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/users/api-token-details'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        data: '{{inputs.data}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get details of the API token that matches the filter.
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  data:
+    type: object
+    properties:
+      apiToken:
+        type: string
+        description: Api token
+    required:
+    - apiToken
+    description: Data
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          createdAt:
+            type: string
+            description: Created at
+          expiresAt:
+            type: string
+            description: Expires at
+        description: Response data
+    description: Success

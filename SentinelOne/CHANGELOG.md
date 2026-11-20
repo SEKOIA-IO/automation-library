@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-17 - 1.23.5
+
+### Added
+
+- Add HWL actions
+
 ## 2026-09-30 - 1.23.4
 
 ### Fixed

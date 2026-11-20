@@ -1,0 +1,122 @@
+uuid: 2de24235-cd5e-580d-9aaf-61262a51de76
+slug: '_sdl_v2_api_queries_{id}_get'
+name: Get Queries By ID
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/sdl/v2/api/queries/{{inputs.id}}'
+      headers:
+        X-Dataset-Query-Forward-Tag: '{{inputs.X_Dataset_Query_Forward_Tag}}'
+        Authorization: '{{inputs.api_token}}'
+      params:
+        lastStepSeen: '{{inputs.lastStepSeen}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Bad Request. Invalid query parameters.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized. Authentication is required or the provided credentials
+          are invalid.
+      error_403:
+        predicate: '{{response.status_code != 403}}'
+        fail: Forbidden. The authenticated user does not have permission to access
+          this query.
+      error_404:
+        predicate: '{{response.status_code != 404}}'
+        fail: Not Found. No launched query found for the combination of query id +
+          current account.
+      error_429:
+        predicate: '{{response.status_code != 429}}'
+        fail: Too Many Requests. Rate limit exceeded for this user, account, or IP
+          address.
+      error_500:
+        predicate: '{{response.status_code != 500}}'
+        fail: Internal Server Error. An unexpected error occurred while processing
+          the request.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: "Poll a previously launched query by its unique identifier. Responses\
+  \ will return a `QueryResult`. If the query has not yet completed, the `data` field\
+  \ will be null. Once the query completes, `data` will contain the full result set\
+  \ (up to configured limits). It is recommended to poll every second; queries expire\
+  \ after the configured TTL (default 30 seconds). The `X-Dataset-Query-Forward-Tag`\
+  \ header value from the launch query response must be applied for routing. \nAuthorization\
+  \ is accomplished via a Bearer service token in the request header. Service tokens\
+  \ are not tied to a specific user. Learn more about service users here: https://community.sentinelone.com/s/article/000005290.\
+  \ \nDue to limitations, clicking \"Run on console\" may not work as expected"
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  lastStepSeen:
+    type: integer
+    description: The step to start return result from
+  X_Dataset_Query_Forward_Tag:
+    type: string
+    description: routing header
+  id:
+    type: string
+    description: The unique query identifier
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      id:
+        type: string
+        description: The unique query identifier. Used in Poll requests to fetch query
+          status and results.
+      stepsCompleted:
+        type: integer
+        description: Number of steps completed in this long running query.
+      stepsTotal:
+        type: integer
+        description: Total number of steps to execute.
+      resolvedTimeRange:
+        type: object
+        properties:
+          end:
+            type: integer
+          start:
+            type: integer
+        description: Start time and end time for the query in nanoseconds.
+      data:
+        type: object
+        description: 'Data object containing results of the query.
+
+
+          Note that `PQ` queries may return either `PlotResultData` or `TableResultData`
+          depending on the `resultType` specified in the request.'
+      cpuUsage:
+        type: integer
+        description: cost of the query execution measured in CPU usage in nanoseconds
+      error:
+        type: object
+        properties:
+          message:
+            type: string
+            description: Basic error message
+          details:
+            type: object
+            description: Additional error details
+        description: Error if the query was not executed. If not null, will always
+          have `message` key which will provide the basic error message and an optional
+          `details` field providing further information. If the query execution was
+          successful, the error field will be null.
+    description: Provides information about current query status and results.

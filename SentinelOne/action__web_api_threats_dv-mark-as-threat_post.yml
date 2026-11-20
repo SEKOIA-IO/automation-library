@@ -1,0 +1,106 @@
+uuid: 008f1c4a-f7e1-5cd3-8025-4e4139155aaa
+slug: '_web_api_threats_dv-mark-as-threat_post'
+name: Create Threats Deep Visibility Mark As Threat
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/threats/dv-mark-as-threat'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        data: '{{inputs.data}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Mark an event from Deep Visibility data as a threat. (see Deep Visibility
+  > Get Events).Your role must have permissions to Mark as Threat - Admin, IR Team,
+  SOC. The item becomes marked as a threat and the Management adds it to the blocklist.
+  If this threat is detected on an endpoint, the Agent blocks it immediately.
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  data:
+    type: object
+    properties:
+      events:
+        type: array
+        items:
+          type: object
+          properties:
+            storyline:
+              type: string
+              description: Storyline of the marked event
+            agentId:
+              type: string
+              description: Id if an agent that reported the DV event. Is preceded
+                by agent_uuid.
+            agentUuid:
+              type: string
+              description: Uuid if an agent that reported the DV event. Takes precedence
+                over agent_id.
+          required:
+          - storyline
+        description: List of DV events with their agents
+      status:
+        type: string
+        description: Desired status to mark the events with
+        enum:
+        - threat
+        - suspicious
+      initiatedBy:
+        type: string
+        description: Initiated by
+        enum:
+        - dvManual
+        - starActive
+        - starManual
+        - other
+        - cloudDetection
+        - threatIntelligence
+        - watchtowerCloudDetection
+        - informationalAlertMitigation
+        default: other
+    required:
+    - events
+    - status
+    description: Data
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          affected:
+            type: integer
+            description: Number of entities affected by the requested operation
+        description: Response data
+    description: Success

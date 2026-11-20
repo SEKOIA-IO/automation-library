@@ -1,0 +1,112 @@
+uuid: 844cfd0e-97c5-5497-8773-7332a12c580d
+slug: '_web_api_users_login_post'
+name: Create Users Login
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/users/login'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        username: '{{inputs.username}}'
+        password: '{{inputs.password}}'
+        rememberMe: '{{inputs.rememberMe}}'
+    asserts:
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Login failed. May be the result of bad credentials, or a wrong authentication
+          method if SSO or 2FA is required. A temporary token might be provided to
+          do the required next step. The error code defines the cause and the next
+          step. <br>Basic error codes:<ul><li>4010010 - authentication failed,</li><li>4010040
+          - generic login error.</li></ul>Error codes related to password changes
+          and expiration:<ul><li>4010091 - user must change password - /users/login/set-password,</li><li>4010092
+          - password expired - /users/login/set-password,</li><li>4010093 - password
+          expires soon - /users/login-continue.</li></ul>Error codes related to LDAP
+          (Active Directory):<ul><li>4010050 - generic LDAP error,</li><li>4010060
+          - user has no email,</li><li>4010070 - user is disabled.</li></ul>Error
+          codes related to 2FA:<ul><li>4010035 - 2FA configuration - /users/request-app,</li><li>4010030
+          - 2FA required - /users/auth/app,</li><li>4010031 - 2FA not enrolled,</li><li>4010032
+          - 2FA enrollment expired.</li></ul>
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: 'Authenticate a user by username and password and return an authentication
+  token. Rate limit: 1 call per second for each different IP address that communicates
+  with the Console.'
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  rememberMe:
+    type: boolean
+    description: User should be remembered across sessions
+    default: null
+  password:
+    type: string
+    description: Your password
+  username:
+    type: string
+    description: The user email
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          token:
+            type: string
+            description: Generated authentication token
+          status:
+            type: string
+            description: User verification status
+            enum:
+            - verified
+            - temporary
+            - pending
+            - incorrect
+            - expired
+            - no_permissions
+            - temporary_token_is_older_than_password
+            - too_many_sessions
+            - session_hijacking
+            - elevated_session_required
+            - elevated_session_setup_required
+            - two_fa_enrollment_expired
+            - two_fa_not_enrolled
+          twoFaMethod:
+            type: string
+            description: Two-factor authentication method (if enabled)
+            enum:
+            - sms
+            - application
+          csrf:
+            type: string
+            description: Generated csrf token
+        required:
+        - token
+        description: Response data
+    description: User authenticated successfully.
