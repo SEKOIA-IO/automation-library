@@ -1,0 +1,164 @@
+{
+  "name": "List messages in a folder",
+  "description": "List messages in a folder using Microsoft Graph.",
+  "uuid": "81848aa0-481f-53b4-aca3-0105470d0a52",
+  "slug": "list_messages",
+  "docker_parameters": "action_list_messages",
+  "arguments": {
+    "additionalProperties": false,
+    "properties": {
+      "user": {
+        "title": "User",
+        "type": "string"
+      },
+      "folder": {
+        "default": "inbox",
+        "title": "Folder",
+        "type": "string",
+        "description": "Graph folder ID or well-known name (inbox, junkemail, deleteditems)."
+      },
+      "subject_filter": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Subject Filter"
+      },
+      "sender_filter": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Sender Filter"
+      },
+      "email_message_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Email Message Id",
+        "description": "Internet Message-ID, with or without angle brackets."
+      },
+      "timeframe_minutes": {
+        "anyOf": [
+          {
+            "minimum": 1,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Timeframe Minutes"
+      },
+      "max_messages_to_return": {
+        "default": 25,
+        "maximum": 100,
+        "minimum": 1,
+        "title": "Max Messages To Return",
+        "type": "integer"
+      },
+      "only_unread": {
+        "default": false,
+        "title": "Only Unread",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "user"
+    ],
+    "title": "ListMessagesArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "error_details": {
+        "type": "array",
+        "description": "Safe structured errors. retryable refers to retrying the whole action; it is false after a modifying request.",
+        "items": {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "retryable",
+            "outcome_unknown"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "outcome_unknown": {
+              "type": "boolean"
+            },
+            "http_status": {
+              "type": "integer"
+            },
+            "diagnostic_reference": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "folder_id": {
+        "type": "string"
+      },
+      "folder_name": {
+        "type": "string"
+      },
+      "has_more": {
+        "type": "boolean"
+      },
+      "message_ids": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "messages": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "outcome": {
+        "type": "string",
+        "enum": [
+          "succeeded",
+          "partial",
+          "failed",
+          "unknown"
+        ],
+        "description": "Overall action outcome. Partial, failed and unknown outcomes also flag an SDK action error; inspect retained results before retrying."
+      },
+      "returned_count": {
+        "type": "integer"
+      },
+      "user": {
+        "type": "string"
+      }
+    }
+  }
+}

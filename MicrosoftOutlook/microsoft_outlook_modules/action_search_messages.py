@@ -3,6 +3,9 @@ from typing import Any, cast
 from pydantic import BaseModel, ConfigDict, Field
 
 from .action_base import GraphAPIError, MicrosoftGraphActionBase
+from .errors import ActionInputError, IncompleteResultsError, describe_error
+from .graph import MailGraph
+from .message_ids import graph_message_id
 
 
 class SearchMessagesArguments(BaseModel):
@@ -53,7 +56,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
         escaped_property = self._escape_odata_literal(self.NETWORK_MESSAGE_ID_EXTENDED_PROPERTY)
         initial_params: dict[str, Any] = {
             "$top": max(max_messages_to_return, self.FALLBACK_PAGE_SIZE),
-            "$select": "id,internetMessageId,subject,receivedDateTime,from,toRecipients",
+            "$select": "id,internetMessageId,parentFolderId,subject,receivedDateTime,from,toRecipients",
         }
 
         if network_message_id:
@@ -73,6 +76,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
             and len(matched_messages) < max_messages_to_return
             and scanned_messages < self.FALLBACK_MAX_MESSAGES_SCANNED
         ):
+            MailGraph.check_url(next_url)
             response = self.client.get(next_url, params=params, timeout=60)
             self.handle_response(response)
 
@@ -118,22 +122,29 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
             "scan_limit_reached": scan_limit_reached,
         }
 
+    def _complete_search(self, result: dict[str, Any]) -> dict[str, Any]:
+        if result["scan_limit_reached"]:
+            return self.report_item_errors(result, [describe_error(IncompleteResultsError())], "partial")
+        return result
+
     def run(self, arguments: Any) -> Any:
         """Execute the search messages action and return normalized results."""
 
         validated_arguments = SearchMessagesArguments.model_validate(arguments)
         user_id_or_principal_name = validated_arguments.user
-        internet_message_id = validated_arguments.email_message_id or None
-        network_message_id = validated_arguments.email_local_id or None
+        internet_message_id = None
+        raw_internet_id = (validated_arguments.email_message_id or "").strip()
+        if raw_internet_id:
+            internet_message_id = graph_message_id(raw_internet_id)
+        network_message_id = (validated_arguments.email_local_id or "").strip() or None
         max_messages_to_return = validated_arguments.max_messages_to_return
         return_most_recent_first = validated_arguments.return_most_recent_first
 
         if not internet_message_id and not network_message_id:
-            self.log(
-                message=(f"Detected invalid search message arguments user={user_id_or_principal_name!r}"),
-                level="error",
+            raise ActionInputError(
+                "Either email_message_id or email_local_id must be provided. "
+                "To find messages without an identifier, use List messages in a folder."
             )
-            raise ValueError("Either email_message_id or email_local_id must be provided")
 
         if internet_message_id and network_message_id:
             query_type = "combined"
@@ -180,7 +191,7 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
         params: dict[str, Any] = {
             "$filter": " and ".join(filters),
             "$top": max_messages_to_return,
-            "$select": "id,internetMessageId,subject,receivedDateTime,from,toRecipients",
+            "$select": "id,internetMessageId,parentFolderId,subject,receivedDateTime,from,toRecipients",
         }
 
         if return_most_recent_first:
@@ -272,17 +283,19 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
                 ),
                 level="debug",
             )
-            return {
-                "user": user_id_or_principal_name,
-                "query_type": query_type,
-                "query_value": query_value,
-                "message_ids": [],
-                "messages": [],
-                "total_results": 0,
-                "returned_count": 0,
-                "has_more": has_more,
-                "scan_limit_reached": scan_limit_reached,
-            }
+            return self._complete_search(
+                {
+                    "user": user_id_or_principal_name,
+                    "query_type": query_type,
+                    "query_value": query_value,
+                    "message_ids": [],
+                    "messages": [],
+                    "total_results": 0,
+                    "returned_count": 0,
+                    "has_more": has_more,
+                    "scan_limit_reached": scan_limit_reached,
+                }
+            )
 
         self.log(
             message=(
@@ -296,14 +309,16 @@ class SearchMessagesAction(MicrosoftGraphActionBase):
             ),
             level="debug",
         )
-        return {
-            "user": user_id_or_principal_name,
-            "query_type": query_type,
-            "query_value": query_value,
-            "message_ids": message_ids,
-            "messages": normalized_messages,
-            "total_results": total_results,
-            "returned_count": total_results,
-            "has_more": has_more,
-            "scan_limit_reached": scan_limit_reached,
-        }
+        return self._complete_search(
+            {
+                "user": user_id_or_principal_name,
+                "query_type": query_type,
+                "query_value": query_value,
+                "message_ids": message_ids,
+                "messages": normalized_messages,
+                "total_results": total_results,
+                "returned_count": total_results,
+                "has_more": has_more,
+                "scan_limit_reached": scan_limit_reached,
+            }
+        )

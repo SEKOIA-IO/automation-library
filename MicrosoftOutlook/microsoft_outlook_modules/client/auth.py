@@ -60,7 +60,7 @@ class GraphApiAuthentication(AuthBase):
                 "grant_type": "client_credentials",
             }
 
-            response = self.__http_session.get(url, data=body)
+            response = self.__http_session.post(url, data=body, timeout=(10, 30))
             response.raise_for_status()
 
             credentials = MicrosoftDefenderCredentials()

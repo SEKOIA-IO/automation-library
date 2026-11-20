@@ -17,7 +17,7 @@ from microsoft_outlook_modules.action_get_message import GetMessageAction
 def test_get_message(configured_action, get_message_1, message_id_input):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -50,7 +50,7 @@ def test_get_message_rejects_invalid_message_id_values(configured_action, invali
 def test_get_message_keeps_non_dict_payload_unchanged(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -72,7 +72,7 @@ def test_get_message_keeps_non_dict_payload_unchanged(configured_action):
 def test_get_message_message_id_falls_back_to_input_message_id(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",

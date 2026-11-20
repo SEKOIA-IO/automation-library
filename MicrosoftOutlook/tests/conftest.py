@@ -136,3 +136,6 @@ def message_2():
         "replyTo": [],
         "flag": {"flagStatus": "notFlagged"},
     }
+
+
+pytest_plugins = ["tests.phishing_fixtures"]

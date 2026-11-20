@@ -12,11 +12,12 @@
     ],
     "properties": {
       "message_id": {
-        "description": "The Microsoft Graph message item ID, or a message object containing message_id",
+        "description": "Full Microsoft Graph item ID of the target message in the mailbox specified by User. Use message_id returned by Search messages or List messages in a folder for this mailbox. Copy the complete value (often starting with AAMk or AAk); do not use email.message_id or an Internet Message-ID such as <...@...>. A message object containing message_id is also accepted.",
         "type": [
           "string",
           "object"
-        ]
+        ],
+        "title": "Graph Message ID"
       },
       "user": {
         "description": "The user identifier or user principal name (UPN)",
@@ -28,6 +29,39 @@
     "title": "GetMessageResults",
     "type": "object",
     "properties": {
+      "error_details": {
+        "type": "array",
+        "description": "Safe structured errors. retryable refers to retrying the whole action; it is false after a modifying request.",
+        "items": {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "retryable",
+            "outcome_unknown"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "outcome_unknown": {
+              "type": "boolean"
+            },
+            "http_status": {
+              "type": "integer"
+            },
+            "diagnostic_reference": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "from": {
         "description": "The sender information",
         "type": "object"
@@ -39,6 +73,20 @@
       "message_id": {
         "description": "The Microsoft Graph message item ID",
         "type": "string"
+      },
+      "outcome": {
+        "type": "string",
+        "enum": [
+          "succeeded",
+          "partial",
+          "failed",
+          "unknown"
+        ],
+        "description": "Overall action outcome. Partial, failed and unknown outcomes also flag an SDK action error; inspect retained results before retrying."
+      },
+      "parent_folder_id": {
+        "type": "string",
+        "description": "The Graph parent folder ID at retrieval time."
       },
       "received_date_time": {
         "description": "The message reception timestamp",

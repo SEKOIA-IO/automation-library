@@ -15,6 +15,8 @@ class DeleteMessageArguments(BaseModel):
 
 
 class DeleteMessageAction(MicrosoftGraphActionBase):
+    may_modify_data = True
+
     def run(self, arguments: Any) -> Any:
         """Execute the delete message action and return action metadata."""
 

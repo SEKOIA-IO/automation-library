@@ -4,7 +4,6 @@ import pytest
 import requests_mock
 
 from microsoft_outlook_modules import MicrosoftOutlookModule
-from microsoft_outlook_modules.action_base import GraphAPIError
 from microsoft_outlook_modules.action_search_messages import SearchMessagesAction
 from microsoft_outlook_modules.client import ApiClient
 
@@ -12,7 +11,7 @@ from microsoft_outlook_modules.client import ApiClient
 def test_search_messages_by_internet_message_id(configured_action, get_message_1):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -53,7 +52,7 @@ def test_search_messages_by_internet_message_id(configured_action, get_message_1
 def test_search_messages_return_most_recent_first_adds_orderby(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -159,7 +158,7 @@ def test_search_messages_by_network_message_id(configured_action, get_message_1)
 
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -213,7 +212,7 @@ def test_search_messages_with_combined_identifiers(configured_action, get_messag
 
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -245,11 +244,9 @@ def test_search_messages_with_combined_identifiers(configured_action, get_messag
 
 def test_search_messages_validation_error(configured_action):
     action = configured_action(SearchMessagesAction)
-    try:
-        action.run(arguments={"user": "1111"})
-        raise AssertionError("Expected ValueError")
-    except ValueError as exc:
-        assert "Either email_message_id or email_local_id" in str(exc)
+    result = action.run(arguments={"user": "1111"})
+    assert result["outcome"] == "failed"
+    assert "Either email_message_id or email_local_id" in action.error_message
 
 
 @pytest.mark.parametrize(
@@ -264,14 +261,16 @@ def test_search_messages_max_messages_to_return_range_validation_error(
 ):
     action = configured_action(SearchMessagesAction)
 
-    with pytest.raises(ValueError, match=expected_match):
-        action.run(
-            arguments={
-                "user": "1111",
-                "email_message_id": "<sample-message-id@example.com>",
-                "max_messages_to_return": max_messages_to_return,
-            }
-        )
+    result = action.run(
+        arguments={
+            "user": "1111",
+            "email_message_id": "<sample-message-id@example.com>",
+            "max_messages_to_return": max_messages_to_return,
+        }
+    )
+    assert result["outcome"] == "failed"
+    assert action.error_message
+    assert expected_match in action.error_message
 
 
 @pytest.mark.parametrize(
@@ -291,7 +290,7 @@ def test_search_messages_max_messages_to_return_range_validation_error(
 def test_search_messages_by_network_message_id_fallback(configured_action, initial_response):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -343,7 +342,7 @@ def test_search_messages_by_network_message_id_fallback(configured_action, initi
 def test_search_messages_fallback_ignores_empty_optional_identifier(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -399,7 +398,7 @@ def test_search_messages_by_network_message_id_fallback_paginates_until_match(
 
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -465,7 +464,10 @@ def test_search_messages_by_network_message_id_fallback_paginates_until_match(
         fallback_first_page_request = mock.request_history[2]
         decoded_first_page_query = unquote_plus(fallback_first_page_request.url.split("?", maxsplit=1)[1])
         assert "$top=50" in decoded_first_page_query
-        assert "$select=id,internetMessageId,subject,receivedDateTime,from,toRecipients" in decoded_first_page_query
+        assert (
+            "$select=id,internetMessageId,parentFolderId,subject,receivedDateTime,from,toRecipients"
+            in decoded_first_page_query
+        )
         assert "$expand=singleValueExtendedProperties($filter=id eq " in decoded_first_page_query
 
         fallback_continuation_request = mock.request_history[3]
@@ -493,7 +495,7 @@ def test_search_messages_fallback_sets_has_more_for_truncated_last_page(
 
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -579,7 +581,7 @@ def test_search_messages_fallback_scan_limit_signals(
 
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -663,7 +665,7 @@ def test_search_messages_fallback_on_inefficient_filter(
 ):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -715,7 +717,7 @@ def test_search_messages_fallback_on_inefficient_filter(
 def test_search_messages_combined_identifiers_fallback_applies_and_filter(configured_action, initial_response):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -788,7 +790,7 @@ def test_search_messages_fallback_orderby_behavior(
 ):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -840,7 +842,7 @@ def test_search_messages_omits_message_id_when_graph_id_is_not_string(
 ):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -868,7 +870,7 @@ def test_search_messages_omits_message_id_when_graph_id_is_not_string(
 def test_search_messages_returns_empty_selection_when_no_results(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -891,6 +893,7 @@ def test_search_messages_returns_empty_selection_when_no_results(configured_acti
         )
 
         assert result == {
+            "outcome": "succeeded",
             "user": "1111",
             "query_type": "email_message_id",
             "query_value": "<sample-message-id@example.com>",
@@ -906,7 +909,7 @@ def test_search_messages_returns_empty_selection_when_no_results(configured_acti
 def test_search_messages_rejects_removed_item_index_input(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -921,14 +924,16 @@ def test_search_messages_rejects_removed_item_index_input(configured_action):
         )
 
         action = configured_action(SearchMessagesAction)
-        with pytest.raises(ValueError, match="Extra inputs are not permitted"):
-            action.run(
-                arguments={
-                    "user": "1111",
-                    "email_message_id": "<sample-message-id@example.com>",
-                    "item_index": 2,
-                }
-            )
+        result = action.run(
+            arguments={
+                "user": "1111",
+                "email_message_id": "<sample-message-id@example.com>",
+                "item_index": 2,
+            }
+        )
+        assert result["outcome"] == "failed"
+        assert action.error_message
+        assert "Extra inputs are not permitted" in action.error_message
 
 
 @pytest.mark.parametrize(
@@ -961,7 +966,7 @@ def test_search_messages_by_network_message_id_raises_non_inefficient_filter_err
 ):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -977,10 +982,12 @@ def test_search_messages_by_network_message_id_raises_non_inefficient_filter_err
         )
 
         action = configured_action(SearchMessagesAction)
-        with pytest.raises(GraphAPIError, match="BadRequest"):
-            action.run(
-                arguments={
-                    "user": "1111",
-                    "email_local_id": "00000000-0000-4000-8000-000000000001",
-                }
-            )
+        result = action.run(
+            arguments={
+                "user": "1111",
+                "email_local_id": "00000000-0000-4000-8000-000000000001",
+            }
+        )
+        assert result["outcome"] == "failed"
+        assert action.error_message
+        assert result["error_details"][0]["code"] == "request_rejected"

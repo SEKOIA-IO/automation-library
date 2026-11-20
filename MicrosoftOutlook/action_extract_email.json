@@ -1,0 +1,178 @@
+{
+  "name": "Extract embedded emails",
+  "description": "Extract embedded emails using Microsoft Graph.",
+  "uuid": "587ea90d-65f6-5589-8f6c-1593e33d78a6",
+  "slug": "extract_email",
+  "docker_parameters": "action_extract_email",
+  "arguments": {
+    "additionalProperties": false,
+    "properties": {
+      "user": {
+        "title": "User",
+        "type": "string",
+        "description": "Mailbox containing the message. For phishing reports, use the reporting mailbox."
+      },
+      "message_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "additionalProperties": true,
+            "type": "object"
+          }
+        ],
+        "title": "Graph Message ID",
+        "description": "Graph ID of the message in this mailbox. For phishing reports, use id from the raw report event, not email.message_id. Copy the full ID; Internet Message-IDs (<...@...>) are not accepted."
+      }
+    },
+    "required": [
+      "user",
+      "message_id"
+    ],
+    "title": "ExtractEmailArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "attachments": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "graph_attachment_type": {
+              "type": "string",
+              "description": "Graph @odata.type supplied for the attachment; empty when absent."
+            },
+            "detected_format": {
+              "type": "string",
+              "enum": [
+                "eml",
+                "msg",
+                "unknown"
+              ],
+              "description": "Content-based parsing route, independent of filename. msg identifies an OLE signature; successful extraction confirms readable email content."
+            }
+          }
+        }
+      },
+      "error_details": {
+        "type": "array",
+        "description": "Safe structured errors. retryable refers to retrying the whole action; it is false after a modifying request.",
+        "items": {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "retryable",
+            "outcome_unknown"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "outcome_unknown": {
+              "type": "boolean"
+            },
+            "http_status": {
+              "type": "integer"
+            },
+            "diagnostic_reference": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "errors": {
+        "type": "array",
+        "items": {}
+      },
+      "message_id": {
+        "type": "string"
+      },
+      "outcome": {
+        "type": "string",
+        "enum": [
+          "succeeded",
+          "partial",
+          "failed",
+          "unknown"
+        ],
+        "description": "Overall action outcome. Partial, failed and unknown outcomes also flag an SDK action error; inspect retained results before retrying."
+      },
+      "parsed_emails": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "source_graph_attachment_type": {
+              "type": "string"
+            },
+            "source_detected_format": {
+              "type": "string",
+              "enum": [
+                "eml",
+                "msg"
+              ]
+            },
+            "headers": {
+              "type": "array",
+              "description": "Decoded transport headers in source order, including repeated fields. Export the EML for byte-preserving evidence.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "headers_map": {
+              "type": "object",
+              "description": "Lowercase header names mapped to arrays of values. Repeated values are preserved.",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "headers_available": {
+              "type": "boolean",
+              "description": "Whether transport headers were available in the source. MSG headers synthesized from MAPI properties are excluded."
+            },
+            "received_headers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "authentication_results": {
+              "type": "string",
+              "description": "First source Authentication-Results header; all occurrences remain in headers_map. This is evidence, not an independently verified verdict."
+            },
+            "return_path": {
+              "type": "string"
+            },
+            "reply_to": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "user": {
+        "type": "string"
+      }
+    }
+  }
+}
