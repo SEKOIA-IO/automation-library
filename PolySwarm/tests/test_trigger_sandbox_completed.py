@@ -11,7 +11,7 @@ from polyswarm_api import exceptions as ps_exceptions
 from sekoia_automation.exceptions import SendEventError
 
 from polyswarm_modules import PolyswarmModule
-from polyswarm_modules.client import RETRY_TOTAL
+from polyswarm_modules.client import RETRY_TOTAL, USER_AGENT
 from polyswarm_modules.trigger_polyswarm_sandbox_completed import (
     IN_FLIGHT_MAX_AGE_SECONDS,
     MAX_BACKOFF_SECONDS,
@@ -273,7 +273,9 @@ def test_the_client_is_built_from_the_module_configuration(trigger: SandboxCompl
     # seven seconds where other calls answer in under one, so the client default
     # of thirty leaves no margin. build_client is expected to pass it through
     # rather than fall back to its own default.
-    polyswarm_api.assert_called_once_with(key="test-api-key", community="default", timeout=TASK_LIST_TIMEOUT)
+    polyswarm_api.assert_called_once_with(
+        key="test-api-key", community="default", timeout=TASK_LIST_TIMEOUT, user_agent=USER_AGENT
+    )
 
 
 def test_the_client_has_retries_installed_for_safe_methods(trigger: SandboxCompleted) -> None:
