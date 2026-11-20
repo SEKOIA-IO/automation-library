@@ -7,7 +7,7 @@ from microsoft_outlook_modules.action_send_message import SendMessageAction
 def test_send_message(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -33,6 +33,7 @@ def test_send_message(configured_action):
             }
         )
         assert result == {
+            "outcome": "succeeded",
             "action": "send_message",
             "bcc": None,
             "cc": None,
@@ -52,7 +53,7 @@ def test_send_message(configured_action):
 def test_send_message_with_all_optional_fields(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -103,7 +104,7 @@ def test_send_message_with_all_optional_fields(configured_action):
 def test_send_message_falls_back_when_response_payload_is_not_usable(configured_action, status_code, response_payload):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -130,6 +131,7 @@ def test_send_message_falls_back_when_response_payload_is_not_usable(configured_
             }
         )
         assert result == {
+            "outcome": "succeeded",
             "action": "send_message",
             "bcc": None,
             "cc": None,
@@ -149,7 +151,7 @@ def test_send_message_falls_back_when_response_payload_is_not_usable(configured_
 def test_send_message_includes_target_message_id_when_api_returns_id(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -211,6 +213,7 @@ def test_send_message_handles_plain_value_error_from_json(configured_action):
     )
 
     assert result == {
+        "outcome": "succeeded",
         "action": "send_message",
         "bcc": None,
         "cc": None,

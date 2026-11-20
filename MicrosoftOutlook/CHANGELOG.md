@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Collect user-reported emails from an Exchange Online mailbox and extract attached EML/MSG evidence.
+- Add actions to list folder messages, download attachments, extract embedded emails, move messages with destination verification, and export messages as EML files.
+- Preserve original transport headers, repeated header values and inline attachment metadata in extracted email evidence.
+- Expose parent folder IDs in message retrieval and search results.
+
+### Changed
+
+- Return structured action outcomes and errors, retaining partial evidence and identifying uncertain modifications.
+- Mark malformed MIME attachments and lossy body decoding as partial evidence, and honor Microsoft backoff delays in the collector.
+- Retry temporary OAuth failures without checkpointing incomplete evidence, and defer Graph calls after throttled post-delivery mailbox updates.
+- Let message searches report missing identifiers through actionable input errors rather than rejecting them before execution.
+
+### Fixed
+
+- Accept Internet Message-IDs with or without angle brackets in message searches.
+- Use POST for OAuth token requests and bound Graph request timeouts and retry delays.
+
 ## [0.5.1] - 2026-11-03
 
 ### Changed
@@ -131,3 +150,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Improve error logging
+
+[Unreleased]: https://github.com/SEKOIA-IO/automation-library/commits/develop/MicrosoftOutlook
+[0.5.1]: https://github.com/SEKOIA-IO/automation-library/blob/68baf4a8aedf003703668f723c06d66495e8d2d6/MicrosoftOutlook/CHANGELOG.md#051---2026-11-03
+[0.5.0]: https://github.com/SEKOIA-IO/automation-library/blob/68baf4a8aedf003703668f723c06d66495e8d2d6/MicrosoftOutlook/CHANGELOG.md#050---2026-10-19
+[0.4.0]: https://github.com/SEKOIA-IO/automation-library/blob/68baf4a8aedf003703668f723c06d66495e8d2d6/MicrosoftOutlook/CHANGELOG.md#040---2026-08-28
+[0.3.0]: https://github.com/SEKOIA-IO/automation-library/blob/68baf4a8aedf003703668f723c06d66495e8d2d6/MicrosoftOutlook/CHANGELOG.md#030---2026-08-27
+[0.2.0]: https://github.com/SEKOIA-IO/automation-library/blob/68baf4a8aedf003703668f723c06d66495e8d2d6/MicrosoftOutlook/CHANGELOG.md#020---2026-08-25
+[0.1.2]: https://github.com/SEKOIA-IO/automation-library/blob/68baf4a8aedf003703668f723c06d66495e8d2d6/MicrosoftOutlook/CHANGELOG.md#012---2025-09-22
+[0.1.1]: https://github.com/SEKOIA-IO/automation-library/blob/68baf4a8aedf003703668f723c06d66495e8d2d6/MicrosoftOutlook/CHANGELOG.md#011---2025-02-07

@@ -24,6 +24,8 @@ class SendMessageArguments(BaseModel):
 
 
 class SendMessageAction(MicrosoftGraphActionBase):
+    may_modify_data = True
+
     def run(self, arguments: Any) -> Any:
         """Execute the send message action and return normalized results."""
 

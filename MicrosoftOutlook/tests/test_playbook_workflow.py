@@ -16,7 +16,7 @@ from microsoft_outlook_modules.action_search_messages import SearchMessagesActio
 def test_playbook_workflow_detect_confirm_search_delete(configured_action, message_identifier):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -79,7 +79,7 @@ def test_playbook_workflow_detect_confirm_search_delete(configured_action, messa
 def test_search_message_item_index_is_rejected(configured_action):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -95,11 +95,13 @@ def test_search_message_item_index_is_rejected(configured_action):
         )
 
         search_action = configured_action(SearchMessagesAction)
-        with pytest.raises(ValueError, match="Extra inputs are not permitted"):
-            search_action.run(
-                arguments={
-                    "user": "1111",
-                    "email_message_id": "<malicious-message-id@example.com>",
-                    "item_index": 5,
-                }
-            )
+        result = search_action.run(
+            arguments={
+                "user": "1111",
+                "email_message_id": "<malicious-message-id@example.com>",
+                "item_index": 5,
+            }
+        )
+        assert result["outcome"] == "failed"
+        assert search_action.error_message
+        assert "Extra inputs are not permitted" in search_action.error_message

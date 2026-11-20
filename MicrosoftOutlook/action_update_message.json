@@ -159,6 +159,39 @@
           "format": "email"
         }
       },
+      "error_details": {
+        "type": "array",
+        "description": "Safe structured errors. retryable refers to retrying the whole action; it is false after a modifying request.",
+        "items": {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "retryable",
+            "outcome_unknown"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "outcome_unknown": {
+              "type": "boolean"
+            },
+            "http_status": {
+              "type": "integer"
+            },
+            "diagnostic_reference": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "from": {
         "description": "The sender information",
         "type": [
@@ -186,6 +219,16 @@
       "message_id": {
         "description": "The Microsoft Graph message item ID",
         "type": "string"
+      },
+      "outcome": {
+        "type": "string",
+        "enum": [
+          "succeeded",
+          "partial",
+          "failed",
+          "unknown"
+        ],
+        "description": "Overall action outcome. Partial, failed and unknown outcomes also flag an SDK action error; inspect retained results before retrying."
       },
       "received_date_time": {
         "description": "The message reception timestamp",

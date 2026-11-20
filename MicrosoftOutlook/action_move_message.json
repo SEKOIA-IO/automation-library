@@ -1,0 +1,122 @@
+{
+  "name": "Move a message to a folder",
+  "description": "Move a message to a folder using Microsoft Graph.",
+  "uuid": "d15160ec-29f4-5c7e-bff1-ff2f13d7a8a7",
+  "slug": "move_message",
+  "docker_parameters": "action_move_message",
+  "arguments": {
+    "additionalProperties": false,
+    "properties": {
+      "user": {
+        "title": "User",
+        "type": "string"
+      },
+      "message_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "additionalProperties": true,
+            "type": "object"
+          }
+        ],
+        "title": "Message Id"
+      },
+      "destination_folder": {
+        "title": "Destination Folder",
+        "type": "string",
+        "description": "Graph folder ID or well-known name (inbox, junkemail, deleteditems). Display names are not supported."
+      }
+    },
+    "required": [
+      "user",
+      "message_id",
+      "destination_folder"
+    ],
+    "title": "MoveMessageArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "destination_folder_id": {
+        "type": "string"
+      },
+      "destination_folder_name": {
+        "type": "string"
+      },
+      "error_details": {
+        "type": "array",
+        "description": "Safe structured errors. retryable refers to retrying the whole action; it is false after a modifying request.",
+        "items": {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "retryable",
+            "outcome_unknown"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "outcome_unknown": {
+              "type": "boolean"
+            },
+            "http_status": {
+              "type": "integer"
+            },
+            "diagnostic_reference": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "errors": {
+        "type": "array",
+        "items": {}
+      },
+      "execution_status": {
+        "type": "string"
+      },
+      "message_id": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "original_message_id": {
+        "type": "string"
+      },
+      "outcome": {
+        "type": "string",
+        "enum": [
+          "succeeded",
+          "partial",
+          "failed",
+          "unknown"
+        ],
+        "description": "Overall action outcome. Partial, failed and unknown outcomes also flag an SDK action error; inspect retained results before retrying."
+      },
+      "parent_folder_id": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "user": {
+        "type": "string"
+      },
+      "verification_status": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "name": "Fetch user-reported emails",
+  "description": "Collect reports from an Exchange Online mailbox and extract attached EML/MSG evidence.",
+  "uuid": "8a1bb4f1-c532-560b-bd87-f7cf2401ce8a",
+  "slug": "fetch-phishing-reports",
+  "docker_parameters": "connector_phishing_reports",
+  "arguments": {
+    "properties": {
+      "intake_server": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Intake Server"
+      },
+      "intake_key": {
+        "title": "Intake Key",
+        "type": "string"
+      },
+      "user": {
+        "minLength": 1,
+        "title": "User",
+        "type": "string"
+      },
+      "folder": {
+        "default": "inbox",
+        "title": "Folder",
+        "type": "string",
+        "description": "Graph folder ID or well-known name; display names are not supported."
+      },
+      "offset_hours": {
+        "default": 24,
+        "maximum": 2160,
+        "minimum": 1,
+        "title": "Offset Hours",
+        "type": "integer"
+      },
+      "page_size": {
+        "default": 25,
+        "maximum": 100,
+        "minimum": 1,
+        "title": "Page Size",
+        "type": "integer"
+      },
+      "polling_interval": {
+        "default": 60,
+        "maximum": 3600,
+        "minimum": 10,
+        "title": "Polling Interval",
+        "type": "integer"
+      },
+      "overlap_seconds": {
+        "default": 300,
+        "maximum": 3600,
+        "minimum": 0,
+        "title": "Overlap Seconds",
+        "type": "integer"
+      },
+      "mark_as_read": {
+        "default": false,
+        "title": "Mark As Read",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "intake_key",
+      "user"
+    ],
+    "title": "PhishingReportsConfiguration",
+    "type": "object"
+  }
+}

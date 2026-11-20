@@ -15,7 +15,7 @@ from microsoft_outlook_modules.action_delete_message import DeleteMessageAction
 def test_delete_message(configured_action, message_id_input):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -33,6 +33,7 @@ def test_delete_message(configured_action, message_id_input):
         action = configured_action(DeleteMessageAction)
         result = action.run(arguments={"user": "1111", "message_id": message_id_input})
         assert result == {
+            "outcome": "succeeded",
             "status": "deleted",
             "action": "delete_a_message",
             "target_message_id": "2222",

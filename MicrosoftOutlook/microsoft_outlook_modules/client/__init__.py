@@ -32,6 +32,12 @@ class ApiClient(requests.Session):
                 max_retries=Retry(
                     total=nb_retries,
                     backoff_factor=1,
+                    status_forcelist=[429, 500, 502, 503, 504],
+                    allowed_methods=frozenset({"GET", "HEAD", "OPTIONS"}),
                 ),
             ),
         )
+
+    def request(self, method, url, **kwargs):
+        kwargs.setdefault("timeout", (10, 30))
+        return super().request(method, url, **kwargs)
