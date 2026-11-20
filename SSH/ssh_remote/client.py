@@ -2,9 +2,9 @@ import base64
 import hashlib
 import io
 import re
+import select
 import socket
 import threading
-import time
 from dataclasses import dataclass
 
 import paramiko
@@ -16,6 +16,8 @@ from ssh_remote.models import SSHModuleConfiguration
 # Keep results small enough for the playbook engine
 MAX_OUTPUT_BYTES = 1024 * 1024
 READ_CHUNK = 32 * 1024
+# Upper bound of a wait for output, to recheck the exit status
+POLL_INTERVAL = 0.5
 
 
 class SSHExecutionError(Exception):
@@ -151,6 +153,17 @@ def _append(buffer: bytearray, chunk: bytes) -> bool:
     return len(chunk) > room
 
 
+def _send_stdin(channel: paramiko.Channel, data: str) -> None:
+    try:
+        channel.sendall(data.encode())
+        # Close stdin, so interpreters reading it until EOF don't hang
+        channel.shutdown_write()
+    except Exception:
+        # The channel was closed (command exited without reading its input, or timeout):
+        # the reading loop reports the outcome
+        pass
+
+
 def _decode(buffer: bytearray, truncated: bool) -> str:
     text = buffer.decode("utf-8", errors="replace")
     if truncated:
@@ -250,25 +263,27 @@ class SSHRunner:
         channel = transport.open_session(timeout=self.config.connect_timeout)
         channel.exec_command(command)
 
-        if stdin_data is not None:
-            channel.sendall(stdin_data.encode())
-        # Always close stdin, so commands reading it until EOF don't hang
-        channel.shutdown_write()
+        # Feed stdin from a separate thread: if the remote writes more output than the SSH window holds
+        # before reading all its input, sending and reading in the same thread would deadlock
+        if stdin_data is None:
+            # Nothing to send: close stdin right away, so commands reading it until EOF don't hang
+            channel.shutdown_write()
+        else:
+            threading.Thread(target=_send_stdin, args=(channel, stdin_data), daemon=True).start()
 
         stdout, stderr = bytearray(), bytearray()
         out_truncated = err_truncated = False
         while True:
-            activity = False
             if channel.recv_ready():
-                activity = True
                 out_truncated |= _append(stdout, channel.recv(READ_CHUNK))
             if channel.recv_stderr_ready():
-                activity = True
                 err_truncated |= _append(stderr, channel.recv_stderr(READ_CHUNK))
             if channel.exit_status_ready() and not channel.recv_ready() and not channel.recv_stderr_ready():
                 break
-            if not activity:
-                time.sleep(0.1)
+            if not channel.recv_ready() and not channel.recv_stderr_ready():
+                # The channel's file descriptor is signalled when stdout or stderr data arrives or the channel
+                # closes. The exit status alone does not signal it, hence the bounded wait.
+                select.select([channel], [], [], POLL_INTERVAL)
 
         # Closing the connection also marks the exit status as ready, so check the watchdog first
         if timed_out.is_set():

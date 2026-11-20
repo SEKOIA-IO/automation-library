@@ -11,13 +11,15 @@
         "type": "string"
       },
       "host": {
-        "description": "Run on this host instead of the account's host. It must be listed in the account's allowed hosts",
+        "description": "Run on this host instead of the account's host. It must be listed in the account's allowed hosts (case-insensitive)",
         "type": "string"
       },
       "timeout": {
-        "description": "Maximum execution time, in seconds",
+        "description": "Maximum execution time, in seconds (from 1 to 3600)",
         "type": "integer",
-        "default": 300
+        "default": 300,
+        "minimum": 1,
+        "maximum": 3600
       },
       "fail_on_error": {
         "description": "Mark the action as failed when the exit code is not 0",

@@ -7,8 +7,8 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, rsa
 
-from ssh_remote import SSHModule
-from ssh_remote.actions import RunSSHCommand, RunSSHScript
+from ssh_remote import SSHModule, client
+from ssh_remote.actions import RunSSHCommand, RunSSHScript, parse_timeout
 from ssh_remote.client import SSHExecutionError, load_private_key, parse_fingerprints
 from ssh_remote.models import SSHModuleConfiguration
 
@@ -49,8 +49,10 @@ def test_run_command_nonzero_exit_fails(ssh_server, data_storage):
     result = action.run({"command": "echo boom >&2; exit 3"})
 
     assert result["exit_code"] == 3
+    assert result["stderr"] == "boom\n"
     assert "exited with code 3" in action.error_message
-    assert "boom" in action.error_message
+    # stderr may hold secrets: it is returned in the results but kept out of the logged error
+    assert "boom" not in action.error_message
 
 
 def test_run_command_nonzero_exit_tolerated(ssh_server, data_storage):
@@ -302,3 +304,32 @@ def test_unsupported_key_type():
     )
     with pytest.raises(SSHExecutionError, match="Unsupported private key type"):
         load_private_key(pem, None)
+
+
+@pytest.mark.parametrize("timeout", ["abc", -1, 0, 3601, True, [5]])
+def test_invalid_timeout(data_storage, timeout):
+    action = _action(RunSSHCommand, data_storage, host="127.0.0.1", password="x")
+    assert action.run({"command": "true", "timeout": timeout}) is None
+    assert "Invalid timeout" in action.error_message
+
+
+@pytest.mark.parametrize("timeout, expected", [(None, 300), ("", 300), ("12", 12), (3600, 3600)])
+def test_parse_timeout(timeout, expected):
+    assert parse_timeout(timeout) == expected
+
+
+def test_output_truncated(ssh_server, data_storage, monkeypatch):
+    monkeypatch.setattr(client, "MAX_OUTPUT_BYTES", 10)
+    action = _action(RunSSHCommand, data_storage, **_config(ssh_server))
+    result = action.run({"command": "printf 0123456789abcdef; printf 0123456789ABCDEF >&2"})
+
+    assert action.error_message is None
+    assert result["stdout"] == "0123456789\n[output truncated to 10 bytes]"
+    assert result["stderr"] == "0123456789\n[output truncated to 10 bytes]"
+
+
+def test_closed_transport(ssh_server, data_storage, monkeypatch):
+    monkeypatch.setattr(paramiko.SSHClient, "get_transport", lambda self: None)
+    action = _action(RunSSHCommand, data_storage, **_config(ssh_server))
+    assert action.run({"command": "true"}) is None
+    assert "was closed" in action.error_message
