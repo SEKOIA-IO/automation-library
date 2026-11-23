@@ -12,6 +12,7 @@ from sekoia_automation.module import Module
 
 from connectors.blob import AzureBlobConnectorConfig, azure_blob
 from connectors.blob.azure_blob import AzureBlobConnector
+from tests.connector.blob import collect
 
 
 @pytest.fixture
@@ -158,7 +159,7 @@ async def test_azure_blob_get_azure_blob_data_1(connector: AzureBlobConnector, s
     """A plain blob with a single JSON document without trailing newline is forwarded."""
     storage.write("blob.json", blob_content)
 
-    result = await connector.get_azure_blob_data()
+    result = await collect(connector)
 
     assert result == [blob_content.decode("utf-8")]
 
@@ -168,7 +169,7 @@ async def test_azure_blob_get_azure_blob_data_2(connector: AzureBlobConnector, s
     """Empty lines are ignored."""
     storage.write("blob.json", blob_content + b"\n\n\n" + blob_content + b"\n")
 
-    result = await connector.get_azure_blob_data()
+    result = await collect(connector)
 
     assert result == [blob_content.decode("utf-8")] * 2
 
@@ -178,7 +179,7 @@ async def test_azure_blob_get_azure_blob_data_3(connector: AzureBlobConnector, s
     """A gzip blob is decompressed."""
     storage.write("blob.json.gz", gzip.compress(blob_content))
 
-    result = await connector.get_azure_blob_data()
+    result = await collect(connector)
 
     assert result == [blob_content.decode("utf-8")]
 
@@ -190,7 +191,7 @@ async def test_azure_blob_get_azure_blob_data_4(connector: AzureBlobConnector, s
         "blob.json.gz", gzip.compress(blob_content + b"\n\n\n\n\n\n" + blob_content + b"\n" + blob_content + b"\n")
     )
 
-    result = await connector.get_azure_blob_data()
+    result = await collect(connector)
 
     assert result == [blob_content.decode("utf-8") for _ in range(3)]
 
@@ -205,19 +206,19 @@ async def test_azure_blob_growing_blob_is_not_forwarded_twice(connector: AzureBl
     first_content = b"".join(line + b"\n" for line in first_lines)
     storage.write("PT1H.json", first_content)
 
-    assert await connector.get_azure_blob_data() == [line.decode() for line in first_lines]
+    assert await collect(connector) == [line.decode() for line in first_lines]
 
     storage.append("PT1H.json", b"".join(line + b"\n" for line in new_lines))
     storage.downloads.clear()
 
-    assert await connector.get_azure_blob_data() == [line.decode() for line in new_lines]
+    assert await collect(connector) == [line.decode() for line in new_lines]
     assert pushed_events(connector) == [line.decode() for line in first_lines + new_lines]
     # Only the appended bytes are downloaded
     assert [offset for _, offset, _ in storage.downloads] == [resume_offset(len(first_content))]
 
     # Nothing new: nothing forwarded, nothing downloaded
     storage.downloads.clear()
-    assert await connector.get_azure_blob_data() == []
+    assert await collect(connector) == []
     assert storage.downloads == []
 
 
@@ -226,15 +227,15 @@ async def test_azure_blob_last_line_being_written(connector: AzureBlobConnector,
     """A last line cut in the middle is forwarded once complete, and only once."""
     storage.write("PT1H.json", b'{"id": 1}\n{"id": 2, "mess')
 
-    assert await connector.get_azure_blob_data() == ['{"id": 1}']
+    assert await collect(connector) == ['{"id": 1}']
 
     storage.append("PT1H.json", b'age": "end"}\n{"id": 3}')
 
-    assert await connector.get_azure_blob_data() == ['{"id": 2, "message": "end"}', '{"id": 3}']
+    assert await collect(connector) == ['{"id": 2, "message": "end"}', '{"id": 3}']
 
     storage.append("PT1H.json", b'\n{"id": 4}\n')
 
-    assert await connector.get_azure_blob_data() == ['{"id": 4}']
+    assert await collect(connector) == ['{"id": 4}']
 
 
 @pytest.mark.asyncio
@@ -243,15 +244,15 @@ async def test_azure_blob_last_text_line_forwarded_once_blob_is_settled(connecto
     now = datetime.now(timezone.utc)
     storage.write("logs.txt", b"line 1\nline 2", modified_at=now)
 
-    assert await connector.get_azure_blob_data() == ["line 1"]
+    assert await collect(connector) == ["line 1"]
 
     # Not modified since: the blob is listed again for its pending line, forwarded once settled
     storage.blobs["logs.txt"].last_modified = now - timedelta(minutes=10)
     with connector.context as cache:
         cache["last_event_date"] = now.isoformat()
 
-    assert await connector.get_azure_blob_data() == ["line 2"]
-    assert await connector.get_azure_blob_data() == []
+    assert await collect(connector) == ["line 2"]
+    assert await collect(connector) == []
 
 
 @pytest.mark.asyncio
@@ -264,7 +265,7 @@ async def test_azure_blob_large_blob_read_by_chunks_and_pushed_by_batches(
     lines = make_lines(2500)
     storage.write("PT1H.json", b"".join(line + b"\n" for line in lines))
 
-    result = await connector.get_azure_blob_data()
+    result = await collect(connector)
 
     assert result == [line.decode() for line in lines]
     assert all(length <= 100 for _, _, length in storage.downloads)
@@ -281,7 +282,7 @@ async def test_azure_blob_large_gzip_blob_read_by_chunks_and_pushed_by_batches(
     lines = make_lines(2500)
     storage.write("PT1H.json.gz", gzip_lines(*lines))
 
-    result = await connector.get_azure_blob_data()
+    result = await collect(connector)
 
     assert result == [line.decode() for line in lines]
     assert all(length <= 100 for _, _, length in storage.downloads)
@@ -289,14 +290,14 @@ async def test_azure_blob_large_gzip_blob_read_by_chunks_and_pushed_by_batches(
 
     # Already forwarded and unchanged: not downloaded again
     storage.downloads.clear()
-    assert await connector.get_azure_blob_data() == []
+    assert await collect(connector) == []
     assert storage.downloads == []
 
     # Modified without a new size: only the bytes of the fingerprint are downloaded, once
     storage.blobs["PT1H.json.gz"].last_modified = datetime.now(timezone.utc)
-    assert await connector.get_azure_blob_data() == []
+    assert await collect(connector) == []
     assert [length for _, _, length in storage.downloads] == [azure_blob.FINGERPRINT_SIZE]
-    assert await connector.get_azure_blob_data() == []
+    assert await collect(connector) == []
     assert len(storage.downloads) == 1
 
 
@@ -332,10 +333,10 @@ async def test_azure_blob_resume_after_failure_without_duplicates(
     connector.push_data_to_intakes = AsyncMock(side_effect=push_then_fail)
 
     with pytest.raises(ConnectionError):
-        await connector.get_azure_blob_data()
+        await collect(connector)
 
     connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
-    result = await connector.get_azure_blob_data()
+    result = await collect(connector)
 
     assert result == [line.decode() for line in lines[20:]]
 
@@ -345,17 +346,17 @@ async def test_azure_blob_gzip_blob_with_appended_member(connector: AzureBlobCon
     """A gzip blob growing with a new gzip member: only the new member is downloaded and forwarded."""
     first_member = gzip_lines(b"a", b"b")
     storage.write("PT1H.json.gz", first_member)
-    assert await connector.get_azure_blob_data() == ["a", "b"]
+    assert await collect(connector) == ["a", "b"]
 
     storage.downloads.clear()
     storage.append("PT1H.json.gz", gzip_lines(b"c"))
-    assert await connector.get_azure_blob_data() == ["c"]
+    assert await collect(connector) == ["c"]
     assert [offset for _, offset, _ in storage.downloads] == [resume_offset(len(first_member))]
 
     # The next member is read from its own offset too
     storage.downloads.clear()
     storage.append("PT1H.json.gz", gzip_lines(b"d"))
-    assert await connector.get_azure_blob_data() == ["d"]
+    assert await collect(connector) == ["d"]
     assert [offset for _, offset, _ in storage.downloads] == [resume_offset(len(first_member) + len(gzip_lines(b"c")))]
 
 
@@ -363,10 +364,10 @@ async def test_azure_blob_gzip_blob_with_appended_member(connector: AzureBlobCon
 async def test_azure_blob_gzip_member_without_trailing_newline(connector: AzureBlobConnector, storage):
     """A gzip member ending without newline is a complete line: the next member is not merged with it."""
     storage.write("PT1H.json.gz", gzip.compress(b'{"id": 1}'))
-    assert await connector.get_azure_blob_data() == ['{"id": 1}']
+    assert await collect(connector) == ['{"id": 1}']
 
     storage.append("PT1H.json.gz", gzip.compress(b'{"id": 2}\n'))
-    assert await connector.get_azure_blob_data() == ['{"id": 2}']
+    assert await collect(connector) == ['{"id": 2}']
 
 
 @pytest.mark.asyncio
@@ -377,14 +378,14 @@ async def test_azure_blob_gzip_truncated_member_resumes_from_member_start(connec
     second_member = gzip_lines(*lines)
     storage.write("PT1H.json.gz", first_member + second_member[: len(second_member) // 2])
 
-    forwarded = await connector.get_azure_blob_data()
+    forwarded = await collect(connector)
     assert forwarded[0] == "a"
     assert 0 < len(forwarded) - 1 < len(lines)
     assert forwarded[1:] == [line.decode() for line in lines[: len(forwarded) - 1]]
 
     storage.downloads.clear()
     storage.write("PT1H.json.gz", first_member + second_member)
-    assert await connector.get_azure_blob_data() == [line.decode() for line in lines[len(forwarded) - 1 :]]
+    assert await collect(connector) == [line.decode() for line in lines[len(forwarded) - 1 :]]
     assert [offset for _, offset, _ in storage.downloads] == [resume_offset(len(first_member))]
 
 
@@ -393,12 +394,12 @@ async def test_azure_blob_gzip_zero_padding_is_skipped(connector: AzureBlobConne
     """Zero bytes after a gzip member are skipped, and a member appended after them is read from its offset."""
     padded = gzip_lines(b"a") + b"\x00" * 8
     storage.write("PT1H.json.gz", padded)
-    assert await connector.get_azure_blob_data() == ["a"]
+    assert await collect(connector) == ["a"]
     connector.log.assert_not_called()
 
     storage.downloads.clear()
     storage.append("PT1H.json.gz", gzip_lines(b"b"))
-    assert await connector.get_azure_blob_data() == ["b"]
+    assert await collect(connector) == ["b"]
     assert [offset for _, offset, _ in storage.downloads] == [resume_offset(len(padded))]
 
 
@@ -418,13 +419,13 @@ async def test_azure_blob_corrupted_gzip_blob_does_not_block_the_cycle(
     storage.write("0-corrupted.json.gz", content)
     storage.write("1-other.json", b"b\n")
 
-    assert "b" in await connector.get_azure_blob_data()
+    assert "b" in await collect(connector)
     assert connector.log.call_args.kwargs["level"] == "error"
     assert "0-corrupted.json.gz" in connector.log.call_args.kwargs["message"]
 
     # Not read again until it changes
     storage.downloads.clear()
-    assert await connector.get_azure_blob_data() == []
+    assert await collect(connector) == []
     assert storage.downloads == []
 
 
@@ -443,14 +444,14 @@ async def test_azure_blob_appended_within_the_checkpoint_second(connector: Azure
     """
     modified_at = datetime.now(timezone.utc).replace(microsecond=0)
     storage.write(name, encode([b"a", b"b"]), modified_at=modified_at)
-    assert await connector.get_azure_blob_data() == ["a", "b"]
+    assert await collect(connector) == ["a", "b"]
 
     storage.append(name, encode([b"c"]), modified_at=modified_at)
-    assert await connector.get_azure_blob_data() == ["c"]
+    assert await collect(connector) == ["c"]
 
     # Unchanged: nothing is downloaded nor forwarded
     storage.downloads.clear()
-    assert await connector.get_azure_blob_data() == []
+    assert await collect(connector) == []
     assert storage.downloads == []
 
 
@@ -459,10 +460,10 @@ async def test_azure_blob_empty_blob_filled_within_the_checkpoint_second(connect
     """An empty blob, filled within the same second as the checkpoint, is read."""
     modified_at = datetime.now(timezone.utc).replace(microsecond=0)
     storage.write("PT1H.json", b"", modified_at=modified_at)
-    assert await connector.get_azure_blob_data() == []
+    assert await collect(connector) == []
 
     storage.write("PT1H.json", b"a\nb\n", modified_at=modified_at)
-    assert await connector.get_azure_blob_data() == ["a", "b"]
+    assert await collect(connector) == ["a", "b"]
 
 
 @pytest.mark.asyncio
@@ -476,14 +477,14 @@ async def test_azure_blob_interrupted_gzip_blob_older_than_the_window_is_resumed
 
     connector.push_data_to_intakes = AsyncMock(side_effect=[lines[:10], ConnectionError("intake unavailable")])
     with pytest.raises(ConnectionError):
-        await connector.get_azure_blob_data()
+        await collect(connector)
 
     with connector.context as cache:
         cache["last_event_date"] = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
     storage.blobs["PT1H.json.gz"].last_modified = datetime.now(timezone.utc) - timedelta(hours=2)
 
     connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
-    assert await connector.get_azure_blob_data() == [line.decode() for line in lines[10:]]
+    assert await collect(connector) == [line.decode() for line in lines[10:]]
 
 
 @pytest.mark.asyncio
@@ -499,10 +500,10 @@ async def test_azure_blob_invalid_utf8_does_not_block_the_cycle(connector: Azure
     storage.write(name, encode(b'{"user": "caf\xe9"}\n'))
     storage.write("1-other.json", b"b\n")
 
-    assert await connector.get_azure_blob_data() == ['{"user": "caf\ufffd"}', "b"]
+    assert await collect(connector) == ['{"user": "caf\ufffd"}', "b"]
 
     # Not forwarded again
-    assert await connector.get_azure_blob_data() == []
+    assert await collect(connector) == []
 
 
 @pytest.mark.asyncio
@@ -515,13 +516,13 @@ async def test_azure_blob_gzip_members_without_newline_are_pushed_by_batches(con
 
     connector.push_data_to_intakes = AsyncMock(side_effect=[lines[:10], ConnectionError("intake unavailable")])
     with pytest.raises(ConnectionError):
-        await connector.get_azure_blob_data()
+        await collect(connector)
 
     assert [len(call.kwargs["events"]) for call in connector.push_data_to_intakes.call_args_list] == [10, 10]
     assert connector.get_blob_states()["PT1H.json.gz"]["offset"] == sum(len(member) for member in members[:10])
 
     connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
-    assert await connector.get_azure_blob_data() == [line.decode() for line in lines[10:]]
+    assert await collect(connector) == [line.decode() for line in lines[10:]]
 
 
 @pytest.mark.asyncio
@@ -536,7 +537,7 @@ async def test_azure_blob_unfinished_old_blob_keeps_its_state(connector: AzureBl
 
     connector.push_data_to_intakes = AsyncMock(side_effect=[lines[:10], ConnectionError("intake unavailable")])
     with pytest.raises(ConnectionError):
-        await connector.get_azure_blob_data()
+        await collect(connector)
 
     # Long outage: the blob is now older than the retention and outside the one-hour window
     old = datetime.now(timezone.utc) - timedelta(days=8)
@@ -548,10 +549,10 @@ async def test_azure_blob_unfinished_old_blob_keeps_its_state(connector: AzureBl
 
     connector.push_data_to_intakes = AsyncMock(side_effect=[lines[10:20], ConnectionError("intake unavailable")])
     with pytest.raises(ConnectionError):
-        await connector.get_azure_blob_data()
+        await collect(connector)
 
     connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
-    assert await connector.get_azure_blob_data() == [line.decode() for line in lines[20:]]
+    assert await collect(connector) == [line.decode() for line in lines[20:]]
 
 
 @pytest.mark.asyncio
@@ -571,35 +572,78 @@ async def test_azure_blob_overwritten_blob_is_read_from_start(
     is read again from its start (and not from the offset of the previous content).
     """
     storage.write(name, encode([b"a", b"b"]))
-    assert await connector.get_azure_blob_data() == ["a", "b"]
+    assert await collect(connector) == ["a", "b"]
 
     storage.write(name, encode(new_lines))
-    assert await connector.get_azure_blob_data() == [line.decode() for line in new_lines]
+    assert await collect(connector) == [line.decode() for line in new_lines]
 
     # Not forwarded again
-    assert await connector.get_azure_blob_data() == []
+    assert await collect(connector) == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("new_count", [35, 5], ids=["as many lines", "less lines"])
+async def test_azure_blob_gzip_blob_overwritten_after_a_partial_read(
+    connector: AzureBlobConnector, storage, new_count
+):
+    """
+    A gzip blob read partially (failure after its first batch), then overwritten with another content,
+    is read again from its start: the lines of the new content are not skipped.
+    """
+    connector.limit_of_events_to_push = 10
+    lines = make_lines(35)
+    storage.write("PT1H.json.gz", gzip_lines(*lines))
+
+    connector.push_data_to_intakes = AsyncMock(side_effect=[lines[:10], ConnectionError("intake unavailable")])
+    with pytest.raises(ConnectionError):
+        await collect(connector)
+    assert connector.get_blob_states()["PT1H.json.gz"]["lines"] == 10
+
+    new_lines = make_lines(new_count, start=100)
+    storage.write("PT1H.json.gz", gzip_lines(*new_lines))
+
+    connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
+    assert await collect(connector) == [line.decode() for line in new_lines]
+    assert await collect(connector) == []
+
+
+@pytest.mark.asyncio
+async def test_azure_blob_gzip_state_without_checksum_is_resumed(connector: AzureBlobConnector, storage):
+    """A reading state of a gzip blob saved without checksum is resumed after its lines already forwarded."""
+    connector.limit_of_events_to_push = 10
+    lines = make_lines(35)
+    storage.write("PT1H.json.gz", gzip_lines(*lines))
+
+    connector.push_data_to_intakes = AsyncMock(side_effect=[lines[:10], ConnectionError("intake unavailable")])
+    with pytest.raises(ConnectionError):
+        await collect(connector)
+    with connector.context as cache:
+        del cache["blobs"]["PT1H.json.gz"]["checksum"]
+
+    connector.push_data_to_intakes = AsyncMock(side_effect=lambda events: events)
+    assert await collect(connector) == [line.decode() for line in lines[10:]]
 
 
 @pytest.mark.asyncio
 async def test_azure_blob_overwritten_with_another_compression(connector: AzureBlobConnector, storage):
     """A plain blob overwritten with a larger gzip content is detected as gzip again."""
     storage.write("PT1H.json", b"a\n")
-    assert await connector.get_azure_blob_data() == ["a"]
+    assert await collect(connector) == ["a"]
 
     storage.write("PT1H.json", gzip_lines(b"b", b"c"))
-    assert await connector.get_azure_blob_data() == ["b", "c"]
+    assert await collect(connector) == ["b", "c"]
 
 
 @pytest.mark.asyncio
 async def test_azure_blob_state_without_fingerprint_is_resumed(connector: AzureBlobConnector, storage):
     """A reading state saved without fingerprint is resumed from its offset."""
     storage.write("PT1H.json", b"a\nb\n")
-    assert await connector.get_azure_blob_data() == ["a", "b"]
+    assert await collect(connector) == ["a", "b"]
     with connector.context as cache:
         del cache["blobs"]["PT1H.json"]["tail"]
 
     storage.append("PT1H.json", b"c\n")
-    assert await connector.get_azure_blob_data() == ["c"]
+    assert await collect(connector) == ["c"]
     assert "tail" in connector.get_blob_states()["PT1H.json"]
 
 
@@ -607,10 +651,10 @@ async def test_azure_blob_state_without_fingerprint_is_resumed(connector: AzureB
 async def test_azure_blob_recreated_blob_is_read_from_start(connector: AzureBlobConnector, storage):
     """A blob deleted and created again with the same name is read from the start."""
     storage.write("PT1H.json", b"a\nb\n")
-    assert await connector.get_azure_blob_data() == ["a", "b"]
+    assert await collect(connector) == ["a", "b"]
 
     storage.write("PT1H.json", b"c\nd\ne\n", created_at=datetime.now(timezone.utc) + timedelta(seconds=1))
-    assert await connector.get_azure_blob_data() == ["c", "d", "e"]
+    assert await collect(connector) == ["c", "d", "e"]
 
 
 @pytest.mark.asyncio
@@ -623,7 +667,7 @@ async def test_azure_blob_old_blob_states_are_forgotten(connector: AzureBlobConn
         }
 
     storage.write("PT1H.json", b"a\n")
-    await connector.get_azure_blob_data()
+    await collect(connector)
 
     assert set(connector.get_blob_states()) == {"PT1H.json"}
 
@@ -632,7 +676,7 @@ async def test_azure_blob_old_blob_states_are_forgotten(connector: AzureBlobConn
 async def test_azure_blob_idle_blob_appended_is_not_forwarded_twice(connector: AzureBlobConnector, storage):
     """A blob appended after hours without modification keeps its reading state: only the new lines are forwarded."""
     storage.write("idle.json", b"a\nb\n")
-    assert await connector.get_azure_blob_data() == ["a", "b"]
+    assert await collect(connector) == ["a", "b"]
 
     # The blob was read 7 hours ago
     idle = datetime.now(timezone.utc) - timedelta(hours=7)
@@ -642,10 +686,10 @@ async def test_azure_blob_idle_blob_appended_is_not_forwarded_twice(connector: A
 
     # Other blobs are read in the meantime
     storage.write("PT1H.json", b"x\n")
-    assert await connector.get_azure_blob_data() == ["x"]
+    assert await collect(connector) == ["x"]
 
     storage.append("idle.json", b"c\n")
-    assert await connector.get_azure_blob_data() == ["c"]
+    assert await collect(connector) == ["c"]
 
 
 @pytest.mark.asyncio
@@ -663,11 +707,11 @@ async def test_azure_blob_too_long_line_is_skipped(connector: AzureBlobConnector
     connector.log = MagicMock()
 
     storage.write(name, encode(b"a\n" + b"x" * 1000 + b"\nb\n"))
-    assert await connector.get_azure_blob_data() == ["a", "b"]
+    assert await collect(connector) == ["a", "b"]
     assert [call.kwargs["level"] for call in connector.log.call_args_list] == ["warning"]
 
     storage.append(name, encode(b"c\n"))
-    assert await connector.get_azure_blob_data() == ["c"]
+    assert await collect(connector) == ["c"]
     assert pushed_events(connector) == ["a", "b", "c"]
 
 
@@ -680,18 +724,18 @@ async def test_azure_blob_too_long_last_line_is_skipped_once_settled(
     now = datetime.now(timezone.utc)
     storage.write("logs.txt", b"a\n" + b"x" * 1000, modified_at=now)
 
-    assert await connector.get_azure_blob_data() == ["a"]
+    assert await collect(connector) == ["a"]
     assert connector.get_blob_states()["logs.txt"]["offset"] == 2
 
     storage.blobs["logs.txt"].last_modified = now - timedelta(minutes=10)
     with connector.context as cache:
         cache["last_event_date"] = now.isoformat()
 
-    assert await connector.get_azure_blob_data() == []
+    assert await collect(connector) == []
     assert connector.get_blob_states()["logs.txt"]["offset"] == 1002
 
     storage.append("logs.txt", b"\nb\n")
-    assert await connector.get_azure_blob_data() == ["b"]
+    assert await collect(connector) == ["b"]
 
 
 @pytest.mark.asyncio
@@ -750,7 +794,7 @@ async def test_azure_blob_append_in_the_same_second_is_read(connector: AzureBlob
     """
     modified_at = datetime.now(timezone.utc).replace(microsecond=0)
     storage.write("PT1H.json", b"a\nb\n", modified_at=modified_at)
-    assert await connector.get_azure_blob_data() == ["a", "b"]
+    assert await collect(connector) == ["a", "b"]
 
     storage.append("PT1H.json", b"c\n", modified_at=modified_at)
-    assert await connector.get_azure_blob_data() == ["c"]
+    assert await collect(connector) == ["c"]

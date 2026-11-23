@@ -184,12 +184,12 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
                 if name in keep or isoparse(state["last_modified"]) >= oldest
             }
 
-    async def get_azure_blob_data(self) -> list[str]:
+    async def get_azure_blob_data(self) -> int:
         """
-        Get Azure Blob Storage data.
+        Forward Azure Blob Storage data to the intake.
 
         Returns:
-            list[str]:
+            int: number of events forwarded
         """
         _last_modified_date = self.last_event_date
 
@@ -200,14 +200,14 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
         )
 
         records: list[str] = []
-        result: list[str] = []
+        forwarded = 0
         # Reading states of the blobs whose events are in `records`, saved once the records are forwarded
         states: dict[str, dict[str, Any]] = {}
 
         async def forward_records() -> None:
-            nonlocal records, states
+            nonlocal records, states, forwarded
             if records:
-                result.extend(await self.push_data_to_intakes(events=records))
+                forwarded += len(await self.push_data_to_intakes(events=records))
             if states:
                 self.save_blob_states(states)
 
@@ -245,7 +245,7 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
 
             cache["last_event_date"] = _last_modified_date.isoformat()
 
-        return result
+        return forwarded
 
     def run(self) -> None:  # pragma: no cover
         """Runs Azure Blob Storage."""
@@ -262,9 +262,9 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
                             processing_start - self.last_event_date.timestamp()
                         )
 
-                    message_ids: list[str] = loop.run_until_complete(self.get_azure_blob_data())
+                    forwarded: int = loop.run_until_complete(self.get_azure_blob_data())
                     processing_end = time.time()
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(forwarded)
 
                     logger.info(
                         "Processing took {processing_time} seconds",
@@ -277,8 +277,8 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
 
                     previous_processing_end = processing_end
 
-                    if len(message_ids) > 0:
-                        self.log(message="Pushed {0} records".format(len(message_ids)), level="info")
+                    if forwarded > 0:
+                        self.log(message="Pushed {0} records".format(forwarded), level="info")
                     else:
                         self.log(message="No records to forward", level="info")
                         time.sleep(self.configuration.frequency)

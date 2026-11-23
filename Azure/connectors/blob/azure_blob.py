@@ -336,10 +336,23 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
             return
 
         # Compressed offset of the gzip member being read (with the fingerprint of the bytes preceding it),
-        # and the number of its lines already forwarded
+        # and the number of its lines already forwarded (with their checksum, checked when they are skipped)
         offset, tail, lines_to_skip = state["offset"], state.get("tail"), state["lines"]
+        expected_checksum = state.get("checksum")
 
         index = 0
+        checksum = 0
+
+        def progress(lines: int, size: int | None) -> dict[str, Any]:
+            return {
+                **state,
+                "offset": offset,
+                "tail": tail,
+                "lines": lines,
+                "checksum": checksum if lines else None,
+                "size": size,
+            }
+
         batch: list[str] = []
         reader = LineReader()
         gunzip_state: dict[str, Any] = {"offset": offset, "tail": tail}
@@ -353,21 +366,30 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
                         if index > lines_to_skip:
                             batch.extend(self._decode(line, size, blob))
 
+                    # The member has less lines than the ones already forwarded: it is not the member that was read
+                    if index < lines_to_skip and expected_checksum is not None:
+                        raise BlobOverwritten()
+
                     offset, tail, lines_to_skip, index = gunzip_state["offset"], gunzip_state["tail"], 0, 0
+                    checksum = 0
                     if len(batch) >= self.limit_of_events_to_push:
-                        yield batch, {**state, "offset": offset, "tail": tail, "lines": 0, "size": None}
+                        yield batch, progress(0, None)
                         batch = []
                     continue
 
-                for line, size, _ in reader.feed(data):
+                for line, size, line_tail in reader.feed(data):
                     index += 1
+                    checksum = zlib.crc32(line_tail if line is None else line, zlib.crc32(b"\n", checksum))
                     if index <= lines_to_skip:
+                        # The lines skipped are not the ones that were forwarded
+                        if index == lines_to_skip and expected_checksum not in (None, checksum):
+                            raise BlobOverwritten()
                         continue
 
                     batch.extend(self._decode(line, size, blob))
 
                     if len(batch) >= self.limit_of_events_to_push:
-                        yield batch, {**state, "offset": offset, "tail": tail, "lines": index, "size": None}
+                        yield batch, progress(index, None)
                         batch = []
 
         except zlib.error as error:
@@ -377,20 +399,14 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
                 "its remaining content is skipped",
                 level="error",
             )
-            yield batch, {**state, "offset": offset, "tail": tail, "lines": index, "size": blob.size}
+            yield batch, progress(index, blob.size) if index >= lines_to_skip else {**state, "size": blob.size}
             return
 
         # The last gzip member is truncated (blob being written): its remaining lines are read next time
         if not gunzip_state["eof"]:
-            lines_read = max(index, lines_to_skip)
-            yield batch, {**state, "offset": offset, "tail": tail, "lines": lines_read, "size": None}
+            yield batch, progress(index, None) if index >= lines_to_skip else {**state, "size": None}
             return
 
         # Every member is complete: the next one starts after the last member and its padding
-        yield batch, {
-            **state,
-            "offset": gunzip_state["offset"],
-            "tail": gunzip_state["tail"],
-            "lines": 0,
-            "size": blob.size,
-        }
+        offset, tail = gunzip_state["offset"], gunzip_state["tail"]
+        yield batch, progress(0, blob.size)

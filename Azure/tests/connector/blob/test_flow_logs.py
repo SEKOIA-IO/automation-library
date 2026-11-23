@@ -13,6 +13,7 @@ from sekoia_automation.module import Module
 from connectors.blob import AzureBlobConnectorConfig
 from connectors.blob.azure_flow_logs import AzureFlowLogsConnector
 from connectors.blob.azure_network_watcher import AzureNetworkWatcherConnector
+from tests.connector.blob import collect
 
 
 @pytest.fixture
@@ -107,7 +108,7 @@ async def test_flow_logs_get_network_watcher_data_1(
 
     connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
 
-    result = await connector.get_azure_blob_data()
+    result = await collect(connector)
 
     assert result == connector.filter_blob_data(flow_logs_content.decode("utf-8"))
 
@@ -156,7 +157,7 @@ async def test_flow_logs_get_network_watcher_data_2(
 
     connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
 
-    result = await connector.get_azure_blob_data()
+    result = await collect(connector)
 
     assert result == connector.filter_blob_data(flow_logs_content.decode("utf-8"))
 
@@ -204,6 +205,6 @@ async def test_flow_logs_get_network_watcher_data_3(
 
     connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
 
-    result = await connector.get_azure_blob_data()
+    result = await collect(connector)
 
     assert result == connector.filter_blob_data(flow_logs_content.decode("utf-8"))
