@@ -38,7 +38,7 @@
   "name": "Rapid7 InsightVM",
   "uuid": "910366b3-7969-49d6-aa19-d1e3a620f864",
   "slug": "rapid7-insightvm",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "categories": [
     "Network"
   ],
