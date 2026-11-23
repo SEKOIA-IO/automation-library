@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-19 - 0.7.1
+
+### Changed
+
+- New default settings, for the new connectors: 8 event details requested at the same time instead of 4, no delay between calls instead of 0.25 s (the connector retries when Flare rate limits), and 24 hours of initial lookback instead of 1
+
+## 2026-11-19 - 0.7.0
+
+### Changed
+
+- Mark the module as an Intelligence module, so the platform lists it as an Intelligence connector and opens it to Intelligence-only communities
+
+## 2026-11-19 - 0.6.10
+
+### Fixed
+
+- Fix the wording of the log shown when the connector starts: "Starting to fetch Flare events"
+
+## 2026-11-18 - 0.6.9
+
+### Changed
+
+- Log the events cut to fit the intake size limit only in the connector's output, not in the intake's logs: a first sync can cut hundreds of them. The events still above the limit are still logged in the intake's logs
+
+## 2026-11-18 - 0.6.8
+
+### Fixed
+
+- Give every call to the Flare API a timeout (10 s to connect, 60 s to read), in the connector and the account validation, and retry the calls that time out: a call Flare never answered blocked the connector until the connection broke
+
 ## 2026-11-17 - 0.6.7
 
 ### Fixed

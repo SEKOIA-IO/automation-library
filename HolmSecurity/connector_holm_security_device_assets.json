@@ -42,6 +42,5 @@
       "frequency",
       "batch_size"
     ]
-  },
-  "feature-flag": ["reveal-beta-connectors"]
+  }
 }

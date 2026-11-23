@@ -10,13 +10,12 @@ import orjson
 import requests
 from flareio import FlareApiClient
 from flareio.ratelimit import Limiter
-from requests.adapters import HTTPAdapter
 from sekoia_automation.checkpoint import CheckpointCursor
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.constants import EVENT_BYTES_MAX_SIZE
-from urllib3.util import Retry
 
 from flareio_modules import FlareIOModule
+from flareio_modules.http import create_session
 from flareio_modules.metrics import (
     DISCARDED_EVENTS,
     EVENTS_LAG,
@@ -41,9 +40,9 @@ class SerializedEvent(NamedTuple):
 class FlareEventsConnectorConfiguration(DefaultConnectorConfiguration):
     frequency: int = 60
     page_size: int = 10
-    initial_hours_lookback: int = 1
-    throttle_seconds: float = 0.25
-    concurrency: int = 4
+    initial_hours_lookback: int = 24
+    throttle_seconds: float = 0
+    concurrency: int = 8
 
 
 class ThreadSafeLimiter:
@@ -76,26 +75,8 @@ class FlareEventsConnector(Connector):
         return FlareApiClient(
             api_key=self.module.configuration.api_key,
             tenant_id=self.module.configuration.tenant_id,
-            session=self._create_session(),
+            session=create_session(),
         )
-
-    @staticmethod
-    def _create_session() -> requests.Session:
-        """
-        The SDK's session retries 429, 502, 503 and 504 only, while Flare also answers intermittent 500s to both the
-        search and the details: without a retry, each one fails the batch and costs a `frequency` wait in `run()`.
-        Same retries as the SDK's otherwise.
-        """
-        session = requests.Session()
-        retry = Retry(
-            total=5,
-            backoff_factor=2,
-            backoff_max=15,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods={"GET", "POST"},
-        )
-        session.mount("https://", HTTPAdapter(max_retries=retry))
-        return session
 
     @cached_property
     def limiter(self) -> ThreadSafeLimiter:
@@ -262,7 +243,8 @@ class FlareEventsConnector(Connector):
         if serialized.truncated_fields:
             TRUNCATED_EVENTS.labels(intake_key=intake_key).inc()
             fields = ", ".join(serialized.truncated_fields)
-            self.log(f"Cut the fields {fields} of the {description} to fit the intake size limit", level="info")
+            # Not in the intake's logs, shown to the user: a backfill can cut hundreds of events
+            self._logger.info(f"Cut the fields {fields} of the {description} to fit the intake size limit")
         if serialized.size > EVENT_BYTES_MAX_SIZE:
             DISCARDED_EVENTS.labels(intake_key=intake_key).inc()
             self.log(
@@ -330,7 +312,7 @@ class FlareEventsConnector(Connector):
             time.sleep(delta_sleep)
 
     def run(self) -> None:  # pragma: no cover
-        self.log(message="Start fetching Flare events", level="info")
+        self.log(message="Starting to fetch Flare events", level="info")
 
         while self.running:
             try:

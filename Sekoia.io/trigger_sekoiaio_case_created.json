@@ -72,7 +72,7 @@
         "type": "string"
       },
       "assignees": {
-        "description": "List of assignees of the Case.",
+        "description": "UUIDs of the avatars assigned to the Case.",
         "type": "array",
         "items": {
           "type": "string"
