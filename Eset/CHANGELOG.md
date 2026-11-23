@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-19 - 1.2.1
+
+### Changed
+
+- Show the vulnerability asset connector only to the communities that have the `reveal-application-discovery` feature flag
+
 ## 2026-08-06 - 1.2.0
 
 ### Added
