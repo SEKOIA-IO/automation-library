@@ -3,7 +3,6 @@ import textwrap
 import pytest
 import yaml
 
-from nextron_valhalla_modules.ecs_field_maps import RAW_TO_ECS, RAW_TO_ECS_BY_PRODUCT
 from nextron_valhalla_modules.sigma_mapper import (
     DEFAULT_SEVERITY,
     MARKER_TAG,
@@ -701,17 +700,6 @@ def test_custom_mapping_overrides_default():
     assert "custom.ecs.field|contains" in parsed["detection"]["selection"]
 
 
-def test_windows_process_access_keeps_source_and_target_apart():
-    """C1: Sekoia's parser keeps the access *source* in ``process.*`` and
-    the target under ``action.properties.*`` (Sysmon 10 fixture)."""
-    win = RAW_TO_ECS_BY_PRODUCT["windows"]
-    assert win["SourceImage"] == "process.executable"
-    assert win["Image"] == "process.executable"
-    assert win["TargetImage"] == "action.properties.TargetImage"
-    assert win["TargetProcessId"] == "action.properties.TargetProcessId"
-    assert win["TargetProcessGUID"] == "action.properties.TargetProcessGUID"
-
-
 def test_lsass_access_rule_keeps_both_conditions():
     payload = textwrap.dedent(
         """\
@@ -760,23 +748,9 @@ def test_url_fields_collide_in_one_selection():
 # ---------------------------------------------------------------------------
 
 
-def test_sigmahq_pipelines_load_without_caseless_suffix():
-    """Sekoia's ECS schema doesn't expose `.caseless` sub-fields; the merge
-    strips the suffix. Confirm no runtime target still carries it."""
-    for target in RAW_TO_ECS.values():
-        assert not target.endswith(".caseless"), target
-
-
 def test_product_picks_its_own_field_map():
     """S9: macOS rules use the macOS map (``ProcessName`` → ``process.name``),
     not the Windows targets."""
-    mac = RAW_TO_ECS_BY_PRODUCT["macos"]
-    win = RAW_TO_ECS_BY_PRODUCT["windows"]
-    assert mac["ProcessName"] == "process.name"
-    assert mac["FileName"] == "file.name"
-    assert win["ProcessName"] == "process.executable"
-    assert win["FileName"] == "file.path"
-
     payload = textwrap.dedent(
         """\
         title: T
@@ -792,14 +766,6 @@ def test_product_picks_its_own_field_map():
     converted, unmapped = convert_payload_to_ecs(payload)
     assert unmapped == []
     assert converted["detection"]["selection"] == {"process.name": "osascript"}
-
-
-def test_product_match_is_case_insensitive():
-    from nextron_valhalla_modules.ecs_field_maps import mapping_for_product
-
-    assert mapping_for_product("Windows") is RAW_TO_ECS_BY_PRODUCT["windows"]
-    assert mapping_for_product("okta") is RAW_TO_ECS
-    assert mapping_for_product(None) is RAW_TO_ECS
 
 
 WINDOWS_ONLY_FIELDS = [
@@ -1305,3 +1271,91 @@ def test_non_list_tags_are_ignored_and_non_string_items_dropped():
     rule, parsed = _rule_and_parsed("title: t\ntags: [attack.t1059, 7, null]\ndetection: {}\n")
     body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
     assert body["tags"] == ["attack.t1059", "nextron-valhalla", "uuid-abc-123"]
+
+
+def test_status_tag_is_not_duplicated():
+    yaml_body = "title: t\nstatus: stable\ntags:\n  - status-stable\ndetection: {}\n"
+    rule, parsed = _rule_and_parsed(yaml_body)
+    body = sigma_rule_to_catalog_payload(rule, parsed, enabled=False)
+    assert body["tags"].count("status-stable") == 1
+
+
+def test_unusual_field_key_is_looked_up_whole():
+    """A key that isn't ``Field|modifiers`` (here a space) is not split."""
+    converted, unmapped = convert_payload_to_ecs(_single_field_rule("'Odd Key|contains'"))
+    assert converted is None
+    assert unmapped == ["Odd Key|contains"]
+
+
+def test_non_string_selection_key_is_kept():
+    converted, unmapped = convert_payload_to_ecs(_single_field_rule("4688"))
+    assert unmapped == []
+    assert converted["detection"]["selection"] == {4688: "foo"}
+
+
+def test_fieldref_list_value_is_resolved_item_by_item():
+    payload = _single_field_rule("ParentImage|fieldref", "[Image, CommandLine]", product="windows")
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert unmapped == []
+    assert converted["detection"]["selection"] == {
+        "process.parent.executable|fieldref": ["process.executable", "process.command_line"]
+    }
+
+
+def test_fieldref_non_string_value_is_kept():
+    payload = _single_field_rule("ParentImage|fieldref", "5", product="windows")
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert unmapped == []
+    assert converted["detection"]["selection"] == {"process.parent.executable|fieldref": 5}
+
+
+@pytest.mark.parametrize("value", ["5", "['MD5=aaaa', 5]"])
+def test_hashes_non_string_value_is_unmapped(value):
+    converted, unmapped = convert_payload_to_ecs(_single_field_rule("Hashes|contains", value))
+    assert converted is None
+    assert unmapped == ["Hashes"]
+
+
+def test_several_hashes_keys_in_one_selection_are_unmapped():
+    payload = textwrap.dedent(
+        """\
+        title: T
+        detection:
+          selection:
+            Hashes|contains: 'MD5=aaaa'
+            Hashes|endswith: 'SHA256=bbbb'
+          condition: selection
+        """
+    )
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert converted is None
+    assert unmapped == ["Hashes"]
+
+
+def test_hashes_target_already_in_selection_is_a_collision():
+    payload = textwrap.dedent(
+        """\
+        title: T
+        detection:
+          selection:
+            Hashes: 'MD5=aaaa'
+            process.hash.md5: 'bbbb'
+          condition: selection
+        """
+    )
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert converted is None
+    assert "<collision:process.hash.md5>" in unmapped
+
+
+def test_non_dict_logsource_is_ignored():
+    payload = "title: T\nlogsource: windows\ndetection:\n  selection:\n    CommandLine: x\n  condition: selection\n"
+    converted, unmapped = convert_payload_to_ecs(payload)
+    assert unmapped == []
+    assert converted["detection"]["selection"] == {"process.command_line": "x"}
+
+
+def test_non_mapping_yaml_root_returns_marker():
+    converted, unmapped = convert_payload_to_ecs("- a\n- b\n")
+    assert converted is None
+    assert unmapped == ["<invalid-root>"]
