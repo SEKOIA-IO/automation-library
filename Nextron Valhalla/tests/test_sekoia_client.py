@@ -8,6 +8,7 @@ from nextron_valhalla_modules.sekoia_client import (
     SekoiaAPIError,
     SekoiaClient,
     SekoiaRuleNotFoundError,
+    rule_tag_names,
     writable_rule,
 )
 
@@ -447,6 +448,19 @@ def test_iter_rules_rejects_non_dict_body():
         m.get(RULES_URL, json=[{"uuid": "a"}])
         with pytest.raises(SekoiaAPIError, match="unexpected list shape"):
             list(client.iter_rules())
+
+
+def test_iter_rules_rejects_non_list_items():
+    client = SekoiaClient(BASE_URL, "k")
+    with requests_mock.Mocker() as m:
+        m.get(RULES_URL, json={"items": {"uuid": "a"}})
+        with pytest.raises(SekoiaAPIError, match="unexpected list shape"):
+            list(client.iter_rules())
+
+
+def test_rule_tag_names_ignores_unexpected_tag_shapes():
+    rule = {"tags": [{"uuid": "t-1", "name": "a"}, "b", {"uuid": "t-2"}, {"name": 3}, 4]}
+    assert rule_tag_names(rule) == {"a", "b"}
 
 
 def test_writable_rule_converts_get_shape_to_put_shape():
