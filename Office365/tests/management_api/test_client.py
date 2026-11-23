@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from unittest.mock import AsyncMock
 from urllib.parse import urlencode
 
+import aiohttp
 import orjson
 import pytest
 from aioresponses import aioresponses
@@ -891,6 +892,57 @@ async def test_get_content_should_not_retry_on_client_error(
 
     # assert
     no_retry_sleep.assert_not_awaited()
+
+    # finalize
+    await client.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("retry_after,expected_wait", [("30", 30.0), ("3600", 120.0)])
+async def test_get_content_should_wait_retry_after_on_throttling(
+    mocked_responses, mock_azure_authentication, tenant_id, no_retry_sleep, retry_after, expected_wait
+):
+    # arrange
+    content_uri = "https://manage.office.com/api/v1.0/f28ab78a-d401-4060-8012-736e373933eb/activity/feed/audit/1"
+    events = [{"Id": "1"}]
+
+    mocked_responses.get(content_uri, status=429, headers={"Retry-After": retry_after})
+    mocked_responses.get(content_uri, status=200, body=orjson.dumps(events))
+
+    client = Office365API(client_id="client_id", client_secret="client_secret", tenant_id=tenant_id)
+
+    # act
+    content = await client.get_content(content_uri)
+
+    # assert
+    assert content == events
+    no_retry_sleep.assert_awaited_once_with(expected_wait)
+
+    # finalize
+    await client.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("error", [aiohttp.ClientConnectionError("connection reset"), TimeoutError()])
+async def test_get_content_should_retry_on_transport_error(
+    mocked_responses, mock_azure_authentication, tenant_id, no_retry_sleep, error
+):
+    # arrange
+    content_uri = "https://manage.office.com/api/v1.0/f28ab78a-d401-4060-8012-736e373933eb/activity/feed/audit/1"
+    events = [{"Id": "1"}]
+
+    mocked_responses.get(content_uri, exception=error)
+    mocked_responses.get(content_uri, status=500)
+    mocked_responses.get(content_uri, status=200, body=orjson.dumps(events))
+
+    client = Office365API(client_id="client_id", client_secret="client_secret", tenant_id=tenant_id)
+
+    # act
+    content = await client.get_content(content_uri)
+
+    # assert
+    assert content == events
+    assert no_retry_sleep.await_count == 2
 
     # finalize
     await client.close()

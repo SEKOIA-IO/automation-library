@@ -8,7 +8,7 @@ from urllib.parse import urlencode, urlparse, urlunsplit
 
 import msal
 from aiohttp.client import ClientSession
-from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception, stop_after_attempt
 
 from .constants import OFFICE365_ACTIVE_SUBSCRIPTION_STATUS, OFFICE365_AUTHORITY_DEFAULT, OFFICE365_URL_BASE
 from .errors import (
@@ -19,8 +19,8 @@ from .errors import (
     FailedToListO365Subscriptions,
     SessionClosedError,
 )
-from .helpers import is_transient_content_error, log_content_retry
 from .logging import get_logger
+from .retry import is_transient_content_error, log_content_retry, wait_content_retry
 
 logger = get_logger()
 
@@ -250,7 +250,7 @@ class Office365API:
 
     @retry(
         retry=retry_if_exception(is_transient_content_error),
-        wait=wait_exponential(multiplier=2, max=60),
+        wait=wait_content_retry,
         stop=stop_after_attempt(5),
         before_sleep=log_content_retry,
         reraise=True,
@@ -259,7 +259,8 @@ class Office365API:
         """
         Return a content
 
-        Transient HTTP errors (429, 502, 503, 504) are retried with an exponential backoff
+        Transient errors (HTTP 429/5xx, connection errors, timeouts) are retried, honouring `Retry-After`
+        when the API sends it and with an exponential backoff otherwise
 
         :param str content_uri: The uri of the content to pull
         :return: The list of events from the content
@@ -274,7 +275,12 @@ class Office365API:
 
                 # check HTTP status code
                 if response.status >= 400:
-                    raise FailedToGetO365AuditContent(status_code=response.status, body=await response.text())
+                    retry_after = response.headers.get("Retry-After")
+                    raise FailedToGetO365AuditContent(
+                        status_code=response.status,
+                        body=await response.text(),
+                        **({"retry_after": retry_after} if retry_after else {}),
+                    )
 
                 content = await response.json(content_type=None)
 
