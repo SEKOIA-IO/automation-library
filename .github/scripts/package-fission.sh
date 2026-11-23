@@ -6,8 +6,9 @@
 # of them, named {slug}-{version}-py{python-version}.zip. Each archive contains
 # the module sources and its runtime dependencies, installed for that Python
 # version on the fission Python environment (dhi.io/python:<version>-dev, Debian
-# 13 on x86_64 with glibc 2.41). When the list is missing or empty, the module
-# does not support fission and no archive is built.
+# 13 on x86_64 with glibc 2.41), along with their bytecode compiled for that
+# Python version. When the list is missing or empty, the module does not support
+# fission and no archive is built.
 #
 # Usage: package-fission.sh <module-dir> <output-dir>
 
@@ -98,6 +99,27 @@ for python_version in $python_versions; do
     exit 1
   fi
   rm -rf "${dist:?}/bin" "${dist:?}/.lock"
+
+  # Byte-compile the module sources and dependencies, so that fission does not
+  # compile them at each cold start. Hash-based pycs are used because zip
+  # archives store mtimes with a 2 s resolution and no timezone, which would make
+  # timestamp-based pycs look stale once extracted. The archive is immutable, so
+  # the sources never need to be checked against them (unchecked-hash).
+  #
+  # The module sources must compile, otherwise the errors would only surface at
+  # runtime. Like pip, files of the dependencies that do not compile (e.g. the
+  # cookiecutter templates shipped by sekoia-automation-sdk) are reported but do
+  # not fail the build.
+  if ! (cd "$sources" && find . -name '*.py' -print) |
+      (cd "$dist" && uv run --no-project --python "$python_version" -- \
+        python -I -m compileall -q --invalidation-mode unchecked-hash -i -); then
+    echo "::error::the sources of $module_dir do not compile for Python $python_version" >&2
+    exit 1
+  fi
+  if ! uv run --no-project --python "$python_version" -- \
+      python -I -m compileall -q -j 0 --invalidation-mode unchecked-hash "$dist"; then
+    echo "::warning::some files of the dependencies of $module_dir could not be byte-compiled for Python $python_version" >&2
+  fi
   chmod -R a+rX "$dist"
 
   output="$output_dir/$slug-$version-py$python_version.zip"
