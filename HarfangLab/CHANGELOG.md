@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-24 - 1.31.13
+
+### Fixed
+
+- Fix device asset connector: stop sending the subnet gateway MAC as the device network interface MAC; every host behind one gateway got the same MAC
+
 ## 2026-09-23 - 1.31.12
 
 ### Fixed
