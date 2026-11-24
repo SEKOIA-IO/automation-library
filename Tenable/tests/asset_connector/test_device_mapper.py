@@ -226,7 +226,7 @@ def test_hostname_falls_back_to_name_when_no_host_or_fqdn():
     assert device.name == "my-asset"
 
 
-@pytest.mark.parametrize("name", [None, "unknown asset label", "10.0.0.1"])
+@pytest.mark.parametrize("name", [None, "unknown asset label", "10.0.0.1", "Unknown", "localhost"])
 def test_an_asset_without_a_usable_hostname_is_not_mapped(name):
     """Neither a placeholder nor a label nor an IP is sent as hostname: the asset is skipped."""
     asset = AssetInfo(id="asset-z", name=name)
