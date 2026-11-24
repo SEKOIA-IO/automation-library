@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- Stop the connectors gracefully on an invalid token or an unreachable endpoint instead of retrying forever
+
 ## 2026-11-12 - 1.39.0
 
 ### Changed

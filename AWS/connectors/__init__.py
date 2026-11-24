@@ -9,6 +9,7 @@ from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from aws_helpers.base import AwsModule
+from aws_helpers.errors import is_fatal_error
 from connectors.provider import AwsAccountProvider
 
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, MESSAGES_AGE, OUTCOMING_EVENTS
@@ -84,7 +85,11 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
                         time.sleep(delta_sleep)
 
             except Exception as e:
-                self.log_exception(e)
+                if is_fatal_error(e):
+                    self.log_exception(e, message="Unrecoverable AWS error, stopping", level="critical")
+                    self.stop()
+                else:
+                    self.log_exception(e)
             finally:
                 loop.run_until_complete(loop.shutdown_asyncgens())
                 loop.close()

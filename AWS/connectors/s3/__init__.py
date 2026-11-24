@@ -12,6 +12,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from sekoia_automation.storage import PersistentJSON
 
+from aws_helpers.errors import is_fatal_error
 from aws_helpers.utils import AsyncReader, normalize_s3_key, unescape_string
 from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
 from connectors.metrics import INCOMING_EVENTS
@@ -169,6 +170,10 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                     logger.info(f"Parsed {object_records} records from object {normalized_key}")
 
                 except Exception as e:
+                    # a wrong bucket, key or permission would fail for every message: let the connector stop
+                    if is_fatal_error(e):
+                        raise
+
                     self.log(
                         message=f"Failed to fetch content of {record}: {str(e)}",
                         level="warning",
