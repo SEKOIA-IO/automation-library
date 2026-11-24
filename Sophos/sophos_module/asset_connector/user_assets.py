@@ -118,9 +118,12 @@ class SophosUserAssetConnector(AssetConnector):
 
     @staticmethod
     def _is_local_machine_account(user: SophosUser) -> bool:
-        """Return True for local Windows session accounts"""
+        """Return True for local Windows session accounts, never for a user synced from Active Directory"""
         name = user.name or ""
-        return "\\" in name and not user.email and not user.firstName and not user.lastName
+        from_active_directory = user.source is not None and user.source.type == "active_directory"
+        return (
+            "\\" in name and not user.email and not user.firstName and not user.lastName and not from_active_directory
+        )
 
     @staticmethod
     def _get_account_type(user: SophosUser) -> tuple[AccountTypeId, AccountTypeStr]:

@@ -427,6 +427,16 @@ class TestMapUserFields:
         assert result.user.name == AD_USER.name.split("/", 1)[1]
         assert result.user.account.name == result.user.name
 
+    def test_active_directory_user_without_email_or_names_is_sent_without_its_domain(self, connector):
+        user = WINDOWS_USER.model_copy(
+            update={"name": "CORP\\jdoe", "source": SophosUserSource(type="active_directory")}
+        )
+        result = connector.map_user_fields(user)
+        assert result is not None
+        assert result.user.name == "jdoe"
+        assert result.user.domain == "CORP"
+        assert result.user.type_id == UserTypeId.USER
+
     def test_domain_user_with_a_backslash_is_sent_without_its_domain(self, connector):
         user = NAMED_USER.model_copy(update={"name": "CORP\\jdoe"})
         result = connector.map_user_fields(user)
