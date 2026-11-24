@@ -23,14 +23,21 @@
       "initial_hours_lookback": {
         "type": "integer",
         "description": "Lookback in hours",
-        "default": 1,
+        "default": 24,
         "minimum": 1
       },
       "throttle_seconds": {
         "type": "number",
         "description": "Delay in seconds between individual event requests (lower is faster; the API retries on rate limiting)",
-        "default": 0.25,
+        "default": 0,
         "minimum": 0
+      },
+      "concurrency": {
+        "type": "integer",
+        "description": "Number of event details requested at the same time (all calls are still paced by throttle_seconds)",
+        "default": 8,
+        "minimum": 1,
+        "maximum": 10
       },
       "intake_server": {
         "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
