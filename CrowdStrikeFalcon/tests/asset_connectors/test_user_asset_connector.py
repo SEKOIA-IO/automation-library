@@ -178,6 +178,14 @@ class TestMapIdentityEntityFields:
             ([CrowdStrikeUserAccount(dataSource="ACTIVE_DIRECTORY")], ["alice@example.com"], "alice@example.com"),
             ([], ["alice@example.com"], "alice@example.com"),
             ([], [], "Alice Smith"),
+            (
+                [
+                    CrowdStrikeUserAccount(dataSource="AZURE_AD"),
+                    CrowdStrikeUserAccount(dataSource="ACTIVE_DIRECTORY", samAccountName="asmith"),
+                ],
+                ["alice@example.com"],
+                "asmith",
+            ),
         ],
     )
     def test_user_name_is_the_login_first(self, connector, accounts, emails, expected):
@@ -264,6 +272,11 @@ class TestMapIdentityEntityFields:
 
 
 class TestCheckpoint:
+    def test_the_checkpoint_of_the_previous_mapping_is_ignored(self, connector):
+        assert connector.CHECKPOINT_KEY == "user_assets_last_seen_timestamp_v2"
+        connector.context["user_assets_last_seen_timestamp"] = "2025-01-15T10:00:00Z"
+        assert connector.most_recent_user_date is None
+
     def test_most_recent_user_date_returns_cached_value(self, connector):
         connector.context[connector.CHECKPOINT_KEY] = "2025-01-15T10:00:00Z"
         assert connector.most_recent_user_date == "2025-01-15T10:00:00Z"

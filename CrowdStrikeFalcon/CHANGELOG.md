@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - User assets: send the login of a user in `user.name`, the `samAccountName` of its Active Directory account, else its first email, else its display name, instead of always its display name
 - User assets: send only an account SID in `user.account.uid`, never the objectGuid or the entity ID
 - The checkpoint is renamed, so the next run fetches all the users again
+- User assets: read the login, domain and SID from the Active Directory account of the user, not always from its first account
 
 ## 2026-09-01 - 1.25.20
 
