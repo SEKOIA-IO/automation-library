@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Renew the OIDC credentials 15 minutes before expiry, so they do not expire before the end of a batch
 - Stop the connectors gracefully on an invalid token or an unreachable endpoint instead of retrying forever
 
 ## 2026-11-12 - 1.39.0

@@ -170,6 +170,30 @@ def test_get_assume_role_refreshes_expired_cache(oidc_instance: ConcreteOidcClas
     assert result.aws_access_key_id == "NEW_KEY"
 
 
+def test_get_assume_role_refreshes_credentials_close_to_expiry(oidc_instance: ConcreteOidcClass):
+    """Test that credentials too close to expiry for a whole SQS batch are renewed."""
+    oidc_instance._cached_aws_config = MagicMock(spec=AwsClientConfiguration)
+    oidc_instance._config_expiration = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+    mock_sts = MagicMock()
+    mock_sts.assume_role_with_web_identity.return_value = {
+        "Credentials": {
+            "AccessKeyId": "NEW_KEY",
+            "SecretAccessKey": "new_secret",
+            "SessionToken": "new_token",
+            "Expiration": datetime.now(timezone.utc) + timedelta(hours=1),
+        }
+    }
+
+    with (
+        patch("aws_helpers.oidc.boto3.client", return_value=mock_sts),
+        patch.object(oidc_instance, "_get_oidc_token", return_value="fresh_oidc_token"),
+    ):
+        result = oidc_instance.get_assume_role()
+
+    assert result.aws_access_key_id == "NEW_KEY"
+
+
 def test_get_assume_role_exception_wrapping(oidc_instance: ConcreteOidcClass):
     """Test that exceptions from STS are wrapped with context message."""
     mock_sts = MagicMock()

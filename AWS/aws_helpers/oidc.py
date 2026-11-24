@@ -10,6 +10,9 @@ from aws_helpers.client import AwsClientConfiguration
 
 from .base import AwsModule
 
+# credentials must outlive a whole SQS batch (visibility timeout 10 min), as messages are deleted at its end
+CREDENTIALS_REFRESH_MARGIN = timedelta(minutes=15)
+
 
 class _OidcHost(Protocol):
     """Protocol describing what OidcAwsMixin expects from its concrete class."""
@@ -88,13 +91,13 @@ class OidcAwsMixin:
     def get_assume_role(self: _OidcHost) -> AwsClientConfiguration:
         """Assume AWS role via OIDC web identity and return temporary credentials.
 
-        Credentials are cached and reused until 5 minutes before expiration.
+        Credentials are cached and reused until CREDENTIALS_REFRESH_MARGIN before expiration.
         """
         now = datetime.now(timezone.utc)
         if (
             self._cached_aws_config is not None
             and self._config_expiration is not None
-            and self._config_expiration - timedelta(minutes=5) > now
+            and self._config_expiration - CREDENTIALS_REFRESH_MARGIN > now
         ):
             return self._cached_aws_config
 
