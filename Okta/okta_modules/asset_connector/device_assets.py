@@ -25,6 +25,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
 )
 from sekoia_automation.storage import PersistentJSON
+from sekoia_automation_models.hostname import split_hostname
 
 from okta_modules import OktaModule
 from okta_modules.asset_connector import OktaAsyncAssetConnector
@@ -240,6 +241,12 @@ class OktaDeviceAssetConnector(OktaAsyncAssetConnector):
         if not okta_device.profile or not okta_device.profile.displayName:
             raise ValueError("Device profile and displayName are required")
 
+        # `displayName` is a label set on the device: only a usable hostname is sent
+        hostname, domain = split_hostname(okta_device.profile.displayName)
+        if hostname is None:
+            # The platform cannot store a device without hostname yet (SekoiaLab/platform#98032)
+            raise ValueError("no usable hostname")
+
         # Parse timestamps
         created_timestamp = isoparse(okta_device.created).timestamp()
         last_updated_timestamp = isoparse(okta_device.lastUpdated).timestamp()
@@ -257,7 +264,8 @@ class OktaDeviceAssetConnector(OktaAsyncAssetConnector):
         imei_list = [okta_device.profile.imei] if okta_device.profile.imei else None
 
         device = Device(
-            hostname=okta_device.profile.displayName,
+            hostname=hostname,
+            domain=domain,
             name=okta_device.profile.displayName,
             uid=okta_device.id,
             type_id=device_type_id,
