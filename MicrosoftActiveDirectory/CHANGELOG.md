@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-24 - 1.6.7
+
+### Fixed
+
+- Send the login (sAMAccountName, else userPrincipalName) as the user name, so the user assets match the accounts in the events; the display name, else the first and last name, goes to the full name
+- Leave a missing display name, full name or domain out instead of sending `Unknown`, and skip a user without login or SID instead of sending `Unknown` for them
+
 ## 2026-11-09 - 1.6.6
 
 ### Fixed
