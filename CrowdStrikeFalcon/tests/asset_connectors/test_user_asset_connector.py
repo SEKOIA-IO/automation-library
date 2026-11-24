@@ -9,6 +9,7 @@ from crowdstrike_falcon.asset_connectors.crowdstrike_user_model import (
 )
 from crowdstrike_falcon.asset_connectors.user_assets import CrowdstrikeUserAssetConnector
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
+from sekoia_automation.exceptions import AssetConnectorRateLimitError
 from sekoia_automation.asset_connector.models.ocsf.user import (
     UserOCSFModel,
     AccountTypeId,
@@ -228,9 +229,16 @@ class TestCheckpoint:
         connector._latest_time = None
         connector.update_checkpoint()
         assert connector.context["user_assets_last_seen_timestamp"] == "2025-01-01T00:00:00Z"
-        connector.log.assert_called_with(
-            "Warning: new_most_recent_date is None, skipping checkpoint update", level="warning"
-        )
+        connector.log.assert_called_with("No new user checkpoint to commit, skipping checkpoint update", level="info")
+
+    def test_update_checkpoint_does_nothing_when_a_push_failed(self, connector):
+        connector.context["user_assets_last_seen_timestamp"] = "2025-01-01T00:00:00Z"
+        connector._latest_time = "2025-06-01T12:00:00Z"
+        connector._push_failed = True
+
+        connector.update_checkpoint()
+
+        assert connector.context["user_assets_last_seen_timestamp"] == "2025-01-01T00:00:00Z"
 
     def test_update_checkpoint_handles_exception(self, connector):
         connector._latest_time = "2025-06-01T12:00:00Z"
@@ -285,7 +293,7 @@ class TestFetchIdentityEntities:
         assert result[0].entityId == "2"
         assert connector._latest_time == "2025-01-02T10:00:00Z"
 
-    def test_fetch_identity_entities_updates_checkpoint_on_new_data(self, connector):
+    def test_fetch_identity_entities_remembers_checkpoint_on_new_data(self, connector):
         entities = [
             {"entityId": "1", "creationTime": "2025-01-01T10:00:00Z"},
             {"entityId": "2", "creationTime": "2025-01-03T10:00:00Z"},
@@ -295,7 +303,24 @@ class TestFetchIdentityEntities:
 
         list(connector._fetch_identity_entities())
 
-        assert connector.context["user_assets_last_seen_timestamp"] == "2025-01-03T10:00:00Z"
+        # Remembered once the listing is walked, committed later by the fetch cycle
+        assert connector._latest_time == "2025-01-03T10:00:00Z"
+        assert "user_assets_last_seen_timestamp" not in connector.context
+
+    def test_fetch_identity_entities_stops_walking_when_the_connector_is_stopped(self, connector):
+        entities = [
+            {"entityId": "1", "creationTime": "2025-01-01T10:00:00Z"},
+            {"entityId": "2", "creationTime": "2025-01-03T10:00:00Z"},
+        ]
+        connector.client = Mock()
+        connector.client.list_identity_entities.return_value = iter(entities)
+
+        users = connector._fetch_identity_entities()
+        assert next(users).entityId == "1"
+        connector._stop_event.set()
+
+        assert list(users) == []
+        assert connector._latest_time is None
 
     def test_fetch_identity_entities_no_checkpoint_update_when_no_new_data(self, connector):
         connector.context["user_assets_last_seen_timestamp"] = "2025-01-05T00:00:00Z"
@@ -445,3 +470,179 @@ class TestListIdentityEntities:
             query="query { test }",
             data_path=["entities", "nodes"],
         )
+
+
+def test_get_mapped_fields(connector):
+    fields = connector.get_mapped_fields()
+
+    assert isinstance(fields, dict)
+    assert fields
+    assert all(isinstance(key, str) and isinstance(value, str) for key, value in fields.items())
+    assert fields["entityId"] == "user.uid"
+
+
+def test_reset_checkpoint(connector):
+    connector._latest_time = "2025-01-01T00:00:00Z"
+    connector.update_checkpoint()
+    assert connector.most_recent_user_date == "2025-01-01T00:00:00Z"
+
+    connector.reset_checkpoint()
+
+    assert connector._latest_time is None
+    assert connector.most_recent_user_date is None
+
+
+def test_reset_checkpoint_only_pops_its_own_key(connector):
+    connector.context.update({connector.CHECKPOINT_KEY: "2025-01-01T00:00:00Z", "other_key": "kept"})
+
+    connector.reset_checkpoint()
+
+    assert dict(connector.context) == {"other_key": "kept"}
+
+
+def test_asset_fetch_cycle_retries_a_rate_limited_push(connector, monkeypatch):
+    connector.configuration = {
+        "sekoia_base_url": "https://api.fake.sekoia.io/",
+        "sekoia_api_key": "fake_api_key",
+        "batch_size": 100,
+        "frequency": 0,
+    }
+    connector.module.connector_configuration_uuid = "adcd0095-0f3d-4699-8621-158977b6c2c3"
+    monkeypatch.setattr(connector, "_check_schema_and_reset_if_needed", lambda: None)
+    monkeypatch.delenv("ASSET_CONNECTOR_RATE_LIMIT_WAIT", raising=False)
+    waits = Mock(return_value=False)
+    monkeypatch.setattr(connector._stop_event, "wait", waits)
+
+    connector.client = Mock()
+    connector.client.list_identity_entities.return_value = iter(
+        [{"entityId": "user-1", "primaryDisplayName": "user1", "creationTime": "2025-01-01T00:00:00Z"}]
+    )
+
+    statuses = iter([429, 200])
+    pushed = []
+
+    def post(url, json=None, timeout=None):
+        res = Mock()
+        res.status_code = next(statuses)
+        res.headers = {}
+        res.json.return_value = {}
+        if res.status_code == 200:
+            pushed.extend(item["user"]["uid"] for item in json["items"])
+        return res
+
+    connector.__dict__["_http_session"] = Mock(post=Mock(side_effect=post))
+
+    connector.asset_fetch_cycle()
+
+    assert pushed == ["user-1"]
+    assert [c.args[0] for c in waits.call_args_list if c.args[0] > 1] == [60.0]
+    assert connector.most_recent_user_date == "2025-01-01T00:00:00Z"
+
+
+USERS = [
+    {"entityId": "user-1", "primaryDisplayName": "user1", "creationTime": "2025-01-01T00:00:00Z"},
+    {"entityId": "user-2", "primaryDisplayName": "user2", "creationTime": "2025-01-03T00:00:00Z"},
+    {"entityId": "user-3", "primaryDisplayName": "user3", "creationTime": "2025-01-02T00:00:00Z"},
+]
+STORED_CHECKPOINT = "2024-12-31T00:00:00Z"
+
+
+def _cycle_connector(connector, monkeypatch, users=USERS, batch_size=2):
+    """Prepare a connector to run whole fetch cycles over `users`, from a stored checkpoint."""
+    monkeypatch.delenv("ASSET_CONNECTOR_RATE_LIMIT_WAIT", raising=False)
+    connector.configuration = {
+        "sekoia_base_url": "https://api.fake.sekoia.io/",
+        "sekoia_api_key": "fake_api_key",
+        "batch_size": batch_size,
+        "frequency": 0,
+    }
+    connector.module.connector_configuration_uuid = "adcd0095-0f3d-4699-8621-158977b6c2c3"
+    # Checkpoint as stored by the previous versions of the connector
+    connector.context[connector.CHECKPOINT_KEY] = STORED_CHECKPOINT
+    monkeypatch.setattr(connector, "_check_schema_and_reset_if_needed", lambda: None)
+
+    connector.client = Mock()
+    connector.client.list_identity_entities.side_effect = lambda query: iter(users)
+
+    waits = Mock(return_value=False)
+    monkeypatch.setattr(connector._stop_event, "wait", waits)
+    return waits
+
+
+def _install_push_session(connector, statuses, on_push=None):
+    """Mock the Sekoia push; `statuses` gives the status code of each POST."""
+    pushed = []
+    codes = iter(statuses)
+
+    def post(url, json=None, timeout=None):
+        res = Mock()
+        res.status_code = next(codes)
+        res.headers = {}
+        res.json.return_value = {}
+        if on_push:
+            on_push()
+        if res.status_code == 200:
+            pushed.append([item["user"]["uid"] for item in json["items"]])
+        return res
+
+    connector.__dict__["_http_session"] = Mock(post=Mock(side_effect=post))
+    return pushed
+
+
+def test_asset_fetch_cycle_commits_the_checkpoint_once_every_batch_is_pushed(connector, monkeypatch):
+    _cycle_connector(connector, monkeypatch)
+    checkpoint_at_push = []
+    pushed = _install_push_session(
+        connector,
+        [200, 200],
+        on_push=lambda: checkpoint_at_push.append(connector.context[connector.CHECKPOINT_KEY]),
+    )
+
+    connector.asset_fetch_cycle()
+
+    assert pushed == [["user-1", "user-2"], ["user-3"]]
+    # The checkpoint does not move while the users are being pushed
+    assert checkpoint_at_push == [STORED_CHECKPOINT, STORED_CHECKPOINT]
+    assert connector.most_recent_user_date == "2025-01-03T00:00:00Z"
+
+    # The next cycle has nothing new to push
+    pushed = _install_push_session(connector, [200] * 2)
+    connector.asset_fetch_cycle()
+    assert pushed == []
+
+
+def test_asset_fetch_cycle_keeps_the_checkpoint_when_stopped_during_a_push(connector, monkeypatch):
+    _cycle_connector(connector, monkeypatch)
+    pushed = _install_push_session(connector, [200, 200], on_push=connector._stop_event.set)
+
+    connector.asset_fetch_cycle()
+
+    assert pushed == [["user-1", "user-2"]]
+    assert connector.most_recent_user_date == STORED_CHECKPOINT
+
+
+def test_asset_fetch_cycle_keeps_the_checkpoint_when_the_last_push_fails(connector, monkeypatch):
+    _cycle_connector(connector, monkeypatch)
+    pushed = _install_push_session(connector, [200, 500])
+
+    connector.asset_fetch_cycle()
+
+    assert pushed == [["user-1", "user-2"]]
+    assert connector.most_recent_user_date == STORED_CHECKPOINT
+
+    # The next cycle collects the users again
+    pushed = _install_push_session(connector, [200, 200])
+    connector.asset_fetch_cycle()
+    assert pushed == [["user-1", "user-2"], ["user-3"]]
+    assert connector.most_recent_user_date == "2025-01-03T00:00:00Z"
+
+
+def test_asset_fetch_cycle_keeps_the_checkpoint_on_a_persistent_rate_limit(connector, monkeypatch):
+    _cycle_connector(connector, monkeypatch)
+    pushed = _install_push_session(connector, [200] + [429] * (connector.MAX_RATE_LIMIT_RETRIES + 1))
+
+    with pytest.raises(AssetConnectorRateLimitError):
+        connector.asset_fetch_cycle()
+
+    assert pushed == [["user-1", "user-2"]]
+    assert connector.most_recent_user_date == STORED_CHECKPOINT

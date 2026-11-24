@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-04 - 1.25.21
+
+### Fixed
+
+- Asset connectors: retry pushes rejected by the rate limit (HTTP 429), honouring the
+  `Retry-After` header (60 seconds when absent, at most 1 hour of waiting per batch)
+- Users asset connector: the checkpoint is no longer advanced when a push failed or the
+  connector stopped before every user was pushed
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.27.0
+- Asset connectors: limit pushes to one per second
+- Asset connectors: set the default frequency to 3 hours
+
 ## 2026-09-01 - 1.25.20
 
 ### Fixed
