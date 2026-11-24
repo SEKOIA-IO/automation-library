@@ -62,6 +62,9 @@ omit = ["tests/*", "main.py"]
 version = "^1.24.0"
 extras = ["all"]
 
+[tool.poetry.dependencies.sekoia-automation-models]
+version = "^1.6.0"
+
 [tool.poetry.dev-dependencies.black]
 version = "^26.1.0"
 allow-prereleases = true
