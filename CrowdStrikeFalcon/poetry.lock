@@ -2364,14 +2364,14 @@ crt = ["botocore[crt] (>=1.37.4,<2.0a.0)"]
 
 [[package]]
 name = "sekoia-automation-models"
-version = "1.6.0"
+version = "1.7.0"
 description = "Standalone Pydantic models (OCSF asset-connector) shared across Sekoia services and the `sekoia-automation-sdk`"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "sekoia_automation_models-1.6.0-py3-none-any.whl", hash = "sha256:f87930e72081f79cc55e25ccd508776b32ab42cb596b5ad834d9b51a0de7a940"},
-    {file = "sekoia_automation_models-1.6.0.tar.gz", hash = "sha256:0ae5627f293dc0708edebc4294d8324d922395904d0f6896986a0a3d5b9a9b82"},
+    {file = "sekoia_automation_models-1.7.0-py3-none-any.whl", hash = "sha256:b422a9274a0ceaa71fad01b8260edd6bf8b519af22998635a3417ca1e75cf120"},
+    {file = "sekoia_automation_models-1.7.0.tar.gz", hash = "sha256:b6eb45073fc94b9ae65beeaba49c9915cc18ee701f899a2b2c0efb3b7e37a77e"},
 ]
 
 [package.dependencies]
@@ -3001,4 +3001,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "a19498a2a3aafd206736a802465e61e1cdf89afa48c4417bffcd0a7f0d9b15dc"
+content-hash = "41f981d5041858da8b0b78f17c78913b05a183c78588852ace0a8858636cc321"

@@ -21,7 +21,7 @@ line_length = 119
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 sekoia-automation-sdk = "^1.22.5"
-sekoia-automation-models = "^1.6.0"
+sekoia-automation-models = "^1.7.0"
 crowdstrike-falconpy = "^1.1.4"
 requests-ratelimiter = "^0.7.0"
 stix2-patterns = "^2.0.0"

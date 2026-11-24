@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - User assets: send only an account SID in `user.account.uid`, never the objectGuid or the entity ID
 - The checkpoint is renamed, so the next run fetches all the users again
 - User assets: read the login, domain and SID from the Active Directory account of the user, not always from its first account
+- Use sekoia-automation-models 1.7.0
 
 ## 2026-09-01 - 1.25.20
 
