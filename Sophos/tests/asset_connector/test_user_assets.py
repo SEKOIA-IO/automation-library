@@ -285,6 +285,21 @@ class TestExtractDomain:
         assert SophosUserAssetConnector._extract_domain("") is None
 
 
+class TestExtractLogin:
+    @pytest.mark.parametrize(
+        ("name", "expected"),
+        [
+            ("CORP\\jdoe", "jdoe"),
+            ("CORP/jdoe", "jdoe"),
+            ("jdoe", "jdoe"),
+            ("Jane Doe", "Jane Doe"),
+            ("CORP\\", "CORP\\"),
+        ],
+    )
+    def test_extract_login(self, name, expected):
+        assert SophosUserAssetConnector._extract_login(name) == expected
+
+
 class TestGetGroups:
     def test_user_with_one_group(self):
         groups = SophosUserAssetConnector._get_groups(USER_WITH_GROUPS)
@@ -400,6 +415,8 @@ class TestMapUserFields:
         assert result.user.email_addr is None
         assert result.user.full_name is None
         assert result.user.domain == "DESKTOP-ABC1234"
+        assert result.user.name == WINDOWS_USER.name
+        assert result.user.account.name == WINDOWS_USER.name
 
     def test_ad_user_mapping(self, connector):
         result = connector.map_user_fields(AD_USER)
@@ -407,6 +424,16 @@ class TestMapUserFields:
         assert result.user.account.type_id == AccountTypeId.LDAP_ACCOUNT
         assert result.user.domain == "test"
         assert result.user.uid_alt == "AC00008700"
+        assert result.user.name == AD_USER.name.split("/", 1)[1]
+        assert result.user.account.name == result.user.name
+
+    def test_domain_user_with_a_backslash_is_sent_without_its_domain(self, connector):
+        user = NAMED_USER.model_copy(update={"name": "CORP\\jdoe"})
+        result = connector.map_user_fields(user)
+        assert result is not None
+        assert result.user.name == "jdoe"
+        assert result.user.account.name == "jdoe"
+        assert result.user.domain == "CORP"
 
     def test_exchange_login_mapped_to_uid_alt(self, connector):
         user = NAMED_USER.model_copy(update={"exchangeLogin": "AC00008700"})
@@ -735,6 +762,9 @@ class TestGetMappedFields:
     def test_returns_dict(self, connector):
         result = connector.get_mapped_fields()
         assert isinstance(result, dict)
+
+    def test_declares_the_domain_prefix(self, connector):
+        assert connector.get_mapped_fields()["name (domain prefix)"] == "user.domain"
 
     def test_is_non_empty(self, connector):
         assert len(connector.get_mapped_fields()) > 0
