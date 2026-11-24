@@ -143,6 +143,7 @@ class TestMapIdentityEntityFields:
                     domain="CORP",
                     samAccountName="asmith",
                     objectSid="S-1-5-21-123",
+                    objectGuid="0f9e8d7c-6b5a-4321-9876-543210fedcba",
                     enabled=True,
                 )
             ],
@@ -152,8 +153,10 @@ class TestMapIdentityEntityFields:
         result = connector.map_identity_entity_fields(entity)
 
         assert isinstance(result, UserOCSFModel)
-        assert result.user.name == "Alice Smith"
+        assert result.user.name == "asmith"
+        assert result.user.display_name == "Alice Smith"
         assert result.user.uid == "entity-123"
+        assert result.user.uid_alt == "0f9e8d7c-6b5a-4321-9876-543210fedcba"
         assert result.user.email_addr == "alice@example.com"
         assert result.user.full_name == "Alice Smith alice.smith"
         assert result.user.domain == "CORP"
@@ -176,12 +179,82 @@ class TestMapIdentityEntityFields:
         result = connector.map_identity_entity_fields(entity)
 
         assert result.user.name == "Bob"
+        assert result.user.display_name == "Bob"
         assert result.user.uid == "entity-456"
+        assert result.user.uid_alt is None
         assert result.user.email_addr is None
         assert result.user.account is None
         assert result.user.risk_score == 0
         assert result.time == 0
         assert result.enrichments is None
+
+    def test_map_identity_entity_fields_account_uid_is_sid_only(self, connector):
+        entity = CrowdStrikeUser(
+            entityId="entity-789",
+            primaryDisplayName="Carol Jones",
+            accounts=[
+                CrowdStrikeUserAccount(
+                    dataSource="ACTIVE_DIRECTORY",
+                    samAccountName="cjones",
+                    objectGuid="11111111-2222-3333-4444-555555555555",
+                )
+            ],
+        )
+
+        result = connector.map_identity_entity_fields(entity)
+
+        assert result.user.name == "cjones"
+        assert result.user.account.uid is None
+        assert result.user.uid_alt == "11111111-2222-3333-4444-555555555555"
+
+    def test_map_identity_entity_fields_account_uid_never_entity_id(self, connector):
+        entity = CrowdStrikeUser(
+            entityId="entity-000",
+            primaryDisplayName="Dave",
+            accounts=[CrowdStrikeUserAccount(dataSource="AZURE_AD")],
+        )
+
+        result = connector.map_identity_entity_fields(entity)
+
+        assert result.user.account.uid is None
+        assert result.user.uid_alt is None
+
+    def test_map_identity_entity_fields_without_login_uses_display_name(self, connector):
+        entity = CrowdStrikeUser(
+            entityId="entity-111",
+            primaryDisplayName="Erin Doe",
+            accounts=[CrowdStrikeUserAccount(dataSource="ACTIVE_DIRECTORY", objectSid="S-1-5-21-456")],
+        )
+
+        result = connector.map_identity_entity_fields(entity)
+
+        assert result.user.name == "Erin Doe"
+        assert result.user.account.name == "Erin Doe"
+        assert result.user.account.uid == "S-1-5-21-456"
+
+    def test_map_identity_entity_fields_prefers_account_with_sid(self, connector):
+        entity = CrowdStrikeUser(
+            entityId="entity-222",
+            primaryDisplayName="Frank Moe",
+            accounts=[
+                CrowdStrikeUserAccount(dataSource="AZURE_AD", domain="cloud.example.com"),
+                CrowdStrikeUserAccount(
+                    dataSource="ACTIVE_DIRECTORY",
+                    domain="CORP",
+                    samAccountName="fmoe",
+                    objectSid="S-1-5-21-789",
+                    objectGuid="66666666-7777-8888-9999-000000000000",
+                ),
+            ],
+        )
+
+        result = connector.map_identity_entity_fields(entity)
+
+        assert result.user.name == "fmoe"
+        assert result.user.domain == "CORP"
+        assert result.user.account.uid == "S-1-5-21-789"
+        assert result.user.account.type_id == AccountTypeId.LDAP_ACCOUNT
+        assert result.user.uid_alt == "66666666-7777-8888-9999-000000000000"
 
     def test_map_identity_entity_fields_risk_score_conversion(self, connector):
         """Test que le risk_score float (0-1) est converti en int (0-100)."""

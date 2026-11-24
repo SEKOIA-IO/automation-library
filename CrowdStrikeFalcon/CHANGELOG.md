@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-24 - 1.25.21
+
+### Fixed
+
+- Crowdstrike Falcon Users asset connector: send the login (`samAccountName`) in `user.name`
+  instead of the display name, which now goes to `user.display_name`.
+- Crowdstrike Falcon Users asset connector: `user.account.uid` holds the SID only and is left
+  out when there is none, instead of falling back to the objectGUID or the entity ID.
+  The objectGUID is sent in `user.uid_alt`.
+- Crowdstrike Falcon Users asset connector: read the account that carries the SID and the
+  login, instead of the first account only.
+
 ## 2026-09-01 - 1.25.20
 
 ### Fixed

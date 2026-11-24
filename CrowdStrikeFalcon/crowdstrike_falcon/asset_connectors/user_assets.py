@@ -181,6 +181,17 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
                 return UserTypeId.ADMIN, UserTypeStr.ADMIN
         return UserTypeId.USER, UserTypeStr.USER
 
+    def _select_account(self, accounts: list[CrowdStrikeUserAccount]) -> CrowdStrikeUserAccount | None:
+        """
+        Select the account that best identifies the user.
+        Args:
+            accounts (list[CrowdStrikeUserAccount]): The accounts attached to the user entity.
+        Returns:
+            CrowdStrikeUserAccount | None: An account with a SID first, then one with a login.
+            Ties keep the API order. None when there is no account.
+        """
+        return min(accounts, key=lambda acc: (not acc.objectSid, not acc.samAccountName), default=None)
+
     def map_identity_entity_fields(self, entity: CrowdStrikeUser) -> UserOCSFModel:
         """Map fields from Crowdstrike identity entity to OCSF User model."""
 
@@ -191,17 +202,19 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
         email_addresses = entity.emailAddresses
 
         account_data, domain, enrichments = None, None, []
+        user_name, object_guid = primary_name, None
 
-        if entity.accounts:
-            acc = entity.accounts[0]
+        if acc := self._select_account(entity.accounts):
             account_type_id, account_type_str = self._determine_account_type(acc)
             domain = acc.domain
+            user_name = acc.samAccountName or primary_name
+            object_guid = acc.objectGuid or None
 
             account_data = Account(
-                name=acc.samAccountName or primary_name,
+                name=user_name,
                 type_id=account_type_id,
                 type=account_type_str,
-                uid=acc.objectSid or acc.objectGuid or entity_id,
+                uid=acc.objectSid or None,
             )
 
             enrichments.append(
@@ -216,8 +229,10 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
         user_type_id, user_type_str = self._determine_user_type(entity)
 
         user_ocsf = UserOCSF(
-            name=primary_name,
+            name=user_name,
             uid=entity_id,
+            uid_alt=object_guid,
+            display_name=entity.primaryDisplayName or None,
             account=account_data,
             full_name=f"{primary_name} {entity.secondaryDisplayName or ''}".strip() or None,
             email_addr=email_addresses[0] if email_addresses else None,
