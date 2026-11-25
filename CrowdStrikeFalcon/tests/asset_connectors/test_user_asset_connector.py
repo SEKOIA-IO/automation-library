@@ -178,6 +178,8 @@ class TestMapIdentityEntityFields:
             ([CrowdStrikeUserAccount(dataSource="ACTIVE_DIRECTORY")], ["alice@example.com"], "alice@example.com"),
             ([], ["alice@example.com"], "alice@example.com"),
             ([], [], "Alice Smith"),
+            ([], [""], "Alice Smith"),
+            ([], ["", "alice@example.com"], "alice@example.com"),
             (
                 [
                     CrowdStrikeUserAccount(dataSource="AZURE_AD"),

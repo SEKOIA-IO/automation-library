@@ -189,10 +189,10 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
 
         entity_id = entity.entityId or "Unknown"
         primary_name = entity.primaryDisplayName or ""
-        email_addresses = entity.emailAddresses
+        email = next((address for address in entity.emailAddresses or [] if address), None)
 
         account_data, domain, enrichments = None, None, []
-        login = email_addresses[0] if email_addresses else primary_name
+        login = email or primary_name
 
         if entity.accounts:
             acc = max(entity.accounts, key=lambda a: (bool(a.samAccountName), bool(a.objectSid)))
@@ -223,7 +223,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
             uid=entity_id,
             account=account_data,
             full_name=f"{primary_name} {entity.secondaryDisplayName or ''}".strip() or None,
-            email_addr=email_addresses[0] if email_addresses else None,
+            email_addr=email,
             domain=domain,
             risk_level=risk_level_str,
             risk_level_id=risk_level_id,
