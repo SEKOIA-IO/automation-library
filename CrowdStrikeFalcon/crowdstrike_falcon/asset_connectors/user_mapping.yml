@@ -161,7 +161,7 @@ mapping:
     - source: "account.domain"
       target: "user.domain"
       type: "string"
-      logic: "Domain of the account: the first account with an objectSid or a samAccountName, else the first account"
+      logic: "Domain of the account: the first one with a samAccountName, then the first one with an objectSid, else the first account"
       description: "User domain or realm (from AD account)"
 
     # USER TYPE
@@ -206,7 +206,7 @@ mapping:
     - source: "normalize_sid(account.objectSid)"
       target: "user.account.uid"
       type: "string"
-      logic: "SID of a domain account (relative ID from 1000) or an Entra ID object; null for anything else"
+      logic: "SID of a domain account (relative ID from 1000) or of an Entra ID object (S-1-12-1-...); null for anything else"
       description: "Account SID"
 
     - source: "account.dataSource"
@@ -287,7 +287,7 @@ mapping:
             "desc": "administrateur - Risk: MEDIUM",
             "created_time": 1729509560,
             "account": {
-              "uid": "S-1-5-21-947947667-100116589-3603791262-500",
+              "uid": null,
               "name": "administrateur",
               "domain": "EXAMPLE.COM",
               "type": "LDAP Account",
