@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-24 - 1.23.5
+
+### Fixed
+
+- Fix device asset connector never refreshing updated agents: agents were fetched once, after the `createdAt` of the last fetched page, so changes to IP, user, version or group were never collected
+- Sweep every agent again once per frequency, sorted ascending on `createdAt`. An interrupted pass resumes after the `createdAt` of the last pushed agent, without splitting agents created at the same time
+- Stream agents page by page instead of loading the whole inventory in memory, and stop the pass on a failed page instead of ending it as complete
+
 ## 2026-09-30 - 1.23.4
 
 ### Fixed

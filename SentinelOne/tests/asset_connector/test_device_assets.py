@@ -108,114 +108,87 @@ def sample_agent():
     )
 
 
+def agent_created_at(sample_agent, created_at: str, name: str | None = None) -> SentinelOneAgent:
+    agent = sample_agent.model_copy()
+    agent.id = created_at
+    agent.createdAt = created_at
+    agent.computerName = name or f"PC-{created_at}"
+    return agent
+
+
+def page(agents: list[SentinelOneAgent], next_cursor: str | None = None) -> dict:
+    return {"data": [a.model_dump() for a in agents], "errors": None, "pagination": {"nextCursor": next_cursor}}
+
+
 # Tests for fetch_agents method
-def test_fetch_agents_success(test_sentinelone_device_asset_connector, sample_agent):
-    """Test successful agent fetching."""
-    # Arrange
-    mock_response = {
-        "data": [sample_agent.model_dump()],
-        "errors": None,
-        "pagination": {"nextCursor": "YWdlbnRfaWQ6NTgwMjkzODE=", "totalItems": 1},
-    }
+def test_fetch_agents_first_pass_page(test_sentinelone_device_asset_connector, sample_agent):
+    connector = test_sentinelone_device_asset_connector
+    connector._client_mock.get.return_value = page([sample_agent], "YWdlbnRfaWQ6NTgwMjkzODE=")
 
-    test_sentinelone_device_asset_connector._client_mock.get.return_value = mock_response
+    agents, next_cursor = connector.fetch_agents(None)
 
-    # Act
-    agents, next_cursor = test_sentinelone_device_asset_connector.fetch_agents()
-
-    # Assert
-    assert len(agents) == 1
-    assert agents[0].id == sample_agent.id
-    assert agents[0].computerName == sample_agent.computerName
+    assert [a.id for a in agents] == [sample_agent.id]
     assert next_cursor == "YWdlbnRfaWQ6NTgwMjkzODE="
-    test_sentinelone_device_asset_connector._client_mock.get.assert_called_once_with(
-        "/web/api/v2.1/agents", params={"limit": 100}
+    connector._client_mock.get.assert_called_once_with(
+        "/web/api/v2.1/agents", params={"limit": 100, "sortBy": "createdAt", "sortOrder": "asc"}
     )
 
 
-def test_fetch_agents_no_response(test_sentinelone_device_asset_connector):
-    """Test fetching agents with no response."""
-    # Arrange
-    test_sentinelone_device_asset_connector._client_mock.get.side_effect = Exception("Connection error")
+def test_fetch_agents_resumes_after_checkpoint(test_sentinelone_device_asset_connector, sample_agent):
+    connector = test_sentinelone_device_asset_connector
+    connector._client_mock.get.return_value = page([sample_agent])
 
-    # Act
-    agents, next_cursor = test_sentinelone_device_asset_connector.fetch_agents()
+    connector.fetch_agents("2018-02-27T04:49:26.257525Z", "cursor1")
 
-    # Assert
-    assert agents == []
-    assert next_cursor is None
+    connector._client_mock.get.assert_called_once_with(
+        "/web/api/v2.1/agents",
+        params={
+            "limit": 100,
+            "sortBy": "createdAt",
+            "sortOrder": "asc",
+            "createdAt__gt": "2018-02-27T04:49:26.257525Z",
+            "cursor": "cursor1",
+        },
+    )
 
 
 def test_fetch_agents_with_errors(test_sentinelone_device_asset_connector, sample_agent):
-    """Test fetching agents with errors in response."""
-    # Arrange
-    mock_response = {
-        "data": [sample_agent.model_dump()],
-        "errors": ["Some error occurred"],
-        "pagination": {"nextCursor": None},
-    }
+    connector = test_sentinelone_device_asset_connector
+    connector._client_mock.get.return_value = {**page([sample_agent]), "errors": ["Some error occurred"]}
 
-    test_sentinelone_device_asset_connector._client_mock.get.return_value = mock_response
+    agents, next_cursor = connector.fetch_agents(None)
 
-    # Act
-    agents, next_cursor = test_sentinelone_device_asset_connector.fetch_agents()
-
-    # Assert
     assert len(agents) == 1
     assert next_cursor is None
+    connector.log.assert_any_call("Errors in API response: ['Some error occurred']", level="error")
 
 
-def test_fetch_agents_exception(test_sentinelone_device_asset_connector):
-    """Test exception handling during agent fetching."""
-    # Arrange
-    test_sentinelone_device_asset_connector._client_mock.get.side_effect = Exception("API Error")
+def test_fetch_agents_empty_page_stops_pagination(test_sentinelone_device_asset_connector):
+    connector = test_sentinelone_device_asset_connector
+    connector._client_mock.get.return_value = {"data": [], "pagination": {"nextCursor": "cursor1"}}
 
-    # Act
-    agents, next_cursor = test_sentinelone_device_asset_connector.fetch_agents()
-
-    # Assert
-    assert agents == []
-    assert next_cursor is None
+    assert connector.fetch_agents(None) == ([], None)
 
 
-# Tests for list_all_agents method
-def test_list_all_agents_success(test_sentinelone_device_asset_connector, sample_agent):
-    """Test listing all agents with pagination."""
-    # Arrange
-    agent2 = sample_agent.model_copy()
-    agent2.id = "225494730938493805"
-    agent2.computerName = "JANE-MAC-5678"
-    agent2.createdAt = "2018-02-28T04:49:26.257525Z"
+def test_fetch_agents_exception_propagates(test_sentinelone_device_asset_connector):
+    """A failed page must not end the pass as if every agent was fetched."""
+    connector = test_sentinelone_device_asset_connector
+    connector._client_mock.get.side_effect = Exception("API Error")
 
-    with patch.object(test_sentinelone_device_asset_connector, "fetch_agents") as mock_fetch:
-        mock_fetch.side_effect = [
-            ([sample_agent], "cursor1"),
-            ([agent2], None),
-        ]
-
-        # Act
-        agents = test_sentinelone_device_asset_connector.list_all_agents()
-
-        # Assert
-        assert len(agents) == 2
-        assert agents[0].id == sample_agent.id
-        assert agents[1].id == agent2.id
-        assert mock_fetch.call_count == 2
+    with pytest.raises(Exception, match="API Error"):
+        connector.fetch_agents(None)
 
 
-def test_list_all_agents_no_pagination(test_sentinelone_device_asset_connector, sample_agent):
-    """Test listing agents without pagination."""
-    # Arrange
-    with patch.object(test_sentinelone_device_asset_connector, "fetch_agents") as mock_fetch:
-        mock_fetch.return_value = ([sample_agent], None)
+def test_iter_agents_follows_pagination(test_sentinelone_device_asset_connector, sample_agent):
+    connector = test_sentinelone_device_asset_connector
+    first = agent_created_at(sample_agent, "2018-02-27T00:00:00.000000Z")
+    second = agent_created_at(sample_agent, "2018-02-28T00:00:00.000000Z")
 
-        # Act
-        agents = test_sentinelone_device_asset_connector.list_all_agents()
+    with patch.object(connector, "fetch_agents", side_effect=[([first], "cursor1"), ([second], None)]) as fetch:
+        agents = list(connector.iter_agents("checkpoint"))
 
-        # Assert
-        assert len(agents) == 1
-        assert agents[0].id == sample_agent.id
-        mock_fetch.assert_called_once()
+    assert [a.id for a in agents] == [first.id, second.id]
+    assert [c.args for c in fetch.call_args_list] == [("checkpoint", None), ("checkpoint", "cursor1")]
 
 
 # Tests for get_device_os method
@@ -623,163 +596,142 @@ def test_map_fields_org_and_eid(test_sentinelone_device_asset_connector):
 
 # Tests for get_assets method
 def test_get_assets_success(test_sentinelone_device_asset_connector, sample_agent):
-    """Test successful asset generation."""
-    # Arrange
-    agent2 = sample_agent.model_copy()
-    agent2.id = "225494730938493805"
-    agent2.computerName = "JANE-MAC-5678"
+    connector = test_sentinelone_device_asset_connector
+    agents = [
+        agent_created_at(sample_agent, "2018-02-27T00:00:00.000000Z", "JOHN-WIN-4125"),
+        agent_created_at(sample_agent, "2018-02-28T00:00:00.000000Z", "JANE-MAC-5678"),
+    ]
 
-    test_sentinelone_device_asset_connector._data_path = MagicMock()
-    test_sentinelone_device_asset_connector._data_path.absolute.return_value = "/tmp/test"
+    with patch.object(connector, "iter_agents", return_value=iter(agents)) as iter_agents:
+        assets = list(connector.get_assets())
 
-    with patch.object(test_sentinelone_device_asset_connector, "list_all_agents") as mock_list:
-        mock_list.return_value = [sample_agent, agent2]
-
-        # Act
-        assets = list(test_sentinelone_device_asset_connector.get_assets())
-
-        # Assert
-        assert len(assets) == 2
-        assert assets[0].device.hostname == "JOHN-WIN-4125"
-        assert assets[1].device.hostname == "JANE-MAC-5678"
-        mock_list.assert_called_once()
+    assert [a.device.hostname for a in assets] == ["JOHN-WIN-4125", "JANE-MAC-5678"]
+    iter_agents.assert_called_once_with(None)
 
 
 def test_get_assets_with_mapping_error(test_sentinelone_device_asset_connector, sample_agent):
-    """Test asset generation with mapping error."""
-    # Arrange
-    bad_agent = sample_agent.model_copy()
-    bad_agent.id = ""  # This will cause a ValueError
+    connector = test_sentinelone_device_asset_connector
+    bad_agent = agent_created_at(sample_agent, "2018-02-27T00:00:00.000000Z")
+    good_agent = agent_created_at(sample_agent, "2018-02-28T00:00:00.000000Z", "GOOD-PC")
 
-    good_agent = sample_agent.model_copy()
-    good_agent.computerName = "GOOD-PC"
+    with (
+        patch.object(connector, "iter_agents", return_value=iter([bad_agent, good_agent])),
+        patch.object(connector, "map_fields", side_effect=[ValueError("bad agent"), connector.map_fields(good_agent)]),
+    ):
+        assets = list(connector.get_assets())
 
-    test_sentinelone_device_asset_connector._data_path = MagicMock()
-    test_sentinelone_device_asset_connector._data_path.absolute.return_value = "/tmp/test"
-
-    with patch.object(test_sentinelone_device_asset_connector, "list_all_agents") as mock_list:
-        mock_list.return_value = [bad_agent, good_agent]
-
-        # Act
-        assets = list(test_sentinelone_device_asset_connector.get_assets())
-
-        # Assert
-        assert len(assets) == 1  # Only the good agent
-        assert assets[0].device.hostname == "GOOD-PC"
+    assert [a.device.hostname for a in assets] == ["GOOD-PC"]
+    connector.log.assert_any_call(f"Error while mapping agent {bad_agent.id}: bad agent", level="error")
 
 
 def test_get_assets_empty_list(test_sentinelone_device_asset_connector):
-    """Test asset generation with empty agent list."""
-    # Arrange
-    test_sentinelone_device_asset_connector._data_path = MagicMock()
-    test_sentinelone_device_asset_connector._data_path.absolute.return_value = "/tmp/test"
-
-    with patch.object(test_sentinelone_device_asset_connector, "list_all_agents") as mock_list:
-        mock_list.return_value = []
-
-        # Act
-        assets = list(test_sentinelone_device_asset_connector.get_assets())
-
-        # Assert
-        assert len(assets) == 0
+    with patch.object(test_sentinelone_device_asset_connector, "iter_agents", return_value=iter([])):
+        assert list(test_sentinelone_device_asset_connector.get_assets()) == []
 
 
-# Tests for checkpoint management
-def test_get_last_created_date(test_sentinelone_device_asset_connector, sample_agent):
-    """Test getting last created date from agents."""
-    # Arrange
-    agent1 = sample_agent.model_copy()
-    agent1.createdAt = "2018-02-27T04:49:26.257525Z"
+# Tests for checkpoint management: one sweep pass over every agent per frequency
+@pytest.fixture
+def sweep_connector(test_sentinelone_device_asset_connector, sample_agent):
+    connector = test_sentinelone_device_asset_connector
+    connector.configuration = {
+        "sekoia_base_url": "https://sekoia.io",
+        "sekoia_api_key": "fake_api_key",
+        "frequency": 60,
+        "batch_size": 2,
+    }
+    connector.agents = [agent_created_at(sample_agent, f"2018-02-2{day}T00:00:00.000000Z") for day in (1, 2, 2, 3)]
+    connector.checkpoints = []
+    connector.pushed = []
+    connector.fail_on_batch = None
 
-    agent2 = sample_agent.model_copy()
-    agent2.createdAt = "2018-02-28T04:49:26.257525Z"
+    def iter_agents(checkpoint):
+        connector.checkpoints.append(checkpoint)
+        return iter([a for a in connector.agents if checkpoint is None or a.createdAt > checkpoint])
 
-    agent3 = sample_agent.model_copy()
-    agent3.createdAt = "2018-02-26T04:49:26.257525Z"
+    def post(assets, asset_connector_api_url):
+        connector.pushed.append([item.device.uid for item in assets.items])
+        if len(connector.pushed) == connector.fail_on_batch:
+            return None
+        connector.update_checkpoint()
+        return {}
 
-    # Act
-    last_date = test_sentinelone_device_asset_connector.get_last_created_date([agent1, agent2, agent3])
-
-    # Assert
-    assert last_date == "2018-02-28T04:49:26.257525Z"
-
-
-def test_get_last_created_date_empty_list(test_sentinelone_device_asset_connector):
-    """Test getting last created date from empty list raises ValueError."""
-    # Act & Assert
-    with pytest.raises(ValueError, match="Cannot get last created date from empty agents list"):
-        test_sentinelone_device_asset_connector.get_last_created_date([])
-
-
-def test_update_checkpoint_success(test_sentinelone_device_asset_connector):
-    """Test successful checkpoint update."""
-    # Arrange
-    test_sentinelone_device_asset_connector.new_most_recent_date = "2018-02-28T04:49:26.257525Z"
-    mock_cache = {}
-
-    # Mock the context manager
-    mock_context = MagicMock()
-    mock_context.__enter__ = MagicMock(return_value=mock_cache)
-    mock_context.__exit__ = MagicMock(return_value=None)
-    test_sentinelone_device_asset_connector.context = mock_context
-
-    # Act
-    test_sentinelone_device_asset_connector.update_checkpoint()
-
-    # Assert
-    assert mock_cache["most_recent_date_seen"] == "2018-02-28T04:49:26.257525Z"
-    mock_context.__enter__.assert_called_once()
-    mock_context.__exit__.assert_called_once()
+    with (
+        patch.object(connector, "iter_agents", side_effect=iter_agents),
+        patch.object(connector, "post_assets_to_api", side_effect=post),
+        patch("time.sleep"),
+    ):
+        yield connector
 
 
-def test_update_checkpoint_none_date(test_sentinelone_device_asset_connector):
-    """Test checkpoint update with None date."""
-    # Arrange
-    test_sentinelone_device_asset_connector.new_most_recent_date = None
+def stored(connector) -> dict:
+    with connector.asset_checkpoint.store as store:
+        return dict(store)
 
-    # Act
-    test_sentinelone_device_asset_connector.update_checkpoint()
 
-    # Assert
-    test_sentinelone_device_asset_connector.log.assert_called_with(
-        "Warning: new_most_recent_date is None, skipping checkpoint update", level="warning"
+def test_sweep_pass_completes_then_waits_for_frequency(sweep_connector):
+    with patch("time.time", return_value=1000.0):
+        sweep_connector.asset_fetch_cycle()
+
+    assert len(sum(sweep_connector.pushed, [])) == 4
+    assert stored(sweep_connector) == {"cursor": None, "pass_started_at": 1000.0, "pass_completed": True}
+
+    with patch("time.time", return_value=1030.0):
+        sweep_connector.asset_fetch_cycle()
+
+    assert sweep_connector.checkpoints == [None]
+
+    with patch("time.time", return_value=1060.0):
+        sweep_connector.asset_fetch_cycle()
+
+    # Updated agents are refreshed: the next pass fetches every agent again.
+    assert sweep_connector.checkpoints == [None, None]
+
+
+def test_interrupted_pass_resumes_without_splitting_equal_dates(sweep_connector):
+    sweep_connector.fail_on_batch = 2
+
+    sweep_connector.asset_fetch_cycle()
+
+    # The first batch ends inside the two agents created on the 22nd: only the 21st is safe.
+    assert stored(sweep_connector)["cursor"] == "2018-02-21T00:00:00.000000Z"
+    assert stored(sweep_connector)["pass_completed"] is False
+
+    sweep_connector.asset_fetch_cycle()
+
+    assert sweep_connector.checkpoints == [None, "2018-02-21T00:00:00.000000Z"]
+    assert len(sweep_connector.pushed[-1] + sweep_connector.pushed[-2]) == 3
+    assert stored(sweep_connector)["pass_completed"] is True
+
+
+def test_unsorted_agents_freeze_the_checkpoint(sweep_connector, sample_agent):
+    sweep_connector.agents = [
+        agent_created_at(sample_agent, f"2018-02-2{day}T00:00:00.000000Z") for day in (1, 2, 4, 3)
+    ]
+    sweep_connector.fail_on_batch = 2
+
+    sweep_connector.asset_fetch_cycle()
+
+    assert stored(sweep_connector)["cursor"] == "2018-02-22T00:00:00.000000Z"
+    sweep_connector.log.assert_any_call(
+        "Agents are not sorted ascending on createdAt "
+        "(2018-02-23T00:00:00.000000Z after 2018-02-24T00:00:00.000000Z). "
+        "The checkpoint is not moved for the rest of this cycle",
+        level="error",
     )
 
 
-def test_most_recent_date_seen_property(test_sentinelone_device_asset_connector):
-    """Test the most_recent_date_seen property."""
-    # Arrange
-    mock_cache = {"most_recent_date_seen": "2018-02-27T04:49:26.257525Z"}
-    mock_context = MagicMock()
-    mock_context.__enter__ = MagicMock(return_value=mock_cache)
-    mock_context.__exit__ = MagicMock(return_value=None)
-    test_sentinelone_device_asset_connector.context = mock_context
+def test_reset_checkpoint_starts_a_new_pass(sweep_connector):
+    sweep_connector.asset_fetch_cycle()
 
-    # Act
-    result = test_sentinelone_device_asset_connector.most_recent_date_seen
+    sweep_connector.reset_checkpoint()
 
-    # Assert
-    assert result == "2018-02-27T04:49:26.257525Z"
-    mock_context.__enter__.assert_called_once()
-    mock_context.__exit__.assert_called_once()
+    assert stored(sweep_connector) == {}
+    sweep_connector.asset_fetch_cycle()
+    assert sweep_connector.checkpoints == [None, None]
 
 
-def test_most_recent_date_seen_none(test_sentinelone_device_asset_connector):
-    """Test the most_recent_date_seen property when no date is set."""
-    # Arrange
-    mock_cache = {}
-    mock_context = MagicMock()
-    mock_context.__enter__ = MagicMock(return_value=mock_cache)
-    mock_context.__exit__ = MagicMock(return_value=None)
-    test_sentinelone_device_asset_connector.context = mock_context
-
-    # Act
-    result = test_sentinelone_device_asset_connector.most_recent_date_seen
-
-    # Assert
-    assert result is None
-    mock_context.__enter__.assert_called_once()
-    mock_context.__exit__.assert_called_once()
+def test_get_mapped_fields_is_empty(test_sentinelone_device_asset_connector):
+    assert test_sentinelone_device_asset_connector.get_mapped_fields() == {}
 
 
 @pytest.mark.parametrize(
