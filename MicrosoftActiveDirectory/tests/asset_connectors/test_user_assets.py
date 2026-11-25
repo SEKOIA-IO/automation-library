@@ -229,6 +229,17 @@ def test_user_ocsf_object_sends_the_login_as_name(connector):
     assert user_ocsf.domain == "corp.example.com"
 
 
+@pytest.mark.parametrize(
+    ("distinguished_name", "domain"),
+    [
+        ("CN=Doe\\, DC=fake,OU=Paris,DC=corp,DC=example,DC=com", "corp.example.com"),
+        ("CN=John Doe,OU=Users", None),
+    ],
+)
+def test_domain_from_dn(connector, distinguished_name, domain):
+    assert connector.domain_from_dn(distinguished_name) == domain
+
+
 def test_user_ocsf_object_without_sid_takes_its_guid_and_no_placeholder(connector):
     user_attr = LDAPUserAttributes(sAMAccountName="jdoe", objectGUID="{2f9c3a1e-0b6d-4c5e-9a7f-1d2e3f4a5b6c}")
 

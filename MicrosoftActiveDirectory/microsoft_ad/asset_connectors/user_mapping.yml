@@ -169,7 +169,7 @@ mapping:
       target: "user.uid"
       type: "string"
       logic: "User SID (Security Identifier); objectGUID without braces when the SID is missing; the user is skipped when both are missing"
-      description: "Active Directory user unique identifier (SID)"
+      description: "Active Directory user unique identifier (SID, or objectGUID when the user has no SID)"
 
     - source: "sAMAccountName"
       target: "user.name"

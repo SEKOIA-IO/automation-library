@@ -1,4 +1,5 @@
 import datetime
+import re
 from collections.abc import Generator
 from typing import Any
 
@@ -213,7 +214,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
     def domain_from_dn(distinguished_name: str | None) -> str | None:
         labels = [
             part.split("=", 1)[1].strip().lower()
-            for part in (distinguished_name or "").split(",")
+            for part in re.split(r"(?<!\\),", distinguished_name or "")
             if part.strip().upper().startswith("DC=") and part.split("=", 1)[1].strip()
         ]
         return ".".join(labels) or None
@@ -360,7 +361,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             if user_created_at:
                 user_created_str = user_created_at.strftime("%Y%m%d%H%M%S.0Z")
                 if user_created_str == checkpoint_time:
-                    sid = user_attributes.get("objectSid")
+                    sid = user_attributes.get("objectSid") or user_attributes.get("objectGUID")
                     if sid and sid in already_seen_sids:
                         self.log(
                             f"Skipping already-seen user (SID={sid}) at boundary second {checkpoint_time}",
@@ -375,7 +376,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
 
             if user_created_at:
                 user_created_str = user_created_at.strftime("%Y%m%d%H%M%S.0Z")
-                sid = user_attributes.get("objectSid")
+                sid = user_attributes.get("objectSid") or user_attributes.get("objectGUID")
                 if not self._latest_time or user_created_str > self._latest_time:
                     self._latest_time = user_created_str
                     self._seen_sids = {sid} if sid else set()
