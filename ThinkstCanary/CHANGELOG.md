@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-25 - 1.0.2
+
+### Fixed
+
+- Add a timeout to the Thinkst Canary API calls, so a hung request fails and is logged instead of blocking the collection.
+- Forward the events of a page even when acknowledging its incidents fails.
+- Accept incidents without the `events_count` or `events_list` fields instead of failing on the whole page.
+
 ## 2026-11-06 - 1.0.1
 
 ### Fixed
