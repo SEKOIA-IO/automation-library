@@ -74,14 +74,28 @@ def test_checkpoint_offset_setter(checkpoint, context, mock_now, new_offset, exp
     assert context.read_text() == expected_offset.isoformat()
 
 
+def read_operation(checkpoint, context, data):
+    return checkpoint.read(context)
+
+
+def write_operation(checkpoint, context, data):
+    return checkpoint.write(context, data)
+
+
 FILE_OPERATIONS = [
-    pytest.param(lambda checkpoint, context, data: checkpoint.read(context), id="read"),
-    pytest.param(lambda checkpoint, context, data: checkpoint.write(context, data), id="write"),
+    pytest.param(read_operation, id="read"),
+    pytest.param(write_operation, id="write"),
 ]
 
 
-@pytest.mark.parametrize("operation", FILE_OPERATIONS)
-def test_file_operation_retries_on_transient_error_then_succeeds(checkpoint, context, operation):
+@pytest.mark.parametrize(
+    "operation,returns_data",
+    [
+        pytest.param(read_operation, True, id="read_returns_the_data"),
+        pytest.param(write_operation, False, id="write_returns_nothing"),
+    ],
+)
+def test_file_operation_retries_on_transient_error_then_succeeds(checkpoint, context, operation, returns_data):
     calls = {"n": 0}
     real_open = Path.open
 
@@ -99,7 +113,7 @@ def test_file_operation_retries_on_transient_error_then_succeeds(checkpoint, con
         result = operation(checkpoint, context, data)
 
     assert calls["n"] == 3  # two failures + one success
-    assert result in (data, None)  # read returns the data, write returns nothing
+    assert result == (data if returns_data else None)
     assert context.read_text() == data
 
 

@@ -14,8 +14,16 @@ from office365.management_api.connector import Office365Connector
 
 
 @pytest.fixture(autouse=True)
-def no_sleep():
-    """Make blocking waits instant, such as the backoff between tenacity retries."""
+def no_sleep(request):
+    """Make blocking waits instant, such as the backoff between tenacity retries.
+
+    Tests marked with `real_sleep` (the live tests against Microsoft) keep the real waits,
+    so the triggers don't poll the API in a tight loop.
+    """
+    if request.node.get_closest_marker("real_sleep"):
+        yield None
+        return
+
     with patch("time.sleep") as mock_sleep:
         yield mock_sleep
 

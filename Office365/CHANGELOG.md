@@ -11,22 +11,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Migrate the module from Poetry to uv, with mise tasks, and run it on Python 3.14
-- Upgrade `sekoia-automation-sdk` to 1.27.2 and refresh the other dependencies
-- Pin `aiohttp` below 3.14, as `aioresponses` (tests) is not compatible with it yet
-- Lint and format the code with ruff instead of black
-- Management API: log the active subscriptions when the connector starts
-- Message Trace (OAuth): reuse the MSAL application between queries, so access tokens are cached until they expire instead of being requested at every query
-- Message Trace: log authentication failures in a single line, and truncate the HTTP response bodies in the error logs to 500 characters
-- Tests: reach 100% coverage (branches included), treat warnings as errors, align the tests folder structure with the source code, remove duplicated tests with `pytest.mark.parametrize` and mock `time.sleep` to speed up retries
+- Packaging:
+  - migrate the module from Poetry to uv, with mise tasks, and run it on Python 3.14
+  - upgrade `sekoia-automation-sdk` to 1.27.2 and refresh the other dependencies
+  - pin `aiohttp` below 3.14, as `aioresponses` (tests) is not compatible with it yet
+  - lint and format the code with ruff instead of black
+- Management API:
+  - log the active subscriptions when the connector starts
+  - centralize the classification of the errors (whether they need an action from the customer) and their remediation hints in `errors.py`
+- Message Trace:
+  - reuse the MSAL application between queries (OAuth), so access tokens are cached until they expire instead of being requested at every query
+  - log authentication failures in a single line
+  - truncate the HTTP response bodies in the error logs to 500 characters
+- Tests:
+  - reach 100% coverage (branches included) and treat warnings as errors
+  - align the tests folder structure with the source code
+  - remove duplicated tests with `pytest.mark.parametrize`
+  - mock `time.sleep` to speed up retries
 
 ### Fixed
 
-- Management API: activate each Office365 subscription independently, so a failure on one content type no longer prevents the activation of the others
-- Management API: log a critical error (which stops the connector) only when no subscription is active; log partial failures as errors and keep collecting the active content types
-- Management API: add an actionable error message when Microsoft reports that the tenant does not exist (unified audit logging not enabled or not provisioned yet)
-- Management API: stop crashing when the subscriptions cannot be listed at startup, and log the error with a hint about the `ActivityFeed.Read` permission
-- Message Trace (OAuth): stop sending empty log messages when an access token cannot be retrieved
+- Management API:
+  - activate each Office365 subscription independently, so a failure on one content type (including network errors and timeouts) no longer prevents the activation of the others
+  - retry the activation of the failed subscriptions with an exponential backoff (1 minute up to 1 hour) while collecting the active ones, so the connector recovers without a restart
+  - when no event can be collected (no active subscription, authentication or permission error), at startup or while running, log an actionable message and restart the connector with the same backoff: the SDK stops it with a critical error only if the error persists, instead of stopping it at once at startup or never while running
+  - keep retrying the transient errors (network, server errors) without stopping the connector
+  - do not advance the checkpoint while no subscription is active
+  - add actionable error messages when Microsoft reports that the tenant does not exist (unified audit logging not enabled or not provisioned yet), and on authentication and permission (`ActivityFeed.Read`) errors
+  - handle the network and invalid JSON errors when listing the subscriptions
+  - stop logging errors on requests interrupted by the connector shutdown
+- Message Trace:
+  - stop sending empty log messages when an access token cannot be retrieved (OAuth)
 
 ## [2.20.7] - 2026-07-02
 

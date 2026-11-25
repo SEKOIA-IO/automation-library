@@ -68,6 +68,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 filterwarnings = ["error"]
+markers = ["real_sleep: keep the real time.sleep (live tests against Microsoft)"]
 addopts = '''
   --strict-markers
   --tb=short

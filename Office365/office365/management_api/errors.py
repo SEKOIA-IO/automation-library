@@ -1,16 +1,59 @@
+"""Errors of the Office 365 Management Activity API.
+
+Each error knows whether it needs an action from the customer (`is_actionable`) and how to fix it (`hint`),
+so that the connector decides how to handle an error in a single place, with an actionable message.
+"""
+
 import re
 
 TENANT_NOT_PROVISIONED_PATTERN = re.compile(r"Tenant \S+ does not exist", re.IGNORECASE)
 
+# HTTP status codes that won't disappear without an action from the customer
+ACTIONABLE_STATUS_CODES = {401, 403}
+
+AUTHENTICATION_HINT = "Please check the client ID, client secret and tenant ID of the connector."
+PERMISSION_HINT = (
+    "Please check that the application has the ActivityFeed.Read permission "
+    "on the Office 365 Management APIs, with admin consent granted."
+)
+TENANT_NOT_PROVISIONED_HINT = (
+    "Microsoft reports that the tenant does not exist for the Office 365 Management Activity API. "
+    "This usually means that unified audit logging is not enabled in Microsoft Purview, was enabled less than "
+    "24 hours ago, or that the tenant has no Microsoft 365 license with auditing. Please enable auditing in "
+    "Microsoft Purview and wait for it to be provisioned: the connector retries the activation, "
+    "or restart it if it was stopped."
+)
+GENERIC_HINT = "Please check the error details in the connector logs."
+
 
 class O365Exception(Exception):  # noqa: N818 - public name kept for backward compatibility
-    pass
+    @property
+    def is_actionable(self) -> bool:
+        """Whether the error needs an action from the customer, instead of disappearing on its own"""
+        return False
+
+    @property
+    def hint(self) -> str:
+        """How to fix the error"""
+        return GENERIC_HINT
 
 
 class ApplicationAuthenticationFailed(O365Exception):
     def __init__(self, msg, **kwargs):
         super().__init__(msg)
         self.context = kwargs
+
+    @property
+    def is_actionable(self) -> bool:
+        return True
+
+    @property
+    def hint(self) -> str:
+        response = self.context.get("response")
+        if response and "error_description" in response:
+            return f"{AUTHENTICATION_HINT} Details: {response['error_description']}"
+
+        return AUTHENTICATION_HINT
 
 
 class ContextualizedO365Exception(O365Exception):
@@ -19,6 +62,29 @@ class ContextualizedO365Exception(O365Exception):
 
     def __str__(self):
         return " ".join([f"{name}='{value}'" for name, value in self.context.items()])
+
+    @property
+    def is_tenant_not_provisioned(self) -> bool:
+        """Whether Microsoft reports the tenant as unknown to the Management Activity API.
+
+        The API returns `Tenant <id> does not exist` when unified audit logging is not
+        enabled (or not provisioned yet) on the tenant, even though authentication succeeds.
+        """
+        return TENANT_NOT_PROVISIONED_PATTERN.search(str(self)) is not None
+
+    @property
+    def is_actionable(self) -> bool:
+        return self.context.get("status_code") in ACTIONABLE_STATUS_CODES or self.is_tenant_not_provisioned
+
+    @property
+    def hint(self) -> str:
+        if self.is_tenant_not_provisioned:
+            return TENANT_NOT_PROVISIONED_HINT
+
+        if self.context.get("status_code") in ACTIONABLE_STATUS_CODES:
+            return PERMISSION_HINT
+
+        return GENERIC_HINT
 
 
 class FailedToGetO365Token(ContextualizedO365Exception):
@@ -53,13 +119,17 @@ class FailedToActivateSomeO365Subscriptions(FailedToActivateO365Subscription):
         return f"{super().__str__()} details=[{details}]"
 
     @property
-    def is_tenant_not_provisioned(self) -> bool:
-        """Whether Microsoft reports the tenant as unknown to the Management Activity API.
+    def is_actionable(self) -> bool:
+        return any(error.is_actionable for error in self.failures.values())
 
-        The API returns `Tenant <id> does not exist` when unified audit logging is not
-        enabled (or not provisioned yet) on the tenant, even though authentication succeeds.
-        """
-        return any(TENANT_NOT_PROVISIONED_PATTERN.search(str(error)) for error in self.failures.values())
+    @property
+    def hint(self) -> str:
+        # the hint of the first failure that needs an action from the customer
+        for _, error in sorted(self.failures.items()):
+            if error.is_actionable:
+                return error.hint
+
+        return GENERIC_HINT
 
 
 class FailedToListO365Subscriptions(ContextualizedO365Exception):

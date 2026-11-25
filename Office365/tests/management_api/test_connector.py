@@ -8,10 +8,12 @@ from prometheus_client import Counter
 
 from office365.management_api.checkpoint import Checkpoint
 from office365.management_api.configuration import Office365Configuration
-from office365.management_api.connector import FORWARD_EVENTS_DURATION, Office365Connector
+from office365.management_api.connector import FORWARD_EVENTS_DURATION, Office365Connector, backoff_delay
 from office365.management_api.errors import (
+    ApplicationAuthenticationFailed,
     FailedToActivateO365Subscription,
     FailedToActivateSomeO365Subscriptions,
+    FailedToGetO365SubscriptionContents,
     FailedToListO365Subscriptions,
     SessionClosedError,
 )
@@ -37,66 +39,147 @@ OTHER_ERROR = FailedToActivateO365Subscription(
 )
 
 
+LISTING_ERROR = FailedToListO365Subscriptions(status_code=403, body="Forbidden")
+
+
 @pytest.mark.parametrize(
-    "error,expected_level,expected_in_message,not_expected_in_message",
+    "error",
     [
+        pytest.param(FailedToActivateO365Subscription(), id="generic_error"),
         pytest.param(
-            FailedToActivateO365Subscription(),
-            "critical",
-            ["Failed to activate Office365 subscriptions. The connector will produce no events."],
-            [],
-            id="generic_error",
+            FailedToActivateSomeO365Subscriptions(failures={"Audit.General": OTHER_ERROR}, active_content_types=set()),
+            id="total_failure",
         ),
+        pytest.param(LISTING_ERROR, id="listing_failure"),
+    ],
+)
+async def test_activate_subscriptions_raises_when_no_subscription_is_active(connector, error):
+    """With no active subscription, the error is raised: the SDK restarts (and eventually stops) the connector"""
+    connector.client.activate_subscriptions.side_effect = error
+
+    with pytest.raises(type(error)) as exc_info:
+        await connector.activate_subscriptions()
+
+    assert exc_info.value is error
+    connector.log.assert_not_called()
+    connector.log_exception.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "error,previous_failures,expected_in_message",
+    [
         pytest.param(
             FailedToActivateSomeO365Subscriptions(
                 failures={"Audit.General": TENANT_NOT_FOUND},
                 active_content_types={"Audit.SharePoint", "Audit.Exchange"},
             ),
-            "error",
+            0,
             [
-                "Audit.General",
-                "Events from Audit.Exchange, Audit.SharePoint will still be collected",
+                "Failed to activate the Office365 subscriptions for Audit.General.",
+                "Events from Audit.Exchange, Audit.SharePoint are still collected",
                 "Microsoft Purview",
+                "Next attempt in 60 seconds",
             ],
-            ["will produce no events"],
-            id="partial_failure_tenant_not_provisioned",
-        ),
-        pytest.param(
-            FailedToActivateSomeO365Subscriptions(failures={"Audit.General": OTHER_ERROR}, active_content_types=set()),
-            "critical",
-            ["The connector will produce no events", "Please check the error details in the connector logs."],
-            ["Purview"],
-            id="total_failure_other_error",
+            id="tenant_not_provisioned",
         ),
         pytest.param(
             FailedToActivateSomeO365Subscriptions(
-                failures={"Audit.General": TENANT_NOT_FOUND}, active_content_types=set()
+                failures={"Audit.General": OTHER_ERROR}, active_content_types={"Audit.Exchange"}
             ),
-            "critical",
-            ["The connector will produce no events", "unified audit logging is not enabled", "tenant 2 "],
-            [],
-            id="total_failure_tenant_not_provisioned",
+            10,
+            ["Please check the error details", "Next attempt in 3600 seconds"],
+            id="other_error_max_delay",
+        ),
+        pytest.param(
+            LISTING_ERROR,
+            1,
+            [
+                "Failed to list the Office365 subscriptions.",
+                "Events from Audit.Exchange are still collected",
+                "ActivityFeed.Read",
+                "Next attempt in 120 seconds",
+            ],
+            id="listing_failure",
+        ),
+        pytest.param(
+            FailedToActivateO365Subscription(),
+            2,
+            ["Failed to activate the Office365 subscriptions.", "Next attempt in 240 seconds"],
+            id="generic_error",
         ),
     ],
 )
-async def test_activate_subscriptions_failure(
-    connector, error, expected_level, expected_in_message, not_expected_in_message
-):
+async def test_activate_subscriptions_partial_failure(connector, error, previous_failures, expected_in_message):
+    """While some subscriptions are active, the failed ones are retried with a backoff and the collection goes on"""
+    connector._active_content_types = {"Audit.Exchange"}
+    connector._activation_failures = previous_failures
+    connector.client.activate_subscriptions.side_effect = error
+
+    with patch("office365.management_api.connector.time.monotonic", return_value=1_000.0):
+        await connector.activate_subscriptions()
+
+    connector.log_exception.assert_called_once()
+    assert connector.log_exception.call_args.kwargs["exception"] is error
+    connector.log.assert_called_once()
+    log_call = connector.log.call_args.kwargs
+    assert log_call["level"] == "error"
+    for expected in expected_in_message:
+        assert expected in log_call["message"]
+
+    assert connector._activation_pending
+    assert connector._activation_failures == previous_failures + 1
+    assert connector._next_activation_attempt == 1_000.0 + backoff_delay(previous_failures + 1)
+
+
+@pytest.mark.parametrize(
+    "error,expected_active_content_types",
+    [
+        pytest.param(LISTING_ERROR, {"Audit.Exchange"}, id="listing_failure_keeps_the_known_active_types"),
+        pytest.param(
+            FailedToActivateSomeO365Subscriptions(
+                failures={"Audit.General": OTHER_ERROR}, active_content_types={"Audit.SharePoint"}
+            ),
+            {"Audit.SharePoint"},
+            id="activation_failure_updates_the_active_types",
+        ),
+    ],
+)
+async def test_activate_subscriptions_failure_active_content_types(connector, error, expected_active_content_types):
+    connector._active_content_types = {"Audit.Exchange"}
     connector.client.activate_subscriptions.side_effect = error
 
     await connector.activate_subscriptions()
 
-    connector.client.activate_subscriptions.assert_called_once()
-    connector.log_exception.assert_called_once_with(
-        exception=error, message="An exception occurred when trying to subscribe to Office365 events."
-    )
-    connector.log.assert_called_once()
-    log_call = connector.log.call_args.kwargs
-    assert log_call["level"] == expected_level
-    for expected in expected_in_message:
-        assert expected in log_call["message"]
-    for not_expected in not_expected_in_message:
-        assert not_expected not in log_call["message"]
+    assert connector._active_content_types == expected_active_content_types
+
+
+async def test_activate_subscriptions_success_resets_the_retry_state(connector):
+    connector._activation_failures = 3
+    connector.client.activate_subscriptions.return_value = {"Audit.SharePoint", "Audit.Exchange"}
+
+    await connector.activate_subscriptions()
+
+    assert not connector._activation_pending
+    assert connector._activation_failures == 0
+    assert connector._active_content_types == {"Audit.SharePoint", "Audit.Exchange"}
+
+
+@pytest.mark.parametrize(
+    "pending,next_attempt,expected_calls",
+    [
+        pytest.param(True, 999.0, 1, id="pending_and_due"),
+        pytest.param(True, 1_001.0, 0, id="pending_but_not_due"),
+        pytest.param(False, 0.0, 0, id="not_pending"),
+    ],
+)
+async def test_retry_pending_activation(connector, pending, next_attempt, expected_calls):
+    connector._activation_pending = pending
+    connector._next_activation_attempt = next_attempt
+
+    with patch("office365.management_api.connector.time.monotonic", return_value=1_000.0):
+        await connector._retry_pending_activation()
+
+    assert connector.client.activate_subscriptions.await_count == expected_calls
 
 
 async def async_generator(iterable):
@@ -477,13 +560,225 @@ async def test_activate_subscriptions_logs_active_content_types(connector):
     connector.log_exception.assert_not_called()
 
 
-async def test_activate_subscriptions_logs_listing_failure(connector):
-    error = FailedToListO365Subscriptions(status_code=403, body="Forbidden")
-    connector.client.activate_subscriptions.side_effect = error
+@pytest.mark.parametrize(
+    "activation_pending,active_content_types,expected_activations,expected_forward_calls",
+    [
+        pytest.param(True, set(), 1, 1, id="retries_the_activation_then_forwards"),
+        pytest.param(False, {"Audit.General"}, 0, 1, id="forwards_when_a_subscription_is_active"),
+        pytest.param(False, set(), 0, 0, id="does_not_advance_the_checkpoint_without_active_subscription"),
+    ],
+)
+async def test_forward_events_forever_retries_activation(
+    connector,
+    symphony_storage,
+    activation_pending,
+    active_content_types,
+    expected_activations,
+    expected_forward_calls,
+):
+    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
+    connector._activation_pending = activation_pending
+    connector._active_content_types = active_content_types
 
-    await connector.activate_subscriptions()
+    async def stop(*args):
+        connector._stop_event.set()
 
-    connector.log.assert_not_called()
-    connector.log_exception.assert_called_once()
-    assert connector.log_exception.call_args.kwargs["exception"] is error
-    assert "ActivityFeed.Read" in connector.log_exception.call_args.kwargs["message"]
+    with (
+        patch.object(connector, "forward_next_batches", new_callable=AsyncMock) as forward_mock,
+        patch("office365.management_api.connector.asyncio.sleep", side_effect=stop),
+    ):
+        await connector.forward_events_forever(checkpoint)
+
+    assert connector.client.activate_subscriptions.await_count == expected_activations
+    assert forward_mock.await_count == expected_forward_calls
+
+
+async def test_forward_events_forever_exits_on_error_during_shutdown(connector, symphony_storage):
+    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
+    connector._activation_pending = False
+    connector._active_content_types = {"Audit.General"}
+
+    async def fail_while_stopping(cp):
+        connector._stop_event.set()
+        raise FailedToListO365Subscriptions(error_message="ClientConnectionError: Connector is closed.")
+
+    with (
+        patch.object(connector, "forward_next_batches", side_effect=fail_while_stopping),
+        patch("office365.management_api.connector.asyncio.sleep", new_callable=AsyncMock) as sleep_mock,
+    ):
+        await connector.forward_events_forever(checkpoint)
+
+    connector.log_exception.assert_not_called()
+    connector.log.assert_called_once_with(
+        message="Stopping event forwarding: the connector is stopping.", level="info"
+    )
+    sleep_mock.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "error,expected_raised",
+    [
+        pytest.param(FailedToGetO365SubscriptionContents(status_code=403), True, id="permission_error"),
+        pytest.param(ApplicationAuthenticationFailed("Failed to get access token"), True, id="authentication_error"),
+        pytest.param(FailedToGetO365SubscriptionContents(status_code=500), False, id="server_error"),
+        pytest.param(ValueError("unexpected"), False, id="unexpected_error"),
+    ],
+)
+async def test_forward_events_forever_raises_actionable_errors(connector, symphony_storage, error, expected_raised):
+    """Errors that need an action from the customer are raised to the SDK; the others are retried"""
+    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
+    connector._activation_pending = False
+    connector._active_content_types = {"Audit.General"}
+
+    async def stop(*args):
+        connector._stop_event.set()
+
+    with (
+        patch.object(connector, "forward_next_batches", side_effect=error),
+        patch("office365.management_api.connector.asyncio.sleep", side_effect=stop),
+    ):
+        if expected_raised:
+            with pytest.raises(type(error)):
+                await connector.forward_events_forever(checkpoint)
+            connector.log_exception.assert_not_called()
+        else:
+            await connector.forward_events_forever(checkpoint)
+            connector.log_exception.assert_called_once_with(error, message="Failed to forward events")
+
+
+async def test_collect_events_resets_the_activation_state(connector):
+    connector._active_content_types = {"Audit.General"}
+    connector._activation_pending = False
+    connector._activation_failures = 3
+
+    with (
+        patch.object(connector, "activate_subscriptions", new_callable=AsyncMock),
+        patch.object(connector, "forward_events_forever", new_callable=AsyncMock),
+    ):
+        await connector.collect_events()
+
+    assert connector._active_content_types == set()
+    assert connector._activation_pending
+    assert connector._activation_failures == 0
+
+
+@pytest.mark.parametrize(
+    "attempt,expected_delay",
+    [
+        pytest.param(0, 60, id="no_failure"),
+        pytest.param(1, 60, id="first_failure"),
+        pytest.param(2, 120, id="second_failure"),
+        pytest.param(4, 480, id="fourth_failure"),
+        pytest.param(7, 3600, id="capped"),
+        pytest.param(50, 3600, id="still_capped"),
+    ],
+)
+def test_backoff_delay(attempt, expected_delay):
+    assert backoff_delay(attempt) == expected_delay
+
+
+@pytest.fixture
+def run_connector(connector):
+    """Run the connector with a mocked `collect_events`, whose behavior is set by `asyncio.run`"""
+    with (
+        patch.object(connector, "collect_events", Mock()),
+        patch("office365.management_api.connector.asyncio.run") as asyncio_run,
+        patch.object(connector._stop_event, "wait") as stop_event_wait,
+    ):
+        yield connector, asyncio_run, stop_event_wait
+
+
+def test_run_without_error(run_connector):
+    connector, _, stop_event_wait = run_connector
+
+    connector.run()
+
+    assert [call.kwargs["message"] for call in connector.log.call_args_list] == [
+        "Office365 Trigger has started",
+        "Office365 Trigger has stopped",
+    ]
+    stop_event_wait.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "running,expected_log_exception_calls",
+    [
+        pytest.param(True, 1, id="while_running"),
+        pytest.param(False, 0, id="during_shutdown"),
+    ],
+)
+def test_run_handles_closed_session(run_connector, running, expected_log_exception_calls):
+    connector, asyncio_run, stop_event_wait = run_connector
+    asyncio_run.side_effect = SessionClosedError("closed")
+    if not running:
+        connector._stop_event.set()
+
+    connector.run()
+
+    assert connector.log_exception.call_count == expected_log_exception_calls
+    stop_event_wait.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "error,error_count,expected_delay,expected_in_message",
+    [
+        pytest.param(
+            ApplicationAuthenticationFailed(
+                "Failed to get access token", response={"error_description": "AADSTS7000215: Invalid client secret"}
+            ),
+            0,
+            60,
+            ["ApplicationAuthenticationFailed", "client secret", "AADSTS7000215"],
+            id="authentication_error",
+        ),
+        pytest.param(
+            FailedToActivateSomeO365Subscriptions(
+                failures={"Audit.General": TENANT_NOT_FOUND}, active_content_types=set()
+            ),
+            3,
+            480,
+            ["unified audit logging is not enabled"],
+            id="no_active_subscription",
+        ),
+        pytest.param(LISTING_ERROR, 6, 3600, ["ActivityFeed.Read"], id="permission_error_max_delay"),
+        pytest.param(ValueError("unexpected"), 1, 120, ["ValueError: unexpected", "Please check the error details"]),
+    ],
+)
+def test_run_waits_then_raises_errors_to_the_sdk(
+    run_connector, error, error_count, expected_delay, expected_in_message
+):
+    """The SDK restarts the connector on errors, counts them and stops the connector when they persist"""
+    connector, asyncio_run, stop_event_wait = run_connector
+    asyncio_run.side_effect = error
+    connector._error_count = error_count
+
+    with pytest.raises(type(error)):
+        connector.run()
+
+    stop_event_wait.assert_called_once_with(expected_delay)
+    log_call = connector.log.call_args.kwargs
+    assert log_call["level"] == "error"
+    assert f"The connector will restart in {expected_delay} seconds." in log_call["message"]
+    for expected in expected_in_message:
+        assert expected in log_call["message"]
+
+
+def test_run_does_not_raise_errors_during_shutdown(run_connector):
+    connector, asyncio_run, stop_event_wait = run_connector
+    asyncio_run.side_effect = LISTING_ERROR
+    connector._stop_event.set()
+
+    connector.run()
+
+    stop_event_wait.assert_not_called()
+    assert connector.log.call_args.kwargs["level"] == "info"
+
+
+def test_run_does_not_raise_errors_when_stopped_while_waiting(run_connector):
+    connector, asyncio_run, stop_event_wait = run_connector
+    asyncio_run.side_effect = LISTING_ERROR
+    stop_event_wait.side_effect = lambda delay: connector._stop_event.set()
+
+    connector.run()
+
+    stop_event_wait.assert_called_once_with(60)

@@ -7,6 +7,7 @@ from typing import Any
 from urllib.parse import urlencode, urlparse, urlunsplit
 
 import msal
+from aiohttp import ClientError
 from aiohttp.client import ClientSession
 
 from .constants import OFFICE365_ACTIVE_SUBSCRIPTION_STATUS, OFFICE365_AUTHORITY_DEFAULT, OFFICE365_URL_BASE
@@ -134,7 +135,14 @@ class Office365API:
         :raises FailedToActivateO365Subscription: if the subscription could not be activated
         """
         base_url = OFFICE365_URL_BASE.format(tenant_id=self.tenant_id)
-        response = await session.post(f"{base_url}/subscriptions/start", params={"contentType": content_type})
+        try:
+            response = await session.post(f"{base_url}/subscriptions/start", params={"contentType": content_type})
+        except (ClientError, TimeoutError) as exc:
+            # Record the transport error for this content type only, so the other content types are still activated.
+            # A closed session (RuntimeError) and the cancellation (BaseException) are propagated.
+            raise FailedToActivateO365Subscription(
+                content_type=content_type, error_message=f"{type(exc).__name__}: {exc}"
+            ) from exc
 
         try:
             subscription = await response.json(content_type=None)
@@ -194,6 +202,9 @@ class Office365API:
                 }
 
                 return list(active_subscriptions)
+        except (ClientError, TimeoutError, ValueError) as exc:
+            # Transport errors, timeouts and invalid JSON bodies (json.JSONDecodeError is a ValueError)
+            raise FailedToListO365Subscriptions(error_message=f"{type(exc).__name__}: {exc}") from exc
         except RuntimeError as exc:
             if "Session is closed" in str(exc):
                 raise SessionClosedError(str(exc)) from exc

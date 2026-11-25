@@ -14,14 +14,26 @@ from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 from .checkpoint import Checkpoint
 from .configuration import Office365Configuration
 from .errors import (
-    ApplicationAuthenticationFailed,
+    GENERIC_HINT,
     FailedToActivateO365Subscription,
     FailedToActivateSomeO365Subscriptions,
     FailedToListO365Subscriptions,
+    O365Exception,
     SessionClosedError,
 )
 from .helpers import split_date_range
 from .office365_client import Office365API
+
+# Exponential backoff (1, 2, 4... minutes, up to 1 hour) used:
+# - to retry the activation of the failed subscriptions, while the active ones are collected
+# - before restarting the connector after an error that prevents any collection
+RETRY_MIN_DELAY = 60
+RETRY_MAX_DELAY = 3600
+
+
+def backoff_delay(attempt: int) -> int:
+    """Delay, in seconds, before the next attempt after `attempt` failures in a row"""
+    return min(RETRY_MAX_DELAY, RETRY_MIN_DELAY * 2 ** max(0, attempt - 1))
 
 
 class Office365Connector(AsyncConnector):
@@ -32,6 +44,12 @@ class Office365Connector(AsyncConnector):
         self.limit_of_events_to_push = int(os.getenv("OFFICE365_BATCH_SIZE", 10000))
         self._frequency = int(os.getenv("OFFICE365_PULL_FREQUENCY", 60))
         self.time_range_interval = int(os.getenv("OFFICE365_TIME_RANGE_INTERVAL", 30))
+
+        # State of the activation of the subscriptions
+        self._active_content_types: set[str] = set()
+        self._activation_pending = True
+        self._activation_failures = 0
+        self._next_activation_attempt = 0.0
 
     async def shutdown(self) -> None:
         """
@@ -125,22 +143,13 @@ class Office365Connector(AsyncConnector):
         await self.push_data_to_intakes(events=events)
 
     async def _activate_subscriptions(self, recover: bool = False):
-        """Activates an Office 365 subscriptions"""
+        """Activates the Office 365 subscriptions, and schedules a new attempt if some of them failed
+
+        Raises the activation error when no subscription is active, as no event can be collected:
+        the connector is restarted, and stopped by the SDK if the error persists (see `run`).
+        """
         try:
             active_content_types = await self.client.activate_subscriptions()
-            self.log(
-                message=f"Office365 subscriptions are active for {', '.join(sorted(active_content_types))}",
-                level="info",
-            )
-        except FailedToListO365Subscriptions as exp:
-            self.log_exception(
-                exception=exp,
-                message=(
-                    "Failed to list the Office365 subscriptions, their activation is skipped. "
-                    "Please check that the application has the ActivityFeed.Read permission "
-                    "on the Office 365 Management APIs, with admin consent granted."
-                ),
-            )
         except SessionClosedError as exp:
             if not recover:
                 self.log_exception(
@@ -168,57 +177,51 @@ class Office365Connector(AsyncConnector):
                 )
                 self._reset_client()
                 await self._activate_subscriptions(False)
-        except FailedToActivateSomeO365Subscriptions as exp:
-            self.log_exception(
-                exception=exp,
-                message="An exception occurred when trying to subscribe to Office365 events.",
-            )
-            self._log_subscription_failures(exp)
-        except FailedToActivateO365Subscription as exp:
-            self.log_exception(
-                exception=exp,
-                message="An exception occurred when trying to subscribe to Office365 events.",
-            )
-            self.log(
-                message="Failed to activate Office365 subscriptions. The connector will produce no events.",
-                level="critical",
-            )
+        except (FailedToListO365Subscriptions, FailedToActivateO365Subscription) as exp:
+            if isinstance(exp, FailedToActivateSomeO365Subscriptions):
+                self._active_content_types = set(exp.active_content_types)
 
-    def _log_subscription_failures(self, exp: FailedToActivateSomeO365Subscriptions) -> None:
-        """Log the subscription failures with an actionable message.
+            if not self._active_content_types:
+                raise
 
-        The failure is critical (and stops the connector) only when no subscription is active.
-        """
-        failed_types = ", ".join(sorted(exp.failures))
-
-        if exp.is_tenant_not_provisioned:
-            reason = (
-                f"Microsoft reports that the tenant {self.configuration.tenant_id} does not exist for the "
-                "Office 365 Management Activity API. This usually means that unified audit logging is not enabled "
-                "in Microsoft Purview, was enabled less than 24 hours ago, or that the tenant has no Microsoft 365 "
-                "license with auditing. Please enable auditing in Microsoft Purview, wait for it to be provisioned "
-                "and restart the connector."
-            )
+            self._schedule_activation_retry(exp)
         else:
-            reason = "Please check the error details in the connector logs."
+            self._active_content_types = set(active_content_types)
+            self._activation_pending = False
+            self._activation_failures = 0
+            self.log(
+                message=f"Office365 subscriptions are active for {', '.join(sorted(active_content_types))}",
+                level="info",
+            )
 
-        if exp.active_content_types:
-            active_types = ", ".join(sorted(exp.active_content_types))
-            self.log(
-                message=(
-                    f"Failed to activate the Office365 subscriptions for {failed_types}: events of these content "
-                    f"types will not be collected. Events from {active_types} will still be collected. {reason}"
-                ),
-                level="error",
-            )
+    def _schedule_activation_retry(self, error: O365Exception) -> None:
+        """Log a partial activation failure with an actionable message, and schedule the next attempt"""
+        self._activation_pending = True
+        self._activation_failures += 1
+        delay = backoff_delay(self._activation_failures)
+        self._next_activation_attempt = time.monotonic() + delay
+
+        if isinstance(error, FailedToActivateSomeO365Subscriptions):
+            summary = f"Failed to activate the Office365 subscriptions for {', '.join(sorted(error.failures))}"
+        elif isinstance(error, FailedToListO365Subscriptions):
+            summary = "Failed to list the Office365 subscriptions"
         else:
-            self.log(
-                message=(
-                    f"Failed to activate the Office365 subscriptions for {failed_types}. "
-                    f"The connector will produce no events. {reason}"
-                ),
-                level="critical",
-            )
+            summary = "Failed to activate the Office365 subscriptions"
+
+        active_types = ", ".join(sorted(self._active_content_types))
+        self.log_exception(exception=error, message=f"{summary}.")
+        self.log(
+            message=(
+                f"{summary}. Events from {active_types} are still collected. {error.hint} "
+                f"Next attempt in {delay} seconds."
+            ),
+            level="error",
+        )
+
+    async def _retry_pending_activation(self) -> None:
+        """Retry the activation of the failed subscriptions, once their backoff delay has elapsed"""
+        if self._activation_pending and time.monotonic() >= self._next_activation_attempt:
+            await self._activate_subscriptions(True)
 
     async def activate_subscriptions(self):
         """Activates an Office 365 subscriptions"""
@@ -254,7 +257,11 @@ class Office365Connector(AsyncConnector):
         while self.running:
             try:
                 start_time = time.time()
-                await self.forward_next_batches(checkpoint)
+                await self._retry_pending_activation()
+
+                # Don't advance the checkpoint while no subscription is active: the events would be skipped
+                if self._active_content_types:
+                    await self.forward_next_batches(checkpoint)
                 # get the ending time and compute the duration to forward the events
                 end_time = time.time()
                 batch_duration = end_time - start_time
@@ -277,6 +284,15 @@ class Office365Connector(AsyncConnector):
                 if self.running:
                     await asyncio.sleep(self._frequency)
             except Exception as error:
+                if not self.running:
+                    self.log(message="Stopping event forwarding: the connector is stopping.", level="info")
+                    return
+
+                # Errors that need an action from the customer won't disappear by retrying: restart the connector,
+                # so the SDK stops it if they persist (see `run`)
+                if isinstance(error, O365Exception) and error.is_actionable:
+                    raise
+
                 self.log_exception(error, message="Failed to forward events")
                 # Continue the loop to retry after logging
                 await asyncio.sleep(self._frequency)
@@ -302,6 +318,11 @@ class Office365Connector(AsyncConnector):
         # Initialize the checkpoint
         checkpoint = Checkpoint(self.data_path, self.configuration.intake_key)
 
+        # Activate the subscriptions from scratch, as the connector can be restarted after an error
+        self._active_content_types = set()
+        self._activation_pending = True
+        self._activation_failures = 0
+
         try:
             await self.activate_subscriptions()
             await self.forward_events_forever(checkpoint)
@@ -311,26 +332,20 @@ class Office365Connector(AsyncConnector):
                 await self.client.close()
                 self._client_closed = True
 
-    def run(self) -> None:  # pragma: no cover
+    def run(self) -> None:
         """Main execution thread
 
         Runs the async event collection loop. The connector will continuously pull events
         from Office 365 Management API and forward them to Sekoia intake until stopped.
+
+        An error that prevents any collection (no active subscription, authentication or permission error)
+        is raised to the SDK after a backoff delay: the SDK restarts the connector and, if the error persists,
+        stops it with a critical log.
         """
         self.log(message="Office365 Trigger has started", level="info")
 
         try:
             asyncio.run(self.collect_events())
-
-        except ApplicationAuthenticationFailed as auth_error:
-            message = "Authentication failed. Please check your client ID, client secret and tenant ID."
-
-            response = auth_error.context.get("response")
-            if response and "error_description" in response:
-                message = f"{message} Details: {response['error_description']}"
-
-            self.log_exception(auth_error)
-            self.log(message=message, level="critical")
 
         except SessionClosedError as session_error:
             if self.running:
@@ -344,4 +359,30 @@ class Office365Connector(AsyncConnector):
                     level="info",
                 )
 
+        except Exception as error:
+            if not self.running:
+                self.log(message=f"Office365 connector stopped while handling an error: {error}", level="info")
+                return
+
+            self._wait_before_restart(error)
+            if self.running:
+                raise
+
         self.log(message="Office365 Trigger has stopped", level="info")
+
+    def _wait_before_restart(self, error: Exception) -> None:
+        """Log an actionable message, then wait before letting the SDK restart the connector.
+
+        The SDK restarts the connector immediately and counts the consecutive errors (reset when events are sent):
+        the backoff avoids hammering Microsoft until the SDK stops the connector.
+        """
+        delay = backoff_delay(self._error_count + 1)
+        hint = error.hint if isinstance(error, O365Exception) else GENERIC_HINT
+        self.log(
+            message=(
+                f"The Office365 connector can't collect events ({type(error).__name__}: {error}). "
+                f"{hint} The connector will restart in {delay} seconds."
+            ),
+            level="error",
+        )
+        self._stop_event.wait(delay)

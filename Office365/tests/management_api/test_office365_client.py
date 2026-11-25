@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 
 import orjson
 import pytest
+from aiohttp import ClientConnectionError
 from aioresponses import aioresponses
 
 from office365.management_api.errors import (
@@ -70,12 +71,8 @@ def mock_list_subscriptions(mocked_responses, base_url, enabled: list[str]) -> N
     )
 
 
-def mock_start_subscription(mocked_responses, base_url, content_type: str, status: int, body: bytes | str) -> None:
-    mocked_responses.post(
-        f"{base_url}/subscriptions/start?contentType={content_type}",
-        status=status,
-        body=body,
-    )
+def mock_start_subscription(mocked_responses, base_url, content_type: str, **response) -> None:
+    mocked_responses.post(f"{base_url}/subscriptions/start?contentType={content_type}", **response)
 
 
 @pytest.mark.parametrize(
@@ -112,27 +109,36 @@ async def test_activate_subscriptions_should_succeed(
 ):
     mock_list_subscriptions(mocked_responses, base_url, already_enabled)
     for content_type in EXPECTED_SUBSCRIPTIONS - set(already_enabled):
-        mock_start_subscription(mocked_responses, base_url, content_type, start_status, start_body)
+        mock_start_subscription(mocked_responses, base_url, content_type, status=start_status, body=start_body)
 
     assert await client.activate_subscriptions() == EXPECTED_SUBSCRIPTIONS
 
 
 @pytest.mark.parametrize(
-    "status,body,expected_in_error,tenant_not_provisioned",
+    "response,expected_in_error,tenant_not_provisioned",
     [
-        pytest.param(200, BUSINESS_ERROR, "error_code='error_code'", False, id="business_error"),
-        pytest.param(400, "", "status_code='400'", False, id="http_error"),
-        pytest.param(400, TENANT_NOT_FOUND_ERROR, "does not exist", True, id="tenant_not_provisioned"),
+        pytest.param({"status": 200, "body": BUSINESS_ERROR}, "error_code='error_code'", False, id="business_error"),
+        pytest.param({"status": 400, "body": ""}, "status_code='400'", False, id="http_error"),
+        pytest.param(
+            {"status": 400, "body": TENANT_NOT_FOUND_ERROR}, "does not exist", True, id="tenant_not_provisioned"
+        ),
+        pytest.param(
+            {"exception": ClientConnectionError("Connection reset")},
+            "ClientConnectionError: Connection reset",
+            False,
+            id="transport_error",
+        ),
+        pytest.param({"exception": TimeoutError()}, "TimeoutError", False, id="timeout"),
     ],
 )
 async def test_activate_subscriptions_should_continue_after_a_failure(
-    client, mocked_responses, base_url, status, body, expected_in_error, tenant_not_provisioned
+    client, mocked_responses, base_url, response, expected_in_error, tenant_not_provisioned
 ):
     """A failure on one content type must not prevent the activation of the other content types."""
     mock_list_subscriptions(mocked_responses, base_url, [])
-    mock_start_subscription(mocked_responses, base_url, "Audit.General", status, body)
+    mock_start_subscription(mocked_responses, base_url, "Audit.General", **response)
     for content_type in EXPECTED_SUBSCRIPTIONS - {"Audit.General"}:
-        mock_start_subscription(mocked_responses, base_url, content_type, 200, orjson.dumps({}))
+        mock_start_subscription(mocked_responses, base_url, content_type, status=200, body=orjson.dumps({}))
 
     with pytest.raises(FailedToActivateSomeO365Subscriptions) as exc_info:
         await client.activate_subscriptions()
@@ -162,14 +168,17 @@ async def test_list_subscriptions_should_succeed(client, mocked_responses, base_
 
 
 @pytest.mark.parametrize(
-    "status,body",
+    "response",
     [
-        pytest.param(200, BUSINESS_ERROR, id="business_error"),
-        pytest.param(400, "", id="http_error"),
+        pytest.param({"status": 200, "body": BUSINESS_ERROR}, id="business_error"),
+        pytest.param({"status": 400, "body": ""}, id="http_error"),
+        pytest.param({"status": 200, "body": "not json", "content_type": "application/json"}, id="invalid_json"),
+        pytest.param({"exception": ClientConnectionError("Connector is closed.")}, id="transport_error"),
+        pytest.param({"exception": TimeoutError()}, id="timeout"),
     ],
 )
-async def test_list_subscriptions_should_raise_on_error(client, mocked_responses, base_url, status, body):
-    mocked_responses.get(f"{base_url}/subscriptions/list", status=status, body=body)
+async def test_list_subscriptions_should_raise_on_error(client, mocked_responses, base_url, response):
+    mocked_responses.get(f"{base_url}/subscriptions/list", **response)
 
     with pytest.raises(FailedToListO365Subscriptions):
         await client.list_subscriptions()
