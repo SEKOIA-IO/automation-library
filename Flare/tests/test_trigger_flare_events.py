@@ -262,6 +262,38 @@ def test_next_batch_drops_chat_message_context(mock_sleep, data_storage):
     assert pushed_event["data"] == {"message": "hello"}
 
 
+@patch("flareio_modules.trigger_flare_events.time.sleep")
+def test_next_batch_drops_null_fields(mock_sleep, data_storage):
+    trigger = _build_trigger(data_storage)
+    event = _event("evt-1", event_type="driller")
+    event["activity"]["header"]["actor"] = None
+    event["activity"]["data"] = {
+        "url": None,
+        "commit": {"sha": "415138d", "author_email": None},
+        "issue": {"id": None, "state": None},
+        "html_url": ["https://github.com/a/b/commit/415138d", None],
+        "credentials": [{"url": "https://github.com/signup", "password": None}],
+        "is_secret_detection_rule_match": False,
+        "snippets": [],
+        "content": "",
+    }
+
+    _run_next_batch(trigger, _fake_client([([event], "cursor-1")]))
+
+    pushed_event = json.loads(trigger.push_events_to_intakes.call_args.kwargs["events"][0])
+    assert pushed_event["header"] == {"uid": "evt-1", "type": "driller"}
+    # Only `null` values go: `false`, empty strings, lists and objects are kept, and so are the items of lists
+    assert pushed_event["data"] == {
+        "commit": {"sha": "415138d"},
+        "issue": {},
+        "html_url": ["https://github.com/a/b/commit/415138d", None],
+        "credentials": [{"url": "https://github.com/signup"}],
+        "is_secret_detection_rule_match": False,
+        "snippets": [],
+        "content": "",
+    }
+
+
 def _push_one(data_storage, data: dict, event_type: str = "blog_post") -> str:
     trigger = _build_trigger(data_storage)
     event = _event("evt-1", event_type=event_type)

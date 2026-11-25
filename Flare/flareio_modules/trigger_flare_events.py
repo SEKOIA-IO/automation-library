@@ -30,6 +30,15 @@ TRUNCATED_FIELDS = "truncated_fields"
 FULLY_PARSED_FEATURES = frozenset({"emails", "usernames"})
 
 
+def without_nulls(value: Any) -> Any:
+    """Copy of `value` without the dictionary keys set to `null`, at every level (the items of lists are kept)."""
+    if isinstance(value, dict):
+        return {key: without_nulls(item) for key, item in value.items() if item is not None}
+    if isinstance(value, list):
+        return [without_nulls(item) for item in value]
+    return value
+
+
 class SerializedEvent(NamedTuple):
     text: str
     # In UTF-8 bytes, as the intake measures it
@@ -142,7 +151,8 @@ class FlareEventsConnector(Connector):
 
     @staticmethod
     def _serialize(event: dict[str, Any]) -> SerializedEvent:
-        activity = event.get("activity", event)
+        # Flare sends every field of the item's type, most of them `null`: they make events bigger and say nothing
+        activity = without_nulls(event.get("activity", event))
         data = activity.get("data")
         if isinstance(data, dict):
             # Chat messages embed up to 50 older and 50 newer messages of the conversation as
