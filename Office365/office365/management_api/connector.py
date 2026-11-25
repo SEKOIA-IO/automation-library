@@ -13,7 +13,13 @@ from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 from .checkpoint import Checkpoint
 from .configuration import Office365Configuration
-from .errors import ApplicationAuthenticationFailed, FailedToActivateO365Subscription, SessionClosedError
+from .errors import (
+    ApplicationAuthenticationFailed,
+    FailedToActivateO365Subscription,
+    FailedToActivateSomeO365Subscriptions,
+    FailedToListO365Subscriptions,
+    SessionClosedError,
+)
 from .helpers import split_date_range
 from .office365_client import Office365API
 
@@ -65,7 +71,7 @@ class Office365Connector(AsyncConnector):
         self.__dict__.pop("client", None)
         self._client_closed = False
 
-    async def pull_content(self, start_date: datetime, end_date: datetime) -> AsyncGenerator[list[str], None]:
+    async def pull_content(self, start_date: datetime, end_date: datetime) -> AsyncGenerator[list[str]]:
         """Pulls content from Office 365 subscriptions
 
         Args:
@@ -73,7 +79,7 @@ class Office365Connector(AsyncConnector):
             end_date (datetime): End date of the interval
 
         Returns:
-            AsyncGenerator[list[str], None]: Batches of events received for the interval
+            AsyncGenerator[list[str]]: Batches of events received for the interval
         """
         pulled_events: list[str] = []
 
@@ -121,7 +127,20 @@ class Office365Connector(AsyncConnector):
     async def _activate_subscriptions(self, recover: bool = False):
         """Activates an Office 365 subscriptions"""
         try:
-            await self.client.activate_subscriptions()
+            active_content_types = await self.client.activate_subscriptions()
+            self.log(
+                message=f"Office365 subscriptions are active for {', '.join(sorted(active_content_types))}",
+                level="info",
+            )
+        except FailedToListO365Subscriptions as exp:
+            self.log_exception(
+                exception=exp,
+                message=(
+                    "Failed to list the Office365 subscriptions, their activation is skipped. "
+                    "Please check that the application has the ActivityFeed.Read permission "
+                    "on the Office 365 Management APIs, with admin consent granted."
+                ),
+            )
         except SessionClosedError as exp:
             if not recover:
                 self.log_exception(
@@ -149,6 +168,12 @@ class Office365Connector(AsyncConnector):
                 )
                 self._reset_client()
                 await self._activate_subscriptions(False)
+        except FailedToActivateSomeO365Subscriptions as exp:
+            self.log_exception(
+                exception=exp,
+                message="An exception occurred when trying to subscribe to Office365 events.",
+            )
+            self._log_subscription_failures(exp)
         except FailedToActivateO365Subscription as exp:
             self.log_exception(
                 exception=exp,
@@ -156,6 +181,42 @@ class Office365Connector(AsyncConnector):
             )
             self.log(
                 message="Failed to activate Office365 subscriptions. The connector will produce no events.",
+                level="critical",
+            )
+
+    def _log_subscription_failures(self, exp: FailedToActivateSomeO365Subscriptions) -> None:
+        """Log the subscription failures with an actionable message.
+
+        The failure is critical (and stops the connector) only when no subscription is active.
+        """
+        failed_types = ", ".join(sorted(exp.failures))
+
+        if exp.is_tenant_not_provisioned:
+            reason = (
+                f"Microsoft reports that the tenant {self.configuration.tenant_id} does not exist for the "
+                "Office 365 Management Activity API. This usually means that unified audit logging is not enabled "
+                "in Microsoft Purview, was enabled less than 24 hours ago, or that the tenant has no Microsoft 365 "
+                "license with auditing. Please enable auditing in Microsoft Purview, wait for it to be provisioned "
+                "and restart the connector."
+            )
+        else:
+            reason = "Please check the error details in the connector logs."
+
+        if exp.active_content_types:
+            active_types = ", ".join(sorted(exp.active_content_types))
+            self.log(
+                message=(
+                    f"Failed to activate the Office365 subscriptions for {failed_types}: events of these content "
+                    f"types will not be collected. Events from {active_types} will still be collected. {reason}"
+                ),
+                level="error",
+            )
+        else:
+            self.log(
+                message=(
+                    f"Failed to activate the Office365 subscriptions for {failed_types}. "
+                    f"The connector will produce no events. {reason}"
+                ),
                 level="critical",
             )
 
@@ -250,7 +311,7 @@ class Office365Connector(AsyncConnector):
                 await self.client.close()
                 self._client_closed = True
 
-    def run(self):  # pragma: no cover
+    def run(self) -> None:  # pragma: no cover
         """Main execution thread
 
         Runs the async event collection loop. The connector will continuously pull events

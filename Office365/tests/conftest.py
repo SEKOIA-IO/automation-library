@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from sekoia_automation import constants
@@ -11,6 +11,13 @@ from sekoia_automation.storage import get_data_path
 
 from office365.management_api.configuration import Office365Configuration
 from office365.management_api.connector import Office365Connector
+
+
+@pytest.fixture(autouse=True)
+def no_sleep():
+    """Make blocking waits instant, such as the backoff between tenacity retries."""
+    with patch("time.sleep") as mock_sleep:
+        yield mock_sleep
 
 
 @pytest.fixture
@@ -135,7 +142,7 @@ def start_time(trigger_activation) -> datetime:
 @pytest.fixture
 def client():
     client = Mock()
-    client.activate_subscriptions = AsyncMock()
+    client.activate_subscriptions = AsyncMock(return_value={"Audit.General"})
     client.get_subscription_contents = Mock()
     client.list_subscriptions = AsyncMock()
     client.get_content = AsyncMock()

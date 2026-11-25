@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import time
 from threading import Thread
 from unittest.mock import Mock
 
@@ -107,8 +106,8 @@ def test_trigger_with_credentials(trigger):
     trigger.push_events_to_intakes = Mock()
     trigger.log_exception = Mock()
     trigger.log = Mock()
-    thread = Thread(target=trigger.run)
+    thread = Thread(target=trigger.run, daemon=True)
     thread.start()
-    time.sleep(30)
+    thread.join(timeout=30)  # the trigger runs forever: wait 30 seconds for events
     calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
     assert len(calls) > 0

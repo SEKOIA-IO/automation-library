@@ -1,4 +1,5 @@
 from datetime import datetime
+from functools import cached_property
 from posixpath import join as urljoin
 
 import msal
@@ -6,6 +7,7 @@ import requests
 from requests import Response
 
 from office365.message_trace.base import O365BaseConfig, Office365MessageTraceBaseTrigger
+from office365.message_trace.client.auth import format_authentication_error
 
 
 class O365Config(O365BaseConfig):
@@ -29,33 +31,28 @@ class Office365MessageTraceTrigger(Office365MessageTraceBaseTrigger):
         self.scopes: list = ["https://outlook.office365.com/.default"]
         self.base_url = "https://login.microsoftonline.com/"
 
-    def _get_access_token(self) -> str | None:  # pragma: no cover
-        client_id: str = self.configuration.client_id
-        client_secret: str = self.configuration.client_secret
-        authority = urljoin(self.base_url, self.configuration.tenant_id.lstrip("/"))
-
-        app = msal.ConfidentialClientApplication(
-            client_id,
-            authority=authority,
-            client_credential=client_secret,
+    @cached_property
+    def _app(self) -> msal.ConfidentialClientApplication:
+        # Keep the same application between the queries: MSAL caches the tokens until their expiration
+        return msal.ConfidentialClientApplication(
+            self.configuration.client_id,
+            authority=urljoin(self.base_url, self.configuration.tenant_id.lstrip("/")),
+            client_credential=self.configuration.client_secret,
         )
 
-        result_token_silent: dict | None = app.acquire_token_silent(scopes=self.scopes, account=None)
-
+    def _get_access_token(self) -> str | None:
+        result_token_silent: dict | None = self._app.acquire_token_silent(scopes=self.scopes, account=None)
         if result_token_silent:
             return result_token_silent["access_token"]
 
-        result: dict = app.acquire_token_for_client(scopes=self.scopes)
+        result: dict = self._app.acquire_token_for_client(scopes=self.scopes)
         if "access_token" in result:
-            self.log(
-                message="Access token successfully provided by Microsoft API.",
-                level="info",
-            )
             return result["access_token"]
 
-        self.log(message=result.get("error"), level="error")
-        self.log(message=result.get("error_description"), level="error")
-        self.log(message=result.get("correlation_id"), level="error")
+        self.log(
+            message=f"Failed to get an access token from Microsoft. {format_authentication_error(result)}",
+            level="error",
+        )
         return None
 
     def _get_http_header(self) -> dict:
