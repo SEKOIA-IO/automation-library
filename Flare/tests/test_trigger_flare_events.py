@@ -42,11 +42,9 @@ def _build_trigger(data_storage):
 
 
 def _response(status_code, body=None):
-    response = MagicMock()
+    response = requests.Response()
     response.status_code = status_code
-    response.json.return_value = body
-    if status_code >= 400:
-        response.raise_for_status.side_effect = requests.HTTPError(f"{status_code} Client Error")
+    response._content = json.dumps(body).encode()
     return response
 
 

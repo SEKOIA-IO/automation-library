@@ -30,15 +30,6 @@ TRUNCATED_FIELDS = "truncated_fields"
 FULLY_PARSED_FEATURES = frozenset({"emails", "usernames"})
 
 
-def without_nulls(value: Any) -> Any:
-    """Copy of `value` without the dictionary keys set to `null`, at every level (the items of lists are kept)."""
-    if isinstance(value, dict):
-        return {key: without_nulls(item) for key, item in value.items() if item is not None}
-    if isinstance(value, list):
-        return [without_nulls(item) for item in value]
-    return value
-
-
 class SerializedEvent(NamedTuple):
     text: str
     # In UTF-8 bytes, as the intake measures it
@@ -114,7 +105,9 @@ class FlareEventsConnector(Connector):
         if event_resp.status_code == 404:
             return None
         event_resp.raise_for_status()
-        event = event_resp.json()
+        # Flare sends every field of the item's type, most of them `null`: they make events bigger and say nothing.
+        # The hook runs on every object of the document, so the `null` keys go at every level.
+        event = event_resp.json(object_hook=lambda obj: {k: v for k, v in obj.items() if v is not None})
         # The date Flare matched the item to the tenant is only in the search results; the parser uses it as the
         # event's date, since the item can be years old (e.g. the history Flare matches when a tenant is created)
         activity = event.get("activity", event)
@@ -151,8 +144,7 @@ class FlareEventsConnector(Connector):
 
     @staticmethod
     def _serialize(event: dict[str, Any]) -> SerializedEvent:
-        # Flare sends every field of the item's type, most of them `null`: they make events bigger and say nothing
-        activity = without_nulls(event.get("activity", event))
+        activity = event.get("activity", event)
         data = activity.get("data")
         if isinstance(data, dict):
             # Chat messages embed up to 50 older and 50 newer messages of the conversation as
