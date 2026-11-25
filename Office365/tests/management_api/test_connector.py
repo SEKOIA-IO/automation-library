@@ -669,19 +669,41 @@ async def test_forward_events_forever_exits_on_error_during_shutdown(connector, 
 
 
 @pytest.mark.parametrize(
-    "error,expected_raised",
+    "error,active_content_types,expected_raised",
     [
-        pytest.param(FailedToGetO365SubscriptionContents(status_code=403), True, id="permission_error"),
-        pytest.param(ApplicationAuthenticationFailed("Failed to get access token"), True, id="authentication_error"),
-        pytest.param(FailedToGetO365SubscriptionContents(status_code=500), False, id="server_error"),
-        pytest.param(ValueError("unexpected"), False, id="unexpected_error"),
+        pytest.param(
+            FailedToGetO365SubscriptionContents(status_code=403), {"Audit.General"}, True, id="permission_error"
+        ),
+        pytest.param(
+            ApplicationAuthenticationFailed("Failed to get access token"),
+            {"Audit.General"},
+            True,
+            id="authentication_error",
+        ),
+        pytest.param(
+            FailedToGetO365SubscriptionContents(status_code=500), {"Audit.General"}, False, id="server_error"
+        ),
+        pytest.param(ValueError("unexpected"), {"Audit.General"}, False, id="unexpected_error"),
+        pytest.param(
+            FailedToActivateO365Subscription(status_code=500),
+            set(),
+            True,
+            id="server_error_without_active_subscription",
+        ),
     ],
 )
-async def test_forward_events_forever_raises_actionable_errors(connector, symphony_storage, error, expected_raised):
-    """Errors that need an action from the customer are raised to the SDK; the others are retried"""
+async def test_forward_events_forever_raises_actionable_errors(
+    connector, symphony_storage, error, active_content_types, expected_raised
+):
+    """Errors that need an action, or that occur without active subscription, are raised to the SDK
+
+    The other errors are retried by the forwarding loop.
+    """
     checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
-    connector._activation_pending = False
-    connector._active_content_types = {"Audit.General"}
+    connector._active_content_types = active_content_types
+    # without active subscription, the error comes from the reactivation
+    connector._activation_pending = not active_content_types
+    connector.client.activate_subscriptions.side_effect = error
 
     async def stop(*args):
         connector._stop_event.set()
@@ -835,3 +857,18 @@ def test_run_does_not_raise_errors_when_stopped_while_waiting(run_connector):
     connector.run()
 
     stop_event_wait.assert_called_once_with(60)
+
+
+async def test_activate_subscriptions_partial_failure_during_shutdown(connector):
+    """An activation interrupted by the shutdown is neither logged nor retried"""
+    connector._stop_event.set()
+    connector.client.activate_subscriptions.side_effect = FailedToActivateSomeO365Subscriptions(
+        failures={"Audit.General": FailedToActivateO365Subscription(error_message="Connector is closed.")},
+        active_content_types={"Audit.Exchange"},
+    )
+
+    await connector.activate_subscriptions()
+
+    connector.log.assert_not_called()
+    connector.log_exception.assert_not_called()
+    assert connector._activation_failures == 0

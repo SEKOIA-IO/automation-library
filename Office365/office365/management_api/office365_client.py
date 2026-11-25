@@ -8,7 +8,7 @@ from urllib.parse import urlencode, urlparse, urlunsplit
 
 import msal
 from aiohttp import ClientError
-from aiohttp.client import ClientSession
+from aiohttp.client import ClientResponse, ClientSession
 
 from .constants import OFFICE365_ACTIVE_SUBSCRIPTION_STATUS, OFFICE365_AUTHORITY_DEFAULT, OFFICE365_URL_BASE
 from .errors import (
@@ -174,6 +174,14 @@ class Office365API:
                 content_type=content_type, status_code=response.status, body=await response.text()
             )
 
+    @staticmethod
+    async def _read_error_body(response: ClientResponse) -> str:
+        """Read the body of an error response, without losing the error when the body can't be read"""
+        try:
+            return await response.text()
+        except (ClientError, TimeoutError) as exc:
+            return f"<unreadable body: {type(exc).__name__}: {exc}>"
+
     async def list_subscriptions(self) -> list[str]:
         """
         List the subscriptions for the tenant
@@ -190,7 +198,9 @@ class Office365API:
 
                 # check HTTP status code
                 if response.status >= 400:
-                    raise FailedToListO365Subscriptions(status_code=response.status, body=await response.text())
+                    raise FailedToListO365Subscriptions(
+                        status_code=response.status, body=await self._read_error_body(response)
+                    )
 
                 # get the body of the response
                 subscriptions = await response.json()

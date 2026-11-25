@@ -1,7 +1,8 @@
 import time
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 from urllib.parse import urlencode
 
 import orjson
@@ -385,3 +386,30 @@ async def test_activate_subscription_reports_body_read_errors(client, status):
         "status_code": status,
         "error_message": "ClientPayloadError: Response payload is not completed",
     }
+
+
+@pytest.mark.parametrize(
+    "text_error",
+    [
+        pytest.param(ClientPayloadError("Response payload is not completed"), id="payload_error"),
+        pytest.param(TimeoutError(), id="timeout"),
+    ],
+)
+async def test_list_subscriptions_keeps_the_http_status_when_the_body_is_unreadable(client, text_error):
+    response = SimpleNamespace(status=403, text=AsyncMock(side_effect=text_error))
+    session = SimpleNamespace(get=AsyncMock(return_value=response))
+
+    @asynccontextmanager
+    async def fresh_session():
+        yield session
+
+    with (
+        patch.object(client, "_fresh_session", fresh_session),
+        pytest.raises(FailedToListO365Subscriptions) as exc_info,
+    ):
+        await client.list_subscriptions()
+
+    error = exc_info.value
+    assert error.context["status_code"] == 403
+    assert error.context["body"].startswith(f"<unreadable body: {type(text_error).__name__}")
+    assert error.is_actionable

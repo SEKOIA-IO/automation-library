@@ -189,7 +189,9 @@ class Office365Connector(AsyncConnector):
             if not self._active_content_types:
                 raise
 
-            self._schedule_activation_retry(exp)
+            # an activation interrupted by the shutdown is not a failure
+            if self.running:
+                self._schedule_activation_retry(exp)
         else:
             self._active_content_types = set(active_content_types)
             self._activation_pending = False
@@ -319,9 +321,10 @@ class Office365Connector(AsyncConnector):
                     self.log(message="Stopping event forwarding: the connector is stopping.", level="info")
                     return
 
-                # Errors that need an action from the customer won't disappear by retrying: restart the connector,
-                # so the SDK stops it if they persist (see `run`)
-                if isinstance(error, O365Exception) and error.is_actionable:
+                # Restart the connector, so the SDK stops it if the error persists (see `run`), when:
+                # - the error needs an action from the customer: it won't disappear by retrying
+                # - no subscription is active: no event can be collected until the activation succeeds
+                if isinstance(error, O365Exception) and (error.is_actionable or not self._active_content_types):
                     raise
 
                 self.log_exception(error, message="Failed to forward events")
