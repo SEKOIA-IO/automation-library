@@ -10,6 +10,12 @@
 # Python version. When the list is missing or empty, the module does not support
 # fission and no archive is built.
 #
+# botocore ships the models of every AWS service (~20 MB), while the SDK only
+# uses S3 (sekoia_automation.storage). Unless `fission.prune-botocore-data` is
+# set to false in manifest.json, the models of the other services are removed
+# from the archives: a module calling another AWS service through boto3 must
+# opt out.
+#
 # Usage: package-fission.sh <module-dir> <output-dir>
 
 set -euo pipefail
@@ -35,6 +41,14 @@ if [ -z "$python_versions" ]; then
   echo "$module_dir does not support fission (no fission.python-version in manifest.json), nothing to package"
   exit 0
 fi
+
+# `// true` cannot be used for the default value, as it would also replace false
+prune_botocore_data=$(
+  jq -r '
+    (.fission // {}) | if has("prune-botocore-data") then .["prune-botocore-data"] else true end
+    | if type == "boolean" then . else error("fission.prune-botocore-data must be a boolean") end
+  ' "$manifest"
+)
 
 if [ ! -f "$module_dir/uv.lock" ]; then
   echo "error: $module_dir has no uv.lock, only uv modules can be packaged" >&2
@@ -99,6 +113,17 @@ for python_version in $python_versions; do
     exit 1
   fi
   rm -rf "${dist:?}/bin" "${dist:?}/.lock"
+
+  # Keep the models of S3, of the services used to get credentials (STS for web
+  # identity, SSO) and the files loaded when creating any client
+  if [ "$prune_botocore_data" = "true" ] && [ -d "$dist/botocore/data" ]; then
+    echo "Removing the botocore models of the AWS services other than S3"
+    find "$dist/botocore/data" -mindepth 1 -maxdepth 1 \
+      ! -name 's3' ! -name 'sts' ! -name 'sso' ! -name 'sso-oidc' \
+      ! -name 'endpoints.json*' ! -name 'partitions.json*' \
+      ! -name 'sdk-default-configuration.json*' ! -name '_retry.json*' \
+      -exec rm -rf {} +
+  fi
 
   # Byte-compile the module sources and dependencies, so that fission does not
   # compile them at each cold start. Hash-based pycs are used because zip
