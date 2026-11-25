@@ -200,6 +200,35 @@ class TestMapIdentityEntityFields:
             assert result.user.account.name == expected
 
     @pytest.mark.parametrize(
+        ("accounts", "expected_sid"),
+        [
+            (
+                [
+                    CrowdStrikeUserAccount(dataSource="ACTIVE_DIRECTORY", objectSid="S-1-5-21-1-2-3-1001"),
+                    CrowdStrikeUserAccount(
+                        dataSource="ACTIVE_DIRECTORY", samAccountName="asmith", objectSid="S-1-5-21-1-2-3-1002"
+                    ),
+                ],
+                "S-1-5-21-1-2-3-1002",
+            ),
+            (
+                [
+                    CrowdStrikeUserAccount(dataSource="ACTIVE_DIRECTORY", objectSid="S-1-5-21-1-2-3-1001"),
+                    CrowdStrikeUserAccount(dataSource="ACTIVE_DIRECTORY", samAccountName="asmith"),
+                ],
+                None,
+            ),
+        ],
+    )
+    def test_the_account_with_a_login_is_preferred(self, connector, accounts, expected_sid):
+        entity = CrowdStrikeUser(entityId="entity-1", primaryDisplayName="Alice Smith", accounts=accounts)
+
+        result = connector.map_identity_entity_fields(entity)
+
+        assert result.user.name == "asmith"
+        assert result.user.account.uid == expected_sid
+
+    @pytest.mark.parametrize(
         ("object_sid", "object_guid", "expected"),
         [
             (

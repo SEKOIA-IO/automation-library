@@ -195,7 +195,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
         login = email_addresses[0] if email_addresses else primary_name
 
         if entity.accounts:
-            acc = next((a for a in entity.accounts if a.objectSid or a.samAccountName), entity.accounts[0])
+            acc = max(entity.accounts, key=lambda a: (bool(a.samAccountName), bool(a.objectSid)))
             account_type_id, account_type_str = self._determine_account_type(acc)
             domain = acc.domain
             login = acc.samAccountName or login
