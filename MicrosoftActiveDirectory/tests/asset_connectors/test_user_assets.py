@@ -48,14 +48,22 @@ def test_user_ldap_query_with_checkpoint(connector):
     assert query == "(&(objectCategory=person)(objectClass=user)(whenCreated>=20240101120000.0Z))"
 
 
+def test_a_checkpoint_saved_before_the_login_mapping_is_ignored(connector):
+    previous_context = {"most_recent_datetime": "20240101120000.0Z", "seen_sids_at_checkpoint": ["S-1-5-21-1"]}
+    connector.context.__enter__().get.side_effect = lambda key, default=None: previous_context.get(key, default)
+
+    assert connector.user_ldap_query == "(&(objectCategory=person)(objectClass=user))"
+    assert connector.seen_sids_at_checkpoint == set()
+
+
 def test_update_checkpoint_with_latest_time(connector):
     connector._latest_time = "20240101120000.0Z"
 
     connector.update_checkpoint()
 
     cache = connector.context.__enter__()
-    cache.__setitem__.assert_any_call("most_recent_datetime", "20240101120000.0Z")
-    cache.__setitem__.assert_any_call("seen_sids_at_checkpoint", [])
+    cache.__setitem__.assert_any_call("most_recent_datetime_v2", "20240101120000.0Z")
+    cache.__setitem__.assert_any_call("seen_sids_at_checkpoint_v2", [])
 
 
 def test_update_checkpoint_without_latest_time(connector):
@@ -191,11 +199,46 @@ def test_user_ocsf_object(connector):
 
     user_ocsf = connector.user_ocsf_object(user_attr)
 
-    assert user_ocsf.name == "John Doe"
+    assert user_ocsf.name == "john.doe@example.com"
+    assert user_ocsf.full_name == "John Doe"
+    assert user_ocsf.display_name == "John Doe"
     assert user_ocsf.uid == "S-1-5-21-123456"
+    assert user_ocsf.uid_alt == "guid-123"
+    assert user_ocsf.domain == "example.com"
     assert user_ocsf.account.name == "john.doe@example.com"
+    assert user_ocsf.account.uid == "S-1-5-21-123456"
     assert user_ocsf.account.type_id == AccountTypeId.LDAP_ACCOUNT
     assert user_ocsf.email_addr == "john.doe@example.com"
+
+
+def test_user_ocsf_object_sends_the_login_as_name(connector):
+    user_attr = LDAPUserAttributes(
+        givenName="John",
+        sn="Doe",
+        displayName="John Doe",
+        sAMAccountName="jdoe",
+        userPrincipalName="john.doe@example.com",
+        objectSid="S-1-5-21-1-2-3-1104",
+        distinguishedName="CN=John Doe,OU=Paris,DC=corp,DC=example,DC=com",
+    )
+
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.name == "jdoe"
+    assert user_ocsf.full_name == "John Doe"
+    assert user_ocsf.domain == "corp.example.com"
+
+
+def test_user_ocsf_object_without_sid_takes_its_guid_and_no_placeholder(connector):
+    user_attr = LDAPUserAttributes(sAMAccountName="jdoe", objectGUID="{2f9c3a1e-0b6d-4c5e-9a7f-1d2e3f4a5b6c}")
+
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.uid == "2f9c3a1e-0b6d-4c5e-9a7f-1d2e3f4a5b6c"
+    assert user_ocsf.account.uid is None
+    assert user_ocsf.full_name is None
+    assert user_ocsf.display_name is None
+    assert user_ocsf.domain is None
 
 
 @pytest.mark.parametrize("sam_account_name", ["Guest", "krbtgt"])
@@ -238,13 +281,13 @@ def test_user_ocsf_object_with_blank_names(connector):
     assert user_ocsf.account.name == "Guest"
 
 
-def test_user_ocsf_object_without_any_name(connector):
-    user_attr = LDAPUserAttributes(objectSid="S-1-5-21-999")
-
-    user_ocsf = connector.user_ocsf_object(user_attr)
-
-    assert user_ocsf.name == "Unknown"
-    assert user_ocsf.account.name == "Unknown"
+@pytest.mark.parametrize(
+    "attributes",
+    [{"objectSid": "S-1-5-21-999"}, {"sAMAccountName": "jdoe"}],
+)
+def test_user_ocsf_object_refuses_a_user_without_name_or_identifier(connector, attributes):
+    with pytest.raises(ValueError):
+        connector.user_ocsf_object(LDAPUserAttributes(**attributes))
 
 
 def test_user_ocsf_object_machine_account_email_not_set(connector):
@@ -288,7 +331,8 @@ def test_map_user_fields(connector):
     assert isinstance(user_model, UserOCSFModel)
     assert user_model.activity_id == 2
     assert user_model.activity_name == "Collect"
-    assert user_model.user.name == "Jane Smith"
+    assert user_model.user.name == "jane.smith@example.com"
+    assert user_model.user.full_name == "Jane Smith"
     assert user_model.time == int(datetime(2024, 1, 1, 12, 0, 0).timestamp())
 
 

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-25 - 1.7.0
+
+### Changed
+
+- Send the login (sAMAccountName) as the user name, and the display name as full name, so a user meets the account seen in events
+- Send the DNS domain of a user instead of its distinguished name
+- Leave out a missing value instead of sending "Unknown"; a user without a SID takes its objectGUID as identifier, a user with neither or without any name is skipped
+- Read and send every user again once, so existing users get the new mapping
+
 ## 2026-11-09 - 1.6.6
 
 ### Fixed

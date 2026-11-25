@@ -164,29 +164,29 @@ mapping:
       description: "OCSF schema version"
 
     # USER IDENTIFICATION
-    # NOTE: user.name is built from givenName + sn (first + last name).
+    # NOTE: user.name is the login, the display name goes to full_name and display_name; a missing value is left out.
     - source: "objectSid"
       target: "user.uid"
       type: "string"
-      logic: "Direct mapping of user SID (Security Identifier)"
+      logic: "User SID (Security Identifier); objectGUID without braces when the SID is missing; the user is skipped when both are missing"
       description: "Active Directory user unique identifier (SID)"
 
-    - source: "givenName + ' ' + sn"
+    - source: "sAMAccountName"
       target: "user.name"
       type: "string"
-      logic: "Concatenate givenName and sn; fallback to givenName only, sn only, sAMAccountName, or 'Unknown' if all absent"
-      description: "User full name built from first and last name"
+      logic: "The login (sAMAccountName); fallback to userPrincipalName, then to the full name; the user is skipped when all are missing"
+      description: "User login, as events carry it"
 
     - source: "displayName"
       target: "user.full_name"
       type: "string"
-      logic: "Direct mapping of display name as full name"
-      description: "User full name (from displayName attribute)"
+      logic: "Display name; fallback to givenName and sn; null when absent"
+      description: "User full name"
 
     - source: "displayName"
       target: "user.display_name"
       type: "string"
-      logic: "Direct mapping of display name"
+      logic: "Display name; null when absent"
       description: "User display name (User.display_name)"
 
     - source: "mail"
@@ -198,8 +198,8 @@ mapping:
     - source: "distinguishedName"
       target: "user.domain"
       type: "string"
-      logic: "Direct mapping of distinguished name as domain reference"
-      description: "User domain (stored as full DN)"
+      logic: "DNS domain built from the DC= components of the distinguished name (CN=x,DC=corp,DC=example,DC=com -> corp.example.com); null when there is none"
+      description: "User domain"
 
     - source: "objectGUID"
       target: "user.uid_alt"
@@ -224,13 +224,13 @@ mapping:
     - source: "objectSid"
       target: "user.account.uid"
       type: "string"
-      logic: "Direct mapping of objectSid as account UID"
+      logic: "objectSid; null when absent"
       description: "Account UID (objectSid)"
 
     - source: "userPrincipalName"
       target: "user.account.name"
       type: "string"
-      logic: "User principal name; fallback to sAMAccountName, or 'Unknown' if both absent"
+      logic: "User principal name; fallback to user.name"
       description: "User principal name (UPN) as account name"
 
     - source: "static: LDAP Account"
@@ -316,7 +316,7 @@ mapping:
           },
           "user": {
             "uid": "S-1-5-21-3623811015-3361044348-30300820-1013",
-            "name": "Mary Jones",
+            "name": "mary.jones@example.com",
             "full_name": "Mary Jones",
             "email_addr": "mary.jones@example.com",
             "is_enabled": true,
@@ -333,7 +333,7 @@ mapping:
             "password_last_changed_time": 1681234567,
             "has_groups": true,
             "account": {
-              "uid": "CN=mary.jones,OU=Users,DC=example,DC=com",
+              "uid": "S-1-5-21-3623811015-3361044348-30300820-1013",
               "name": "mary.jones@example.com",
               "type": "LDAP",
               "type_id": 4000
