@@ -105,8 +105,7 @@ class FlareEventsConnector(Connector):
         if event_resp.status_code == 404:
             return None
         event_resp.raise_for_status()
-        # Flare sends every field of the item's type, most of them `null`: they make events bigger and say nothing.
-        # The hook runs on every object of the document, so the `null` keys go at every level.
+        # Drop the `null` fields, at every level: Flare sends many of them
         event = event_resp.json(object_hook=lambda obj: {k: v for k, v in obj.items() if v is not None})
         # The date Flare matched the item to the tenant is only in the search results; the parser uses it as the
         # event's date, since the item can be years old (e.g. the history Flare matches when a tenant is created)
