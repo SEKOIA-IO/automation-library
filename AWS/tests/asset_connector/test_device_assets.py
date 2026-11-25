@@ -428,6 +428,7 @@ def test_extract_device_from_instance_success(test_aws_device_asset_connector):
         "State": {"Name": "running"},
         "Tags": [{"Key": "Name", "Value": "TestInstance"}],
         "PublicDnsName": "ec2-203-0-113-25.compute-1.amazonaws.com",
+        "PrivateDnsName": "ip-10-0-0-1.ec2.internal",
         "BlockDeviceMappings": [
             {
                 "Ebs": {
@@ -447,7 +448,7 @@ def test_extract_device_from_instance_success(test_aws_device_asset_connector):
 
     assert isinstance(result, AwsDevice)
     assert result.device.uid == "i-1234567890abcdef0"
-    assert result.device.hostname == "ec2-203-0-113-25.compute-1.amazonaws.com"
+    assert result.device.hostname == "ip-10-0-0-1"
     assert result.device.os.name == "Linux"
     assert result.device.type == DeviceTypeStr.SERVER
     assert result.device.org is not None
@@ -493,6 +494,7 @@ def test_extract_device_from_instance_with_launch_time(test_aws_device_asset_con
         "PlatformDetails": "Windows Server 2019",
         "LaunchTime": isoparse("2023-10-01T12:00:00Z"),
         "PublicDnsName": "ec2-203-0-113-25.compute-1.amazonaws.com",
+        "PrivateDnsName": "ip-10-0-0-1.ec2.internal",
     }
 
     result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
@@ -516,22 +518,52 @@ def test_extract_device_from_instance_with_private_dns(test_aws_device_asset_con
     result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert isinstance(result, AwsDevice)
-    assert result.device.hostname == "ip-10-0-1-1.ec2.internal"
+    assert result.device.hostname == "ip-10-0-1-1"
 
 
-def test_extract_device_from_instance_with_instance_id_hostname(test_aws_device_asset_connector):
-    """Test device extraction using InstanceId as hostname when no DNS names."""
+def test_extract_device_from_instance_ignores_public_dns(test_aws_device_asset_connector):
+    """The public DNS name follows the public IP: the private short name is the hostname."""
     instance_data = {
         "InstanceId": "i-1234567890abcdef0",
         "InstanceType": "t2.micro",
         "PlatformDetails": "Linux/UNIX",
         "LaunchTime": isoparse("2023-10-01T12:00:00Z"),
+        "PublicDnsName": "ec2-203-0-113-25.eu-west-3.compute.amazonaws.com",
+        "PrivateDnsName": "ip-172-31-30-218.eu-west-3.compute.internal",
     }
 
     result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
 
     assert isinstance(result, AwsDevice)
-    assert result.device.hostname == "i-1234567890abcdef0"
+    assert result.device.hostname == "ip-172-31-30-218"
+    assert result.device.uid == "i-1234567890abcdef0"
+
+
+@pytest.mark.parametrize(
+    "dns_names",
+    [
+        {},
+        {"PublicDnsName": "ec2-203-0-113-25.compute-1.amazonaws.com"},
+        {"PrivateDnsName": ""},
+        {"PrivateDnsName": ".ec2.internal"},
+    ],
+)
+def test_extract_device_from_instance_without_private_hostname(test_aws_device_asset_connector, dns_names):
+    """Without a usable private DNS name the instance is skipped: never the public name or the instance ID."""
+    instance_data = {
+        "InstanceId": "i-1234567890abcdef0",
+        "InstanceType": "t2.micro",
+        "PlatformDetails": "Linux/UNIX",
+        "LaunchTime": isoparse("2023-10-01T12:00:00Z"),
+        **dns_names,
+    }
+
+    result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
+
+    assert result is None
+    test_aws_device_asset_connector.log.assert_called_with(
+        "Instance i-1234567890abcdef0 has no usable private DNS name, skipping", level="warning"
+    )
 
 
 def test_extract_device_from_instance_with_date_filter(test_aws_device_asset_connector):
@@ -559,6 +591,7 @@ def test_extract_device_from_instance_timezone_handling(test_aws_device_asset_co
         "InstanceType": "t2.micro",
         "PlatformDetails": "Linux/UNIX",
         "LaunchTime": naive_datetime,
+        "PrivateDnsName": "ip-10-0-0-1.ec2.internal",
     }
 
     result = test_aws_device_asset_connector._extract_device_from_instance(AwsApiInstance(**instance_data), None)
@@ -608,6 +641,7 @@ def test_get_aws_devices_success(test_aws_device_asset_connector):
                             "State": {"Name": "running"},
                             "Tags": [{"Key": "Name", "Value": "TestInstance"}],
                             "PublicDnsName": "ec2-203-0-113-25.compute-1.amazonaws.com",
+                            "PrivateDnsName": "ip-10-0-0-1.ec2.internal",
                             "BlockDeviceMappings": [
                                 {
                                     "Ebs": {
@@ -636,7 +670,7 @@ def test_get_aws_devices_success(test_aws_device_asset_connector):
     device = device_list[0]
     assert isinstance(device, AwsDevice)
     assert device.device.uid == "i-1234567890abcdef0"
-    assert device.device.hostname == "ec2-203-0-113-25.compute-1.amazonaws.com"
+    assert device.device.hostname == "ip-10-0-0-1"
     assert device.device.os.name == "Linux"
     assert device.device.os.type == OSTypeStr.LINUX
     assert device.device.os.type_id == OSTypeId.LINUX
@@ -661,6 +695,7 @@ def test_get_aws_devices_with_checkpoint(test_aws_device_asset_connector):
                             "PlatformDetails": "Linux/UNIX",
                             "LaunchTime": isoparse("2023-10-02T12:00:00Z"),  # After checkpoint
                             "PublicDnsName": "ec2-203-0-113-25.compute-1.amazonaws.com",
+                            "PrivateDnsName": "ip-10-0-0-1.ec2.internal",
                         }
                     ]
                 }
@@ -697,6 +732,7 @@ def test_get_aws_devices_with_invalid_checkpoint(test_aws_device_asset_connector
                             "PlatformDetails": "Linux/UNIX",
                             "LaunchTime": isoparse("2023-10-01T12:00:00Z"),
                             "PublicDnsName": "ec2-203-0-113-25.compute-1.amazonaws.com",
+                            "PrivateDnsName": "ip-10-0-0-1.ec2.internal",
                         }
                     ]
                 }
@@ -762,6 +798,7 @@ def test_get_aws_devices_instance_processing_error(test_aws_device_asset_connect
                             "PlatformDetails": "Linux/UNIX",
                             "LaunchTime": isoparse("2023-10-01T12:00:00Z"),
                             "PublicDnsName": "ec2-203-0-113-25.compute-1.amazonaws.com",
+                            "PrivateDnsName": "ip-10-0-0-1.ec2.internal",
                         },
                         {
                             "InstanceId": "i-invalid",  # This will cause processing to fail
@@ -813,6 +850,7 @@ def test_get_assets_success(test_aws_device_asset_connector):
                             "State": {"Name": "running"},
                             "Tags": [{"Key": "Name", "Value": "TestInstance"}],
                             "PublicDnsName": "ec2-203-0-113-25.compute-1.amazonaws.com",
+                            "PrivateDnsName": "ip-10-0-0-1.ec2.internal",
                             "BlockDeviceMappings": [
                                 {
                                     "Ebs": {
@@ -837,7 +875,7 @@ def test_get_assets_success(test_aws_device_asset_connector):
     asset = assets[0]
     assert isinstance(asset, DeviceOCSFModel)
     assert asset.device.uid == "i-1234567890abcdef0"
-    assert asset.device.hostname == "ec2-203-0-113-25.compute-1.amazonaws.com"
+    assert asset.device.hostname == "ip-10-0-0-1"
     assert asset.device.os.name == "Linux"
     assert asset.device.os.type == OSTypeStr.LINUX
     assert asset.device.os.type_id == OSTypeId.LINUX
@@ -875,6 +913,7 @@ def test_get_assets_multiple_devices(test_aws_device_asset_connector):
                             "PlatformDetails": "Linux/UNIX",
                             "LaunchTime": isoparse("2023-10-01T12:00:00Z"),
                             "PublicDnsName": "ec2-1.compute-1.amazonaws.com",
+                            "PrivateDnsName": "ip-10-0-0-1.ec2.internal",
                         },
                         {
                             "InstanceId": "i-9876543210fedcba0",
@@ -882,6 +921,7 @@ def test_get_assets_multiple_devices(test_aws_device_asset_connector):
                             "PlatformDetails": "Windows Server 2019",
                             "LaunchTime": isoparse("2023-10-02T12:00:00Z"),
                             "PublicDnsName": "ec2-2.compute-1.amazonaws.com",
+                            "PrivateDnsName": "ip-10-0-0-1.ec2.internal",
                         },
                     ]
                 }
@@ -927,6 +967,7 @@ def test_get_assets_device_processing_error(test_aws_device_asset_connector):
                             "PlatformDetails": "Linux/UNIX",
                             "LaunchTime": isoparse("2023-10-01T12:00:00Z"),
                             "PublicDnsName": "ec2-203-0-113-25.compute-1.amazonaws.com",
+                            "PrivateDnsName": "ip-10-0-0-1.ec2.internal",
                         }
                     ]
                 }
@@ -960,6 +1001,7 @@ def test_get_assets_ocsf_creation_error(test_aws_device_asset_connector):
                             "PlatformDetails": "Linux/UNIX",
                             "LaunchTime": isoparse("2023-10-01T12:00:00Z"),
                             "PublicDnsName": "ec2-203-0-113-25.compute-1.amazonaws.com",
+                            "PrivateDnsName": "ip-10-0-0-1.ec2.internal",
                         }
                     ]
                 }
