@@ -233,6 +233,7 @@ def test_user_ocsf_object_sends_the_login_as_name(connector):
     ("distinguished_name", "domain"),
     [
         ("CN=Doe\\, DC=fake,OU=Paris,DC=corp,DC=example,DC=com", "corp.example.com"),
+        ("CN=Jane,OU=Team\\\\,DC=corp,DC=example,DC=com", "corp.example.com"),
         ("CN=John Doe,OU=Users", None),
     ],
 )

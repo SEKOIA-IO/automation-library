@@ -1,5 +1,4 @@
 import datetime
-import re
 from collections.abc import Generator
 from typing import Any
 
@@ -211,10 +210,28 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         return value.strip() if value and value.strip() else None
 
     @staticmethod
+    def _dn_components(distinguished_name: str) -> list[str]:
+        parts: list[str] = []
+        current: list[str] = []
+        escaped = False
+        for char in distinguished_name:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == ",":
+                parts.append("".join(current))
+                current = []
+                continue
+            current.append(char)
+        parts.append("".join(current))
+        return parts
+
+    @staticmethod
     def domain_from_dn(distinguished_name: str | None) -> str | None:
         labels = [
             part.split("=", 1)[1].strip().lower()
-            for part in re.split(r"(?<!\\),", distinguished_name or "")
+            for part in MicrosoftADUserAssetConnector._dn_components(distinguished_name or "")
             if part.strip().upper().startswith("DC=") and part.split("=", 1)[1].strip()
         ]
         return ".".join(labels) or None
