@@ -274,6 +274,7 @@ def test_next_batch_drops_null_fields(mock_sleep, data_storage):
         "html_url": ["https://github.com/a/b/commit/415138d", None],
         "credentials": [{"url": "https://github.com/signup", "password": None}],
         "is_secret_detection_rule_match": False,
+        "stars": 0,
         "snippets": [],
         "content": "",
     }
@@ -282,13 +283,14 @@ def test_next_batch_drops_null_fields(mock_sleep, data_storage):
 
     pushed_event = json.loads(trigger.push_events_to_intakes.call_args.kwargs["events"][0])
     assert pushed_event["header"] == {"uid": "evt-1", "type": "driller"}
-    # Only `null` values go: `false`, empty strings, lists and objects are kept, and so are the items of lists
+    # Only `null` values go: `false`, `0`, empty strings, lists and objects are kept, and so are the items of lists
     assert pushed_event["data"] == {
         "commit": {"sha": "415138d"},
         "issue": {},
         "html_url": ["https://github.com/a/b/commit/415138d", None],
         "credentials": [{"url": "https://github.com/signup"}],
         "is_secret_detection_rule_match": False,
+        "stars": 0,
         "snippets": [],
         "content": "",
     }

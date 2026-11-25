@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Remove the fields set to `null` from the events, at every level: Flare sends every field of the item's type, most of them empty
+- Remove the fields set to `null` from the events, at every level: Flare sends every field of the item's type, most of them `null`
 
 ## 2026-11-19 - 0.7.1
 
