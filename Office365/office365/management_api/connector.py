@@ -22,7 +22,7 @@ from .errors import (
     SessionClosedError,
 )
 from .helpers import split_date_range
-from .office365_client import Office365API
+from .office365_client import EXPECTED_SUBSCRIPTIONS, Office365API
 
 # Exponential backoff (1, 2, 4... minutes, up to 1 hour) used:
 # - to retry the activation of the failed subscriptions, while the active ones are collected
@@ -89,19 +89,24 @@ class Office365Connector(AsyncConnector):
         self.__dict__.pop("client", None)
         self._client_closed = False
 
-    async def pull_content(self, start_date: datetime, end_date: datetime) -> AsyncGenerator[list[str]]:
+    async def pull_content(
+        self, start_date: datetime, end_date: datetime, content_types: list[str] | None = None
+    ) -> AsyncGenerator[list[str]]:
         """Pulls content from Office 365 subscriptions
 
         Args:
             start_date (datetime): Start date of the interval
             end_date (datetime): End date of the interval
+            content_types (list[str] | None): Active subscriptions, listed from Microsoft if not given
 
         Returns:
             AsyncGenerator[list[str]]: Batches of events received for the interval
         """
         pulled_events: list[str] = []
 
-        content_types = await self.client.list_subscriptions()
+        if content_types is None:
+            content_types = await self.client.list_subscriptions()
+
         for content_type in content_types:
             # Get the paginated contents from a subscription
             async for contents in self.client.get_subscription_contents(
@@ -227,7 +232,33 @@ class Office365Connector(AsyncConnector):
         """Activates an Office 365 subscriptions"""
         await self._activate_subscriptions(True)
 
+    def _refresh_active_content_types(self, content_types: list[str]) -> bool:
+        """Update the active subscriptions from Microsoft, as they can be disabled while the connector is running.
+
+        Schedules the reactivation of the missing subscriptions, and returns whether any subscription is active.
+        """
+        self._active_content_types = set(content_types)
+
+        missing_types = EXPECTED_SUBSCRIPTIONS - self._active_content_types
+        if missing_types and not self._activation_pending:
+            self._activation_pending = True
+            self._next_activation_attempt = 0.0  # at the next cycle
+            self.log(
+                message=(
+                    f"The Office365 subscriptions for {', '.join(sorted(missing_types))} are no longer active: "
+                    "they will be reactivated."
+                ),
+                level="warning",
+            )
+
+        return bool(self._active_content_types)
+
     async def forward_next_batches(self, checkpoint: Checkpoint):
+        # Don't advance the checkpoint when no subscription is active anymore: the reactivation is scheduled instead
+        content_types = await self.client.list_subscriptions()
+        if not self._refresh_active_content_types(content_types):
+            return
+
         start_pull_date = checkpoint.offset
         end_pull_date = datetime.now(UTC)
 
@@ -237,7 +268,7 @@ class Office365Connector(AsyncConnector):
             intermediate_start_time = time.time()
 
             # Get events for the current date range
-            async for list_of_events in self.pull_content(start_date, end_date):
+            async for list_of_events in self.pull_content(start_date, end_date, content_types):
                 await self.send_events(list_of_events)
 
             # get the ending time and compute the duration to forward the events

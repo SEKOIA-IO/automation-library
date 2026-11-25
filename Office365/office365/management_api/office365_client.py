@@ -146,7 +146,13 @@ class Office365API:
 
         try:
             subscription = await response.json(content_type=None)
-        except Exception:
+        except (ClientError, TimeoutError) as exc:
+            # The body couldn't be read: the outcome of the activation is unknown
+            raise FailedToActivateO365Subscription(
+                content_type=content_type, status_code=response.status, error_message=f"{type(exc).__name__}: {exc}"
+            ) from exc
+        except ValueError:
+            # The body is not JSON (json.JSONDecodeError is a ValueError): rely on the HTTP status code
             subscription = None
 
         if isinstance(subscription, dict) and "error" in subscription:
@@ -154,8 +160,10 @@ class Office365API:
             if subscription["error"].get("code") == "AF20024":
                 return
 
+            # Keep the HTTP status code: a 401/403 is classified as a permission error
             raise FailedToActivateO365Subscription(
                 content_type=content_type,
+                status_code=response.status,
                 error_code=subscription["error"].get("code"),
                 error_message=subscription["error"].get("message"),
             )

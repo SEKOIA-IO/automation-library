@@ -17,7 +17,7 @@ from office365.management_api.errors import (
     FailedToListO365Subscriptions,
     SessionClosedError,
 )
-from office365.management_api.office365_client import Office365API
+from office365.management_api.office365_client import EXPECTED_SUBSCRIPTIONS, Office365API
 
 
 @patch.object(Counter, "inc")
@@ -210,9 +210,62 @@ async def test_pull_content(connector, event):
     assert [json.loads(event) for event in result[0]] == [event, event, event, event]
 
 
+async def test_pull_content_uses_the_given_content_types(connector, event):
+    connector.client.get_subscription_contents.return_value = async_generator([[{"contentUri": "foo://example.com"}]])
+    connector.client.get_content.return_value = [event]
+
+    result = [item async for item in connector.pull_content(datetime.now(), datetime.now(), ["Audit.General"])]
+
+    assert [json.loads(event) for event in result[0]] == [event]
+    connector.client.list_subscriptions.assert_not_awaited()
+    assert connector.client.get_subscription_contents.call_args.args == ("Audit.General",)
+
+
+@pytest.mark.parametrize(
+    "live_content_types,activation_pending,expected_forward,expected_warning",
+    [
+        pytest.param(sorted(EXPECTED_SUBSCRIPTIONS), False, True, False, id="all_subscriptions_active"),
+        pytest.param(["Audit.General"], False, True, True, id="some_subscriptions_disabled"),
+        pytest.param(["Audit.General"], True, True, False, id="reactivation_already_pending"),
+        pytest.param([], False, False, True, id="all_subscriptions_disabled"),
+    ],
+)
+async def test_forward_next_batches_refreshes_the_live_subscriptions(
+    connector, symphony_storage, live_content_types, activation_pending, expected_forward, expected_warning
+):
+    """Subscriptions can be disabled while the connector is running: they are reactivated at the next cycle"""
+    checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
+    initial_offset = checkpoint.offset
+    connector._active_content_types = set(EXPECTED_SUBSCRIPTIONS)
+    connector._activation_pending = activation_pending
+    connector._next_activation_attempt = 1_000.0
+    connector.client.list_subscriptions.return_value = live_content_types
+
+    with patch.object(connector, "pull_content", return_value=async_generator([])) as pull_content:
+        await connector.forward_next_batches(checkpoint)
+
+    assert connector._active_content_types == set(live_content_types)
+    assert connector._activation_pending == (activation_pending or expected_warning)
+    assert pull_content.called == expected_forward
+    if not expected_forward:
+        # the checkpoint doesn't move while no subscription is active
+        assert checkpoint.offset == initial_offset
+
+    warnings = [call.kwargs for call in connector.log.call_args_list if call.kwargs.get("level") == "warning"]
+    if expected_warning:
+        assert connector._next_activation_attempt == 0.0
+        assert len(warnings) == 1
+        assert "are no longer active: they will be reactivated" in warnings[0]["message"]
+    else:
+        assert connector._next_activation_attempt == 1_000.0
+        assert warnings == []
+
+
 async def test_forward_next_batches(connector, symphony_storage, event):
     checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
     now = datetime.now(tz=UTC)
+    content_types = sorted(EXPECTED_SUBSCRIPTIONS)
+    connector.client.list_subscriptions.return_value = content_types
 
     async def sleeper(_):
         asyncio.sleep(0.1)
@@ -233,7 +286,7 @@ async def test_forward_next_batches(connector, symphony_storage, event):
 
         await connector.forward_next_batches(checkpoint)
 
-        pull_content.assert_called_once_with(now, now)
+        pull_content.assert_called_once_with(now, now, content_types)
         send_events.assert_called_once_with(event)
         prometheus_labels.assert_called_once_with(intake_key=connector.configuration.intake_key)
 

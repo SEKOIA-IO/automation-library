@@ -6,11 +6,12 @@ from urllib.parse import urlencode
 
 import orjson
 import pytest
-from aiohttp import ClientConnectionError
+from aiohttp import ClientConnectionError, ClientPayloadError
 from aioresponses import aioresponses
 
 from office365.management_api.errors import (
     ApplicationAuthenticationFailed,
+    FailedToActivateO365Subscription,
     FailedToActivateSomeO365Subscriptions,
     FailedToGetO365AuditContent,
     FailedToGetO365SubscriptionContents,
@@ -340,3 +341,47 @@ def test_normalize_office365_url(tenant_id, expected_url):
     client = SimpleNamespace(tenant_id=tenant_id)
 
     assert Office365API._normalize_office365_url(client) == expected_url  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "status,body,expected_actionable",
+    [
+        pytest.param(
+            401,
+            orjson.dumps({"error": {"code": "AF10001", "message": "The permission set () sent in the request..."}}),
+            True,
+            id="permission_error",
+        ),
+        pytest.param(400, BUSINESS_ERROR, False, id="business_error"),
+    ],
+)
+async def test_activate_subscription_keeps_the_http_status_of_json_errors(
+    client, mocked_responses, base_url, status, body, expected_actionable
+):
+    mock_start_subscription(mocked_responses, base_url, "Audit.General", status=status, body=body)
+
+    async with client._fresh_session() as session:
+        with pytest.raises(FailedToActivateO365Subscription) as exc_info:
+            await client._activate_subscription(session, "Audit.General")
+
+    assert exc_info.value.context["status_code"] == status
+    assert exc_info.value.is_actionable is expected_actionable
+
+
+@pytest.mark.parametrize("status", [pytest.param(200, id="success_status"), pytest.param(500, id="error_status")])
+async def test_activate_subscription_reports_body_read_errors(client, status):
+    response = SimpleNamespace(
+        status=status,
+        json=AsyncMock(side_effect=ClientPayloadError("Response payload is not completed")),
+        text=AsyncMock(side_effect=AssertionError("the body must not be read again")),
+    )
+    session = SimpleNamespace(post=AsyncMock(return_value=response))
+
+    with pytest.raises(FailedToActivateO365Subscription) as exc_info:
+        await client._activate_subscription(session, "Audit.General")
+
+    assert exc_info.value.context == {
+        "content_type": "Audit.General",
+        "status_code": status,
+        "error_message": "ClientPayloadError: Response payload is not completed",
+    }

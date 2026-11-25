@@ -32,12 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Management API:
-  - activate each Office365 subscription independently, so a failure on one content type (including network errors and timeouts) no longer prevents the activation of the others
+  - activate each Office365 subscription independently, so a failure on one content type (including network errors, timeouts and unreadable responses) no longer prevents the activation of the others
   - retry the activation of the failed subscriptions with an exponential backoff (1 minute up to 1 hour) while collecting the active ones, so the connector recovers without a restart
   - when no event can be collected (no active subscription, authentication or permission error), at startup or while running, log an actionable message and restart the connector with the same backoff: the SDK stops it with a critical error only if the error persists, instead of stopping it at once at startup or never while running
-  - keep retrying the transient errors (network, server errors) without stopping the connector
-  - do not advance the checkpoint while no subscription is active
-  - add actionable error messages when Microsoft reports that the tenant does not exist (unified audit logging not enabled or not provisioned yet), and on authentication and permission (`ActivityFeed.Read`) errors
+  - reactivate the subscriptions disabled while the connector is running, and do not advance the checkpoint while no subscription is active
+  - add actionable error messages when Microsoft reports that the tenant does not exist (unified audit logging not enabled or not provisioned yet), and on permission errors (missing `ActivityFeed.Read`)
   - handle the network and invalid JSON errors when listing the subscriptions
   - stop logging errors on requests interrupted by the connector shutdown
 - Message Trace:
