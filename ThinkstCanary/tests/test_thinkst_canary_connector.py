@@ -324,6 +324,31 @@ def test_next_batch_should_forward_events_when_acknowledge_times_out(trigger, me
         assert trigger.log_exception.call_count == 1
 
 
+def test_next_batch_should_save_the_cursor_only_for_forwarded_pages(trigger, message1):
+    first_page = deepcopy(message1)
+    first_page["cursor"] = {"next": "next-page"}
+    second_page = deepcopy(message1)
+    second_page["max_updated_id"] = 5
+    trigger.push_events_to_intakes.side_effect = [None, RuntimeError("intake unavailable")]
+
+    with (
+        patch("thinkst_canary_modules.connector_thinkst_canary_alerts.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_requests.get(
+            URL_INCIDENTS, [{"status_code": 200, "json": first_page}, {"status_code": 200, "json": second_page}]
+        )
+        mock_time.time.side_effect = [0.0, 1.0]
+
+        with pytest.raises(RuntimeError):
+            trigger.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 2
+        assert trigger.from_id == 3
+        with trigger.context as cache:
+            assert cache["most_recent_id_seen"] == 3
+
+
 def test_extract_events_should_remove_event_counters(message1):
     records = ThinkstCanaryAlertsConnector.extract_events(message1)
 

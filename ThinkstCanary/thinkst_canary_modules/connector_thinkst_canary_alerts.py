@@ -158,8 +158,6 @@ class ThinkstCanaryAlertsConnector(Connector):
                 events = self.extract_events(page)
 
                 last_event_id = page["max_updated_id"]
-                if most_recent_id_seen is None or last_event_id > most_recent_id_seen:
-                    most_recent_id_seen = last_event_id
 
                 if self.configuration.acknowledge:
                     incidents_ids = [event["incident_id"] for event in events if event["event_type"] == "incident"]
@@ -167,12 +165,16 @@ class ThinkstCanaryAlertsConnector(Connector):
                         for incident_id in incidents_ids:
                             self.acknowledge_incident(incident_id=incident_id)
                     except requests.exceptions.RequestException as error:
-                        # forward the events anyway: the cursor is already past this page
+                        # a failed acknowledgement must not prevent the events from being forwarded
                         self.log_exception(error, message="Failed to acknowledge incidents")
 
                 if len(events) > 0:
                     most_recent_timestamp_seen = dateutil.parser.parse(page["updated_std"])
                     yield events
+
+                # move the cursor only once the events of the page were forwarded
+                if most_recent_id_seen is None or last_event_id > most_recent_id_seen:
+                    most_recent_id_seen = last_event_id
 
         finally:
             if self.from_id is None or most_recent_id_seen > self.from_id:
