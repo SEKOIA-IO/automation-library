@@ -344,3 +344,25 @@ def test_a_short_hostname_ignores_the_fqdn_of_another_name():
     )
     device = TenableDeviceMapper(asset).map()
     assert (device.hostname, device.domain) == ("srv-01", None)
+
+
+@pytest.mark.parametrize(
+    "network, name, expected",
+    [
+        ({"hostnames": ["10.0.0.1", "srv-01"]}, None, ("srv-01", None)),
+        (
+            {"hostnames": ["unknown"], "fqdns": ["10.0.0.1", "srv-01.corp.example.fr"]},
+            None,
+            ("srv-01", "corp.example.fr"),
+        ),
+        (
+            {"hostnames": ["srv-01"], "fqdns": ["web.corp.example.fr", "srv-01.corp.example.fr"]},
+            None,
+            ("srv-01", "corp.example.fr"),
+        ),
+    ],
+)
+def test_every_hostname_and_fqdn_is_tried(network, name, expected):
+    asset = AssetInfo.model_validate({"id": "asset-m", "name": name, "network": network})
+    device = TenableDeviceMapper(asset).map()
+    assert (device.hostname, device.domain) == expected

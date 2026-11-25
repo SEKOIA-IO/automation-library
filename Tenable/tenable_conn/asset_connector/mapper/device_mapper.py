@@ -61,18 +61,26 @@ class TenableDeviceMapper:
     @property
     def hostname_and_domain(self) -> tuple[str, str | None]:
         """
-        The short hostname and its domain, from the first usable of the hostname, the name and the FQDN.
-        A short hostname takes its domain from the FQDN when the FQDN starts with it.
+        The short hostname and its domain, from the first usable of the hostnames, the name and the FQDNs.
+        A short hostname takes its domain from the first FQDN that starts with it.
         :raises MissingHostnameError: when none of them is a usable hostname.
         """
-        for candidate in (self.first_hostname, self.asset_info.name, self.first_fqdn):
+        hostnames = self.network.hostnames if self.network and self.network.hostnames else []
+        fqdns = self.network.fqdns if self.network and self.network.fqdns else []
+        split_fqdns = [split_hostname(fqdn) for fqdn in fqdns]
+        for candidate in (*hostnames, self.asset_info.name, *fqdns):
             hostname, domain = split_hostname(candidate)
             if hostname is None:
                 continue
             if domain is None:
-                fqdn_hostname, fqdn_domain = split_hostname(self.first_fqdn)
-                if fqdn_hostname == hostname:
-                    domain = fqdn_domain
+                domain = next(
+                    (
+                        fqdn_domain
+                        for fqdn_hostname, fqdn_domain in split_fqdns
+                        if fqdn_hostname == hostname and fqdn_domain
+                    ),
+                    None,
+                )
             return hostname, domain
         raise MissingHostnameError(f"Tenable asset {self.asset_info.id} has no usable hostname, name or FQDN")
 
