@@ -1,9 +1,9 @@
 import pytest
 import requests_mock
+from pydantic import ValidationError
 from requests.exceptions import HTTPError
 
 from onyphe.action_onyphe_geoloc import OnypheGeolocAction as OnypheAction
-from onyphe.errors import InvalidArgument
 
 base_url = "https://www.onyphe.io/api/v2/simple/geoloc/"
 
@@ -89,15 +89,15 @@ def test_onyphe_geoloc_invalidIP():
     with requests_mock.Mocker() as mock:
         mock.get(f"{base_url}8.8.8", json={}, status_code=404, reason="Not Found")
 
-        pytest.raises(InvalidArgument, action.run, {"ip": "8.8.8"})
+        pytest.raises(ValidationError, action.run, {"ip": "8.8.8"})
 
         assert mock.call_count == 0
 
-        pytest.raises(InvalidArgument, action.run, {"ip": 8})
+        pytest.raises(ValidationError, action.run, {"ip": 8})
 
         assert mock.call_count == 0
 
-        pytest.raises(TypeError, action.run, {})
+        pytest.raises(ValidationError, action.run, {})
 
         assert mock.call_count == 0
 

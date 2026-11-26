@@ -8,18 +8,33 @@
       },
       "string": {
         "description": "The string to scan. Exactly one of 'ip' or 'string' must be specified",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "budget": {
         "description": "Maximum number of pages to retrieve",
-        "type": "integer"
+        "type": "integer",
+        "minimum": 0
       },
       "first_page": {
         "description": "Start retrieving data from this page",
-        "type": "integer"
+        "type": "integer",
+        "minimum": 1
       }
     },
     "required": [],
+    "oneOf": [
+      {
+        "required": [
+          "ip"
+        ]
+      },
+      {
+        "required": [
+          "string"
+        ]
+      }
+    ],
     "title": "Arguments",
     "type": "object"
   },
