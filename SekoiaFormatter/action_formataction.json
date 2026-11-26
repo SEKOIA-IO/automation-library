@@ -1,0 +1,40 @@
+{
+  "name": "FormatAction",
+  "description": "FormatAction",
+  "uuid": "392f7c7d-b86e-5715-8fe6-7377ff2b1649",
+  "docker_parameters": "FormatAction",
+  "arguments": {
+    "properties": {
+      "template": {
+        "description": "Template string with Python f-string style placeholders (e.g., 'Hello {name}!')",
+        "title": "Template",
+        "type": "string"
+      },
+      "data": {
+        "description": "JSON string containing the variables to format into the template (e.g., '{\"name\": \"value\"}')",
+        "title": "Data",
+        "type": "string"
+      }
+    },
+    "required": [
+      "template",
+      "data"
+    ],
+    "title": "FormatArguments",
+    "type": "object"
+  },
+  "results": {
+    "properties": {
+      "formatted_text": {
+        "description": "The formatted output text",
+        "title": "Formatted Text",
+        "type": "string"
+      }
+    },
+    "required": [
+      "formatted_text"
+    ],
+    "title": "FormatResponse",
+    "type": "object"
+  }
+}
