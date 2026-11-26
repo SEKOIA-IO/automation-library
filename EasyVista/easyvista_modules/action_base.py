@@ -125,7 +125,9 @@ class EasyVistaHttpMixin(ModuleItem):
         return response
 
     def get(self, path: str, **kwargs) -> Any:
-        response = self.request("GET", path, **kwargs)
+        return self.json_object(self.request("GET", path, **kwargs), path)
+
+    def json_object(self, response: requests.Response | None, path: str) -> Any:
         if response is None:
             return None
         data = json_body(response)

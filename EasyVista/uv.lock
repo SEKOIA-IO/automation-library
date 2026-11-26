@@ -301,6 +301,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "requests" },
     { name = "sekoia-automation-sdk" },
+    { name = "tldextract" },
 ]
 
 [package.dev-dependencies]
@@ -321,6 +322,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "requests", specifier = ">=2.32,<3" },
     { name = "sekoia-automation-sdk", specifier = ">=1.27,<2" },
+    { name = "tldextract", specifier = ">=5.1,<6" },
 ]
 
 [package.metadata.requires-dev]
