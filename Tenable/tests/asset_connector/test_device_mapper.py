@@ -10,6 +10,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 
 from tenable_conn.asset_connector.helpers import asset_details_to_export
 from tenable_conn.asset_connector.mapper import TenableDeviceMapper
+from tenable_conn.asset_connector.mapper.device_mapper import MissingHostnameError
 from tenable_conn.asset_connector.models.asset_details_model import AssetDetails
 from tenable_conn.asset_connector.models.assets_export_model import AssetExportV2 as AssetInfo
 from tenable_conn.asset_connector.models.assets_export_model import NetworkInterfaceV2 as TenableNetworkInterface
@@ -178,12 +179,13 @@ def test_build_device_complete(asset_info):
 
 
 def test_build_device_minimal():
-    minimal_asset = AssetInfo(id="test-123")
+    minimal_asset = AssetInfo(id="test-123", name="host-1")
 
     device = TenableDeviceMapper(minimal_asset).map()
 
     assert device.uid == "test-123"
-    assert device.hostname == "unknown"
+    assert device.hostname == "host-1"
+    assert device.domain is None
     assert device.type == DeviceTypeStr.UNKNOWN
 
 
@@ -210,7 +212,7 @@ def test_details_azure_location_maps_to_device_region():
     ],
 )
 def test_device_region_from_cloud(cloud, region):
-    device = TenableDeviceMapper(AssetInfo.model_validate({"id": "asset-1", "cloud": cloud})).map()
+    device = TenableDeviceMapper(AssetInfo.model_validate({"id": "asset-1", "name": "host-1", "cloud": cloud})).map()
 
     assert device.region == region
     assert device.location is None
@@ -224,12 +226,12 @@ def test_hostname_falls_back_to_name_when_no_host_or_fqdn():
     assert device.name == "my-asset"
 
 
-def test_hostname_unknown_when_no_labels_at_all():
-    """With neither hostname/fqdn nor name, the device hostname falls back to 'unknown'."""
-    asset = AssetInfo(id="asset-z")
-    device = TenableDeviceMapper(asset).map()
-    assert asset.name is None
-    assert device.hostname == "unknown"
+@pytest.mark.parametrize("name", [None, "unknown asset label", "10.0.0.1", "Unknown", "localhost"])
+def test_an_asset_without_a_usable_hostname_is_not_mapped(name):
+    """Neither a placeholder nor a label nor an IP is sent as hostname: the asset is skipped."""
+    asset = AssetInfo(id="asset-z", name=name)
+    with pytest.raises(MissingHostnameError):
+        TenableDeviceMapper(asset).map()
 
 
 def test_export_hostname_takes_precedence_over_name(asset_info):
@@ -252,7 +254,8 @@ def test_hostname_name_wins_over_fqdn():
 def test_hostname_falls_back_to_fqdn():
     asset = AssetInfo.model_validate({"id": "asset-f", "network": {"fqdns": ["host.example.com"]}})
     device = TenableDeviceMapper(asset).map()
-    assert device.hostname == "host.example.com"
+    assert device.hostname == "host"
+    assert device.domain == "example.com"
     assert device.name == "host.example.com"
 
 
@@ -295,10 +298,20 @@ def test_hostname_parity_export_and_details(hostname, name, fqdn):
         )
     )
 
+    if not (hostname or name or fqdn):
+        for asset in (exported, details):
+            with pytest.raises(MissingHostnameError):
+                TenableDeviceMapper(asset).map()
+        return
+
     from_export = TenableDeviceMapper(exported).map()
     from_details = TenableDeviceMapper(details).map()
 
-    assert (from_export.hostname, from_export.name) == (from_details.hostname, from_details.name)
+    assert (from_export.hostname, from_export.domain, from_export.name) == (
+        from_details.hostname,
+        from_details.domain,
+        from_details.name,
+    )
 
 
 def test_build_network_interface_empty_is_none():
@@ -306,6 +319,50 @@ def test_build_network_interface_empty_is_none():
 
 
 def test_device_without_usable_interface_has_no_network_interfaces():
-    asset = AssetInfo.model_validate({"id": "asset-1", "network": {"network_interfaces": [{}]}})
+    asset = AssetInfo.model_validate({"id": "asset-1", "name": "host-1", "network": {"network_interfaces": [{}]}})
 
     assert TenableDeviceMapper(asset).map().network_interfaces is None
+
+
+def test_a_fully_qualified_hostname_is_split_into_hostname_and_domain():
+    asset = AssetInfo.model_validate({"id": "asset-q", "network": {"hostnames": ["SRV-01.corp.example.fr"]}})
+    device = TenableDeviceMapper(asset).map()
+    assert (device.hostname, device.domain) == ("srv-01", "corp.example.fr")
+
+
+def test_a_short_hostname_takes_its_domain_from_the_fqdn():
+    asset = AssetInfo.model_validate(
+        {"id": "asset-s", "network": {"hostnames": ["srv-01"], "fqdns": ["srv-01.corp.example.fr"]}}
+    )
+    device = TenableDeviceMapper(asset).map()
+    assert (device.hostname, device.domain) == ("srv-01", "corp.example.fr")
+
+
+def test_a_short_hostname_ignores_the_fqdn_of_another_name():
+    asset = AssetInfo.model_validate(
+        {"id": "asset-o", "network": {"hostnames": ["srv-01"], "fqdns": ["web.corp.example.fr"]}}
+    )
+    device = TenableDeviceMapper(asset).map()
+    assert (device.hostname, device.domain) == ("srv-01", None)
+
+
+@pytest.mark.parametrize(
+    "network, name, expected",
+    [
+        ({"hostnames": ["10.0.0.1", "srv-01"]}, None, ("srv-01", None)),
+        (
+            {"hostnames": ["unknown"], "fqdns": ["10.0.0.1", "srv-01.corp.example.fr"]},
+            None,
+            ("srv-01", "corp.example.fr"),
+        ),
+        (
+            {"hostnames": ["srv-01"], "fqdns": ["web.corp.example.fr", "srv-01.corp.example.fr"]},
+            None,
+            ("srv-01", "corp.example.fr"),
+        ),
+    ],
+)
+def test_every_hostname_and_fqdn_is_tried(network, name, expected):
+    asset = AssetInfo.model_validate({"id": "asset-m", "name": name, "network": network})
+    device = TenableDeviceMapper(asset).map()
+    assert (device.hostname, device.domain) == expected

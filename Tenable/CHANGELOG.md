@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-24 - 1.1.3
+
+### Fixed
+
+- Send the short hostname of a device in `hostname` and the rest in `domain`, from its hostname, name or FQDN, instead of a fully-qualified name the platform rejects with all the findings of the batch
+- Skip the findings of an asset without any usable hostname instead of sending `unknown`, which gathered every such asset of a community on one asset
+- Skip an asset whose hostname is a placeholder such as `Unknown` or `localhost` (sekoia-automation-models 1.7.0)
+
 ## 2026-11-19 - 1.1.2
 
 ### Changed

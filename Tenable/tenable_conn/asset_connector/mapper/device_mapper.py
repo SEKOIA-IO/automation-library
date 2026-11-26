@@ -10,6 +10,8 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
 )
 
+from sekoia_automation_models.hostname import split_hostname
+
 from tenable_conn.asset_connector.helpers import parse_datetime_to_timestamp
 from tenable_conn.asset_connector.models.assets_export_model import (
     AssetExportV2,
@@ -17,6 +19,10 @@ from tenable_conn.asset_connector.models.assets_export_model import (
     AssetTimestamps,
     NetworkInterfaceV2 as TenableNetworkInterface,
 )
+
+
+class MissingHostnameError(ValueError):
+    """The asset has no hostname, name or FQDN the asset management API accepts."""
 
 
 class TenableDeviceMapper:
@@ -28,8 +34,6 @@ class TenableDeviceMapper:
     helpers do not depend on the asset: `build_network_interfaces`, `build_network_interface`,
     `map_interface_type`, `map_os_type` and `map_device_type`.
     """
-
-    UNKNOWN_HOSTNAME: str = "unknown"
 
     def __init__(self, asset_info: AssetExportV2) -> None:
         self.asset_info = asset_info
@@ -55,9 +59,30 @@ class TenableDeviceMapper:
         return self.network.ipv4s[0] if self.network and self.network.ipv4s else None
 
     @property
-    def hostname(self) -> str:
-        """Same fallback chain for exported and fallback-fetched assets: hostname, name, FQDN, "unknown"."""
-        return self.first_hostname or self.asset_info.name or self.first_fqdn or self.UNKNOWN_HOSTNAME
+    def hostname_and_domain(self) -> tuple[str, str | None]:
+        """
+        The short hostname and its domain, from the first usable of the hostnames, the name and the FQDNs.
+        A short hostname takes its domain from the first FQDN that starts with it.
+        :raises MissingHostnameError: when none of them is a usable hostname.
+        """
+        hostnames = self.network.hostnames if self.network and self.network.hostnames else []
+        fqdns = self.network.fqdns if self.network and self.network.fqdns else []
+        split_fqdns = [split_hostname(fqdn) for fqdn in fqdns]
+        for candidate in (*hostnames, self.asset_info.name, *fqdns):
+            hostname, domain = split_hostname(candidate)
+            if hostname is None:
+                continue
+            if domain is None:
+                domain = next(
+                    (
+                        fqdn_domain
+                        for fqdn_hostname, fqdn_domain in split_fqdns
+                        if fqdn_hostname == hostname and fqdn_domain
+                    ),
+                    None,
+                )
+            return hostname, domain
+        raise MissingHostnameError(f"Tenable asset {self.asset_info.id} has no usable hostname, name or FQDN")
 
     @property
     def display_name(self) -> str | None:
@@ -73,11 +98,13 @@ class TenableDeviceMapper:
             self.asset_info.system_types[0] if self.asset_info.system_types else None
         )
 
+        hostname, domain = self.hostname_and_domain
         return Device(
             uid=self.asset_info.id,
             type=device_type_str,
             type_id=device_type_id,
-            hostname=self.hostname,
+            hostname=hostname,
+            domain=domain,
             name=self.display_name,
             os=self.build_operating_system(),
             region=self.cloud_region,
