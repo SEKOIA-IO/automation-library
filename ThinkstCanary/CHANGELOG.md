@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-26 - 1.1.0
+
+### Changed
+
+- Collect all the incidents, acknowledged or not, so an incident acknowledged in Thinkst Canary before the connector collects it is no longer missed.
+- Without a saved cursor, collect only the incidents created during the last day instead of the whole incident history.
+- Forward an incident again only when its events change, so an update without new events, such as an acknowledgement, does not forward it twice.
+- With the `acknowledge` option, acknowledge only the incidents that are not acknowledged yet, after their events are forwarded.
+
 ## 2026-11-26 - 1.0.2
 
 ### Fixed
