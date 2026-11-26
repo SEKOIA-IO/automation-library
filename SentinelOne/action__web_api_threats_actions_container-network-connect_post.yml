@@ -1,0 +1,757 @@
+uuid: ea366522-3df4-59aa-8275-613d362efb0b
+slug: '_web_api_threats_actions_container-network-connect_post'
+name: Container Network Connect Threats
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/threats/actions/container-network-connect'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        data: '{{inputs.data}}'
+        filter: '{{inputs.filter}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Restore network to a container that was disconnected
+inputs:
+  filter:
+    type: object
+    properties:
+      accountIds:
+        type: array
+        items:
+          type: string
+        description: List of Account IDs to filter by
+      siteIds:
+        type: array
+        items:
+          type: string
+        description: List of Site IDs to filter by
+      groupIds:
+        type: array
+        items:
+          type: string
+        description: List of Group IDs to filter by
+      tenant:
+        type: boolean
+        description: Indicates a tenant scope request
+      createdAt__lt:
+        type: string
+        description: Created at lesser than.
+      createdAt__gt:
+        type: string
+        description: Created at greater than.
+      createdAt__lte:
+        type: string
+        description: Created at lesser or equal than.
+      createdAt__gte:
+        type: string
+        description: Created at greater or equal than.
+      updatedAt__lt:
+        type: string
+        description: Updated at lesser than.
+      updatedAt__gt:
+        type: string
+        description: Updated at greater than.
+      updatedAt__lte:
+        type: string
+        description: Updated at lesser or equal than.
+      updatedAt__gte:
+        type: string
+        description: Updated at greater or equal than.
+      contentHashes:
+        type: array
+        items:
+          type: string
+        description: List of sha1 hashes to search for
+      displayName:
+        type: string
+        description: Display name
+      mitigationStatuses:
+        type: array
+        items:
+          type: string
+          enum:
+          - not_mitigated
+          - mitigated
+          - marked_as_benign
+        description: Filter threats by a specific status
+      mitigationStatusesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - not_mitigated
+          - mitigated
+          - marked_as_benign
+        description: Filter threats not by a specific status
+      agentIds:
+        type: array
+        items:
+          type: string
+        description: List of Agent IDs
+      storylines:
+        type: array
+        items:
+          type: string
+        description: List of Agent context to search for
+      ids:
+        type: array
+        items:
+          type: string
+        description: List of threat IDs
+      collectionIds:
+        type: array
+        items:
+          type: string
+        description: List of collection IDs to search
+      engines:
+        type: array
+        items:
+          type: string
+          enum:
+          - reputation
+          - sentinelone_cloud
+          - cloud_detection
+          - user_blacklist
+          - pre_execution
+          - pre_execution_suspicious
+          - executables
+          - data_files
+          - exploits
+          - penetration
+          - pup
+          - lateral_movement
+          - remote_shell
+          - manual
+          - application_control
+          - threat_intelligence
+          - watchtower_cloud_detection
+          - driver_blocking
+          - idr
+          - drift_detection
+          - network_protection
+          - application_detection
+          - ai_agents
+        description: Included engines
+      enginesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - reputation
+          - sentinelone_cloud
+          - cloud_detection
+          - user_blacklist
+          - pre_execution
+          - pre_execution_suspicious
+          - executables
+          - data_files
+          - exploits
+          - penetration
+          - pup
+          - lateral_movement
+          - remote_shell
+          - manual
+          - application_control
+          - threat_intelligence
+          - watchtower_cloud_detection
+          - driver_blocking
+          - idr
+          - drift_detection
+          - network_protection
+          - application_detection
+          - ai_agents
+        description: Excluded engines
+      detectionEngines:
+        type: array
+        items:
+          type: string
+          enum:
+          - reputation
+          - sentinelone_cloud
+          - cloud_detection
+          - user_blacklist
+          - pre_execution
+          - pre_execution_suspicious
+          - executables
+          - data_files
+          - exploits
+          - penetration
+          - pup
+          - lateral_movement
+          - remote_shell
+          - manual
+          - application_control
+          - threat_intelligence
+          - watchtower_cloud_detection
+          - driver_blocking
+          - idr
+          - drift_detection
+          - network_protection
+          - application_detection
+          - ai_agents
+        description: Included engines
+      detectionEnginesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - reputation
+          - sentinelone_cloud
+          - cloud_detection
+          - user_blacklist
+          - pre_execution
+          - pre_execution_suspicious
+          - executables
+          - data_files
+          - exploits
+          - penetration
+          - pup
+          - lateral_movement
+          - remote_shell
+          - manual
+          - application_control
+          - threat_intelligence
+          - watchtower_cloud_detection
+          - driver_blocking
+          - idr
+          - drift_detection
+          - network_protection
+          - application_detection
+          - ai_agents
+        description: Excluded engines
+      classifications:
+        type: array
+        items:
+          type: string
+        description: List of threat classifications to search
+      classificationsNin:
+        type: array
+        items:
+          type: string
+        description: List of threat classifications not to search
+      classificationSources:
+        type: array
+        items:
+          type: string
+          enum:
+          - Cloud
+          - Behavioral
+          - Static
+          - Engine
+        description: Classification sources list
+      classificationSourcesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - Cloud
+          - Behavioral
+          - Static
+          - Engine
+        description: Classification sources list to exclude
+      agentVersions:
+        type: array
+        items:
+          type: string
+        description: Include Agent versions
+      agentVersionsNin:
+        type: array
+        items:
+          type: string
+        description: Excluded Agent versions
+      agentMachineTypes:
+        type: array
+        items:
+          type: string
+          enum:
+          - unknown
+          - desktop
+          - laptop
+          - server
+          - kubernetes node
+          - storage
+          - kubernetes pod
+          - ecs task
+          - kubernetes helper
+        description: Include Agent machine types
+      agentMachineTypesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - unknown
+          - desktop
+          - laptop
+          - server
+          - kubernetes node
+          - storage
+          - kubernetes pod
+          - ecs task
+          - kubernetes helper
+        description: Excluded Agent machine types
+      osTypes:
+        type: array
+        items:
+          type: string
+          description: OS type
+          enum:
+          - windows
+          - linux
+          - windows_legacy
+          - macos
+        description: Included OS types
+      osTypesNin:
+        type: array
+        items:
+          type: string
+          description: OS type
+          enum:
+          - windows
+          - linux
+          - windows_legacy
+          - macos
+        description: Excluded OS types
+      osArchs:
+        type: array
+        items:
+          type: string
+          enum:
+          - 32 bit
+          - 64 bit
+          - ARM64
+        description: Included OS Architectures
+      osNames:
+        type: array
+        items:
+          type: string
+        description: ''
+      osNamesNin:
+        type: array
+        items:
+          type: string
+        description: ''
+      agentIsActive:
+        type: boolean
+        description: Include Agents currently connected to the Management Console
+      initiatedBy:
+        type: array
+        items:
+          type: string
+          enum:
+          - agent_policy
+          - full_disk_scan
+          - sentinelctl
+          - dv_command
+          - console_api
+          - on_demand_scan
+          - star_active
+          - star_manual
+          - cloud_detection
+          - threat_intelligence
+          - watchtower_cloud_detection
+          - informational_alert_mitigation
+        description: Only include threats from specific initiating sources
+      initiatedByNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - agent_policy
+          - full_disk_scan
+          - sentinelctl
+          - dv_command
+          - console_api
+          - on_demand_scan
+          - star_active
+          - star_manual
+          - cloud_detection
+          - threat_intelligence
+          - watchtower_cloud_detection
+          - informational_alert_mitigation
+        description: Exclude threats with specific initiating sources
+      confidenceLevels:
+        type: array
+        items:
+          type: string
+          enum:
+          - malicious
+          - suspicious
+          - n/a
+        description: Filter threats by a specific confidence level
+      confidenceLevelsNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - malicious
+          - suspicious
+          - n/a
+        description: Exclude threats with specific confidence level
+      analystVerdicts:
+        type: array
+        items:
+          type: string
+          enum:
+          - undefined
+          - true_positive
+          - false_positive
+          - suspicious
+        description: Filter threats by a specific analyst verdict
+      analystVerdictsNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - undefined
+          - true_positive
+          - false_positive
+          - suspicious
+        description: Exclude threats with specific analyst verdicts
+      incidentStatuses:
+        type: array
+        items:
+          type: string
+          enum:
+          - unresolved
+          - in_progress
+          - resolved
+        description: Filter threats by a specific incident status
+      incidentStatusesNin:
+        type: array
+        items:
+          type: string
+          enum:
+          - unresolved
+          - in_progress
+          - resolved
+        description: Exclude threats with specific incident statuses
+      noteExists:
+        type: boolean
+        description: The threat contains at least one note
+      failedActions:
+        type: boolean
+        description: At least one action failed on the threat
+      rebootRequired:
+        type: boolean
+        description: A reboot is required on any endpoint for at least one action
+          on the threat
+      pendingActions:
+        type: boolean
+        description: At least one action is pending for the Agent for the threat
+      externalTicketExists:
+        type: boolean
+        description: The threat contains ticket number
+      externalTicketIds:
+        type: array
+        items:
+          type: string
+        description: External ticket ID for the threat
+      mitigatedPreemptively:
+        type: boolean
+        description: If the threat was detected pre-execution or post-execution
+      agentTagsData:
+        type: string
+        description: Filter threats by assigned tags to the related agent. Given in
+          form of a JSON where each key represents a tag key, and each value represents
+          a list of string values to filter by. To filter by unassigned tag values,
+          use __nin suffix in the tag key.
+      hasAgentTags:
+        type: boolean
+        description: Include only Threats whose Agent is assigned any tags if True,
+          or none if False
+      query:
+        type: string
+        description: 'Full text search for fields: threat_details, content_hash, computer_name,
+          file_path, uuid, detection_agent_version, realtime_agent_version, detection_agent_domain,
+          command_line_arguments, initiated_by_username, storyline, originated_process,
+          k8s_cluster_name, k8s_node_name, k8s_node_labels, k8s_namespace_name, k8s_namespace_labels,
+          k8s_controller_name, k8s_controller_labels, k8s_pod_name, k8s_pod_labels,
+          container_name, container_image_name, container_labels, external_ticket_id'
+      contentHash__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by file content hash (supports multiple values)
+      threatDetails__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by threat details(supports multiple values)
+      filePath__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by file path (supports multiple values)
+      computerName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by computer name (supports multiple values)
+      uuid__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Agent UUID (supports multiple values)
+      detectionAgentVersion__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Agent version at detection time (supports
+          multiple values)
+      realtimeAgentVersion__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Agent version at current time (supports multiple
+          values)
+      detectionAgentDomain__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by Agent domain at detection time (supports
+          multiple values)
+      commandLineArguments__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by threat command line arguments (supports multiple
+          values)
+      initiatedByUsername__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the username that initiated that threat (supports
+          multiple values)
+      storyline__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by threat storyline (supports multiple values)
+      originatedProcess__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the originated process name of the threat
+          (supports multiple values)
+      publisherName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by threat's publisher name (supports multiple
+          values)
+      signerIdentity__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by threat's signer identity (certificate ID)
+          (supports multiple values)
+      k8sClusterName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes cluster name (supports
+          multiple values)
+      k8sNodeName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes node name (supports
+          multiple values)
+      k8sNodeLabels__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes node labels (supports
+          multiple values)
+      k8sNamespaceName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes namespace name (supports
+          multiple values)
+      k8sNamespaceLabels__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes namespace labels
+          (supports multiple values)
+      k8sControllerName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes controller name (supports
+          multiple values)
+      k8sControllerLabels__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes controller labels
+          (supports multiple values)
+      k8sPodName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes pod name (supports
+          multiple values)
+      k8sPodLabels__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint Kubernetes pod labels (supports
+          multiple values)
+      containerName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint container name (supports multiple
+          values)
+      containerImageName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint container image name (supports
+          multiple values)
+      containerLabels__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the endpoint container labels (supports multiple
+          values)
+      externalTicketId__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the threat external ticket ID (supports multiple
+          values)
+      countsFor:
+        type: string
+        description: comma-separated list of fields to be shown
+      resolved:
+        type: boolean
+        description: This is used for backward-compatibility with API 2.0.
+      cloudProvider:
+        type: array
+        items:
+          type: string
+        description: Agents from which cloud provider
+      cloudProviderNin:
+        type: array
+        items:
+          type: string
+        description: Exclude Agents from these cloud provider
+      awsSecurityGroups__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by aws securityGroups(supports multiple values)
+      cloudAccount__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by cloud account (supports multiple values)
+      cloudImage__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by cloud image (supports multiple values)
+      cloudInstanceId__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by cloud instance id(supports multiple values)
+      cloudInstanceSize__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by cloud instance size(supports multiple values)
+      cloudLocation__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by cloud location (supports multiple values)
+      cloudNetwork__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by cloud network (supports multiple values)
+      awsRole__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by aws role(supports multiple values)
+      awsSubnetIds__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by aws subnet ids (supports multiple values)
+      azureResourceGroup__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by azure resource group(supports multiple values)
+      gcpServiceAccount__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by gcp service account (supports multiple values)
+      limit:
+        type: integer
+        description: Limit
+    description: Use any of the filtering options to control the list of affected
+      threats. You can use any combination of filters to narrow down the list (For
+      example "apply to only active threats from Linux endpoints"). You can also leave
+      this field empty to apply to all available threats.
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  data:
+    type: object
+    properties:
+      containerId:
+        type: string
+        description: Container id
+    required:
+    - containerId
+    description: Data
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          success:
+            type: boolean
+            description: Indicates a successful operation
+        description: Response data
+    description: Reconnect command was created

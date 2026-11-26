@@ -1,0 +1,113 @@
+uuid: 3c6a195d-337b-5cb0-9c04-9ba0bca05ac9
+slug: '_web_api_firewall-control_configuration_get'
+name: Get Firewall Control Configuration
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/firewall-control/configuration'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        accountIds: '{{inputs.accountIds}}'
+        siteIds: '{{inputs.siteIds}}'
+        groupIds: '{{inputs.groupIds}}'
+        tenant: '{{inputs.tenant}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get the Firewall Control configuration for a given scope.<br>To filter
+  the results for a scope:<br>* Global - Make sure "tenant" is "true" and no other
+  scope ID is given.<br>* Account - Make sure "tenant" is "false" and at least one
+  Account ID is given.<br>* Site - Make sure "tenant" is "false" and at least one
+  Site ID is given.<br>The response shows if Firewall Control is enabled for the scope,
+  if Location Awareness is enabled, the higher scope from which this scope inherited
+  the configuration, and whether a lower scope inherits this configuration.<br>Firewall
+  Control requires Control SKU.
+inputs:
+  siteIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Site IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  accountIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Account IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  hostname:
+    type: string
+    description: Base URL for the API
+  groupIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Group IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  tenant:
+    type: boolean
+    description: Indicates a tenant scope request
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          enabled:
+            type: boolean
+            description: Firewall control enabled for the scope
+          locationAware:
+            type: boolean
+            description: Firewall control supports location awareness for the scope
+          reportBlocked:
+            type: boolean
+            description: Agent should report blocked events
+          inherits:
+            type: boolean
+            description: True if rules are decoupled from parent rules
+          inheritedFrom:
+            type: string
+            description: If null it means it is own policy else it tells the ancestor
+              for the policy.For groups options are null/Site/Global, for site options
+              are null/Global.
+          selectedTags:
+            type: array
+            items:
+              type: string
+              description: List of enabled tag IDs
+            description: Selected tags
+          inheritSettings:
+            type: boolean
+            description: Inherit firewall settings from parent scope
+          inheritAllFirewallRules:
+            type: boolean
+            description: Inherit all the rules and tags from the parent scope. Expands
+              on 'inherits' value.
+        description: Response data
+    description: Success

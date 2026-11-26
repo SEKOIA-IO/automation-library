@@ -1,0 +1,874 @@
+uuid: 25ca77cd-c6bc-53e6-b5cf-b38bdde6f52e
+slug: '_web_api_accounts_{account_id}_policy_get'
+name: Get Accounts By Account ID Policy
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/accounts/{{inputs.account_id}}/policy'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+    asserts:
+      error_404:
+        predicate: '{{response.status_code != 404}}'
+        fail: Policy not found
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: 'Get the policy for the Account given by ID. To get the ID of an Account,
+  run "accounts". See also: Get Policy.'
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  account_id:
+    type: string
+    description: 'Account ID. You can get the ID from the Get accounts command. Example:
+      "225494730938493804".'
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          networkQuarantineOn:
+            type: boolean
+            description: Network quarantine on
+          autoImmuneOn:
+            type: boolean
+            description: Automatic immune on/off - this value must be true since all
+              policies are immune by default
+          autoDecommissionOn:
+            type: boolean
+            description: Auto decommission on
+          isDefault:
+            type: boolean
+            description: True if this is the tenant policy
+          cloudValidationOn:
+            type: string
+            description: Cloud validation on
+            default: true
+          researchOn:
+            type: boolean
+            description: Share data with SentinelOne
+          autoMitigationAction:
+            type: string
+            description: Default action for auto mitigation
+          autoDecommissionDays:
+            type: integer
+            description: Automatic decommission period in days
+          mitigationMode:
+            type: string
+            description: Mitigation modes
+            enum:
+            - detect
+            - protect
+          createdAt:
+            type: string
+            description: Timestamp of policy creation
+          agentNotification:
+            type: boolean
+            description: '[DEPRECATED] Show end point notification on suspicious.Replaced
+              by ''show_suspicious'' in the agent UI section'
+          engines:
+            type: object
+            properties:
+              reputation:
+                type: string
+                description: reputation
+                enum:
+                - 'on'
+                - 'off'
+              preExecution:
+                type: string
+                description: on-write
+                enum:
+                - 'on'
+                - 'off'
+              preExecutionSuspicious:
+                type: string
+                description: pre execution suspicious
+                enum:
+                - 'on'
+                - 'off'
+              executables:
+                type: string
+                description: executables
+                enum:
+                - 'on'
+                - 'off'
+              dataFiles:
+                type: string
+                description: data files
+                enum:
+                - 'on'
+                - 'off'
+              exploits:
+                type: string
+                description: exploits
+                enum:
+                - 'on'
+                - 'off'
+              penetration:
+                type: string
+                description: penetration
+                enum:
+                - 'on'
+                - 'off'
+              pup:
+                type: string
+                description: potentially unwanted applications (PUP)
+                enum:
+                - 'on'
+                - 'off'
+              lateralMovement:
+                type: string
+                description: lateral movement
+                enum:
+                - 'on'
+                - 'off'
+              remoteShell:
+                type: string
+                description: remote shell
+                enum:
+                - 'on'
+                - 'off'
+              applicationControl:
+                type: string
+                description: application control
+                enum:
+                - 'on'
+                - 'off'
+              idr:
+                type: string
+                description: idr
+                enum:
+                - 'on'
+                - 'off'
+              driftDetection:
+                type: string
+                description: drift detection
+                enum:
+                - 'on'
+                - 'off'
+              networkProtection:
+                type: string
+                description: network protection
+                enum:
+                - 'on'
+                - 'off'
+              applicationDetection:
+                type: string
+                description: application detection
+                enum:
+                - 'on'
+                - 'off'
+              aiAgents:
+                type: string
+                description: ai security
+                enum:
+                - 'on'
+                - 'off'
+            description: The engines statuses
+          mitigationModeSuspicious:
+            type: string
+            description: Mitigation mode
+            enum:
+            - detect
+            - protect
+          scanNewAgents:
+            type: boolean
+            description: If True initiate full disk scan upon first registration
+          antiTamperingOn:
+            type: boolean
+            description: Anti tampering on/off
+          signedDriverBlockingOn:
+            type: boolean
+            description: Suspicious signed driver blocking on/off
+          unsignedDriverBlockingOn:
+            type: boolean
+            description: Suspicious unsigned driver blocking on/off
+          driverBlocking:
+            type: boolean
+            description: Suspicious driver blocking engine on/off
+          informationalAlertsOn:
+            type: boolean
+            description: Informational alerts on/off
+          agentUiOn:
+            type: boolean
+            description: '[DEPRECATED] Show/hide Agent UI. Moved inside the agent
+              UI section'
+          snapshotsOn:
+            type: boolean
+            description: True if snapshots are enabled
+          agentLoggingOn:
+            type: boolean
+            description: True if logging is enabled in the agent
+          monitorOnExecute:
+            type: boolean
+            description: Monitor on execute on/off
+          monitorOnWrite:
+            type: boolean
+            description: Monitor on write
+          ioc:
+            type: boolean
+            description: True if ioc is enabled
+          iocAttributes:
+            type: object
+            properties:
+              url:
+                type: boolean
+                description: Ioc URI
+              dns:
+                type: boolean
+                description: Network event - DNS
+              process:
+                type: boolean
+                description: Process creation event
+              file:
+                type: boolean
+                description: File event
+              ip:
+                type: boolean
+                description: Network event - IP
+              registry:
+                type: boolean
+                description: Registry event
+              scheduledTask:
+                type: boolean
+                description: Scheduled task event
+              login:
+                type: boolean
+                description: User login/logout event
+              fds:
+                type: boolean
+                description: Full disk scan
+              behavioralIndicators:
+                type: boolean
+                description: Update behavioral indicators
+              dllModuleLoad:
+                type: boolean
+                description: Update DLL module load
+              crossProcess:
+                type: boolean
+                description: Update cross process
+              commandScripts:
+                type: boolean
+                description: Update command scripts
+              autoInstallBrowserExtensions:
+                type: boolean
+                description: Update auto install browser extensions
+              dataMasking:
+                type: boolean
+                description: Update data masking
+              smartFileMonitoring:
+                type: boolean
+                description: Smart file monitoring
+              namedPipe:
+                type: boolean
+                description: Named Pipe
+              namedPipeExtended:
+                type: boolean
+                description: Named Pipe Extended
+              driver:
+                type: boolean
+                description: Driver
+              windowsEventLogs:
+                type: boolean
+                description: Windows Event Log
+              windowsEventLogsExtended:
+                type: boolean
+                description: Windows Event Log Extended
+              openDirectoryActivity:
+                type: boolean
+                description: Open Directory Activity
+              profileActivity:
+                type: boolean
+                description: Profile Activity
+              userSubstitution:
+                type: boolean
+                description: User Substitution
+              externalDeviceActivity:
+                type: boolean
+                description: External Device Activity
+            description: The Ioc attributes
+          dvAttributesPerEventType:
+            type: object
+            properties:
+              url:
+                type: object
+                properties:
+                  dvEventTypeUrl:
+                    type: boolean
+                    description: URL Actions event
+                description: URL Actions event
+              dns:
+                type: object
+                properties:
+                  dvEventTypeDns:
+                    type: boolean
+                    description: Network event - DNS
+                  dvEventTypeExtendedDns:
+                    type: boolean
+                    description: Extended DNS event
+                description: Network event - DNS
+              process:
+                type: object
+                properties:
+                  dvEventTypeProcessCreation:
+                    type: boolean
+                    description: Process Creation Event Type
+                  dvEventTypeProcessModification:
+                    type: boolean
+                    description: Process Termination Event Type
+                  dvEventTypeProcessExit:
+                    type: boolean
+                    description: Process Exit Event Type
+                description: Process event
+              file:
+                type: object
+                properties:
+                  fullDiskScan:
+                    type: boolean
+                    description: File Scan Event Type
+                  dvEventTypeFileCreation:
+                    type: boolean
+                    description: File Creation Event Type
+                  dvEventTypeFileModification:
+                    type: boolean
+                    description: File Modification Event Type
+                  dvEventTypeFileDeletion:
+                    type: boolean
+                    description: File Deletion Event Type
+                  dvEventTypeFileRename:
+                    type: boolean
+                    description: File Rename Event Type
+                description: File event
+              ip:
+                type: object
+                properties:
+                  dvEventTypeIpConnect:
+                    type: boolean
+                    description: IP Connect Event Type
+                  dvEventTypeIpListen:
+                    type: boolean
+                    description: IP Listen Event Type
+                description: Network event - IP
+              registry:
+                type: object
+                properties:
+                  dvEventTypeRegistryKeySecurityChanged:
+                    type: boolean
+                    description: Registry Key Security Changed Event Type
+                  dvEventTypeRegistryKeyCreated:
+                    type: boolean
+                    description: Registry Key Created Event Type
+                  dvEventTypeRegistryKeyRename:
+                    type: boolean
+                    description: Registry Key Rename Event Type
+                  dvEventTypeRegistryKeyDelete:
+                    type: boolean
+                    description: Registry Key Delete Event Type
+                  dvEventTypeRegistryKeyExport:
+                    type: boolean
+                    description: Registry Key Export Event Type
+                  dvEventTypeRegistryKeyImport:
+                    type: boolean
+                    description: Registry Key Import Event Type
+                  dvEventTypeRegistryValueCreated:
+                    type: boolean
+                    description: Registry Value Crated Event Type
+                  dvEventTypeRegistryValueModified:
+                    type: boolean
+                    description: Registry Value Modified Event Type
+                  dvEventTypeRegistryValueDeleted:
+                    type: boolean
+                    description: Registry Value Deleted Event Type
+                description: Registry event
+              scheduledTask:
+                type: object
+                properties:
+                  dvEventTypeScheduledTaskRegister:
+                    type: boolean
+                    description: Scheduled Task Register Event Type
+                  dvEventTypeScheduledTaskUpdate:
+                    type: boolean
+                    description: Scheduled Task Update Event Type
+                  dvEventTypeScheduledTaskDelete:
+                    type: boolean
+                    description: Scheduled Task Delete Event Type
+                  dvEventTypeScheduledTaskStart:
+                    type: boolean
+                    description: Scheduled Task Start Event Type
+                  dvEventTypeScheduledTaskTrigger:
+                    type: boolean
+                    description: Scheduled Task Trigeer Event Type
+                description: Scheduled task event
+              login:
+                type: object
+                properties:
+                  dvEventTypeLoginLoggedIn:
+                    type: boolean
+                    description: User Login Event Type
+                  dvEventTypeLoginLoggedOut:
+                    type: boolean
+                    description: User Logout Event Type
+                description: User login/logout event
+              behavioralIndicators:
+                type: object
+                properties:
+                  dvEventTypeBehavioralIndicators:
+                    type: boolean
+                    description: Behavioral indicators event
+                description: Behavioral indicators event
+              dllModuleLoad:
+                type: object
+                properties:
+                  dvEventTypeDllModuleLoad:
+                    type: boolean
+                    description: DLL module load event
+                description: DLL module load event
+              crossProcess:
+                type: object
+                properties:
+                  dvEventTypeCrossProcessOpenProcess:
+                    type: boolean
+                    description: Open Process Event Type
+                  dvEventTypeCrossProcessDuplicateProcess:
+                    type: boolean
+                    description: Duplicate Process Event Type
+                  dvEventTypeCrossProcessDuplicateThread:
+                    type: boolean
+                    description: Duplicate Thread Event Type
+                  dvEventTypeCrossProcessRemoteThread:
+                    type: boolean
+                    description: Remote Thread Event Type
+                description: Cross process event
+              commandScripts:
+                type: object
+                properties:
+                  dvEventTypeCommandScripts:
+                    type: boolean
+                    description: Command scripts event
+                description: Command scripts event
+              autoInstallBrowserExtensions:
+                type: object
+                properties:
+                  autoInstallBrowserExtensions:
+                    type: boolean
+                    description: Auto install browser extensions
+                description: Auto install browser extensions
+              dataMasking:
+                type: object
+                properties:
+                  dataMasking:
+                    type: boolean
+                    description: Data masking
+                description: Data masking
+              smartFileMonitoring:
+                type: object
+                properties:
+                  smartFileMonitoring:
+                    type: boolean
+                    description: Smart file monitoring
+                description: Smart file monitoring
+              namedPipe:
+                type: object
+                properties:
+                  dvEventTypeNamedPipeCreation:
+                    type: boolean
+                    description: Named Pipe Creation Event Type
+                  dvEventTypeNamedPipeConnection:
+                    type: boolean
+                    description: Named Pipe Connection Event Type
+                description: Named Pipe
+              namedPipeExtended:
+                type: object
+                properties:
+                  namedPipeExtended:
+                    type: boolean
+                    description: Named Pipe Connection Extended Event Type
+                description: Named Pipe Extended
+              driver:
+                type: object
+                properties:
+                  dvEventTypeDriverLoad:
+                    type: boolean
+                    description: Driver Load
+                description: Driver
+              windowsEventLogs:
+                type: object
+                properties:
+                  dvEventTypeWindowsEventLogCreation:
+                    type: boolean
+                    description: Windows Event Log Creation Event Type
+                description: Windows Event Log
+              windowsEventLogsExtended:
+                type: object
+                properties:
+                  windowsEventLogsExtended:
+                    type: boolean
+                    description: Windows Event Log Extended Event Type
+                description: Windows Event Log Extended
+              openDirectoryActivity:
+                type: object
+                properties:
+                  dvEventTypeOpenDirectoryAddAttributeValue:
+                    type: boolean
+                    description: Add Attribute Value Event Type
+                  dvEventTypeOpenDirectoryAddMemberToGroup:
+                    type: boolean
+                    description: Add Member to Group Event Type
+                  dvEventTypeOpenDirectoryCreateGroup:
+                    type: boolean
+                    description: Create Group Event Type
+                  dvEventTypeOpenDirectoryCreateUser:
+                    type: boolean
+                    description: Create User Event Type
+                  dvEventTypeOpenDirectoryDeleteGroup:
+                    type: boolean
+                    description: Delete Group Event Type
+                  dvEventTypeOpenDirectoryDeleteUser:
+                    type: boolean
+                    description: Delete User Event Type
+                  dvEventTypeOpenDirectoryDisableUser:
+                    type: boolean
+                    description: Disable User Event Type
+                  dvEventTypeOpenDirectoryEnableUser:
+                    type: boolean
+                    description: Enable User Event Type
+                  dvEventTypeOpenDirectoryModifyPassword:
+                    type: boolean
+                    description: Modify Password Event Type
+                  dvEventTypeOpenDirectoryRemoveAttributeValue:
+                    type: boolean
+                    description: Remove Attribute Value Event Type
+                  dvEventTypeOpenDirectoryRemoveMemberFromGroup:
+                    type: boolean
+                    description: Remove Member from Group Event Type
+                  dvEventTypeOpenDirectorySetAttributeValues:
+                    type: boolean
+                    description: Set Attribute Values Event Type
+                  dvEventTypeOpenDirectorySetMembersOfGroup:
+                    type: boolean
+                    description: Set Members of Group Event Type
+                description: Open Directory Activity
+              profileActivity:
+                type: object
+                properties:
+                  dvEventTypeProfileAddition:
+                    type: boolean
+                    description: Profile Addition Event Type
+                  dvEventTypeProfileRemoval:
+                    type: boolean
+                    description: Profile Removal Event Type
+                description: Profile Activity
+              userSubstitution:
+                type: object
+                properties:
+                  dvEventTypeSu:
+                    type: boolean
+                    description: su Event Type
+                  dvEventTypeSudo:
+                    type: boolean
+                    description: sudo Event Type
+                description: User Substitution
+              externalDeviceActivity:
+                type: object
+                properties:
+                  dvEventTypeExternalDeviceConnect:
+                    type: boolean
+                    description: External Device Connect Event Type
+                  dvEventTypeExternalDeviceDisconnect:
+                    type: boolean
+                    description: External Device Disconnect Event Type
+                description: External Device Activity
+            description: The DV attributes
+          iocSupported:
+            type: boolean
+            description: Ioc supported for the scope
+          inheritedFrom:
+            type: string
+            description: Indicates the parent scope from which this policy is inherited,
+              or 'null' if it is not inherited (modified specifically for the current
+              scope).
+            enum:
+            - site
+            - account
+            - global
+          updatedAt:
+            type: string
+            description: Time of the last update to the policy
+          userId:
+            type: string
+            description: The user id
+          userFullName:
+            type: string
+            description: The user that created the policy
+          allowRemoteShell:
+            type: boolean
+            description: True if Remote Shell is enabled for the scope
+          autoFileUpload:
+            type: object
+            properties:
+              enabled:
+                type: boolean
+                description: Automatic file upload on/off
+              includeBenignFiles:
+                type: boolean
+                description: Upload benign files
+              maxFileSize:
+                type: integer
+                description: Maximum file size (MB) to upload
+              maxDailyFileUpload:
+                type: integer
+                description: Maximum size (MB) to upload daily
+              maxLocalDiskUsage:
+                type: integer
+                description: Maximum local disk usage (MB) for uploaded files
+              maxFileSizeLimit:
+                type: integer
+                description: Limit for the maximum file size (MB) to upload
+              maxDailyFileUploadLimit:
+                type: integer
+                description: Limit for the maximum size (MB) to upload daily
+              maxLocalDiskUsageLimit:
+                type: integer
+                description: Limit for the maximum local disk usage (MB) for uploaded
+                  files
+            description: Automatic file upload configuration
+          agentUi:
+            type: object
+            properties:
+              agentUiOn:
+                type: boolean
+                description: Agent ui on
+              threatPopUpNotifications:
+                type: boolean
+                description: Threat pop up notifications
+              devicePopUpNotifications:
+                type: boolean
+                description: Device pop up notifications
+              showSuspicious:
+                type: boolean
+                description: Show suspicious
+              showAgentWarnings:
+                type: boolean
+                description: Show agent warnings
+              showDeviceTab:
+                type: boolean
+                description: Show device tab
+              showQuarantineTab:
+                type: boolean
+                description: Show quarantine tab
+              showSupport:
+                type: boolean
+                description: Show support
+              maxEventAgeDays:
+                type: integer
+                description: Max event age days
+              contactFreeText:
+                type: string
+                description: Contact free text
+              contactCompany:
+                type: string
+                description: Contact company
+              contactEmail:
+                type: string
+                description: Contact email
+              contactPhoneNumber:
+                type: string
+                description: Contact phone number
+              contactDirectMessage:
+                type: string
+                description: Contact direct message
+              contactSupportWebsite:
+                type: string
+                description: Contact support website
+              contactOther:
+                type: string
+                description: Contact other
+            description: Agent ui
+          remoteScriptOrchestration:
+            type: object
+            properties:
+              maxFileSize:
+                type: integer
+                description: Maximum size in bytes for single file
+              maxFileSizeLimit:
+                type: integer
+                description: Limit for the maximum file size (MB) to upload
+              maxDailyFileUpload:
+                type: integer
+                description: Maximum size (MB) to upload daily
+              maxDailyFileUploadLimit:
+                type: integer
+                description: Limit for the maximum size (MB) to upload daily
+              alwaysUploadStreamToCloud:
+                type: boolean
+                description: Always upload streams to cloud
+              maxDailyFileDownload:
+                type: integer
+                description: Maximum size (MB) to download daily
+              maxDailyFileDownloadLimit:
+                type: integer
+                description: Limit for the maximum size (MB) to download daily
+              maxLocalPackageDiskUsage:
+                type: integer
+                description: Maximum local disk usage (MB) for packages
+              maxLocalPackageDiskUsageLimit:
+                type: integer
+                description: Limit for the maximum local disk usage (MB) for packages
+            description: Remote script orchestration upload limits configuration
+          isDvPolicyPerEventType:
+            type: boolean
+            description: FE indication as to how to display DV policy
+          remoteOpsForensics:
+            type: object
+            properties:
+              enabled:
+                type: boolean
+                description: Enabled
+              parsedArtifactsDestination:
+                type: string
+                description: Default destination of parsed artifacts
+                enum:
+                - local
+                - cloud
+                - skylight
+              maximumFileSizeUpload:
+                type: integer
+                description: Maximum size for single file
+              maximumFileSizeUploadLimit:
+                type: integer
+                description: Limit for the maximum file size to upload
+              maximumDailyUpload:
+                type: integer
+                description: Maximum size to upload daily
+              maximumDailyUploadLimit:
+                type: integer
+                description: Limit for the maximum size to upload daily
+              cpuLimit:
+                type: integer
+                description: CPU resources limit for collection process
+            description: Remote ops forensics configuration
+          removeMacros:
+            type: boolean
+            description: Determines if macros should be removed from macro threats
+          removeMacrosMl:
+            type: boolean
+            description: Determines if malicious macros should be mitigated using
+              ML Models
+          identityUpdateInterval:
+            type: integer
+            description: Identity update interval in minutes
+          identityReportInterval:
+            type: integer
+            description: Identity telemetry report interval in minutes
+          identityThrottlingInterval:
+            type: integer
+            description: Identity duplicate command consolidation interval in minutes
+          identityEndpointReporting:
+            type: string
+            description: Endpoint reporting level
+            enum:
+            - disabled
+            - conservative
+            - moderate
+            - aggressive
+          identityOn:
+            type: boolean
+            description: Identity module on/off
+          forensicsAutoTriggering:
+            type: object
+            properties:
+              macosProfileId:
+                type: string
+                description: The profile id for the macos forensics
+              macosEnabled:
+                type: boolean
+                description: True if macos forensics is enabled
+              windowsProfileId:
+                type: string
+                description: The profile id for the windows forensics
+              windowsEnabled:
+                type: boolean
+                description: True if windows forensics is enabled
+              linuxProfileId:
+                type: string
+                description: The profile id for the linux forensics
+              linuxEnabled:
+                type: boolean
+                description: True if linux forensics is enabled
+              macosProfileName:
+                type: string
+                description: The profile name for the macos forensics
+              windowsProfileName:
+                type: string
+                description: The profile name for the windows forensics
+              linuxProfileName:
+                type: string
+                description: The profile name for the linux forensics
+            description: Forensics auto triggering configuration
+          allowUnprotectByApprovedProcess:
+            type: boolean
+            description: Allow Unprotect By Approved Process on/off
+          identityConfigurationSettings:
+            type: object
+            properties:
+              identityThresholdMonitoring:
+                type: boolean
+                description: True if Identity threshold monitoring is enabled
+              identityMaxMemoryUsage:
+                type: integer
+                description: Identity maximum memory usage
+              identityMaxMemoryLimit:
+                type: integer
+                description: Identity maximum memory limit in MB
+              identityMaxDefinedMemoryLimit:
+                type: integer
+                description: Identity maximum defined memory limit in MB
+              identityMaxCpuThreshold:
+                type: integer
+                description: Identity maximum CPU threshold
+            description: Identity configuration
+          logCollectorEnabled:
+            type: boolean
+            description: Log collector on/off
+          driftDetectionDelayTime:
+            type: integer
+            description: Drift detection delay time in seconds
+          networkProtectionInfra:
+            type: boolean
+            description: Network Protection Infrastructure On/Off
+          smbLateralMovementMitigation:
+            type: boolean
+            description: SMB Lateral Movement Mitigation
+          fwForNetworkQuarantineEnabled:
+            type: boolean
+            description: True if Firewall Control for Network Quarantine is enabled
+        description: Response data
+    description: Success

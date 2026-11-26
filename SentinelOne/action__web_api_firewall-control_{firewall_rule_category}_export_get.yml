@@ -1,0 +1,202 @@
+uuid: 09d4eea4-c91a-5da8-9a35-28eb6cec2d24
+slug: '_web_api_firewall-control_{firewall_rule_category}_export_get'
+name: Get Firewall Control By Firewall Rule Category Export
+pipeline:
+- name: http
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/firewall-control/{{inputs.firewall_rule_category}}/export'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        accountIds: '{{inputs.accountIds}}'
+        siteIds: '{{inputs.siteIds}}'
+        groupIds: '{{inputs.groupIds}}'
+        tenant: '{{inputs.tenant}}'
+        query: '{{inputs.query}}'
+        scopes: '{{inputs.scopes}}'
+        applications: '{{inputs.applications}}'
+        name: '{{inputs.name}}'
+        protocols: '{{inputs.protocols}}'
+        osTypes: '{{inputs.osTypes}}'
+        directions: '{{inputs.directions}}'
+        actions: '{{inputs.actions}}'
+        statuses: '{{inputs.statuses}}'
+        createdAt__lt: '{{inputs.createdAt__lt}}'
+        createdAt__gt: '{{inputs.createdAt__gt}}'
+        createdAt__lte: '{{inputs.createdAt__lte}}'
+        createdAt__gte: '{{inputs.createdAt__gte}}'
+        createdAt__between: '{{inputs.createdAt__between}}'
+        ids: '{{inputs.ids}}'
+        locationIds: '{{inputs.locationIds}}'
+        tagIds: '{{inputs.tagIds}}'
+        name__contains: '{{inputs.name__contains}}'
+        tagName__contains: '{{inputs.tagName__contains}}'
+        application__contains: '{{inputs.application__contains}}'
+        protocol__contains: '{{inputs.protocol__contains}}'
+        service__contains: '{{inputs.service__contains}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+description: Export Firewall Control rules that match the filter to a JSON file from
+  a scope specified by ID (run "accounts", "sites", "groups", or leave the scope empty
+  and set "tenant" to "true") and import them to another scope (with the "import"
+  command. <br>Firewall Control requires Control SKU.
+inputs:
+  service__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by service (supports multiple values)
+  createdAt__lt:
+    type: string
+    description: 'Return firewall rules created before this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  ids:
+    type: array
+    items:
+      type: string
+    description: 'List of ids to filter by. Example: "225494730938493804,225494730938493915".'
+  accountIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Account IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  osTypes:
+    type: array
+    items:
+      type: string
+      enum:
+      - windows
+      - linux
+      - windows_legacy
+      - macos
+    description: 'Return firewall rules with the filtered os_type. Example: "windows".'
+  query:
+    type: string
+    description: Free text search on name, tag, application, protocol
+  protocols:
+    type: array
+    items:
+      type: string
+    description: Return firewall rules with the filtered protocols.
+  application__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by application (supports multiple values)
+  tenant:
+    type: boolean
+    description: Indicates a tenant scope request
+  createdAt__between:
+    type: string
+    description: 'Return firewall rules created within this range (inclusive). Example:
+      "1514978764288-1514978999999".'
+  firewall_rule_category:
+    type: string
+    description: To affect Network Quarantine use network-quarantine
+  createdAt__gt:
+    type: string
+    description: 'Return firewall rules created after this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  hostname:
+    type: string
+    description: Base URL for the API
+  siteIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Site IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  scopes:
+    type: array
+    items:
+      type: string
+      enum:
+      - site
+      - group
+      - global
+      - account
+    description: 'Return only firewall rules in this scope. Example: "site".'
+  statuses:
+    type: array
+    items:
+      type: string
+      enum:
+      - Enabled
+      - Disabled
+    description: 'Return firewall rules with the filtered status. Example: "Enabled".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  actions:
+    type: array
+    items:
+      type: string
+      enum:
+      - Allow
+      - Block
+    description: 'Return firewall rules with the filtered action. Example: "Allow".'
+  applications:
+    type: array
+    items:
+      type: string
+    description: Return firewall rules with the filtered firewall class.
+  name:
+    type: string
+    description: Return firewall rules with the filtered name.
+  createdAt__gte:
+    type: string
+    description: 'Return firewall rules created after or at this timestamp. Example:
+      "2018-02-27T04:49:26.257525Z".'
+  tagName__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the Tag name (supports multiple values)
+  createdAt__lte:
+    type: string
+    description: 'Return firewall rules created before or at this timestamp. Example:
+      "2018-02-27T04:49:26.257525Z".'
+  directions:
+    type: array
+    items:
+      type: string
+      enum:
+      - any
+      - inbound
+      - outbound
+    description: 'Return firewall rules with the filtered directions. Example: "any".'
+  protocol__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by protocol (supports multiple values)
+  name__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by the Rule name (supports multiple values)
+  groupIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Group IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  tagIds:
+    type: array
+    items:
+      type: string
+    description: 'Filter by associated tags. Example: "225494730938493804,225494730938493915".'
+  locationIds:
+    type: array
+    items:
+      type: string
+    description: 'Filter by associated locations. Example: "225494730938493804,225494730938493915".'

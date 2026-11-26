@@ -1,0 +1,92 @@
+uuid: e7bd5d4a-737c-531f-8bd6-da8636950e1f
+slug: '_web_api_threats_mitigate-alerts_post'
+name: Create Threats Mitigate Alerts
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/threats/mitigate-alerts'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        data: '{{inputs.data}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Mark an alerts as a threat and run mitigation action from the Management
+  UI.
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  data:
+    type: object
+    properties:
+      alerts:
+        type: array
+        items:
+          type: object
+          properties:
+            storyline:
+              type: string
+              description: Storyline of the mitigated alert
+            agentId:
+              type: string
+              description: Agent ID that reported the alert
+          required:
+          - agentId
+          - storyline
+        description: List of alerts to mitigate
+      action:
+        type: string
+        description: Mitigation action
+        enum:
+        - kill
+        - remediate
+        - rollback-remediation
+        - quarantine
+        - un-quarantine
+        - null
+        - remove_macros
+        - restore_macros
+    required:
+    - alerts
+    description: Data
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          affected:
+            type: integer
+            description: Number of entities affected by the requested operation
+        description: Response data
+    description: Success

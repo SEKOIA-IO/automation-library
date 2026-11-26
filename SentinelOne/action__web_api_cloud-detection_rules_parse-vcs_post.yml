@@ -1,0 +1,202 @@
+uuid: e1234a41-342b-5c48-9a65-4e22401a1c3c
+slug: '_web_api_cloud-detection_rules_parse-vcs_post'
+name: Create Cloud Detection Rules Parse VCS
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/cloud-detection/rules/parse-vcs'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        mode: '{{inputs.mode}}'
+      form:
+        vcsRepoId: '{{inputs.vcsRepoId}}'
+        vcsRepoName: '{{inputs.vcsRepoName}}'
+        vcsCommitId: '{{inputs.vcsCommitId}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Validation errors found
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: 'Parse a ZIP file from your repository and compare it with the current
+  Detection-as-Code (DAC) rules in the database.<br>Send a multipart/form-data request
+  with a file field that contains the ZIP file, and the vcsRepoId, vcsRepoName, and
+  vcsCommitId fields.<br>Set mode query parameter for the required operation. In the
+  diff mode (default), the API returns the sync plan that shows the rules to create,
+  update, delete, retain, and import. In the apply mode, the API writes the changes
+  to the database.<br>If a rule has deletePolicy: Retain, and the rule is deleted
+  from the repository, DAC stops managing the rule but doesn''t delete it in the database.<br>A
+  rule with importCustomRuleId fails to import with HTTP 400 if the rule''s YAML file
+  doesn''t match the existing rule. This prevents unintended changes to a DAC rule.'
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  vcsRepoId:
+    type: string
+    description: VCS repository identifier
+  vcsRepoName:
+    type: string
+    description: VCS repository name
+  mode:
+    type: string
+    description: 'Mode of operation: diff (default) compares with current state, apply
+      persists the changes'
+    enum:
+    - diff
+    - apply
+    default: diff
+  vcsCommitId:
+    type: string
+    description: VCS commit ID
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          creates:
+            type: array
+            items:
+              type: object
+              properties:
+                externalId:
+                  type: string
+                  description: External ID of the rule
+                scopeLevel:
+                  type: string
+                  description: Scope level (tenant, site, account)
+                scopeId:
+                  type: integer
+                  description: Scope ID
+                ruleData:
+                  type: object
+                  description: Rule data (for CREATE/UPDATE/IMPORT)
+            description: Rules to create
+          updates:
+            type: array
+            items:
+              type: object
+              properties:
+                externalId:
+                  type: string
+                  description: External ID of the rule
+                scopeLevel:
+                  type: string
+                  description: Scope level (tenant, site, account)
+                scopeId:
+                  type: integer
+                  description: Scope ID
+                ruleData:
+                  type: object
+                  description: Rule data (for CREATE/UPDATE/IMPORT)
+            description: Rules to update
+          deletes:
+            type: array
+            items:
+              type: object
+              properties:
+                externalId:
+                  type: string
+                  description: External ID of the rule
+                scopeLevel:
+                  type: string
+                  description: Scope level (tenant, site, account)
+                scopeId:
+                  type: integer
+                  description: Scope ID
+                ruleData:
+                  type: object
+                  description: Rule data (for CREATE/UPDATE/IMPORT)
+            description: Rules to delete
+          retains:
+            type: array
+            items:
+              type: object
+              properties:
+                externalId:
+                  type: string
+                  description: External ID of the rule
+                scopeLevel:
+                  type: string
+                  description: Scope level (tenant, site, account)
+                scopeId:
+                  type: integer
+                  description: Scope ID
+                ruleData:
+                  type: object
+                  description: Rule data (for CREATE/UPDATE/IMPORT)
+            description: 'Rules released from DAC management (deletePolicy: Retain)
+              instead of deleted'
+          imports:
+            type: array
+            items:
+              type: object
+              properties:
+                externalId:
+                  type: string
+                  description: External ID of the rule
+                scopeLevel:
+                  type: string
+                  description: Scope level (tenant, site, account)
+                scopeId:
+                  type: integer
+                  description: Scope ID
+                ruleData:
+                  type: object
+                  description: Rule data (for CREATE/UPDATE/IMPORT)
+            description: Rules to import
+          vcsRepoId:
+            type: string
+            description: VCS repository ID
+          summary:
+            type: object
+            properties:
+              totalCreates:
+                type: integer
+                description: Number of rules to create
+              totalUpdates:
+                type: integer
+                description: Number of rules to update
+              totalDeletes:
+                type: integer
+                description: Number of rules to delete
+              totalRetains:
+                type: integer
+                description: Number of rules released from DAC management instead
+                  of deleted
+              totalImports:
+                type: integer
+                description: Number of existing rules to import
+              totalChanges:
+                type: integer
+                description: Total number of create/update/delete/retain/import changes
+            description: Summary counts
+        description: Response data
+    description: Success

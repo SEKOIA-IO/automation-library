@@ -1,0 +1,115 @@
+uuid: 9a99a265-52cb-5d06-bb01-2a3419f8d773
+slug: '_web_api_firewall-control_reorder_put'
+name: Update Firewall Control Reorder
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: PUT
+      url: '{{inputs.hostname}}/web/api/v2.1/firewall-control/reorder'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        data: '{{inputs.data}}'
+        filter: '{{inputs.filter}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Change the order of rules for a scope  specified by ID (run "accounts",
+  "sites", or "groups"). <br>The Agent looks at the rules based on their order in
+  the Firewall Control policy, from the top to the bottom. First it goes through the
+  Group rules, then the Site rules, then the Account rules, then the Global rules.
+  When the Agent finds a rule that matches the parameters of the traffic, that rule
+  is applied. The Agent does not continue to the lower rules in the list. Thus, the
+  scope and the order of the rules is important.<br>Firewall Control requires Control
+  SKU.
+inputs:
+  filter:
+    type: object
+    properties:
+      accountIds:
+        type: array
+        items:
+          type: string
+        description: List of Account IDs to filter by
+      siteIds:
+        type: array
+        items:
+          type: string
+        description: List of Site IDs to filter by
+      groupIds:
+        type: array
+        items:
+          type: string
+        description: List of Group IDs to filter by
+      tenant:
+        type: boolean
+        description: Indicates a tenant scope request
+      osTypes:
+        type: array
+        items:
+          type: string
+          description: OS type
+          enum:
+          - windows
+          - linux
+          - windows_legacy
+          - macos
+        description: '[DEPRECATED] Rules OS type (was relevant for when each OS type
+          had its own rule order)'
+    description: Filter
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  data:
+    type: array
+    items:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Rule ID
+        order:
+          type: integer
+          description: Desired position in the list of rules
+      required:
+      - id
+      - order
+    description: Data
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          success:
+            type: boolean
+            description: Indicates a successful operation
+        description: Response data
+    description: Success

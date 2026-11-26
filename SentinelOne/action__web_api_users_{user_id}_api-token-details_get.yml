@@ -1,0 +1,65 @@
+uuid: cc402a04-192e-5e99-8959-a32b942f55fc
+slug: '_web_api_users_{user_id}_api-token-details_get'
+name: Get Users By User ID API Token Details
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/users/{{inputs.user_id}}/api-token-details'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+    asserts:
+      error_404:
+        predicate: '{{response.status_code != 404}}'
+        fail: User not found
+      error_403:
+        predicate: '{{response.status_code != 403}}'
+        fail: Insufficient permissions
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get the details of the API token generated for a given user.
+inputs:
+  user_id:
+    type: string
+    description: 'User ID. Example: "225494730938493804".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          createdAt:
+            type: string
+            description: Created at
+          expiresAt:
+            type: string
+            description: Expires at
+        description: Response data
+    description: Success

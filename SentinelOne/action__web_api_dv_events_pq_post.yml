@@ -1,0 +1,125 @@
+uuid: 3c85f676-c8b9-5d9b-aa05-31e411779f83
+slug: '_web_api_dv_events_pq_post'
+name: Create Deep Visibility Events PQ
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/dv/events/pq'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        accountIds: '{{inputs.accountIds}}'
+        siteIds: '{{inputs.siteIds}}'
+        query: '{{inputs.query}}'
+        fromDate: '{{inputs.fromDate}}'
+        toDate: '{{inputs.toDate}}'
+        limit: '{{inputs.limit}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Start a Deep Visibility Power Query, get back status and potential results
+  (ping afterwards using the queryId if query has not finished)
+inputs:
+  siteIds:
+    type: array
+    items:
+      type: string
+    description: List of Site IDs to filter by
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  limit:
+    type: integer
+    description: Limit number of returned items (1-100000)
+  fromDate:
+    type: string
+    description: Events created after this timestamp
+  accountIds:
+    type: array
+    items:
+      type: string
+    description: List of Account IDs to filter by
+  query:
+    type: string
+    description: Events matching the query search term will be returned
+  toDate:
+    type: string
+    description: Events created before or at this timestamp
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          queryId:
+            type: string
+            description: Query Id
+          externalId:
+            type: string
+            description: External Query Id
+          status:
+            type: string
+            description: Status
+            enum:
+            - PROCESS_RUNNING
+            - EVENTS_RUNNING
+            - FAILED
+            - FAILED_CLIENT
+            - FINISHED
+            - RUNNING
+            - ERROR
+            - QUERY_CANCELLED
+            - TIMED_OUT
+            - QUERY_EXPIRED
+          progress:
+            type: integer
+            description: Query loading status in percentage
+          columns:
+            type: array
+            items:
+              type: object
+            description: includes the name of the column and its type
+          data:
+            type: array
+            items:
+              type: array
+            description: Includes actual searched data
+          recommendations:
+            type: array
+            items:
+              type: string
+            description: possible action items to improve query results
+        required:
+        - progress
+        - queryId
+        - status
+        description: Response data
+    description: Success

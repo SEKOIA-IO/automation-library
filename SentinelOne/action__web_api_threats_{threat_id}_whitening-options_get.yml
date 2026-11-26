@@ -1,0 +1,70 @@
+uuid: a0aa2982-85ea-59c2-8734-a332363eadde
+slug: '_web_api_threats_{threat_id}_whitening-options_get'
+name: Get Threats By Threat ID Whitening Options
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/threats/{{inputs.threat_id}}/whitening-options'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+    asserts:
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get the Exclusion types that can be created from the detection data.
+  <BR> For example, if a threat is a file with a detected SHA1 hash and pathname,
+  the values of the whiteningOptions in the response are "path" and "file_hash". This
+  command requires the ID of the threat, which you can get from "threats" (see Get
+  Threats). To create an Exclusion, see Exclusions.
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  threat_id:
+    type: string
+    description: 'Threat ID. Example: "225494730938493804".'
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          whiteningOptions:
+            type: array
+            items:
+              type: string
+            description: Available exclusion options
+          threatType:
+            type: array
+            items:
+              type: string
+            description: Threat type
+          threatPolicy:
+            type: string
+            description: Threat policy
+        description: Response data
+    description: Success

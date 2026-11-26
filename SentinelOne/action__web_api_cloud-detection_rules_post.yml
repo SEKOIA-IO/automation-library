@@ -1,0 +1,644 @@
+uuid: 90c6ce06-ad96-58db-a8e9-11906cf30fbd
+slug: '_web_api_cloud-detection_rules_post'
+name: Create Cloud Detection Rules
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/cloud-detection/rules'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        data: '{{inputs.data}}'
+        filter: '{{inputs.filter}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Create a Custom Detection Rule for a scope specified by ID. To get the
+  ID, run "accounts", "sites", "groups", or set "tenant" to "true" for Global.
+inputs:
+  filter:
+    type: object
+    properties:
+      accountIds:
+        type: array
+        items:
+          type: string
+        description: List of Account IDs to filter by
+      siteIds:
+        type: array
+        items:
+          type: string
+        description: List of Site IDs to filter by
+      groupIds:
+        type: array
+        items:
+          type: string
+        description: List of Group IDs to filter by
+      tenant:
+        type: boolean
+        description: Indicates a tenant scope request
+    description: Filter
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  data:
+    type: object
+    properties:
+      name:
+        type: string
+        description: The name of the custom detection rule.
+      description:
+        type: string
+        description: A description of the custom detection rule.
+      severity:
+        type: string
+        description: The rule severity in your environment.
+        enum:
+        - Info
+        - Low
+        - Medium
+        - High
+        - Critical
+      expirationMode:
+        type: string
+        description: Defines the rule as Permanent or Temporary.
+        enum:
+        - Permanent
+        - Temporary
+      expiration:
+        type: string
+        description: If the rule is Temporary, enter the expiration date for the rule.
+        default: null
+      queryType:
+        type: string
+        description: 'Define the query type: Correlation (made of multiple subqueries),
+          Event (single query).'
+        enum:
+        - events
+        - correlation
+        - uebafirstseen
+        - scheduled
+      s1ql:
+        type: string
+        description: The query
+      status:
+        type: string
+        description: Defines the rule is Enabled (Activated and sends alerts if triggered)
+          or Disabled.
+        enum:
+        - Draft
+        - Activating
+        - Active
+        - Disabling
+        - Disabled
+        - Deleted
+        - Deleting
+      networkQuarantine:
+        type: boolean
+        description: Set to True to automatically quarantine the alerted endpoints.
+        default: false
+      treatAsThreat:
+        type: string
+        description: Defines the Treat as a threat auto response. Undefined, Suspicious,
+          or Malicious.
+        enum:
+        - UNDEFINED
+        - Suspicious
+        - Malicious
+      queryLang:
+        type: string
+        description: Defines the s1ql version query language of the rule - 1.0 or
+          2.0.
+        enum:
+        - '1.0'
+        - '2.0'
+        default: '1.0'
+      correlationParams:
+        type: object
+        properties:
+          subQueries:
+            type: array
+            items:
+              type: object
+              properties:
+                subQuery:
+                  type: string
+                  description: A subquery
+                matchesRequired:
+                  type: integer
+                  description: The number of times a subquery must match.
+              required:
+              - matchesRequired
+              - subQuery
+            description: The list of subqueries for the custom detection rule.
+          entity:
+            type: string
+            description: A common entity used to group matching events.
+            enum:
+            - user
+            - process
+            - ip
+            - endpoint
+            - storyline
+            - custom
+            - none
+          matchInOrder:
+            type: boolean
+            description: Set to True to require subqueries to match in sequence to
+              trigger an alert.
+          timeWindow:
+            type: object
+            properties:
+              windowMinutes:
+                type: integer
+                description: The period of time in minutes in which subqueries must
+                  match to trigger an alert.
+                enum:
+                - 10
+                - 30
+                - 60
+                - 240
+                - 480
+                - 720
+            description: The period of time in minutes in which subqueries must match
+              to trigger an alert.
+            default:
+              windowMinutes: 480
+          entitiesAndFields:
+            type: array
+            items:
+              type: array
+              items:
+                type: string
+            description: Entity field aliases in Conjunctive Normal Form (AND of ORs).
+              Each inner array is an OR-group; the outer array ANDs them together.
+              The product of the group sizes (aliases in group 1 x aliases in group
+              2 x ...) must not be more than the configured limit, because the engine
+              tracks at most that many entities per event. The live limit is in the
+              /cloud-detection/rules/config response. Required when entity is Custom;
+              must be omitted otherwise.
+        required:
+        - entity
+        - matchInOrder
+        description: Correlation params
+      scheduledParams:
+        type: object
+        properties:
+          query:
+            type: string
+            description: The PowerQuery to run
+          runIntervalMinutes:
+            type: integer
+            description: How often the alert is evaluated, in minutes. If used with
+              coolOffSettings then it must be a denominator of renotifyMinutes. If
+              the lookbackWindowMinutes is less than 60 (1 hour), the minimum is 1
+              minute. For a window between 1 and 360 (6 hours), 5 minutes. For a window
+              between 360 (6 hours) and 10080 (7 days), 15 minutes. For a window between
+              10080 (7 days) and 43200 (30 days), 60 minutes.
+          lookbackWindowMinutes:
+            type: integer
+            description: Sets the evaluation lookback window in minutes. For example,
+              set to 5 evaluates the alert over the past five minutes.
+          threshold:
+            type: object
+            properties:
+              value:
+                type: integer
+                description: Defines the threshold value that in combination with
+                  operator and the query sets the threshold condition for an alert
+                  to be triggered. The default value is 0
+                default: 0
+              operator:
+                type: string
+                description: Defines the operator to use in combination with the query
+                  and thresholdValue to set the threshold condition for an alert to
+                  trigger The default value is Greater
+                enum:
+                - Greater
+                - Less
+                - Equal
+                default: Greater
+            description: Receive an alert only if the number of rows in the result
+              of the query matches the condition in the threshold
+            default:
+              value: 0
+              operator: Greater
+          alertPerRow:
+            type: boolean
+            description: If True, an alert will be generated for each row detected
+              in the defined lookback window. If False (default), get one alert for
+              all detected events matched in the defined lookback window.
+            default: null
+          disableStreaksLogic:
+            type: boolean
+            description: If True (default), disables streak counting logic for scheduled
+              rules. If False, streak counting logic is enabled.
+            default: null
+        required:
+        - lookbackWindowMinutes
+        - query
+        - runIntervalMinutes
+        description: Scheduled params
+      uebaParams:
+        type: object
+        properties:
+          windowMinutes:
+            type: integer
+            description: Lookback window in minutes. Between 1 and 30 days.
+          entitiesAndFields:
+            type: array
+            items:
+              type: array
+              items:
+                type: string
+            description: Entity key in Conjunctive Normal Form (AND of ORs). Each
+              inner array is one key component's interchangeable aliases; the outer
+              array ANDs the components together.
+        required:
+        - entitiesAndFields
+        - windowMinutes
+        description: Ueba params
+      coolOffSettings:
+        type: object
+        properties:
+          renotifyMinutes:
+            type: integer
+            description: The period of time in minutes in which alerts will be suppressed
+              after the rule has been triggered. 0 disables cool-off.
+        required:
+        - renotifyMinutes
+        description: Receive only one alert and suppress additional alerts when a
+          rule is triggered multiple times during the cool-off period. Mitigation
+          actions set in the rule will not be applied to suppressed alerts.
+      hideLogic:
+        type: boolean
+        description: If true, hide this rule logic from non-privileged users.
+      entityMappings:
+        type: array
+        items:
+          type: object
+          properties:
+            columnName:
+              type: string
+              description: Unique case insensitive column name from PowerQuery table
+                result (required for Scheduled rules)
+            identifierType:
+              type: string
+              description: Identifier type for UAIP asset lookup routing.
+        description: List of OCSF entity mappings to associate alerts with specific
+          assets.
+        default: null
+      id:
+        type: string
+        description: Rule ID
+      templateRuleId:
+        type: string
+        description: Rule Id of template rule from which this rule was created.
+      exclusionIds:
+        type: array
+        items:
+          type: string
+        description: Desired full set of Detection Exclusion IDs attached to this
+          rule. On update, a present list replaces the current attachments (missing
+          IDs are detached, new IDs are attached); omit the field to leave attachments
+          unchanged; send an empty list to detach all. On creation, the listed exclusions
+          are attached to the new rule. Only Single Event and Correlation rules accept
+          this field.
+    required:
+    - expirationMode
+    - name
+    - queryType
+    - severity
+    - status
+    description: Data
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Rule ID
+          name:
+            type: string
+            description: The name of the custom detection rule.
+          description:
+            type: string
+            description: The description of the custom detection rule.
+          severity:
+            type: string
+            description: The rule severity in your environment.
+            enum:
+            - Info
+            - Low
+            - Medium
+            - High
+            - Critical
+          expirationMode:
+            type: string
+            description: Whether the rule is Temporary or Permanent.
+            enum:
+            - Permanent
+            - Temporary
+          expiration:
+            type: string
+            description: If Temporary, the expiration date for the rule.
+            default: null
+          queryType:
+            type: string
+            description: The query type - Correlation (made of multiple subqueries),
+              Event (single query).
+            enum:
+            - events
+            - correlation
+            - uebafirstseen
+            - scheduled
+          s1ql:
+            type: string
+            description: The query.
+          status:
+            type: string
+            description: Current rule lifecycle status. Active rules send alerts when
+              triggered; Disabled rules do not.
+            enum:
+            - Draft
+            - Activating
+            - Active
+            - Disabling
+            - Disabled
+            - Deleted
+            - Deleting
+          scope:
+            type: string
+            description: The scope of the rule. Can be Global, Account, Site, or Group.
+            enum:
+            - site
+            - account
+            - group
+            - global
+          scopeId:
+            type: array
+            items:
+              type: string
+            description: The Account, Site, or Group ID, depending on the scope. Null
+              if the scope is Global.
+          editable:
+            type: boolean
+            description: True if the rule can be modified at this scope level.
+          createdAt:
+            type: string
+            description: The date the rule was created.
+          updatedAt:
+            type: string
+            description: The date the rule was last updated.
+          creator:
+            type: string
+            description: The email of the user that created the rule.
+          creatorId:
+            type: string
+            description: The ID of the user that created the rule.
+          updaterId:
+            type: string
+            description: The ID of the user that last updated the rule.
+          expired:
+            type: boolean
+            description: True if the Rule has expired.
+          reachedLimit:
+            type: boolean
+            description: True if the Rule reached the 5k/hour or 10k/day alert limit.
+              If the limit has been reached, the Rule is disabled.
+          statusReason:
+            type: string
+            description: The reason why the Rule has its current status.
+          networkQuarantine:
+            type: boolean
+            description: True if the network quarantine is on.
+          treatAsThreat:
+            type: string
+            description: The Treat as threat auto response - UNDEFINED/suspicious/malicious
+            enum:
+            - UNDEFINED
+            - Suspicious
+            - Malicious
+          queryLang:
+            type: string
+            description: The s1ql version query language of the rule. Can be 1.0 or
+              2.0.
+            enum:
+            - '1.0'
+            - '2.0'
+            default: '1.0'
+          correlationParams:
+            type: object
+            properties:
+              subQueries:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    subQuery:
+                      type: string
+                      description: A subquery
+                    matchesRequired:
+                      type: integer
+                      description: The number of times a subquery must match.
+                  required:
+                  - matchesRequired
+                  - subQuery
+                description: The list of subqueries for the custom detection rule.
+              entity:
+                type: string
+                description: A common entity used to group matching events.
+                enum:
+                - user
+                - process
+                - ip
+                - endpoint
+                - storyline
+                - custom
+                - none
+              matchInOrder:
+                type: boolean
+                description: Set to True to require subqueries to match in sequence
+                  to trigger an alert.
+              timeWindow:
+                type: object
+                properties:
+                  windowMinutes:
+                    type: integer
+                    description: The period of time in minutes in which subqueries
+                      must match to trigger an alert.
+                    enum:
+                    - 10
+                    - 30
+                    - 60
+                    - 240
+                    - 480
+                    - 720
+                description: The period of time in minutes in which subqueries must
+                  match to trigger an alert.
+                default:
+                  windowMinutes: 480
+              entitiesAndFields:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: string
+                description: Entity field aliases in Conjunctive Normal Form (AND
+                  of ORs). Each inner array is an OR-group; the outer array ANDs them
+                  together. The product of the group sizes (aliases in group 1 x aliases
+                  in group 2 x ...) must not be more than the configured limit, because
+                  the engine tracks at most that many entities per event. The live
+                  limit is in the /cloud-detection/rules/config response. Required
+                  when entity is Custom; must be omitted otherwise.
+            required:
+            - entity
+            - matchInOrder
+            description: Correlation params
+          scheduledParams:
+            type: object
+            properties:
+              query:
+                type: string
+                description: The PowerQuery to run
+              runIntervalMinutes:
+                type: integer
+                description: How often the alert is evaluated, in minutes. If used
+                  with coolOffSettings then it must be a denominator of renotifyMinutes.
+                  If the lookbackWindowMinutes is less than 60 (1 hour), the minimum
+                  is 1 minute. For a window between 1 and 360 (6 hours), 5 minutes.
+                  For a window between 360 (6 hours) and 10080 (7 days), 15 minutes.
+                  For a window between 10080 (7 days) and 43200 (30 days), 60 minutes.
+              lookbackWindowMinutes:
+                type: integer
+                description: Sets the evaluation lookback window in minutes. For example,
+                  set to 5 evaluates the alert over the past five minutes.
+              threshold:
+                type: object
+                properties:
+                  value:
+                    type: integer
+                    description: Defines the threshold value that in combination with
+                      operator and the query sets the threshold condition for an alert
+                      to be triggered. The default value is 0
+                    default: 0
+                  operator:
+                    type: string
+                    description: Defines the operator to use in combination with the
+                      query and thresholdValue to set the threshold condition for
+                      an alert to trigger The default value is Greater
+                    enum:
+                    - Greater
+                    - Less
+                    - Equal
+                    default: Greater
+                description: Receive an alert only if the number of rows in the result
+                  of the query matches the condition in the threshold
+                default:
+                  value: 0
+                  operator: Greater
+              alertPerRow:
+                type: boolean
+                description: If True, an alert will be generated for each row detected
+                  in the defined lookback window. If False (default), get one alert
+                  for all detected events matched in the defined lookback window.
+                default: null
+              disableStreaksLogic:
+                type: boolean
+                description: If True (default), disables streak counting logic for
+                  scheduled rules. If False, streak counting logic is enabled.
+                default: null
+            required:
+            - lookbackWindowMinutes
+            - query
+            - runIntervalMinutes
+            description: Scheduled params
+          uebaParams:
+            type: object
+            properties:
+              windowMinutes:
+                type: integer
+                description: Lookback window in minutes. Between 1 and 30 days.
+              entitiesAndFields:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: string
+                description: Entity key in Conjunctive Normal Form (AND of ORs). Each
+                  inner array is one key component's interchangeable aliases; the
+                  outer array ANDs the components together.
+            required:
+            - entitiesAndFields
+            - windowMinutes
+            description: Ueba params
+          templateRuleId:
+            type: string
+            description: Rule Id of template rule from which this rule was created.
+          coolOffSettings:
+            type: object
+            properties:
+              renotifyMinutes:
+                type: integer
+                description: The period of time in minutes in which alerts will be
+                  suppressed after the rule has been triggered. 0 disables cool-off.
+            required:
+            - renotifyMinutes
+            description: Receive only one alert and suppress additional alerts when
+              a rule is triggered multiple times during the cool-off period. Mitigation
+              actions set in the rule will not be applied to suppressed alerts.
+          hideLogic:
+            type: boolean
+            description: If true, this rule's logic is hidden from non-privileged
+              users.
+          entityMappings:
+            type: array
+            items:
+              type: object
+              properties:
+                columnName:
+                  type: string
+                  description: Unique case insensitive column name from PowerQuery
+                    table result (required for Scheduled rules)
+                identifierType:
+                  type: string
+                  description: Identifier type for UAIP asset lookup routing.
+            description: List of OCSF entity mappings to associate alerts with specific
+              assets.
+        required:
+        - expirationMode
+        - name
+        - severity
+        - status
+        description: Response data
+    description: Success

@@ -1,0 +1,438 @@
+uuid: 9b51e950-db8e-5dff-9b9c-31d75ade9775
+slug: '_sdl_v2_api_queries_post'
+name: Create Queries
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/sdl/v2/api/queries'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        accountIds: '{{inputs.accountIds}}'
+        distribution: '{{inputs.distribution}}'
+        endTime: '{{inputs.endTime}}'
+        facetValues: '{{inputs.facetValues}}'
+        log: '{{inputs.log}}'
+        plot: '{{inputs.plot}}'
+        pq: '{{inputs.pq}}'
+        queryPriority: '{{inputs.queryPriority}}'
+        queryType: '{{inputs.queryType}}'
+        scheme: '{{inputs.scheme}}'
+        startTime: '{{inputs.startTime}}'
+        tenant: '{{inputs.tenant}}'
+        topFacets: '{{inputs.topFacets}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Bad Request. The request body is malformed or contains invalid parameters.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized. Authentication is required or the provided credentials
+          are invalid.
+      error_403:
+        predicate: '{{response.status_code != 403}}'
+        fail: Forbidden. The authenticated user does not have permission to execute
+          this query.
+      error_429:
+        predicate: '{{response.status_code != 429}}'
+        fail: Too Many Requests. Rate limit exceeded for this user, account, or IP
+          address.
+      error_500:
+        predicate: '{{response.status_code != 500}}'
+        fail: Internal Server Error. An unexpected error occurred while processing
+          the request.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: "Returns a `QueryResult` containing the query identifier, status, and,\
+  \ if the query completes immediately, the full result set in the `data` field. If\
+  \ the query is still processing, the `data` field will be null. Use the returned\
+  \ query id to poll the query via GET `/v2/api/queries/{id}` until results are available.\
+  \ \nLog queries have a default limit of 1000 events but by paginating can be used\
+  \ to return essentially unlimited results. Power query results are subject to the\
+  \ standard power query limits on row count and memory consumption. A successful\
+  \ response will also include a `X-Dataset-Query-Forward-Tag` header that must be\
+  \ applied to the subsequent Poll and Delete requests for routing. \nAuthorization\
+  \ is accomplished via a Bearer service token in the request header. Service user\
+  \ tokens are not tied to a specific physical user. Learn more about service users\
+  \ here: https://community.sentinelone.com/s/article/000005290. \nDue to limitations,\
+  \ clicking \"Run on console\" may not work as expected, and the \"Body Sample\"\
+  \ may not be accurate because of polymorphism in the body. Refer to the \"Body Schema\"\
+  \ instead. Only one set of attributes like `log` or `pq` should be supplied, depending\
+  \ on the specified `queryType`."
+inputs:
+  scheme:
+    type: string
+    description: When set to `edr`, field names in queries are validated against the
+      EDR schema. Queries referencing unknown field names are rejected with HTTP 400.
+      When omitted, no schema validation is performed and any field name is allowed.
+    enum:
+    - edr
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  endTime:
+    type: string
+    description: Specifies end of the time range to query, using the same syntax as
+      the Start and End fields in the query UI. You can also supply a simple timestamp,
+      measured in seconds, milliseconds, or nanoseconds since 1/1/1970.The default
+      is to query the last 24 hours. If you specify startTime but not endTime, the
+      query covers 24 hours beginning at the startTime. If you specify endTime but
+      not startTime, the query covers 24 hours ending at the endTime.
+  tenant:
+    type: boolean
+    description: 'Controls the scope of the query across accessible data.
+
+
+      When set to `true`:
+
+      - Global admin users: Queries across global scope and all accounts
+
+      - Account-level users: Queries only within the authorized account
+
+      - Multi-account users: Queries across all authorized accounts
+
+      - Site-level users: Queries only within the authorized site
+
+      - Multi-site users: Queries across all authorized sites
+
+
+      Tenant must be set to `false` when specifying scope via `accountIds`.'
+  topFacets:
+    type: object
+    properties:
+      determineNumeric:
+        type: boolean
+        description: Whether to determine if a value is numeric.
+        default: false
+      filter:
+        type: string
+        description: "Specifies which events to match, using the same syntax as the\
+          \ Expression field in the query UI. \n\nTo match all events, omit this field\
+          \ or pass an empty string.\n\nField aliases (prefixed with `#`) are supported\
+          \ and expand into a disjunction over all canonical field names they cover.\
+          \ For example, `#cmdline = '/bin/bash'` matches events where any of the\
+          \ aliased command-line fields equals that value. The `!=` operator instead\
+          \ requires every aliased field to differ (a conjunction)."
+      numFacetsToReturn:
+        type: integer
+        description: 'Number of facets to return.
+
+
+          Before facets are returned, they are sorted by the number of events that
+          have them, and in the event of a tie alphabetically.'
+      numValuesToReturnPerFacet:
+        type: integer
+        description: The maximum number of values to return per facet for the request
+    description: Attributes specific to the `TOP_FACETS` query type.
+  accountIds:
+    type: array
+    items:
+      type: string
+    description: List of account ids to query. We do not currently support a corresponding
+      siteIds parameter. You can instead supply siteIds as part of the query filter,
+      like `site.id in ('1383518925981773650', '479559923400588751')`. You can also
+      restrict query space by supplying an appropriately scoped service token in the
+      auth header.
+  distribution:
+    type: object
+    properties:
+      facet:
+        type: string
+        description: 'The facet to query and aggregate on.
+
+
+          Currently all facet queries will be aggregated using the ''count'' function.'
+      filter:
+        type: string
+        description: "Specifies which events to match, using the same syntax as the\
+          \ Expression field in the query UI. \n\nTo match all events, omit this field\
+          \ or pass an empty string.\n\nField aliases (prefixed with `#`) are supported\
+          \ and expand into a disjunction over all canonical field names they cover.\
+          \ For example, `#cmdline = '/bin/bash'` matches events where any of the\
+          \ aliased command-line fields equals that value. The `!=` operator instead\
+          \ requires every aliased field to differ (a conjunction)."
+    description: Attributes specific to the `DISTRIBUTION` query type.
+  log:
+    type: object
+    properties:
+      ascending:
+        type: boolean
+        description: If true, results are returned in order from oldest to newest;
+          if false, results are returned in order from newest to oldest.
+        default: false
+      cursor:
+        type: string
+        description: 'Cursor returned by a previous `LOG` query, used for pagination.
+          When provided, the query returns events starting with this cursor (inclusive)
+          up to the specified `limit`. This allows retrieval of additional results
+          beyond the default maximum per request (typically 5000). To page further,
+          take the `cursor` value from the last event in the previous response and
+          launch a new query with the same time range and this `cursor`; the API will
+          resume where it left off. Note: The boundary event (the event whose cursor
+          you''re using) will be included in the next query''s results, so it will
+          appear as a duplicate across consecutive API calls. To avoid duplicates,
+          you can skip the first event in each paginated response after the initial
+          query.
+
+
+          If not provided, a request with `ascending=true` starts at the beginning
+          of the specified time range, and with `ascending=false` starts at the end.'
+      filter:
+        type: string
+        description: "Specifies which events to match, using the same syntax as the\
+          \ Expression field in the query UI. \n\nTo match all events, omit this field\
+          \ or pass an empty string.\n\nField aliases (prefixed with `#`) are supported\
+          \ and expand into a disjunction over all canonical field names they cover.\
+          \ For example, `#cmdline = '/bin/bash'` matches events where any of the\
+          \ aliased command-line fields equals that value. The `!=` operator instead\
+          \ requires every aliased field to differ (a conjunction)."
+        default: ''
+      limit:
+        type: integer
+        description: Limits the number of returned log events.
+        default: 1000
+      exclusive:
+        type: boolean
+        description: When set to `true` and a `cursor` is provided, pagination continues
+          from the event represented by the cursor exclusively (the cursor event will
+          NOT be included). This provides standard pagination behavior without duplicates.
+          This parameter overrides the default inclusive behavior.
+        default: false
+    description: Attributes specific to the `LOG` query type.
+  startTime:
+    type: string
+    description: Specifies start of the time range to query, using the same syntax
+      as the Start and End fields in the query UI.You can also supply a simple timestamp,
+      measured in seconds, milliseconds, or nanoseconds since 1/1/1970.The default
+      is to query the last 24 hours. If you specify startTime but not endTime, the
+      query covers 24 hours beginning at the startTime. If you specify endTime but
+      not startTime, the query covers 24 hours ending at the endTime.
+  facetValues:
+    type: object
+    properties:
+      determineNumeric:
+        type: boolean
+        description: Whether to determine if a value is numeric.
+        default: false
+      filter:
+        type: string
+        description: "Specifies which events to match, using the same syntax as the\
+          \ Expression field in the query UI. \n\nTo match all events, omit this field\
+          \ or pass an empty string.\n\nField aliases (prefixed with `#`) are supported\
+          \ and expand into a disjunction over all canonical field names they cover.\
+          \ For example, `#cmdline = '/bin/bash'` matches events where any of the\
+          \ aliased command-line fields equals that value. The `!=` operator instead\
+          \ requires every aliased field to differ (a conjunction)."
+      maxValues:
+        type: integer
+        description: The maximum number of unique values to return per facet for the
+          request.
+        default: 100
+      name:
+        type: string
+        description: Specifies the facet name to get values for.
+    description: Attributes specific to the `FACET_VALUES` query type.
+  queryPriority:
+    type: string
+    description: 'Specifies the execution priority for this query; defaults to "LOW".
+      Use "LOW" for background operations where a delay of a second or so is acceptable.LOW-priority
+      queries have more generous rate limits.* `HIGH`: Standard query priority for
+      API requests, with tighter rate limits.* `LOW`: Use low priority for scripted
+      queries where a slight delay is acceptable; low priority queries are subject
+      to less rate limiting.'
+    enum:
+    - HIGH
+    - LOW
+    default: LOW
+  pq:
+    type: object
+    properties:
+      frequency:
+        type: string
+        description: "Clients should set frequency to `HIGH` if the query with the\
+          \ same expression will be repeated. \n\nDefaults to `LOW`."
+        enum:
+        - LOW
+        - HIGH
+        default: LOW
+      query:
+        type: string
+        description: 'The power query to execute.
+
+
+          Field aliases (prefixed with `#`) are supported in the query''s leading
+          filter (everything before the first pipe) and expand into a disjunction
+          over all canonical field names they cover. For example, `#cmdline = ''/bin/bash''
+          | group count() by host` matches events where any of the aliased command-line
+          fields equals that value. The `!=` operator instead requires every aliased
+          field to differ (a conjunction). Aliases in later pipeline commands are
+          not expanded.'
+      resultType:
+        type: string
+        description: Specifies the result type of a power query.
+        enum:
+        - TABLE
+        - PLOT
+        default: TABLE
+    required:
+    - query
+    - resultType
+    description: Attributes specific to the `PQ` query type.
+  queryType:
+    type: string
+    description: 'Specifies the type of query to launch.* `LOG`: Fetch a time-ordered
+      list of matching events, with support for pagination.* `TOP_FACETS`: Find the
+      top facets & facet values for all matching events.* `FACET_VALUES`: Find the
+      top values for a particular facet across all matching events.* `PLOT`: Generate
+      a plot of a numeric function applied to all matching events. The plot can be
+      broken down by values of a certain facet, if needed.* `PQ`: Fetch data using
+      Power Query language. Results can be returned as a table or a plot.* `DISTRIBUTION`:
+      Map, as a histogram, the distribution of values for a facet.'
+    enum:
+    - LOG
+    - TOP_FACETS
+    - FACET_VALUES
+    - PLOT
+    - PQ
+    - DISTRIBUTION
+  plot:
+    type: object
+    properties:
+      autoAggregate:
+        type: boolean
+        description: 'When set to true, no matter what function is specified in the
+          expression, the result of this query will include a list of plots with the
+          following aggregations applied:
+
+          - count
+
+          - mean
+
+          - min
+
+          - max
+
+          - sum
+
+          - sumPerSecond
+
+          - countPerSecond
+
+          - p10
+
+          - p50
+
+          - p90
+
+          - p95
+
+          - p99
+
+          - p999'
+        default: false
+      autoAlign:
+        type: boolean
+        description: Based on a the time range and a target number of slices, auto
+          aligns the slices to a meaningful boundary.
+        default: false
+      breakdownFacet:
+        type: string
+        description: Additional facet to breakdown by.
+      expression:
+        type: string
+        description: Expression to query and filter numeric data. Field aliases (prefixed
+          with `#`) are supported inside the expression's `where` clause and expand
+          the same way as in the top-level filter (a disjunction, or a conjunction
+          for `!=`).
+      filter:
+        type: string
+        description: "Specifies which events to match, using the same syntax as the\
+          \ Expression field in the query UI. \n\nTo match all events, omit this field\
+          \ or pass an empty string.\n\nField aliases (prefixed with `#`) are supported\
+          \ and expand into a disjunction over all canonical field names they cover.\
+          \ For example, `#cmdline = '/bin/bash'` matches events where any of the\
+          \ aliased command-line fields equals that value. The `!=` operator instead\
+          \ requires every aliased field to differ (a conjunction)."
+      frequency:
+        type: string
+        description: "Clients should set frequency to `HIGH` if the query with the\
+          \ same expression will be repeated. \n\nDefaults to `LOW`."
+        enum:
+        - LOW
+        - HIGH
+        default: LOW
+      sliceWidth:
+        type: string
+        description: 'Width in duration the time range will be divided into. Cannot
+          be used together with `slices`.
+
+
+          Supported units: `seconds` or `s`, `minutes` or `m`, `hours` or `h`, `days`
+          or `d`, `weeks` or `w`.'
+      slices:
+        type: integer
+        description: Number of parts the time range will be divided into. Cannot be
+          used together with `sliceWidth`.
+    description: Attributes specific to the `PLOT` query type.
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      id:
+        type: string
+        description: The unique query identifier. Used in Poll requests to fetch query
+          status and results.
+      stepsCompleted:
+        type: integer
+        description: Number of steps completed in this long running query.
+      stepsTotal:
+        type: integer
+        description: Total number of steps to execute.
+      resolvedTimeRange:
+        type: object
+        properties:
+          end:
+            type: integer
+          start:
+            type: integer
+        description: Start time and end time for the query in nanoseconds.
+      data:
+        type: object
+        description: 'Data object containing results of the query.
+
+
+          Note that `PQ` queries may return either `PlotResultData` or `TableResultData`
+          depending on the `resultType` specified in the request.'
+      cpuUsage:
+        type: integer
+        description: cost of the query execution measured in CPU usage in nanoseconds
+      error:
+        type: object
+        properties:
+          message:
+            type: string
+            description: Basic error message
+          details:
+            type: object
+            description: Additional error details
+        description: Error if the query was not executed. If not null, will always
+          have `message` key which will provide the basic error message and an optional
+          `details` field providing further information. If the query execution was
+          successful, the error field will be null.
+    description: Provides information about current query status and results.

@@ -1,0 +1,480 @@
+uuid: 62ebeb09-533e-5b58-99dc-6d0a90be360e
+slug: '_web_api_users_get'
+name: Get Users
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/users'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        skip: '{{inputs.skip}}'
+        limit: '{{inputs.limit}}'
+        cursor: '{{inputs.cursor}}'
+        countOnly: '{{inputs.countOnly}}'
+        skipCount: '{{inputs.skipCount}}'
+        sortBy: '{{inputs.sortBy}}'
+        sortOrder: '{{inputs.sortOrder}}'
+        siteIds: '{{inputs.siteIds}}'
+        accountIds: '{{inputs.accountIds}}'
+        source: '{{inputs.source}}'
+        sources: '{{inputs.sources}}'
+        email: '{{inputs.email}}'
+        email__contains: '{{inputs.email__contains}}'
+        emailReadOnly: '{{inputs.emailReadOnly}}'
+        fullName: '{{inputs.fullName}}'
+        fullName__contains: '{{inputs.fullName__contains}}'
+        fullNameReadOnly: '{{inputs.fullNameReadOnly}}'
+        firstLogin: '{{inputs.firstLogin}}'
+        lastLogin: '{{inputs.lastLogin}}'
+        dateJoined: '{{inputs.dateJoined}}'
+        groupsReadOnly: '{{inputs.groupsReadOnly}}'
+        twoFaEnabled: '{{inputs.twoFaEnabled}}'
+        primaryTwoFaMethod: '{{inputs.primaryTwoFaMethod}}'
+        emailVerified: '{{inputs.emailVerified}}'
+        query: '{{inputs.query}}'
+        ids: '{{inputs.ids}}'
+        roleIds: '{{inputs.roleIds}}'
+        twoFaStatus: '{{inputs.twoFaStatus}}'
+        twoFaStatuses: '{{inputs.twoFaStatuses}}'
+        canGenerateApiToken: '{{inputs.canGenerateApiToken}}'
+        hasValidApiToken: '{{inputs.hasValidApiToken}}'
+        lastActivation__lt: '{{inputs.lastActivation__lt}}'
+        lastActivation__lte: '{{inputs.lastActivation__lte}}'
+        lastActivation__gt: '{{inputs.lastActivation__gt}}'
+        lastActivation__gte: '{{inputs.lastActivation__gte}}'
+        lastActivation__between: '{{inputs.lastActivation__between}}'
+        apiTokenExpiresAt__lt: '{{inputs.apiTokenExpiresAt__lt}}'
+        apiTokenExpiresAt__lte: '{{inputs.apiTokenExpiresAt__lte}}'
+        apiTokenExpiresAt__gt: '{{inputs.apiTokenExpiresAt__gt}}'
+        apiTokenExpiresAt__gte: '{{inputs.apiTokenExpiresAt__gte}}'
+        apiTokenExpiresAt__between: '{{inputs.apiTokenExpiresAt__between}}'
+        createdAt__lt: '{{inputs.createdAt__lt}}'
+        createdAt__lte: '{{inputs.createdAt__lte}}'
+        createdAt__gt: '{{inputs.createdAt__gt}}'
+        createdAt__gte: '{{inputs.createdAt__gte}}'
+        createdAt__between: '{{inputs.createdAt__between}}'
+    asserts:
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Get a list of users.
+inputs:
+  lastActivation__gte:
+    type: string
+    description: 'User was last active after or at this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  sources:
+    type: array
+    items:
+      type: string
+      enum:
+      - mgmt
+      - sso_saml
+      - active_directory
+      - global
+    description: 'Source in. Example: "mgmt".'
+  cursor:
+    type: string
+    description: 'Cursor position returned by the last request. Use to iterate over
+      more than 1000 items. Example: "YWdlbnRfaWQ6NTgwMjkzODE=".'
+    default: null
+  sortOrder:
+    type: string
+    description: 'Sort direction. Example: "asc".'
+    enum:
+    - asc
+    - desc
+    default: null
+  ids:
+    type: array
+    items:
+      type: string
+    description: 'List of user IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  createdAt__lt:
+    type: string
+    description: 'User was created before this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  accountIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Account IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  query:
+    type: string
+    description: 'Full text search for fields: full_name, email, description'
+  apiTokenExpiresAt__gt:
+    type: string
+    description: 'API token expires after this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  apiTokenExpiresAt__lt:
+    type: string
+    description: 'API token expires before this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  apiTokenExpiresAt__gte:
+    type: string
+    description: 'API token expires after or at this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  twoFaStatuses:
+    type: array
+    items:
+      type: string
+    description: Two fa status in
+  roleIds:
+    type: array
+    items:
+      type: string
+    description: 'List of rbac roles to filter by. Example: "225494730938493804,225494730938493915".'
+  apiTokenExpiresAt__between:
+    type: string
+    description: 'Date range for when the API token expires (format: <from_timestamp>-<to_timestamp>,
+      inclusive). Example: "1514978890136-1514978650130".'
+  hostname:
+    type: string
+    description: Base URL for the API
+  createdAt__between:
+    type: string
+    description: 'Date range for when the user was created (format: <from_timestamp>-<to_timestamp>,
+      inclusive). Example: "1514978890136-1514978650130".'
+  primaryTwoFaMethod:
+    type: string
+    description: Primary two fa method
+  createdAt__gt:
+    type: string
+    description: 'User was created after this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  countOnly:
+    type: boolean
+    description: If true, only total number of items will be returned, without any
+      of the actual objects.
+    default: false
+  siteIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Site IDs to filter by. Example: "225494730938493804,225494730938493915".'
+  twoFaEnabled:
+    type: boolean
+    description: Two fa enabled
+  dateJoined:
+    type: string
+    description: 'Date joined. Example: "2018-02-27T04:49:26.257525Z".'
+  fullName:
+    type: string
+    description: Full name
+  lastActivation__lt:
+    type: string
+    description: 'User was last active before this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  limit:
+    type: integer
+    description: 'Limit number of returned items (1-1000). Example: "10".'
+    default: 10
+  fullName__contains:
+    type: array
+    items:
+      type: string
+    description: Match full name partially (substring)
+  apiTokenExpiresAt__lte:
+    type: string
+    description: 'API token expires before or at this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  hasValidApiToken:
+    type: boolean
+    description: Has valid api token
+  lastActivation__lte:
+    type: string
+    description: 'User was last active before or at this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  source:
+    type: string
+    description: 'User Source. Example: "mgmt".'
+    enum:
+    - mgmt
+    - sso_saml
+    - active_directory
+    - global
+  firstLogin:
+    type: string
+    description: 'First login. Example: "2018-02-27T04:49:26.257525Z".'
+  emailReadOnly:
+    type: boolean
+    description: True if email cannot be changed
+  canGenerateApiToken:
+    type: boolean
+    description: Can generate api token
+  createdAt__gte:
+    type: string
+    description: 'User was created after or at this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  email:
+    type: string
+    description: 'Email. Example: "admin@sentinelone.com".'
+    pattern: (^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-011\013\014\016-\177])*")@(?:[A-Z0-9](?:[A-Z0-9(-|_).]{0,259}[A-Z0-9])?)$
+  twoFaStatus:
+    type: string
+    description: Two fa status
+  sortBy:
+    type: string
+    description: 'The column to sort the results by. Example: "id".'
+    enum:
+    - id
+    - createdAt
+    - fullName
+    - firstLogin
+    - lastLogin
+    - source
+    - email
+    - emailVerified
+    - dateJoined
+    - twoFaEnabled
+    - twoFaStatus
+    - apiTokenCreatedAt
+    - apiTokenExpiresAt
+    - canGenerateApiToken
+    default: null
+  lastLogin:
+    type: string
+    description: 'Last login. Example: "2018-02-27T04:49:26.257525Z".'
+  createdAt__lte:
+    type: string
+    description: 'User was created before or at this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  skipCount:
+    type: boolean
+    description: If true, total number of items will not be calculated, which speeds
+      up execution time.
+    default: null
+  fullNameReadOnly:
+    type: boolean
+    description: True if full name cannot be changed
+  email__contains:
+    type: array
+    items:
+      type: string
+    description: Match email partially (substring)
+  emailVerified:
+    type: boolean
+    description: Return only verified/unverified users
+  skip:
+    type: integer
+    description: 'Skip first number of items (0-1000). To iterate over more than 1000
+      items,  use "cursor". Example: "150".'
+    default: null
+  lastActivation__gt:
+    type: string
+    description: 'User was last active after this timestamp. Example: "2018-02-27T04:49:26.257525Z".'
+  lastActivation__between:
+    type: string
+    description: 'Date range for when the user was last active (format: <from_timestamp>-<to_timestamp>,
+      inclusive). Example: "1514978890136-1514978650130".'
+  groupsReadOnly:
+    type: boolean
+    description: '[DEPRECATED] True if permissions cannot be changed'
+outputs:
+  result:
+    type: object
+    properties:
+      pagination:
+        type: object
+        properties:
+          nextCursor:
+            type: string
+            description: Pass this value as "cursor" on your next request, to get
+              the next page of results (Will be "null" when last page reached)
+            default: null
+          totalItems:
+            type: integer
+            description: Total number of items found matching your query
+        required:
+        - totalItems
+        description: Pagination information
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Id
+            source:
+              type: string
+              description: Source
+            globalUserId:
+              type: string
+              description: Global user id
+              default: null
+            globalOrganizationId:
+              type: string
+              description: Global organization id
+              default: null
+            email:
+              type: string
+              description: Email
+              pattern: (^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-011\013\014\016-\177])*")@(?:[A-Z0-9](?:[A-Z0-9(-|_).]{0,259}[A-Z0-9])?)$
+              default: null
+            emailReadOnly:
+              type: boolean
+              description: True if email cannot be modified
+            fullName:
+              type: string
+              description: Full name
+              default: null
+            fullNameReadOnly:
+              type: boolean
+              description: True if full name cannot be modified
+            firstLogin:
+              type: string
+              description: First login
+            lastLogin:
+              type: string
+              description: Last login
+            dateJoined:
+              type: string
+              description: Date joined
+            lowestRole:
+              type: string
+              description: '[DEPRECATED] in RBAC there''s no ''lowest'' role. Returns
+                Admin if user has admin permission on all sites, otherwise a different
+                role.'
+            groupsReadOnly:
+              type: boolean
+              description: '[Deprecated]'
+            twoFaEnabled:
+              type: boolean
+              description: Two fa enabled
+            primaryTwoFaMethod:
+              type: string
+              description: Primary two fa method
+            emailVerified:
+              type: boolean
+              description: True if user verification completed successfully
+            scope:
+              type: string
+              description: User Scope
+              enum:
+              - tenant
+              - account
+              - site
+            apiToken:
+              type: object
+              properties:
+                createdAt:
+                  type: string
+                  description: Created at
+                expiresAt:
+                  type: string
+                  description: Expires at
+              description: Api token
+            twoFaEnabledReadOnly:
+              type: boolean
+              description: True if two fa option cannot be modified
+            agreedEula:
+              type: boolean
+              description: True if EULA was agreed for user's sites
+            agreementUrl:
+              type: string
+              description: Link to EULA agreement if it was not agreed yet
+            allowRemoteShell:
+              type: boolean
+              description: '[DEPRECATED] Unused field. The user''s role will determine
+                if it is allowed to use remote_shell.'
+            twoFaConfigured:
+              type: boolean
+              description: User 2FA Auth is configured
+            scopeRoles:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Scope ID
+                  roles:
+                    type: array
+                    items:
+                      type: string
+                    description: '[DEPRECATED] List containing the desired role name
+                      in this scope. Use role_id or role_name instead.'
+                  roleName:
+                    type: string
+                    description: '[DEPRECATED] Name of the role, will work only for
+                      predefined roles'
+                  roleId:
+                    type: string
+                    description: ID of the wanted role
+                  name:
+                    type: string
+                    description: Scope name
+                  accountName:
+                    type: string
+                    description: Scope name
+                required:
+                - accountName
+                - name
+              description: Roles of the scope user
+            isSystem:
+              type: boolean
+            tenantRoles:
+              type: array
+              items:
+                type: string
+              description: '[DEPRECATED] Role ids for the tenant user. Using scopeRoles
+                is more consistent.'
+              default: []
+            siteRoles:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Site ID
+                  name:
+                    type: string
+                    description: Site name
+                  roles:
+                    type: array
+                    items:
+                      type: string
+                    description: '[DEPRECATED] List containing the desired role name
+                      in this scope. Use role_id instead.'
+                  roleName:
+                    type: string
+                    description: '[DEPRECATED] Name of the role, will work only for
+                      predefined roles'
+                  roleId:
+                    type: string
+                    description: ID of the wanted role
+                required:
+                - id
+                - name
+              description: '[DEPRECATED] Role and site ids for the user. Using scopeRoles
+                is more consistent.'
+            canGenerateApiToken:
+              type: boolean
+              description: Can generate api token
+            twoFaStatus:
+              type: string
+              description: State of 2FA setup
+          required:
+          - scope
+        description: Response data
+    required:
+    - pagination
+    description: List of users retrieved successfully.

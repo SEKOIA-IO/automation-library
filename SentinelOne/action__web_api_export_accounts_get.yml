@@ -1,0 +1,145 @@
+uuid: 785407f7-0815-5d5d-aea4-9020a4553a7c
+slug: '_web_api_export_accounts_get'
+name: Get Export Accounts
+pipeline:
+- name: http
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/export/accounts'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        ids: '{{inputs.ids}}'
+        accountIds: '{{inputs.accountIds}}'
+        query: '{{inputs.query}}'
+        name: '{{inputs.name}}'
+        isDefault: '{{inputs.isDefault}}'
+        accountType: '{{inputs.accountType}}'
+        expiration: '{{inputs.expiration}}'
+        totalLicenses: '{{inputs.totalLicenses}}'
+        activeLicenses: '{{inputs.activeLicenses}}'
+        sku: '{{inputs.sku}}'
+        module: '{{inputs.module}}'
+        createdAt: '{{inputs.createdAt}}'
+        updatedAt: '{{inputs.updatedAt}}'
+        state: '{{inputs.state}}'
+        states: '{{inputs.states}}'
+        statesNin: '{{inputs.statesNin}}'
+        features: '{{inputs.features}}'
+        usageType: '{{inputs.usageType}}'
+        billingMode: '{{inputs.billingMode}}'
+        name__contains: '{{inputs.name__contains}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+description: Export Accounts data to a CSV, for Accounts that match the filter.
+inputs:
+  activeLicenses:
+    type: integer
+    description: Active licenses
+  isDefault:
+    type: boolean
+    description: Is default
+  ids:
+    type: array
+    items:
+      type: string
+    description: 'A list of Account IDs. Example: "225494730938493804,225494730938493915".'
+  accountIds:
+    type: array
+    items:
+      type: string
+    description: 'List of Account IDs to search for. Example: "225494730938493804,225494730938493915".'
+  query:
+    type: string
+    description: 'Full text search for fields: name. (Note: on single-Account Consoles,
+      the Account name will not be matched)'
+  state:
+    type: string
+    description: 'Account state. Example: "active".'
+    enum:
+    - active
+    - expired
+    - deleted
+  accountType:
+    type: string
+    description: 'Account type. Example: "Trial".'
+    enum:
+    - Trial
+    - Paid
+  hostname:
+    type: string
+    description: Base URL for the API
+  createdAt:
+    type: string
+    description: 'Timestamp of Account creation. Example: "2018-02-27T04:49:26.257525Z".'
+  expiration:
+    type: string
+    description: 'Expiration. Example: "2018-02-27T04:49:26.257525Z".'
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  updatedAt:
+    type: string
+    description: 'Timestamp of last update. Example: "2018-02-27T04:49:26.257525Z".'
+  billingMode:
+    type: string
+    description: 'Billing mode. Example: "subscription".'
+    enum:
+    - subscription
+    - consumption
+  name:
+    type: string
+    description: 'Name. Example: "My Account".'
+  totalLicenses:
+    type: integer
+    description: Total licenses
+  features:
+    type: array
+    items:
+      type: string
+      enum:
+      - firewall-control
+      - device-control
+      - ioc
+    description: 'Filter the list of Accounts for those that support this feature.
+      Example: "firewall-control".'
+  sku:
+    type: string
+    description: 'Sku. Example: "core".'
+  statesNin:
+    type: array
+    items:
+      type: string
+    description: List of states to not filter
+  usageType:
+    type: string
+    description: 'Usage type. Example: "customer".'
+    enum:
+    - customer
+    - mssp
+    - ir
+  name__contains:
+    type: array
+    items:
+      type: string
+    description: Free-text filter by account name (supports multiple values)
+  states:
+    type: array
+    items:
+      type: string
+    description: Filter by state, such as active or expired.
+  module:
+    type: string
+    description: 'Module. Example: "star,rso".'

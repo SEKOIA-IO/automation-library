@@ -1,0 +1,105 @@
+uuid: b1a7d64b-f7c7-555b-9b11-775eb602e577
+slug: '_web_api_agent-artifacts_token_get'
+name: Get Agent Artifacts Token
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.hostname}}/web/api/v2.1/agent-artifacts/token'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      params:
+        scope_level: '{{inputs.scope_level}}'
+        scope_id: '{{inputs.scope_id}}'
+        limit: '{{inputs.limit}}'
+        offset: '{{inputs.offset}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid request
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized
+      error_500:
+        predicate: '{{response.status_code != 500}}'
+        fail: Internal error
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Lists valid access tokens for the S1 Agent Artifacts Repository, with
+  the option to filter by scope
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  limit:
+    type: integer
+    description: 'The number of tokens to return, for example: ''10''. Optional'
+  offset:
+    type: integer
+    description: 'The number of tokens to skip before starting to collect the result,
+      for example: ''2''. Optional'
+  scope_level:
+    type: string
+    description: 'Scope level to list the tokens for. Possible values: ''site'', ''account'',
+      ''tenant'''
+  scope_id:
+    type: integer
+    description: 'Scope id to list the tokens for, example: ''983604236220743370'''
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      data:
+        type: array
+        items:
+          type: object
+          properties:
+            created_at:
+              type: string
+              description: Created At timestamp of the token
+            description:
+              type: string
+              description: Token description
+            id:
+              type: integer
+              description: Access token ID
+            scope_id:
+              type: string
+              description: Scope ID
+            scope_level:
+              type: string
+              description: Scope level of the token
+            title:
+              type: string
+              description: Token name
+            token:
+              type: string
+              description: Access token - seen only once
+            username:
+              type: string
+              description: Username of the token
+        description: List of existing tokens
+      pagination:
+        type: object
+        properties:
+          next_offset:
+            type: integer
+          total:
+            type: integer
+        description: Pagination information
+    description: OK

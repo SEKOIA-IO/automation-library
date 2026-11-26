@@ -1,0 +1,236 @@
+uuid: 3f3c2841-1949-5291-81ae-872653616b47
+slug: '_web_api_firewall-control_{firewall_rule_category}_copy-rules_post'
+name: Create Firewall Control By Firewall Rule Category Copy Rules
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/firewall-control/{{inputs.firewall_rule_category}}/copy-rules'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+      json:
+        filter: '{{inputs.filter}}'
+        data: '{{inputs.data}}'
+    asserts:
+      error_400:
+        predicate: '{{response.status_code != 400}}'
+        fail: Invalid user input received. See error details for further information.
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: Copy a set of rules to other scopes. <br>In the filter of the body, enter
+  the properties to define the source. In the data field of the body, define the targets
+  by ID. To get a scope ID, run 'accounts', 'sites', or 'groups'.
+inputs:
+  filter:
+    type: object
+    properties:
+      accountIds:
+        type: array
+        items:
+          type: string
+        description: List of Account IDs to filter by
+      siteIds:
+        type: array
+        items:
+          type: string
+        description: List of Site IDs to filter by
+      groupIds:
+        type: array
+        items:
+          type: string
+        description: List of Group IDs to filter by
+      tenant:
+        type: boolean
+        description: Indicates a tenant scope request
+      query:
+        type: string
+        description: Free text search on name, tag, application, protocol
+      scopes:
+        type: array
+        items:
+          type: string
+          enum:
+          - site
+          - group
+          - global
+          - account
+        description: Return only firewall rules in this scope
+      applications:
+        type: array
+        items:
+          type: string
+        description: Return firewall rules with the filtered firewall class.
+      name:
+        type: string
+        description: Return firewall rules with the filtered name.
+      protocols:
+        type: array
+        items:
+          type: string
+        description: Return firewall rules with the filtered protocols.
+      osTypes:
+        type: array
+        items:
+          type: string
+          description: OS type
+          enum:
+          - windows
+          - linux
+          - windows_legacy
+          - macos
+        description: Return firewall rules with the filtered os_type.
+      directions:
+        type: array
+        items:
+          type: string
+          enum:
+          - any
+          - inbound
+          - outbound
+        description: Return firewall rules with the filtered directions.
+      actions:
+        type: array
+        items:
+          type: string
+          enum:
+          - Allow
+          - Block
+        description: Return firewall rules with the filtered action.
+      statuses:
+        type: array
+        items:
+          type: string
+          enum:
+          - Enabled
+          - Disabled
+        description: Return firewall rules with the filtered status.
+      createdAt__lt:
+        type: string
+        description: Return firewall rules created before this timestamp.
+      createdAt__gt:
+        type: string
+        description: Return firewall rules created after this timestamp.
+      createdAt__lte:
+        type: string
+        description: Return firewall rules created before or at this timestamp.
+      createdAt__gte:
+        type: string
+        description: Return firewall rules created after or at this timestamp.
+      createdAt__between:
+        type: string
+        description: Return firewall rules created within this range (inclusive)
+      ids:
+        type: array
+        items:
+          type: string
+        description: List of ids to filter by
+      locationIds:
+        type: array
+        items:
+          type: string
+        description: Filter by associated locations
+      tagIds:
+        type: array
+        items:
+          type: string
+        description: Filter by associated tags
+      name__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the Rule name (supports multiple values)
+      tagName__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by the Tag name (supports multiple values)
+      application__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by application (supports multiple values)
+      protocol__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by protocol (supports multiple values)
+      service__contains:
+        type: array
+        items:
+          type: string
+        description: Free-text filter by service (supports multiple values)
+    description: Filter
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  data:
+    type: array
+    items:
+      type: object
+      properties:
+        accountIds:
+          type: array
+          items:
+            type: string
+          description: List of Account IDs to filter by
+        siteIds:
+          type: array
+          items:
+            type: string
+          description: List of Site IDs to filter by
+        groupIds:
+          type: array
+          items:
+            type: string
+          description: '[DEPRECATED] Target group(s)'
+        tenant:
+          type: boolean
+          description: Indicates a tenant scope request
+        accountId:
+          type: string
+          description: Target account
+        siteId:
+          type: string
+          description: Target site
+        groupId:
+          type: string
+          description: Target group
+    description: Data
+  firewall_rule_category:
+    type: string
+    description: To affect Network Quarantine use network-quarantine
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          affected:
+            type: integer
+            description: Number of entities affected by the requested operation
+        description: Response data
+    description: Success

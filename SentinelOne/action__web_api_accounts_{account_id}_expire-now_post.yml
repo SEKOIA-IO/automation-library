@@ -1,0 +1,313 @@
+uuid: b6a5428c-6eec-5ab6-930d-07935dbd16e5
+slug: '_web_api_accounts_{account_id}_expire-now_post'
+name: Create Accounts By Account ID Expire Now
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.hostname}}/web/api/v2.1/accounts/{{inputs.account_id}}/expire-now'
+      headers:
+        Authorization: '{{inputs.api_token}}'
+    asserts:
+      error_404:
+        predicate: '{{response.status_code != 404}}'
+        fail: Account not found
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: Unauthorized access - please sign in and retry.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: 'Expire an Account immediately. The user must have Global access or Account
+  acces with permissions for the Account. Best practice: Consult with Support before
+  you use this command.'
+inputs:
+  api_token:
+    type: string
+    description: The value of the Authorization header
+    secret: true
+  account_id:
+    type: string
+    description: 'Account ID. You can get the ID from the Get accounts command. Example:
+      "225494730938493804".'
+  hostname:
+    type: string
+    description: Base URL for the API
+outputs:
+  result:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          type: object
+        description: Errors
+      data:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Account ID
+          name:
+            type: string
+            description: Name
+          isDefault:
+            type: boolean
+            description: Is default
+          accountType:
+            type: string
+            description: Account type
+          expiration:
+            type: string
+            description: Expiration
+          salesforceId:
+            type: string
+          externalId:
+            type: string
+            description: ID of CRM external system
+          state:
+            type: string
+            description: Account state
+            enum:
+            - active
+            - expired
+            - deleted
+          createdAt:
+            type: string
+            description: Timestamp of Account creation
+          updatedAt:
+            type: string
+            description: Timestamp of last update
+          unlimitedExpiration:
+            type: string
+            description: The Account does not expire
+          activeAgents:
+            type: integer
+            description: Total Agents in the Account
+          skus:
+            type: array
+            items:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: The suite of product features active for this account
+                  enum:
+                  - Core
+                  - Control
+                  - Complete
+                totalLicenses:
+                  type: integer
+                  description: Number of licenses for this specific SKU. Applicable
+                    only if unlimited is False
+                unlimited:
+                  type: boolean
+                  description: True if this is an unlimited SKU.
+                agentsInSku:
+                  type: integer
+                  description: Total agents commissioned in this SKU.
+            description: '[DEPRECATED] The list of SKUs for the Account.'
+          licenses:
+            type: object
+            properties:
+              bundles:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    displayName:
+                      type: string
+                      description: The Bundle display name
+                    majorVersion:
+                      type: integer
+                      description: The Bundle major version
+                    minorVersion:
+                      type: integer
+                      description: The Bundle minor version
+                    name:
+                      type: string
+                      description: The Bundle internal api name
+                    surfaces:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          count:
+                            type: integer
+                            description: The Surface count. -1 indicates unlimited
+                              count
+                          name:
+                            type: string
+                            description: The Surface name.
+                      description: The Surfaces in the Bundle
+                    totalSurfaces:
+                      type: integer
+                      description: The total number of Surfaces in this Bundle. -1
+                        indicates unlimited count.
+                description: The licenses Bundles
+              modules:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    displayName:
+                      type: string
+                      description: The Add-on display name
+                    majorVersion:
+                      type: integer
+                      description: The Add-on major version
+                    name:
+                      type: string
+                      description: The Add-on internal api name
+                description: The licenses Add-ons
+              settings:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    displayName:
+                      type: string
+                      description: '[DEPRECATED] The Setting display name'
+                    settingGroup:
+                      type: string
+                      description: '[DEPRECATED] The Setting group name'
+                    settingGroupDisplayName:
+                      type: string
+                      description: The Setting group display name
+                    groupName:
+                      type: string
+                      description: The Setting group name
+                    setting:
+                      type: string
+                      description: The Setting display name
+                description: The licenses Settings
+            description: The account licenses.
+          totalLicenses:
+            type: integer
+            description: The total number of licenses on all Surfaces for all Bundles.
+          usageType:
+            type: string
+            description: Usage type
+            enum:
+            - customer
+            - mssp
+            - ir
+          billingMode:
+            type: string
+            description: Billing mode
+            enum:
+            - subscription
+            - consumption
+          irFields:
+            type: object
+            properties:
+              companyName:
+                type: string
+                description: The customer's company name
+              contactFirstName:
+                type: string
+                description: First name of the customer contact
+              contactLastName:
+                type: string
+                description: Last name of the customer contact
+              contactEmail:
+                type: string
+                description: Business email of the customer contact. Must not match
+                  the IR partner domain, the submitter's own domain, or a free/personal
+                  email provider (e.g. Gmail, Yahoo, Hotmail)
+                pattern: (^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-011\013\014\016-\177])*")@(?:[A-Z0-9](?:[A-Z0-9(-|_).]{0,259}[A-Z0-9])?)$
+              region:
+                type: string
+                description: State or region within the country
+              country:
+                type: string
+                description: Country of the customer
+              city:
+                type: string
+                description: City of the customer
+              postal:
+                type: string
+                description: Postal / ZIP code of the customer
+              numberOfEmployeesEndpoints:
+                type: integer
+                description: Estimated number of employees or endpoints at the customer
+              industry:
+                type: string
+                description: Industry vertical of the customer
+                enum:
+                - Education
+                - Government (Central/Federal)
+                - Government (Local)
+                - Healthcare (Provider)
+                - Other
+            required:
+            - companyName
+            - contactEmail
+            - contactFirstName
+            - contactLastName
+            - country
+            - industry
+            - numberOfEmployeesEndpoints
+            description: Ir fields
+          promptFields:
+            type: object
+            properties:
+              promptRegion:
+                type: string
+                description: Region associated with the prompt
+                enum:
+                - useast
+                - eunorth
+                - apsouth
+                - apsoutheast
+                - null
+              promptTenantName:
+                type: string
+                description: Tenant name associated with the prompt
+              promptUserEmail:
+                type: string
+                description: Email of the user associated with the prompt
+                pattern: (^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-011\013\014\016-\177])*")@(?:[A-Z0-9](?:[A-Z0-9(-|_).]{0,259}[A-Z0-9])?)$
+              promptUserName:
+                type: string
+                description: Name of the user associated with the prompt
+              promptUsers:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    promptUserName:
+                      type: string
+                      description: Name of the additional Prompt tenant user
+                    promptUserEmail:
+                      type: string
+                      description: Email of the additional Prompt tenant user
+                      pattern: (^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-011\013\014\016-\177])*")@(?:[A-Z0-9](?:[A-Z0-9(-|_).]{0,259}[A-Z0-9])?)$
+                  required:
+                  - promptUserEmail
+                  - promptUserName
+                description: Prompt tenant users (used instead of the single prompt
+                  user fields once multi-user provisioning is enabled). Limited to
+                  10 entries.
+            description: Prompt fields
+          makeSocDefaultUi:
+            type: boolean
+            description: True if SOC is to be enabled by default
+          creator:
+            type: string
+            description: The user that created the group
+          creatorId:
+            type: string
+            description: The ID of the user that created the group
+        description: Response data
+    description: Expire account now
