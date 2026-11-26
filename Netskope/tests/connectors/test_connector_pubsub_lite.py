@@ -184,10 +184,9 @@ def test_run(trigger):
 
         assert trigger.events_queue.qsize() == 3
 
-        try:
+        # Once stopped, handle_queue drains the remaining events and returns
+        with patch.object(PubSubLite, "running", new_callable=PropertyMock, return_value=False):
             asyncio.run(asyncio.wait_for(trigger.handle_queue(), timeout=3))
 
-        except TimeoutError:
-            pass
-
+        assert trigger.events_queue.qsize() == 0
         assert trigger.push_data_to_intakes.await_count == 3
