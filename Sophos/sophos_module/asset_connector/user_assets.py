@@ -109,10 +109,21 @@ class SophosUserAssetConnector(AssetConnector):
         return None
 
     @staticmethod
+    def _extract_login(name: str) -> str:
+        """Return the login of 'DOMAIN\\user' or 'DOMAIN/user', or the name itself when it has no domain prefix."""
+        for sep in ("\\", "/"):
+            if sep in name:
+                return name.split(sep, 1)[1] or name
+        return name
+
+    @staticmethod
     def _is_local_machine_account(user: SophosUser) -> bool:
-        """Return True for local Windows session accounts"""
+        """Return True for local Windows session accounts, never for a user synced from Active Directory"""
         name = user.name or ""
-        return "\\" in name and not user.email and not user.firstName and not user.lastName
+        from_active_directory = user.source is not None and user.source.type == "active_directory"
+        return (
+            "\\" in name and not user.email and not user.firstName and not user.lastName and not from_active_directory
+        )
 
     @staticmethod
     def _get_account_type(user: SophosUser) -> tuple[AccountTypeId, AccountTypeStr]:
@@ -185,6 +196,7 @@ class SophosUserAssetConnector(AssetConnector):
         groups = self._get_groups(user)
         org = self._get_organization(user)
         domain = self._extract_domain(name)
+        login = name if self._is_local_machine_account(user) else self._extract_login(name)
 
         # Build full name from firstName + lastName when available
         full_name: str | None = None
@@ -192,7 +204,7 @@ class SophosUserAssetConnector(AssetConnector):
             full_name = " ".join(filter(None, [user.firstName, user.lastName])) or None
 
         account = Account(
-            name=name,
+            name=login,
             type_id=account_type_id,
             type=account_type_str,
             uid=uid,
@@ -200,7 +212,7 @@ class SophosUserAssetConnector(AssetConnector):
 
         ocsf_user = User(
             uid=uid,
-            name=name,
+            name=login,
             full_name=full_name,
             email_addr=user.email if user.email else None,
             account=account,
@@ -276,6 +288,7 @@ class SophosUserAssetConnector(AssetConnector):
         """Return the Sophos → OCSF field mapping for schema-change fingerprinting."""
         return {
             "name": "user.name",
+            "name (domain prefix)": "user.domain",
             "firstName": "user.full_name",
             "lastName": "user.full_name",
             "email": "user.email_addr",

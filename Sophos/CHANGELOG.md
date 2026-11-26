@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-24 - 1.20.1
+
+### Fixed
+
+- User assets: send the login of a domain user without its domain prefix (`CORP\jdoe` and `CORP/jdoe` become `jdoe`, the domain stays in `user.domain`), so the user matches the account seen in events. A local machine account keeps its prefix, and a user synced from Active Directory is never taken for one
+- The field mapping changes, so the next run fetches all the users again
+
 ## 2026-07-06 - 1.20.0
 
 ### Changed
