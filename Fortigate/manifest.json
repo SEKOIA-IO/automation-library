@@ -26,6 +26,11 @@
               "description": "Fortigate Virtual Domain (VDOM)",
               "type": "string",
               "default": "root"
+            },
+            "verify_certificate": {
+              "description": "Is the firewall certificate verified",
+              "type": "boolean",
+              "default": true
             }
           },
           "required": [
