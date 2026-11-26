@@ -1,0 +1,38 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Palo Alto Cortex XDR Issues (API v5)",
+    "type": "object",
+    "properties": {
+      "api_key": {
+        "description": "The API Key is your unique identifier used as the authorization header",
+        "type": "string"
+      },
+      "api_key_id": {
+        "description": "The API Key ID is your unique token used to authenticate the API Key",
+        "type": "string"
+      },
+      "fqdn": {
+        "description": "The FQDN is a unique host and domain name associated with each tenant",
+        "type": "string"
+      }
+    },
+    "required": [
+      "api_key",
+      "api_key_id",
+      "fqdn"
+    ],
+    "secrets": [
+      "api_key",
+      "api_key_id"
+    ]
+  },
+  "description": "Collect and forward Cortex XDR Issues API v5 events.",
+  "name": "Palo Alto Cortex XDR Issues (API v5)",
+  "uuid": "9466f885-adf6-496a-b971-ed4bf1006fc8",
+  "slug": "paloalto_cortex_xdr_issues",
+  "version": "1.0.0",
+  "categories": [
+    "Endpoint"
+  ]
+}
