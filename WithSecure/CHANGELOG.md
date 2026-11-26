@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## 2026-10-09 - 2.18.0
+
+### Added
+
+- Add the device asset connector
+
 ## 2026-09-15 - 2.17.1
 
 ### Fixed
