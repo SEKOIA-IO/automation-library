@@ -1,13 +1,21 @@
-from typing import Any
+from typing import Annotated, Any, Optional
+
+from pydantic import BaseModel, Field
 
 from .action_vision_one_base import TrendMicroVisionOneBaseAction
 
 
+class CollectFileArguments(BaseModel):
+    agent_guids: list[Annotated[str, Field(min_length=1)]] = Field(..., min_length=1, description="Agent GUIDs")
+    file_path: str = Field(..., min_length=1, description="Path of the file to collect")
+    description: Optional[str] = None
+
+
 class CollectFileAction(TrendMicroVisionOneBaseAction):
-    def run(self, arguments: Any) -> Any:
-        agent_guids: list[str] = arguments["agent_guids"]
-        description: str | None = arguments.get("description")
-        file_path: str = arguments["file_path"]
+    def run(self, arguments: CollectFileArguments) -> Any:
+        agent_guids = arguments.agent_guids
+        description = arguments.description
+        file_path = arguments.file_path
 
         base_url: str = self.module.configuration.base_url
         url = f"{base_url}/v3.0/response/endpoints/collectFile"
