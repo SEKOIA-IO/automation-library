@@ -17,6 +17,7 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
 )
 from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId, RiskLevelStr
 from sekoia_automation.storage import PersistentJSON
+from sekoia_automation_models.sid import normalize_sid
 
 from crowdstrike_falcon.asset_connectors.crowdstrike_user_model import CrowdStrikeUser, CrowdStrikeUserAccount
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
@@ -68,7 +69,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
     PRODUCT_NAME: str = "Crowdstrike Falcon"
     PRODUCT_VERSION = "N/A"
     LIMIT: int = 100
-    CHECKPOINT_KEY = "user_assets_last_seen_timestamp"
+    CHECKPOINT_KEY = "user_assets_last_seen_timestamp_v2"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -188,20 +189,22 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
 
         entity_id = entity.entityId or "Unknown"
         primary_name = entity.primaryDisplayName or ""
-        email_addresses = entity.emailAddresses
+        email = next((address for address in entity.emailAddresses or [] if address), None)
 
         account_data, domain, enrichments = None, None, []
+        login = email or primary_name
 
         if entity.accounts:
-            acc = entity.accounts[0]
+            acc = max(entity.accounts, key=lambda a: (bool(a.samAccountName), bool(a.objectSid)))
             account_type_id, account_type_str = self._determine_account_type(acc)
             domain = acc.domain
+            login = acc.samAccountName or login
 
             account_data = Account(
-                name=acc.samAccountName or primary_name,
+                name=login,
                 type_id=account_type_id,
                 type=account_type_str,
-                uid=acc.objectSid or acc.objectGuid or entity_id,
+                uid=normalize_sid(acc.objectSid),
             )
 
             enrichments.append(
@@ -216,11 +219,11 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
         user_type_id, user_type_str = self._determine_user_type(entity)
 
         user_ocsf = UserOCSF(
-            name=primary_name,
+            name=login,
             uid=entity_id,
             account=account_data,
             full_name=f"{primary_name} {entity.secondaryDisplayName or ''}".strip() or None,
-            email_addr=email_addresses[0] if email_addresses else None,
+            email_addr=email,
             domain=domain,
             risk_level=risk_level_str,
             risk_level_id=risk_level_id,

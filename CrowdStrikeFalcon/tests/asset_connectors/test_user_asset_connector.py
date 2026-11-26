@@ -142,7 +142,7 @@ class TestMapIdentityEntityFields:
                     dataSource="ACTIVE_DIRECTORY",
                     domain="CORP",
                     samAccountName="asmith",
-                    objectSid="S-1-5-21-123",
+                    objectSid="S-1-5-21-1500703765-3354019915-535386580-1662",
                     enabled=True,
                 )
             ],
@@ -152,7 +152,7 @@ class TestMapIdentityEntityFields:
         result = connector.map_identity_entity_fields(entity)
 
         assert isinstance(result, UserOCSFModel)
-        assert result.user.name == "Alice Smith"
+        assert result.user.name == "asmith"
         assert result.user.uid == "entity-123"
         assert result.user.email_addr == "alice@example.com"
         assert result.user.full_name == "Alice Smith alice.smith"
@@ -163,9 +163,101 @@ class TestMapIdentityEntityFields:
         assert result.user.type_id == UserTypeId.USER
         assert result.user.account.name == "asmith"
         assert result.user.account.type_id == AccountTypeId.LDAP_ACCOUNT
-        assert result.user.account.uid == "S-1-5-21-123"
+        assert result.user.account.uid == "S-1-5-21-1500703765-3354019915-535386580-1662"
         assert result.time == int(datetime.fromisoformat("2025-01-01T12:00:00+00:00").timestamp())
         assert result.enrichments[0].data.is_enabled is True
+
+    @pytest.mark.parametrize(
+        ("accounts", "emails", "expected"),
+        [
+            (
+                [CrowdStrikeUserAccount(dataSource="ACTIVE_DIRECTORY", samAccountName="asmith")],
+                ["alice@example.com"],
+                "asmith",
+            ),
+            ([CrowdStrikeUserAccount(dataSource="ACTIVE_DIRECTORY")], ["alice@example.com"], "alice@example.com"),
+            ([], ["alice@example.com"], "alice@example.com"),
+            ([], [], "Alice Smith"),
+            ([], [""], "Alice Smith"),
+            ([], ["", "alice@example.com"], "alice@example.com"),
+            (
+                [
+                    CrowdStrikeUserAccount(dataSource="AZURE_AD"),
+                    CrowdStrikeUserAccount(dataSource="ACTIVE_DIRECTORY", samAccountName="asmith"),
+                ],
+                ["alice@example.com"],
+                "asmith",
+            ),
+        ],
+    )
+    def test_user_name_is_the_login_first(self, connector, accounts, emails, expected):
+        entity = CrowdStrikeUser(
+            entityId="entity-1", primaryDisplayName="Alice Smith", emailAddresses=emails, accounts=accounts
+        )
+
+        result = connector.map_identity_entity_fields(entity)
+
+        assert result.user.name == expected
+        if accounts:
+            assert result.user.account.name == expected
+
+    @pytest.mark.parametrize(
+        ("accounts", "expected_sid"),
+        [
+            (
+                [
+                    CrowdStrikeUserAccount(dataSource="ACTIVE_DIRECTORY", objectSid="S-1-5-21-1-2-3-1001"),
+                    CrowdStrikeUserAccount(
+                        dataSource="ACTIVE_DIRECTORY", samAccountName="asmith", objectSid="S-1-5-21-1-2-3-1002"
+                    ),
+                ],
+                "S-1-5-21-1-2-3-1002",
+            ),
+            (
+                [
+                    CrowdStrikeUserAccount(dataSource="ACTIVE_DIRECTORY", objectSid="S-1-5-21-1-2-3-1001"),
+                    CrowdStrikeUserAccount(dataSource="ACTIVE_DIRECTORY", samAccountName="asmith"),
+                ],
+                None,
+            ),
+        ],
+    )
+    def test_the_account_with_a_login_is_preferred(self, connector, accounts, expected_sid):
+        entity = CrowdStrikeUser(entityId="entity-1", primaryDisplayName="Alice Smith", accounts=accounts)
+
+        result = connector.map_identity_entity_fields(entity)
+
+        assert result.user.name == "asmith"
+        assert result.user.account.uid == expected_sid
+
+    @pytest.mark.parametrize(
+        ("object_sid", "object_guid", "expected"),
+        [
+            (
+                "S-1-5-21-1500703765-3354019915-535386580-1662",
+                "0b6f5a3e-8e2c-4b1a-9d1f-2a3b4c5d6e7f",
+                "S-1-5-21-1500703765-3354019915-535386580-1662",
+            ),
+            (None, "0b6f5a3e-8e2c-4b1a-9d1f-2a3b4c5d6e7f", None),
+            ("S-1-5-21-1500703765-3354019915-535386580-500", None, None),
+            (None, None, None),
+        ],
+    )
+    def test_account_uid_is_only_an_account_sid(self, connector, object_sid, object_guid, expected):
+        entity = CrowdStrikeUser(
+            entityId="entity-1",
+            primaryDisplayName="Alice Smith",
+            accounts=[
+                CrowdStrikeUserAccount(
+                    dataSource="ACTIVE_DIRECTORY",
+                    samAccountName="asmith",
+                    objectSid=object_sid,
+                    objectGuid=object_guid,
+                )
+            ],
+        )
+
+        assert connector.map_identity_entity_fields(entity).user.account.uid == expected
 
     def test_map_identity_entity_fields_minimal(self, connector):
         entity = CrowdStrikeUser(
@@ -211,8 +303,13 @@ class TestMapIdentityEntityFields:
 
 
 class TestCheckpoint:
-    def test_most_recent_user_date_returns_cached_value(self, connector):
+    def test_the_checkpoint_of_the_previous_mapping_is_ignored(self, connector):
+        assert connector.CHECKPOINT_KEY == "user_assets_last_seen_timestamp_v2"
         connector.context["user_assets_last_seen_timestamp"] = "2025-01-15T10:00:00Z"
+        assert connector.most_recent_user_date is None
+
+    def test_most_recent_user_date_returns_cached_value(self, connector):
+        connector.context[connector.CHECKPOINT_KEY] = "2025-01-15T10:00:00Z"
         assert connector.most_recent_user_date == "2025-01-15T10:00:00Z"
 
     def test_most_recent_user_date_returns_none_when_empty(self, connector):
@@ -221,13 +318,13 @@ class TestCheckpoint:
     def test_update_checkpoint_saves_latest_time(self, connector):
         connector._latest_time = "2025-06-01T12:00:00Z"
         connector.update_checkpoint()
-        assert connector.context["user_assets_last_seen_timestamp"] == "2025-06-01T12:00:00Z"
+        assert connector.context[connector.CHECKPOINT_KEY] == "2025-06-01T12:00:00Z"
 
     def test_update_checkpoint_does_nothing_when_latest_time_is_none(self, connector):
-        connector.context["user_assets_last_seen_timestamp"] = "2025-01-01T00:00:00Z"
+        connector.context[connector.CHECKPOINT_KEY] = "2025-01-01T00:00:00Z"
         connector._latest_time = None
         connector.update_checkpoint()
-        assert connector.context["user_assets_last_seen_timestamp"] == "2025-01-01T00:00:00Z"
+        assert connector.context[connector.CHECKPOINT_KEY] == "2025-01-01T00:00:00Z"
         connector.log.assert_called_with(
             "Warning: new_most_recent_date is None, skipping checkpoint update", level="warning"
         )
@@ -253,7 +350,7 @@ class TestCheckpoint:
         list(connector._fetch_identity_entities())
         connector.update_checkpoint()
 
-        assert connector.context["user_assets_last_seen_timestamp"] == "2025-01-03T10:00:00Z"
+        assert connector.context[connector.CHECKPOINT_KEY] == "2025-01-03T10:00:00Z"
 
 
 class TestFetchIdentityEntities:
@@ -271,7 +368,7 @@ class TestFetchIdentityEntities:
         assert connector._latest_time == "2025-01-02T10:00:00Z"
 
     def test_fetch_identity_entities_with_checkpoint_filters_old(self, connector):
-        connector.context["user_assets_last_seen_timestamp"] = "2025-01-01T12:00:00Z"
+        connector.context[connector.CHECKPOINT_KEY] = "2025-01-01T12:00:00Z"
         entities = [
             {"entityId": "1", "creationTime": "2025-01-01T10:00:00Z"},  # Avant checkpoint
             {"entityId": "2", "creationTime": "2025-01-02T10:00:00Z"},  # Après checkpoint
@@ -295,10 +392,10 @@ class TestFetchIdentityEntities:
 
         list(connector._fetch_identity_entities())
 
-        assert connector.context["user_assets_last_seen_timestamp"] == "2025-01-03T10:00:00Z"
+        assert connector.context[connector.CHECKPOINT_KEY] == "2025-01-03T10:00:00Z"
 
     def test_fetch_identity_entities_no_checkpoint_update_when_no_new_data(self, connector):
-        connector.context["user_assets_last_seen_timestamp"] = "2025-01-05T00:00:00Z"
+        connector.context[connector.CHECKPOINT_KEY] = "2025-01-05T00:00:00Z"
         entities = [
             {"entityId": "1", "creationTime": "2025-01-01T10:00:00Z"},
         ]
@@ -308,7 +405,7 @@ class TestFetchIdentityEntities:
         result = list(connector._fetch_identity_entities())
 
         assert result == []
-        assert connector.context["user_assets_last_seen_timestamp"] == "2025-01-05T00:00:00Z"
+        assert connector.context[connector.CHECKPOINT_KEY] == "2025-01-05T00:00:00Z"
 
 
 class TestGetAssets:

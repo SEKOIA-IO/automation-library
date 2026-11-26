@@ -138,11 +138,11 @@ mapping:
       logic: "Direct mapping of CrowdStrike entity unique ID"
       description: "User unique identifier from CrowdStrike Identity Protection"
 
-    - source: "primaryDisplayName"
+    - source: "account.samAccountName || emailAddresses[0] || primaryDisplayName"
       target: "user.name"
       type: "string"
-      logic: "Direct mapping of primary display name"
-      description: "User display name (username)"
+      logic: "SAM account name of the Active Directory account; fallback to the first email, then to primaryDisplayName"
+      description: "User login"
 
     - source: "primaryDisplayName + secondaryDisplayName"
       target: "user.full_name"
@@ -158,10 +158,10 @@ mapping:
       description: "Primary email address"
 
     # DOMAIN
-    - source: "accounts[0].domain"
+    - source: "account.domain"
       target: "user.domain"
       type: "string"
-      logic: "Direct mapping of domain from primary account"
+      logic: "Domain of the account: the first one with a samAccountName, then the first one with an objectSid, else the first account"
       description: "User domain or realm (from AD account)"
 
     # USER TYPE
@@ -197,25 +197,25 @@ mapping:
       description: "OCSF risk level ID"
 
     # ACCOUNT INFORMATION
-    - source: "accounts[0].samAccountName || primaryDisplayName"
+    - source: "account.samAccountName || emailAddresses[0] || primaryDisplayName"
       target: "user.account.name"
       type: "string"
-      logic: "Direct mapping of SAM account name; fallback to primaryDisplayName if empty or missing"
-      description: "Account username (SAM account name)"
+      logic: "Same value as user.name"
+      description: "Account login"
 
-    - source: "accounts[0].objectSid || accounts[0].objectGuid || entityId"
+    - source: "normalize_sid(account.objectSid)"
       target: "user.account.uid"
       type: "string"
-      logic: "Fallback chain: objectSid → objectGuid → entityId"
-      description: "Account unique identifier (SID or GUID)"
+      logic: "SID of a domain account (relative ID from 1000) or of an Entra ID object (S-1-12-1-...); null for anything else"
+      description: "Account SID"
 
-    - source: "accounts[0].dataSource"
+    - source: "account.dataSource"
       target: "user.account.type"
       type: "string"
       logic: "Map dataSource: 'ACTIVE_DIRECTORY' or objectSid present→'LDAP Account', 'AZURE_AD'→'Azure AD Account', else→'Other'"
       description: "Account type (LDAP, Azure AD, etc.)"
 
-    - source: "accounts[0].dataSource"
+    - source: "account.dataSource"
       target: "user.account.type_id"
       type: "integer"
       logic: "Map account type to OCSF ID: LDAP Account→11, Azure AD Account→12, Other→15"
@@ -228,13 +228,13 @@ mapping:
       logic: "Always 'account_details' for this enrichment type"
       description: "Enrichment name for account details"
 
-    - source: "accounts[0].dataSource"
+    - source: "account.dataSource"
       target: "enrichments[0].value"
       type: "string"
       logic: "Resolved account type string (e.g., 'LDAP Account', 'Azure AD Account', 'Other')"
       description: "Enrichment value: resolved account type string"
 
-    - source: "accounts[0].enabled"
+    - source: "account.enabled"
       target: "enrichments[0].data.is_enabled"
       type: "boolean"
       logic: "Direct mapping of account enabled status; null if field absent"
@@ -287,7 +287,7 @@ mapping:
             "desc": "administrateur - Risk: MEDIUM",
             "created_time": 1729509560,
             "account": {
-              "uid": "S-1-5-21-947947667-100116589-3603791262-500",
+              "uid": null,
               "name": "administrateur",
               "domain": "EXAMPLE.COM",
               "type": "LDAP Account",
