@@ -205,6 +205,24 @@ class ThreatVisualizerLogConnector(Connector):
     module: DarktraceModule
     configuration: ThreatVisualizerLogConnectorConfiguration
 
+    def validate_cloud_configuration(self):
+        """
+        Ensure Cloud API settings are present before starting collectors.
+        """
+        missing_fields = [
+            field_name
+            for field_name in ("api_url", "public_key", "private_key")
+            if not getattr(self.module.configuration, field_name, None)
+        ]
+
+        if missing_fields:
+            missing_fields_str = ", ".join(missing_fields)
+            raise ValueError(
+                "Missing required Darktrace Cloud configuration fields: "
+                f"{missing_fields_str}. "
+                "These fields are only required when running the Cloud API connector."
+            )
+
     def start_consumers(self):
         consumers = {}
         for endpoint in Endpoints:
@@ -232,6 +250,8 @@ class ThreatVisualizerLogConnector(Connector):
 
     def run(self):
         self.log(message="Start fetching Darktrace threat visualizer logs", level="info")  # pragma: no cover
+
+        self.validate_cloud_configuration()
 
         consumers = self.start_consumers()
         while self.running:
