@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-12 - 1.1.1
+
+### Changed
+
+- Document the WinRM prerequisites in `CONFIGURE.md`
+
 ## 2024-05-28 - 1.1.0
 
 ### Changed
