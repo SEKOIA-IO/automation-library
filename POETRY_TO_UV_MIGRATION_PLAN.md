@@ -40,6 +40,7 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 
 ### Wave 4 first batch completed in this session
 - CatoNetwork
+- Proofpoint
 - TrendMicro
 
 ### Wave 4 second batch completed in this session
