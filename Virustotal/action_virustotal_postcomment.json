@@ -4,11 +4,13 @@
     "properties": {
       "comment": {
         "description": "The comment to post",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "resource": {
         "description": "The hash or url to comment",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       }
     },
     "required": [
