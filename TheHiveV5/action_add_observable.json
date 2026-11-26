@@ -8,11 +8,12 @@
     "properties": {
       "alert_id": {
         "description": "The id of the alert you want to add observables to. For instance: ~12345",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "events": {
-        "description": "The JSON Sekoia event from which to extract the observables to be added to the alert",
-        "type": "object"
+        "description": "The list of JSON Sekoia events from which to extract the observables to be added to the alert",
+        "type": "array"
       },
       "tlp": {
         "description": "The TLP for the observables - defaults to AMBER",

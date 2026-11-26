@@ -1,12 +1,22 @@
-from typing import Any, Optional, Dict, List
 import json
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
 
 from .thehiveconnector import TheHiveConnector
 
 
+class TheHiveCreateObservableArguments(BaseModel):
+    alert_id: str = Field(..., min_length=1, description="The Unique identifier of the alert")
+    events: List[Any] = Field(..., description="Events to convert to observables; non-dict entries are skipped")
+    tlp: str = Field(default="AMBER", description="Traffic Light Protocol level")
+    pap: str = Field(default="AMBER", description="Permissible Actions Protocol level")
+    areioc: bool = Field(default=True, description="Whether the observables are IOCs")
+
+
 class TheHiveCreateObservableV5(Action):
-    def run(self, arguments: dict[str, Any]) -> Optional[Dict[str, List]]:
+    def run(self, arguments: TheHiveCreateObservableArguments) -> Optional[Dict[str, List]]:
         api = TheHiveConnector(
             self.module.configuration["base_url"],
             self.module.configuration["apikey"],
@@ -16,13 +26,13 @@ class TheHiveCreateObservableV5(Action):
             log_fn=self.log,
         )
 
-        arg_alert_id = arguments["alert_id"]
+        arg_alert_id = arguments.alert_id
         # arg_observables = arguments["observables"]
         # Input arguments are NOT observables but a list of dicts with sekoia fields
-        arg_events = json.dumps(arguments["events"])
-        arg_tlp = arguments.get("tlp", "AMBER")
-        arg_pap = arguments.get("pap", "AMBER")
-        arg_ioc = arguments.get("areioc", True)
+        arg_events = json.dumps(arguments.events)
+        arg_tlp = arguments.tlp
+        arg_pap = arguments.pap
+        arg_ioc = arguments.areioc
 
         data = json.loads(arg_events)
         observables = TheHiveConnector.sekoia_to_thehive(data, arg_tlp, arg_pap, arg_ioc)

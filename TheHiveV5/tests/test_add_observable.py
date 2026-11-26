@@ -2,6 +2,7 @@ from typing import Any, Optional, List
 import json
 import pytest
 import requests_mock
+from pydantic import ValidationError
 
 from thehive.add_observable import TheHiveCreateObservableV5
 from thehive4py.types.observable import OutputObservable
@@ -438,6 +439,39 @@ def test_add_observables_action_api_error(requests_mock):
     assert mock_alert.call_count > 0
 
 
+@pytest.mark.parametrize("alert_id", [None, ""])
+def test_add_observables_action_requires_alert_id(alert_id, requests_mock):
+    action = TheHiveCreateObservableV5()
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+
+    with pytest.raises(ValidationError):
+        action.run({"alert_id": alert_id, "events": EVENTS})
+
+    assert requests_mock.call_count == 0
+
+
+def test_add_observables_action_skips_non_dict_events(requests_mock):
+    url = f"https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable"
+    mock_alert = requests_mock.post(url=url, status_code=200, json=HIVE_OUTPUT)
+
+    action = TheHiveCreateObservableV5()
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+
+    result = action.run({"alert_id": ALERT_ID, "events": ["not-an-event", *EVENTS]})
+
+    assert result is not None
+    assert len(result["success"]) > 0
+    assert mock_alert.call_count > 0
+
+
 def test_add_observables_action_json_decode_error():
     """Test that JSONDecodeError is properly caught and re-raised"""
     action = TheHiveCreateObservableV5()
@@ -455,3 +489,33 @@ def test_add_observables_action_json_decode_error():
 
         with pytest.raises(json.JSONDecodeError):
             action.run({"alert_id": ALERT_ID, "events": EVENTS})
+
+
+def test_add_observables_action_partial_failure(requests_mock):
+    """When some observables fail, the action returns both lists and logs a warning"""
+    url = f"https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable"
+    mock_alert = requests_mock.post(
+        url=url,
+        response_list=[
+            {"status_code": 500, "json": {"type": "CreateError", "message": "boom"}},
+            {"status_code": 201, "json": [HIVE_OUTPUT[1]]},
+        ],
+    )
+
+    action = TheHiveCreateObservableV5()
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+    logs = []
+    action.log = lambda message, level="info", **kwargs: logs.append((message, level))
+
+    result = action.run({"alert_id": ALERT_ID, "events": EVENTS})
+
+    assert mock_alert.call_count == 2
+    assert result is not None
+    assert result["success"] == [[HIVE_OUTPUT[1]]]
+    assert len(result["failure"]) == 1
+    assert result["failure"][0]["observable"]["data"] == "192.168.0.1"
+    assert ("Added 1 observables successfully, 1 failed", "warning") in logs
