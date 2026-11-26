@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-24 - 2.11.2
+
+### Fixed
+
+- Device asset connector: send the display name as hostname only when it is a usable hostname, lowercased and cut to its first label with the rest in `device.domain`; skip the device otherwise
+
 ## 2026-11-17 - 2.11.1
 
 ### Fixed

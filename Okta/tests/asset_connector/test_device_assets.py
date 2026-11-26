@@ -377,7 +377,7 @@ async def test_map_fields_success(test_okta_device_asset_connector):
         created="2023-01-01T00:00:00Z",
         lastUpdated="2023-01-02T00:00:00Z",
         profile=OktaDeviceProfile(
-            displayName="Test Device",
+            displayName="TEST-DEVICE",
             platform="windows",
             serialNumber="SN001",
             sid="SID001",
@@ -393,7 +393,7 @@ async def test_map_fields_success(test_okta_device_asset_connector):
     result = await test_okta_device_asset_connector.map_fields(okta_device)
 
     assert isinstance(result, DeviceOCSFModel)
-    assert result.device.hostname == "Test Device"
+    assert result.device.hostname == "test-device"
     assert result.device.uid == "dev1"
     assert result.device.type == DeviceTypeStr.DESKTOP
     assert result.device.type_id == DeviceTypeId.DESKTOP
@@ -772,7 +772,7 @@ async def test_map_fields_with_minimal_device(test_okta_device_asset_connector):
         created="2023-01-01T00:00:00Z",
         lastUpdated="2023-01-01T00:00:00Z",
         profile=OktaDeviceProfile(
-            displayName="Minimal Device",
+            displayName="MINIMAL-DEVICE",
             platform="unknown",
             registered=False,
             secureHardwarePresent=False,
@@ -783,7 +783,7 @@ async def test_map_fields_with_minimal_device(test_okta_device_asset_connector):
     result = await test_okta_device_asset_connector.map_fields(minimal_device)
 
     assert isinstance(result, DeviceOCSFModel)
-    assert result.device.hostname == "Minimal Device"
+    assert result.device.hostname == "minimal-device"
     assert result.device.uid == "dev1"
     assert result.device.type == DeviceTypeStr.OTHER
     assert result.device.type_id == DeviceTypeId.OTHER
@@ -809,7 +809,7 @@ async def test_map_fields_with_enrichments(test_okta_device_asset_connector):
         created="2023-01-01T00:00:00Z",
         lastUpdated="2023-01-02T00:00:00Z",
         profile=OktaDeviceProfile(
-            displayName="Encrypted Device",
+            displayName="ENCRYPTED-DEVICE",
             platform="windows",
             registered=True,
             secureHardwarePresent=True,
@@ -840,7 +840,7 @@ async def test_map_fields_without_enrichments(test_okta_device_asset_connector):
         created="2023-01-01T00:00:00Z",
         lastUpdated="2023-01-02T00:00:00Z",
         profile=OktaDeviceProfile(
-            displayName="Minimal Device",
+            displayName="MINIMAL-DEVICE",
             platform="windows",
             registered=True,
             secureHardwarePresent=True,
@@ -867,7 +867,7 @@ async def test_map_fields_compliance_status(test_okta_device_asset_connector):
         created="2023-01-01T00:00:00Z",
         lastUpdated="2023-01-02T00:00:00Z",
         profile=OktaDeviceProfile(
-            displayName="Inactive Device",
+            displayName="INACTIVE-DEVICE",
             platform="windows",
             registered=True,
             secureHardwarePresent=True,
@@ -891,7 +891,7 @@ async def test_map_fields_all_encryption_types(test_okta_device_asset_connector)
         created="2023-01-01T00:00:00Z",
         lastUpdated="2023-01-02T00:00:00Z",
         profile=OktaDeviceProfile(
-            displayName="User Encrypted Device",
+            displayName="USER-ENCRYPTED-DEVICE",
             platform="android",
             registered=True,
             secureHardwarePresent=True,
@@ -916,7 +916,7 @@ async def test_map_fields_all_encryption_types(test_okta_device_asset_connector)
         created="2023-01-01T00:00:00Z",
         lastUpdated="2023-01-02T00:00:00Z",
         profile=OktaDeviceProfile(
-            displayName="Fully Encrypted Device",
+            displayName="FULLY-ENCRYPTED-DEVICE",
             platform="macos",
             registered=True,
             secureHardwarePresent=True,
@@ -944,7 +944,7 @@ async def test_map_fields_with_hardware_enrichment(test_okta_device_asset_connec
         created="2023-01-01T00:00:00Z",
         lastUpdated="2023-01-02T00:00:00Z",
         profile=OktaDeviceProfile(
-            displayName="Device with Hardware Info",
+            displayName="HARDWARE-INFO-DEVICE",
             platform="windows",
             registered=True,
             secureHardwarePresent=True,
@@ -978,7 +978,7 @@ async def test_map_fields_with_combined_enrichment(test_okta_device_asset_connec
         created="2023-01-01T00:00:00Z",
         lastUpdated="2023-01-02T00:00:00Z",
         profile=OktaDeviceProfile(
-            displayName="Device with Full Info",
+            displayName="FULL-INFO-DEVICE",
             platform="windows",
             registered=True,
             secureHardwarePresent=False,
@@ -1089,8 +1089,8 @@ async def test_map_fields_last_seen_falls_back_to_last_updated(test_okta_device_
 
 
 @pytest.mark.asyncio
-async def test_map_fields_device_name_matches_hostname(test_okta_device_asset_connector):
-    """Test map_fields sets device.name equal to device.hostname."""
+async def test_map_fields_device_name_keeps_display_name(test_okta_device_asset_connector):
+    """Test map_fields keeps the display name in device.name and its hostname form in device.hostname."""
     device = OktaDevice(
         id="dev1",
         status="ACTIVE",
@@ -1108,7 +1108,60 @@ async def test_map_fields_device_name_matches_hostname(test_okta_device_asset_co
     result = await test_okta_device_asset_connector.map_fields(device)
 
     assert result.device.name == "WORKSTATION-BOB"
-    assert result.device.hostname == "WORKSTATION-BOB"
+    assert result.device.hostname == "workstation-bob"
+    assert result.device.domain is None
+
+
+@pytest.mark.asyncio
+async def test_map_fields_splits_fully_qualified_display_name(test_okta_device_asset_connector):
+    device = OktaDevice(
+        id="dev1",
+        status="ACTIVE",
+        created="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-02T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="LAPTOP-001.corp.example.com",
+            platform="windows",
+            registered=True,
+            secureHardwarePresent=True,
+        ),
+    )
+
+    result = await test_okta_device_asset_connector.map_fields(device)
+
+    assert result.device.hostname == "laptop-001"
+    assert result.device.domain == "corp.example.com"
+    assert result.device.name == "LAPTOP-001.corp.example.com"
+
+
+@pytest.mark.asyncio
+async def test_get_assets_skips_device_without_usable_hostname(test_okta_device_asset_connector):
+    devices = [
+        OktaDevice(
+            id=device_id,
+            status="ACTIVE",
+            created="2023-01-01T00:00:00Z",
+            lastUpdated="2023-01-02T00:00:00Z",
+            profile=OktaDeviceProfile(
+                displayName=display_name,
+                platform="macos",
+                registered=True,
+                secureHardwarePresent=True,
+            ),
+        )
+        for device_id, display_name in [("dev1", "Mary's MacBook Pro"), ("dev2", "MAC-MARY-002")]
+    ]
+    test_okta_device_asset_connector._data_path = MagicMock()
+
+    async def mock_next_list_devices():
+        for device in devices:
+            yield device
+
+    with patch.object(test_okta_device_asset_connector, "next_list_devices", mock_next_list_devices):
+        assets = [asset async for asset in test_okta_device_asset_connector.get_assets()]
+
+    assert [asset.device.uid for asset in assets] == ["dev2"]
+    assert assets[0].device.hostname == "mac-mary-002"
 
 
 @pytest.mark.asyncio

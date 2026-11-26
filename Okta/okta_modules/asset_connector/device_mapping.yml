@@ -159,8 +159,14 @@ mapping:
     - source: "profile.displayName"
       target: "device.hostname"
       type: "string"
-      logic: "Direct mapping of display name as hostname"
+      logic: "split_hostname(profile.displayName): lowercased first label; device skipped when the display name is not a usable hostname"
       description: "Device hostname (from display name)"
+
+    - source: "profile.displayName"
+      target: "device.domain"
+      type: "string"
+      logic: "split_hostname(profile.displayName): remainder of a fully qualified display name"
+      description: "Device domain (from display name)"
 
     - source: "id"
       target: "device.uid"
@@ -312,7 +318,7 @@ mapping:
             "uid": "gooabc123defGHIJKL",
             "uid_alt": "ABC123DEF456",
             "name": "LAPTOP-MARY-001",
-            "hostname": "LAPTOP-MARY-001",
+            "hostname": "laptop-mary-001",
             "type": "Desktop",
             "type_id": 2,
             "vendor_name": "Dell",
@@ -374,7 +380,7 @@ mapping:
             "uid": "goodef456ghiJKLMNO",
             "uid_alt": "A2R4P7B9C1D2E3F4G5",
             "name": "iPhone-ROBERT-001",
-            "hostname": "iPhone-ROBERT-001",
+            "hostname": "iphone-robert-001",
             "type": "Mobile",
             "type_id": 5,
             "vendor_name": "Apple",
