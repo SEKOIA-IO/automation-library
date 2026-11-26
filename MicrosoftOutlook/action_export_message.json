@@ -1,0 +1,118 @@
+{
+  "name": "Export a message as EML",
+  "description": "Export a mailbox message as an EML file in playbook shared storage, with its exact downloaded-byte SHA-256.",
+  "uuid": "831b603c-272e-58f8-a350-a0d9234dad83",
+  "slug": "export_message_as_eml",
+  "docker_parameters": "action_export_message",
+  "arguments": {
+    "type": "object",
+    "title": "ExportMessageArguments",
+    "additionalProperties": false,
+    "required": [
+      "user",
+      "message_id"
+    ],
+    "properties": {
+      "user": {
+        "type": "string",
+        "title": "User",
+        "description": "Mailbox user ID or user principal name (UPN)."
+      },
+      "message_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "additionalProperties": true
+          }
+        ],
+        "title": "Graph Message ID",
+        "description": "Full Microsoft Graph item ID of the target message in the mailbox specified by User. Use message_id returned by Search messages or List messages in a folder for this mailbox. Copy the complete value (often starting with AAMk or AAk); do not use email.message_id or an Internet Message-ID such as <...@...>. A message object containing message_id is also accepted."
+      },
+      "max_size_mb": {
+        "type": "integer",
+        "title": "Maximum size (MiB)",
+        "minimum": 1,
+        "maximum": 100,
+        "default": 25,
+        "description": "Maximum downloaded EML size. Oversized or incomplete files are removed."
+      }
+    }
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "content_type": {
+        "type": "string",
+        "description": "MIME type of the exported file: message/rfc822."
+      },
+      "error_details": {
+        "type": "array",
+        "description": "Safe structured errors. retryable refers to retrying the whole action; it is false after a modifying request.",
+        "items": {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "retryable",
+            "outcome_unknown"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "outcome_unknown": {
+              "type": "boolean"
+            },
+            "http_status": {
+              "type": "integer"
+            },
+            "diagnostic_reference": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "file_name": {
+        "type": "string",
+        "description": "Generated filename, independent of untrusted message subjects."
+      },
+      "file_path": {
+        "type": "string",
+        "description": "Relative file path in this playbook shared storage. Pass it to Upload attachment in the same playbook run."
+      },
+      "message_id": {
+        "type": "string"
+      },
+      "outcome": {
+        "type": "string",
+        "enum": [
+          "succeeded",
+          "partial",
+          "failed",
+          "unknown"
+        ],
+        "description": "Overall action outcome. Partial, failed and unknown outcomes also flag an SDK action error; inspect retained results before retrying."
+      },
+      "sha256": {
+        "type": "string",
+        "description": "SHA-256 of the exact MIME bytes downloaded from Microsoft Graph."
+      },
+      "size": {
+        "type": "integer",
+        "description": "Number of exported MIME bytes."
+      },
+      "user": {
+        "type": "string"
+      }
+    }
+  }
+}

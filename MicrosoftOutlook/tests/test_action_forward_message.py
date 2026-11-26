@@ -15,7 +15,7 @@ from microsoft_outlook_modules.action_forward_message import ForwardMessageActio
 def test_forward_message(configured_action, message_id_input):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",
@@ -39,6 +39,7 @@ def test_forward_message(configured_action, message_id_input):
             }
         )
         assert result == {
+            "outcome": "succeeded",
             "action": "forward_message",
             "comment": "",
             "recipients": ["john.doe@example.com"],

@@ -1,0 +1,113 @@
+{
+  "name": "Download message attachments",
+  "description": "Download message attachments using Microsoft Graph.",
+  "uuid": "a3e6c3ec-7627-5741-b4e9-d2acf0f232a4",
+  "slug": "download_attachments",
+  "docker_parameters": "action_download_attachments",
+  "arguments": {
+    "additionalProperties": false,
+    "properties": {
+      "user": {
+        "title": "User",
+        "type": "string"
+      },
+      "message_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "additionalProperties": true,
+            "type": "object"
+          }
+        ],
+        "title": "Message Id"
+      }
+    },
+    "required": [
+      "user",
+      "message_id"
+    ],
+    "title": "ExtractEmailArguments",
+    "type": "object"
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "attachments": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "graph_attachment_type": {
+              "type": "string",
+              "description": "Graph @odata.type supplied for the attachment; empty when absent."
+            },
+            "detected_format": {
+              "type": "string",
+              "enum": [
+                "eml",
+                "msg",
+                "unknown"
+              ],
+              "description": "Content-based parsing route, independent of filename. msg identifies an OLE signature; successful extraction confirms readable email content."
+            }
+          }
+        }
+      },
+      "error_details": {
+        "type": "array",
+        "description": "Safe structured errors. retryable refers to retrying the whole action; it is false after a modifying request.",
+        "items": {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "retryable",
+            "outcome_unknown"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "outcome_unknown": {
+              "type": "boolean"
+            },
+            "http_status": {
+              "type": "integer"
+            },
+            "diagnostic_reference": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "errors": {
+        "type": "array",
+        "items": {}
+      },
+      "message_id": {
+        "type": "string"
+      },
+      "outcome": {
+        "type": "string",
+        "enum": [
+          "succeeded",
+          "partial",
+          "failed",
+          "unknown"
+        ],
+        "description": "Overall action outcome. Partial, failed and unknown outcomes also flag an SDK action error; inspect retained results before retrying."
+      },
+      "user": {
+        "type": "string"
+      }
+    }
+  }
+}

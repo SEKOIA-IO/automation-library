@@ -56,7 +56,7 @@ def test_anonymized_fixture_headers_map_pertinently_to_search(configured_action)
 
     with requests_mock.Mocker() as mock:
         mock.register_uri(
-            "GET",
+            "POST",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
             json={
                 "access_token": "foo-token",

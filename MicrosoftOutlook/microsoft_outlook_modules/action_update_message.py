@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Literal
 
 import requests
@@ -44,6 +46,8 @@ class UpdateMessageArguments(BaseModel):
 
 
 class UpdateMessageAction(MicrosoftGraphActionBase):
+    may_modify_data = True
+
     def run(self, arguments: Any) -> Any:
         """Execute the update message action and return normalized results."""
 

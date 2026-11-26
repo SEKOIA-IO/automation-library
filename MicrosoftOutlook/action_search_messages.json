@@ -1,32 +1,18 @@
 {
   "name": "Search messages",
-  "description": "The action that searches messages in a user's mailbox using InternetMessageId and/or NetworkMessageId",
+  "description": "Search mailbox messages by Internet Message-ID and/or NetworkMessageId. At least one identifier is required; use List messages in a folder to find messages without an identifier.",
   "uuid": "9cd0dbfd-1ceb-40bf-a49f-28ca70e61165",
   "docker_parameters": "action_search_messages",
   "arguments": {
     "title": "ApplicationArguments",
     "type": "object",
-    "anyOf": [
-      {
-        "required": [
-          "email_message_id",
-          "user"
-        ]
-      },
-      {
-        "required": [
-          "email_local_id",
-          "user"
-        ]
-      }
-    ],
     "properties": {
       "email_local_id": {
-        "description": "The local message identifier mapped from email.local_id (Graph NetworkMessageId)",
+        "description": "NetworkMessageId mapped from email.local_id. Provide this or Email Message Id. This is not the Graph item ID returned as message_id.",
         "type": "string"
       },
       "email_message_id": {
-        "description": "The message identifier mapped from email.message_id (Graph internetMessageId / Internet Message-ID RFC 5322)",
+        "description": "Internet Message-ID mapped from email.message_id, with or without angle brackets. Provide this or Email Local Id. This is not the Graph item ID returned as message_id.",
         "type": "string"
       },
       "max_messages_to_return": {
@@ -45,23 +31,48 @@
         "description": "The user identifier or user principal name (UPN)",
         "type": "string"
       }
-    }
+    },
+    "required": [
+      "user"
+    ]
   },
   "results": {
     "title": "SearchMessagesResults",
     "type": "object",
-    "required": [
-      "user",
-      "query_type",
-      "query_value",
-      "message_ids",
-      "messages",
-      "total_results",
-      "returned_count",
-      "has_more",
-      "scan_limit_reached"
-    ],
     "properties": {
+      "error_details": {
+        "type": "array",
+        "description": "Safe structured errors. retryable refers to retrying the whole action; it is false after a modifying request.",
+        "items": {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "retryable",
+            "outcome_unknown"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "outcome_unknown": {
+              "type": "boolean"
+            },
+            "http_status": {
+              "type": "integer"
+            },
+            "diagnostic_reference": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "has_more": {
         "description": "The indicator that is true when Graph indicates additional pages may exist",
         "type": "boolean"
@@ -110,9 +121,23 @@
               "items": {
                 "type": "object"
               }
+            },
+            "parent_folder_id": {
+              "type": "string",
+              "description": "The Graph parent folder ID at retrieval time."
             }
           }
         }
+      },
+      "outcome": {
+        "type": "string",
+        "enum": [
+          "succeeded",
+          "partial",
+          "failed",
+          "unknown"
+        ],
+        "description": "Overall action outcome. Partial, failed and unknown outcomes also flag an SDK action error; inspect retained results before retrying."
       },
       "query_type": {
         "description": "The identifier type used for the search",
@@ -143,6 +168,29 @@
         "description": "The echo of the user identifier used for this action, reusable in downstream playbook nodes",
         "type": "string"
       }
+    },
+    "if": {
+      "properties": {
+        "outcome": {
+          "const": "succeeded"
+        }
+      },
+      "required": [
+        "outcome"
+      ]
+    },
+    "then": {
+      "required": [
+        "user",
+        "query_type",
+        "query_value",
+        "message_ids",
+        "messages",
+        "total_results",
+        "returned_count",
+        "has_more",
+        "scan_limit_reached"
+      ]
     }
   },
   "slug": "search_messages"

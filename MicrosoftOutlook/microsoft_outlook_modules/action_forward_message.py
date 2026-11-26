@@ -17,6 +17,8 @@ class ForwardMessageArguments(BaseModel):
 
 
 class ForwardMessageAction(MicrosoftGraphActionBase):
+    may_modify_data = True
+
     def run(self, arguments: Any) -> Any:
         """Execute the forward message action and return action metadata."""
 

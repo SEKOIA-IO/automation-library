@@ -89,13 +89,6 @@
   "results": {
     "title": "SendMessageResults",
     "type": "object",
-    "required": [
-      "action",
-      "recipients",
-      "status",
-      "target_message_id",
-      "user"
-    ],
     "properties": {
       "action": {
         "description": "The action technical identifier",
@@ -131,6 +124,39 @@
           "html"
         ]
       },
+      "error_details": {
+        "type": "array",
+        "description": "Safe structured errors. retryable refers to retrying the whole action; it is false after a modifying request.",
+        "items": {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "retryable",
+            "outcome_unknown"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "outcome_unknown": {
+              "type": "boolean"
+            },
+            "http_status": {
+              "type": "integer"
+            },
+            "diagnostic_reference": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "from": {
         "description": "The mailbox owner email address used in the From header",
         "type": "string",
@@ -148,6 +174,16 @@
           "High",
           null
         ]
+      },
+      "outcome": {
+        "type": "string",
+        "enum": [
+          "succeeded",
+          "partial",
+          "failed",
+          "unknown"
+        ],
+        "description": "Overall action outcome. Partial, failed and unknown outcomes also flag an SDK action error; inspect retained results before retrying."
       },
       "recipients": {
         "description": "The recipient email addresses used by the action",
@@ -185,6 +221,25 @@
         "description": "The echo of the user identifier used for this action",
         "type": "string"
       }
+    },
+    "if": {
+      "properties": {
+        "outcome": {
+          "const": "succeeded"
+        }
+      },
+      "required": [
+        "outcome"
+      ]
+    },
+    "then": {
+      "required": [
+        "action",
+        "recipients",
+        "status",
+        "target_message_id",
+        "user"
+      ]
     }
   },
   "slug": "send_message"
