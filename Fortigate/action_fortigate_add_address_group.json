@@ -4,7 +4,8 @@
     "properties": {
       "name": {
         "description": "The name of the Address Group.",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "member": {
         "description": "The Object LIST to be added in the Address Group (can be an IP address, a FQDN or event a Group), for example Address1",

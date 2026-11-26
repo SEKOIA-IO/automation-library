@@ -4,7 +4,8 @@
     "properties": {
       "name": {
         "description": "The name of the local account to disable.",
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       }
     },
     "required": [
