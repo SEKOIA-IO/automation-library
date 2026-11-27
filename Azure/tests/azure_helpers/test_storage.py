@@ -143,3 +143,56 @@ async def test_download_blob_with_file(wrapper, blob_content, session_faker):
     assert result is not None
 
     os.remove(result)
+
+
+@pytest.mark.asyncio
+async def test_download_blob_with_file_removed_on_error(wrapper, session_faker, tmp_path):
+    """
+    The temporary file is removed when the download fails.
+
+    Args:
+        wrapper: AzureBlobStorageWrapper
+        session_faker: Faker
+        tmp_path: Path
+    """
+
+    async def failing_chunks():
+        yield b"first chunk"
+        raise ConnectionError("ConditionNotMet")
+
+    client_mock = MagicMock()
+    blob_client = AsyncMock()
+    mocked_stream = MagicMock()
+    mocked_stream.chunks = failing_chunks
+    blob_client.download_blob.return_value = mocked_stream
+    client_mock.get_blob_client.return_value = blob_client
+    wrapper._client = client_mock
+
+    with pytest.raises(ConnectionError):
+        await wrapper.download_blob(session_faker.word(), True, tmp_dir=str(tmp_path))
+
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.asyncio
+async def test_download_blob_range(wrapper, blob_content, session_faker):
+    """
+    Test download a range of a blob.
+
+    Args:
+        wrapper: AzureBlobStorageWrapper
+        blob_content: bytes
+        session_faker: Faker
+    """
+    client_mock = MagicMock()
+    blob_client = AsyncMock()
+    mocked_stream = AsyncMock()
+    mocked_stream.readall.return_value = blob_content[10:20]
+    blob_client.download_blob.return_value = mocked_stream
+    client_mock.get_blob_client.return_value = blob_client
+    wrapper._client = client_mock
+
+    result = await wrapper.download_blob_range(session_faker.word(), 10, 10)
+
+    assert result == blob_content[10:20]
+    blob_client.download_blob.assert_awaited_once_with(offset=10, length=10)

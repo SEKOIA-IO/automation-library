@@ -13,6 +13,7 @@ from sekoia_automation.module import Module
 
 from connectors.blob import AzureBlobConnectorConfig
 from connectors.blob.azure_key_vault import AzureKeyVaultConnector
+from tests.connector.blob import collect
 
 
 @pytest.fixture
@@ -126,7 +127,7 @@ async def test_azure_key_vault_get_azure_blob_data_1(connector: AzureKeyVaultCon
 
     connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
 
-    result = await connector.get_azure_blob_data()
+    result = await collect(connector)
 
     assert result == [
         orjson.dumps(event).decode("utf-8") for event in orjson.loads(blob_content.decode("utf-8")).get("records")
@@ -176,7 +177,7 @@ async def test_azure_key_vault_get_azure_blob_data_2(
 
     connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
 
-    result = await connector.get_azure_blob_data()
+    result = await collect(connector)
 
     assert result == [
         orjson.dumps(event).decode("utf-8") for event in orjson.loads(blob_content.decode("utf-8")).get("records")
@@ -226,7 +227,7 @@ async def test_azure_key_vault_get_azure_blob_data_3(
 
     connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
 
-    result = await connector.get_azure_blob_data()
+    result = await collect(connector)
 
     assert result == [
         orjson.dumps(event).decode("utf-8") for event in orjson.loads(blob_content.decode("utf-8")).get("records")
@@ -276,7 +277,7 @@ async def test_azure_key_vault_get_azure_blob_data_4(
 
     connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
 
-    result = await connector.get_azure_blob_data()
+    result = await collect(connector)
 
     assert result == [event for event in blob_content_simple_format.decode("utf-8").split("\n") if event != ""]
 

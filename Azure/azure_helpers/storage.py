@@ -7,6 +7,7 @@ from azure.core.async_paging import AsyncItemPaged
 from azure.storage.blob import BlobProperties
 from azure.storage.blob.aio import ContainerClient
 from pydantic import BaseModel
+from sekoia_automation.aio.helpers.files.utils import delete_file
 
 
 class AzureBlobStorageConfig(BaseModel):
@@ -87,8 +88,12 @@ class AzureBlobStorageWrapper(object):
         if download:
             async with aiofiles.tempfile.NamedTemporaryFile("wb", delete=False, dir=tmp_dir) as file:
                 file_name = str(file.name)
-                async for chunk in stream.chunks():
-                    await file.write(chunk)
+                try:
+                    async for chunk in stream.chunks():
+                        await file.write(chunk)
+                except BaseException:
+                    await delete_file(file_name)
+                    raise
 
                 return file_name, None
 
@@ -96,3 +101,23 @@ class AzureBlobStorageWrapper(object):
         result = await stream.readall()
 
         return None, result
+
+    async def download_blob_range(self, blob_name: str, offset: int, length: int) -> bytes:
+        """
+        Download a range of bytes of a blob.
+
+        Keep `length` small (a few MB): the range is then fetched with a single request,
+        so a blob modified during the download doesn't fail with `412 ConditionNotMet`.
+
+        Args:
+            blob_name: str
+            offset: int
+            length: int
+
+        Returns:
+            bytes:
+        """
+        blob = self.client().get_blob_client(blob_name)
+        stream = await blob.download_blob(offset=offset, length=length)
+
+        return await stream.readall()
