@@ -11,18 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add the `Get Sophos Fusion detections` connector, to collect the detections of Sophos Fusion (Security Operations) with the Sophos Detections GraphQL API on tenants upgraded to Sophos Fusion
+- Add the `[BETA] Get Sophos Fusion detections` connector, to collect the detections of Sophos Fusion (Security Operations) with the Sophos Detections GraphQL API on tenants upgraded to Sophos Fusion
 - Add the optional module setting `graphql_api_url` (default `https://api.taegis.sophos.com`)
 
 ### Changed
 
+- Mark the `Query IoC from data lake` connector as `[DEPRECATED]`: Sophos has started to upgrade the tenants to Sophos Fusion, whose data lake no longer receives new IoCs. Keep it only for the tenants not upgraded yet
+- Mark the new `Get Sophos Fusion detections` connector as `[BETA]` while its parsing is validated on every detection type
 - Query IoC from data lake: check the Sophos Fusion markers of the tenant at startup and once a day, and log an error when the tenant is upgraded, since the XDR Query API then returns no new IoC. When the markers are unavailable, warn once a day after 30 days without IoC
 - Query IoC from data lake: make the Sophos Fusion check a single attempt with a 10-second timeout, without retries, so an unreachable or failing GraphQL API never blocks or delays the IoC collection
 - Sophos Fusion detections: set a 60-second timeout on the GraphQL requests
 - Logging: show the users only the connector lifecycle, the errors and the Sophos Fusion upgrade; send the per-cycle diagnostics (window, collected, forwarded and skipped counts, pagination, checkpoint, query polling) and the per-item skips of the asset connectors to the pod logs as `key=value` lines
 - Logging: remove the request, correlation and query ids from the error messages shown to the users, so the SDK deduplicates identical errors instead of logging one per cycle; name the IoC query trigger correctly in its start and stop messages
 - Logging: add diagnostics on branches that were silent (empty page before the announced total, window split, detections without id, unparsable error responses)
-- Errors: share the collection loop of the triggers and the description of the Sophos API errors. The error messages give what to check: client id and secret on `401`, the role the API needs on `403` (`Service Principal ReadOnly`, `Forensics` or `Management`, plus the XDR licence for the data lake), rate limit on `429`, Sophos-side error on `5xx`. The actions and the account validator use the same messages
+- Errors: share the collection loop of the triggers and the description of the Sophos API errors. The error messages give what to check: client id and secret on `401`, the role the API needs on `403` (`Service Principal ReadOnly`, `Forensics` or `Management`, plus the XDR licence for the data lake), rate limit on `429`, Sophos-side error on `5xx`. The actions and the account validator use the same messages; an action logs its error once, in a readable line with the Sophos request and correlation ids
 - Errors: show the configuration errors (`401`, `403`) at most once per hour instead of once per cycle, since they last until the customer fixes the API credential
 - Errors: network errors (connection refused, timeout) no longer stop the triggers: they are logged and retried on the next cycle
 - Raise the minimum supported Python version to `3.14`

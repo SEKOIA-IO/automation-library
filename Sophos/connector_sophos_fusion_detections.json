@@ -1,7 +1,7 @@
 {
-  "description": "Get detections from Sophos Fusion Security Operations",
+  "description": "[BETA] Get the detections of Sophos Fusion (Security Operations), with the Sophos Detections GraphQL API, for the tenants upgraded to Sophos Fusion. It replaces the deprecated 'Query IoC from data lake' connector. Beta: the format of the detections is not yet validated on every detection type.",
   "docker_parameters": "sophos_fusion_detections_trigger",
-  "name": "Get Sophos Fusion detections",
+  "name": "[BETA] Get Sophos Fusion detections",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {

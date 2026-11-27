@@ -14,22 +14,25 @@
 | Connector | Sophos API | Minimum role |
 |---|---|---|
 | Get Sophos events | SIEM API `GET /siem/v1/events` | `Service Principal ReadOnly` |
-| Get Sophos Fusion detections | Detections GraphQL API `POST https://api.taegis.sophos.com/graphql` | `Service Principal ReadOnly` |
-| Query IoC from data lake (legacy) | XDR Data Lake Query API `POST /xdr-query/v1/queries/runs` | `Service Principal Forensics` |
+| [BETA] Get Sophos Fusion detections | Detections GraphQL API `POST https://api.taegis.sophos.com/graphql` | `Service Principal ReadOnly` |
+| [DEPRECATED] Query IoC from data lake | XDR Data Lake Query API `POST /xdr-query/v1/queries/runs` | `Service Principal Forensics` |
 | Device and user assets | `/endpoint/v1`, `/common/v1` | `Service Principal ReadOnly` |
-| Isolate, deisolate, scan | `/endpoint/v1` | `Service Principal Management` (not checked yet) |
+| Isolate, deisolate, scan | `/endpoint/v1` | `Service Principal Management` (refused with ReadOnly and Forensics) |
 
 - `Service Principal ReadOnly` gives read access to all public APIs except forensics: with this role, the legacy IoC connector gets `403 UNAUTHORIZED_ACCESS`.
+- `Service Principal Forensics` does not include the read-only access: it reads the endpoints but not the directory users (`403`).
+- A credential has a single role and the module a single credential: to use connectors needing different roles, create one module configuration per credential, or use a `Service Principal Super Admin` credential.
 - No role is specific to Sophos Fusion.
 - The credential must be created on the tenant itself: partner and organization credentials are not supported.
 
 #### Choose the connector: Sophos Fusion or legacy
 
-Sophos upgrades the tenants of Sophos XDR and MDR to **Sophos Fusion** in a staged rollout, without notice on the API side. Customers onboarded recently start directly on Sophos Fusion.
+Sophos has started to upgrade the tenants of Sophos XDR and MDR to **Sophos Fusion**, in a staged rollout and without notice on the API side. Customers onboarded recently start directly on Sophos Fusion.
 
-- **The tenant is upgraded to Sophos Fusion** (the console shows `Security Operations` instead of `Threat Analysis Center`): use **Get Sophos Fusion detections**. The legacy XDR Data Lake Query API still answers, but returns no new data, so the legacy IoC connector runs without error and collects nothing.
-- **The tenant is not upgraded yet**: keep **Query IoC from data lake**, and switch to the Fusion connector once the console shows the upgrade.
-- **Get Sophos events** (SIEM API) keeps working before and after the upgrade.
+- **[DEPRECATED] Query IoC from data lake**: the legacy IoC connector, for the tenants **not upgraded yet** only. On an upgraded tenant, the XDR Data Lake Query API still answers but returns no new data: the connector runs without collecting anything, and logs an error when it detects the upgrade. It will be removed once every tenant is upgraded.
+- **[BETA] Get Sophos Fusion detections**: its replacement, for the tenants **upgraded to Sophos Fusion** (the console shows `Security Operations` instead of `Threat Analysis Center`). In beta while its parsing is validated on every detection type: report any detection that is not parsed correctly.
+- To switch, create a new intake with the Sophos Fusion connector as soon as the console shows the upgrade, then delete the legacy one.
+- **Get Sophos events** (SIEM API) is not affected: it keeps working before and after the upgrade.
 
 #### Useful pages of the Sophos console
 
