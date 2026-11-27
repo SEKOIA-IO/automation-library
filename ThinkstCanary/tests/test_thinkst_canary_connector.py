@@ -352,6 +352,8 @@ def test_next_batch_should_stop_acknowledging_at_the_first_network_error(trigger
         assert trigger.push_events_to_intakes.call_count == 1
         assert trigger.from_id == 3
         assert all(incident["id"] in trigger.forwarded_incidents for incident in message1["incidents"])
+        with trigger.context as cache:
+            assert set(cache["forwarded_incidents"]) == {incident["id"] for incident in message1["incidents"]}
         assert trigger.log_exception.call_count == 1
         assert "2 of 2 incidents" in trigger.log_exception.call_args.kwargs["message"]
 
