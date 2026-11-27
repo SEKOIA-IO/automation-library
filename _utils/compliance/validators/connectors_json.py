@@ -10,6 +10,38 @@ from jsonschema.exceptions import SchemaError
 from .base import Validator
 from .models import CheckError, CheckResult
 
+# Keys of an asset connector descriptor (`"type": "asset"`). An unknown key is ignored by the platform,
+# e.g. `feature-flag` instead of `feature_flags` silently leaves the connector without its flag.
+ASSET_CONNECTOR_REQUIRED_KEYS = {
+    "name",
+    "description",
+    "uuid",
+    "docker_parameters",
+    "type",
+    "capability",
+    "arguments",
+}
+ASSET_CONNECTOR_ALLOWED_KEYS = ASSET_CONNECTOR_REQUIRED_KEYS | {
+    "feature_flags",
+    "slug",
+    "execution_modes",
+    "on_premise_action",
+}
+ASSET_CONNECTOR_CAPABILITIES = {
+    "host_detection",
+    "account_detection",
+    "software_enrichment",
+    "vulnerability_enrichment",
+}
+# Arguments the platform fills for every asset connector: they must be hidden from the user form
+ASSET_CONNECTOR_INTERNAL_ARGUMENTS = {
+    "sekoia_base_url",
+    "sekoia_api_key",
+    "frequency",
+    "batch_size",
+}
+ASSET_CONNECTOR_SECRET_ARGUMENTS = {"sekoia_api_key"}
+
 
 class ConnectorsJSONValidator(Validator):
     @classmethod
@@ -86,7 +118,79 @@ class ConnectorsJSONValidator(Validator):
                 CheckError(filepath=path, error=f"`arguments` is not valid JSON schema")
             )
 
+        if raw.get("type") == "asset":
+            cls.validate_asset_connector(raw, path, result)
+
         # @todo perhaps check if results present? (they shouldn't be)
+
+    @classmethod
+    def validate_asset_connector(
+        cls, raw: dict, path: Path, result: CheckResult
+    ) -> None:
+        missing_keys = ASSET_CONNECTOR_REQUIRED_KEYS - raw.keys()
+        for key in sorted(missing_keys):
+            result.errors.append(
+                CheckError(filepath=path, error=f"`{key}` is not present")
+            )
+
+        unknown_keys = raw.keys() - ASSET_CONNECTOR_ALLOWED_KEYS
+        for key in sorted(unknown_keys):
+            result.errors.append(
+                CheckError(
+                    filepath=path,
+                    error=f"unknown key `{key}` (allowed: {', '.join(sorted(ASSET_CONNECTOR_ALLOWED_KEYS))})",
+                )
+            )
+
+        if (
+            "capability" in raw
+            and raw["capability"] not in ASSET_CONNECTOR_CAPABILITIES
+        ):
+            result.errors.append(
+                CheckError(
+                    filepath=path,
+                    error=f"`capability` must be one of {', '.join(sorted(ASSET_CONNECTOR_CAPABILITIES))}",
+                )
+            )
+
+        feature_flags = raw.get("feature_flags", [])
+        if not isinstance(feature_flags, list) or not all(
+            isinstance(flag, str) for flag in feature_flags
+        ):
+            result.errors.append(
+                CheckError(
+                    filepath=path, error="`feature_flags` must be a list of strings"
+                )
+            )
+
+        arguments = raw.get("arguments")
+        if not isinstance(arguments, dict):
+            return
+
+        properties = arguments.get("properties", {})
+        for name in sorted(ASSET_CONNECTOR_INTERNAL_ARGUMENTS - properties.keys()):
+            result.errors.append(
+                CheckError(
+                    filepath=path, error=f"`arguments.properties.{name}` is not present"
+                )
+            )
+
+        internal = set(arguments.get("internal", []))
+        for name in sorted(ASSET_CONNECTOR_INTERNAL_ARGUMENTS - internal):
+            result.errors.append(
+                CheckError(
+                    filepath=path,
+                    error=f"`{name}` is missing from `arguments.internal`",
+                )
+            )
+
+        secrets = set(arguments.get("secrets", []))
+        for name in sorted(ASSET_CONNECTOR_SECRET_ARGUMENTS - secrets):
+            result.errors.append(
+                CheckError(
+                    filepath=path, error=f"`{name}` is missing from `arguments.secrets`"
+                )
+            )
 
     @staticmethod
     def is_valid_json_schema(schema: dict) -> bool:
