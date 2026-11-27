@@ -362,6 +362,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pyarrow" },
     { name = "pytz" },
+    { name = "sekoia-automation-models" },
     { name = "sekoia-automation-sdk" },
 ]
 
@@ -397,6 +398,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=3.0.3,<4" },
     { name = "pyarrow", specifier = ">=24.0.0,<25" },
     { name = "pytz", specifier = ">=2024.1" },
+    { name = "sekoia-automation-models", specifier = ">=1.5.0,<2" },
     { name = "sekoia-automation-sdk", specifier = ">=1.27.0,<2" },
 ]
 

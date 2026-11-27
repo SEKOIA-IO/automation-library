@@ -26,6 +26,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 )
 from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
+from sekoia_automation_models.hostname import split_hostname
 
 from asset_connector.aws_api_models import AwsApiInstance, AwsReservationApi
 from asset_connector.aws_assets import AwsAssetsConnector, handle_aws_errors
@@ -345,11 +346,12 @@ class AwsDeviceAssetConnector(AwsAssetsConnector):
             if date_filter and created_time < date_filter:
                 return None
 
-            # Extract hostname (prefer PublicDnsName, fallback to PrivateDnsName)
-            # Handle empty strings as None
-            public_dns = instance.PublicDnsName or None
-            private_dns = instance.PrivateDnsName or None
-            hostname = public_dns or private_dns or instance_id
+            # The public DNS name follows the public IP: only the private name matches events.
+            # split_hostname keeps `.internal` names whole, so cut the first label first.
+            hostname, _ = split_hostname((instance.PrivateDnsName or "").partition(".")[0])
+            if not hostname:
+                self.log(f"Instance {instance_id} has no usable private DNS name, skipping", level="warning")
+                return None
 
             # Extract name from tags
             tags_dicts = [{"Key": t.Key, "Value": t.Value} for t in instance.Tags]

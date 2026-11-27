@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-25 - 1.39.1
+
+### Fixed
+
+- Use the short private DNS name as device hostname, never the public DNS name or the instance ID
+- Skip instances without a usable private DNS name
+
 ## 2026-11-12 - 1.39.0
 
 ### Changed
