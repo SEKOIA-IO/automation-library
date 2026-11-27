@@ -347,7 +347,7 @@ wheels = [
 
 [[package]]
 name = "aws-automation"
-version = "1.39.0"
+version = "1.39.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiobotocore" },

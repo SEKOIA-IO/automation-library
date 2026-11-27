@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-27 - 1.39.1
+
 ### Fixed
 
 - AWS clients renew the OIDC credentials by themselves when they get close to expiry, so a long batch can still delete its SQS messages
