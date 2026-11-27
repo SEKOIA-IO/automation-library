@@ -2,6 +2,7 @@
 Unit tests for SophosUserAssetConnector (asset_connector/user_assets.py).
 """
 
+import logging
 from unittest.mock import MagicMock
 
 import pytest
@@ -510,9 +511,12 @@ class TestMapUserFields:
             pytest.param(NAMED_USER.model_copy(update={"name": None}), id="missing_name_returns_none"),
         ],
     )
-    def test_missing_mandatory_field_returns_none(self, connector, user):
+    def test_missing_mandatory_field_returns_none(self, connector, caplog, user):
+        caplog.set_level(logging.DEBUG)
         assert connector.map_user_fields(user) is None
-        connector.log.assert_called()
+        # one warning per skipped user: pod logs only, the user sees the skipped count of the run
+        connector.log.assert_not_called()
+        assert any("Skipping user: missing" in record.getMessage() for record in caplog.records)
 
     @pytest.mark.parametrize(
         ("user", "expected_ts"),

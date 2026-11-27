@@ -2,6 +2,7 @@
 Unit tests for SophosDeviceAssetConnector (asset_connector/device_assets.py).
 """
 
+import logging
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
@@ -433,10 +434,13 @@ class TestMapDeviceFields:
             pytest.param("hostname", id="missing_hostname"),
         ],
     )
-    def test_missing_mandatory_field_returns_none(self, connector, missing_field):
+    def test_missing_mandatory_field_returns_none(self, connector, caplog, missing_field):
+        caplog.set_level(logging.DEBUG)
         ep = _computer_with(**{missing_field: None})
         assert connector.map_device_fields(ep) is None
-        connector.log.assert_called()
+        # one warning per skipped endpoint: pod logs only, the user sees the skipped count of the run
+        connector.log.assert_not_called()
+        assert any(f"Skipping endpoint: missing {missing_field}" in record.getMessage() for record in caplog.records)
 
     def test_no_cloud_field(self, connector):
         result = connector.map_device_fields(_computer_with(cloud=None))
@@ -677,7 +681,7 @@ class TestLoadSentIds:
         connector._load_sent_ids()
         assert "boundary-id" in connector._sent_ids
 
-    def test_log_eviction_count(self, connector):
+    def test_log_eviction_count(self, connector, monkeypatch):
         """Debug log must report the correct number of evicted entries."""
         old = (datetime.now(tz=UTC) - timedelta(days=10)).isoformat()
         recent = datetime.now(tz=UTC).isoformat()
@@ -687,9 +691,12 @@ class TestLoadSentIds:
                 "old-2": {"fingerprint": "fp2", "cached_at": old},
                 "new-1": {"fingerprint": "fp3", "cached_at": recent},
             }
+        # debug logs are filtered by structlog at the default LOG_LEVEL: check the call itself
+        pod_logger = MagicMock()
+        monkeypatch.setattr("sophos_module.asset_connector.device_assets.logger", pod_logger)
         connector._load_sent_ids()
-        log_calls = [str(call) for call in connector.log.call_args_list]
-        assert any("evicted=2" in call for call in log_calls)
+        connector.log.assert_not_called()
+        assert "evicted=2" in pod_logger.debug.call_args.args[0]
 
 
 class TestSaveSentIds:

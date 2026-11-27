@@ -1,4 +1,5 @@
 import json
+import logging
 from unittest.mock import Mock
 
 import pytest
@@ -219,7 +220,7 @@ def test_run_raises_unexpected_errors(trigger, run_one_cycle):
         run_one_cycle(trigger, "forward_next_batches", ValueError("boom"))
 
     trigger.log_exception.assert_called_once()
-    assert trigger.log.call_args_list[-1].kwargs["message"] == "Sophos Events Trigger has stopped"
+    assert trigger.log.call_args_list[-1].kwargs["message"] == "Sophos events trigger has stopped"
 
 
 def test_run_stops_on_authentication_error(trigger, run_one_cycle):
@@ -228,3 +229,31 @@ def test_run_stops_on_authentication_error(trigger, run_one_cycle):
     trigger.run()
 
     assert log_levels(trigger) == ["info", "critical", "info"]
+
+
+def test_cycle_summary_goes_to_the_pod_logs_only(trigger, mock_api, caplog):
+    caplog.set_level(logging.INFO)
+    mock_api.get(SIEM_URL, json=batch([EVENT_REGISTERED, EVENT_MALWARE]))
+
+    trigger.forward_next_batches()
+
+    trigger.log.assert_not_called()
+    summary = [record.getMessage() for record in caplog.records if "SIEM events collected" in record.getMessage()]
+    assert len(summary) == 1
+    assert "pages=1" in summary[0] and "collected=2" in summary[0] and "forwarded=2" in summary[0]
+
+
+def test_api_failure_message_is_stable(trigger, mock_api):
+    mock_api.get(
+        SIEM_URL,
+        [
+            {"status_code": 503, "reason": "Service Unavailable", "json": {"requestId": "1"}},
+            {"status_code": 503, "reason": "Service Unavailable", "json": {"requestId": "2"}},
+        ],
+    )
+
+    trigger.get_next_events(None)
+    trigger.get_next_events("cursor")
+
+    first, second = (call.kwargs["message"] for call in trigger.log.call_args_list)
+    assert first == second == "Failed to fetch the events from the Sophos SIEM API: status 503 - Service Unavailable"

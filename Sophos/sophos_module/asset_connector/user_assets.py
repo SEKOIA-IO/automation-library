@@ -22,6 +22,10 @@ from sekoia_automation.storage import PersistentJSON
 from sophos_module.asset_connector.model import SophosUser, SophosUsersResponse
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.logging import get_logger
+
+# per-item and cache diagnostics go to the pod logs only: the connector logs (self.log) are shown to the user
+logger = get_logger()
 
 _CACHE_KEY = "known_users"
 
@@ -185,10 +189,10 @@ class SophosUserAssetConnector(AssetConnector):
         name = user.name
 
         if not uid:
-            self.log(f"Skipping user: missing 'id'. Data: {user}", level="warning")
+            logger.warning("Skipping user: missing id", data=str(user)[:1000])
             return None
         if not name:
-            self.log(f"Skipping user {uid}: missing 'name'", level="warning")
+            logger.warning("Skipping user: missing name", id=uid)
             return None
 
         account_type_id, account_type_str = self._get_account_type(user)
@@ -311,12 +315,9 @@ class SophosUserAssetConnector(AssetConnector):
         if self._current_run:
             with self.context as cache:
                 cache[_CACHE_KEY] = self._current_run
-            self.log(
-                f"Checkpoint updated - {len(self._current_run)} users cached",
-                level="debug",
-            )
+            logger.debug(f"Checkpoint updated - {len(self._current_run)} users cached")
         else:
-            self.log("No checkpoint update needed - no users seen this run", level="debug")
+            logger.debug("No checkpoint update needed - no users seen this run")
 
     def get_assets(self) -> Generator[UserOCSFModel]:
         """Main entry point: yield new/changed Sophos directory users as OCSF models."""

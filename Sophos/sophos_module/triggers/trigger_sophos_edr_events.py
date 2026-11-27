@@ -13,7 +13,11 @@ from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
 from sophos_module.client.exceptions import SophosApiAuthenticationError
 from sophos_module.helper import latest_timestamp, normalize_message
+from sophos_module.logging import get_logger
 from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+
+# per-cycle diagnostics go to the pod logs only: the connector logs (self.log) are shown to the user
+logger = get_logger()
 
 
 class SophosEDRConfiguration(DefaultConnectorConfiguration):
@@ -69,7 +73,7 @@ class SophosEDREventsTrigger(SophosConnector):
         return SophosApiClient(auth=self.authentication)
 
     def run(self) -> None:
-        self.log(message="Sophos Events Trigger has started", level="info")
+        self.log(message="Sophos events trigger has started", level="info")
 
         try:
             # Authenticate with the Sophos API
@@ -101,7 +105,7 @@ class SophosEDREventsTrigger(SophosConnector):
             self.log(message=str(ex), level="critical")
 
         finally:
-            self.log(message="Sophos Events Trigger has stopped", level="info")
+            self.log(message="Sophos events trigger has stopped", level="info")
 
     def get_next_events(self, cursor: str | None) -> dict[str, Any] | None:
         # set parameters
@@ -128,10 +132,17 @@ class SophosEDREventsTrigger(SophosConnector):
         if not response.ok:
             self.log(
                 message=(
-                    "Request on Sophos Central API to fetch events of failed with"
+                    "Failed to fetch the events from the Sophos SIEM API:"
                     f" status {response.status_code} - {response.reason}"
                 ),
                 level="error",
+            )
+            logger.error(
+                "SIEM API request failed",
+                status_code=response.status_code,
+                reason=response.reason,
+                response=response.text[:1000],
+                has_cursor=cursor is not None,
             )
 
             return None
@@ -152,6 +163,9 @@ class SophosEDREventsTrigger(SophosConnector):
         cursor = self.cursor
 
         messages = []
+        pages = 0
+        collected = 0
+        forwarded = 0
         while has_more_messages and self.running:
             has_more_messages = False
 
@@ -165,7 +179,9 @@ class SophosEDREventsTrigger(SophosConnector):
             if (next_cursor := batch.get("next_cursor")) is not None:
                 cursor = next_cursor
 
+            pages += 1
             items = batch.get("items", [])
+            collected += len(items)
             if len(items) > 0:
                 most_recent_timestamp_seen = self._get_most_recent_timestamp_from_items(items)
                 if most_recent_timestamp_seen is not None:
@@ -178,18 +194,26 @@ class SophosEDREventsTrigger(SophosConnector):
                 messages.append(orjson.dumps(normalized_message).decode("utf-8"))
 
             if len(messages) > self.pagination_limit:
-                self.log(message=f"Sending a batch of {len(messages)} messages", level="info")
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
                 self.push_events_to_intakes(events=messages)
+                forwarded += len(messages)
                 messages = []
 
         if cursor is not None:
             self.cursor = cursor
 
         if messages:
-            self.log(message=f"Sending a batch of {len(messages)} messages", level="info")
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
             self.push_events_to_intakes(events=messages)
+            forwarded += len(messages)
         else:
-            self.log(message="No messages to forward", level="info")
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+
+        logger.info(
+            "SIEM events collected",
+            pages=pages,
+            collected=collected,
+            forwarded=forwarded,
+            has_more=has_more_messages,
+            cursor_saved=cursor is not None,
+        )

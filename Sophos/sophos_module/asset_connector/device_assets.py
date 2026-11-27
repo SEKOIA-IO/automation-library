@@ -30,6 +30,10 @@ from sophos_module.asset_connector.model import (
 )
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.logging import get_logger
+
+# per-item and cache diagnostics go to the pod logs only: the connector logs (self.log) are shown to the user
+logger = get_logger()
 
 
 class SophosDeviceAssetConnector(AssetConnector):
@@ -120,10 +124,7 @@ class SophosDeviceAssetConnector(AssetConnector):
             )
 
         self._sent_ids = pruned
-        self.log(
-            f"Dedup cache loaded - entries={len(self._sent_ids)} (evicted={len(raw) - len(self._sent_ids)})",
-            level="debug",
-        )
+        logger.debug(f"Dedup cache loaded - entries={len(self._sent_ids)} (evicted={len(raw) - len(self._sent_ids)})")
 
     def _save_sent_ids(self) -> None:
         """Persist the fingerprint cache back to context.json."""
@@ -135,13 +136,10 @@ class SophosDeviceAssetConnector(AssetConnector):
                     reverse=True,
                 )[: self.MAX_CACHE_SIZE]
             )
-            self.log(
-                f"Dedup cache trimmed to {self.MAX_CACHE_SIZE} entries before save",
-                level="debug",
-            )
+            logger.debug(f"Dedup cache trimmed to {self.MAX_CACHE_SIZE} entries before save")
         with self.context as cache:
             cache["sent_ids"] = self._sent_ids
-        self.log(f"Dedup cache saved - entries={len(self._sent_ids)}", level="debug")
+        logger.debug(f"Dedup cache saved - entries={len(self._sent_ids)}")
 
     @cached_property
     def client(self) -> SophosApiClient:
@@ -314,10 +312,10 @@ class SophosDeviceAssetConnector(AssetConnector):
         hostname = endpoint.hostname
 
         if not uid:
-            self.log(f"Skipping endpoint: missing 'id'. Data: {endpoint}", level="warning")
+            logger.warning("Skipping endpoint: missing id", data=str(endpoint)[:1000])
             return None
         if not hostname:
-            self.log(f"Skipping endpoint {uid}: missing 'hostname'", level="warning")
+            logger.warning("Skipping endpoint: missing hostname", id=uid)
             return None
 
         type_id, type_str = self._get_device_type(endpoint)
@@ -445,9 +443,9 @@ class SophosDeviceAssetConnector(AssetConnector):
         if self._latest_time:
             with self.context as cache:
                 cache["last_seen_cursor"] = self._latest_time
-            self.log(f"Checkpoint updated successfully - New timestamp: {self._latest_time}", level="debug")
+            logger.debug(f"Checkpoint updated successfully - New timestamp: {self._latest_time}")
         else:
-            self.log("No checkpoint update needed - No new timestamp available", level="debug")
+            logger.debug("No checkpoint update needed - No new timestamp available")
 
     def get_assets(self) -> Generator[DeviceOCSFModel]:
         """Main entry point: yield all Sophos device assets as OCSF models."""
@@ -468,10 +466,7 @@ class SophosDeviceAssetConnector(AssetConnector):
                 try:
                     current_fp = self._compute_fingerprint(endpoint)
                 except TypeError as exc:
-                    self.log(
-                        f"Skipping endpoint '{endpoint.id}': fingerprint serialization failed - {exc}",
-                        level="warning",
-                    )
+                    logger.warning(f"Skipping endpoint '{endpoint.id}': fingerprint serialization failed - {exc}")
                     skipped += 1
                     continue
 

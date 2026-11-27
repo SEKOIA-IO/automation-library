@@ -17,7 +17,28 @@ from sophos_module.client.auth import SophosApiAuthentication
 from sophos_module.client.exceptions import SophosApiAuthenticationError
 from sophos_module.fusion_queries import TENANT_MARKERS
 from sophos_module.helper import latest_timestamp
+from sophos_module.logging import get_logger
 from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+
+# per-cycle diagnostics go to the pod logs only: the connector logs (self.log) are shown to the user
+logger = get_logger()
+
+
+def describe_error(response: Any) -> str:
+    """Stable summary of a Sophos error response, without request or correlation ids.
+
+    Identical errors then give identical log messages, that the SDK deduplicates.
+    """
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = None
+
+    if isinstance(payload, dict) and (payload.get("error") or payload.get("message")):
+        return f"{payload.get('error')}: {payload.get('message')}"
+
+    return str(response.reason or "no details")
+
 
 FUSION_UPGRADE_MESSAGE = (
     "This tenant was probably upgraded to Sophos Fusion: the XDR Query API no longer returns new IoCs. "
@@ -101,15 +122,13 @@ class SophosXDRQueryTrigger(SophosConnector):
             tenant = self.client.graphql(TENANT_MARKERS, {"id": tenant_id}).get("tenant") or {}
             markers = tenant["centralTenant"] or {}
         except Exception as error:
-            self.log(message=f"Unable to check whether the tenant is upgraded to Sophos Fusion: {error}", level="info")
+            logger.info("Unable to check whether the tenant is upgraded to Sophos Fusion", error=str(error))
             self.fusion_upgraded = None
             return None
 
         xdr_ownership, hydrate_to = markers.get("xdrOwnership"), markers.get("hydrateTo")
-        self.log(
-            message=f"Sophos Fusion markers of the tenant: xdrOwnership={xdr_ownership}, hydrateTo={hydrate_to}",
-            level="info",
-        )
+        # read in Loki to validate the markers on tenants not upgraded yet
+        logger.info("Sophos Fusion markers of the tenant", xdrOwnership=xdr_ownership, hydrateTo=hydrate_to)
 
         self.fusion_upgraded = xdr_ownership == "securityOperations" or hydrate_to == "taegis"
         if self.fusion_upgraded:
@@ -150,7 +169,7 @@ class SophosXDRQueryTrigger(SophosConnector):
         )
 
     def run(self) -> None:
-        self.log(message="Sophos Events Trigger has started", level="info")
+        self.log(message="Sophos IoC query trigger has started", level="info")
 
         try:
             # Authenticate with the Sophos API
@@ -183,22 +202,21 @@ class SophosXDRQueryTrigger(SophosConnector):
             self.log(message=str(ex), level="critical")
 
         finally:
-            self.log(message="Sophos Events Trigger has stopped", level="info")
+            self.log(message="Sophos IoC query trigger has stopped", level="info")
 
     def post_query(self, query: dict[str, Any]) -> tuple[str, str | None]:
         # It's the first step of our query treatment.
         # Posting the query
-        self.log(
-            message=f"Querying the Sophos data lake at {self.from_date.strftime('%Y-%m-%d %H:%M:%S')}", level="info"
-        )
+        logger.info("Querying the Sophos data lake", from_date=self.from_date.isoformat())
 
         response = self.client.run_query(json_query=query)
         if response.status_code >= 400:
             self.log(
-                message=f"Failed to post the query. Status code: {response.status_code}, response: {response.text}"
-                f"{self._query_error_hint(response.status_code)}",
+                message=f"Failed to post the query to the Sophos data lake: status {response.status_code} - "
+                f"{describe_error(response)}{self._query_error_hint(response.status_code)}",
                 level="error",
             )
+            logger.error("Query post failed", status_code=response.status_code, response=response.text[:1000])
 
             return "failed", None
 
@@ -207,12 +225,14 @@ class SophosXDRQueryTrigger(SophosConnector):
         query_id = result.get("id")
 
         if query_id is None:
-            self.log(message=f"Failed to post the query: no query id in the response {result}", level="error")
+            self.log(message="Failed to post the query to the Sophos data lake: no query id returned", level="error")
+            logger.error("Query post returned no id", response=str(result)[:1000])
             return "failed", query_id
 
         status = ""
-        self.log(message=f"Waiting the query {query_id} to complete", level="info")
+        polls = 0
         while status != "finished":
+            polls += 1
             # Give time for query to finish.
             time.sleep(2)
             # It's the Second step of our query treatment.
@@ -220,16 +240,22 @@ class SophosXDRQueryTrigger(SophosConnector):
             response_query_status = self.client.get_query_status(query_id)
             if response_query_status.status_code >= 400:
                 self.log(
-                    message=f"Failed to get the query status. Status code: {response_query_status.status_code}, "
-                    f"response: {response_query_status.text}",
+                    message=f"Failed to get the status of the Sophos data lake query: status "
+                    f"{response_query_status.status_code} - {describe_error(response_query_status)}",
                     level="error",
+                )
+                logger.error(
+                    "Query status failed",
+                    query_id=query_id,
+                    status_code=response_query_status.status_code,
+                    response=response_query_status.text[:1000],
                 )
 
             result_query_status = response_query_status.json()
             status = result_query_status.get("status")
             result = result_query_status.get("result")
 
-        self.log(message=f"Finishing the loop with status {status} and result {result}", level="info")
+        logger.info("Query finished", query_id=query_id, result=result, polls=polls)
 
         if result != "succeeded":
             details = {
@@ -237,7 +263,9 @@ class SophosXDRQueryTrigger(SophosConnector):
                 for key, value in result_query_status.items()
                 if key.lower().startswith("error") or key in ("message", "details")
             }
-            self.log(message=f"The query {query_id} ended with result {result}: {details}", level="error")
+            # no query id in the message: identical failures are deduplicated
+            self.log(message=f"The Sophos data lake query ended with result {result}: {details}", level="error")
+            logger.error("Query failed", query_id=query_id, result=result, details=details)
 
         return result, query_id
 
@@ -261,25 +289,24 @@ class SophosXDRQueryTrigger(SophosConnector):
 
     def getting_results(self, pagination: int) -> None:
         now = datetime.now(UTC)
+        forwarded_before = self.events_sum
 
         result, query_id = self.post_query(self.query)
 
         if result != "succeeded":
-            self.log(
-                message=f"The query failed. No events collected at {self.from_date.strftime('%Y-%m-%d %H:%M:%S')} !!"
-            )
+            # the cause is already logged by post_query: the checkpoint is kept and the query retried next cycle
+            logger.warning("No IoC collected, checkpoint kept", from_date=self.from_date.isoformat())
         else:
             # If the result succeed ==> get the data.
             response: dict[str, Any] = self.client.get_query_results(query_id, pagination).json()
             items = response.get("items", [])
             self._observe_items_events_lag(items)
-            self.log(message=f"Getting results with {len(items)} elements", level="info")
             INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
             if len(items) > 0:
                 messages = [orjson.dumps(message).decode("utf-8") for message in items]
                 next_key = response.get("pages", {}).get("nextKey")
-                self.log(message=f"Sending the first batch of {len(messages)} messages", level="info")
+                pages = 1
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
                 self.push_events_to_intakes(events=messages)
                 self.events_sum += len(messages)
@@ -292,7 +319,7 @@ class SophosXDRQueryTrigger(SophosConnector):
                     next_page_items = response_next_page.get("items", [])
                     next_messages = [orjson.dumps(message).decode("utf-8") for message in next_page_items]
                     self._observe_items_events_lag(next_page_items)
-                    self.log(message=f"Sending other batches of {len(next_messages)} messages", level="info")
+                    pages += 1
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(next_messages))
                     self.push_events_to_intakes(events=next_messages)
                     self.events_sum += len(next_messages)
@@ -301,9 +328,15 @@ class SophosXDRQueryTrigger(SophosConnector):
                 most_recent_date_seen = now
                 self.from_date = most_recent_date_seen
                 self.cursor.offset = most_recent_date_seen
+                logger.info(
+                    "IoCs collected",
+                    pages=pages,
+                    forwarded=self.events_sum - forwarded_before,
+                    checkpoint=most_recent_date_seen.isoformat(),
+                )
 
             else:
-                self.log(message="No messages to forward", level="info")
+                logger.info("No new IoC", from_date=self.from_date.isoformat())
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
                 self.warn_if_stalled()
 

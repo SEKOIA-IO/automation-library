@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock
 
@@ -312,3 +313,62 @@ def test_run_stops_on_authentication_error(trigger, run_one_cycle, during_cycle)
 
     trigger.log_exception.assert_not_called()
     assert [call.kwargs.get("level") for call in trigger.log.call_args_list] == ["info", "critical", "info"]
+
+
+def test_detections_without_id_are_skipped(trigger, mock_api, caplog):
+    caplog.set_level(logging.INFO)
+    without_id = {**detection(9), "id": None}
+    mock_api.post(GRAPHQL_URL, json=search_response([without_id, detection(1)]))
+
+    trigger.next_batch()
+
+    assert [event["id"] for event in forwarded_events(trigger)] == ["alert://priv:example:00000:1"]
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("Detections without id skipped" in message and "count=1" in message for message in messages)
+
+
+@pytest.mark.parametrize(
+    "responses, expected_pod_log",
+    [
+        pytest.param(
+            [{"json": search_response([detection(1)])}],
+            "collected=1 forwarded=1 skipped=0",
+            id="summary",
+        ),
+        pytest.param(
+            [{"json": search_response([detection(1), detection(2)], total=5)}, {"json": search_response([], total=5)}],
+            "Sophos returned an empty page before the announced total",
+            id="empty-page",
+        ),
+        pytest.param(
+            [
+                {"json": search_response([detection(0)], total=MAX_RESULTS_PER_SEARCH + 1)},
+                {"json": search_response([])},
+                {"json": search_response([])},
+            ],
+            "Too many detections for one search, splitting the window",
+            id="window-split",
+        ),
+    ],
+)
+def test_cycle_diagnostics_go_to_the_pod_logs_only(trigger, mock_api, caplog, responses, expected_pod_log):
+    caplog.set_level(logging.INFO)
+    mock_api.post(GRAPHQL_URL, responses)
+
+    trigger.next_batch()
+
+    trigger.log.assert_not_called()
+    assert any(expected_pod_log in record.getMessage() for record in caplog.records)
+
+
+def test_search_errors_are_shown_with_a_stable_message(trigger, mock_api):
+    error = {"message": "failed to parse cql query", "extensions": {"code": "BAD_USER_INPUT"}}
+    mock_api.post(GRAPHQL_URL, json={"data": None, "errors": [error]})
+
+    trigger.next_batch()
+    trigger.next_batch()
+
+    first, second = (call.kwargs["message"] for call in trigger.log.call_args_list)
+    # no window dates in the message: the SDK deduplicates it while the error lasts
+    assert first == second
+    assert "earliest" not in first and "BAD_USER_INPUT" in first

@@ -14,7 +14,11 @@ from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
 from sophos_module.client.exceptions import SophosApiAuthenticationError, SophosGraphQLError
 from sophos_module.fusion_queries import DETECTION_SEARCH
+from sophos_module.logging import get_logger
 from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+
+# per-cycle diagnostics go to the pod logs only: the connector logs (self.log) are shown to the user
+logger = get_logger()
 
 # detectionSearch returns at most 10,000 results per search: larger windows are split
 MAX_RESULTS_PER_SEARCH = 10000
@@ -127,10 +131,11 @@ class SophosFusionDetectionsTrigger(SophosConnector):
 
         if total > MAX_RESULTS_PER_SEARCH and end - start > timedelta(seconds=1):
             middle = start + (end - start) / 2
-            self.log(
-                message=f"{total} detections between {format_ql_date(start)} and {format_ql_date(end)}: "
-                "splitting the window",
-                level="info",
+            logger.info(
+                "Too many detections for one search, splitting the window",
+                total_results=total,
+                start=format_ql_date(start),
+                end=format_ql_date(end),
             )
             return self.fetch_window(start, middle) + self.fetch_window(middle, end)
 
@@ -138,6 +143,13 @@ class SophosFusionDetectionsTrigger(SophosConnector):
         while len(detections) < min(total, MAX_RESULTS_PER_SEARCH):
             page = (self.search(start, end, offset=len(detections)).get("alerts") or {}).get("list") or []
             if not page:
+                logger.warning(
+                    "Sophos returned an empty page before the announced total",
+                    fetched=len(detections),
+                    total_results=total,
+                    start=format_ql_date(start),
+                    end=format_ql_date(end),
+                )
                 break
             detections.extend(page)
 
@@ -149,10 +161,14 @@ class SophosFusionDetectionsTrigger(SophosConnector):
     def forward_detections(self, detections: list[dict[str, Any]], window_end: datetime) -> int:
         events: list[str] = []
         most_recent_timestamp: float | None = None
+        without_id = 0
 
         for detection in detections:
             detection_id = detection.get("id")
-            if detection_id is None or detection_id in self._seen:
+            if detection_id is None:
+                without_id += 1
+                continue
+            if detection_id in self._seen:
                 continue
             self._seen[detection_id] = window_end
 
@@ -165,6 +181,9 @@ class SophosFusionDetectionsTrigger(SophosConnector):
         if most_recent_timestamp is not None:
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(time.time() - most_recent_timestamp))
 
+        if without_id:
+            logger.warning("Detections without id skipped", count=without_id)
+
         if events:
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
             for index in range(0, len(events), self.page_size):
@@ -176,21 +195,33 @@ class SophosFusionDetectionsTrigger(SophosConnector):
         end = datetime.now(UTC) - self.latency
         start = self.cursor.offset - self.overlap
         if end <= start:
+            logger.debug("Window not open yet", start=format_ql_date(start), end=format_ql_date(end))
             return
 
         try:
             detections = self.fetch_window(start, end)
         except SophosGraphQLError as error:
-            # keep the checkpoint: the same window is searched again on the next cycle
+            # keep the checkpoint: the same window is searched again on the next cycle.
+            # Stable message (no dates): the SDK deduplicates identical logs while the error lasts
             self.log(message=f"Failed to search the Sophos Fusion detections: {error}", level="error")
+            logger.error(
+                "Detection search failed, checkpoint kept",
+                error=str(error),
+                codes=error.codes,
+                start=format_ql_date(start),
+                end=format_ql_date(end),
+            )
             return
 
         INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(detections))
         forwarded = self.forward_detections(detections, end)
-        self.log(
-            message=f"{len(detections)} detections between {format_ql_date(start)} and {format_ql_date(end)}, "
-            f"{forwarded} forwarded",
-            level="info",
+        logger.info(
+            "Detections collected",
+            start=format_ql_date(start),
+            end=format_ql_date(end),
+            collected=len(detections),
+            forwarded=forwarded,
+            skipped=len(detections) - forwarded,
         )
         if not detections:
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)

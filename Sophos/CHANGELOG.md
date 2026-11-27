@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Query IoC from data lake: check the Sophos Fusion markers of the tenant at startup and once a day, and log an error when the tenant is upgraded, since the XDR Query API then returns no new IoC. When the markers are unavailable, warn once a day after 30 days without IoC
+- Logging: show the users only the connector lifecycle, the errors and the Sophos Fusion upgrade; send the per-cycle diagnostics (window, collected, forwarded and skipped counts, pagination, checkpoint, query polling) and the per-item skips of the asset connectors to the pod logs as `key=value` lines
+- Logging: remove the request, correlation and query ids from the error messages shown to the users, so the SDK deduplicates identical errors instead of logging one per cycle; name the IoC query trigger correctly in its start and stop messages
+- Logging: add diagnostics on branches that were silent (empty page before the announced total, window split, detections without id, unparsable error responses)
 - Raise the minimum supported Python version to `3.14`
 - Migrate project dependency management from Poetry to uv (`pyproject.toml` PEP 621 + `uv.lock`), with `mise` tasks and `ruff` instead of `black`, `isort` and `autoflake`
 - Upgrade `sekoia-automation-sdk` to `1.28.1` and regenerate `uv.lock` with the latest versions of all dependencies

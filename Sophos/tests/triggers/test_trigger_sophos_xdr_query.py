@@ -1,12 +1,20 @@
+import json
+import logging
 from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
+import requests
 import requests_mock
 
 from sophos_module.base import SophosModule
 from sophos_module.client.exceptions import SophosApiAuthenticationError
-from sophos_module.triggers.trigger_sophos_xdr_query import SophosXDRIOCQuery, SophosXDRQueryTrigger
+from sophos_module.triggers.trigger_sophos_xdr_query import (
+    FUSION_UPGRADE_MESSAGE,
+    SophosXDRIOCQuery,
+    SophosXDRQueryTrigger,
+    describe_error,
+)
 
 
 @pytest.fixture
@@ -353,8 +361,11 @@ def test_post_query_forbidden_logs_role_hint(trigger, authorization_message, who
 
         assert trigger.post_query(trigger.query) == ("failed", None)
 
-    messages = [call.kwargs["message"] for call in trigger.log.call_args_list if call.kwargs.get("level") == "error"]
-    assert any("403" in message and "Service Principal Forensics" in message for message in messages)
+    assert [call.kwargs["message"] for call in trigger.log.call_args_list] == [
+        "Failed to post the query to the Sophos data lake: status 403 - UNAUTHORIZED_ACCESS: Forbidden"
+        ". Check that the API credential has the 'Service Principal Forensics' role"
+        " and that the XDR licence of the tenant is valid"
+    ]
 
 
 def test_post_query_without_query_id(trigger, authorization_message, whoami_message):
@@ -403,18 +414,17 @@ def _mock_tenant_markers(mock, trigger, authorization_message, whoami_message, *
 
 
 @pytest.mark.parametrize(
-    "markers, expected, expected_levels",
+    "markers, expected",
     [
-        pytest.param(
-            {"xdrOwnership": "securityOperations", "hydrateTo": "taegis"}, True, ["info", "error"], id="fusion"
-        ),
-        pytest.param({"xdrOwnership": "securityOperations", "hydrateTo": None}, True, ["info", "error"], id="sec-ops"),
-        pytest.param({"xdrOwnership": "central", "hydrateTo": "taegis"}, True, ["info", "error"], id="taegis"),
-        pytest.param({"xdrOwnership": "central", "hydrateTo": None}, False, ["info"], id="legacy"),
-        pytest.param(None, False, ["info"], id="no-central-tenant"),
+        pytest.param({"xdrOwnership": "securityOperations", "hydrateTo": "taegis"}, True, id="fusion"),
+        pytest.param({"xdrOwnership": "securityOperations", "hydrateTo": None}, True, id="sec-ops"),
+        pytest.param({"xdrOwnership": "central", "hydrateTo": "taegis"}, True, id="taegis"),
+        pytest.param({"xdrOwnership": "central", "hydrateTo": None}, False, id="legacy"),
+        pytest.param(None, False, id="no-central-tenant"),
     ],
 )
-def test_check_fusion_upgrade(trigger, authorization_message, whoami_message, markers, expected, expected_levels):
+def test_check_fusion_upgrade(trigger, authorization_message, whoami_message, caplog, markers, expected):
+    caplog.set_level(logging.INFO)
     with requests_mock.Mocker() as mock:
         _mock_tenant_markers(
             mock,
@@ -427,7 +437,14 @@ def test_check_fusion_upgrade(trigger, authorization_message, whoami_message, ma
         assert mock.last_request.json()["variables"] == {"id": whoami_message["id"]}
 
     assert trigger.fusion_upgraded is expected
-    assert [call.kwargs["level"] for call in trigger.log.call_args_list] == expected_levels
+    # the user only sees the upgrade error; the raw markers go to the pod logs
+    assert [call.kwargs["message"] for call in trigger.log.call_args_list] == (
+        [FUSION_UPGRADE_MESSAGE] if expected else []
+    )
+    pod_logs = [record.getMessage() for record in caplog.records if "Sophos Fusion markers" in record.getMessage()]
+    assert len(pod_logs) == 1
+    if markers:
+        assert f"xdrOwnership={markers['xdrOwnership']}" in pod_logs[0]
 
 
 @pytest.mark.parametrize(
@@ -447,7 +464,8 @@ def test_check_fusion_upgrade_failure_is_ignored(trigger, authorization_message,
         assert trigger.check_fusion_upgrade() is None
         assert trigger.fusion_upgraded is None
 
-    assert all(call.kwargs["level"] == "info" for call in trigger.log.call_args_list)
+    # best effort: nothing shown to the user
+    trigger.log.assert_not_called()
 
 
 def test_warn_if_stalled_when_markers_unknown(trigger):
@@ -552,8 +570,9 @@ def test_post_query_retries_status_after_error(
         assert trigger.post_query(trigger.query) == ("succeeded", query_id)
 
     assert no_sleep == [2, 2, 2]
-    errors = [call.kwargs["message"] for call in trigger.log.call_args_list if call.kwargs.get("level") == "error"]
-    assert errors == [errors[0]] and "Failed to get the query status. Status code: 404" in errors[0]
+    assert [call.kwargs["message"] for call in trigger.log.call_args_list] == [
+        "Failed to get the status of the Sophos data lake query: status 404 - no details"
+    ]
 
 
 def test_getting_results_query_failed(trigger):
@@ -564,7 +583,8 @@ def test_getting_results_query_failed(trigger):
 
     trigger.push_events_to_intakes.assert_not_called()
     trigger.warn_if_stalled.assert_not_called()
-    assert "The query failed" in trigger.log.call_args_list[-1].kwargs["message"]
+    # the cause is logged by post_query: nothing more for the user
+    trigger.log.assert_not_called()
 
 
 def test_getting_results_without_items(trigger, authorization_message, whoami_message):
@@ -604,7 +624,7 @@ def test_run_raises_unexpected_errors(trigger, run_one_cycle):
         run_one_cycle(trigger, "getting_results", ValueError("boom"))
 
     trigger.log_exception.assert_called_once()
-    assert trigger.log.call_args_list[-1].kwargs["message"] == "Sophos Events Trigger has stopped"
+    assert trigger.log.call_args_list[-1].kwargs["message"] == "Sophos IoC query trigger has stopped"
 
 
 def test_run_stops_on_authentication_error(trigger):
@@ -614,3 +634,76 @@ def test_run_stops_on_authentication_error(trigger):
     trigger.run()
 
     assert [call.kwargs.get("level") for call in trigger.log.call_args_list] == ["info", "critical", "info"]
+
+
+def error_response(status_code: int, json_body=None, text: str = "", reason: str = "Forbidden"):
+    response = requests.Response()
+    response.status_code = status_code
+    response.reason = reason
+    response._content = (json.dumps(json_body) if json_body is not None else text).encode()
+    return response
+
+
+@pytest.mark.parametrize(
+    "response, expected",
+    [
+        pytest.param(
+            error_response(403, {"error": "UNAUTHORIZED_ACCESS", "message": "Forbidden", "requestId": "r-1"}),
+            "UNAUTHORIZED_ACCESS: Forbidden",
+            id="sophos-error-without-request-id",
+        ),
+        pytest.param(error_response(400, {"message": "Invalid query"}), "None: Invalid query", id="message-only"),
+        pytest.param(error_response(500, {"requestId": "r-1"}, reason="Server Error"), "Server Error", id="ids-only"),
+        pytest.param(error_response(500, {}, reason=None), "no details", id="no-reason"),
+        pytest.param(
+            error_response(502, text="<html>Bad Gateway</html>", reason="Bad Gateway"), "Bad Gateway", id="not-json"
+        ),
+        pytest.param(error_response(503, ["unexpected"], reason="Unavailable"), "Unavailable", id="json-list"),
+    ],
+)
+def test_describe_error(response, expected):
+    assert describe_error(response) == expected
+
+
+def test_same_error_gives_the_same_message(trigger, authorization_message, whoami_message):
+    """The SDK deduplicates identical messages: the request ids must not be part of them."""
+    url = "https://api-eu01.central.sophos.com/xdr-query/v1/queries/runs"
+    with requests_mock.Mocker() as mock:
+        _mock_authentication(mock, trigger, authorization_message, whoami_message)
+        mock.post(
+            url,
+            [
+                {
+                    "status_code": 403,
+                    "json": {"error": "UNAUTHORIZED_ACCESS", "message": "Forbidden", "requestId": "1"},
+                },
+                {
+                    "status_code": 403,
+                    "json": {"error": "UNAUTHORIZED_ACCESS", "message": "Forbidden", "requestId": "2"},
+                },
+            ],
+        )
+        trigger.post_query(trigger.query)
+        trigger.post_query(trigger.query)
+
+    first, second = (call.kwargs["message"] for call in trigger.log.call_args_list)
+    assert first == second
+
+
+def test_getting_results_logs_a_summary_in_the_pod_logs_only(
+    trigger, authorization_message, whoami_message, query_results_message, caplog
+):
+    caplog.set_level(logging.INFO)
+    trigger.post_query = Mock(return_value=("succeeded", "query-id"))
+
+    with requests_mock.Mocker() as mock:
+        _mock_authentication(mock, trigger, authorization_message, whoami_message)
+        mock.get(
+            "https://api-eu01.central.sophos.com/xdr-query/v1/queries/runs/query-id/results",
+            json={**query_results_message, "pages": {}},
+        )
+        trigger.getting_results(1000)
+
+    trigger.log.assert_not_called()
+    summary = [record.getMessage() for record in caplog.records if "IoCs collected" in record.getMessage()]
+    assert len(summary) == 1 and "pages=1" in summary[0] and "forwarded=7" in summary[0]
