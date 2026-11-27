@@ -70,6 +70,14 @@ def test_validate_without_access_token(validator, credentials):
     validator.error.assert_called_once_with("Failed to validate Sophos credentials: no access token returned")
 
 
+def unauthorized_response() -> requests.Response:
+    response = requests.Response()
+    response.status_code = 401
+    response.url = AUTH_URL
+    response._content = b'{"error": "invalid_client", "message": "Bad client credentials"}'
+    return response
+
+
 @pytest.mark.parametrize(
     "error, expected_message",
     [
@@ -82,6 +90,12 @@ def test_validate_without_access_token(validator, credentials):
             requests.HTTPError("503 Service Unavailable"),
             "Failed to validate Sophos credentials due to HTTP error: 503 Service Unavailable",
             id="http-error",
+        ),
+        pytest.param(
+            requests.HTTPError("401 Client Error", response=unauthorized_response()),
+            "Failed to validate Sophos credentials: status 401 - invalid_client: Bad client credentials"
+            ". Check the client_id and client_secret of the module, and that the API credential has not expired",
+            id="http-error-with-response",
         ),
         pytest.param(
             requests.ConnectionError("Network unreachable"),

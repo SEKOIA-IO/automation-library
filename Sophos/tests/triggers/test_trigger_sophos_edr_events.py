@@ -6,7 +6,6 @@ import pytest
 import requests_mock
 
 from sophos_module.base import SophosModule
-from sophos_module.client.exceptions import SophosApiAuthenticationError
 from sophos_module.triggers.trigger_sophos_edr_events import SophosEDREventsTrigger
 
 API_HOST = "https://api-eu.central.sophos.com"
@@ -205,32 +204,6 @@ def test_events_without_timestamp_are_forwarded(trigger, mock_api):
     assert [event["id"] for event in forwarded(trigger)[0]] == ["1"]
 
 
-@pytest.mark.parametrize("frequency, expected_sleeps", [(60, [60]), (0, [])])
-def test_run(trigger, run_one_cycle, recoverable_error, no_sleep, frequency, expected_sleeps):
-    step = run_one_cycle(trigger, "forward_next_batches", recoverable_error, frequency)
-
-    step.assert_called_once()
-    trigger.authentication.get_credentials.assert_called_once()
-    assert no_sleep == expected_sleeps
-    assert trigger.log_exception.call_count == (recoverable_error is not None)
-
-
-def test_run_raises_unexpected_errors(trigger, run_one_cycle):
-    with pytest.raises(ValueError):
-        run_one_cycle(trigger, "forward_next_batches", ValueError("boom"))
-
-    trigger.log_exception.assert_called_once()
-    assert trigger.log.call_args_list[-1].kwargs["message"] == "Sophos events trigger has stopped"
-
-
-def test_run_stops_on_authentication_error(trigger, run_one_cycle):
-    trigger.authentication = Mock()
-    trigger.authentication.get_credentials.side_effect = SophosApiAuthenticationError("bad credentials")
-    trigger.run()
-
-    assert log_levels(trigger) == ["info", "critical", "info"]
-
-
 def test_cycle_summary_goes_to_the_pod_logs_only(trigger, mock_api, caplog):
     caplog.set_level(logging.INFO)
     mock_api.get(SIEM_URL, json=batch([EVENT_REGISTERED, EVENT_MALWARE]))
@@ -256,4 +229,20 @@ def test_api_failure_message_is_stable(trigger, mock_api):
     trigger.get_next_events("cursor")
 
     first, second = (call.kwargs["message"] for call in trigger.log.call_args_list)
-    assert first == second == "Failed to fetch the events from the Sophos SIEM API: status 503 - Service Unavailable"
+    assert (
+        first
+        == second
+        == (
+            "Failed to fetch the events from the Sophos SIEM API: status 503 - Service Unavailable"
+            ". Error on the Sophos side: retried on the next cycle"
+        )
+    )
+
+
+def test_collect(trigger):
+    trigger.forward_next_batches = Mock()
+
+    trigger.collect()
+
+    trigger.forward_next_batches.assert_called_once_with()
+    assert trigger.name == "Sophos events trigger"

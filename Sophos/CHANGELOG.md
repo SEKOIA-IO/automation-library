@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging: show the users only the connector lifecycle, the errors and the Sophos Fusion upgrade; send the per-cycle diagnostics (window, collected, forwarded and skipped counts, pagination, checkpoint, query polling) and the per-item skips of the asset connectors to the pod logs as `key=value` lines
 - Logging: remove the request, correlation and query ids from the error messages shown to the users, so the SDK deduplicates identical errors instead of logging one per cycle; name the IoC query trigger correctly in its start and stop messages
 - Logging: add diagnostics on branches that were silent (empty page before the announced total, window split, detections without id, unparsable error responses)
+- Errors: share the collection loop of the triggers and the description of the Sophos API errors. The error messages give what to check: client id and secret on `401`, the role the API needs on `403` (`Service Principal ReadOnly`, `Forensics` or `Management`, plus the XDR licence for the data lake), rate limit on `429`, Sophos-side error on `5xx`. The actions and the account validator use the same messages
+- Errors: show the configuration errors (`401`, `403`) at most once per hour instead of once per cycle, since they last until the customer fixes the API credential
+- Errors: network errors (connection refused, timeout) no longer stop the triggers: they are logged and retried on the next cycle
 - Raise the minimum supported Python version to `3.14`
 - Migrate project dependency management from Poetry to uv (`pyproject.toml` PEP 621 + `uv.lock`), with `mise` tasks and `ruff` instead of `black`, `isort` and `autoflake`
 - Upgrade `sekoia-automation-sdk` to `1.28.1` and regenerate `uv.lock` with the latest versions of all dependencies
@@ -30,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Query IoC from data lake: stop polling the status of a data lake query after 5 minutes, or at once on a client error (unknown or expired query, access refused), instead of polling forever and blocking the collection
 - Isolate and deisolate endpoint actions: raise the HTTP errors other than `400` instead of silently returning nothing
 - Authentication: replace the deprecated `datetime.utcnow()` with a timezone-aware date (deprecation warnings on Python 3.14)
 - Events and IoC triggers: compute the events lag from timestamps with or without fractional seconds and time offset, instead of failing on any format other than `%Y-%m-%dT%H:%M:%S.%fZ`

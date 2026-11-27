@@ -8,7 +8,6 @@ import requests
 import requests_mock
 
 from sophos_module.base import SophosModule
-from sophos_module.client.exceptions import SophosApiAuthenticationError
 from sophos_module.triggers.trigger_sophos_fusion_detections import (
     MAX_RESULTS_PER_SEARCH,
     SophosFusionDetectionsTrigger,
@@ -283,38 +282,6 @@ def test_next_batch_empty_window(trigger, mock_api):
     assert graphql_calls(mock_api) == []
 
 
-@pytest.mark.parametrize("frequency, expected_sleeps", [(60, [60]), (0, [])])
-def test_run(trigger, run_one_cycle, recoverable_error, no_sleep, frequency, expected_sleeps):
-    step = run_one_cycle(trigger, "next_batch", recoverable_error, frequency)
-
-    step.assert_called_once_with()
-    trigger.authentication.get_credentials.assert_called_once()
-    assert no_sleep == expected_sleeps
-    assert trigger.log_exception.call_count == (recoverable_error is not None)
-
-
-def test_run_raises_unexpected_errors(trigger, run_one_cycle):
-    with pytest.raises(ValueError):
-        run_one_cycle(trigger, "next_batch", ValueError("boom"))
-
-    trigger.log_exception.assert_called_once()
-    assert trigger.log.call_args_list[-1].kwargs["message"] == "Sophos Fusion detections trigger has stopped"
-
-
-@pytest.mark.parametrize("during_cycle", [False, True], ids=["at-startup", "during-a-cycle"])
-def test_run_stops_on_authentication_error(trigger, run_one_cycle, during_cycle):
-    error = SophosApiAuthenticationError("bad credentials")
-    if during_cycle:
-        run_one_cycle(trigger, "next_batch", error)
-    else:
-        trigger.authentication = Mock()
-        trigger.authentication.get_credentials.side_effect = error
-        trigger.run()
-
-    trigger.log_exception.assert_not_called()
-    assert [call.kwargs.get("level") for call in trigger.log.call_args_list] == ["info", "critical", "info"]
-
-
 def test_detections_without_id_are_skipped(trigger, mock_api, caplog):
     caplog.set_level(logging.INFO)
     without_id = {**detection(9), "id": None}
@@ -372,3 +339,12 @@ def test_search_errors_are_shown_with_a_stable_message(trigger, mock_api):
     # no window dates in the message: the SDK deduplicates it while the error lasts
     assert first == second
     assert "earliest" not in first and "BAD_USER_INPUT" in first
+
+
+def test_collect(trigger):
+    trigger.next_batch = Mock()
+
+    trigger.collect()
+
+    trigger.next_batch.assert_called_once_with()
+    assert trigger.name == "Sophos Fusion detections trigger"

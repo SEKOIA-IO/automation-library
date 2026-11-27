@@ -8,12 +8,11 @@ import requests
 import requests_mock
 
 from sophos_module.base import SophosModule
-from sophos_module.client.exceptions import SophosApiAuthenticationError
 from sophos_module.triggers.trigger_sophos_xdr_query import (
     FUSION_UPGRADE_MESSAGE,
+    MAX_QUERY_STATUS_POLLS,
     SophosXDRIOCQuery,
     SophosXDRQueryTrigger,
-    describe_error,
 )
 
 
@@ -533,48 +532,6 @@ def test_pagination_limit(trigger, chunk_size, expected):
     assert trigger.pagination_limit == expected
 
 
-@pytest.mark.parametrize(
-    "status_code, expected_hint",
-    [
-        (
-            403,
-            ". Check that the API credential has the 'Service Principal Forensics' role"
-            " and that the XDR licence of the tenant is valid",
-        ),
-        (400, ""),
-        (500, ""),
-    ],
-)
-def test_query_error_hint(status_code, expected_hint):
-    assert SophosXDRQueryTrigger._query_error_hint(status_code) == expected_hint
-
-
-def test_post_query_retries_status_after_error(
-    trigger, authorization_message, whoami_message, query_run_message, query_status_message, no_sleep
-):
-    host = "https://api-eu01.central.sophos.com"
-    query_id = query_run_message["id"]
-
-    with requests_mock.Mocker() as mock:
-        _mock_authentication(mock, trigger, authorization_message, whoami_message)
-        mock.post(f"{host}/xdr-query/v1/queries/runs", json=query_run_message)
-        mock.get(
-            f"{host}/xdr-query/v1/queries/runs/{query_id}",
-            [
-                {"status_code": 404, "json": {"status": "pending"}},
-                {"json": {**query_status_message, "status": "pending"}},
-                {"json": query_status_message},
-            ],
-        )
-
-        assert trigger.post_query(trigger.query) == ("succeeded", query_id)
-
-    assert no_sleep == [2, 2, 2]
-    assert [call.kwargs["message"] for call in trigger.log.call_args_list] == [
-        "Failed to get the status of the Sophos data lake query: status 404 - no details"
-    ]
-
-
 def test_getting_results_query_failed(trigger):
     trigger.post_query = Mock(return_value=("failed", None))
     trigger.warn_if_stalled = Mock()
@@ -605,68 +562,8 @@ def test_getting_results_without_items(trigger, authorization_message, whoami_me
     assert trigger.cursor.offset == checkpoint
 
 
-@pytest.mark.parametrize("frequency, expected_sleeps", [(60, [60]), (0, [])])
-def test_run(trigger, run_one_cycle, recoverable_error, no_sleep, frequency, expected_sleeps):
-    trigger.check_fusion_upgrade_daily = Mock()
-
-    step = run_one_cycle(trigger, "getting_results", recoverable_error, frequency)
-
-    step.assert_called_once_with(trigger.pagination_limit)
-    trigger.check_fusion_upgrade_daily.assert_called_once()
-    assert no_sleep == expected_sleeps
-    assert trigger.log_exception.call_count == (recoverable_error is not None)
-
-
-def test_run_raises_unexpected_errors(trigger, run_one_cycle):
-    trigger.check_fusion_upgrade_daily = Mock()
-
-    with pytest.raises(ValueError):
-        run_one_cycle(trigger, "getting_results", ValueError("boom"))
-
-    trigger.log_exception.assert_called_once()
-    assert trigger.log.call_args_list[-1].kwargs["message"] == "Sophos IoC query trigger has stopped"
-
-
-def test_run_stops_on_authentication_error(trigger):
-    trigger.authentication = Mock()
-    trigger.authentication.get_credentials.side_effect = SophosApiAuthenticationError("bad credentials")
-
-    trigger.run()
-
-    assert [call.kwargs.get("level") for call in trigger.log.call_args_list] == ["info", "critical", "info"]
-
-
-def error_response(status_code: int, json_body=None, text: str = "", reason: str = "Forbidden"):
-    response = requests.Response()
-    response.status_code = status_code
-    response.reason = reason
-    response._content = (json.dumps(json_body) if json_body is not None else text).encode()
-    return response
-
-
-@pytest.mark.parametrize(
-    "response, expected",
-    [
-        pytest.param(
-            error_response(403, {"error": "UNAUTHORIZED_ACCESS", "message": "Forbidden", "requestId": "r-1"}),
-            "UNAUTHORIZED_ACCESS: Forbidden",
-            id="sophos-error-without-request-id",
-        ),
-        pytest.param(error_response(400, {"message": "Invalid query"}), "None: Invalid query", id="message-only"),
-        pytest.param(error_response(500, {"requestId": "r-1"}, reason="Server Error"), "Server Error", id="ids-only"),
-        pytest.param(error_response(500, {}, reason=None), "no details", id="no-reason"),
-        pytest.param(
-            error_response(502, text="<html>Bad Gateway</html>", reason="Bad Gateway"), "Bad Gateway", id="not-json"
-        ),
-        pytest.param(error_response(503, ["unexpected"], reason="Unavailable"), "Unavailable", id="json-list"),
-    ],
-)
-def test_describe_error(response, expected):
-    assert describe_error(response) == expected
-
-
-def test_same_error_gives_the_same_message(trigger, authorization_message, whoami_message):
-    """The SDK deduplicates identical messages: the request ids must not be part of them."""
+def test_access_refused_is_shown_once_per_hour(trigger, authorization_message, whoami_message):
+    """A 403 lasts until the customer fixes the credential: shown once per hour, not once per cycle."""
     url = "https://api-eu01.central.sophos.com/xdr-query/v1/queries/runs"
     with requests_mock.Mocker() as mock:
         _mock_authentication(mock, trigger, authorization_message, whoami_message)
@@ -686,8 +583,11 @@ def test_same_error_gives_the_same_message(trigger, authorization_message, whoam
         trigger.post_query(trigger.query)
         trigger.post_query(trigger.query)
 
-    first, second = (call.kwargs["message"] for call in trigger.log.call_args_list)
-    assert first == second
+    assert [call.kwargs["message"] for call in trigger.log.call_args_list] == [
+        "Failed to post the query to the Sophos data lake: status 403 - UNAUTHORIZED_ACCESS: Forbidden"
+        ". Check that the API credential has the 'Service Principal Forensics' role"
+        " and that the XDR licence of the tenant is valid"
+    ]
 
 
 def test_getting_results_logs_a_summary_in_the_pod_logs_only(
@@ -718,3 +618,84 @@ def test_check_fusion_upgrade_is_a_single_short_attempt(trigger):
     trigger.client.graphql.assert_called_once()
     assert trigger.client.graphql.call_args.kwargs == {"best_effort": True}
     trigger.log.assert_not_called()
+
+
+def test_collect_and_daily_fusion_check(trigger):
+    trigger.getting_results = Mock()
+    trigger.check_fusion_upgrade_daily = Mock()
+
+    trigger.before_collect()
+    trigger.collect()
+
+    trigger.check_fusion_upgrade_daily.assert_called_once_with()
+    trigger.getting_results.assert_called_once_with(trigger.pagination_limit)
+    assert trigger.name == "Sophos IoC query trigger"
+
+
+STATUS_URL = "https://api-eu01.central.sophos.com/xdr-query/v1/queries/runs/7d00cf17-a987-4d07-ac88-93d4df89fa73"
+
+
+@pytest.fixture
+def mock_query(trigger, authorization_message, whoami_message, query_run_message):
+    with requests_mock.Mocker() as mock:
+        _mock_authentication(mock, trigger, authorization_message, whoami_message)
+        mock.post("https://api-eu01.central.sophos.com/xdr-query/v1/queries/runs", json=query_run_message)
+        yield mock
+
+
+@pytest.mark.parametrize(
+    "transient_status",
+    [pytest.param(429, id="rate-limited"), pytest.param(503, id="server-error")],
+)
+def test_query_status_transient_errors_are_polled_again(
+    trigger, mock_query, query_status_message, no_sleep, transient_status
+):
+    # the urllib3 adapter retries 429 and 5xx itself: disable it to see the trigger behaviour
+    trigger.client.get_query_status = Mock(
+        side_effect=[
+            _response(transient_status, {"message": "busy"}, STATUS_URL),
+            _response(200, {**query_status_message, "status": "pending"}, STATUS_URL),
+            _response(200, query_status_message, STATUS_URL),
+        ]
+    )
+
+    assert trigger.post_query(trigger.query) == ("succeeded", query_status_message["id"])
+
+    assert no_sleep == [2, 2, 2]
+    assert len(trigger.log.call_args_list) == 1
+
+
+@pytest.mark.parametrize("client_status", [400, 403, 404])
+def test_query_status_client_errors_stop_the_polling(trigger, mock_query, no_sleep, client_status):
+    trigger.client.get_query_status = Mock(return_value=_response(client_status, {"message": "gone"}, STATUS_URL))
+
+    assert trigger.post_query(trigger.query) == ("failed", "7d00cf17-a987-4d07-ac88-93d4df89fa73")
+
+    assert no_sleep == [2]
+    assert (
+        trigger.log.call_args_list[0]
+        .kwargs["message"]
+        .startswith(f"Failed to get the status of the Sophos data lake query: status {client_status} - None: gone")
+    )
+
+
+def test_query_status_polling_is_capped(trigger, mock_query, query_status_message, no_sleep):
+    trigger.client.get_query_status = Mock(
+        return_value=_response(200, {**query_status_message, "status": "pending"}, STATUS_URL)
+    )
+
+    assert trigger.post_query(trigger.query) == ("failed", "7d00cf17-a987-4d07-ac88-93d4df89fa73")
+
+    assert trigger.client.get_query_status.call_count == MAX_QUERY_STATUS_POLLS
+    assert len(no_sleep) == MAX_QUERY_STATUS_POLLS
+    assert [call.kwargs["message"] for call in trigger.log.call_args_list] == [
+        "The Sophos data lake query did not finish within 5 minutes: retried on the next cycle"
+    ]
+
+
+def _response(status_code, body, url):
+    response = requests.Response()
+    response.status_code = status_code
+    response.url = url
+    response._content = json.dumps(body).encode()
+    return response

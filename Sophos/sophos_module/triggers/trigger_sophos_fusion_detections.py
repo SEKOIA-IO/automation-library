@@ -4,18 +4,14 @@ from functools import cached_property
 from typing import Any
 
 import orjson
-from requests.exceptions import HTTPError
 from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import DefaultConnectorConfiguration
-from urllib3.exceptions import HTTPError as BaseHTTPError
 
 from sophos_module.base import SophosConnector
-from sophos_module.client import SophosApiClient
-from sophos_module.client.auth import SophosApiAuthentication
-from sophos_module.client.exceptions import SophosApiAuthenticationError, SophosGraphQLError
+from sophos_module.client.exceptions import SophosGraphQLError
 from sophos_module.fusion_queries import DETECTION_SEARCH
 from sophos_module.logging import get_logger
-from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+from sophos_module.metrics import EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
 
 # per-cycle diagnostics go to the pod logs only: the connector logs (self.log) are shown to the user
 logger = get_logger()
@@ -72,6 +68,9 @@ class SophosFusionDetectionsTrigger(SophosConnector):
 
     configuration: SophosFusionDetectionsConfiguration
 
+    name = "Sophos Fusion detections trigger"
+    collect_error_action = "Failed to search the Sophos Fusion detections"
+
     overlap = timedelta(minutes=5)
     latency = timedelta(minutes=1)
 
@@ -82,19 +81,6 @@ class SophosFusionDetectionsTrigger(SophosConnector):
         )
         # detection id -> window end at which it was seen, to skip the detections already forwarded
         self._seen: dict[str, datetime] = {}
-
-    @cached_property
-    def authentication(self) -> SophosApiAuthentication:
-        return SophosApiAuthentication(
-            api_host=self.module.configuration.api_host,
-            authorization_url=self.module.configuration.oauth2_authorization_url,
-            client_id=self.module.configuration.client_id,
-            client_secret=self.module.configuration.client_secret,
-        )
-
-    @cached_property
-    def client(self) -> SophosApiClient:
-        return SophosApiClient(auth=self.authentication, graphql_api_url=self.module.configuration.graphql_api_url)
 
     @cached_property
     def page_size(self) -> int:
@@ -229,34 +215,5 @@ class SophosFusionDetectionsTrigger(SophosConnector):
         self.cursor.offset = end
         self._forget_seen_before(start)
 
-    def run(self) -> None:
-        self.log(message="Sophos Fusion detections trigger has started", level="info")
-
-        try:
-            self.authentication.get_credentials()
-
-            while self.running:
-                start = time.time()
-
-                try:
-                    self.next_batch()
-                except (HTTPError, BaseHTTPError) as ex:
-                    self.log_exception(ex, message="Failed to get the next detections")
-                except SophosApiAuthenticationError:
-                    raise
-                except Exception as ex:
-                    self.log_exception(ex, message="An unknown exception occurred")
-                    raise
-
-                duration = int(time.time() - start)
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
-
-                delta_sleep = self.configuration.frequency - duration
-                if delta_sleep > 0:
-                    time.sleep(delta_sleep)
-
-        except SophosApiAuthenticationError as ex:
-            self.log(message=str(ex), level="critical")
-
-        finally:
-            self.log(message="Sophos Fusion detections trigger has stopped", level="info")
+    def collect(self) -> None:
+        self.next_batch()

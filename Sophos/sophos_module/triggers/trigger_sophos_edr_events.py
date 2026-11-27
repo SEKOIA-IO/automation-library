@@ -3,18 +3,13 @@ from functools import cached_property
 from typing import Any
 
 import orjson
-from requests.exceptions import HTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
-from urllib3.exceptions import HTTPError as BaseHTTPError
 
 from sophos_module.base import SophosConnector
-from sophos_module.client import SophosApiClient
-from sophos_module.client.auth import SophosApiAuthentication
-from sophos_module.client.exceptions import SophosApiAuthenticationError
 from sophos_module.helper import latest_timestamp, normalize_message
 from sophos_module.logging import get_logger
-from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+from sophos_module.metrics import EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
 
 # per-cycle diagnostics go to the pod logs only: the connector logs (self.log) are shown to the user
 logger = get_logger()
@@ -39,6 +34,9 @@ class SophosEDREventsTrigger(SophosConnector):
 
     configuration: SophosEDRConfiguration
 
+    name = "Sophos events trigger"
+    collect_error_action = "Failed to fetch the Sophos events"
+
     def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
@@ -58,54 +56,6 @@ class SophosEDREventsTrigger(SophosConnector):
     @cached_property
     def pagination_limit(self) -> int:
         return max(self.configuration.chunk_size, 1000)
-
-    @cached_property
-    def authentication(self) -> SophosApiAuthentication:
-        return SophosApiAuthentication(
-            api_host=self.module.configuration.api_host,
-            authorization_url=self.module.configuration.oauth2_authorization_url,
-            client_id=self.module.configuration.client_id,
-            client_secret=self.module.configuration.client_secret,
-        )
-
-    @cached_property
-    def client(self) -> SophosApiClient:
-        return SophosApiClient(auth=self.authentication)
-
-    def run(self) -> None:
-        self.log(message="Sophos events trigger has started", level="info")
-
-        try:
-            # Authenticate with the Sophos API
-            self.authentication.get_credentials()
-
-            while self.running:
-                start = time.time()
-
-                try:
-                    self.forward_next_batches()
-                except (HTTPError, BaseHTTPError) as ex:
-                    self.log_exception(ex, message="Failed to get next batch of events")
-                except Exception as ex:
-                    self.log_exception(ex, message="An unknown exception occurred")
-                    raise
-
-                # compute the duration of the last events fetching
-                duration = int(time.time() - start)
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
-
-                # Compute the remaining sleeping time
-                delta_sleep = self.configuration.frequency - duration
-                # if greater than 0, sleep
-                if delta_sleep > 0:
-                    time.sleep(delta_sleep)
-
-        except SophosApiAuthenticationError as ex:
-            # Log a critical message, that will stop the connector, when the authentication fails
-            self.log(message=str(ex), level="critical")
-
-        finally:
-            self.log(message="Sophos events trigger has stopped", level="info")
 
     def get_next_events(self, cursor: str | None) -> dict[str, Any] | None:
         # set parameters
@@ -130,21 +80,7 @@ class SophosEDREventsTrigger(SophosConnector):
 
         # Something failed
         if not response.ok:
-            self.log(
-                message=(
-                    "Failed to fetch the events from the Sophos SIEM API:"
-                    f" status {response.status_code} - {response.reason}"
-                ),
-                level="error",
-            )
-            logger.error(
-                "SIEM API request failed",
-                status_code=response.status_code,
-                reason=response.reason,
-                response=response.text[:1000],
-                has_cursor=cursor is not None,
-            )
-
+            self.log_http_error("Failed to fetch the events from the Sophos SIEM API", response)
             return None
 
         result: dict[str, Any] = response.json()
@@ -217,3 +153,6 @@ class SophosEDREventsTrigger(SophosConnector):
             has_more=has_more_messages,
             cursor_saved=cursor is not None,
         )
+
+    def collect(self) -> None:
+        self.forward_next_batches()

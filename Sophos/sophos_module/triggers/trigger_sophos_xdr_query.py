@@ -5,39 +5,23 @@ from functools import cached_property
 from typing import Any
 
 import orjson
-from requests.exceptions import HTTPError
 from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
-from urllib3.exceptions import HTTPError as BaseHTTPError
 
 from sophos_module.base import SophosConnector
-from sophos_module.client import SophosApiClient
-from sophos_module.client.auth import SophosApiAuthentication
-from sophos_module.client.exceptions import SophosApiAuthenticationError
 from sophos_module.fusion_queries import TENANT_MARKERS
 from sophos_module.helper import latest_timestamp
 from sophos_module.logging import get_logger
-from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+from sophos_module.metrics import EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
 
 # per-cycle diagnostics go to the pod logs only: the connector logs (self.log) are shown to the user
 logger = get_logger()
 
 
-def describe_error(response: Any) -> str:
-    """Stable summary of a Sophos error response, without request or correlation ids.
-
-    Identical errors then give identical log messages, that the SDK deduplicates.
-    """
-    try:
-        payload = response.json()
-    except ValueError:
-        payload = None
-
-    if isinstance(payload, dict) and (payload.get("error") or payload.get("message")):
-        return f"{payload.get('error')}: {payload.get('message')}"
-
-    return str(response.reason or "no details")
+# the status of a data lake query is polled every 2 seconds, for 5 minutes at most
+QUERY_STATUS_POLL_INTERVAL = 2
+MAX_QUERY_STATUS_POLLS = 150
 
 
 FUSION_UPGRADE_MESSAGE = (
@@ -60,6 +44,9 @@ class SophosXDRQueryTrigger(SophosConnector):
     """
 
     configuration: SophosXDRQueryConfiguration
+
+    name = "Sophos IoC query trigger"
+    collect_error_action = "Failed to query the Sophos data lake"
 
     def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         super().__init__(*args, **kwargs)
@@ -96,19 +83,6 @@ class SophosXDRQueryTrigger(SophosConnector):
     @cached_property
     def pagination_limit(self) -> int:
         return max(self.configuration.chunk_size, 1000)
-
-    @cached_property
-    def authentication(self) -> SophosApiAuthentication:
-        return SophosApiAuthentication(
-            api_host=self.module.configuration.api_host,
-            authorization_url=self.module.configuration.oauth2_authorization_url,
-            client_id=self.module.configuration.client_id,
-            client_secret=self.module.configuration.client_secret,
-        )
-
-    @cached_property
-    def client(self) -> SophosApiClient:
-        return SophosApiClient(auth=self.authentication, graphql_api_url=self.module.configuration.graphql_api_url)
 
     def check_fusion_upgrade(self) -> bool | None:
         """
@@ -169,42 +143,6 @@ class SophosXDRQueryTrigger(SophosConnector):
             level="warning",
         )
 
-    def run(self) -> None:
-        self.log(message="Sophos IoC query trigger has started", level="info")
-
-        try:
-            # Authenticate with the Sophos API
-            self.authentication.get_credentials()
-
-            while self.running:
-                start = time.time()
-                self.check_fusion_upgrade_daily()
-                try:
-                    self.getting_results(self.pagination_limit)
-
-                except (HTTPError, BaseHTTPError) as ex:
-                    self.log_exception(ex, message="Failed to get next batch of events")
-                except Exception as ex:
-                    self.log_exception(ex, message="An unknown exception occurred")
-                    raise
-
-                # compute the duration of the last events fetching
-                duration = int(time.time() - start)
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
-
-                # Compute the remaining sleeping time
-                delta_sleep = self.configuration.frequency - duration
-                # if greater than 0, sleep
-                if delta_sleep > 0:
-                    time.sleep(delta_sleep)
-
-        except SophosApiAuthenticationError as ex:
-            # Log a critical message, that will stop the connector, when the authentication fails
-            self.log(message=str(ex), level="critical")
-
-        finally:
-            self.log(message="Sophos IoC query trigger has stopped", level="info")
-
     def post_query(self, query: dict[str, Any]) -> tuple[str, str | None]:
         # It's the first step of our query treatment.
         # Posting the query
@@ -212,13 +150,7 @@ class SophosXDRQueryTrigger(SophosConnector):
 
         response = self.client.run_query(json_query=query)
         if response.status_code >= 400:
-            self.log(
-                message=f"Failed to post the query to the Sophos data lake: status {response.status_code} - "
-                f"{describe_error(response)}{self._query_error_hint(response.status_code)}",
-                level="error",
-            )
-            logger.error("Query post failed", status_code=response.status_code, response=response.text[:1000])
-
+            self.log_http_error("Failed to post the query to the Sophos data lake", response)
             return "failed", None
 
         result = response.json()
@@ -226,36 +158,37 @@ class SophosXDRQueryTrigger(SophosConnector):
         query_id = result.get("id")
 
         if query_id is None:
-            self.log(message="Failed to post the query to the Sophos data lake: no query id returned", level="error")
+            self.log_error("Failed to post the query to the Sophos data lake: no query id returned")
             logger.error("Query post returned no id", response=str(result)[:1000])
             return "failed", query_id
 
-        status = ""
-        polls = 0
-        while status != "finished":
-            polls += 1
+        result_query_status: dict[str, Any] = {}
+        for polls in range(1, MAX_QUERY_STATUS_POLLS + 1):
             # Give time for query to finish.
-            time.sleep(2)
+            time.sleep(QUERY_STATUS_POLL_INTERVAL)
             # It's the Second step of our query treatment.
             # Checking the status of our query.
             response_query_status = self.client.get_query_status(query_id)
-            if response_query_status.status_code >= 400:
-                self.log(
-                    message=f"Failed to get the status of the Sophos data lake query: status "
-                    f"{response_query_status.status_code} - {describe_error(response_query_status)}",
-                    level="error",
-                )
-                logger.error(
-                    "Query status failed",
-                    query_id=query_id,
-                    status_code=response_query_status.status_code,
-                    response=response_query_status.text[:1000],
-                )
+            status_code = response_query_status.status_code
+            if status_code >= 400:
+                self.log_http_error("Failed to get the status of the Sophos data lake query", response_query_status)
+                if status_code < 500 and status_code != 429:
+                    # client error (unknown or expired query, access refused): polling again would not help
+                    return "failed", query_id
+                continue
 
             result_query_status = response_query_status.json()
-            status = result_query_status.get("status")
-            result = result_query_status.get("result")
+            if result_query_status.get("status") == "finished":
+                break
+        else:
+            self.log_error(
+                "The Sophos data lake query did not finish within "
+                f"{MAX_QUERY_STATUS_POLLS * QUERY_STATUS_POLL_INTERVAL // 60} minutes: retried on the next cycle"
+            )
+            logger.error("Query status polling timed out", query_id=query_id, polls=polls)
+            return "failed", query_id
 
+        result = result_query_status.get("result")
         logger.info("Query finished", query_id=query_id, result=result, polls=polls)
 
         if result != "succeeded":
@@ -265,19 +198,10 @@ class SophosXDRQueryTrigger(SophosConnector):
                 if key.lower().startswith("error") or key in ("message", "details")
             }
             # no query id in the message: identical failures are deduplicated
-            self.log(message=f"The Sophos data lake query ended with result {result}: {details}", level="error")
+            self.log_error(f"The Sophos data lake query ended with result {result}: {details}")
             logger.error("Query failed", query_id=query_id, result=result, details=details)
 
         return result, query_id
-
-    @staticmethod
-    def _query_error_hint(status_code: int) -> str:
-        if status_code == 403:
-            return (
-                ". Check that the API credential has the 'Service Principal Forensics' role"
-                " and that the XDR licence of the tenant is valid"
-            )
-        return ""
 
     def _observe_items_events_lag(self, items: list[dict[str, Any]]) -> None:
         most_recent_timestamp = latest_timestamp(items, ("calendar_time",))
@@ -340,6 +264,12 @@ class SophosXDRQueryTrigger(SophosConnector):
                 logger.info("No new IoC", from_date=self.from_date.isoformat())
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
                 self.warn_if_stalled()
+
+    def collect(self) -> None:
+        self.getting_results(self.pagination_limit)
+
+    def before_collect(self) -> None:
+        self.check_fusion_upgrade_daily()
 
 
 class SophosXDRIOCQuery(SophosXDRQueryTrigger):
