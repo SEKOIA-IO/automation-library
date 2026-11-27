@@ -390,6 +390,38 @@ async def test_azure_blob_gzip_truncated_member_resumes_from_member_start(connec
 
 
 @pytest.mark.asyncio
+async def test_azure_blob_gzip_truncated_member_forwarded_once_blob_is_settled(connector: AzureBlobConnector, storage):
+    """
+    A gzip blob whose last member is never completed (writer crashed) is not downloaded again at every cycle:
+    once the blob is settled, the partial last line is forwarded and the blob is read again only if modified.
+    """
+    now = datetime.now(timezone.utc)
+    first_member = gzip_lines(b"a")
+    second_member = gzip.compress(b"b\nc\npartial")
+    content = first_member + second_member[:-8]  # without the gzip trailer: the member is never completed
+    storage.write("PT1H.json.gz", content, modified_at=now)
+
+    # Still being written: the partial line is kept for the next cycle
+    assert await collect(connector) == ["a", "b", "c"]
+
+    storage.blobs["PT1H.json.gz"].last_modified = now - timedelta(minutes=10)
+    with connector.context as cache:
+        cache["last_event_date"] = now.isoformat()
+
+    assert await collect(connector) == ["partial"]
+
+    # The blob is not modified since: it is not downloaded again
+    storage.downloads.clear()
+    assert await collect(connector) == []
+    assert storage.downloads == []
+
+    # The member is finally completed: its last line is forwarded again, complete
+    storage.write("PT1H.json.gz", first_member + second_member)
+    assert await collect(connector) == ["partial"]
+    assert await collect(connector) == []
+
+
+@pytest.mark.asyncio
 async def test_azure_blob_gzip_zero_padding_is_skipped(connector: AzureBlobConnector, storage):
     """Zero bytes after a gzip member are skipped, and a member appended after them is read from its offset."""
     padded = gzip_lines(b"a") + b"\x00" * 8

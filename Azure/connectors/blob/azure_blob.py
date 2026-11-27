@@ -243,6 +243,11 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
         except orjson.JSONDecodeError:
             pass
 
+        return self._is_settled(blob)
+
+    @staticmethod
+    def _is_settled(blob: BlobProperties) -> bool:
+        """Tell if the blob is no longer modified: its content won't be completed."""
         return blob.last_modified < datetime.now(timezone.utc) - SETTLED_DELAY
 
     def _decode(self, line: bytes | None, size: int, blob: BlobProperties) -> list[str]:
@@ -403,8 +408,22 @@ class AzureBlobConnector(AbstractAzureBlobConnector):
             return
 
         # The last gzip member is truncated (blob being written): its remaining lines are read next time
-        if not gunzip_state["eof"]:
+        if not gunzip_state["eof"] and not self._is_settled(blob):
             yield batch, progress(index, None) if index >= lines_to_skip else {**state, "size": None}
+            return
+
+        # The last gzip member is truncated and the blob is no longer modified (writer stopped): its partial last
+        # line is forwarded and the blob is not read again until it is modified
+        if not gunzip_state["eof"]:
+            self.log(
+                message=f"Blob {blob.name}: the gzip member at offset {offset} is truncated, "
+                "its partial last line is forwarded",
+                level="warning",
+            )
+            line, size, _ = reader.end()
+            if size and index >= lines_to_skip:
+                batch.extend(self._decode(line, size, blob))
+            yield batch, progress(index, blob.size) if index >= lines_to_skip else {**state, "size": blob.size}
             return
 
         # Every member is complete: the next one starts after the last member and its padding
