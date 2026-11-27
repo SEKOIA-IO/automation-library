@@ -16,6 +16,9 @@ from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 from .timestepper import TimeStepper
 
+# Maximum number of characters of an HTTP response body to include in the logs
+MAX_LOGGED_BODY_LENGTH = 500
+
 
 class O365BaseConfig(DefaultConnectorConfiguration):
     frequency: int = 60
@@ -94,7 +97,7 @@ class Office365MessageTraceBaseTrigger(Connector):
             self.log(
                 message=(
                     f"Request on MessageTrace API to fetch {response.url} "
-                    f"failed with status {response.status_code} - {response.text}"
+                    f"failed with status {response.status_code} - {response.text[:MAX_LOGGED_BODY_LENGTH]}"
                 ),
                 level="error",
             )
@@ -108,8 +111,7 @@ class Office365MessageTraceBaseTrigger(Connector):
             self.log_exception(
                 err,
                 message=(
-                    f"Request on MessageTrace API to fetch {response.url} "
-                    f"failed, invalid JSON payload was returned."
+                    f"Request on MessageTrace API to fetch {response.url} failed, invalid JSON payload was returned."
                 ),
             )
             return []
@@ -124,7 +126,7 @@ class Office365MessageTraceBaseTrigger(Connector):
         json_messages: list[str] = self.serialize_json(messages)
         return json_messages
 
-    def run(self):  # pragma: no cover
+    def run(self) -> None:  # pragma: no cover
         self.log(message="Office365 MessageTrace Trigger has started.", level="info")
 
         for start, end in self.stepper.ranges():

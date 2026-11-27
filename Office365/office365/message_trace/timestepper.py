@@ -24,7 +24,7 @@ class TimeStepper:
 
     def ranges(
         self,
-    ) -> Generator[tuple[datetime.datetime, datetime.datetime], None, None]:
+    ) -> Generator[tuple[datetime.datetime, datetime.datetime]]:
         while True:
             # return the current time range
             yield (self.start, self.end)
@@ -66,7 +66,7 @@ class TimeStepper:
         frequency: int = 60,
         timedelta: int = 1,
         start_time: int = 1,
-    ) -> "TimeStepper":
+    ) -> TimeStepper:
         t_frequency = datetime.timedelta(seconds=frequency)
         t_timedelta = datetime.timedelta(minutes=timedelta)
 
@@ -86,7 +86,7 @@ class TimeStepper:
         start: datetime.datetime,
         frequency: int = 60,
         timedelta: int = 1,
-    ) -> "TimeStepper":
+    ) -> TimeStepper:
         t_frequency = datetime.timedelta(seconds=frequency)
         t_timedelta = datetime.timedelta(minutes=timedelta)
 

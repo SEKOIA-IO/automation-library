@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import time
 from threading import Thread
 from unittest.mock import Mock
 
@@ -92,6 +91,7 @@ def test_query_api_with_credentials(trigger, start_time, end_time):
         assert type(json.loads(event)) is dict
 
 
+@pytest.mark.real_sleep
 @pytest.mark.skipif("{'O365_EMAIL', 'O365_PASSWORD'}.issubset(os.environ.keys()) == False")
 def test_trigger_with_credentials(trigger):
     trigger.log = Mock()
@@ -107,8 +107,13 @@ def test_trigger_with_credentials(trigger):
     trigger.push_events_to_intakes = Mock()
     trigger.log_exception = Mock()
     trigger.log = Mock()
-    thread = Thread(target=trigger.run)
+    thread = Thread(target=trigger.run, daemon=True)
     thread.start()
-    time.sleep(30)
+    thread.join(timeout=30)  # the trigger runs forever: wait 30 seconds for events
+
+    # stop the trigger, so it doesn't keep querying Microsoft during the next tests
+    trigger.stop()
+    thread.join(timeout=5)
+
     calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
     assert len(calls) > 0

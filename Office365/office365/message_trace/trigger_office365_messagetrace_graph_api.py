@@ -1,7 +1,8 @@
 import time
-from datetime import datetime, timedelta, timezone
+from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from typing import Any, Generator
+from typing import Any
 
 import orjson
 import requests
@@ -12,8 +13,9 @@ from sekoia_automation.storage import PersistentJSON
 
 from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
+from .base import MAX_LOGGED_BODY_LENGTH
 from .client import ApiClient
-from .client.auth import AuthenticationError
+from .client.auth import AuthenticationError, format_authentication_error
 from .timestepper import TimeStepper
 
 
@@ -92,7 +94,7 @@ class Office365MessageTraceTriggerGraphAPI(Connector):
             # We don't retrieve messages older than 30 days
             # see https://learn.microsoft.com/en-us/previous-versions/office/developer/o365-enterprise-developers/↵
             # jj984335(v=office.15)?redirectedfrom=MSDN#data-granularity-persistence-and-availability
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             one_month_ago = now - timedelta(days=30)
             if most_recent_date_requested < one_month_ago:
                 most_recent_date_requested = one_month_ago
@@ -106,19 +108,25 @@ class Office365MessageTraceTriggerGraphAPI(Connector):
 
     def handle_response_error(self, response: requests.Response) -> None:
         if not response.ok:
-            message = f"Request on Microsoft Graph API failed with status {response.status_code} - {response.text}"
+            message = (
+                f"Request on Microsoft Graph API failed with status {response.status_code} - "
+                f"{response.text[:MAX_LOGGED_BODY_LENGTH]}"
+            )
             self.log(message=message, level="error")
 
             response.raise_for_status()
 
-    def fetch_events(self, start: datetime, end: datetime) -> Generator[list, None, None]:
+    def fetch_events(self, start: datetime, end: datetime) -> Generator[list]:
         self.log(message=f"Querying timerange {start} to {end}.", level="info")
 
         url = "https://graph.microsoft.com/v1.0/admin/exchange/tracing/messageTraces"
         # NOTE: $orderby won't work here, so we will receive events sorted from the most recent to the oldest
         params: dict[str, Any] | None = {
             "$format": "json",
-            "$filter": f"receivedDateTime ge {start.strftime(self.RFC3339_STRICT_FORMAT)} and receivedDateTime le {end.strftime(self.RFC3339_STRICT_FORMAT)}",
+            "$filter": (
+                f"receivedDateTime ge {start.strftime(self.RFC3339_STRICT_FORMAT)} "
+                f"and receivedDateTime le {end.strftime(self.RFC3339_STRICT_FORMAT)}"
+            ),
             "$top": 1_000,
         }
 
@@ -144,7 +152,7 @@ class Office365MessageTraceTriggerGraphAPI(Connector):
             else:
                 break
 
-    def run(self):  # pragma: no cover
+    def run(self) -> None:  # pragma: no cover
         self.log(message="Office365 MessageTrace Trigger has started.", level="info")
 
         for start, end in self.stepper.ranges():
@@ -178,9 +186,7 @@ class Office365MessageTraceTriggerGraphAPI(Connector):
 
             except AuthenticationError as e:
                 if e.result:
-                    self.log(message="Error: {0}".format(e.result.get("error")), level="error")
-                    self.log(message="Error description: {0}".format(e.result.get("error_description")), level="error")
-                    self.log(message="Correlation ID: {0}".format(e.result.get("correlation_id")), level="error")
+                    self.log(message=format_authentication_error(e.result), level="error")
 
                 self.log(str(e), level="critical")
 

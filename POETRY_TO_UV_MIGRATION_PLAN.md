@@ -49,12 +49,15 @@ Migrate all remaining Poetry-based automation modules to uv + mise using the rep
 - CrowdStrike
 - SentinelOneDeepVisibility
 
+### Wave 5 first batch completed
+- Office365
+
 ### Wave 6 first batch completed
 - AWS
 
 ### Remaining scope
-- Remaining modules to migrate: 81
-- Remaining planned effort: about 369 hours
+- Remaining modules to migrate: 80
+- Remaining planned effort: about 363 hours
 - Criticity scale: 1 (easiest) to 10 (hardest)
 
 ## Incremental Delivery Strategy
@@ -168,7 +171,7 @@ Estimated wave effort: 96h
 
 Estimated wave effort: 108h total, 99h remaining
 
-### Wave 5: Criticity 8 (estimated 6h each)
+### Wave 5: Criticity 8 (estimated 6h each) - In progress
 - Azure
 - CrowdStrikeFalcon
 - CyberArk
@@ -177,7 +180,7 @@ Estimated wave effort: 108h total, 99h remaining
 - MicrosoftDefender
 - MicrosoftEntraID
 - Netskope
-- Office365
+- Office365 (completed)
 - Okta
 - PaloAltoCortexXDR
 - PaloAltoXSIAM
@@ -187,7 +190,7 @@ Estimated wave effort: 108h total, 99h remaining
 - TheHiveV5
 - TrendMicroVisionOne
 
-Estimated wave effort: 102h
+Estimated wave effort: 102h total, 96h remaining
 
 ### Wave 6: Criticity 9 (estimated 7h each) - In progress
 - AWS (completed)

@@ -14,6 +14,15 @@ class AuthenticationError(Exception):
         return self.message
 
 
+def format_authentication_error(result: dict[str, Any]) -> str:
+    """Format the error returned by MSAL in a single log line"""
+    return (
+        f"Error: {result.get('error')} - "
+        f"Description: {result.get('error_description')} - "
+        f"Correlation ID: {result.get('correlation_id')}"
+    )
+
+
 class ApiKeyAuthentication(AuthBase):
     def __init__(self, base_url: str, tenant_id: str, client_id: str, client_secret: str, scopes: list[str]) -> None:
         self.__base_url = base_url

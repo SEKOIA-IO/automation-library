@@ -4,17 +4,17 @@ from unittest.mock import Mock, patch
 import pytest
 from sekoia_automation.storage import PersistentJSON
 
-from office365.message_trace.base import Office365MessageTraceBaseTrigger
+from office365.message_trace.base import MAX_LOGGED_BODY_LENGTH, Office365MessageTraceBaseTrigger
 
 
-class TestTrigger(Office365MessageTraceBaseTrigger):
+class DummyTrigger(Office365MessageTraceBaseTrigger):
     def query_api(self, start: datetime, end: datetime):
         return
 
 
 @pytest.fixture
 def trigger(symphony_storage):
-    trigger = TestTrigger(data_path=symphony_storage)
+    trigger = DummyTrigger(data_path=symphony_storage)
     trigger.log = Mock()
     trigger.module.configuration = {}
     trigger.configuration = {
@@ -72,3 +72,46 @@ def test_stepper_without_cursor(trigger, symphony_storage):
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
         assert trigger.stepper.start == datetime(2023, 3, 22, 11, 55, 28, tzinfo=UTC)
+
+
+def test_stop(trigger):
+    trigger.stop()
+
+    trigger.log.assert_called_once_with(message="Stopping Office365 MessageTrace trigger", level="info")
+    assert not trigger.running
+
+
+def test_query_api_is_abstract(trigger):
+    with pytest.raises(NotImplementedError):
+        Office365MessageTraceBaseTrigger.query_api(trigger, datetime.now(UTC), datetime.now(UTC))
+
+
+def test_manage_response_reraises_unexpected_errors(trigger):
+    trigger.log_exception = Mock()
+    response = Mock(ok=True)
+    response.json.return_value = ["not", "a", "dict"]
+
+    with pytest.raises(AttributeError):
+        trigger.manage_response(response)
+
+    trigger.log_exception.assert_called_once()
+    assert trigger.log_exception.call_args.kwargs["message"] == "Office365 MessageTrace Trigger encountered an error"
+
+
+@pytest.mark.parametrize(
+    "body,expected_logged_body",
+    [
+        pytest.param("Forbidden", "Forbidden", id="short_body"),
+        pytest.param("x" * 2_000, "x" * MAX_LOGGED_BODY_LENGTH, id="long_body_is_truncated"),
+    ],
+)
+def test_manage_response_logs_http_errors(trigger, body, expected_logged_body):
+    response = Mock(ok=False, url="https://example.com", status_code=403, text=body)
+
+    assert trigger.manage_response(response) == []
+    trigger.log.assert_called_once_with(
+        message=(
+            f"Request on MessageTrace API to fetch https://example.com failed with status 403 - {expected_logged_body}"
+        ),
+        level="error",
+    )
