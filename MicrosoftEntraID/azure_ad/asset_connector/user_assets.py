@@ -31,6 +31,7 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     UserTypeStr,
 )
 from sekoia_automation.storage import PersistentJSON
+from sekoia_automation_models.sid import normalize_sid
 
 from azure_ad.base import AzureADModule
 
@@ -112,6 +113,8 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             "company_name": "user.org.name",
             "office_location": "user.org.ou_name",
             "on_premises_sam_account_name": "user.uid_alt",
+            "on_premises_security_identifier": "user.account.uid",
+            "security_identifier": "user.account.uid",
             "account_enabled": "enrichments.account.data.is_enabled",
             "department": "enrichments.employment.value",
             "job_title": "enrichments.employment.value",
@@ -163,7 +166,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             name=user.user_principal_name or "Unknown",
             type_id=AccountTypeId.AZURE_AD_ACCOUNT,
             type=AccountTypeStr.AZURE_AD_ACCOUNT,
-            uid=user.id,
+            uid=normalize_sid(user.on_premises_security_identifier) or normalize_sid(user.security_identifier),
         )
         user_data = UserOCSF(
             has_mfa=has_mfa,
@@ -171,7 +174,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             uid=user.id,
             groups=groups,
             full_name=user.display_name or "Unknown",
-            email_addr=user.mail or "Unknown",
+            email_addr=user.mail or None,
             account=account,
             display_name=user.display_name,
             domain=domain,
@@ -332,6 +335,8 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 "isManagementRestricted",
                 "lastPasswordChangeDateTime",
                 "onPremisesSamAccountName",
+                "onPremisesSecurityIdentifier",
+                "securityIdentifier",
             ],
             filter=f"createdDateTime ge {last_run_date}" if last_run_date else None,
             orderby=["createdDateTime asc"],

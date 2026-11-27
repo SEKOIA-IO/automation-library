@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-24 - 2.10.32
+
+### Changed
+
+- User assets: send the account SID in `user.account.uid`, the on-premises SID (`onPremisesSecurityIdentifier`) when the user is synced from Active Directory, else the cloud SID (`securityIdentifier`), and leave it unset when Microsoft Entra ID has none
+- User assets: leave `email_addr` unset when the user has no mail, instead of sending `Unknown`
+- The field mapping changes, so the next run fetches all the users again
+
 ## 2026-11-18 - 2.10.31
 
 ### Changed

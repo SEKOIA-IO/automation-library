@@ -816,7 +816,8 @@ def test_map_fields_with_none_values(test_entra_id_asset_connector):
     assert result.user.uid == "test-id"
     assert result.user.has_mfa is False
     assert result.user.full_name == "Unknown"
-    assert result.user.email_addr == "Unknown"
+    assert result.user.email_addr is None
+    assert result.user.account.uid is None
     assert result.time == 0  # Should be 0 when created_date_time is None
 
 
@@ -1038,6 +1039,8 @@ def test_get_mapped_fields(test_entra_id_asset_connector):
         "company_name": "user.org.name",
         "office_location": "user.org.ou_name",
         "on_premises_sam_account_name": "user.uid_alt",
+        "on_premises_security_identifier": "user.account.uid",
+        "security_identifier": "user.account.uid",
         "account_enabled": "enrichments.account.data.is_enabled",
         "department": "enrichments.employment.value",
         "job_title": "enrichments.employment.value",
@@ -1056,3 +1059,35 @@ def test_get_mapped_fields_failed(test_entra_id_asset_connector):
     }
 
     assert test_entra_id_asset_connector.get_mapped_fields() != not_expected
+
+
+ON_PREMISES_SID = "S-1-5-21-1500703765-3354019915-535386580-1662"
+CLOUD_SID = "S-1-12-1-1234567890-1098765432-2345678901-3456789012"
+
+
+@pytest.mark.parametrize(
+    ("on_premises_sid", "cloud_sid", "expected"),
+    [
+        (ON_PREMISES_SID, CLOUD_SID, ON_PREMISES_SID),
+        (ON_PREMISES_SID.lower(), None, ON_PREMISES_SID),
+        (None, CLOUD_SID, CLOUD_SID),
+        ("S-1-5-21-1500703765-3354019915-535386580-500", CLOUD_SID, CLOUD_SID),
+        ("Unknown", "0b6f5a3e-8e2c-4b1a-9d1f-2a3b4c5d6e7f", None),
+        (None, None, None),
+    ],
+)
+def test_map_fields_sends_the_account_sid(test_entra_id_asset_connector, on_premises_sid, cloud_sid, expected):
+    from msgraph.generated.models.user import User
+
+    asset_user = User(
+        id="user-id",
+        user_principal_name="jdoe@corp.example",
+        mail="jdoe@corp.example",
+        on_premises_security_identifier=on_premises_sid,
+        security_identifier=cloud_sid,
+    )
+
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
+
+    assert result.user.account.uid == expected
+    assert result.user.uid == "user-id"
