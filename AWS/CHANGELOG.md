@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-27 - 1.39.1
+
+### Fixed
+
+- AWS clients renew the OIDC credentials by themselves when they get close to expiry, so a long batch can still delete its SQS messages
+- Renew the OIDC credentials 15 minutes before expiry, so they do not expire before the end of a batch
+- Stop the connectors gracefully on unrecoverable AWS errors (invalid credentials, missing permissions, unknown bucket or queue) instead of retrying forever; an unreachable endpoint stops them after 5 consecutive failures
+- The S3 list connectors stop on unrecoverable AWS errors instead of retrying the same object forever
+
 ## 2026-11-12 - 1.39.0
 
 ### Changed

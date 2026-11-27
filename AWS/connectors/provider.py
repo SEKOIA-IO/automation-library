@@ -50,6 +50,8 @@ class AwsAccountProvider(OidcAwsMixin, AwsProvider):
                 aws_secret_access_key=aws_config.aws_secret_access_key,
                 aws_region=aws_config.aws_region,
                 aws_session_token=aws_config.aws_session_token,
+                aws_expiration=aws_config.aws_expiration,
+                credentials_refresher=aws_config.credentials_refresher,
             )
             return self._reuse_s3_wrapper(config)
         config = S3Configuration(
@@ -78,6 +80,8 @@ class AwsAccountProvider(OidcAwsMixin, AwsProvider):
                 aws_secret_access_key=aws_config.aws_secret_access_key,
                 aws_region=aws_config.aws_region,
                 aws_session_token=aws_config.aws_session_token,
+                aws_expiration=aws_config.aws_expiration,
+                credentials_refresher=aws_config.credentials_refresher,
             )
             return self._reuse_sqs_wrapper(config)
 

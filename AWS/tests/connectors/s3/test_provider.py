@@ -93,6 +93,8 @@ class TestAwsAccountProviderWithRole:
         assumed.aws_secret_access_key = "assumed_secret"
         assumed.aws_session_token = "assumed_token"
         assumed.aws_region = "us-west-2"
+        assumed.aws_expiration = None
+        assumed.credentials_refresher = None
         return assumed
 
     def test_s3_wrapper_uses_assumed_role_credentials(self, aws_module_with_role, queued_config):

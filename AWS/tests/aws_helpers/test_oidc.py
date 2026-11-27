@@ -130,7 +130,7 @@ def test_get_assume_role_uses_cache(oidc_instance: ConcreteOidcClass):
     future_expiry = datetime.now(timezone.utc) + timedelta(hours=1)
     cached = MagicMock(spec=AwsClientConfiguration)
     oidc_instance._cached_aws_config = cached
-    oidc_instance._config_expiration = future_expiry
+    cached.aws_expiration = future_expiry
 
     with (
         patch("aws_helpers.oidc.boto3.client") as mock_boto,
@@ -148,7 +148,7 @@ def test_get_assume_role_refreshes_expired_cache(oidc_instance: ConcreteOidcClas
     past_expiry = datetime.now(timezone.utc) - timedelta(minutes=10)
     cached = MagicMock(spec=AwsClientConfiguration)
     oidc_instance._cached_aws_config = cached
-    oidc_instance._config_expiration = past_expiry
+    cached.aws_expiration = past_expiry
 
     new_expiry = datetime.now(timezone.utc) + timedelta(hours=1)
     mock_sts = MagicMock()
@@ -168,6 +168,60 @@ def test_get_assume_role_refreshes_expired_cache(oidc_instance: ConcreteOidcClas
         result = oidc_instance.get_assume_role()
 
     assert result.aws_access_key_id == "NEW_KEY"
+
+
+def test_get_assume_role_refreshes_credentials_close_to_expiry(oidc_instance: ConcreteOidcClass):
+    """Test that credentials too close to expiry for a whole SQS batch are renewed."""
+    cached = MagicMock(spec=AwsClientConfiguration)
+    cached.aws_expiration = datetime.now(timezone.utc) + timedelta(minutes=10)
+    oidc_instance._cached_aws_config = cached
+
+    mock_sts = MagicMock()
+    mock_sts.assume_role_with_web_identity.return_value = {
+        "Credentials": {
+            "AccessKeyId": "NEW_KEY",
+            "SecretAccessKey": "new_secret",
+            "SessionToken": "new_token",
+            "Expiration": datetime.now(timezone.utc) + timedelta(hours=1),
+        }
+    }
+
+    with (
+        patch("aws_helpers.oidc.boto3.client", return_value=mock_sts),
+        patch.object(oidc_instance, "_get_oidc_token", return_value="fresh_oidc_token"),
+    ):
+        result = oidc_instance.get_assume_role()
+
+    assert result.aws_access_key_id == "NEW_KEY"
+
+
+def test_assume_role_ignores_valid_cache_and_exposes_refresher(oidc_instance: ConcreteOidcClass):
+    """Test that renewing always calls STS and hands out what the clients need to renew by themselves."""
+    cached = MagicMock(spec=AwsClientConfiguration)
+    cached.aws_expiration = datetime.now(timezone.utc) + timedelta(hours=1)
+    oidc_instance._cached_aws_config = cached
+
+    expiration = datetime.now(timezone.utc) + timedelta(hours=1)
+    mock_sts = MagicMock()
+    mock_sts.assume_role_with_web_identity.return_value = {
+        "Credentials": {
+            "AccessKeyId": "NEW_KEY",
+            "SecretAccessKey": "new_secret",
+            "SessionToken": "new_token",
+            "Expiration": expiration,
+        }
+    }
+
+    with (
+        patch("aws_helpers.oidc.boto3.client", return_value=mock_sts),
+        patch.object(oidc_instance, "_get_oidc_token", return_value="fresh_oidc_token"),
+    ):
+        result = oidc_instance._assume_role()
+
+    assert result.aws_access_key_id == "NEW_KEY"
+    assert result.aws_expiration == expiration
+    assert result.credentials_refresher == oidc_instance._assume_role
+    assert oidc_instance._cached_aws_config is result
 
 
 def test_get_assume_role_exception_wrapping(oidc_instance: ConcreteOidcClass):

@@ -9,9 +9,13 @@ from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from aws_helpers.base import AwsModule
+from aws_helpers.errors import is_endpoint_error, is_fatal_error
 from connectors.provider import AwsAccountProvider
 
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, MESSAGES_AGE, OUTCOMING_EVENTS
+
+# an unreachable endpoint may be a network outage: only stop after this many consecutive failures
+ENDPOINT_MAX_FAILURES = 5
 
 
 class AbstractAwsConnectorConfiguration(DefaultConnectorConfiguration):
@@ -25,6 +29,7 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
 
     module: AwsModule
     configuration: AbstractAwsConnectorConfiguration
+    _endpoint_failures = 0
 
     async def next_batch(self) -> tuple[int, list[int]]:
         """
@@ -48,6 +53,7 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
 
                     batch_result: tuple[int, list[int]] = loop.run_until_complete(self.next_batch())
                     message_count, messages_timestamp = batch_result
+                    self._endpoint_failures = 0
 
                     # compute the duration of the batch
                     processing_end = time.time()
@@ -84,10 +90,25 @@ class AbstractAwsConnector(AwsAccountProvider, AsyncConnector, metaclass=ABCMeta
                         time.sleep(delta_sleep)
 
             except Exception as e:
-                self.log_exception(e)
+                self._handle_error(e)
             finally:
                 loop.run_until_complete(loop.shutdown_asyncgens())
                 loop.close()
+
+    def _handle_error(self, error: Exception) -> None:
+        """Stop the connector on an unrecoverable error, retry later on any other."""
+        self._endpoint_failures = self._endpoint_failures + 1 if is_endpoint_error(error) else 0
+
+        if is_fatal_error(error) and (
+            not is_endpoint_error(error) or self._endpoint_failures >= ENDPOINT_MAX_FAILURES
+        ):
+            self.log_exception(error, message="Unrecoverable AWS error, stopping", level="critical")
+            self.stop()
+            return
+
+        self.log_exception(error)
+        if self._endpoint_failures:
+            time.sleep(self.configuration.frequency)
 
     def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:  # pragma: no cover
         """

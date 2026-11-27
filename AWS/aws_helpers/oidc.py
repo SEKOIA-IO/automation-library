@@ -10,6 +10,9 @@ from aws_helpers.client import AwsClientConfiguration
 
 from .base import AwsModule
 
+# credentials must outlive a whole SQS batch (visibility timeout 10 min), as messages are deleted at its end
+CREDENTIALS_REFRESH_MARGIN = timedelta(minutes=15)
+
 
 class _OidcHost(Protocol):
     """Protocol describing what OidcAwsMixin expects from its concrete class."""
@@ -19,9 +22,10 @@ class _OidcHost(Protocol):
     logs_url: str
     callback_url: str
     _cached_aws_config: AwsClientConfiguration | None
-    _config_expiration: datetime | None
 
     def _get_oidc_token(self) -> str: ...
+
+    def _assume_role(self) -> AwsClientConfiguration: ...
 
     @cached_property
     def url(self) -> str: ...
@@ -42,7 +46,6 @@ class OidcAwsMixin:
     """
 
     _cached_aws_config: AwsClientConfiguration | None = None
-    _config_expiration: datetime | None = None
 
     @cached_property
     def headers(self: _OidcHost) -> dict[str, str]:
@@ -88,16 +91,18 @@ class OidcAwsMixin:
     def get_assume_role(self: _OidcHost) -> AwsClientConfiguration:
         """Assume AWS role via OIDC web identity and return temporary credentials.
 
-        Credentials are cached and reused until 5 minutes before expiration.
+        Credentials are cached and reused until CREDENTIALS_REFRESH_MARGIN before expiration.
         """
         now = datetime.now(timezone.utc)
-        if (
-            self._cached_aws_config is not None
-            and self._config_expiration is not None
-            and self._config_expiration - timedelta(minutes=5) > now
-        ):
-            return self._cached_aws_config
+        # the cache is replaced as a whole: clients renew it from a worker thread
+        cached = self._cached_aws_config
+        if cached is not None and cached.aws_expiration and cached.aws_expiration - CREDENTIALS_REFRESH_MARGIN > now:
+            return cached
 
+        return self._assume_role()
+
+    def _assume_role(self: _OidcHost) -> AwsClientConfiguration:
+        """Assume the role again, whatever the cache holds. Also used by clients to renew their credentials."""
         sts_client = boto3.client("sts", region_name=self.module.configuration.aws_region_name)
         try:
             oidc_token = self._get_oidc_token()
@@ -107,13 +112,16 @@ class OidcAwsMixin:
                 WebIdentityToken=oidc_token,
             )
             credentials: dict[str, Any] = response["Credentials"]
-            self._config_expiration = credentials["Expiration"]
-            self._cached_aws_config = AwsClientConfiguration(
+            config = AwsClientConfiguration(
                 aws_access_key_id=credentials["AccessKeyId"],
                 aws_secret_access_key=credentials["SecretAccessKey"],
                 aws_region=self.module.configuration.aws_region_name,
                 aws_session_token=credentials["SessionToken"],
+                aws_expiration=credentials["Expiration"],
+                credentials_refresher=self._assume_role,
             )
-            return self._cached_aws_config
         except Exception as e:
             raise RuntimeError(f"Could not assume role: {str(e)}") from e
+
+        self._cached_aws_config = config
+        return config
