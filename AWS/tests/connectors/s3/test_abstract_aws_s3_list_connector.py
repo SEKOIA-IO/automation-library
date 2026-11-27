@@ -8,6 +8,7 @@ from typing import BinaryIO
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
+from botocore.exceptions import ClientError
 from faker import Faker
 
 from aws_helpers.s3_wrapper import S3Wrapper
@@ -252,6 +253,36 @@ async def test_abstract_aws_s3_list_connector_next_batch_error_stops_loop(
     assert abstract_list_connector.read_marker() == good_key
     # file-2.log should not have been read (loop stopped after error)
     assert call_count[0] == 2
+
+
+@pytest.mark.asyncio
+async def test_abstract_aws_s3_list_connector_next_batch_fatal_error_is_raised(
+    abstract_list_connector: AbstractAwsS3ListConnector,
+):
+    """
+    Test that a fatal error on an object is raised, so that the connector stops instead of retrying forever.
+
+    Args:
+        abstract_list_connector: AbstractAwsS3ListConnector
+    """
+
+    async def list_objects(bucket=None, prefix=None, start_after=None):
+        yield {"Key": "file-0.log", "Size": 100}
+
+    async def read_key():
+        raise ClientError({"Error": {"Code": "AccessDenied"}}, "GetObject")
+
+    mock_s3 = MagicMock()
+    mock_s3.list_objects = list_objects
+    mock_s3.read_key = MagicMock()
+    mock_s3.read_key.return_value.__aenter__.side_effect = read_key
+
+    connector_type = type(abstract_list_connector)
+    with patch.object(connector_type, "s3_wrapper", new_callable=PropertyMock, return_value=mock_s3):
+        with pytest.raises(ClientError):
+            await abstract_list_connector.next_batch()
+
+    assert abstract_list_connector.read_marker() is None
 
 
 @pytest.mark.asyncio

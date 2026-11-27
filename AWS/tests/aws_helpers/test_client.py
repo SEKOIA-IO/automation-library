@@ -34,7 +34,7 @@ async def test_credentials_renew_themselves_close_to_expiration():
 
     def refresher() -> AwsClientConfiguration:
         calls.append(1)
-        return _config(new_expiration, key="NEW_KEY")
+        return _config(new_expiration, refresher, key="NEW_KEY")
 
     credentials = await _CredentialsProvider(
         _config(datetime.now(timezone.utc) + timedelta(minutes=5), refresher)
@@ -77,7 +77,10 @@ async def test_failing_refresh_is_raised_when_credentials_are_about_to_expire():
 
 @pytest.mark.asyncio
 async def test_failing_refresh_keeps_the_credentials_while_they_are_still_valid():
+    calls: list[int] = []
+
     def refresher() -> AwsClientConfiguration:
+        calls.append(1)
         raise RuntimeError("Could not assume role")
 
     credentials = await _CredentialsProvider(
@@ -85,3 +88,11 @@ async def test_failing_refresh_keeps_the_credentials_while_they_are_still_valid(
     ).load()
 
     assert (await credentials.get_frozen_credentials()).access_key == "OLD_KEY"
+    # the renewal was attempted, then the still valid credentials were kept
+    assert calls == [1]
+
+
+@pytest.mark.parametrize("expiration, refresher", [(datetime.now(timezone.utc), None), (None, lambda: None)])
+def test_refresher_and_expiration_must_be_set_together(expiration, refresher):
+    with pytest.raises(ValueError, match="must be set together"):
+        _config(expiration, refresher)

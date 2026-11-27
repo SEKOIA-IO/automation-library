@@ -303,6 +303,10 @@ class AbstractAwsS3ListConnector(AbstractAwsConnector, metaclass=ABCMeta):
                     raise
 
                 except Exception as e:
+                    # a wrong bucket, key or permission would fail for every object: let the connector stop
+                    if is_fatal_error(e):
+                        raise
+
                     # do not advance the marker past a failing object to avoid losing data.
                     self.log(
                         message=f"Failed to fetch content of {key}: {str(e)}",

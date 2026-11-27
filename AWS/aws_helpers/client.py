@@ -9,7 +9,7 @@ from typing import Any, Generic, TypeVar
 from aiobotocore.credentials import AioRefreshableCredentials
 from aiobotocore.session import AioCredentials, AioSession, ClientCreatorContext
 from botocore.credentials import CredentialProvider
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class AwsClientConfiguration(BaseModel):
@@ -26,6 +26,13 @@ class AwsClientConfiguration(BaseModel):
         repr=False,
         description="Renews the temporary credentials. Blocking: it is called in a worker thread",
     )
+
+    @model_validator(mode="after")
+    def _refresh_needs_expiration(self) -> "AwsClientConfiguration":
+        if bool(self.credentials_refresher) != bool(self.aws_expiration):
+            raise ValueError("aws_expiration and credentials_refresher must be set together")
+
+        return self
 
 
 AwsConfigurationT = TypeVar("AwsConfigurationT", bound=AwsClientConfiguration)
