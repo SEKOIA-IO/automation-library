@@ -45,6 +45,9 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
     OCSF_SEVERITY = "Informational"
     OCSF_SEVERITY_ID = 1
 
+    CHECKPOINT_KEY = "most_recent_datetime_v2"
+    SEEN_SIDS_KEY = "seen_sids_at_checkpoint_v2"
+
     # Users whose mapping failed: the cursor moves past them, so only a full resync reads them again
     skipped_users: int = 0
 
@@ -57,12 +60,12 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
     @property
     def most_recent_datetime(self) -> str | None:
         with self.context as cache:
-            return cache.get("most_recent_datetime", None)
+            return cache.get(self.CHECKPOINT_KEY, None)
 
     @property
     def seen_sids_at_checkpoint(self) -> set[str]:
         with self.context as cache:
-            return set(cache.get("seen_sids_at_checkpoint", []))
+            return set(cache.get(self.SEEN_SIDS_KEY, []))
 
     @property
     def user_ldap_query(self) -> str:
@@ -75,14 +78,14 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             return
 
         with self.context as cache:
-            previous_checkpoint = cache.get("most_recent_datetime")
+            previous_checkpoint = cache.get(self.CHECKPOINT_KEY)
 
             if self._latest_time == previous_checkpoint:
-                existing_sids = set(cache.get("seen_sids_at_checkpoint", []))
-                cache["seen_sids_at_checkpoint"] = list(existing_sids | self._seen_sids)
+                existing_sids = set(cache.get(self.SEEN_SIDS_KEY, []))
+                cache[self.SEEN_SIDS_KEY] = list(existing_sids | self._seen_sids)
             else:
-                cache["most_recent_datetime"] = self._latest_time
-                cache["seen_sids_at_checkpoint"] = list(self._seen_sids)
+                cache[self.CHECKPOINT_KEY] = self._latest_time
+                cache[self.SEEN_SIDS_KEY] = list(self._seen_sids)
 
     def user_metadata_object(self) -> Metadata:
         """
@@ -202,6 +205,37 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             return mail
         return None
 
+    @staticmethod
+    def _present(value: str | None) -> str | None:
+        return value.strip() if value and value.strip() else None
+
+    @staticmethod
+    def _dn_components(distinguished_name: str) -> list[str]:
+        parts: list[str] = []
+        current: list[str] = []
+        escaped = False
+        for char in distinguished_name:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == ",":
+                parts.append("".join(current))
+                current = []
+                continue
+            current.append(char)
+        parts.append("".join(current))
+        return parts
+
+    @staticmethod
+    def domain_from_dn(distinguished_name: str | None) -> str | None:
+        labels = [
+            part.split("=", 1)[1].strip().lower()
+            for part in MicrosoftADUserAssetConnector._dn_components(distinguished_name or "")
+            if part.strip().upper().startswith("DC=") and part.split("=", 1)[1].strip()
+        ]
+        return ".".join(labels) or None
+
     def user_ocsf_object(self, user_attributes: LDAPUserAttributes) -> UserOCSF:
         """
         Build OCSF User object from LDAP user attributes.
@@ -209,51 +243,48 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             user_attributes: LDAPUserAttributes: LDAP user attributes.
         :return:
             UserOCSF: OCSF User object.
+        :raises ValueError: when the entry has no login nor name, or no objectSid nor objectGUID.
         """
-
-        # Determine user type
         user_type, user_type_id = self.compute_user_type(user_attributes)
 
-        # Build user name
-        # A blank name counts as absent: it would be shared by every such user, as the placeholder is
-        first_name = (user_attributes.givenName or "").strip() and user_attributes.givenName
-        last_name = (user_attributes.sn or "").strip() and user_attributes.sn
-
+        first_name = self._present(user_attributes.givenName) and user_attributes.givenName
+        last_name = self._present(user_attributes.sn) and user_attributes.sn
         if first_name and last_name:
-            user_name = f"{first_name} {last_name}".strip()
-        elif first_name:
-            user_name = first_name.strip()
-        elif last_name:
-            user_name = last_name.strip()
+            built_name: str | None = f"{first_name} {last_name}".strip()
         else:
-            # Built-in accounts (Guest, krbtgt) have no names: a shared placeholder merges them
-            user_name = user_attributes.sAMAccountName or "Unknown"
+            built_name = (first_name or last_name or "").strip() or None
 
-        # Parse alternative UID
-        if uid_alt := user_attributes.objectGUID:
-            uid_alt = uid_alt.strip("{}")
-        else:
-            uid_alt = None
+        display_name = self._present(user_attributes.displayName)
+        full_name = display_name or built_name
+        upn = self._present(user_attributes.userPrincipalName)
+        login = self._present(user_attributes.sAMAccountName) or upn
+        name = login or full_name
+        if not name:
+            raise ValueError("The user has no sAMAccountName, userPrincipalName nor name")
 
-        # Build account object
+        object_guid = self._present(user_attributes.objectGUID)
+        uid_alt = object_guid.strip("{}") if object_guid else None
+        object_sid = self._present(user_attributes.objectSid)
+        uid = object_sid or uid_alt
+        if not uid:
+            raise ValueError("The user has no objectSid nor objectGUID")
+
         account = Account(
-            name=(user_attributes.userPrincipalName or "").strip() or user_attributes.sAMAccountName or "Unknown",
+            name=upn or name,
             type_id=AccountTypeId.LDAP_ACCOUNT,
             type=AccountTypeStr.LDAP_ACCOUNT,
-            uid=user_attributes.objectSid or "Unknown",
+            uid=object_sid,
         )
 
-        email_addr = self.resolve_email_addr(user_attributes.mail)
-
         return UserOCSF(
-            name=user_name,
-            uid=user_attributes.objectSid or "Unknown",
+            name=name,
+            uid=uid,
             account=account,
             groups=self.get_user_groups(user_attributes),
-            full_name=user_attributes.displayName or "Unknown",
-            email_addr=email_addr,
-            display_name=user_attributes.displayName or "Unknown",
-            domain=user_attributes.distinguishedName or "Unknown",
+            full_name=full_name,
+            email_addr=self.resolve_email_addr(user_attributes.mail),
+            display_name=display_name,
+            domain=self.domain_from_dn(user_attributes.distinguishedName),
             type_id=user_type_id,
             type=user_type,
             uid_alt=uid_alt,
@@ -347,7 +378,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             if user_created_at:
                 user_created_str = user_created_at.strftime("%Y%m%d%H%M%S.0Z")
                 if user_created_str == checkpoint_time:
-                    sid = user_attributes.get("objectSid")
+                    sid = user_attributes.get("objectSid") or user_attributes.get("objectGUID")
                     if sid and sid in already_seen_sids:
                         self.log(
                             f"Skipping already-seen user (SID={sid}) at boundary second {checkpoint_time}",
@@ -362,7 +393,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
 
             if user_created_at:
                 user_created_str = user_created_at.strftime("%Y%m%d%H%M%S.0Z")
-                sid = user_attributes.get("objectSid")
+                sid = user_attributes.get("objectSid") or user_attributes.get("objectGUID")
                 if not self._latest_time or user_created_str > self._latest_time:
                     self._latest_time = user_created_str
                     self._seen_sids = {sid} if sid else set()
