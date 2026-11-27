@@ -775,6 +775,8 @@ def test_build_network_interface(test_harfanglab_asset_connector, agent_first_ob
     assert network_interface.type == "Wired"
     assert network_interface.type_id == 1
     assert network_interface.uid == "35064b52-fa8a-4357-b21d-87ab8114add2"
+    # subnet.gateway_macaddress is the gateway's MAC, shared by every host behind it
+    assert network_interface.mac is None
 
 
 def test_build_network_interface_no_data(test_harfanglab_asset_connector):
