@@ -4,9 +4,9 @@ This module provides functionality to collect device assets from SentinelOne
 and format them according to OCSF standards.
 """
 
-from collections.abc import Generator
+from collections.abc import Generator, Iterator
 from functools import cached_property
-from typing import Any, Optional
+from typing import Any
 
 from dateutil.parser import isoparse
 from sekoia_automation.asset_connector import AssetConnector
@@ -31,8 +31,8 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     RiskLevelId,
     RiskLevelStr,
 )
-from sekoia_automation.storage import PersistentJSON
 
+from sentinelone_module.asset_connector.checkpoint import AssetCheckpoint, Cursor
 from sentinelone_module.asset_connector.models import SentinelOneAgent
 from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.client import SentinelOneClient
@@ -47,6 +47,9 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
 
     module: SentinelOneModule
 
+    # Agents are swept in full passes on createdAt: no field is known to move on every agent change
+    checkpoint_field = "createdAt"
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the SentinelOne Device Asset Connector.
 
@@ -55,8 +58,7 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
             **kwargs: Arbitrary keyword arguments.
         """
         super().__init__(*args, **kwargs)
-        self.context = PersistentJSON("context.json", self._data_path)
-        self.new_most_recent_date: Optional[str] = None
+        self.asset_checkpoint = AssetCheckpoint(self.data_path, "sweep")
 
     @cached_property
     def client(self) -> SentinelOneClient:
@@ -72,120 +74,55 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
             rate_limit_per_second=20,  # Limit to 25 requests per second in the documentation so we set 20 to be safe
         )
 
-    @property
-    def most_recent_date_seen(self) -> str | None:
-        """Get the most recent date seen from the context cache.
-
-        Returns:
-            The most recent date seen as a string, or None if not set.
-        """
-        with self.context as cache:
-            result: str | None = cache.get("most_recent_date_seen", None)
-            return result
-
     def update_checkpoint(self) -> None:
-        """Update the checkpoint with the most recent date seen.
+        """Commit the createdAt of the last pushed agent."""
+        self.asset_checkpoint.commit()
 
-        Raises:
-            ValueError: If new_most_recent_date is None.
-        """
-        if self.new_most_recent_date is None:
-            self.log("Warning: new_most_recent_date is None, skipping checkpoint update", level="warning")
-            return
+    def reset_checkpoint(self) -> None:
+        """Start a new pass over every agent."""
+        self.asset_checkpoint.reset()
 
-        try:
-            with self.context as cache:
-                cache["most_recent_date_seen"] = self.new_most_recent_date
-                self.log(f"Checkpoint updated with date: {self.new_most_recent_date}", level="info")
-        except Exception as e:
-            self.log(f"Failed to update checkpoint: {str(e)}", level="error")
+    def get_mapped_fields(self) -> dict[str, str]:
+        return {}
 
-    def get_last_created_date(self, agents: list[SentinelOneAgent]) -> str:
-        """Get the last created date from the list of agents.
+    def fetch_agents(
+        self, checkpoint: Cursor | None, cursor: str | None = None
+    ) -> tuple[list[SentinelOneAgent], str | None]:
+        """Fetch one page of agents, sorted ascending on createdAt.
 
         Args:
-            agents: List of SentinelOne agents.
-
-        Returns:
-            The last created date as a string.
-
-        Raises:
-            ValueError: If the agents list is empty.
-        """
-        if not agents:
-            raise ValueError("Cannot get last created date from empty agents list")
-        return max(agent.createdAt for agent in agents)
-
-    def fetch_agents(self, cursor: str | None = None) -> tuple[list[SentinelOneAgent], str | None]:
-        """Fetch agents from SentinelOne.
-
-        Args:
+            checkpoint: Only fetch agents created strictly after this date.
             cursor: Optional cursor for pagination.
 
         Returns:
-            Tuple of (agents list, next cursor) or ([], None) on error.
+            Tuple of (agents list, next cursor).
         """
-        try:
-            # Build query parameters
-            params: dict[str, Any] = {"limit": 100}
+        params: dict[str, Any] = {"limit": 100, "sortBy": self.checkpoint_field, "sortOrder": "asc"}
+        if checkpoint:
+            params["createdAt__gt"] = checkpoint
+        if cursor:
+            params["cursor"] = cursor
 
-            if self.most_recent_date_seen:
-                params["createdAt__gt"] = self.most_recent_date_seen
+        response = self.client.get("/web/api/v2.1/agents", params=params)
 
-            if cursor:
-                params["cursor"] = cursor
+        if response.get("errors"):
+            self.log(f"Errors in API response: {response['errors']}", level="error")
 
-            # Make API request
-            response = self.client.get("/web/api/v2.1/agents", params=params)
+        agents = [SentinelOneAgent(**agent) for agent in response.get("data") or []]
+        next_cursor = (response.get("pagination") or {}).get("nextCursor")
+        return agents, next_cursor if agents else None
 
-            # Check for errors in response
-            if response.get("errors"):
-                self.log(f"Errors in API response: {response['errors']}", level="error")
+    def iter_agents(self, checkpoint: Cursor | None) -> Iterator[SentinelOneAgent]:
+        """Stream every agent created after the checkpoint, page by page.
 
-            # Extract agents data
-            agents_data = response.get("data", [])
-            if not agents_data:
-                self.log("No agents found in response", level="info")
-                return [], None
-
-            agents = [SentinelOneAgent(**agent) for agent in agents_data]
-
-            # Update checkpoint with the most recent date
-            if agents:
-                self.new_most_recent_date = self.get_last_created_date(agents)
-
-            # Get next cursor from pagination
-            next_cursor = None
-            pagination = response.get("pagination")
-            if pagination:
-                next_cursor = pagination.get("nextCursor")
-
-            return agents, next_cursor
-
-        except Exception as e:
-            self.log(f"Exception while fetching agents: {e}", level="error")
-            return [], None
-
-    def list_all_agents(self) -> list[SentinelOneAgent]:
-        """Fetch all agents from SentinelOne using pagination.
-
-        Returns:
-            List of all agents from SentinelOne.
+        A failed page raises, so the pass resumes from the checkpoint instead of being marked complete.
         """
-        all_agents = []
-        cursor = None
-
+        cursor: str | None = None
         while True:
-            agents, next_cursor = self.fetch_agents(cursor)
-            all_agents.extend(agents)
-
-            if not next_cursor:
-                break
-
-            cursor = next_cursor
-            self.log(f"Fetched {len(all_agents)} agents so far, continuing with next page", level="info")
-
-        return all_agents
+            agents, cursor = self.fetch_agents(checkpoint, cursor)
+            yield from agents
+            if not cursor:
+                return
 
     def get_device_os(self, os_type: str | None, os_name: str | None, os_revision: str | None) -> OperatingSystem:
         """Get operating system information for a device.
@@ -425,20 +362,34 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
         )
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
-        """Generate device assets from SentinelOne.
+        """Generate device assets from SentinelOne, one sweep pass per frequency.
 
         Yields:
             DeviceOCSFModel instances for each agent found in SentinelOne.
         """
-        self.log("Starting SentinelOne device assets generator", level="info")
+        should_fetch, checkpoint = self.asset_checkpoint.begin(self.frequency)
+        if not should_fetch:
+            return
 
-        agents = self.list_all_agents()
-        self.log(f"Fetched {len(agents)} agents from SentinelOne", level="info")
+        self.log(f"Fetching SentinelOne agents created after {checkpoint}", level="info")
+        agents = self.iter_agents(checkpoint)
+        current = next(agents, None)
+        while current is not None:
+            following = next(agents, None)
+            next_cursor = following.createdAt if following is not None else None
+            if self.asset_checkpoint.stage(current.createdAt, next_cursor):
+                self.log(
+                    f"Agents are not sorted ascending on createdAt ({next_cursor} after {current.createdAt}). "
+                    "The checkpoint is not moved for the rest of this cycle",
+                    level="error",
+                )
 
-        for agent in agents:
             try:
-                yield self.map_fields(agent)
+                asset = self.map_fields(current)
             except Exception as e:
-                agent_id = getattr(agent, "id", "unknown")
-                self.log(f"Error while mapping agent {agent_id}: {e}", level="error")
-                continue
+                self.log(f"Error while mapping agent {current.id}: {e}", level="error")
+            else:
+                yield asset
+            current = following
+
+        self.asset_checkpoint.exhausted()
