@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-27 - 1.23.1
+
+### Changed
+
+- Add the reveal-application-discovery feature flag
+
 ## 2026-11-04 - 1.23.0
 
 ### Added

@@ -49,6 +49,6 @@
     ]
   },
   "feature_flags": [
-    "reveal-beta-connectors"
+    "reveal-application-discovery"
   ]
 }
