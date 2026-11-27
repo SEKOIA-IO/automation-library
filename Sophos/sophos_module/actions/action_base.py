@@ -6,10 +6,10 @@ from urllib.parse import urljoin
 
 from sekoia_automation.action import Action
 
-from .base import SophosModule
-from .client import SophosApiClient
-from .client.auth import SophosApiAuthentication
-from .logging import get_logger
+from sophos_module.base import SophosModule
+from sophos_module.client import SophosApiClient
+from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.logging import get_logger
 
 logger = get_logger()
 

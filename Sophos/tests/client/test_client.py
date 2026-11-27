@@ -2,10 +2,12 @@ import os
 import time
 
 import pytest
+import requests
 import requests_mock
 
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.client.exceptions import SophosGraphQLError
 
 
 def test_list_siem_events():
@@ -95,3 +97,67 @@ def test_authentication_integration(symphony_storage):
 
     response = client.list_siem_events(parameters={"from_date": int(time.time()) - 300})
     assert response.status_code < 300
+
+
+GRAPHQL_URL = "https://api.taegis.sophos.com/graphql"
+
+
+@pytest.fixture
+def graphql_client():
+    authentication = SophosApiAuthentication(
+        api_host="https://api.central.sophos.com",
+        authorization_url="https://id.sophos.com/api/v2/oauth2/token",
+        client_id="my-id",
+        client_secret="my-password",
+    )
+    return SophosApiClient(auth=authentication, graphql_api_url="https://api.taegis.sophos.com/")
+
+
+@pytest.fixture
+def mock_authentication():
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            "https://id.sophos.com/api/v2/oauth2/token",
+            json={"access_token": "access_token", "token_type": "bearer", "expires_in": 3600},
+        )
+        mock.get(
+            "https://api.central.sophos.com/whoami/v1",
+            json={"id": "tenant-id", "idType": "tenant", "apiHosts": {"global": "https://api.central.sophos.com"}},
+        )
+        yield mock
+
+
+def test_graphql_returns_data(graphql_client, mock_authentication):
+    mock_authentication.post(GRAPHQL_URL, json={"data": {"tenant": {"id": "1"}}})
+
+    assert graphql_client.graphql("query { tenant { id } }", {"id": "1"}) == {"tenant": {"id": "1"}}
+
+    request = mock_authentication.last_request
+    assert request.json() == {"query": "query { tenant { id } }", "variables": {"id": "1"}}
+    assert request.headers["Authorization"] == "Bearer access_token"
+    assert request.headers["X-Tenant-ID"] == "tenant-id"
+
+
+def test_graphql_without_data(graphql_client, mock_authentication):
+    mock_authentication.post(GRAPHQL_URL, json={"data": None})
+
+    assert graphql_client.graphql("query { tenant { id } }") == {}
+    assert mock_authentication.last_request.json()["variables"] == {}
+
+
+def test_graphql_errors_with_http_200(graphql_client, mock_authentication):
+    mock_authentication.post(
+        GRAPHQL_URL,
+        json={"data": None, "errors": [{"message": "failed to parse cql query", "extensions": {"code": "BAD"}}]},
+    )
+
+    with pytest.raises(SophosGraphQLError) as error:
+        graphql_client.graphql("query { detectionSearch { status } }")
+    assert error.value.codes == ["BAD"]
+
+
+def test_graphql_http_error(graphql_client, mock_authentication):
+    mock_authentication.post(GRAPHQL_URL, status_code=403, json={"message": "Forbidden"})
+
+    with pytest.raises(requests.HTTPError):
+        graphql_client.graphql("query { tenant { id } }")

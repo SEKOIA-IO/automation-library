@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import requests
@@ -113,7 +113,7 @@ class SophosApiAuthentication(AuthBase):
         """
         Return Sophos Credentials for the API
         """
-        current_dt = datetime.utcnow()
+        current_dt = datetime.now(UTC)
 
         if self.api_credentials is None or current_dt + timedelta(seconds=300) >= self.api_credentials.expires_at:
             # Initialize credentials

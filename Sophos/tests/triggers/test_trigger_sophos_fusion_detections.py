@@ -7,8 +7,7 @@ import requests
 import requests_mock
 
 from sophos_module.base import SophosModule
-from sophos_module.client.exceptions import SophosGraphQLError
-from sophos_module.trigger_sophos_fusion_detections import (
+from sophos_module.triggers.trigger_sophos_fusion_detections import (
     MAX_RESULTS_PER_SEARCH,
     SophosFusionDetectionsTrigger,
     clean_detection,
@@ -280,11 +279,3 @@ def test_next_batch_empty_window(trigger, mock_api):
     trigger.next_batch()
 
     assert graphql_calls(mock_api) == []
-
-
-def test_graphql_error_message():
-    error = SophosGraphQLError(
-        [{"message": "internal service error", "path": ["detectionPoll"], "extensions": {"code": "DOWNSTREAM"}}]
-    )
-    assert error.codes == ["DOWNSTREAM"]
-    assert "internal service error" in str(error) and "DOWNSTREAM" in str(error)

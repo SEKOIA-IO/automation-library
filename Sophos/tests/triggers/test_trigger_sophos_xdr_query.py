@@ -5,7 +5,7 @@ import pytest
 import requests_mock
 
 from sophos_module.base import SophosModule
-from sophos_module.trigger_sophos_xdr_query import SophosXDRIOCQuery
+from sophos_module.triggers.trigger_sophos_xdr_query import SophosXDRIOCQuery
 
 
 @pytest.fixture
@@ -373,7 +373,7 @@ def test_post_query_execution_failed_logs_details(
     host = "https://api-eu01.central.sophos.com"
     query_id = query_run_message["id"]
     failed_status = {**query_status_message, "result": "failed", "error": {"code": "QUERY_FAILED"}}
-    monkeypatch.setattr("sophos_module.trigger_sophos_xdr_query.time.sleep", lambda _: None)
+    monkeypatch.setattr("sophos_module.triggers.trigger_sophos_xdr_query.time.sleep", lambda _: None)
 
     with requests_mock.Mocker() as mock:
         _mock_authentication(mock, trigger, authorization_message, whoami_message)
@@ -388,7 +388,7 @@ def test_post_query_execution_failed_logs_details(
 
 def test_observe_items_events_lag_without_fractional_seconds(trigger, monkeypatch):
     lag = Mock()
-    monkeypatch.setattr("sophos_module.trigger_sophos_xdr_query.EVENTS_LAG", lag)
+    monkeypatch.setattr("sophos_module.triggers.trigger_sophos_xdr_query.EVENTS_LAG", lag)
     trigger._observe_items_events_lag([{"calendar_time": "2023-07-03T11:28:45Z"}])
     lag.labels.return_value.set.assert_called_once()
 

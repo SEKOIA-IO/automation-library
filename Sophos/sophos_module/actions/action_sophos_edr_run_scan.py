@@ -1,6 +1,6 @@
 from typing import Any
 
-from sophos_module.action_base import SophosEDRAction
+from sophos_module.actions.action_base import SophosEDRAction
 
 
 class ActionSophosEDRScan(SophosEDRAction):

@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import requests_mock
@@ -40,7 +40,7 @@ def test_get_credentials():
             },
         )
 
-        current_dt = datetime.utcnow()
+        current_dt = datetime.now(UTC)
         credentials = auth.get_credentials()
         assert credentials.token_type == "bearer"
         assert credentials.access_token == "foo-token"
@@ -224,7 +224,7 @@ def test_get_credentials_with_temporary_failing_whoami():
             ],
         )
 
-        current_dt = datetime.utcnow()
+        current_dt = datetime.now(UTC)
         credentials = auth.get_credentials()
         assert credentials.token_type == "bearer"
         assert credentials.access_token == "foo-token"

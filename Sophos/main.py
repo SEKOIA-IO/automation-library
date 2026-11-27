@@ -1,12 +1,12 @@
 from sophos_module.account_validator import SophosAccountValidator
-from sophos_module.action_sophos_edr_deisolate import ActionSophosEDRDeIsolateEndpoint
-from sophos_module.action_sophos_edr_isolate import ActionSophosEDRIsolateEndpoint
-from sophos_module.action_sophos_edr_run_scan import ActionSophosEDRScan
+from sophos_module.actions.action_sophos_edr_deisolate import ActionSophosEDRDeIsolateEndpoint
+from sophos_module.actions.action_sophos_edr_isolate import ActionSophosEDRIsolateEndpoint
+from sophos_module.actions.action_sophos_edr_run_scan import ActionSophosEDRScan
 from sophos_module.asset_connector import SophosDeviceAssetConnector, SophosUserAssetConnector
 from sophos_module.base import SophosModule
-from sophos_module.trigger_sophos_edr_events import SophosEDREventsTrigger
-from sophos_module.trigger_sophos_fusion_detections import SophosFusionDetectionsTrigger
-from sophos_module.trigger_sophos_xdr_query import SophosXDRIOCQuery
+from sophos_module.triggers.trigger_sophos_edr_events import SophosEDREventsTrigger
+from sophos_module.triggers.trigger_sophos_fusion_detections import SophosFusionDetectionsTrigger
+from sophos_module.triggers.trigger_sophos_xdr_query import SophosXDRIOCQuery
 
 if __name__ == "__main__":
     module = SophosModule()
