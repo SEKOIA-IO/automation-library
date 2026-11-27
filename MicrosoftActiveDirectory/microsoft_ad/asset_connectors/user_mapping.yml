@@ -9,6 +9,7 @@ mapping:
       data: |
         {
           "objectSid": "S-1-5-21-3623811015-3361044348-30300820-1013",
+          "sAMAccountName": "mjones",
           "userPrincipalName": "mary.jones@example.com",
           "displayName": "Mary Jones",
           "givenName": "Mary",
@@ -42,6 +43,7 @@ mapping:
       data: |
         {
           "objectSid": "S-1-5-21-3623811015-3361044348-30300820-1014",
+          "sAMAccountName": "rsmith",
           "userPrincipalName": "robert.smith@example.com",
           "displayName": "Robert Smith",
           "givenName": "Robert",
@@ -164,29 +166,29 @@ mapping:
       description: "OCSF schema version"
 
     # USER IDENTIFICATION
-    # NOTE: user.name is built from givenName + sn (first + last name).
+    # NOTE: user.name is the login, as the events carry it. A user without login or objectSid is skipped.
     - source: "objectSid"
       target: "user.uid"
       type: "string"
-      logic: "Direct mapping of user SID (Security Identifier)"
+      logic: "Direct mapping of user SID (Security Identifier); the user is skipped when absent"
       description: "Active Directory user unique identifier (SID)"
 
-    - source: "givenName + ' ' + sn"
+    - source: "sAMAccountName"
       target: "user.name"
       type: "string"
-      logic: "Concatenate givenName and sn; fallback to givenName only, sn only, sAMAccountName, or 'Unknown' if all absent"
-      description: "User full name built from first and last name"
+      logic: "sAMAccountName; fallback to userPrincipalName; the user is skipped when both are absent"
+      description: "User login"
 
     - source: "displayName"
       target: "user.full_name"
       type: "string"
-      logic: "Direct mapping of display name as full name"
+      logic: "displayName; fallback to givenName and sn joined by a space; left out when all are absent"
       description: "User full name (from displayName attribute)"
 
     - source: "displayName"
       target: "user.display_name"
       type: "string"
-      logic: "Direct mapping of display name"
+      logic: "Direct mapping of display name; left out when absent"
       description: "User display name (User.display_name)"
 
     - source: "mail"
@@ -230,7 +232,7 @@ mapping:
     - source: "userPrincipalName"
       target: "user.account.name"
       type: "string"
-      logic: "User principal name; fallback to sAMAccountName, or 'Unknown' if both absent"
+      logic: "User principal name; fallback to sAMAccountName"
       description: "User principal name (UPN) as account name"
 
     - source: "static: LDAP Account"
@@ -316,7 +318,7 @@ mapping:
           },
           "user": {
             "uid": "S-1-5-21-3623811015-3361044348-30300820-1013",
-            "name": "Mary Jones",
+            "name": "mjones",
             "full_name": "Mary Jones",
             "email_addr": "mary.jones@example.com",
             "is_enabled": true,

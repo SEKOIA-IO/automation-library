@@ -180,10 +180,11 @@ def test_user_ocsf_object(connector):
     user_attr = LDAPUserAttributes(
         givenName="John",
         sn="Doe",
+        sAMAccountName="jdoe",
         userPrincipalName="john.doe@example.com",
         objectSid="S-1-5-21-123456",
         objectGUID="guid-123",
-        displayName="John Doe",
+        displayName="John Doe (IT)",
         mail="john.doe@example.com",
         distinguishedName="CN=John Doe,DC=example,DC=com",
         member_of=["CN=Users,DC=example,DC=com"],
@@ -191,9 +192,14 @@ def test_user_ocsf_object(connector):
 
     user_ocsf = connector.user_ocsf_object(user_attr)
 
-    assert user_ocsf.name == "John Doe"
+    # The login, as the events carry it, not the first and last name
+    assert user_ocsf.name == "jdoe"
     assert user_ocsf.uid == "S-1-5-21-123456"
+    assert user_ocsf.full_name == "John Doe (IT)"
+    assert user_ocsf.display_name == "John Doe (IT)"
+    assert user_ocsf.domain == "CN=John Doe,DC=example,DC=com"
     assert user_ocsf.account.name == "john.doe@example.com"
+    assert user_ocsf.account.uid == "S-1-5-21-123456"
     assert user_ocsf.account.type_id == AccountTypeId.LDAP_ACCOUNT
     assert user_ocsf.email_addr == "john.doe@example.com"
 
@@ -220,11 +226,28 @@ def test_user_ocsf_object_without_names_with_upn(connector):
     assert user_ocsf.account.name == "svc-backup@example.com"
 
 
-def test_user_ocsf_object_keeps_inner_spaces_of_names(connector):
-    # The name is the asset atom: an existing user must keep the same one
-    user_attr = LDAPUserAttributes(givenName="John ", sn="Doe", objectSid="S-1-5-21-1002")
+def test_user_ocsf_object_full_name_from_names_without_display_name(connector):
+    user_attr = LDAPUserAttributes(
+        givenName="John ", sn="Doe", displayName=" ", sAMAccountName="jdoe", objectSid="S-1-5-21-1002"
+    )
 
-    assert connector.user_ocsf_object(user_attr).name == "John  Doe"
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.name == "jdoe"
+    assert user_ocsf.full_name == "John Doe"
+    assert user_ocsf.display_name is None
+
+
+def test_user_ocsf_object_without_optional_values(connector):
+    # A missing value is left out, never replaced by a placeholder
+    user_attr = LDAPUserAttributes(sAMAccountName="krbtgt", objectSid="S-1-5-21-502")
+
+    user_ocsf = connector.user_ocsf_object(user_attr)
+
+    assert user_ocsf.full_name is None
+    assert user_ocsf.display_name is None
+    assert user_ocsf.domain is None
+    assert user_ocsf.uid_alt is None
 
 
 def test_user_ocsf_object_with_blank_names(connector):
@@ -238,13 +261,27 @@ def test_user_ocsf_object_with_blank_names(connector):
     assert user_ocsf.account.name == "Guest"
 
 
-def test_user_ocsf_object_without_any_name(connector):
-    user_attr = LDAPUserAttributes(objectSid="S-1-5-21-999")
+def test_user_ocsf_object_with_upn_only(connector):
+    user_attr = LDAPUserAttributes(sAMAccountName=" ", userPrincipalName="jdoe@example.com", objectSid="S-1-5-21-1003")
 
     user_ocsf = connector.user_ocsf_object(user_attr)
 
-    assert user_ocsf.name == "Unknown"
-    assert user_ocsf.account.name == "Unknown"
+    assert user_ocsf.name == "jdoe@example.com"
+    assert user_ocsf.account.name == "jdoe@example.com"
+
+
+@pytest.mark.parametrize(
+    "attributes",
+    [
+        {"givenName": "John", "sn": "Doe", "displayName": "John Doe", "objectSid": "S-1-5-21-999"},
+        {"sAMAccountName": "jdoe", "userPrincipalName": "jdoe@example.com"},
+        {"sAMAccountName": "jdoe", "objectSid": ""},
+    ],
+)
+def test_user_ocsf_object_without_login_or_sid(connector, attributes):
+    # A shared placeholder would merge every such user into one asset
+    with pytest.raises(ValueError):
+        connector.user_ocsf_object(LDAPUserAttributes(**attributes))
 
 
 def test_user_ocsf_object_machine_account_email_not_set(connector):
@@ -268,6 +305,7 @@ def test_map_user_fields(connector):
         "attributes": {
             "givenName": "Jane",
             "sn": "Smith",
+            "sAMAccountName": "jsmith",
             "userPrincipalName": "jane.smith@example.com",
             "objectSid": "S-1-5-21-654321",
             "objectGUID": "guid-456",
@@ -288,7 +326,8 @@ def test_map_user_fields(connector):
     assert isinstance(user_model, UserOCSFModel)
     assert user_model.activity_id == 2
     assert user_model.activity_name == "Collect"
-    assert user_model.user.name == "Jane Smith"
+    assert user_model.user.name == "jsmith"
+    assert user_model.user.full_name == "Jane Smith"
     assert user_model.time == int(datetime(2024, 1, 1, 12, 0, 0).timestamp())
 
 

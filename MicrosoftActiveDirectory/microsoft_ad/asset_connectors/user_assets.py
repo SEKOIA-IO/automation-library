@@ -214,20 +214,19 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         # Determine user type
         user_type, user_type_id = self.compute_user_type(user_attributes)
 
-        # Build user name
-        # A blank name counts as absent: it would be shared by every such user, as the placeholder is
-        first_name = (user_attributes.givenName or "").strip() and user_attributes.givenName
-        last_name = (user_attributes.sn or "").strip() and user_attributes.sn
+        # The login, as the events carry it. A blank value counts as absent:
+        # a shared placeholder would merge every such user into one asset
+        upn = (user_attributes.userPrincipalName or "").strip()
+        login = (user_attributes.sAMAccountName or "").strip() or upn
+        if not login:
+            raise ValueError("The user has neither sAMAccountName nor userPrincipalName")
 
-        if first_name and last_name:
-            user_name = f"{first_name} {last_name}".strip()
-        elif first_name:
-            user_name = first_name.strip()
-        elif last_name:
-            user_name = last_name.strip()
-        else:
-            # Built-in accounts (Guest, krbtgt) have no names: a shared placeholder merges them
-            user_name = user_attributes.sAMAccountName or "Unknown"
+        sid = user_attributes.objectSid
+        if not sid:
+            raise ValueError("The user has no objectSid")
+
+        display_name = (user_attributes.displayName or "").strip() or None
+        names = [name.strip() for name in (user_attributes.givenName, user_attributes.sn) if name and name.strip()]
 
         # Parse alternative UID
         if uid_alt := user_attributes.objectGUID:
@@ -237,23 +236,23 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
 
         # Build account object
         account = Account(
-            name=(user_attributes.userPrincipalName or "").strip() or user_attributes.sAMAccountName or "Unknown",
+            name=upn or login,
             type_id=AccountTypeId.LDAP_ACCOUNT,
             type=AccountTypeStr.LDAP_ACCOUNT,
-            uid=user_attributes.objectSid or "Unknown",
+            uid=sid,
         )
 
         email_addr = self.resolve_email_addr(user_attributes.mail)
 
         return UserOCSF(
-            name=user_name,
-            uid=user_attributes.objectSid or "Unknown",
+            name=login,
+            uid=sid,
             account=account,
             groups=self.get_user_groups(user_attributes),
-            full_name=user_attributes.displayName or "Unknown",
+            full_name=display_name or " ".join(names) or None,
             email_addr=email_addr,
-            display_name=user_attributes.displayName or "Unknown",
-            domain=user_attributes.distinguishedName or "Unknown",
+            display_name=display_name,
+            domain=user_attributes.distinguishedName or None,
             type_id=user_type_id,
             type=user_type,
             uid_alt=uid_alt,
