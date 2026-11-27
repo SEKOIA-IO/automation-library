@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-11-26 - 1.1.0
+## 2026-11-27 - 1.1.0
 
 ### Changed
 
@@ -16,12 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Forward an incident again only when its events change, so an update without new events, such as an acknowledgement, does not forward it twice.
 - With the `acknowledge` option, acknowledge only the incidents that are not acknowledged yet, after their events are forwarded.
 
-## 2026-11-26 - 1.0.2
+## 2026-11-27 - 1.0.2
 
 ### Fixed
 
 - Add a timeout to the Thinkst Canary API calls, so a hung request fails and is logged instead of blocking the collection.
-- Forward the events of a page even when acknowledging its incidents fails.
+- Forward the events of a page even when acknowledging its incidents fails, and log how many incidents of the page were left unacknowledged.
 - Save the cursor only after the events of a page are forwarded, so a failed push no longer skips the page.
 - Accept incidents without the `events_count` or `events_list` fields instead of failing on the whole page.
 

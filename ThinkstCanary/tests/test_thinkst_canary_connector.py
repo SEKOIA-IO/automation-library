@@ -1,3 +1,4 @@
+import json
 from copy import deepcopy
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
@@ -8,7 +9,7 @@ import requests
 import requests_mock
 
 from thinkst_canary_modules import ThinkstCanaryModule
-from thinkst_canary_modules.connector_thinkst_canary_alerts import API_TIMEOUT_SECONDS, ThinkstCanaryAlertsConnector
+from thinkst_canary_modules.connector_thinkst_canary_alerts import ThinkstCanaryAlertsConnector
 
 
 def build_connector(data_storage):
@@ -238,6 +239,7 @@ def test_acknowledge_messages(trigger, message1):
 
 
 URL_INCIDENTS = "https://example.com/api/v1/incidents/all"
+URL_ACKNOWLEDGE = "https://example.com/api/v1/incident/acknowledge"
 BAD_GATEWAY = {"status_code": 502, "text": "<html><body>Bad Gateway</body></html>"}
 
 
@@ -285,7 +287,7 @@ def test_fetch_pages_should_set_a_timeout_on_every_request(trigger, message1):
         list(trigger.fetch_pages(None))
 
         assert len(mock_requests.request_history) == 2
-        assert all(request.timeout == API_TIMEOUT_SECONDS for request in mock_requests.request_history)
+        assert all(request.timeout == 60 for request in mock_requests.request_history)
 
 
 def test_acknowledge_incident_should_set_a_timeout(trigger):
@@ -294,7 +296,7 @@ def test_acknowledge_incident_should_set_a_timeout(trigger):
 
         trigger.acknowledge_incident(incident_id="incident:1")
 
-        assert mock_requests.request_history[0].timeout == API_TIMEOUT_SECONDS
+        assert mock_requests.request_history[0].timeout == 60
 
 
 def test_next_batch_should_raise_on_timeout_and_keep_the_cursor(trigger):
@@ -326,8 +328,71 @@ def test_next_batch_should_forward_events_when_acknowledge_times_out(trigger, me
         trigger.next_batch()
 
         assert trigger.push_events_to_intakes.call_count == 1
+        forwarded_events = [json.loads(event) for event in trigger.push_events_to_intakes.call_args.kwargs["events"]]
+        assert forwarded_events == ThinkstCanaryAlertsConnector.extract_events(deepcopy(message1))
         assert trigger.from_id == 3
         assert trigger.log_exception.call_count == 1
+
+
+def test_next_batch_should_stop_acknowledging_at_the_first_network_error(trigger, message1):
+    trigger.configuration.acknowledge = True
+
+    with (
+        patch("thinkst_canary_modules.connector_thinkst_canary_alerts.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_requests.get(URL_INCIDENTS, status_code=200, json=message1)
+        mock_requests.post(URL_ACKNOWLEDGE, exc=requests.exceptions.ReadTimeout)
+        mock_time.time.side_effect = [0.0, 1.0]
+
+        trigger.next_batch()
+
+        acknowledge_requests = [item for item in mock_requests.request_history if item.method == "POST"]
+        assert len(acknowledge_requests) == 1
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert trigger.from_id == 3
+        assert all(incident["id"] in trigger.forwarded_incidents for incident in message1["incidents"])
+        assert trigger.log_exception.call_count == 1
+        assert "2 of 2 incidents" in trigger.log_exception.call_args.kwargs["message"]
+
+
+def test_next_batch_should_report_the_remaining_incidents_when_a_later_acknowledgement_fails(trigger, message1):
+    trigger.configuration.acknowledge = True
+
+    with (
+        patch("thinkst_canary_modules.connector_thinkst_canary_alerts.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_requests.get(URL_INCIDENTS, status_code=200, json=message1)
+        mock_requests.post(URL_ACKNOWLEDGE, [{"status_code": 200}, {"exc": requests.exceptions.ReadTimeout}])
+        mock_time.time.side_effect = [0.0, 1.0]
+
+        trigger.next_batch()
+
+        acknowledge_requests = [item for item in mock_requests.request_history if item.method == "POST"]
+        assert len(acknowledge_requests) == 2
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert trigger.log_exception.call_count == 1
+        assert "1 of 2 incidents" in trigger.log_exception.call_args.kwargs["message"]
+
+
+def test_next_batch_should_keep_acknowledging_after_an_http_error(trigger, message1):
+    trigger.configuration.acknowledge = True
+
+    with (
+        patch("thinkst_canary_modules.connector_thinkst_canary_alerts.time") as mock_time,
+        requests_mock.Mocker() as mock_requests,
+    ):
+        mock_requests.get(URL_INCIDENTS, status_code=200, json=message1)
+        mock_requests.post(URL_ACKNOWLEDGE, [{"status_code": 500}, {"status_code": 200}])
+        mock_time.time.side_effect = [0.0, 1.0]
+
+        trigger.next_batch()
+
+        acknowledged = [item.qs["incident"][0] for item in mock_requests.request_history if item.method == "POST"]
+        assert acknowledged == [incident["id"] for incident in message1["incidents"]]
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert trigger.log_exception.call_count == 0
 
 
 def test_next_batch_should_save_the_cursor_only_for_forwarded_pages(trigger, message1):
@@ -395,9 +460,6 @@ def test_extract_events_should_return_only_the_incident_when_it_has_no_events():
             "timestamp": "1720684212",
         }
     ]
-
-
-URL_ACKNOWLEDGE = "https://example.com/api/v1/incident/acknowledge"
 
 
 def make_page(incidents: list[dict], max_updated_id: int, next_cursor: str | None = None) -> dict:
