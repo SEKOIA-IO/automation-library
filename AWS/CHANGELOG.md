@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-27 - 1.39.1
+
+### Fixed
+
+- Fix `Read-only file system: '/tmp/tls'` crash by linking `/tmp/tls` to `/dev/shm`, keeping `/tmp` mountable
+
 ## 2026-11-12 - 1.39.0
 
 ### Changed

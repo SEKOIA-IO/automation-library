@@ -16,6 +16,10 @@ COPY . .
 
 RUN useradd -ms /bin/bash sekoiaio-runtime
 
+# The sekoia_automation SDK hardcodes writes to /tmp/tls, which fails on a read-only root fs.
+# Point only that path at the in-memory /dev/shm; /tmp stays free to be mounted on disk or tmpfs.
+RUN ln -s /dev/shm /tmp/tls
+
 USER sekoiaio-runtime
 
 ENTRYPOINT [ "python", "./main.py" ]
