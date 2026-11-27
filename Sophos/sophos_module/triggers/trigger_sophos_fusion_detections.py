@@ -20,6 +20,8 @@ logger = get_logger()
 MAX_RESULTS_PER_SEARCH = 10000
 # cycles that search an incomplete window again (empty page before the announced total), before moving on
 MAX_INCOMPLETE_WINDOW_RETRIES = 3
+# error code of a search response without status or results, and without GraphQL errors
+INCOMPLETE_RESPONSE = "INCOMPLETE_RESPONSE"
 
 
 class SophosFusionDetectionsConfiguration(DefaultConnectorConfiguration):
@@ -105,10 +107,24 @@ class SophosFusionDetectionsTrigger(SophosConnector):
             DETECTION_SEARCH,
             {"in": {"cql_query": self.build_query(start, end), "offset": offset, "limit": self.page_size}},
         )
-        response: dict[str, Any] = data.get("detectionSearch") or {}
-        if response.get("status") not in (None, "OK"):
+        # only an explicit OK with its alerts is a complete search: anything else keeps the checkpoint
+        response = data.get("detectionSearch")
+        if not isinstance(response, dict):
             raise SophosGraphQLError(
-                [{"message": response.get("reason"), "extensions": {"code": response.get("status")}}]
+                [{"message": "no detectionSearch in the response", "extensions": {"code": INCOMPLETE_RESPONSE}}]
+            )
+        if response.get("status") != "OK":
+            raise SophosGraphQLError(
+                [
+                    {
+                        "message": response.get("reason") or "no search status",
+                        "extensions": {"code": response.get("status") or INCOMPLETE_RESPONSE},
+                    }
+                ]
+            )
+        if not isinstance(response.get("alerts"), dict):
+            raise SophosGraphQLError(
+                [{"message": "no alerts in the search response", "extensions": {"code": INCOMPLETE_RESPONSE}}]
             )
 
         return response

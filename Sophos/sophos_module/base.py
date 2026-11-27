@@ -120,14 +120,14 @@ class SophosConnector(Connector):
         self.log(message=f"{self.name} has started", level="info")
 
         try:
-            # Authenticate with the Sophos API
-            self.authentication.get_credentials()
-
             while self.running:
                 start = time.time()
-                self.before_collect()
 
                 try:
+                    # Authenticate with the Sophos API (cached token): a temporary failure is retried next cycle,
+                    # refused credentials (SophosApiAuthenticationError) stop the trigger
+                    self.authentication.get_credentials()
+                    self.before_collect()
                     self.collect()
                 except (requests.RequestException, BaseHTTPError) as error:
                     self.handle_collect_error(error)

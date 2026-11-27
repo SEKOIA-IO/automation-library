@@ -314,13 +314,29 @@ def test_next_batch_graphql_errors_keep_the_checkpoint(trigger, mock_api):
     assert any("BAD_USER_INPUT" in message for message in error_logs)
 
 
-def test_next_batch_failed_search_status(trigger, mock_api):
-    mock_api.post(GRAPHQL_URL, json=search_response([], status="ERROR"))
+@pytest.mark.parametrize(
+    "body, expected_code",
+    [
+        pytest.param(search_response([], status="ERROR"), "ERROR", id="failed-status"),
+        pytest.param({"data": None}, "INCOMPLETE_RESPONSE", id="null-data"),
+        pytest.param({"data": {"detectionSearch": None}}, "INCOMPLETE_RESPONSE", id="null-search"),
+        pytest.param({"data": {"detectionSearch": {"status": None}}}, "INCOMPLETE_RESPONSE", id="no-status"),
+        pytest.param(
+            {"data": {"detectionSearch": {"status": "OK", "alerts": None}}}, "INCOMPLETE_RESPONSE", id="no-alerts"
+        ),
+    ],
+)
+def test_next_batch_incomplete_search_responses_keep_the_checkpoint(trigger, mock_api, body, expected_code):
+    """Only an explicit OK with its alerts is a complete search: never an empty window by default."""
+    mock_api.post(GRAPHQL_URL, json=body)
     checkpoint = trigger.cursor.offset
 
     trigger.next_batch()
 
     assert trigger.cursor.offset == checkpoint
+    trigger.push_events_to_intakes.assert_not_called()
+    [message] = [call.kwargs["message"] for call in trigger.log.call_args_list]
+    assert message.startswith("Failed to search the Sophos Fusion detections:") and expected_code in message
 
 
 def test_next_batch_http_error(trigger, mock_api):

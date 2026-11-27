@@ -185,6 +185,27 @@ def test_run_raises_unexpected_errors(connector):
     assert user_messages(connector)[-1] == ("info", "Dummy trigger has stopped")
 
 
+@pytest.mark.parametrize(
+    "error",
+    [
+        pytest.param(requests.ConnectionError("unreachable"), id="network"),
+        pytest.param(http_error(503, url="https://id.sophos.com/api/v2/oauth2/token"), id="server-error"),
+    ],
+)
+def test_run_retries_a_temporary_authentication_failure_at_startup(connector, error):
+    connector.authentication.get_credentials.side_effect = [error, None]
+
+    run_cycles(connector, None)
+
+    assert connector.authentication.get_credentials.call_count == 2
+    connector.collect.assert_called_once()
+    messages = user_messages(connector)
+    assert messages[0] == ("info", "Dummy trigger has started")
+    assert messages[1][0] == "error" and messages[1][1].startswith("Failed to collect:")
+    assert messages[-1] == ("info", "Dummy trigger has stopped")
+    connector.log_exception.assert_not_called()
+
+
 @pytest.mark.parametrize("during_cycle", [False, True], ids=["at-startup", "during-a-cycle"])
 def test_run_stops_on_authentication_error(connector, during_cycle):
     error = SophosApiAuthenticationError("bad credentials")

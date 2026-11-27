@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Query IoC from data lake: stop polling a data lake query after 5 minutes, including the time of the status requests, or at once on a client error, instead of blocking the collection
 - Add a 60-second timeout to the Sophos REST API and authentication requests, so a stalled connection no longer blocks a trigger or an action
+- Triggers: retry the authentication on the next cycle after a temporary failure at startup (network error, timeout, `5xx`), instead of stopping the trigger
 - Isolate and deisolate actions: raise the HTTP errors other than `400` instead of returning nothing
 - Events lag: parse the timestamps with or without fractional seconds and time offset
 - Authentication: replace the deprecated `datetime.utcnow()`
