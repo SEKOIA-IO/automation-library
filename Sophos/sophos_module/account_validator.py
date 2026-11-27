@@ -1,9 +1,10 @@
-import requests
 from functools import cached_property
 
+import requests
 from sekoia_automation.account_validator import AccountValidator
 
 from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.client.errors import format_http_error
 from sophos_module.client.exceptions import SophosApiAuthenticationError
 
 
@@ -38,7 +39,7 @@ class SophosAccountValidator(AccountValidator):
                 return False
 
             self.log(
-                f"Credentials validated – tenancy_type={credentials.tenancy_type}, "
+                f"Credentials validated - tenancy_type={credentials.tenancy_type}, "
                 f"tenancy_id={credentials.tenancy_id}",
                 level="info",
             )
@@ -51,7 +52,10 @@ class SophosAccountValidator(AccountValidator):
 
         except requests.HTTPError as http_err:
             self.log(f"HTTP error during credential validation: {http_err}", level="error")
-            self.error(f"Failed to validate Sophos credentials due to HTTP error: {http_err}")
+            if http_err.response is not None:
+                self.error(format_http_error("Failed to validate Sophos credentials", http_err.response))
+            else:
+                self.error(f"Failed to validate Sophos credentials due to HTTP error: {http_err}")
             return False
 
         except requests.RequestException as req_err:

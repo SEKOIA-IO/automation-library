@@ -139,6 +139,10 @@
 		{
 			"name": "UrlScan",
 			"path": "UrlScan"
+		},
+		{
+			"name": "Sophos",
+			"path": "Sophos"
 		}
 	],
 	"settings": {

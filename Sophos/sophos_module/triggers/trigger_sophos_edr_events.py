@@ -1,20 +1,18 @@
-import datetime
 import time
 from functools import cached_property
-from typing import Any, Optional
+from typing import Any
 
 import orjson
-from requests.exceptions import HTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
-from urllib3.exceptions import HTTPError as BaseHTTPError
 
 from sophos_module.base import SophosConnector
-from sophos_module.client import SophosApiClient
-from sophos_module.client.auth import SophosApiAuthentication
-from sophos_module.client.exceptions import SophosApiAuthenticationError
-from sophos_module.helper import normalize_message
-from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+from sophos_module.helper import latest_timestamp, normalize_message
+from sophos_module.logging import get_logger
+from sophos_module.metrics import EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
+
+# per-cycle diagnostics go to the pod logs only: the connector logs (self.log) are shown to the user
+logger = get_logger()
 
 
 class SophosEDRConfiguration(DefaultConnectorConfiguration):
@@ -36,7 +34,10 @@ class SophosEDREventsTrigger(SophosConnector):
 
     configuration: SophosEDRConfiguration
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    name = "Sophos events trigger"
+    collect_error_action = "Failed to fetch the Sophos events"
+
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
 
@@ -55,54 +56,6 @@ class SophosEDREventsTrigger(SophosConnector):
     @cached_property
     def pagination_limit(self) -> int:
         return max(self.configuration.chunk_size, 1000)
-
-    @cached_property
-    def authentication(self) -> SophosApiAuthentication:
-        return SophosApiAuthentication(
-            api_host=self.module.configuration.api_host,
-            authorization_url=self.module.configuration.oauth2_authorization_url,
-            client_id=self.module.configuration.client_id,
-            client_secret=self.module.configuration.client_secret,
-        )
-
-    @cached_property
-    def client(self) -> SophosApiClient:
-        return SophosApiClient(auth=self.authentication)
-
-    def run(self) -> None:  # pragma: no cover
-        self.log(message="Sophos Events Trigger has started", level="info")
-
-        try:
-            # Authenticate with the Sophos API
-            self.authentication.get_credentials()
-
-            while self.running:
-                start = time.time()
-
-                try:
-                    self.forward_next_batches()
-                except (HTTPError, BaseHTTPError) as ex:
-                    self.log_exception(ex, message="Failed to get next batch of events")
-                except Exception as ex:
-                    self.log_exception(ex, message="An unknown exception occurred")
-                    raise
-
-                # compute the duration of the last events fetching
-                duration = int(time.time() - start)
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
-
-                # Compute the remaining sleeping time
-                delta_sleep = self.configuration.frequency - duration
-                # if greater than 0, sleep
-                if delta_sleep > 0:
-                    time.sleep(delta_sleep)
-
-        except SophosApiAuthenticationError as ex:
-            # Log a critical message, that will stop the connector, when the authentication fails
-            self.log(message=str(ex), level="critical")
-
-        finally:
-            self.log(message="Sophos Events Trigger has stopped", level="info")
 
     def get_next_events(self, cursor: str | None) -> dict[str, Any] | None:
         # set parameters
@@ -127,30 +80,15 @@ class SophosEDREventsTrigger(SophosConnector):
 
         # Something failed
         if not response.ok:
-            self.log(
-                message=(
-                    "Request on Sophos Central API to fetch events of failed with"
-                    f" status {response.status_code} - {response.reason}"
-                ),
-                level="error",
-            )
-
+            self.log_http_error("Failed to fetch the events from the Sophos SIEM API", response)
             return None
 
         result: dict[str, Any] = response.json()
 
         return result
 
-    def _get_most_recent_timestamp_from_items(self, items: list[dict[str, Any]]) -> float:
-        def _extract_timestamp(item: dict[str, Any]) -> float:
-            RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-
-            return datetime.datetime.strptime(item["created_at"], RFC3339_STRICT_FORMAT).timestamp()
-
-        latest_message: dict[str, Any] = max(items, key=lambda item: item["created_at"])  # type: ignore
-        latest_message_timestamp = _extract_timestamp(latest_message)
-
-        return latest_message_timestamp
+    def _get_most_recent_timestamp_from_items(self, items: list[dict[str, Any]]) -> float | None:
+        return latest_timestamp(items, ("created_at", "when"))
 
     def forward_next_batches(self) -> None:
         """
@@ -161,6 +99,9 @@ class SophosEDREventsTrigger(SophosConnector):
         cursor = self.cursor
 
         messages = []
+        pages = 0
+        collected = 0
+        forwarded = 0
         while has_more_messages and self.running:
             has_more_messages = False
 
@@ -174,11 +115,14 @@ class SophosEDREventsTrigger(SophosConnector):
             if (next_cursor := batch.get("next_cursor")) is not None:
                 cursor = next_cursor
 
+            pages += 1
             items = batch.get("items", [])
+            collected += len(items)
             if len(items) > 0:
                 most_recent_timestamp_seen = self._get_most_recent_timestamp_from_items(items)
-                events_lag = int(time.time() - most_recent_timestamp_seen)
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
+                if most_recent_timestamp_seen is not None:
+                    events_lag = int(time.time() - most_recent_timestamp_seen)
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
                 INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
             for message in items:
@@ -186,17 +130,29 @@ class SophosEDREventsTrigger(SophosConnector):
                 messages.append(orjson.dumps(normalized_message).decode("utf-8"))
 
             if len(messages) > self.pagination_limit:
-                self.log(message=f"Sending a batch of {len(messages)} messages", level="info")
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
                 self.push_events_to_intakes(events=messages)
+                forwarded += len(messages)
                 messages = []
 
-        self.cursor = cursor
+        if cursor is not None:
+            self.cursor = cursor
 
         if messages:
-            self.log(message=f"Sending a batch of {len(messages)} messages", level="info")
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
             self.push_events_to_intakes(events=messages)
+            forwarded += len(messages)
         else:
-            self.log(message="No messages to forward", level="info")
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+
+        logger.info(
+            "SIEM events collected",
+            pages=pages,
+            collected=collected,
+            forwarded=forwarded,
+            has_more=has_more_messages,
+            cursor_saved=cursor is not None,
+        )
+
+    def collect(self) -> None:
+        self.forward_next_batches()

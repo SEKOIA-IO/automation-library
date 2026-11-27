@@ -1,15 +1,18 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import requests
 from requests.adapters import HTTPAdapter, Retry
 from requests.auth import AuthBase
 
-from sophos_module.logging import get_logger
 from sophos_module.client.exceptions import SophosApiAuthenticationError
 from sophos_module.client.helpers import retry
+from sophos_module.logging import get_logger
 
 logger = get_logger()
+
+# seconds: timeout of the token and whoami requests, so a stalled connection never blocks a trigger
+AUTHENTICATION_TIMEOUT = 60
 
 
 class SophosApiCredentials:
@@ -62,6 +65,7 @@ class SophosApiAuthentication(AuthBase):
                 "client_id": self.__client_id,
                 "client_secret": self.__client_secret,
             },
+            timeout=AUTHENTICATION_TIMEOUT,
         )
 
         # Log the response status
@@ -90,6 +94,7 @@ class SophosApiAuthentication(AuthBase):
         response = self.__http_session.get(
             url=f"{self.__api_host}/whoami/v1",
             headers={"Authorization": credentials.authorization},
+            timeout=AUTHENTICATION_TIMEOUT,
         )
 
         # Log the response status
@@ -113,7 +118,7 @@ class SophosApiAuthentication(AuthBase):
         """
         Return Sophos Credentials for the API
         """
-        current_dt = datetime.utcnow()
+        current_dt = datetime.now(UTC)
 
         if self.api_credentials is None or current_dt + timedelta(seconds=300) >= self.api_credentials.expires_at:
             # Initialize credentials

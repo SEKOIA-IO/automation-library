@@ -1,0 +1,42 @@
+{
+  "description": "[BETA] Get the detections of Sophos Fusion (Security Operations), with the Sophos Detections GraphQL API, for the tenants upgraded to Sophos Fusion. It replaces the deprecated 'Query IoC from data lake' connector. Beta: the format of the detections is not yet validated on every detection type.",
+  "docker_parameters": "sophos_fusion_detections_trigger",
+  "name": "[BETA] Get Sophos Fusion detections",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 1000
+      },
+      "min_severity": {
+        "type": "number",
+        "description": "Only collect the detections with a severity greater than or equal to this value (from 0 to 1). Leave empty to collect all detections",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "frequency",
+      "intake_key"
+    ],
+    "title": "Sophos Fusion detections",
+    "type": "object"
+  },
+  "uuid": "6faf46f3-41aa-4ee9-a02c-9f3757c1b9ca"
+}

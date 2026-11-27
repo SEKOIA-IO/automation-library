@@ -1,16 +1,15 @@
 from abc import ABC
+from collections.abc import Callable
 from functools import cached_property
-from typing import Any, Callable
+from typing import Any
 from urllib.parse import urljoin
 
 from sekoia_automation.action import Action
 
-from .base import SophosModule
-from .client import SophosApiClient
-from .client.auth import SophosApiAuthentication
-from .logging import get_logger
-
-logger = get_logger()
+from sophos_module.base import SophosModule
+from sophos_module.client import SophosApiClient
+from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.client.errors import format_http_error, support_ids
 
 
 class SophosEDRAction(Action, ABC):
@@ -53,21 +52,12 @@ class SophosEDRAction(Action, ABC):
 
         response = func(url=url, json=data)
 
-        if response.ok:
-            return response.json()
-
-        else:
-            raw = response.json()
-            logger.error(
-                f"Error {response.status_code}",
-                error=raw.get("error"),
-                message=raw.get("message"),
-                corellation_id=raw.get("correlationId"),
-                code=raw.get("code"),
-                created_at=raw.get("createdAt"),
-                request_id=raw.get("requestId"),
-                doc_url=raw.get("docUrl"),
+        if not response.ok:
+            # one readable line in the action logs: what failed, what to check, and the ids for the Sophos support
+            self.log(
+                message=format_http_error("The Sophos API call failed", response) + support_ids(response),
+                level="error",
             )
             response.raise_for_status()
 
-        return {}
+        return response.json()

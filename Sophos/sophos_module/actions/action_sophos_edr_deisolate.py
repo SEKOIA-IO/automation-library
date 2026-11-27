@@ -1,6 +1,6 @@
 from typing import Any
 
-from sophos_module.action_sophos_edr_isolate import ActionSophosEDRIsolateEndpoint
+from sophos_module.actions.action_sophos_edr_isolate import ActionSophosEDRIsolateEndpoint
 
 
 class ActionSophosEDRDeIsolateEndpoint(ActionSophosEDRIsolateEndpoint):

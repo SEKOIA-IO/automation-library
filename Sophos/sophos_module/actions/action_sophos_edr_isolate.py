@@ -2,7 +2,7 @@ from typing import Any
 
 import requests
 
-from sophos_module.action_base import SophosEDRAction
+from sophos_module.actions.action_base import SophosEDRAction
 
 
 class ActionSophosEDRIsolateEndpoint(SophosEDRAction):
@@ -31,7 +31,7 @@ class ActionSophosEDRIsolateEndpoint(SophosEDRAction):
         current_status = self.get_endpoint_isolation_status(endpoint_id)
         if current_status["enabled"] == enabled:
             result_label = "enabled" if enabled else "disabled"
-            current_status["message"] = "Already %s" % result_label
+            current_status["message"] = f"Already {result_label}"
             return current_status
 
         try:
@@ -53,6 +53,8 @@ class ActionSophosEDRIsolateEndpoint(SophosEDRAction):
                 )
                 result.update(current_status)
                 return result
+
+            raise
 
     def run(self, arguments: dict[str, Any]) -> Any:
         endpoint_id = arguments["endpoint_id"]

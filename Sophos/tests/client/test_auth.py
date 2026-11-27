@@ -1,252 +1,145 @@
-import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
+import requests
 import requests_mock
 
-from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.client.auth import AUTHENTICATION_TIMEOUT, SophosApiAuthentication
 from sophos_module.client.exceptions import SophosApiAuthenticationError
 
+API_HOST = "https://api-eu.central.sophos.com"
+AUTHORIZATION_URL = "https://id.sophos.com/api/v2/oauth2/token"
+WHOAMI_URL = f"{API_HOST}/whoami/v1"
+TENANT_ID = "00000000-0000-0000-0000-000000000000"
 
-def test_get_credentials():
-    api_host_url = "https://api-eu.central.sophos.com"
-    authorization_url = "https://id.sophos.com/api/v2/oauth2/token"
-    client_id = "foo"
-    client_secret = "bar"
-    auth = SophosApiAuthentication(api_host_url, authorization_url, client_id, client_secret)
 
+def token(access_token: str = "foo-token", expires_in: int = 1799) -> dict:
+    return {"access_token": access_token, "token_type": "bearer", "scope": "our-scope", "expires_in": expires_in}
+
+
+def whoami(id_type: str = "tenant", api_hosts: dict | None = None) -> dict:
+    if api_hosts is None:
+        api_hosts = {"global": "https://api.central.sophos.com", "dataRegion": "https://api-eu02.central.sophos.com"}
+    return {"id": TENANT_ID, "idType": id_type, "apiHosts": api_hosts}
+
+
+@pytest.fixture
+def auth():
+    return SophosApiAuthentication(API_HOST, AUTHORIZATION_URL, "foo", "bar")
+
+
+@pytest.mark.parametrize(
+    "whoami_responses, expected_api_url, expected_header",
+    [
+        pytest.param(
+            [{"json": whoami()}],
+            "https://api-eu02.central.sophos.com",
+            {"X-Tenant-ID": TENANT_ID},
+            id="tenant",
+        ),
+        pytest.param(
+            [{"status_code": 502}, {"json": whoami()}],
+            "https://api-eu02.central.sophos.com",
+            {"X-Tenant-ID": TENANT_ID},
+            id="temporary-whoami-failure",
+        ),
+        pytest.param(
+            [{"json": whoami("organization", {"global": "https://api.central.sophos.com"})}],
+            "https://api.central.sophos.com",
+            {"X-Organization-ID": TENANT_ID},
+            id="organization-without-data-region",
+        ),
+    ],
+)
+def test_get_credentials(auth, whoami_responses, expected_api_url, expected_header):
     with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            "POST",
-            authorization_url,
-            json={
-                "access_token": "foo-token",
-                "token_type": "bearer",
-                "scope": "our-scope",
-                "expires_in": 1799,
-            },
-        )
+        mock.post(AUTHORIZATION_URL, json=token())
+        mock.get(WHOAMI_URL, whoami_responses)
 
-        mock.get(
-            f"{api_host_url}/whoami/v1",
-            status_code=200,
-            json={
-                "id": "00000000-0000-0000-0000-000000000000",
-                "idType": "tenant",
-                "apiHosts": {
-                    "global": "https://api.central.sophos.com",
-                    "dataRegion": "https://api-eu02.central.sophos.com",
-                },
-            },
-        )
-
-        current_dt = datetime.utcnow()
+        now = datetime.now(UTC)
         credentials = auth.get_credentials()
-        assert credentials.token_type == "bearer"
-        assert credentials.access_token == "foo-token"
-        assert credentials.expires_at > (current_dt + timedelta(seconds=1750))
-        assert credentials.expires_at < (current_dt + timedelta(seconds=1850))
-        assert credentials.authorization == "Bearer foo-token"
-        assert credentials.tenancy_type == "tenant"
-        assert credentials.tenancy_id == "00000000-0000-0000-0000-000000000000"
-        assert credentials.tenancy_header == {"X-Tenant-ID": "00000000-0000-0000-0000-000000000000"}
+
+    assert credentials.token_type == "bearer"
+    assert credentials.access_token == "foo-token"
+    assert now + timedelta(seconds=1750) < credentials.expires_at < now + timedelta(seconds=1850)
+    assert credentials.authorization == "Bearer foo-token"
+    assert credentials.tenancy_id == TENANT_ID
+    assert credentials.tenancy_header == expected_header
+    assert credentials.api_url == expected_api_url
 
 
-def test_get_credentials_request_new_token_only_when_needed():
-    api_host_url = "https://api-eu.central.sophos.com"
-    authorization_url = "https://id.sophos.com/api/v2/oauth2/token"
-    client_id = "foo"
-    client_secret = "bar"
-    auth = SophosApiAuthentication(api_host_url, authorization_url, client_id, client_secret)
-
+def test_get_credentials_request_new_token_only_when_needed(auth):
     with requests_mock.Mocker() as mock:
-        p1 = mock.post(
-            authorization_url,
-            json={
-                "access_token": "123456",
-                "expires_in": 10,
-                "scope": "our-scope",
-                "token_type": "bearer",
-            },
-        )
+        mock.get(WHOAMI_URL, json=whoami())
 
-        mock.get(
-            f"{api_host_url}/whoami/v1",
-            status_code=200,
-            json={
-                "id": "00000000-0000-0000-0000-000000000000",
-                "idType": "tenant",
-                "apiHosts": {
-                    "global": "https://api.central.sophos.com",
-                    "dataRegion": "https://api-eu02.central.sophos.com",
-                },
-            },
-        )
+        # expires in 10 seconds: within the 300-second margin, renewed on the next call
+        first = mock.post(AUTHORIZATION_URL, json=token("123456", expires_in=10))
+        assert auth.get_credentials().authorization == "Bearer 123456"
 
-        credentials = auth.get_credentials()
-        assert credentials.authorization == "Bearer 123456"
+        second = mock.post(AUTHORIZATION_URL, json=token("78910", expires_in=10000))
+        assert auth.get_credentials().authorization == "Bearer 78910"
 
-        p2 = mock.post(
-            authorization_url,
-            json={
-                "access_token": "78910",
-                "expires_in": 10000,
-                "scope": "our-scope",
-                "token_type": "bearer",
-            },
-        )
-        credentials = auth.get_credentials()
-        assert credentials.authorization == "Bearer 78910"
+        third = mock.post(AUTHORIZATION_URL, json=token("11111", expires_in=10000))
+        assert auth.get_credentials().authorization == "Bearer 78910"
 
-        p3 = mock.post(
-            authorization_url,
-            json={
-                "access_token": "11111",
-                "expires_in": 10000,
-                "scope": "our-scope",
-                "token_type": "bearer",
-            },
-        )
-
-        credentials = auth.get_credentials()
-        assert credentials.authorization == "Bearer 78910"
-
-        assert p1.called
-        assert p2.called
-        assert not p3.called
+    assert first.called and second.called and not third.called
 
 
-def test_failing_authentication():
-    api_host_url = "https://api-eu.central.sophos.com"
-    authorization_url = "https://id.sophos.com/api/v2/oauth2/token"
-    client_id = "foo"
-    client_secret = "bar"
-    auth = SophosApiAuthentication(api_host_url, authorization_url, client_id, client_secret)
-
+@pytest.mark.parametrize("status_code", [400, 401, 403])
+def test_failing_authentication(auth, status_code):
     with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            "POST",
-            authorization_url,
-            status_code=401,
-            json={
-                "errorCode": "oauth.invalid_client_secret",
-                "message": "Unauthorized",
-            },
-        )
+        mock.post(AUTHORIZATION_URL, status_code=status_code, json={"message": "Unauthorized"})
+        whoami_mock = mock.get(WHOAMI_URL, json=whoami())
 
-        whoiam_mock = mock.get(
-            f"{api_host_url}/whoami/v1",
-            status_code=200,
-            json={
-                "id": "00000000-0000-0000-0000-000000000000",
-                "idType": "tenant",
-                "apiHosts": {
-                    "global": "https://api.central.sophos.com",
-                    "dataRegion": "https://api-eu02.central.sophos.com",
-                },
-            },
-        )
-
-        with pytest.raises(SophosApiAuthenticationError) as excinfo:
+        with pytest.raises(SophosApiAuthenticationError) as error:
             auth.get_credentials()
 
-            assert str(excinfo.value) == "Authentication failed. Check your client_id and client_secret."
-            assert not whoiam_mock.called
+    assert str(error.value) == "Authentication failed. Check your client_id and client_secret."
+    assert not whoami_mock.called
 
 
-def test_failing_whoami():
-    api_host_url = "https://api-eu.central.sophos.com"
-    authorization_url = "https://id.sophos.com/api/v2/oauth2/token"
-    client_id = "foo"
-    client_secret = "bar"
-    auth = SophosApiAuthentication(api_host_url, authorization_url, client_id, client_secret)
-
+@pytest.mark.parametrize("status_code", [400, 401, 403])
+def test_failing_whoami(auth, status_code):
     with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            "POST",
-            authorization_url,
-            json={
-                "access_token": "foo-token",
-                "token_type": "bearer",
-                "scope": "our-scope",
-                "expires_in": 1799,
-            },
-        )
+        mock.post(AUTHORIZATION_URL, json=token())
+        mock.get(WHOAMI_URL, status_code=status_code, json={"error": "Unauthorized"})
 
-        whoiam_mock = mock.get(
-            f"{api_host_url}/whoami/v1",
-            status_code=401,
-            json={
-                "error": "Unauthorized",
-            },
-        )
-
-        with pytest.raises(SophosApiAuthenticationError) as excinfo:
+        with pytest.raises(SophosApiAuthenticationError) as error:
             auth.get_credentials()
 
-            assert str(excinfo.value) == "The Whoami call failed. Check your client_id and client_secret."
+    assert str(error.value) == "The Whoami call failed. Check your client_id and client_secret."
 
 
-def test_get_credentials_with_temporary_failing_whoami():
-    api_host_url = "https://api-eu.central.sophos.com"
-    authorization_url = "https://id.sophos.com/api/v2/oauth2/token"
-    client_id = "foo"
-    client_secret = "bar"
-    auth = SophosApiAuthentication(api_host_url, authorization_url, client_id, client_secret)
-
+@pytest.mark.parametrize(
+    "token_status, whoami_status",
+    [pytest.param(404, 200, id="token-not-found"), pytest.param(200, 404, id="whoami-not-found")],
+)
+def test_other_http_errors_are_raised(auth, token_status, whoami_status):
     with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            "POST",
-            authorization_url,
-            json={
-                "access_token": "foo-token",
-                "token_type": "bearer",
-                "scope": "our-scope",
-                "expires_in": 1799,
-            },
-        )
+        mock.post(AUTHORIZATION_URL, status_code=token_status, json=token())
+        mock.get(WHOAMI_URL, status_code=whoami_status, json=whoami())
 
-        mock.get(
-            f"{api_host_url}/whoami/v1",
-            [
-                {"status_code": 502},
-                {
-                    "status_code": 200,
-                    "json": {
-                        "id": "00000000-0000-0000-0000-000000000000",
-                        "idType": "tenant",
-                        "apiHosts": {
-                            "global": "https://api.central.sophos.com",
-                            "dataRegion": "https://api-eu02.central.sophos.com",
-                        },
-                    },
-                },
-            ],
-        )
-
-        current_dt = datetime.utcnow()
-        credentials = auth.get_credentials()
-        assert credentials.token_type == "bearer"
-        assert credentials.access_token == "foo-token"
-        assert credentials.expires_at > (current_dt + timedelta(seconds=1750))
-        assert credentials.expires_at < (current_dt + timedelta(seconds=1850))
-        assert credentials.authorization == "Bearer foo-token"
-        assert credentials.tenancy_type == "tenant"
-        assert credentials.tenancy_id == "00000000-0000-0000-0000-000000000000"
-        assert credentials.tenancy_header == {"X-Tenant-ID": "00000000-0000-0000-0000-000000000000"}
+        with pytest.raises(requests.HTTPError):
+            auth.get_credentials()
 
 
-@pytest.mark.skipif("{'SOPHOS_CLIENT_ID', 'SOPHOS_CLIENT_SECRET'}.issubset(os.environ.keys()) == False")
-def test_authentication_integration(symphony_storage):
-    api_host_url = os.environ.get("SOPHOS_URL", "https://api-eu.central.sophos.com")
-    authorization_url = os.environ.get("SOPHOS_AUTH_URL", "https://id.sophos.com/api/v2/oauth2/token")
-    client_id = os.environ["SOPHOS_CLIENT_ID"]
-    client_secret = os.environ["SOPHOS_CLIENT_SECRET"]
-    auth = SophosApiAuthentication(api_host_url, authorization_url, client_id, client_secret)
+def test_requests_are_authenticated(auth):
+    with requests_mock.Mocker() as mock:
+        mock.post(AUTHORIZATION_URL, json=token())
+        mock.get(WHOAMI_URL, json=whoami())
+        api = mock.get("https://api-eu02.central.sophos.com/siem/v1/events", json={})
 
-    credentials = auth.get_credentials()
-    assert credentials.token_type is not None
-    assert credentials.access_token is not None
-    assert credentials.expires_at is not None
-    assert credentials.tenancy_type is not None
-    assert credentials.tenancy_id is not None
+        requests.get("https://api-eu02.central.sophos.com/siem/v1/events", auth=auth)
+
+    assert api.last_request.headers["Authorization"] == "Bearer foo-token"
+    assert api.last_request.headers["X-Tenant-ID"] == TENANT_ID
+
+
+def test_authentication_requests_have_a_timeout(auth):
+    with requests_mock.Mocker() as mock:
+        mock.post(AUTHORIZATION_URL, json=token())
+        mock.get(WHOAMI_URL, json=whoami())
+
+        auth.get_credentials()
+
+    assert [request.timeout for request in mock.request_history] == [AUTHENTICATION_TIMEOUT, AUTHENTICATION_TIMEOUT]

@@ -2,26 +2,27 @@
 Unit tests for SophosUserAssetConnector (asset_connector/user_assets.py).
 """
 
+import logging
 from unittest.mock import MagicMock
 
 import pytest
 import requests_mock as req_mock
-
-from sophos_module.asset_connector.model import (
-    SophosUser,
-    SophosUserGroup,
-    SophosUserGroups,
-    SophosUserSource,
-    SophosTenant,
-)
-from sophos_module.asset_connector.user_assets import SophosUserAssetConnector, _CACHE_KEY
-from sophos_module.base import SophosModule
 from sekoia_automation.asset_connector.models.ocsf.user import (
     AccountTypeId,
     AccountTypeStr,
     UserTypeId,
     UserTypeStr,
 )
+
+from sophos_module.asset_connector.model import (
+    SophosTenant,
+    SophosUser,
+    SophosUserGroup,
+    SophosUserGroups,
+    SophosUserSource,
+)
+from sophos_module.asset_connector.user_assets import _CACHE_KEY, SophosUserAssetConnector
+from sophos_module.base import SophosModule
 
 NAMED_USER = SophosUser(
     id="aaaaaaaa-0000-0000-0000-000000000001",
@@ -196,104 +197,117 @@ def _seed_cache(connector, data: dict[str, str]) -> None:
         cache[_CACHE_KEY] = data
 
 
+def _page(*items: dict) -> dict:
+    """Build a single-page API response containing the given raw users."""
+    return {"items": list(items), "pages": {"current": 1, "size": 50, "maxSize": 100}}
+
+
 class TestGetAccountType:
-    def test_local_machine_account_backslash_no_names(self):
-        type_id, type_str = SophosUserAssetConnector._get_account_type(WINDOWS_USER)
-        assert type_id == AccountTypeId.WINDOWS_ACCOUNT
-        assert type_str == AccountTypeStr.WINDOWS_ACCOUNT
-
-    def test_backslash_but_has_first_name_is_not_windows(self):
-        """A real named user whose name happens to contain a backslash is not a local account."""
-        user = SophosUser(id="x", name="DOMAIN\\user", firstName="John")
-        type_id, _ = SophosUserAssetConnector._get_account_type(user)
-        assert type_id == AccountTypeId.UNKNOWN
-
-    def test_backslash_but_has_email_is_not_windows(self):
-        user = SophosUser(id="x", name="DOMAIN\\user", email="user@example.com")
-        type_id, _ = SophosUserAssetConnector._get_account_type(user)
-        assert type_id == AccountTypeId.UNKNOWN
-
-    def test_ad_user_with_forward_slash(self):
-        type_id, type_str = SophosUserAssetConnector._get_account_type(AD_USER)
-        assert type_id == AccountTypeId.LDAP_ACCOUNT
-        assert type_str == AccountTypeStr.LDAP_ACCOUNT
-
-    def test_named_user_with_email_is_unknown(self):
-        type_id, type_str = SophosUserAssetConnector._get_account_type(NAMED_USER)
-        assert type_id == AccountTypeId.UNKNOWN
-        assert type_str == AccountTypeStr.UNKNOWN
-
-    def test_forward_slash_but_has_email_is_unknown(self):
-        user = SophosUser(id="x", name="DOMAIN/user", email="user@example.com")
-        type_id, _ = SophosUserAssetConnector._get_account_type(user)
-        assert type_id == AccountTypeId.UNKNOWN
-
-    def test_no_name_is_unknown(self):
-        user = SophosUser(id="x", name=None)
-        type_id, _ = SophosUserAssetConnector._get_account_type(user)
-        assert type_id == AccountTypeId.UNKNOWN
+    @pytest.mark.parametrize(
+        ("user", "expected_id", "expected_str"),
+        [
+            pytest.param(
+                WINDOWS_USER,
+                AccountTypeId.WINDOWS_ACCOUNT,
+                AccountTypeStr.WINDOWS_ACCOUNT,
+                id="local_machine_account_backslash_no_names",
+            ),
+            # A real named user whose name happens to contain a backslash is not a local account.
+            pytest.param(
+                SophosUser(id="x", name="DOMAIN\\user", firstName="John"),
+                AccountTypeId.UNKNOWN,
+                AccountTypeStr.UNKNOWN,
+                id="backslash_but_has_first_name_is_not_windows",
+            ),
+            pytest.param(
+                SophosUser(id="x", name="DOMAIN\\user", email="user@example.com"),
+                AccountTypeId.UNKNOWN,
+                AccountTypeStr.UNKNOWN,
+                id="backslash_but_has_email_is_not_windows",
+            ),
+            pytest.param(
+                AD_USER, AccountTypeId.LDAP_ACCOUNT, AccountTypeStr.LDAP_ACCOUNT, id="ad_user_with_forward_slash"
+            ),
+            pytest.param(
+                NAMED_USER, AccountTypeId.UNKNOWN, AccountTypeStr.UNKNOWN, id="named_user_with_email_is_unknown"
+            ),
+            pytest.param(
+                SophosUser(id="x", name="DOMAIN/user", email="user@example.com"),
+                AccountTypeId.UNKNOWN,
+                AccountTypeStr.UNKNOWN,
+                id="forward_slash_but_has_email_is_unknown",
+            ),
+            pytest.param(
+                SophosUser(id="x", name=None), AccountTypeId.UNKNOWN, AccountTypeStr.UNKNOWN, id="no_name_is_unknown"
+            ),
+        ],
+    )
+    def test_get_account_type(self, user, expected_id, expected_str):
+        type_id, type_str = SophosUserAssetConnector._get_account_type(user)
+        assert type_id == expected_id
+        assert type_str == expected_str
 
 
 class TestGetUserType:
-    def test_named_user_is_user_type(self):
-        type_id, type_str = SophosUserAssetConnector._get_user_type(NAMED_USER)
-        assert type_id == UserTypeId.USER
-        assert type_str == UserTypeStr.USER
+    @pytest.mark.parametrize(
+        ("user", "expected_id", "expected_str"),
+        [
+            pytest.param(NAMED_USER, UserTypeId.USER, UserTypeStr.USER, id="named_user_is_user_type"),
+            pytest.param(AD_USER, UserTypeId.USER, UserTypeStr.USER, id="ad_user_is_user_type"),
+            pytest.param(WINDOWS_USER, UserTypeId.SYSTEM, UserTypeStr.SYSTEM, id="local_machine_account_is_system"),
+        ],
+    )
+    def test_get_user_type(self, user, expected_id, expected_str):
+        type_id, type_str = SophosUserAssetConnector._get_user_type(user)
+        assert type_id == expected_id
+        assert type_str == expected_str
 
-    def test_ad_user_is_user_type(self):
-        type_id, type_str = SophosUserAssetConnector._get_user_type(AD_USER)
-        assert type_id == UserTypeId.USER
-        assert type_str == UserTypeStr.USER
-
-    def test_local_machine_account_is_system(self):
-        type_id, type_str = SophosUserAssetConnector._get_user_type(WINDOWS_USER)
-        assert type_id == UserTypeId.SYSTEM
-        assert type_str == UserTypeStr.SYSTEM
-
-    def test_desktop_user_is_local(self):
-        assert SophosUserAssetConnector._is_local_machine_account(WINDOWS_USER) is True
-
-    def test_named_user_is_not_local(self):
-        assert SophosUserAssetConnector._is_local_machine_account(NAMED_USER) is False
-
-    def test_ad_user_forward_slash_is_not_local(self):
-        assert SophosUserAssetConnector._is_local_machine_account(AD_USER) is False
-
-    def test_backslash_with_email_is_not_local(self):
-        user = SophosUser(id="x", name="DOMAIN\\user", email="user@example.com")
-        assert SophosUserAssetConnector._is_local_machine_account(user) is False
-
-    def test_backslash_with_first_name_is_not_local(self):
-        user = SophosUser(id="x", name="DOMAIN\\user", firstName="John")
-        assert SophosUserAssetConnector._is_local_machine_account(user) is False
+    @pytest.mark.parametrize(
+        ("user", "expected"),
+        [
+            pytest.param(WINDOWS_USER, True, id="desktop_user_is_local"),
+            pytest.param(NAMED_USER, False, id="named_user_is_not_local"),
+            pytest.param(AD_USER, False, id="ad_user_forward_slash_is_not_local"),
+            pytest.param(
+                SophosUser(id="x", name="DOMAIN\\user", email="user@example.com"),
+                False,
+                id="backslash_with_email_is_not_local",
+            ),
+            pytest.param(
+                SophosUser(id="x", name="DOMAIN\\user", firstName="John"),
+                False,
+                id="backslash_with_first_name_is_not_local",
+            ),
+        ],
+    )
+    def test_is_local_machine_account(self, user, expected):
+        assert SophosUserAssetConnector._is_local_machine_account(user) is expected
 
 
 class TestExtractDomain:
-    def test_backslash_format(self):
-        assert SophosUserAssetConnector._extract_domain("DESKTOP-ABC1234\\jdoe") == "DESKTOP-ABC1234"
-
-    def test_forward_slash_format(self):
-        assert SophosUserAssetConnector._extract_domain("URDOM/AC75008715") == "URDOM"
-
-    def test_no_separator_returns_none(self):
-        assert SophosUserAssetConnector._extract_domain("Jane Doe") is None
-
-    def test_none_input_returns_none(self):
-        assert SophosUserAssetConnector._extract_domain(None) is None
-
-    def test_empty_string_returns_none(self):
-        assert SophosUserAssetConnector._extract_domain("") is None
+    @pytest.mark.parametrize(
+        ("name", "expected"),
+        [
+            pytest.param("DESKTOP-ABC1234\\jdoe", "DESKTOP-ABC1234", id="backslash_format"),
+            pytest.param("URDOM/AC75008715", "URDOM", id="forward_slash_format"),
+            pytest.param("Jane Doe", None, id="no_separator_returns_none"),
+            pytest.param(None, None, id="none_input_returns_none"),
+            pytest.param("", None, id="empty_string_returns_none"),
+        ],
+    )
+    def test_extract_domain(self, name, expected):
+        assert SophosUserAssetConnector._extract_domain(name) == expected
 
 
 class TestExtractLogin:
     @pytest.mark.parametrize(
         ("name", "expected"),
         [
-            ("CORP\\jdoe", "jdoe"),
-            ("CORP/jdoe", "jdoe"),
-            ("jdoe", "jdoe"),
-            ("Jane Doe", "Jane Doe"),
-            ("CORP\\", "CORP\\"),
+            pytest.param("CORP\\jdoe", "jdoe", id="backslash_format"),
+            pytest.param("CORP/jdoe", "jdoe", id="forward_slash_format"),
+            pytest.param("jdoe", "jdoe", id="no_separator"),
+            pytest.param("Jane Doe", "Jane Doe", id="display_name_without_separator"),
+            pytest.param("CORP\\", "CORP\\", id="empty_login_after_separator_keeps_name"),
         ],
     )
     def test_extract_login(self, name, expected):
@@ -308,23 +322,26 @@ class TestGetGroups:
         assert groups[0].uid == "cccccccc-0000-0000-0000-000000000001"
         assert groups[0].name == "example.onmicrosoft.com"
 
-    def test_empty_groups_returns_none(self):
-        assert SophosUserAssetConnector._get_groups(NAMED_USER) is None
-
-    def test_missing_groups_returns_none(self):
-        user = SophosUser(id="x", name="Test User")
-        assert SophosUserAssetConnector._get_groups(user) is None
-
-    def test_group_without_id_is_skipped(self):
-        user = SophosUser(
-            id="x",
-            name="Test",
-            groups=SophosUserGroups(
-                total=1,
-                itemsCount=1,
-                items=[SophosUserGroup(id=None, name="no-id-group")],
+    @pytest.mark.parametrize(
+        "user",
+        [
+            pytest.param(NAMED_USER, id="empty_groups_returns_none"),
+            pytest.param(SophosUser(id="x", name="Test User"), id="missing_groups_returns_none"),
+            pytest.param(
+                SophosUser(
+                    id="x",
+                    name="Test",
+                    groups=SophosUserGroups(
+                        total=1,
+                        itemsCount=1,
+                        items=[SophosUserGroup(id=None, name="no-id-group")],
+                    ),
+                ),
+                id="group_without_id_is_skipped",
             ),
-        )
+        ],
+    )
+    def test_no_usable_groups_returns_none(self, user):
         assert SophosUserAssetConnector._get_groups(user) is None
 
 
@@ -335,12 +352,16 @@ class TestGetOrganization:
         assert org.uid == "bbbbbbbb-0000-0000-0000-000000000001"
         assert org.name == "bbbbbbbb-0000-0000-0000-000000000001"
 
-    def test_tenant_missing_returns_none(self):
-        user = SophosUser(id="x", name="Test")
-        assert SophosUserAssetConnector._get_organization(user) is None
-
-    def test_tenant_empty_id_returns_none(self):
-        user = SophosUser(id="x", name="Test", tenant=SophosTenant(id=""))
+    @pytest.mark.parametrize(
+        "user",
+        [
+            pytest.param(SophosUser(id="x", name="Test"), id="tenant_missing_returns_none"),
+            pytest.param(
+                SophosUser(id="x", name="Test", tenant=SophosTenant(id="")), id="tenant_empty_id_returns_none"
+            ),
+        ],
+    )
+    def test_no_tenant_id_returns_none(self, user):
         assert SophosUserAssetConnector._get_organization(user) is None
 
 
@@ -350,45 +371,56 @@ class TestParseTs:
         assert isinstance(ts, float)
         assert ts > 0
 
-    def test_none_input(self):
-        assert SophosUserAssetConnector._parse_ts(None) is None
-
-    def test_empty_string(self):
-        assert SophosUserAssetConnector._parse_ts("") is None
-
-    def test_invalid_string(self):
-        assert SophosUserAssetConnector._parse_ts("not-a-date") is None
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param(None, id="none_input"),
+            pytest.param("", id="empty_string"),
+            pytest.param("not-a-date", id="invalid_string"),
+        ],
+    )
+    def test_unparsable_returns_none(self, value):
+        assert SophosUserAssetConnector._parse_ts(value) is None
 
 
 class TestUserTimestamp:
-    def test_prefers_updated_at(self):
-        ts = SophosUserAssetConnector._user_timestamp(NAMED_USER)
-        assert ts == "2023-06-16T15:00:56.870Z"
-
-    def test_falls_back_to_created_at(self):
-        user = SophosUser(id="x", name="Test", createdAt="2023-01-01T00:00:00.000Z")
-        assert SophosUserAssetConnector._user_timestamp(user) == "2023-01-01T00:00:00.000Z"
-
-    def test_returns_none_when_both_absent(self):
-        user = SophosUser(id="x", name="Test")
-        assert SophosUserAssetConnector._user_timestamp(user) is None
+    @pytest.mark.parametrize(
+        ("user", "expected"),
+        [
+            pytest.param(NAMED_USER, "2023-06-16T15:00:56.870Z", id="prefers_updated_at"),
+            pytest.param(
+                SophosUser(id="x", name="Test", createdAt="2023-01-01T00:00:00.000Z"),
+                "2023-01-01T00:00:00.000Z",
+                id="falls_back_to_created_at",
+            ),
+            pytest.param(SophosUser(id="x", name="Test"), None, id="returns_none_when_both_absent"),
+        ],
+    )
+    def test_user_timestamp(self, user, expected):
+        assert SophosUserAssetConnector._user_timestamp(user) == expected
 
 
 class TestIsNewOrChanged:
-    def test_unknown_user_is_new(self, connector):
-        assert connector._is_new_or_changed(NAMED_USER, {}) is True
-
-    def test_unchanged_user_is_skipped(self, connector):
-        known = {NAMED_USER.id: "2023-06-16T15:00:56.870Z"}
-        assert connector._is_new_or_changed(NAMED_USER, known) is False
-
-    def test_updated_timestamp_triggers_yield(self, connector):
-        known = {NAMED_USER.id: "2023-01-01T00:00:00.000Z"}  # older ts
-        assert connector._is_new_or_changed(NAMED_USER, known) is True
-
-    def test_user_without_id_is_always_new(self, connector):
-        user = SophosUser(id=None, name="ghost")
-        assert connector._is_new_or_changed(user, {"anything": "ts"}) is True
+    @pytest.mark.parametrize(
+        ("user", "known", "expected"),
+        [
+            pytest.param(NAMED_USER, {}, True, id="unknown_user_is_new"),
+            pytest.param(
+                NAMED_USER, {NAMED_USER.id: "2023-06-16T15:00:56.870Z"}, False, id="unchanged_user_is_skipped"
+            ),
+            pytest.param(
+                NAMED_USER,
+                {NAMED_USER.id: "2023-01-01T00:00:00.000Z"},  # older ts
+                True,
+                id="updated_timestamp_triggers_yield",
+            ),
+            pytest.param(
+                SophosUser(id=None, name="ghost"), {"anything": "ts"}, True, id="user_without_id_is_always_new"
+            ),
+        ],
+    )
+    def test_is_new_or_changed(self, connector, user, known, expected):
+        assert connector._is_new_or_changed(user, known) is expected
 
 
 class TestMapUserFields:
@@ -427,34 +459,44 @@ class TestMapUserFields:
         assert result.user.name == AD_USER.name.split("/", 1)[1]
         assert result.user.account.name == result.user.name
 
-    def test_active_directory_user_without_email_or_names_is_sent_without_its_domain(self, connector):
-        user = WINDOWS_USER.model_copy(
-            update={"name": "CORP\\jdoe", "source": SophosUserSource(type="active_directory")}
-        )
-        result = connector.map_user_fields(user)
-        assert result is not None
-        assert result.user.name == "jdoe"
-        assert result.user.domain == "CORP"
-        assert result.user.type_id == UserTypeId.USER
-
-    def test_domain_user_with_a_backslash_is_sent_without_its_domain(self, connector):
-        user = NAMED_USER.model_copy(update={"name": "CORP\\jdoe"})
+    @pytest.mark.parametrize(
+        "user",
+        [
+            pytest.param(
+                WINDOWS_USER.model_copy(
+                    update={"name": "CORP\\jdoe", "source": SophosUserSource(type="active_directory")}
+                ),
+                id="active_directory_user_without_email_or_names_is_sent_without_its_domain",
+            ),
+            pytest.param(
+                NAMED_USER.model_copy(update={"name": "CORP\\jdoe"}),
+                id="domain_user_with_a_backslash_is_sent_without_its_domain",
+            ),
+        ],
+    )
+    def test_backslash_user_is_sent_without_its_domain(self, connector, user):
         result = connector.map_user_fields(user)
         assert result is not None
         assert result.user.name == "jdoe"
         assert result.user.account.name == "jdoe"
         assert result.user.domain == "CORP"
+        assert result.user.type_id == UserTypeId.USER
 
-    def test_exchange_login_mapped_to_uid_alt(self, connector):
-        user = NAMED_USER.model_copy(update={"exchangeLogin": "AC00008700"})
+    @pytest.mark.parametrize(
+        ("user", "expected"),
+        [
+            pytest.param(
+                NAMED_USER.model_copy(update={"exchangeLogin": "AC00008700"}),
+                "AC00008700",
+                id="exchange_login_mapped_to_uid_alt",
+            ),
+            pytest.param(NAMED_USER, None, id="empty_exchange_login_produces_no_uid_alt"),
+        ],
+    )
+    def test_uid_alt(self, connector, user, expected):
         result = connector.map_user_fields(user)
         assert result is not None
-        assert result.user.uid_alt == "AC00008700"
-
-    def test_empty_exchange_login_produces_no_uid_alt(self, connector):
-        result = connector.map_user_fields(NAMED_USER)
-        assert result is not None
-        assert result.user.uid_alt is None
+        assert result.user.uid_alt == expected
 
     def test_user_with_groups(self, connector):
         result = connector.map_user_fields(USER_WITH_GROUPS)
@@ -462,25 +504,35 @@ class TestMapUserFields:
         assert result.user.groups is not None
         assert len(result.user.groups) == 1
 
-    def test_missing_id_returns_none(self, connector):
-        user = NAMED_USER.model_copy(update={"id": None})
+    @pytest.mark.parametrize(
+        "user",
+        [
+            pytest.param(NAMED_USER.model_copy(update={"id": None}), id="missing_id_returns_none"),
+            pytest.param(NAMED_USER.model_copy(update={"name": None}), id="missing_name_returns_none"),
+        ],
+    )
+    def test_missing_mandatory_field_returns_none(self, connector, caplog, user):
+        caplog.set_level(logging.DEBUG)
         assert connector.map_user_fields(user) is None
-        connector.log.assert_called()
+        # one warning per skipped user: pod logs only, the user sees the skipped count of the run
+        connector.log.assert_not_called()
+        assert any("Skipping user: missing" in record.getMessage() for record in caplog.records)
 
-    def test_missing_name_returns_none(self, connector):
-        user = NAMED_USER.model_copy(update={"name": None})
-        assert connector.map_user_fields(user) is None
-
-    def test_event_time_uses_updated_at(self, connector):
-        result = connector.map_user_fields(NAMED_USER)
-        assert result is not None
-        assert result.time == SophosUserAssetConnector._parse_ts("2023-06-16T15:00:56.870Z")
-
-    def test_event_time_falls_back_to_created_at(self, connector):
-        user = NAMED_USER.model_copy(update={"updatedAt": None})
+    @pytest.mark.parametrize(
+        ("user", "expected_ts"),
+        [
+            pytest.param(NAMED_USER, "2023-06-16T15:00:56.870Z", id="uses_updated_at"),
+            pytest.param(
+                NAMED_USER.model_copy(update={"updatedAt": None}),
+                "2023-06-16T15:00:56.473Z",
+                id="falls_back_to_created_at",
+            ),
+        ],
+    )
+    def test_event_time(self, connector, user, expected_ts):
         result = connector.map_user_fields(user)
         assert result is not None
-        assert result.time == SophosUserAssetConnector._parse_ts("2023-06-16T15:00:56.473Z")
+        assert result.time == SophosUserAssetConnector._parse_ts(expected_ts)
 
     def test_metadata_product_name(self, connector):
         result = connector.map_user_fields(NAMED_USER)
@@ -495,22 +547,25 @@ class TestMapUserFields:
 
 
 class TestFetchAllPages:
-    def test_single_page(self, connector):
-        _mock_list_users(
-            connector,
-            [
-                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-            ],
-        )
+    @pytest.mark.parametrize(
+        ("page", "expected_ids"),
+        [
+            pytest.param(
+                _page(NAMED_USER_DICT, WINDOWS_USER_DICT),
+                [NAMED_USER_DICT["id"], WINDOWS_USER_DICT["id"]],
+                id="single_page",
+            ),
+            pytest.param(_page(), [], id="empty_response"),
+        ],
+    )
+    def test_single_partial_page(self, connector, page, expected_ids):
+        _mock_list_users(connector, [page])
         items = list(connector._fetch_all_pages())
-        assert len(items) == 2
+        assert [item.id for item in items] == expected_ids
         connector.client.list_directory_users.assert_called_once()
 
     def test_include_group_ids_param_is_sent(self, connector):
-        _mock_list_users(
-            connector,
-            [{"items": [NAMED_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}}],
-        )
+        _mock_list_users(connector, [_page(NAMED_USER_DICT)])
         list(connector._fetch_all_pages())
         call_params = connector.client.list_directory_users.call_args[0][0]
         assert call_params.get("includeGroupIds") is True
@@ -523,15 +578,6 @@ class TestFetchAllPages:
         second_params = connector.client.list_directory_users.call_args_list[1][0][0]
         assert second_params["page"] == 2
 
-    def test_empty_response(self, connector):
-        _mock_list_users(
-            connector,
-            [
-                {"items": [], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-            ],
-        )
-        assert list(connector._fetch_all_pages()) == []
-
     def test_stops_when_not_running(self, connector):
         type(connector).running = property(lambda self: False)
         connector.client = MagicMock()
@@ -540,66 +586,47 @@ class TestFetchAllPages:
 
 
 class TestIterUsers:
-    def test_first_run_yields_all_users(self, connector):
-        """No cache → every user is considered new."""
-        _mock_list_users(
-            connector,
-            [
-                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-            ],
-        )
+    @pytest.mark.parametrize(
+        ("cache", "expected_ids"),
+        [
+            # No cache → every user is considered new.
+            pytest.param(
+                None,
+                [NAMED_USER_DICT["id"], WINDOWS_USER_DICT["id"]],
+                id="first_run_yields_all_users",
+            ),
+            # Cache matches current timestamps → nothing yielded.
+            pytest.param(
+                {
+                    NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],
+                    WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],
+                },
+                [],
+                id="unchanged_users_are_filtered_out",
+            ),
+            # Cache has old timestamp for one user → only that user is yielded.
+            pytest.param(
+                {
+                    NAMED_USER_DICT["id"]: "2020-01-01T00:00:00.000Z",  # stale
+                    WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],  # current
+                },
+                [NAMED_USER_DICT["id"]],
+                id="updated_user_is_yielded",
+            ),
+            # Cache has one user; second is brand new → only new one yielded.
+            pytest.param(
+                {NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"]},
+                [WINDOWS_USER_DICT["id"]],
+                id="new_user_is_yielded",
+            ),
+        ],
+    )
+    def test_yields_new_or_changed_users(self, connector, cache, expected_ids):
+        if cache is not None:
+            _seed_cache(connector, cache)
+        _mock_list_users(connector, [_page(NAMED_USER_DICT, WINDOWS_USER_DICT)])
         items = list(connector._iter_users())
-        assert len(items) == 2
-
-    def test_unchanged_users_are_filtered_out(self, connector):
-        """Cache matches current timestamps → nothing yielded."""
-        _seed_cache(
-            connector,
-            {
-                NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],
-                WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],
-            },
-        )
-        _mock_list_users(
-            connector,
-            [
-                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-            ],
-        )
-        items = list(connector._iter_users())
-        assert items == []
-
-    def test_updated_user_is_yielded(self, connector):
-        """Cache has old timestamp for one user → only that user is yielded."""
-        _seed_cache(
-            connector,
-            {
-                NAMED_USER_DICT["id"]: "2020-01-01T00:00:00.000Z",  # stale
-                WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],  # current
-            },
-        )
-        _mock_list_users(
-            connector,
-            [
-                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-            ],
-        )
-        items = list(connector._iter_users())
-        assert len(items) == 1
-        assert items[0].id == NAMED_USER_DICT["id"]
-
-    def test_new_user_is_yielded(self, connector):
-        """Cache has one user; second is brand new → only new one yielded."""
-        _seed_cache(connector, {NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"]})
-        _mock_list_users(
-            connector,
-            [
-                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-            ],
-        )
-        items = list(connector._iter_users())
-        assert len(items) == 1
-        assert items[0].id == WINDOWS_USER_DICT["id"]
+        assert [item.id for item in items] == expected_ids
 
     def test_current_run_tracks_all_users(self, connector):
         """_current_run is populated for ALL fetched users, not just the yielded ones."""
@@ -609,24 +636,14 @@ class TestIterUsers:
                 NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],  # unchanged
             },
         )
-        _mock_list_users(
-            connector,
-            [
-                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-            ],
-        )
+        _mock_list_users(connector, [_page(NAMED_USER_DICT, WINDOWS_USER_DICT)])
         list(connector._iter_users())
         assert NAMED_USER_DICT["id"] in connector._current_run
         assert WINDOWS_USER_DICT["id"] in connector._current_run
 
     def test_user_without_id_not_tracked_in_current_run(self, connector):
         no_id = {**NAMED_USER_DICT, "id": None}
-        _mock_list_users(
-            connector,
-            [
-                {"items": [no_id], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-            ],
-        )
+        _mock_list_users(connector, [_page(no_id)])
         list(connector._iter_users())
         assert connector._current_run == {}
 
@@ -660,73 +677,55 @@ class TestUpdateCheckpoint:
 
 
 class TestGetAssets:
-    def test_first_run_yields_all_valid_users(self, connector):
-        _mock_list_users(
-            connector,
-            [
-                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-            ],
-        )
+    @pytest.mark.parametrize(
+        ("cache", "items", "expected_uids"),
+        [
+            pytest.param(
+                None,
+                [NAMED_USER_DICT, WINDOWS_USER_DICT],
+                [NAMED_USER_DICT["id"], WINDOWS_USER_DICT["id"]],
+                id="first_run_yields_all_valid_users",
+            ),
+            pytest.param(
+                {
+                    NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],
+                    WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],
+                },
+                [NAMED_USER_DICT, WINDOWS_USER_DICT],
+                [],
+                id="second_run_yields_nothing_when_unchanged",
+            ),
+            pytest.param(
+                {
+                    NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],
+                    WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],  # old ts
+                },
+                [NAMED_USER_DICT, {**WINDOWS_USER_DICT, "updatedAt": "2099-01-01T00:00:00.000Z"}],
+                [WINDOWS_USER_DICT["id"]],
+                id="second_run_yields_only_changed_user",
+            ),
+            pytest.param(
+                None,
+                [{**NAMED_USER_DICT, "id": None}, WINDOWS_USER_DICT],
+                [WINDOWS_USER_DICT["id"]],
+                id="skips_users_missing_id",
+            ),
+        ],
+    )
+    def test_yields_mapped_new_or_changed_users(self, connector, cache, items, expected_uids):
+        if cache is not None:
+            _seed_cache(connector, cache)
+        _mock_list_users(connector, [_page(*items)])
         assets = list(connector.get_assets())
-        assert len(assets) == 2
+        assert [asset.user.uid for asset in assets] == expected_uids
 
     def test_desktop_user_domain_in_user(self, connector):
         """Local machine account has its computer name as user.domain."""
-        _mock_list_users(
-            connector,
-            [{"items": [WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}}],
-        )
+        _mock_list_users(connector, [_page(WINDOWS_USER_DICT)])
         assets = list(connector.get_assets())
         assert len(assets) == 1
         assert assets[0].user.domain == "DESKTOP-ABC1234"
         assert assets[0].user.type_id == UserTypeId.SYSTEM
-
-    def test_second_run_yields_nothing_when_unchanged(self, connector):
-        _seed_cache(
-            connector,
-            {
-                NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],
-                WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],
-            },
-        )
-        _mock_list_users(
-            connector,
-            [
-                {"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-            ],
-        )
-        assets = list(connector.get_assets())
-        assert assets == []
-
-    def test_second_run_yields_only_changed_user(self, connector):
-        updated_windows = {**WINDOWS_USER_DICT, "updatedAt": "2099-01-01T00:00:00.000Z"}
-        _seed_cache(
-            connector,
-            {
-                NAMED_USER_DICT["id"]: NAMED_USER_DICT["updatedAt"],
-                WINDOWS_USER_DICT["id"]: WINDOWS_USER_DICT["updatedAt"],  # old ts
-            },
-        )
-        _mock_list_users(
-            connector,
-            [
-                {"items": [NAMED_USER_DICT, updated_windows], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-            ],
-        )
-        assets = list(connector.get_assets())
-        assert len(assets) == 1
-        assert assets[0].user.uid == WINDOWS_USER_DICT["id"]
-
-    def test_skips_users_missing_id(self, connector):
-        no_id = {**NAMED_USER_DICT, "id": None}
-        _mock_list_users(
-            connector,
-            [
-                {"items": [no_id, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}},
-            ],
-        )
-        assets = list(connector.get_assets())
-        assert len(assets) == 1
 
     def test_raises_on_http_error(self, connector):
         mock_response = MagicMock()
@@ -750,10 +749,7 @@ class TestFullHttpRoundTrip:
             m.get("https://api.central.sophos.com/whoami/v1", json=WHOAMI_RESPONSE, status_code=200)
             m.get(
                 f"{data_region}/common/v1/directory/users",
-                json={
-                    "items": [NAMED_USER_DICT, WINDOWS_USER_DICT],
-                    "pages": {"current": 1, "size": 50, "maxSize": 100},
-                },
+                json=_page(NAMED_USER_DICT, WINDOWS_USER_DICT),
                 status_code=200,
             )
 
@@ -785,16 +781,17 @@ class TestGetMappedFields:
             assert isinstance(k, str), f"Key {k!r} is not a string"
             assert isinstance(v, str), f"Value {v!r} is not a string"
 
-    def test_contains_name_mapping(self, connector):
-        assert "name" in connector.get_mapped_fields()
-
-    def test_contains_email_mapping(self, connector):
-        assert "email" in connector.get_mapped_fields()
-
-    def test_contains_timestamp_mappings(self, connector):
-        mapping = connector.get_mapped_fields()
-        assert "updatedAt" in mapping
-        assert "createdAt" in mapping
+    @pytest.mark.parametrize(
+        "key",
+        [
+            pytest.param("name", id="contains_name_mapping"),
+            pytest.param("email", id="contains_email_mapping"),
+            pytest.param("updatedAt", id="contains_updated_at_mapping"),
+            pytest.param("createdAt", id="contains_created_at_mapping"),
+        ],
+    )
+    def test_contains_mapping(self, connector, key):
+        assert key in connector.get_mapped_fields()
 
     def test_deterministic_across_calls(self, connector):
         assert connector.get_mapped_fields() == connector.get_mapped_fields()
@@ -802,9 +799,9 @@ class TestGetMappedFields:
     def test_values_reference_user_namespace_or_time(self, connector):
         """All OCSF paths must point into the user object or top-level time field."""
         for v in connector.get_mapped_fields().values():
-            assert (
-                v.startswith("user.") or v == "time"
-            ), f"Expected OCSF path to start with 'user.' or be 'time', got {v!r}"
+            assert v.startswith("user.") or v == "time", (
+                f"Expected OCSF path to start with 'user.' or be 'time', got {v!r}"
+            )
 
 
 class TestResetCheckpoint:
@@ -834,7 +831,7 @@ class TestResetCheckpoint:
         """After reset, the next get_assets() run must re-yield all users."""
         _mock_list_users(
             connector,
-            [{"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}}],
+            [_page(NAMED_USER_DICT, WINDOWS_USER_DICT)],
         )
         list(connector.get_assets())  # seeds cache
 
@@ -842,7 +839,7 @@ class TestResetCheckpoint:
 
         _mock_list_users(
             connector,
-            [{"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}}],
+            [_page(NAMED_USER_DICT, WINDOWS_USER_DICT)],
         )
         assets = list(connector.get_assets())
         assert len(assets) == 2
@@ -859,7 +856,7 @@ class TestResetCheckpoint:
         # Without reset, second run should yield nothing
         _mock_list_users(
             connector,
-            [{"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}}],
+            [_page(NAMED_USER_DICT, WINDOWS_USER_DICT)],
         )
         no_changes = list(connector.get_assets())
         assert no_changes == []
@@ -868,7 +865,7 @@ class TestResetCheckpoint:
 
         _mock_list_users(
             connector,
-            [{"items": [NAMED_USER_DICT, WINDOWS_USER_DICT], "pages": {"current": 1, "size": 50, "maxSize": 100}}],
+            [_page(NAMED_USER_DICT, WINDOWS_USER_DICT)],
         )
         after_reset = list(connector.get_assets())
         assert len(after_reset) == 2

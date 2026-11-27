@@ -1,7 +1,7 @@
 import hashlib
 import json
 from collections.abc import Generator
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from typing import Any
 
@@ -20,8 +20,8 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeId,
     OSTypeStr,
 )
-from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.asset_connector.models.ocsf.group import Group
+from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.storage import PersistentJSON
 
 from sophos_module.asset_connector.model import (
@@ -30,6 +30,10 @@ from sophos_module.asset_connector.model import (
 )
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.logging import get_logger
+
+# per-item and cache diagnostics go to the pod logs only: the connector logs (self.log) are shown to the user
+logger = get_logger()
 
 
 class SophosDeviceAssetConnector(AssetConnector):
@@ -69,7 +73,7 @@ class SophosDeviceAssetConnector(AssetConnector):
             return cache.get("last_seen_cursor") or None
 
     @staticmethod
-    def _compute_fingerprint(endpoint: "SophosEndpoint") -> str:
+    def _compute_fingerprint(endpoint: SophosEndpoint) -> str:
         """
         Compute a SHA-256 fingerprint of inventory-significant fields.
         Fields that change without a real inventory change (lastSeenAt, registeredAt)
@@ -106,7 +110,7 @@ class SophosDeviceAssetConnector(AssetConnector):
         if not isinstance(raw, dict):
             raw = {}
 
-        cutoff: datetime = datetime.now(tz=timezone.utc) - timedelta(days=self.CACHE_MAX_AGE_DAYS)
+        cutoff: datetime = datetime.now(tz=UTC) - timedelta(days=self.CACHE_MAX_AGE_DAYS)
 
         pruned: dict[str, dict[str, str]] = {}
         for device_id, entry in raw.items():
@@ -120,10 +124,7 @@ class SophosDeviceAssetConnector(AssetConnector):
             )
 
         self._sent_ids = pruned
-        self.log(
-            f"Dedup cache loaded – entries={len(self._sent_ids)} " f"(evicted={len(raw) - len(self._sent_ids)})",
-            level="debug",
-        )
+        logger.debug(f"Dedup cache loaded - entries={len(self._sent_ids)} (evicted={len(raw) - len(self._sent_ids)})")
 
     def _save_sent_ids(self) -> None:
         """Persist the fingerprint cache back to context.json."""
@@ -135,13 +136,10 @@ class SophosDeviceAssetConnector(AssetConnector):
                     reverse=True,
                 )[: self.MAX_CACHE_SIZE]
             )
-            self.log(
-                f"Dedup cache trimmed to {self.MAX_CACHE_SIZE} entries before save",
-                level="debug",
-            )
+            logger.debug(f"Dedup cache trimmed to {self.MAX_CACHE_SIZE} entries before save")
         with self.context as cache:
             cache["sent_ids"] = self._sent_ids
-        self.log(f"Dedup cache saved – entries={len(self._sent_ids)}", level="debug")
+        logger.debug(f"Dedup cache saved - entries={len(self._sent_ids)}")
 
     @cached_property
     def client(self) -> SophosApiClient:
@@ -167,7 +165,7 @@ class SophosDeviceAssetConnector(AssetConnector):
             return None
         try:
             return isoparse(ts).timestamp()
-        except (ValueError, AttributeError):
+        except ValueError, AttributeError:
             return None
 
     @staticmethod
@@ -314,10 +312,10 @@ class SophosDeviceAssetConnector(AssetConnector):
         hostname = endpoint.hostname
 
         if not uid:
-            self.log(f"Skipping endpoint: missing 'id'. Data: {endpoint}", level="warning")
+            logger.warning("Skipping endpoint: missing id", data=str(endpoint)[:1000])
             return None
         if not hostname:
-            self.log(f"Skipping endpoint {uid}: missing 'hostname'", level="warning")
+            logger.warning("Skipping endpoint: missing hostname", id=uid)
             return None
 
         type_id, type_str = self._get_device_type(endpoint)
@@ -346,7 +344,7 @@ class SophosDeviceAssetConnector(AssetConnector):
         registered_ts = self._parse_ts(endpoint.registeredAt)
 
         # Event time: prefer lastSeenAt, fallback to registeredAt, then now
-        event_time = last_seen_ts or registered_ts or datetime.now(tz=timezone.utc).timestamp()
+        event_time = last_seen_ts or registered_ts or datetime.now(tz=UTC).timestamp()
 
         device = Device(
             type_id=type_id,
@@ -386,7 +384,7 @@ class SophosDeviceAssetConnector(AssetConnector):
             enrichments=enrichments,
         )
 
-    def _iter_endpoints(self) -> Generator[SophosEndpoint, None, None]:
+    def _iter_endpoints(self) -> Generator[SophosEndpoint]:
         params: dict[str, Any] = {
             "pageSize": self.PAGE_SIZE,
             "view": "full",
@@ -439,17 +437,17 @@ class SophosDeviceAssetConnector(AssetConnector):
             cache.pop("sent_ids", None)
         self._latest_time = None
         self._sent_ids = {}
-        self.log("Checkpoint reset – full device re-fetch will occur on next cycle", level="info")
+        self.log("Checkpoint reset - full device re-fetch will occur on next cycle", level="info")
 
     def update_checkpoint(self) -> None:
         if self._latest_time:
             with self.context as cache:
                 cache["last_seen_cursor"] = self._latest_time
-            self.log(f"Checkpoint updated successfully - New timestamp: {self._latest_time}", level="debug")
+            logger.debug(f"Checkpoint updated successfully - New timestamp: {self._latest_time}")
         else:
-            self.log("No checkpoint update needed - No new timestamp available", level="debug")
+            logger.debug("No checkpoint update needed - No new timestamp available")
 
-    def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
+    def get_assets(self) -> Generator[DeviceOCSFModel]:
         """Main entry point: yield all Sophos device assets as OCSF models."""
         self.log("Starting Sophos device asset collection", level="info")
         self._load_sent_ids()
@@ -459,35 +457,34 @@ class SophosDeviceAssetConnector(AssetConnector):
 
         try:
             for endpoint in self._iter_endpoints():
-                try:
-                    current_fp = self._compute_fingerprint(endpoint) if endpoint.id else None
-                except TypeError as exc:
-                    self.log(
-                        f"Skipping endpoint '{endpoint.id}': fingerprint serialization failed – {exc}",
-                        level="warning",
-                    )
+                # map first: endpoints without id or hostname are skipped
+                mapped = self.map_device_fields(endpoint)
+                if mapped is None:
                     skipped += 1
                     continue
 
-                if endpoint.id and endpoint.id in self._sent_ids:
-                    if current_fp == self._sent_ids[endpoint.id]["fingerprint"]:
-                        deduplicated += 1
-                        continue
-
-                mapped = self.map_device_fields(endpoint)
-                if mapped is not None:
-                    total += 1
-                    if endpoint.id and current_fp is not None:
-                        self._sent_ids[endpoint.id] = {
-                            "fingerprint": current_fp,
-                            "cached_at": datetime.now(tz=timezone.utc).isoformat(),
-                        }
-                    yield mapped
-                else:
+                try:
+                    current_fp = self._compute_fingerprint(endpoint)
+                except TypeError as exc:
+                    logger.warning(f"Skipping endpoint '{endpoint.id}': fingerprint serialization failed - {exc}")
                     skipped += 1
+                    continue
+
+                device_id = mapped.device.uid
+                cached = self._sent_ids.get(device_id)
+                if cached is not None and cached["fingerprint"] == current_fp:
+                    deduplicated += 1
+                    continue
+
+                total += 1
+                self._sent_ids[device_id] = {
+                    "fingerprint": current_fp,
+                    "cached_at": datetime.now(tz=UTC).isoformat(),
+                }
+                yield mapped
         except Exception as exc:
             self.log(
-                f"Asset collection failed – collected={total}, skipped={skipped}, "
+                f"Asset collection failed - collected={total}, skipped={skipped}, "
                 f"deduplicated={deduplicated}, error={exc}",
                 level="error",
             )
@@ -496,7 +493,6 @@ class SophosDeviceAssetConnector(AssetConnector):
             self._save_sent_ids()
 
         self.log(
-            f"Sophos device asset collection complete – "
-            f"total={total}, skipped={skipped}, deduplicated={deduplicated}",
+            f"Sophos device asset collection complete - total={total}, skipped={skipped}, deduplicated={deduplicated}",
             level="info",
         )

@@ -1,7 +1,7 @@
 {
-  "description": "Query last IoCs from the Sophos Data lake",
+  "description": "[DEPRECATED] Query the last IoCs from the Sophos Central data lake (Threat Analysis Center). Sophos is upgrading the tenants to Sophos Fusion: once upgraded, the data lake no longer receives new IoCs. Keep this connector only for the tenants not upgraded yet, and use '[BETA] Get Sophos Fusion detections' for the upgraded ones.",
   "docker_parameters": "sophos_query_ioc_trigger",
-  "name": "Query IoC from data lake",
+  "name": "[DEPRECATED] Query IoC from data lake",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
