@@ -4,7 +4,7 @@ import requests_mock
 
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
-from sophos_module.client.client import BEST_EFFORT_GRAPHQL_TIMEOUT, GRAPHQL_TIMEOUT
+from sophos_module.client.client import BEST_EFFORT_GRAPHQL_TIMEOUT, GRAPHQL_TIMEOUT, REQUEST_TIMEOUT
 from sophos_module.client.exceptions import SophosGraphQLError
 
 DATA_REGION = "https://api-eu02.central.sophos.com"
@@ -117,8 +117,18 @@ def test_rest_calls(rest_client, mock_rest_api, call, method, path, expected_que
     request = endpoint.last_request
     assert request.qs == expected_query
     assert request.headers["X-Tenant-ID"] == "tenant-id"
+    # a stalled connection never blocks a trigger
+    assert request.timeout == REQUEST_TIMEOUT
     if expected_body is not None:
         assert request.json() == expected_body
+
+
+def test_get_query_status_with_a_shorter_timeout(rest_client, mock_rest_api):
+    endpoint = mock_rest_api.get(f"{DATA_REGION}/xdr-query/v1/queries/runs/run-id", json={"status": "pending"})
+
+    rest_client.get_query_status("run-id", timeout=12.5)
+
+    assert endpoint.last_request.timeout == 12.5
 
 
 def test_get_query_results_requires_a_run_id(rest_client):

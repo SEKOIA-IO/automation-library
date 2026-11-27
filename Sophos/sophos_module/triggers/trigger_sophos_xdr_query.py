@@ -10,6 +10,7 @@ from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from sophos_module.base import SophosConnector
+from sophos_module.client.client import REQUEST_TIMEOUT
 from sophos_module.fusion_queries import TENANT_MARKERS
 from sophos_module.helper import latest_timestamp
 from sophos_module.logging import get_logger
@@ -21,7 +22,9 @@ logger = get_logger()
 
 # the status of a data lake query is polled every 2 seconds, for 5 minutes at most
 QUERY_STATUS_POLL_INTERVAL = 2
-MAX_QUERY_STATUS_POLLS = 150
+QUERY_STATUS_TIMEOUT = 300
+# seconds: shortest timeout of a status request near the deadline
+QUERY_STATUS_MIN_REQUEST_TIMEOUT = 5
 
 
 FUSION_UPGRADE_MESSAGE = (
@@ -162,13 +165,27 @@ class SophosXDRQueryTrigger(SophosConnector):
             logger.error("Query post returned no id", response=str(result)[:1000])
             return "failed", query_id
 
+        # deadline on the elapsed time, not on the number of polls: each status request can also wait
+        # for the rate limiter and the retries
+        deadline = time.monotonic() + QUERY_STATUS_TIMEOUT
         result_query_status: dict[str, Any] = {}
-        for polls in range(1, MAX_QUERY_STATUS_POLLS + 1):
+        polls = 0
+        while result_query_status.get("status") != "finished":
+            if time.monotonic() >= deadline:
+                self.log_error(
+                    "The Sophos data lake query did not finish within "
+                    f"{QUERY_STATUS_TIMEOUT // 60} minutes: retried on the next cycle"
+                )
+                logger.error("Query status polling timed out", query_id=query_id, polls=polls)
+                return "failed", query_id
+
             # Give time for query to finish.
             time.sleep(QUERY_STATUS_POLL_INTERVAL)
+            polls += 1
             # It's the Second step of our query treatment.
-            # Checking the status of our query.
-            response_query_status = self.client.get_query_status(query_id)
+            # Checking the status of our query, within the remaining time.
+            remaining = max(deadline - time.monotonic(), QUERY_STATUS_MIN_REQUEST_TIMEOUT)
+            response_query_status = self.client.get_query_status(query_id, timeout=min(remaining, REQUEST_TIMEOUT))
             status_code = response_query_status.status_code
             if status_code >= 400:
                 self.log_http_error("Failed to get the status of the Sophos data lake query", response_query_status)
@@ -178,15 +195,6 @@ class SophosXDRQueryTrigger(SophosConnector):
                 continue
 
             result_query_status = response_query_status.json()
-            if result_query_status.get("status") == "finished":
-                break
-        else:
-            self.log_error(
-                "The Sophos data lake query did not finish within "
-                f"{MAX_QUERY_STATUS_POLLS * QUERY_STATUS_POLL_INTERVAL // 60} minutes: retried on the next cycle"
-            )
-            logger.error("Query status polling timed out", query_id=query_id, polls=polls)
-            return "failed", query_id
 
         result = result_query_status.get("result")
         logger.info("Query finished", query_id=query_id, result=result, polls=polls)

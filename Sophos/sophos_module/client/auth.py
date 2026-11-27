@@ -11,6 +11,9 @@ from sophos_module.logging import get_logger
 
 logger = get_logger()
 
+# seconds: timeout of the token and whoami requests, so a stalled connection never blocks a trigger
+AUTHENTICATION_TIMEOUT = 60
+
 
 class SophosApiCredentials:
     token_type: str
@@ -62,6 +65,7 @@ class SophosApiAuthentication(AuthBase):
                 "client_id": self.__client_id,
                 "client_secret": self.__client_secret,
             },
+            timeout=AUTHENTICATION_TIMEOUT,
         )
 
         # Log the response status
@@ -90,6 +94,7 @@ class SophosApiAuthentication(AuthBase):
         response = self.__http_session.get(
             url=f"{self.__api_host}/whoami/v1",
             headers={"Authorization": credentials.authorization},
+            timeout=AUTHENTICATION_TIMEOUT,
         )
 
         # Log the response status

@@ -10,7 +10,9 @@ import requests_mock
 from sophos_module.base import SophosModule
 from sophos_module.triggers.trigger_sophos_xdr_query import (
     FUSION_UPGRADE_MESSAGE,
-    MAX_QUERY_STATUS_POLLS,
+    QUERY_STATUS_MIN_REQUEST_TIMEOUT,
+    QUERY_STATUS_POLL_INTERVAL,
+    QUERY_STATUS_TIMEOUT,
     SophosXDRIOCQuery,
     SophosXDRQueryTrigger,
 )
@@ -679,18 +681,64 @@ def test_query_status_client_errors_stop_the_polling(trigger, mock_query, no_sle
     )
 
 
-def test_query_status_polling_is_capped(trigger, mock_query, query_status_message, no_sleep):
+@pytest.fixture
+def clock(monkeypatch, no_sleep):
+    """Fake monotonic clock, moved forward by the sleeps and by the tests (slow requests)."""
+    now = [1000.0]
+
+    def sleep(seconds: float) -> None:
+        no_sleep.append(seconds)
+        now[0] += seconds
+
+    monkeypatch.setattr("time.sleep", sleep)
+    monkeypatch.setattr("time.monotonic", lambda: now[0])
+    return now
+
+
+def test_query_status_polling_is_capped(trigger, mock_query, query_status_message, no_sleep, clock):
     trigger.client.get_query_status = Mock(
         return_value=_response(200, {**query_status_message, "status": "pending"}, STATUS_URL)
     )
 
     assert trigger.post_query(trigger.query) == ("failed", "7d00cf17-a987-4d07-ac88-93d4df89fa73")
 
-    assert trigger.client.get_query_status.call_count == MAX_QUERY_STATUS_POLLS
-    assert len(no_sleep) == MAX_QUERY_STATUS_POLLS
+    expected_polls = QUERY_STATUS_TIMEOUT // QUERY_STATUS_POLL_INTERVAL
+    assert trigger.client.get_query_status.call_count == expected_polls
+    assert len(no_sleep) == expected_polls
     assert [call.kwargs["message"] for call in trigger.log.call_args_list] == [
         "The Sophos data lake query did not finish within 5 minutes: retried on the next cycle"
     ]
+
+
+def test_query_status_polling_deadline_includes_slow_requests(trigger, mock_query, query_status_message, clock):
+    """The deadline bounds the elapsed time, not the number of polls; each request gets the remaining time."""
+    timeouts: list[float] = []
+
+    def slow_status(query_id: str, timeout: float) -> requests.Response:
+        timeouts.append(timeout)
+        clock[0] += 250
+        return _response(200, {**query_status_message, "status": "pending"}, STATUS_URL)
+
+    trigger.client.get_query_status = Mock(side_effect=slow_status)
+
+    assert trigger.post_query(trigger.query) == ("failed", "7d00cf17-a987-4d07-ac88-93d4df89fa73")
+
+    # 2 s sleep + 250 s request, twice: past the 300 s deadline; the second request gets the 46 s left
+    assert trigger.client.get_query_status.call_count == 2
+    assert timeouts == [60, QUERY_STATUS_TIMEOUT - 2 * QUERY_STATUS_POLL_INTERVAL - 250]
+
+
+def test_query_status_request_timeout_has_a_floor(trigger, mock_query, query_status_message, clock):
+    def status(query_id: str, timeout: float) -> requests.Response:
+        clock[0] += QUERY_STATUS_TIMEOUT - QUERY_STATUS_POLL_INTERVAL - 1
+        return _response(200, {**query_status_message, "status": "pending"}, STATUS_URL)
+
+    trigger.client.get_query_status = Mock(side_effect=status)
+
+    trigger.post_query(trigger.query)
+
+    # second poll: 1 s left after the sleep, below the floor
+    assert trigger.client.get_query_status.call_args_list[1].kwargs["timeout"] == QUERY_STATUS_MIN_REQUEST_TIMEOUT
 
 
 def _response(status_code, body, url):

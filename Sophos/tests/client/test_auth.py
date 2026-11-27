@@ -4,7 +4,7 @@ import pytest
 import requests
 import requests_mock
 
-from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.client.auth import AUTHENTICATION_TIMEOUT, SophosApiAuthentication
 from sophos_module.client.exceptions import SophosApiAuthenticationError
 
 API_HOST = "https://api-eu.central.sophos.com"
@@ -133,3 +133,13 @@ def test_requests_are_authenticated(auth):
 
     assert api.last_request.headers["Authorization"] == "Bearer foo-token"
     assert api.last_request.headers["X-Tenant-ID"] == TENANT_ID
+
+
+def test_authentication_requests_have_a_timeout(auth):
+    with requests_mock.Mocker() as mock:
+        mock.post(AUTHORIZATION_URL, json=token())
+        mock.get(WHOAMI_URL, json=whoami())
+
+        auth.get_credentials()
+
+    assert [request.timeout for request in mock.request_history] == [AUTHENTICATION_TIMEOUT, AUTHENTICATION_TIMEOUT]

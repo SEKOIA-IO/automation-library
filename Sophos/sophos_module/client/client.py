@@ -10,6 +10,8 @@ from sophos_module.client.exceptions import SophosGraphQLError
 from sophos_module.client.helpers import retry
 
 DEFAULT_GRAPHQL_API_URL = "https://api.taegis.sophos.com"
+# seconds: default timeout of the REST requests, so a stalled connection never blocks a trigger
+REQUEST_TIMEOUT = 60
 # seconds: GraphQL requests of the collection, and of the optional checks (single attempt)
 GRAPHQL_TIMEOUT = 60
 BEST_EFFORT_GRAPHQL_TIMEOUT = 10
@@ -36,6 +38,10 @@ class ApiClient(requests.Session):
         )
         self.mount("http://", adapter)
         self.mount("https://", adapter)
+
+    def request(self, method: str | bytes, url: str | bytes, *args: Any, **kwargs: Any) -> requests.Response:
+        kwargs.setdefault("timeout", REQUEST_TIMEOUT)
+        return super().request(method, url, *args, **kwargs)
 
 
 class SophosApiClient(ApiClient):
@@ -73,9 +79,10 @@ class SophosApiClient(ApiClient):
         return self.post(url=f"{self.auth.get_credentials().api_url}/xdr-query/v1/queries/runs", json=json_query)
 
     @retry()
-    def get_query_status(self, run_id: str) -> requests.Response:
+    def get_query_status(self, run_id: str, timeout: float = REQUEST_TIMEOUT) -> requests.Response:
         return self.get(
             url=f"{self.auth.get_credentials().api_url}/xdr-query/v1/queries/runs/{run_id}",
+            timeout=timeout,
         )
 
     @retry()

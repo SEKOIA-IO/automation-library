@@ -18,6 +18,8 @@ logger = get_logger()
 
 # detectionSearch returns at most 10,000 results per search: larger windows are split
 MAX_RESULTS_PER_SEARCH = 10000
+# cycles that search an incomplete window again (empty page before the announced total), before moving on
+MAX_INCOMPLETE_WINDOW_RETRIES = 3
 
 
 class SophosFusionDetectionsConfiguration(DefaultConnectorConfiguration):
@@ -81,6 +83,8 @@ class SophosFusionDetectionsTrigger(SophosConnector):
         )
         # detection id -> window end at which it was seen, to skip the detections already forwarded
         self._seen: dict[str, datetime] = {}
+        # consecutive cycles that kept the checkpoint because the window was incomplete
+        self._incomplete_window_retries = 0
 
     @cached_property
     def page_size(self) -> int:
@@ -109,21 +113,41 @@ class SophosFusionDetectionsTrigger(SophosConnector):
 
         return response
 
-    def fetch_window(self, start: datetime, end: datetime) -> list[dict[str, Any]]:
-        """Return the detections of the window, splitting it when it has too many results for one search."""
+    def fetch_window(self, start: datetime, end: datetime) -> tuple[list[dict[str, Any]], bool]:
+        """
+        Return the detections of the window, and whether all of them were fetched.
+
+        The window is split when it has too many results for one search.
+        """
         response = self.search(start, end, offset=0)
         alerts = response.get("alerts") or {}
         total = alerts.get("total_results") or 0
 
-        if total > MAX_RESULTS_PER_SEARCH and end - start > timedelta(seconds=1):
-            middle = start + (end - start) / 2
-            logger.info(
-                "Too many detections for one search, splitting the window",
+        if total > MAX_RESULTS_PER_SEARCH:
+            if end - start > timedelta(seconds=1):
+                middle = start + (end - start) / 2
+                logger.info(
+                    "Too many detections for one search, splitting the window",
+                    total_results=total,
+                    start=format_ql_date(start),
+                    end=format_ql_date(end),
+                )
+                first, first_complete = self.fetch_window(start, middle)
+                second, second_complete = self.fetch_window(middle, end)
+                return first + second, first_complete and second_complete
+
+            # the dates of the queries have a one-second precision: this window cannot be split.
+            # Searching it again would return the same results, so the collection moves on
+            self.log_error(
+                f"More than {MAX_RESULTS_PER_SEARCH} Sophos Fusion detections in one second: "
+                f"only the first {MAX_RESULTS_PER_SEARCH} were collected"
+            )
+            logger.error(
+                "Window with too many detections cannot be split, detections missed",
                 total_results=total,
                 start=format_ql_date(start),
                 end=format_ql_date(end),
             )
-            return self.fetch_window(start, middle) + self.fetch_window(middle, end)
 
         detections: list[dict[str, Any]] = list(alerts.get("list") or [])
         while len(detections) < min(total, MAX_RESULTS_PER_SEARCH):
@@ -136,10 +160,10 @@ class SophosFusionDetectionsTrigger(SophosConnector):
                     start=format_ql_date(start),
                     end=format_ql_date(end),
                 )
-                break
+                return detections, False
             detections.extend(page)
 
-        return detections
+        return detections, True
 
     def _forget_seen_before(self, limit: datetime) -> None:
         self._seen = {key: seen_at for key, seen_at in self._seen.items() if seen_at >= limit}
@@ -185,7 +209,7 @@ class SophosFusionDetectionsTrigger(SophosConnector):
             return
 
         try:
-            detections = self.fetch_window(start, end)
+            detections, complete = self.fetch_window(start, end)
         except SophosGraphQLError as error:
             # keep the checkpoint: the same window is searched again on the next cycle.
             # Stable message (no dates): the SDK deduplicates identical logs while the error lasts
@@ -212,6 +236,26 @@ class SophosFusionDetectionsTrigger(SophosConnector):
         if not detections:
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
 
+        if not complete:
+            if self._incomplete_window_retries < MAX_INCOMPLETE_WINDOW_RETRIES:
+                # keep the checkpoint: the window is searched again on the next cycle,
+                # the detections already forwarded are skipped
+                self._incomplete_window_retries += 1
+                logger.warning(
+                    "Incomplete window, checkpoint kept",
+                    retries=self._incomplete_window_retries,
+                    start=format_ql_date(start),
+                )
+                return
+
+            self.log_error(
+                "Sophos returned fewer Sophos Fusion detections than announced: some detections may be missing"
+            )
+            logger.error(
+                "Window still incomplete, checkpoint moved", start=format_ql_date(start), end=format_ql_date(end)
+            )
+
+        self._incomplete_window_retries = 0
         self.cursor.offset = end
         self._forget_seen_before(start)
 

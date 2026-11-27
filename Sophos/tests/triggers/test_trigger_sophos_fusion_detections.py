@@ -9,6 +9,7 @@ import requests_mock
 
 from sophos_module.base import SophosModule
 from sophos_module.triggers.trigger_sophos_fusion_detections import (
+    MAX_INCOMPLETE_WINDOW_RETRIES,
     MAX_RESULTS_PER_SEARCH,
     SophosFusionDetectionsTrigger,
     clean_detection,
@@ -219,19 +220,74 @@ def test_next_batch_splits_large_windows(trigger, mock_api):
     ]
 
 
-def test_next_batch_stops_on_empty_page(trigger, mock_api):
-    mock_api.post(
-        GRAPHQL_URL,
-        [
-            {"json": search_response([detection(1), detection(2)], total=5)},
-            {"json": search_response([], total=5)},
-        ],
+def test_next_batch_cannot_split_a_one_second_window(trigger, mock_api):
+    """More than 10,000 detections in one second: the first ones forwarded, loss shown, cycle moves on."""
+    trigger.configuration.chunk_size = 1000
+    now = datetime.now(UTC)
+    trigger.cursor.offset = now - trigger.latency - timedelta(milliseconds=500) + trigger.overlap
+    trigger.search = Mock(
+        side_effect=lambda start, end, offset: {
+            "alerts": {
+                "total_results": MAX_RESULTS_PER_SEARCH + 1,
+                "list": [detection(offset + index) for index in range(1000)],
+            }
+        }
     )
+
+    trigger.next_batch()
+
+    assert trigger.search.call_count == MAX_RESULTS_PER_SEARCH // 1000
+    assert len(forwarded_events(trigger)) == MAX_RESULTS_PER_SEARCH
+    assert [call.kwargs["message"] for call in trigger.log.call_args_list] == [
+        "More than 10000 Sophos Fusion detections in one second: only the first 10000 were collected"
+    ]
+    assert trigger.cursor.offset > now - trigger.latency
+
+
+def empty_page_responses() -> list[dict]:
+    return [
+        {"json": search_response([detection(1), detection(2)], total=5)},
+        {"json": search_response([], total=5)},
+    ]
+
+
+def test_next_batch_keeps_the_checkpoint_on_an_empty_page(trigger, mock_api):
+    """An empty page before the announced total: forward what was fetched, search the window again next cycle."""
+    mock_api.post(GRAPHQL_URL, empty_page_responses())
+    checkpoint = trigger.cursor.offset
 
     trigger.next_batch()
 
     assert len(forwarded_events(trigger)) == 2
     assert len(graphql_calls(mock_api)) == 2
+    assert trigger.cursor.offset == checkpoint
+    trigger.log.assert_not_called()
+
+    # next cycle: complete window, the detections already forwarded are skipped, the checkpoint moves
+    mock_api.post(GRAPHQL_URL, json=search_response([detection(1), detection(2), detection(3)]))
+    trigger.next_batch()
+
+    assert [event["id"] for event in forwarded_events(trigger)][2:] == ["alert://priv:example:00000:3"]
+    assert trigger.cursor.offset > checkpoint
+    assert trigger._incomplete_window_retries == 0
+
+
+def test_next_batch_moves_on_after_the_incomplete_window_retries(trigger, mock_api):
+    mock_api.post(GRAPHQL_URL, empty_page_responses() * (MAX_INCOMPLETE_WINDOW_RETRIES + 1))
+    checkpoint = trigger.cursor.offset
+
+    for _ in range(MAX_INCOMPLETE_WINDOW_RETRIES):
+        trigger.next_batch()
+        assert trigger.cursor.offset == checkpoint
+    trigger.next_batch()
+
+    assert trigger.cursor.offset > checkpoint
+    assert trigger._incomplete_window_retries == 0
+    assert [call.kwargs["message"] for call in trigger.log.call_args_list] == [
+        "Sophos returned fewer Sophos Fusion detections than announced: some detections may be missing"
+    ]
+    # forwarded once, despite the retries
+    assert len(forwarded_events(trigger)) == 2
 
 
 def test_next_batch_graphql_errors_keep_the_checkpoint(trigger, mock_api):
