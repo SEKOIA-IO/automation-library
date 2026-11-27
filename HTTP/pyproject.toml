@@ -1,6 +1,6 @@
 [project]
 name = "automation-module-http"
-version = "1.122.0"
+version = "1.122.1"
 description = ""
 authors = []
 requires-python = ">=3.14,<4"
@@ -39,7 +39,7 @@ select = ["A", "ARG", "E", "F", "I", "N", "RUF", "UP", "W"]
 python_version = "3.14"
 install_types = true
 non_interactive = true
-#ignore_missing_imports = true
+ignore_missing_imports = true
 show_column_numbers = true
 show_error_context = false
 exclude = ["tests/"]
