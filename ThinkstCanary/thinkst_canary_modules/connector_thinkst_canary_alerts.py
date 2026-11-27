@@ -1,5 +1,6 @@
+import hashlib
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from typing import Generator
 from urllib.parse import urljoin
@@ -26,6 +27,15 @@ class ThinksCanaryAlertsConnectorConfiguration(DefaultConnectorConfiguration):
 
 logger = structlog.getLogger()
 
+# Timeout, in seconds, of every call to the Thinkst Canary API
+API_TIMEOUT_SECONDS = 60
+
+# Without a saved cursor, collect only the incidents created during this period instead of the whole history
+FIRST_RUN_LOOKBACK = timedelta(days=1)
+
+# Number of forwarded incidents remembered, so an update without new events does not forward them again
+MAX_FORWARDED_INCIDENTS = 10_000
+
 
 class ThinkstCanaryAlertsConnector(Connector):
     module: ThinkstCanaryModule
@@ -36,6 +46,10 @@ class ThinkstCanaryAlertsConnector(Connector):
 
         self.context = PersistentJSON("context.json", self._data_path)
         self.from_id = self.most_recent_id_seen
+
+        # fingerprint of the events last forwarded for each incident, from the oldest to the most recent
+        with self.context as cache:
+            self.forwarded_incidents: dict[str, str] = dict(cache.get("forwarded_incidents", {}))
 
     @cached_property
     def client(self):
@@ -55,7 +69,7 @@ class ThinkstCanaryAlertsConnector(Connector):
         url = urljoin(self.client.base_url, "/api/v1/incident/acknowledge")
         params = {"incident": incident_id}
 
-        response = self.client.post(url=url, params=params)
+        response = self.client.post(url=url, params=params, timeout=API_TIMEOUT_SECONDS)
         if response.ok:
             self.log(level="info", message=f"successfully acknowledged {incident_id}")
 
@@ -81,13 +95,15 @@ class ThinkstCanaryAlertsConnector(Connector):
 
     def fetch_pages(self, from_id: int | None) -> Generator[dict, None, None]:
         # Iterate through pages
-        url = urljoin(self.client.base_url, "/api/v1/incidents/unacknowledged")
-        params = (
-            {"limit": self.configuration.chunk_size, "incidents_since": from_id}
-            if from_id
-            else {"limit": self.configuration.chunk_size}
-        )
-        response = self.client.get(url=url, params=params)
+        # all incidents, acknowledged or not, so an incident acknowledged before being collected is not missed
+        url = urljoin(self.client.base_url, "/api/v1/incidents/all")
+        params: dict[str, int | str]
+        if from_id:
+            params = {"limit": self.configuration.chunk_size, "incidents_since": from_id}
+        else:
+            newer_than = datetime.now(timezone.utc) - FIRST_RUN_LOOKBACK
+            params = {"limit": self.configuration.chunk_size, "newer_than": newer_than.strftime("%Y-%m-%d-%H:%M:%S")}
+        response = self.client.get(url=url, params=params, timeout=API_TIMEOUT_SECONDS)
 
         while self.running:
             if self._handle_response_error(response):
@@ -106,7 +122,7 @@ class ThinkstCanaryAlertsConnector(Connector):
             if not cursor:
                 return
 
-            response = self.client.get(url, params={"cursor": cursor})
+            response = self.client.get(url, params={"cursor": cursor}, timeout=API_TIMEOUT_SECONDS)
 
     @staticmethod
     def extract_events(page: dict) -> list[dict]:
@@ -134,8 +150,8 @@ class ThinkstCanaryAlertsConnector(Connector):
             events = description.pop("events", [])
 
             # remove events_count and events_list from the description
-            description.pop("events_count")
-            description.pop("events_list")
+            description.pop("events_count", None)
+            description.pop("events_list", None)
 
             for event in events:
                 record = {"incident_id": incident_id, "event_type": "event"}
@@ -145,6 +161,18 @@ class ThinkstCanaryAlertsConnector(Connector):
 
         return records
 
+    @staticmethod
+    def events_fingerprint(incident: dict) -> str:
+        events = incident.get("description", {}).get("events", [])
+        return hashlib.blake2b(orjson.dumps(events, option=orjson.OPT_SORT_KEYS), digest_size=16).hexdigest()
+
+    def remember_forwarded_incident(self, incident_id: str, fingerprint: str) -> None:
+        # move the incident to the most recent end, then forget the oldest incidents beyond the limit
+        self.forwarded_incidents.pop(incident_id, None)
+        self.forwarded_incidents[incident_id] = fingerprint
+        while len(self.forwarded_incidents) > MAX_FORWARDED_INCIDENTS:
+            del self.forwarded_incidents[next(iter(self.forwarded_incidents))]
+
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_id_seen = self.from_id
         most_recent_timestamp_seen = None  # for the event lag calculation
@@ -152,20 +180,51 @@ class ThinkstCanaryAlertsConnector(Connector):
 
         try:
             for page in self.fetch_pages(most_recent_id_seen):
-                events = self.extract_events(page)
-
                 last_event_id = page["max_updated_id"]
-                if most_recent_id_seen is None or last_event_id > most_recent_id_seen:
-                    most_recent_id_seen = last_event_id
 
-                if self.configuration.acknowledge:
-                    incidents_ids = [event["incident_id"] for event in events if event["event_type"] == "incident"]
-                    for incident_id in incidents_ids:
-                        self.acknowledge_incident(incident_id=incident_id)
+                # skip the incidents already forwarded with the same events:
+                # an update without new events, such as an acknowledgement, must not forward them again
+                fingerprints = {incident["id"]: self.events_fingerprint(incident) for incident in page["incidents"]}
+                page["incidents"] = [
+                    incident
+                    for incident in page["incidents"]
+                    if self.forwarded_incidents.get(incident["id"]) != fingerprints[incident["id"]]
+                ]
+                incidents_to_acknowledge = [
+                    incident["id"]
+                    for incident in page["incidents"]
+                    if str(incident.get("description", {}).get("acknowledged")) != "True"
+                ]
+
+                events = self.extract_events(page)
 
                 if len(events) > 0:
                     most_recent_timestamp_seen = dateutil.parser.parse(page["updated_std"])
                     yield events
+
+                # move the cursor and remember the incidents only once the events of the page were forwarded
+                if most_recent_id_seen is None or last_event_id > most_recent_id_seen:
+                    most_recent_id_seen = last_event_id
+
+                for incident in page["incidents"]:
+                    self.remember_forwarded_incident(incident["id"], fingerprints[incident["id"]])
+
+                if self.configuration.acknowledge:
+                    for position, incident_id in enumerate(incidents_to_acknowledge):
+                        try:
+                            self.acknowledge_incident(incident_id=incident_id)
+                        except requests.exceptions.RequestException as error:
+                            # HTTP errors are logged per incident and do not raise. A network error means the API is
+                            # unreachable (connection errors were already retried): stop instead of waiting for the
+                            # timeout once per remaining incident before collecting the next page.
+                            self.log_exception(
+                                error,
+                                message=(
+                                    f"Failed to acknowledge incidents: {len(incidents_to_acknowledge) - position} of "
+                                    f"{len(incidents_to_acknowledge)} incidents of the page were left unacknowledged"
+                                ),
+                            )
+                            break
 
         finally:
             if self.from_id is None or most_recent_id_seen > self.from_id:
@@ -173,6 +232,7 @@ class ThinkstCanaryAlertsConnector(Connector):
 
                 with self.context as cache:
                     cache["most_recent_id_seen"] = most_recent_id_seen
+                    cache["forwarded_incidents"] = self.forwarded_incidents
 
         if most_recent_timestamp_seen:
             # Update the current lag only if the most_recent_timestamp_seen was defined
