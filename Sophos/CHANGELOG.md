@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Query IoC from data lake: check the Sophos Fusion markers of the tenant at startup and once a day, and log an error when the tenant is upgraded, since the XDR Query API then returns no new IoC. When the markers are unavailable, warn once a day after 30 days without IoC
 - Raise the minimum supported Python version to `3.14`
 - Migrate project dependency management from Poetry to uv (`pyproject.toml` PEP 621 + `uv.lock`), with `mise` tasks and `ruff` instead of `black`, `isort` and `autoflake`
+- Upgrade `sekoia-automation-sdk` to `1.28.1` and regenerate `uv.lock` with the latest versions of all dependencies
 - Move the actions to `sophos_module/actions/` and the triggers to `sophos_module/triggers/`, and lay out `tests/` like `sophos_module/` (one `test_<file>.py` per module file)
 - Query IoC from data lake: log the details of failed queries (HTTP status and error payload of the query post, error fields of a failed execution), with a hint about the `Service Principal Forensics` role on `403`
 
