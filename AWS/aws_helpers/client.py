@@ -1,8 +1,12 @@
 """Aws base client wrapper with its config class."""
 
+import asyncio
+from collections.abc import Callable
+from datetime import datetime
 from functools import cached_property
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
+from aiobotocore.credentials import AioRefreshableCredentials
 from aiobotocore.session import AioCredentials, AioSession, ClientCreatorContext
 from botocore.credentials import CredentialProvider
 from pydantic import BaseModel, Field
@@ -15,6 +19,13 @@ class AwsClientConfiguration(BaseModel):
     aws_secret_access_key: str | None = Field(default=None, description="AWS secret access key")
     aws_region: str = Field(..., description="AWS region name")
     aws_session_token: str | None = Field(default=None, description="AWS session token")
+    aws_expiration: datetime | None = Field(default=None, description="Expiration of the temporary credentials")
+    credentials_refresher: Callable[[], "AwsClientConfiguration"] | None = Field(
+        default=None,
+        exclude=True,
+        repr=False,
+        description="Renews the temporary credentials. Blocking: it is called in a worker thread",
+    )
 
 
 AwsConfigurationT = TypeVar("AwsConfigurationT", bound=AwsClientConfiguration)
@@ -25,30 +36,49 @@ class _CredentialsProvider(CredentialProvider):
 
     METHOD = "_sekoia_credentials_provider"
 
-    def __init__(self, access_key: str | None, secret_key: str | None, session_token: str | None = None) -> None:
+    def __init__(self, configuration: AwsClientConfiguration) -> None:
         """
         Initialize CredentialsProvider.
 
         Args:
-            access_key: str
-            secret_key: str
-            session_token: str | None = None
+            configuration: AwsClientConfiguration
         """
-        self.access_key = access_key
-        self.secret_key = secret_key
-        self.session_token = session_token
+        self.configuration = configuration
+
+    @staticmethod
+    def _metadata(configuration: AwsClientConfiguration) -> dict[str, Any]:
+        expiration = configuration.aws_expiration
+        return {
+            "access_key": configuration.aws_access_key_id,
+            "secret_key": configuration.aws_secret_access_key,
+            "token": configuration.aws_session_token,
+            # botocore parses a string
+            "expiry_time": expiration.isoformat() if expiration else None,
+        }
 
     async def load(self) -> AioCredentials:
         """
         Load credentials.
 
+        They renew themselves when close to expiration if the configuration can refresh them.
+
         Returns:
-            ReadOnlyCredentials
+            AioCredentials
         """
+        configuration = self.configuration
+        refresher = configuration.credentials_refresher
+
+        if refresher and configuration.aws_expiration:
+
+            async def refresh() -> dict[str, Any]:
+                return self._metadata(await asyncio.to_thread(refresher))
+
+            return AioRefreshableCredentials.create_from_metadata(self._metadata(configuration), refresh, self.METHOD)
+
         return AioCredentials(
-            access_key=self.access_key,
-            secret_key=self.secret_key,
-            token=self.session_token,
+            access_key=configuration.aws_access_key_id,
+            secret_key=configuration.aws_secret_access_key,
+            token=configuration.aws_session_token,
             method=self.METHOD,
         )
 
@@ -73,11 +103,7 @@ class AwsClient(Generic[AwsConfigurationT]):
         self._configuration = configuration
 
         if self._configuration:
-            self._credentials_provider = _CredentialsProvider(
-                self._configuration.aws_access_key_id,
-                self._configuration.aws_secret_access_key,
-                self._configuration.aws_session_token,
-            )
+            self._credentials_provider = _CredentialsProvider(self._configuration)
 
     @cached_property
     def session(self) -> AioSession:
