@@ -26,6 +26,9 @@ class ThinksCanaryAlertsConnectorConfiguration(DefaultConnectorConfiguration):
 
 logger = structlog.getLogger()
 
+# Timeout, in seconds, of every call to the Thinkst Canary API
+API_TIMEOUT_SECONDS = 60
+
 
 class ThinkstCanaryAlertsConnector(Connector):
     module: ThinkstCanaryModule
@@ -55,7 +58,7 @@ class ThinkstCanaryAlertsConnector(Connector):
         url = urljoin(self.client.base_url, "/api/v1/incident/acknowledge")
         params = {"incident": incident_id}
 
-        response = self.client.post(url=url, params=params)
+        response = self.client.post(url=url, params=params, timeout=API_TIMEOUT_SECONDS)
         if response.ok:
             self.log(level="info", message=f"successfully acknowledged {incident_id}")
 
@@ -87,7 +90,7 @@ class ThinkstCanaryAlertsConnector(Connector):
             if from_id
             else {"limit": self.configuration.chunk_size}
         )
-        response = self.client.get(url=url, params=params)
+        response = self.client.get(url=url, params=params, timeout=API_TIMEOUT_SECONDS)
 
         while self.running:
             if self._handle_response_error(response):
@@ -106,7 +109,7 @@ class ThinkstCanaryAlertsConnector(Connector):
             if not cursor:
                 return
 
-            response = self.client.get(url, params={"cursor": cursor})
+            response = self.client.get(url, params={"cursor": cursor}, timeout=API_TIMEOUT_SECONDS)
 
     @staticmethod
     def extract_events(page: dict) -> list[dict]:
@@ -134,8 +137,8 @@ class ThinkstCanaryAlertsConnector(Connector):
             events = description.pop("events", [])
 
             # remove events_count and events_list from the description
-            description.pop("events_count")
-            description.pop("events_list")
+            description.pop("events_count", None)
+            description.pop("events_list", None)
 
             for event in events:
                 record = {"incident_id": incident_id, "event_type": "event"}
@@ -155,17 +158,32 @@ class ThinkstCanaryAlertsConnector(Connector):
                 events = self.extract_events(page)
 
                 last_event_id = page["max_updated_id"]
-                if most_recent_id_seen is None or last_event_id > most_recent_id_seen:
-                    most_recent_id_seen = last_event_id
 
                 if self.configuration.acknowledge:
                     incidents_ids = [event["incident_id"] for event in events if event["event_type"] == "incident"]
-                    for incident_id in incidents_ids:
-                        self.acknowledge_incident(incident_id=incident_id)
+                    for position, incident_id in enumerate(incidents_ids):
+                        try:
+                            self.acknowledge_incident(incident_id=incident_id)
+                        except requests.exceptions.RequestException as error:
+                            # HTTP errors are logged per incident and do not raise. A network error means the API is
+                            # unreachable (connection errors were already retried): stop instead of waiting for the
+                            # timeout once per remaining incident, and forward the events anyway.
+                            self.log_exception(
+                                error,
+                                message=(
+                                    f"Failed to acknowledge incidents: {len(incidents_ids) - position} of "
+                                    f"{len(incidents_ids)} incidents of the page were left unacknowledged"
+                                ),
+                            )
+                            break
 
                 if len(events) > 0:
                     most_recent_timestamp_seen = dateutil.parser.parse(page["updated_std"])
                     yield events
+
+                # move the cursor only once the events of the page were forwarded
+                if most_recent_id_seen is None or last_event_id > most_recent_id_seen:
+                    most_recent_id_seen = last_event_id
 
         finally:
             if self.from_id is None or most_recent_id_seen > self.from_id:
