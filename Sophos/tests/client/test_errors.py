@@ -9,6 +9,7 @@ from sophos_module.client.errors import (
     format_http_error,
     identify_api,
     is_configuration_error,
+    support_ids,
 )
 
 XDR_URL = "https://api-eu01.central.sophos.com/xdr-query/v1/queries/runs"
@@ -97,9 +98,9 @@ def test_describe_error(response, expected):
             id="403-endpoint",
         ),
         pytest.param(403, "https://id.sophos.com/api/v2/oauth2/token", ". Check the API credential", id="403-auth"),
-        pytest.param(429, XDR_URL, ". The Sophos rate limit is reached: retried on the next cycle", id="429"),
-        pytest.param(500, XDR_URL, ". Error on the Sophos side: retried on the next cycle", id="500"),
-        pytest.param(503, None, ". Error on the Sophos side: retried on the next cycle", id="503"),
+        pytest.param(429, XDR_URL, ". The Sophos rate limit is reached, try again later", id="429"),
+        pytest.param(500, XDR_URL, ". Error on the Sophos side, try again later", id="500"),
+        pytest.param(503, None, ". Error on the Sophos side, try again later", id="503"),
         pytest.param(400, XDR_URL, "", id="400"),
         pytest.param(404, XDR_URL, "", id="404"),
     ],
@@ -124,3 +125,21 @@ def test_format_http_error():
         ". Check that the API credential has the 'Service Principal Forensics' role"
         " and that the XDR licence of the tenant is valid"
     )
+
+
+@pytest.mark.parametrize(
+    "response, expected",
+    [
+        pytest.param(
+            make_response(403, {"error": "forbidden", "requestId": "r-1", "correlationId": "c-1"}),
+            " (requestId=r-1, correlationId=c-1)",
+            id="both-ids",
+        ),
+        pytest.param(make_response(403, {"requestId": "r-1"}), " (requestId=r-1)", id="request-id"),
+        pytest.param(make_response(403, {"error": "forbidden"}), "", id="no-ids"),
+        pytest.param(make_response(502, text="<html></html>"), "", id="not-json"),
+        pytest.param(make_response(500, ["unexpected"]), "", id="json-list"),
+    ],
+)
+def test_support_ids(response, expected):
+    assert support_ids(response) == expected

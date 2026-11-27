@@ -128,7 +128,7 @@ def test_run_cycle(connector, no_sleep, frequency, expected_sleeps):
     [
         pytest.param(
             http_error(503),
-            "Failed to collect: status 503 - Reason. Error on the Sophos side: retried on the next cycle",
+            "Failed to collect: status 503 - Reason. Error on the Sophos side, try again later",
             id="http-error-with-response",
         ),
         pytest.param(

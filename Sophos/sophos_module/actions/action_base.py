@@ -9,10 +9,7 @@ from sekoia_automation.action import Action
 from sophos_module.base import SophosModule
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
-from sophos_module.client.errors import format_http_error
-from sophos_module.logging import get_logger
-
-logger = get_logger()
+from sophos_module.client.errors import format_http_error, support_ids
 
 
 class SophosEDRAction(Action, ABC):
@@ -56,14 +53,10 @@ class SophosEDRAction(Action, ABC):
         response = func(url=url, json=data)
 
         if not response.ok:
-            # stable message for the user, with what to check (e.g. the role of the API credential)
-            self.log(message=format_http_error("The Sophos API call failed", response), level="error")
-            logger.error(
-                "Sophos API call failed",
-                method=method.upper(),
-                url=url,
-                status_code=response.status_code,
-                response=response.text[:1000],
+            # one readable line in the action logs: what failed, what to check, and the ids for the Sophos support
+            self.log(
+                message=format_http_error("The Sophos API call failed", response) + support_ids(response),
+                level="error",
             )
             response.raise_for_status()
 

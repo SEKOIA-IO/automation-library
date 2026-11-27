@@ -1,4 +1,5 @@
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 import requests
@@ -35,6 +36,7 @@ def test_region_base_url(action, mock_api):
 
 @pytest.mark.parametrize("status_code", [400, 404, 500])
 def test_call_endpoint_error(action, mock_api, status_code):
+    action.log = Mock()
     mock_api.post(
         f"{API_HOST}/endpoint/v1/settings",
         status_code=status_code,
@@ -44,6 +46,14 @@ def test_call_endpoint_error(action, mock_api, status_code):
     with pytest.raises(requests.HTTPError) as error:
         action.call_endpoint("post", "endpoint/v1/settings")
     assert error.value.response.status_code == status_code
+
+    # one readable line in the action logs, with the ids for the Sophos support
+    action.log.assert_called_once_with(
+        message=f"The Sophos API call failed: status {status_code} - badRequest: Invalid request"
+        f"{'. Error on the Sophos side, try again later' if status_code >= 500 else ''}"
+        " (correlationId=c)",
+        level="error",
+    )
 
 
 @pytest.mark.parametrize("method", ["delete", "put"])

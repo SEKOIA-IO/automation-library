@@ -55,14 +55,26 @@ def error_hint(status_code: int, url: str | None) -> str:
             hint += " and that the XDR licence of the tenant is valid"
         return hint
     if status_code == 429:
-        return ". The Sophos rate limit is reached: retried on the next cycle"
+        return ". The Sophos rate limit is reached, try again later"
     if status_code >= 500:
-        return ". Error on the Sophos side: retried on the next cycle"
+        return ". Error on the Sophos side, try again later"
     return ""
 
 
 def is_configuration_error(status_code: int | None) -> bool:
     return status_code in CONFIGURATION_ERROR_STATUSES
+
+
+def support_ids(response: requests.Response) -> str:
+    """Request and correlation ids of a Sophos error, for a one-off message (an action), e.g. ' (requestId=...)'."""
+    try:
+        payload: Any = response.json()
+    except ValueError:
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    ids = [f"{key}={payload[key]}" for key in ("requestId", "correlationId") if payload.get(key)]
+    return f" ({', '.join(ids)})" if ids else ""
 
 
 def format_http_error(action: str, response: requests.Response) -> str:

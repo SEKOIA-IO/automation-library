@@ -234,7 +234,7 @@ def test_api_failure_message_is_stable(trigger, mock_api):
         == second
         == (
             "Failed to fetch the events from the Sophos SIEM API: status 503 - Service Unavailable"
-            ". Error on the Sophos side: retried on the next cycle"
+            ". Error on the Sophos side, try again later"
         )
     )
 
