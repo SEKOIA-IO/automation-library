@@ -161,12 +161,21 @@ class ThinkstCanaryAlertsConnector(Connector):
 
                 if self.configuration.acknowledge:
                     incidents_ids = [event["incident_id"] for event in events if event["event_type"] == "incident"]
-                    try:
-                        for incident_id in incidents_ids:
+                    for position, incident_id in enumerate(incidents_ids):
+                        try:
                             self.acknowledge_incident(incident_id=incident_id)
-                    except requests.exceptions.RequestException as error:
-                        # a failed acknowledgement must not prevent the events from being forwarded
-                        self.log_exception(error, message="Failed to acknowledge incidents")
+                        except requests.exceptions.RequestException as error:
+                            # HTTP errors are logged per incident and do not raise. A network error means the API is
+                            # unreachable (connection errors were already retried): stop instead of waiting for the
+                            # timeout once per remaining incident, and forward the events anyway.
+                            self.log_exception(
+                                error,
+                                message=(
+                                    f"Failed to acknowledge incidents: {len(incidents_ids) - position} of "
+                                    f"{len(incidents_ids)} incidents of the page were left unacknowledged"
+                                ),
+                            )
+                            break
 
                 if len(events) > 0:
                     most_recent_timestamp_seen = dateutil.parser.parse(page["updated_std"])
