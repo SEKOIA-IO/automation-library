@@ -5,9 +5,9 @@ import requests
 from requests.adapters import HTTPAdapter, Retry
 from requests.auth import AuthBase
 
-from sophos_module.logging import get_logger
 from sophos_module.client.exceptions import SophosApiAuthenticationError
 from sophos_module.client.helpers import retry
+from sophos_module.logging import get_logger
 
 logger = get_logger()
 

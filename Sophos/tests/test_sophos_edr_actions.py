@@ -1,5 +1,4 @@
 import pytest
-import requests.exceptions
 import requests_mock
 
 from sophos_module.action_sophos_edr_deisolate import ActionSophosEDRDeIsolateEndpoint

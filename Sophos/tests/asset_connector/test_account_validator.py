@@ -2,13 +2,13 @@
 Unit tests for SophosAccountValidator (sophos_module/account_validator.py).
 """
 
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
 
-from sophos_module.base import SophosModule
 from sophos_module.account_validator import SophosAccountValidator
+from sophos_module.base import SophosModule
 from sophos_module.client.exceptions import SophosApiAuthenticationError
 
 AUTH_URL = "https://id.sophos.com/api/v2/oauth2/token"

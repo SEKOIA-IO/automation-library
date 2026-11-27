@@ -1,6 +1,7 @@
 from abc import ABC
+from collections.abc import Callable
 from functools import cached_property
-from typing import Any, Callable
+from typing import Any
 from urllib.parse import urljoin
 
 from sekoia_automation.action import Action

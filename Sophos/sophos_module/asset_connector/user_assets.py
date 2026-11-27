@@ -1,5 +1,5 @@
 from collections.abc import Generator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import cached_property
 from typing import Any
 
@@ -89,7 +89,7 @@ class SophosUserAssetConnector(AssetConnector):
             return None
         try:
             return isoparse(ts).timestamp()
-        except (ValueError, AttributeError):
+        except ValueError, AttributeError:
             return None
 
     @staticmethod
@@ -227,7 +227,7 @@ class SophosUserAssetConnector(AssetConnector):
         # Event time: prefer updatedAt, fallback to createdAt, then now
         updated_ts = self._parse_ts(user.updatedAt)
         created_ts = self._parse_ts(user.createdAt)
-        event_time = updated_ts or created_ts or datetime.now(tz=timezone.utc).timestamp()
+        event_time = updated_ts or created_ts or datetime.now(tz=UTC).timestamp()
 
         return UserOCSFModel(
             activity_id=self.ACTIVITY_ID,
@@ -245,7 +245,7 @@ class SophosUserAssetConnector(AssetConnector):
             user=ocsf_user,
         )
 
-    def _fetch_all_pages(self) -> Generator[SophosUser, None, None]:
+    def _fetch_all_pages(self) -> Generator[SophosUser]:
         """Yield every user returned by the API across all pages."""
         page = 1
 
@@ -268,7 +268,7 @@ class SophosUserAssetConnector(AssetConnector):
 
             page += 1
 
-    def _iter_users(self) -> Generator[SophosUser, None, None]:
+    def _iter_users(self) -> Generator[SophosUser]:
         """Fetch all pages and yield only users that are new or have changed since the last run.
 
         Every seen user (new or unchanged) is recorded in ``_current_run`` so that
@@ -304,7 +304,7 @@ class SophosUserAssetConnector(AssetConnector):
         with self.context as cache:
             cache.pop(_CACHE_KEY, None)
         self._current_run = {}
-        self.log("Checkpoint reset – full user re-fetch will occur on next cycle", level="info")
+        self.log("Checkpoint reset - full user re-fetch will occur on next cycle", level="info")
 
     def update_checkpoint(self) -> None:
         """Persist the full id→timestamp snapshot from the current run."""
@@ -312,13 +312,13 @@ class SophosUserAssetConnector(AssetConnector):
             with self.context as cache:
                 cache[_CACHE_KEY] = self._current_run
             self.log(
-                f"Checkpoint updated – {len(self._current_run)} users cached",
+                f"Checkpoint updated - {len(self._current_run)} users cached",
                 level="debug",
             )
         else:
-            self.log("No checkpoint update needed – no users seen this run", level="debug")
+            self.log("No checkpoint update needed - no users seen this run", level="debug")
 
-    def get_assets(self) -> Generator[UserOCSFModel, None, None]:
+    def get_assets(self) -> Generator[UserOCSFModel]:
         """Main entry point: yield new/changed Sophos directory users as OCSF models."""
         self.log("Starting Sophos user asset collection", level="info")
         total = 0
@@ -333,7 +333,7 @@ class SophosUserAssetConnector(AssetConnector):
                 else:
                     skipped += 1
         except Exception as exc:
-            self.log(f"Asset collection failed – collected={total}, skipped={skipped}, error={exc}", level="error")
+            self.log(f"Asset collection failed - collected={total}, skipped={skipped}, error={exc}", level="error")
             raise
 
-        self.log(f"Sophos user asset collection complete – total={total}, skipped={skipped}", level="info")
+        self.log(f"Sophos user asset collection complete - total={total}, skipped={skipped}", level="info")

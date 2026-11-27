@@ -1,7 +1,7 @@
 import hashlib
 import json
 from collections.abc import Generator
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from typing import Any
 
@@ -20,8 +20,8 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeId,
     OSTypeStr,
 )
-from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.asset_connector.models.ocsf.group import Group
+from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.storage import PersistentJSON
 
 from sophos_module.asset_connector.model import (
@@ -69,7 +69,7 @@ class SophosDeviceAssetConnector(AssetConnector):
             return cache.get("last_seen_cursor") or None
 
     @staticmethod
-    def _compute_fingerprint(endpoint: "SophosEndpoint") -> str:
+    def _compute_fingerprint(endpoint: SophosEndpoint) -> str:
         """
         Compute a SHA-256 fingerprint of inventory-significant fields.
         Fields that change without a real inventory change (lastSeenAt, registeredAt)
@@ -106,7 +106,7 @@ class SophosDeviceAssetConnector(AssetConnector):
         if not isinstance(raw, dict):
             raw = {}
 
-        cutoff: datetime = datetime.now(tz=timezone.utc) - timedelta(days=self.CACHE_MAX_AGE_DAYS)
+        cutoff: datetime = datetime.now(tz=UTC) - timedelta(days=self.CACHE_MAX_AGE_DAYS)
 
         pruned: dict[str, dict[str, str]] = {}
         for device_id, entry in raw.items():
@@ -121,7 +121,7 @@ class SophosDeviceAssetConnector(AssetConnector):
 
         self._sent_ids = pruned
         self.log(
-            f"Dedup cache loaded – entries={len(self._sent_ids)} " f"(evicted={len(raw) - len(self._sent_ids)})",
+            f"Dedup cache loaded - entries={len(self._sent_ids)} (evicted={len(raw) - len(self._sent_ids)})",
             level="debug",
         )
 
@@ -141,7 +141,7 @@ class SophosDeviceAssetConnector(AssetConnector):
             )
         with self.context as cache:
             cache["sent_ids"] = self._sent_ids
-        self.log(f"Dedup cache saved – entries={len(self._sent_ids)}", level="debug")
+        self.log(f"Dedup cache saved - entries={len(self._sent_ids)}", level="debug")
 
     @cached_property
     def client(self) -> SophosApiClient:
@@ -167,7 +167,7 @@ class SophosDeviceAssetConnector(AssetConnector):
             return None
         try:
             return isoparse(ts).timestamp()
-        except (ValueError, AttributeError):
+        except ValueError, AttributeError:
             return None
 
     @staticmethod
@@ -346,7 +346,7 @@ class SophosDeviceAssetConnector(AssetConnector):
         registered_ts = self._parse_ts(endpoint.registeredAt)
 
         # Event time: prefer lastSeenAt, fallback to registeredAt, then now
-        event_time = last_seen_ts or registered_ts or datetime.now(tz=timezone.utc).timestamp()
+        event_time = last_seen_ts or registered_ts or datetime.now(tz=UTC).timestamp()
 
         device = Device(
             type_id=type_id,
@@ -386,7 +386,7 @@ class SophosDeviceAssetConnector(AssetConnector):
             enrichments=enrichments,
         )
 
-    def _iter_endpoints(self) -> Generator[SophosEndpoint, None, None]:
+    def _iter_endpoints(self) -> Generator[SophosEndpoint]:
         params: dict[str, Any] = {
             "pageSize": self.PAGE_SIZE,
             "view": "full",
@@ -439,7 +439,7 @@ class SophosDeviceAssetConnector(AssetConnector):
             cache.pop("sent_ids", None)
         self._latest_time = None
         self._sent_ids = {}
-        self.log("Checkpoint reset – full device re-fetch will occur on next cycle", level="info")
+        self.log("Checkpoint reset - full device re-fetch will occur on next cycle", level="info")
 
     def update_checkpoint(self) -> None:
         if self._latest_time:
@@ -449,7 +449,7 @@ class SophosDeviceAssetConnector(AssetConnector):
         else:
             self.log("No checkpoint update needed - No new timestamp available", level="debug")
 
-    def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
+    def get_assets(self) -> Generator[DeviceOCSFModel]:
         """Main entry point: yield all Sophos device assets as OCSF models."""
         self.log("Starting Sophos device asset collection", level="info")
         self._load_sent_ids()
@@ -463,7 +463,7 @@ class SophosDeviceAssetConnector(AssetConnector):
                     current_fp = self._compute_fingerprint(endpoint) if endpoint.id else None
                 except TypeError as exc:
                     self.log(
-                        f"Skipping endpoint '{endpoint.id}': fingerprint serialization failed – {exc}",
+                        f"Skipping endpoint '{endpoint.id}': fingerprint serialization failed - {exc}",
                         level="warning",
                     )
                     skipped += 1
@@ -480,14 +480,14 @@ class SophosDeviceAssetConnector(AssetConnector):
                     if endpoint.id and current_fp is not None:
                         self._sent_ids[endpoint.id] = {
                             "fingerprint": current_fp,
-                            "cached_at": datetime.now(tz=timezone.utc).isoformat(),
+                            "cached_at": datetime.now(tz=UTC).isoformat(),
                         }
                     yield mapped
                 else:
                     skipped += 1
         except Exception as exc:
             self.log(
-                f"Asset collection failed – collected={total}, skipped={skipped}, "
+                f"Asset collection failed - collected={total}, skipped={skipped}, "
                 f"deduplicated={deduplicated}, error={exc}",
                 level="error",
             )
@@ -496,7 +496,6 @@ class SophosDeviceAssetConnector(AssetConnector):
             self._save_sent_ids()
 
         self.log(
-            f"Sophos device asset collection complete – "
-            f"total={total}, skipped={skipped}, deduplicated={deduplicated}",
+            f"Sophos device asset collection complete - total={total}, skipped={skipped}, deduplicated={deduplicated}",
             level="info",
         )

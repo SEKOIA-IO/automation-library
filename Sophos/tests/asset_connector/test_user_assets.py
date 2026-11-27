@@ -6,22 +6,22 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests_mock as req_mock
-
-from sophos_module.asset_connector.model import (
-    SophosUser,
-    SophosUserGroup,
-    SophosUserGroups,
-    SophosUserSource,
-    SophosTenant,
-)
-from sophos_module.asset_connector.user_assets import SophosUserAssetConnector, _CACHE_KEY
-from sophos_module.base import SophosModule
 from sekoia_automation.asset_connector.models.ocsf.user import (
     AccountTypeId,
     AccountTypeStr,
     UserTypeId,
     UserTypeStr,
 )
+
+from sophos_module.asset_connector.model import (
+    SophosTenant,
+    SophosUser,
+    SophosUserGroup,
+    SophosUserGroups,
+    SophosUserSource,
+)
+from sophos_module.asset_connector.user_assets import _CACHE_KEY, SophosUserAssetConnector
+from sophos_module.base import SophosModule
 
 NAMED_USER = SophosUser(
     id="aaaaaaaa-0000-0000-0000-000000000001",
@@ -802,9 +802,9 @@ class TestGetMappedFields:
     def test_values_reference_user_namespace_or_time(self, connector):
         """All OCSF paths must point into the user object or top-level time field."""
         for v in connector.get_mapped_fields().values():
-            assert (
-                v.startswith("user.") or v == "time"
-            ), f"Expected OCSF path to start with 'user.' or be 'time', got {v!r}"
+            assert v.startswith("user.") or v == "time", (
+                f"Expected OCSF path to start with 'user.' or be 'time', got {v!r}"
+            )
 
 
 class TestResetCheckpoint:

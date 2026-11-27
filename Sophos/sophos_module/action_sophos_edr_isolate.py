@@ -31,7 +31,7 @@ class ActionSophosEDRIsolateEndpoint(SophosEDRAction):
         current_status = self.get_endpoint_isolation_status(endpoint_id)
         if current_status["enabled"] == enabled:
             result_label = "enabled" if enabled else "disabled"
-            current_status["message"] = "Already %s" % result_label
+            current_status["message"] = f"Already {result_label}"
             return current_status
 
         try:

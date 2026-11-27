@@ -1,8 +1,8 @@
 import time
 from abc import abstractmethod
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from typing import Any, Optional
+from typing import Any
 
 import orjson
 from requests.exceptions import HTTPError
@@ -40,7 +40,7 @@ class SophosXDRQueryTrigger(SophosConnector):
 
     configuration: SophosXDRQueryConfiguration
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self.cursor = CheckpointDatetime(
@@ -56,7 +56,7 @@ class SophosXDRQueryTrigger(SophosConnector):
     @property
     def from_date(self) -> datetime:
         # Enforce 30-day limit on every request
-        too_old: datetime = datetime.now(timezone.utc) - self.cursor._ignore_older_than
+        too_old: datetime = datetime.now(UTC) - self.cursor._ignore_older_than
         if self._from_date < too_old:
             return too_old
 
@@ -95,7 +95,7 @@ class SophosXDRQueryTrigger(SophosConnector):
 
         The markers come from the GraphQL tenant of Sophos Fusion. Best effort: any failure gives None (unknown).
         """
-        self._last_fusion_check = datetime.now(timezone.utc)
+        self._last_fusion_check = datetime.now(UTC)
         try:
             tenant_id = self.authentication.get_credentials().tenancy_id
             tenant = self.client.graphql(TENANT_MARKERS, {"id": tenant_id}).get("tenant") or {}
@@ -119,9 +119,7 @@ class SophosXDRQueryTrigger(SophosConnector):
 
     def check_fusion_upgrade_daily(self) -> None:
         """Check the Sophos Fusion markers at startup, then once a day: a tenant can be upgraded at any time."""
-        if self._last_fusion_check is None or datetime.now(timezone.utc) - self._last_fusion_check >= timedelta(
-            days=1
-        ):
+        if self._last_fusion_check is None or datetime.now(UTC) - self._last_fusion_check >= timedelta(days=1):
             self.check_fusion_upgrade()
 
     def warn_if_stalled(self) -> None:
@@ -135,7 +133,7 @@ class SophosXDRQueryTrigger(SophosConnector):
         if self.fusion_upgraded is not None:
             return
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         too_old = now - self.cursor._ignore_older_than
         if self._from_date > too_old:
             return
@@ -262,7 +260,7 @@ class SophosXDRQueryTrigger(SophosConnector):
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
 
     def getting_results(self, pagination: int) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         result, query_id = self.post_query(self.query)
 
@@ -311,7 +309,7 @@ class SophosXDRQueryTrigger(SophosConnector):
 
 
 class SophosXDRIOCQuery(SophosXDRQueryTrigger):
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         super().__init__(*args, **kwargs)
 
     @property

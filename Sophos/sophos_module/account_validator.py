@@ -1,6 +1,6 @@
-import requests
 from functools import cached_property
 
+import requests
 from sekoia_automation.account_validator import AccountValidator
 
 from sophos_module.client.auth import SophosApiAuthentication
@@ -38,7 +38,7 @@ class SophosAccountValidator(AccountValidator):
                 return False
 
             self.log(
-                f"Credentials validated – tenancy_type={credentials.tenancy_type}, "
+                f"Credentials validated - tenancy_type={credentials.tenancy_type}, "
                 f"tenancy_id={credentials.tenancy_id}",
                 level="info",
             )

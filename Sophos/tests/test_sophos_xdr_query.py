@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
@@ -58,7 +58,7 @@ def whoami_message():
 
 
 @pytest.fixture
-def queryRun_message():
+def query_run_message():
     return {
         "id": "7d00cf17-a987-4d07-ac88-93d4df89fa73",
         "createdAt": "2023-06-30T08:14:55.628Z",
@@ -78,7 +78,7 @@ def queryRun_message():
 
 
 @pytest.fixture
-def queryRunFailed_message():
+def query_run_failed_message():
     return {
         "error": "ValidationException",
         "correlationId": "3f2aa7bc-bbb1-4f93-8d56-acad5f6ad3dc",
@@ -90,7 +90,7 @@ def queryRunFailed_message():
 
 
 @pytest.fixture
-def queryStatus_message():
+def query_status_message():
     return {
         "id": "7d00cf17-a987-4d07-ac88-93d4df89fa73",
         "createdAt": "2023-06-30T08:14:55.628Z",
@@ -111,7 +111,7 @@ def queryStatus_message():
 
 
 @pytest.fixture
-def queryResults_message():
+def query_results_message():
     return {
         "items": [
             {
@@ -170,7 +170,7 @@ def queryResults_message():
 
 
 @pytest.fixture
-def queryResults_message1():
+def query_results_message1():
     return {
         "items": [
             {
@@ -222,7 +222,7 @@ def queryResults_message1():
 
 
 @pytest.fixture
-def nextqueryResults_message():
+def next_query_results_message():
     return {
         "items": [
             {
@@ -244,7 +244,7 @@ def nextqueryResults_message():
 
 
 def test_getting_results(
-    trigger, authorization_message, whoami_message, queryRun_message, queryStatus_message, queryResults_message
+    trigger, authorization_message, whoami_message, query_run_message, query_status_message, query_results_message
 ):
     host = "https://api-eu01.central.sophos.com"
     url = f"{host}/xdr-query/v1/queries/runs"
@@ -266,16 +266,16 @@ def test_getting_results(
             json=whoami_message,
         )
 
-        mock.post(url, json=queryRun_message)
-        mock.get(url_query_status, json=queryStatus_message)
-        mock.get(url_results, json=queryResults_message)
+        mock.post(url, json=query_run_message)
+        mock.get(url_query_status, json=query_status_message)
+        mock.get(url_results, json=query_results_message)
         trigger.getting_results("7")
         calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
         assert len(calls[0]) == 7
-        assert trigger.cursor.offset.date() == datetime.now(timezone.utc).date()
+        assert trigger.cursor.offset.date() == datetime.now(UTC).date()
 
 
-def test_getting_failed_results(trigger, authorization_message, whoami_message, queryRunFailed_message):
+def test_getting_failed_results(trigger, authorization_message, whoami_message, query_run_failed_message):
     host = "https://api-eu01.central.sophos.com"
     url = f"{host}/xdr-query/v1/queries/runs"
 
@@ -292,7 +292,7 @@ def test_getting_failed_results(trigger, authorization_message, whoami_message, 
             json=whoami_message,
         )
 
-        mock.post(url, json=queryRunFailed_message)
+        mock.post(url, json=query_run_failed_message)
         assert trigger.post_query("query_ioc") == ("failed", None)
 
 
@@ -300,10 +300,10 @@ def test_getting_next_results(
     trigger,
     authorization_message,
     whoami_message,
-    queryRun_message,
-    queryStatus_message,
-    queryResults_message1,
-    nextqueryResults_message,
+    query_run_message,
+    query_status_message,
+    query_results_message1,
+    next_query_results_message,
 ):
     host = "https://api-eu01.central.sophos.com"
     url = f"{host}/xdr-query/v1/queries/runs"
@@ -311,7 +311,10 @@ def test_getting_next_results(
     url_results = (
         f"{host}/xdr-query/v1/queries/runs/7d00cf17-a987-4d07-ac88-93d4df89fa73/results?maxSize=1000&pageSize=7"
     )
-    url_next_results = f"{host}/xdr-query/v1/queries/runs/7d00cf17-a987-4d07-ac88-93d4df89fa73/results?maxSize=1000&pageSize=7&pageFromKey=AAAABw=="
+    url_next_results = (
+        f"{host}/xdr-query/v1/queries/runs/7d00cf17-a987-4d07-ac88-93d4df89fa73/results"
+        "?maxSize=1000&pageSize=7&pageFromKey=AAAABw=="
+    )
 
     with requests_mock.Mocker() as mock:
         mock.post(
@@ -326,13 +329,13 @@ def test_getting_next_results(
             json=whoami_message,
         )
 
-        mock.post(url, json=queryRun_message)
-        mock.get(url_query_status, json=queryStatus_message)
-        mock.get(url_results, json=queryResults_message1)
-        mock.get(url_next_results, json=nextqueryResults_message)
+        mock.post(url, json=query_run_message)
+        mock.get(url_query_status, json=query_status_message)
+        mock.get(url_results, json=query_results_message1)
+        mock.get(url_next_results, json=next_query_results_message)
         trigger.getting_results("7")
         assert trigger.events_sum == 8
-        assert trigger.cursor.offset.date() == datetime.now(timezone.utc).date()
+        assert trigger.cursor.offset.date() == datetime.now(UTC).date()
         assert trigger.query["from"] == trigger.from_date.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -365,16 +368,16 @@ def test_post_query_without_query_id(trigger, authorization_message, whoami_mess
 
 
 def test_post_query_execution_failed_logs_details(
-    trigger, authorization_message, whoami_message, queryRun_message, queryStatus_message, monkeypatch
+    trigger, authorization_message, whoami_message, query_run_message, query_status_message, monkeypatch
 ):
     host = "https://api-eu01.central.sophos.com"
-    query_id = queryRun_message["id"]
-    failed_status = {**queryStatus_message, "result": "failed", "error": {"code": "QUERY_FAILED"}}
+    query_id = query_run_message["id"]
+    failed_status = {**query_status_message, "result": "failed", "error": {"code": "QUERY_FAILED"}}
     monkeypatch.setattr("sophos_module.trigger_sophos_xdr_query.time.sleep", lambda _: None)
 
     with requests_mock.Mocker() as mock:
         _mock_authentication(mock, trigger, authorization_message, whoami_message)
-        mock.post(f"{host}/xdr-query/v1/queries/runs", json=queryRun_message)
+        mock.post(f"{host}/xdr-query/v1/queries/runs", json=query_run_message)
         mock.get(f"{host}/xdr-query/v1/queries/runs/{query_id}", json=failed_status)
 
         assert trigger.post_query(trigger.query) == ("failed", query_id)
@@ -453,7 +456,7 @@ def test_check_fusion_upgrade_failure_is_ignored(trigger, authorization_message,
 
 
 def test_warn_if_stalled_when_markers_unknown(trigger):
-    trigger.from_date = datetime.now(timezone.utc) - timedelta(days=31)
+    trigger.from_date = datetime.now(UTC) - timedelta(days=31)
 
     trigger.warn_if_stalled()
     trigger.warn_if_stalled()
@@ -466,7 +469,7 @@ def test_warn_if_stalled_when_markers_unknown(trigger):
 @pytest.mark.parametrize("upgraded", [True, False])
 def test_warn_if_stalled_silent_when_markers_answered(trigger, upgraded):
     trigger.fusion_upgraded = upgraded
-    trigger.from_date = datetime.now(timezone.utc) - timedelta(days=31)
+    trigger.from_date = datetime.now(UTC) - timedelta(days=31)
 
     trigger.warn_if_stalled()
 
@@ -474,7 +477,7 @@ def test_warn_if_stalled_silent_when_markers_answered(trigger, upgraded):
 
 
 def test_warn_if_stalled_recent_checkpoint(trigger):
-    trigger.from_date = datetime.now(timezone.utc) - timedelta(days=2)
+    trigger.from_date = datetime.now(UTC) - timedelta(days=2)
 
     trigger.warn_if_stalled()
 
@@ -485,9 +488,9 @@ def test_check_fusion_upgrade_daily(trigger):
     trigger.check_fusion_upgrade = Mock()
 
     trigger.check_fusion_upgrade_daily()
-    trigger._last_fusion_check = datetime.now(timezone.utc)
+    trigger._last_fusion_check = datetime.now(UTC)
     trigger.check_fusion_upgrade_daily()
-    trigger._last_fusion_check = datetime.now(timezone.utc) - timedelta(days=1, minutes=1)
+    trigger._last_fusion_check = datetime.now(UTC) - timedelta(days=1, minutes=1)
     trigger.check_fusion_upgrade_daily()
 
     assert trigger.check_fusion_upgrade.call_count == 2

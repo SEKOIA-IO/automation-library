@@ -1,6 +1,6 @@
 import re
 from collections.abc import Iterable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 MAPPING = {
@@ -51,7 +51,7 @@ def parse_iso8601_timestamp(raw: Any) -> float | None:
         return None
 
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt.timestamp()
 
 
@@ -90,8 +90,8 @@ def extract_info(data: dict[str, Any]) -> dict[str, Any]:
 
     if data.get("type"):
         regex = None
-        for type, type_regex in REGEX_MAPS.items():
-            if (type[-1] == "*" and data["type"].startswith(type[:-1])) or (type == data["type"]):
+        for event_type, type_regex in REGEX_MAPS.items():
+            if (event_type[-1] == "*" and data["type"].startswith(event_type[:-1])) or (event_type == data["type"]):
                 regex = type_regex
 
         if regex:

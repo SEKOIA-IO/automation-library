@@ -1,7 +1,7 @@
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from typing import Any, Optional
+from typing import Any
 
 import orjson
 from requests.exceptions import HTTPError
@@ -28,7 +28,7 @@ class SophosFusionDetectionsConfiguration(DefaultConnectorConfiguration):
 
 def timestamp_to_rfc3339(value: dict[str, Any]) -> str:
     """Convert a GraphQL Timestamp ({seconds, nanos}) into an RFC 3339 date with milliseconds."""
-    dt = datetime.fromtimestamp(int(value["seconds"]), tz=timezone.utc) + timedelta(
+    dt = datetime.fromtimestamp(int(value["seconds"]), tz=UTC) + timedelta(
         microseconds=int(value.get("nanos") or 0) // 1000
     )
     return dt.isoformat(timespec="milliseconds").replace("+00:00", "Z")
@@ -55,7 +55,7 @@ def clean_detection(value: Any) -> Any:
 
 
 def format_ql_date(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 class SophosFusionDetectionsTrigger(SophosConnector):
@@ -71,7 +71,7 @@ class SophosFusionDetectionsTrigger(SophosConnector):
     overlap = timedelta(minutes=5)
     latency = timedelta(minutes=1)
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         super().__init__(*args, **kwargs)
         self.cursor = CheckpointDatetime(
             path=self.data_path, start_at=timedelta(days=1), ignore_older_than=timedelta(days=30)
@@ -173,7 +173,7 @@ class SophosFusionDetectionsTrigger(SophosConnector):
         return len(events)
 
     def next_batch(self) -> None:
-        end = datetime.now(timezone.utc) - self.latency
+        end = datetime.now(UTC) - self.latency
         start = self.cursor.offset - self.overlap
         if end <= start:
             return

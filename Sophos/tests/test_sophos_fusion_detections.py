@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
@@ -128,8 +128,8 @@ def test_clean_detection_converts_timestamps_and_drops_empty_values():
 
 
 def test_build_query(trigger):
-    start = datetime(2026, 11, 27, 10, 0, 0, tzinfo=timezone.utc)
-    end = datetime(2026, 11, 27, 10, 5, 0, tzinfo=timezone.utc)
+    start = datetime(2026, 11, 27, 10, 0, 0, tzinfo=UTC)
+    end = datetime(2026, 11, 27, 10, 5, 0, tzinfo=UTC)
     assert trigger.build_query(start, end) == (
         "from alert earliest='2026-11-27T10:00:00Z' latest='2026-11-27T10:05:00Z' | sort created_at asc"
     )
@@ -150,7 +150,7 @@ def test_next_batch_paginates_and_forwards(trigger, mock_api):
         ],
     )
 
-    before = datetime.now(timezone.utc)
+    before = datetime.now(UTC)
     trigger.next_batch()
 
     events = forwarded_events(trigger)
@@ -165,7 +165,7 @@ def test_next_batch_paginates_and_forwards(trigger, mock_api):
     assert calls[0]["variables"]["in"]["cql_query"].startswith("from alert earliest='")
 
     # the checkpoint moves to the end of the window
-    assert before - timedelta(minutes=2) < trigger.cursor.offset <= datetime.now(timezone.utc)
+    assert before - timedelta(minutes=2) < trigger.cursor.offset <= datetime.now(UTC)
 
 
 def test_next_batch_skips_detections_already_forwarded(trigger, mock_api):
@@ -275,7 +275,7 @@ def test_next_batch_http_error(trigger, mock_api):
 
 
 def test_next_batch_empty_window(trigger, mock_api):
-    trigger.cursor.offset = datetime.now(timezone.utc) + timedelta(minutes=10)
+    trigger.cursor.offset = datetime.now(UTC) + timedelta(minutes=10)
 
     trigger.next_batch()
 

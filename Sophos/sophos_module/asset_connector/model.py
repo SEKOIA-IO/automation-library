@@ -131,7 +131,7 @@ class SophosEndpointsResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Sophos Directory Users – GET /common/v1/directory/users
+# Sophos Directory Users - GET /common/v1/directory/users
 # ---------------------------------------------------------------------------
 
 

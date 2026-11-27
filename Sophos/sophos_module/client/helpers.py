@@ -1,8 +1,8 @@
-from typing import Callable
+from collections.abc import Callable
 
 import requests
 import urllib3
-from tenacity import Retrying, retry_if_exception_type, retry_if_exception, stop_after_attempt, wait_exponential
+from tenacity import Retrying, retry_if_exception, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 
 def retry_strategy(max_retries: int = 10) -> Retrying:

@@ -173,7 +173,7 @@ def test_failing_whoami():
             },
         )
 
-        whoiam_mock = mock.get(
+        mock.get(
             f"{api_host_url}/whoami/v1",
             status_code=401,
             json={

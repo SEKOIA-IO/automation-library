@@ -1,6 +1,6 @@
 import time
 from functools import cached_property
-from typing import Any, Optional
+from typing import Any
 
 import orjson
 from requests.exceptions import HTTPError
@@ -35,7 +35,7 @@ class SophosEDREventsTrigger(SophosConnector):
 
     configuration: SophosEDRConfiguration
 
-    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
 
@@ -183,7 +183,8 @@ class SophosEDREventsTrigger(SophosConnector):
                 self.push_events_to_intakes(events=messages)
                 messages = []
 
-        self.cursor = cursor
+        if cursor is not None:
+            self.cursor = cursor
 
         if messages:
             self.log(message=f"Sending a batch of {len(messages)} messages", level="info")

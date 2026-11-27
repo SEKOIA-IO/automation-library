@@ -2,31 +2,29 @@
 Unit tests for SophosDeviceAssetConnector (asset_connector/device_assets.py).
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
 import requests_mock as req_mock
-
-from sophos_module.base import SophosModule
-from sophos_module.asset_connector.device_assets import SophosDeviceAssetConnector
-from sophos_module.asset_connector.model import (
-    SophosEndpoint,
-    SophosEndpointsResponse,
-    SophosHealth,
-    SophosOS,
-    SophosTenant,
-    SophosCloud,
-    SophosIsolation,
-    SophosAssociatedPerson,
-    SophosPages,
-)
 from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceTypeId,
     DeviceTypeStr,
     OSTypeId,
     OSTypeStr,
 )
+
+from sophos_module.asset_connector.device_assets import SophosDeviceAssetConnector
+from sophos_module.asset_connector.model import (
+    SophosAssociatedPerson,
+    SophosCloud,
+    SophosEndpoint,
+    SophosHealth,
+    SophosIsolation,
+    SophosOS,
+    SophosTenant,
+)
+from sophos_module.base import SophosModule
 
 COMPUTER_ENDPOINT = SophosEndpoint(
     id="aaaaaaaa-0000-0000-0000-000000000001",
@@ -245,7 +243,7 @@ class TestGetDeviceType:
 
     def test_unknown(self):
         ep = SophosEndpoint(id="x", hostname="h", type="tablet")
-        type_id, type_str = SophosDeviceAssetConnector._get_device_type(ep)
+        type_id, _ = SophosDeviceAssetConnector._get_device_type(ep)
         assert type_id == DeviceTypeId.UNKNOWN
 
     def test_missing_key(self):
@@ -607,7 +605,7 @@ def _make_response(connector, items, next_key=None):
 
 class TestLoadSentIds:
     def _entry(self, fp="abc", days_ago=0):
-        ts = (datetime.now(tz=timezone.utc) - timedelta(days=days_ago)).isoformat()
+        ts = (datetime.now(tz=UTC) - timedelta(days=days_ago)).isoformat()
         return {"fingerprint": fp, "cached_at": ts}
 
     def test_empty_context_gives_empty_cache(self, connector):
@@ -636,7 +634,7 @@ class TestLoadSentIds:
 
     def test_enforces_max_cache_size(self, connector):
         connector.MAX_CACHE_SIZE = 3
-        recent_base = datetime.now(tz=timezone.utc)
+        recent_base = datetime.now(tz=UTC)
         entries = {
             f"id-{i}": {
                 "fingerprint": f"fp-{i}",
@@ -654,9 +652,7 @@ class TestLoadSentIds:
 
     def test_entry_at_exact_boundary_is_kept(self, connector):
         """Entry exactly at CACHE_MAX_AGE_DAYS old should still be kept (>= cutoff)."""
-        boundary = (
-            datetime.now(tz=timezone.utc) - timedelta(days=connector.CACHE_MAX_AGE_DAYS, seconds=-1)
-        ).isoformat()
+        boundary = (datetime.now(tz=UTC) - timedelta(days=connector.CACHE_MAX_AGE_DAYS, seconds=-1)).isoformat()
         with connector.context as cache:
             cache["sent_ids"] = {"boundary-id": {"fingerprint": "fp", "cached_at": boundary}}
         connector._load_sent_ids()
@@ -664,8 +660,8 @@ class TestLoadSentIds:
 
     def test_log_eviction_count(self, connector):
         """Debug log must report the correct number of evicted entries."""
-        old = (datetime.now(tz=timezone.utc) - timedelta(days=10)).isoformat()
-        recent = datetime.now(tz=timezone.utc).isoformat()
+        old = (datetime.now(tz=UTC) - timedelta(days=10)).isoformat()
+        recent = datetime.now(tz=UTC).isoformat()
         with connector.context as cache:
             cache["sent_ids"] = {
                 "old-1": {"fingerprint": "fp1", "cached_at": old},
@@ -679,7 +675,7 @@ class TestLoadSentIds:
 
 class TestSaveSentIds:
     def test_persists_to_context(self, connector):
-        recent = datetime.now(tz=timezone.utc).isoformat()
+        recent = datetime.now(tz=UTC).isoformat()
         connector._sent_ids = {"id-1": {"fingerprint": "fp1", "cached_at": recent}}
         connector._save_sent_ids()
         with connector.context as cache:
@@ -973,7 +969,7 @@ class TestGetAssetsDeduplication:
         list(connector.get_assets())
 
         # Manually expire the cache entry by backdating its cached_at
-        expired_ts = (datetime.now(tz=timezone.utc) - timedelta(days=connector.CACHE_MAX_AGE_DAYS + 1)).isoformat()
+        expired_ts = (datetime.now(tz=UTC) - timedelta(days=connector.CACHE_MAX_AGE_DAYS + 1)).isoformat()
         with connector.context as cache:
             cache["sent_ids"][COMPUTER_ENDPOINT_DICT["id"]]["cached_at"] = expired_ts
 
@@ -1084,9 +1080,9 @@ class TestGetMappedFields:
     def test_values_reference_device_namespace(self, connector):
         """All OCSF paths must point into the device object or enrichments."""
         for v in connector.get_mapped_fields().values():
-            assert v.startswith("device.") or v.startswith(
-                "enrichments."
-            ), f"Expected OCSF path to start with 'device.' or 'enrichments.', got {v!r}"
+            assert v.startswith("device.") or v.startswith("enrichments."), (
+                f"Expected OCSF path to start with 'device.' or 'enrichments.', got {v!r}"
+            )
 
 
 class TestResetCheckpoint:
