@@ -124,3 +124,12 @@ def test_forward_next_batches_integration(symphony_storage):
     trigger.forward_next_batches()
     calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
     assert len(calls) > 0
+
+
+def test_get_most_recent_timestamp_without_fractional_seconds(trigger):
+    items = [{"created_at": "2019-04-01T15:11:09Z"}, {"created_at": "2019-04-01T15:12:09.984Z"}]
+    assert trigger._get_most_recent_timestamp_from_items(items) == 1554131529.984
+
+
+def test_get_most_recent_timestamp_returns_none_without_parseable_fields(trigger):
+    assert trigger._get_most_recent_timestamp_from_items([{"foo": "bar"}]) is None

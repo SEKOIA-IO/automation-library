@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
 import pytest
@@ -334,3 +334,160 @@ def test_getting_next_results(
         assert trigger.events_sum == 8
         assert trigger.cursor.offset.date() == datetime.now(timezone.utc).date()
         assert trigger.query["from"] == trigger.from_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _mock_authentication(mock, trigger, authorization_message, whoami_message):
+    mock.post(trigger.module.configuration.oauth2_authorization_url, status_code=200, json=authorization_message)
+    mock.get(f"{trigger.module.configuration.api_host}/whoami/v1", status_code=200, json=whoami_message)
+
+
+def test_post_query_forbidden_logs_role_hint(trigger, authorization_message, whoami_message):
+    url = "https://api-eu01.central.sophos.com/xdr-query/v1/queries/runs"
+    with requests_mock.Mocker() as mock:
+        _mock_authentication(mock, trigger, authorization_message, whoami_message)
+        mock.post(url, status_code=403, json={"error": "UNAUTHORIZED_ACCESS", "message": "Forbidden"})
+
+        assert trigger.post_query(trigger.query) == ("failed", None)
+
+    messages = [call.kwargs["message"] for call in trigger.log.call_args_list if call.kwargs.get("level") == "error"]
+    assert any("403" in message and "Service Principal Forensics" in message for message in messages)
+
+
+def test_post_query_without_query_id(trigger, authorization_message, whoami_message):
+    url = "https://api-eu01.central.sophos.com/xdr-query/v1/queries/runs"
+    with requests_mock.Mocker() as mock:
+        _mock_authentication(mock, trigger, authorization_message, whoami_message)
+        mock.post(url, status_code=201, json={"status": "pending"})
+
+        assert trigger.post_query(trigger.query) == ("failed", None)
+
+    assert any(call.kwargs.get("level") == "error" for call in trigger.log.call_args_list)
+
+
+def test_post_query_execution_failed_logs_details(
+    trigger, authorization_message, whoami_message, queryRun_message, queryStatus_message, monkeypatch
+):
+    host = "https://api-eu01.central.sophos.com"
+    query_id = queryRun_message["id"]
+    failed_status = {**queryStatus_message, "result": "failed", "error": {"code": "QUERY_FAILED"}}
+    monkeypatch.setattr("sophos_module.trigger_sophos_xdr_query.time.sleep", lambda _: None)
+
+    with requests_mock.Mocker() as mock:
+        _mock_authentication(mock, trigger, authorization_message, whoami_message)
+        mock.post(f"{host}/xdr-query/v1/queries/runs", json=queryRun_message)
+        mock.get(f"{host}/xdr-query/v1/queries/runs/{query_id}", json=failed_status)
+
+        assert trigger.post_query(trigger.query) == ("failed", query_id)
+
+    messages = [call.kwargs["message"] for call in trigger.log.call_args_list if call.kwargs.get("level") == "error"]
+    assert any("QUERY_FAILED" in message for message in messages)
+
+
+def test_observe_items_events_lag_without_fractional_seconds(trigger, monkeypatch):
+    lag = Mock()
+    monkeypatch.setattr("sophos_module.trigger_sophos_xdr_query.EVENTS_LAG", lag)
+    trigger._observe_items_events_lag([{"calendar_time": "2023-07-03T11:28:45Z"}])
+    lag.labels.return_value.set.assert_called_once()
+
+    lag.reset_mock()
+    trigger._observe_items_events_lag([{"foo": "bar"}])
+    lag.labels.return_value.set.assert_not_called()
+
+
+def _mock_tenant_markers(mock, trigger, authorization_message, whoami_message, **kwargs):
+    _mock_authentication(mock, trigger, authorization_message, whoami_message)
+    mock.post("https://api.taegis.sophos.com/graphql", **kwargs)
+
+
+def test_check_fusion_upgrade_on_upgraded_tenant(trigger, authorization_message, whoami_message):
+    with requests_mock.Mocker() as mock:
+        _mock_tenant_markers(
+            mock,
+            trigger,
+            authorization_message,
+            whoami_message,
+            json={
+                "data": {
+                    "tenant": {
+                        "id": "427579",
+                        "centralTenant": {"xdrOwnership": "securityOperations", "hydrateTo": "taegis"},
+                    }
+                }
+            },
+        )
+        assert trigger.check_fusion_upgrade() is True
+        assert mock.last_request.json()["variables"] == {"id": whoami_message["id"]}
+
+    levels = [call.kwargs["level"] for call in trigger.log.call_args_list]
+    assert "error" in levels
+
+
+def test_check_fusion_upgrade_on_legacy_tenant(trigger, authorization_message, whoami_message):
+    with requests_mock.Mocker() as mock:
+        _mock_tenant_markers(
+            mock,
+            trigger,
+            authorization_message,
+            whoami_message,
+            json={"data": {"tenant": {"id": "1", "centralTenant": {"xdrOwnership": "central", "hydrateTo": None}}}},
+        )
+        assert trigger.check_fusion_upgrade() is False
+
+    assert all(call.kwargs["level"] == "info" for call in trigger.log.call_args_list)
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        {"status_code": 403, "json": {"message": "Forbidden"}},
+        {"json": {"data": None, "errors": [{"message": "not found", "extensions": {"code": "NOT_FOUND"}}]}},
+    ],
+)
+def test_check_fusion_upgrade_failure_is_ignored(trigger, authorization_message, whoami_message, response):
+    with requests_mock.Mocker() as mock:
+        _mock_tenant_markers(mock, trigger, authorization_message, whoami_message, **response)
+        assert trigger.check_fusion_upgrade() is None
+        assert trigger.fusion_upgraded is None
+
+    assert all(call.kwargs["level"] == "info" for call in trigger.log.call_args_list)
+
+
+def test_warn_if_stalled_when_markers_unknown(trigger):
+    trigger.from_date = datetime.now(timezone.utc) - timedelta(days=31)
+
+    trigger.warn_if_stalled()
+    trigger.warn_if_stalled()
+
+    warnings = [call for call in trigger.log.call_args_list if call.kwargs.get("level") == "warning"]
+    assert len(warnings) == 1
+    assert "Sophos Fusion" in warnings[0].kwargs["message"]
+
+
+@pytest.mark.parametrize("upgraded", [True, False])
+def test_warn_if_stalled_silent_when_markers_answered(trigger, upgraded):
+    trigger.fusion_upgraded = upgraded
+    trigger.from_date = datetime.now(timezone.utc) - timedelta(days=31)
+
+    trigger.warn_if_stalled()
+
+    trigger.log.assert_not_called()
+
+
+def test_warn_if_stalled_recent_checkpoint(trigger):
+    trigger.from_date = datetime.now(timezone.utc) - timedelta(days=2)
+
+    trigger.warn_if_stalled()
+
+    trigger.log.assert_not_called()
+
+
+def test_check_fusion_upgrade_daily(trigger):
+    trigger.check_fusion_upgrade = Mock()
+
+    trigger.check_fusion_upgrade_daily()
+    trigger._last_fusion_check = datetime.now(timezone.utc)
+    trigger.check_fusion_upgrade_daily()
+    trigger._last_fusion_check = datetime.now(timezone.utc) - timedelta(days=1, minutes=1)
+    trigger.check_fusion_upgrade_daily()
+
+    assert trigger.check_fusion_upgrade.call_count == 2

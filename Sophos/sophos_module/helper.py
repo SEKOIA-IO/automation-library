@@ -1,4 +1,6 @@
 import re
+from collections.abc import Iterable
+from datetime import datetime, timezone
 from typing import Any
 
 MAPPING = {
@@ -29,6 +31,42 @@ def strip_null_values(data: dict[str, Any]) -> dict[str, Any]:
             del data[k]
 
     return data
+
+
+def parse_iso8601_timestamp(raw: Any) -> float | None:
+    """Parse an ISO 8601 date (with or without fractional seconds or offset) into a POSIX timestamp."""
+    if not isinstance(raw, str):
+        return None
+
+    value = raw.strip()
+    if not value:
+        return None
+
+    if value[-1] in "Zz":
+        value = f"{value[:-1]}+00:00"
+
+    try:
+        dt = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.timestamp()
+
+
+def latest_timestamp(items: Iterable[dict[str, Any]], keys: Iterable[str]) -> float | None:
+    """Return the most recent timestamp of the items, using the first parseable key of each item."""
+    keys = tuple(keys)
+    most_recent: float | None = None
+    for item in items:
+        for key in keys:
+            parsed = parse_iso8601_timestamp(item.get(key))
+            if parsed is not None:
+                if most_recent is None or parsed > most_recent:
+                    most_recent = parsed
+                break
+    return most_recent
 
 
 THREAT_REGEX = re.compile("'(?P<detection_identity_name>.*?)'.+'(?P<filePath>.*?)'")

@@ -6,7 +6,10 @@ from requests.auth import AuthBase
 from requests_ratelimiter import LimiterAdapter
 
 from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.client.exceptions import SophosGraphQLError
 from sophos_module.client.helpers import retry
+
+DEFAULT_GRAPHQL_API_URL = "https://api.taegis.sophos.com"
 
 
 class ApiClient(requests.Session):
@@ -43,7 +46,9 @@ class SophosApiClient(ApiClient):
         ratelimit_per_minute: int = 100,
         ratelimit_per_hour: int = 1000,
         ratelimit_per_day: int = 200000,
+        graphql_api_url: str = DEFAULT_GRAPHQL_API_URL,
     ) -> None:
+        self.graphql_api_url = graphql_api_url.rstrip("/")
         super().__init__(
             auth=auth,
             nb_retries=nb_retries,
@@ -97,3 +102,26 @@ class SophosApiClient(ApiClient):
             url=f"{self.auth.get_credentials().api_url}/xdr-query/v1/queries/runs/{run_id}/results",
             params=params,
         )
+
+    @retry()
+    def _post_graphql(self, query: str, variables: dict[str, Any] | None) -> requests.Response:
+        response = self.post(
+            url=f"{self.graphql_api_url}/graphql", json={"query": query, "variables": variables or {}}
+        )
+        response.raise_for_status()
+        return response
+
+    def graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
+        """
+        Run a query on the Sophos Fusion GraphQL API and return its `data`.
+
+        The API answers HTTP 200 on query errors (invalid query, downstream errors):
+        a non-empty `errors` array raises SophosGraphQLError.
+        """
+        body = self._post_graphql(query, variables).json()
+        errors = body.get("errors")
+        if errors:
+            raise SophosGraphQLError(errors)
+
+        data: dict[str, Any] = body.get("data") or {}
+        return data

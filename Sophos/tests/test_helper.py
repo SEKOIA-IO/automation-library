@@ -1,4 +1,12 @@
-from sophos_module.helper import extract_info, strip_null_values, translate_fields
+import pytest
+
+from sophos_module.helper import (
+    extract_info,
+    latest_timestamp,
+    parse_iso8601_timestamp,
+    strip_null_values,
+    translate_fields,
+)
 
 
 def test_translate_fields():
@@ -50,3 +58,40 @@ def test_extract_info():
         "file_size": "36",
         "file_path": "C:\\Users\\Sophos\\Desktop\\test.txt",
     }
+
+
+def test_parse_iso8601_timestamp_handles_invalid_values():
+    assert parse_iso8601_timestamp(None) is None
+    assert parse_iso8601_timestamp(123) is None
+    assert parse_iso8601_timestamp("") is None
+    assert parse_iso8601_timestamp("not-a-date") is None
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("2023-07-03T11:28:45.000Z", 1688383725.0),
+        ("2023-07-03T11:28:45.000z", 1688383725.0),
+        ("2023-07-03T11:28:45Z", 1688383725.0),
+        ("2023-07-03T13:28:45+02:00", 1688383725.0),
+        ("2023-07-03T11:28:45", 1688383725.0),
+    ],
+)
+def test_parse_iso8601_timestamp_exact_values(raw, expected):
+    assert parse_iso8601_timestamp(raw) == expected
+
+
+def test_latest_timestamp_uses_first_parseable_key_per_item():
+    assert (
+        latest_timestamp(
+            [
+                {"created_at": "invalid", "when": "2023-07-03T11:28:45Z"},
+                {"created_at": "2023-07-03T11:29:45Z", "when": "2023-07-03T12:28:45Z"},
+                {"created_at": None},
+            ],
+            ("created_at", "when"),
+        )
+        == 1688383785.0
+    )
+    assert latest_timestamp([], ("created_at",)) is None
+    assert latest_timestamp([{"created_at": "invalid"}], ("created_at",)) is None

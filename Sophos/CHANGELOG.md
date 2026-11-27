@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-11-27 - 1.21.0
+
+### Added
+
+- Add the `Get Sophos Fusion detections` connector, to collect the detections of Sophos Fusion (Security Operations) with the Sophos Detections GraphQL API on tenants upgraded to Sophos Fusion
+- Add the optional module setting `graphql_api_url` (default `https://api.taegis.sophos.com`)
+
+### Changed
+
+- Query IoC from data lake: check the Sophos Fusion markers of the tenant at startup and once a day, and log an error when the tenant is upgraded, since the XDR Query API then returns no new IoC. When the markers are unavailable, warn once a day after 30 days without IoC
+- Query IoC from data lake: log the details of failed queries (HTTP status and error payload of the query post, error fields of a failed execution), with a hint about the `Service Principal Forensics` role on `403`
+
+### Fixed
+
+- Events and IoC triggers: compute the events lag from timestamps with or without fractional seconds and time offset, instead of failing on any format other than `%Y-%m-%dT%H:%M:%S.%fZ`
+
 ## 2026-11-24 - 1.20.1
 
 ### Fixed

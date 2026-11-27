@@ -15,7 +15,14 @@ from sophos_module.base import SophosConnector
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
 from sophos_module.client.exceptions import SophosApiAuthenticationError
+from sophos_module.fusion_queries import TENANT_MARKERS
+from sophos_module.helper import latest_timestamp
 from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+
+FUSION_UPGRADE_MESSAGE = (
+    "This tenant was probably upgraded to Sophos Fusion: the XDR Query API no longer returns new IoCs. "
+    "Use the 'Get Sophos Fusion detections' connector instead."
+)
 
 
 class SophosXDRQueryConfiguration(DefaultConnectorConfiguration):
@@ -41,6 +48,10 @@ class SophosXDRQueryTrigger(SophosConnector):
         )
         self._from_date: datetime = self.cursor.offset
         self.events_sum = 0
+        self._last_stall_warning: datetime | None = None
+        # Sophos Fusion upgrade, from the tenant markers: True, False, or None when unknown
+        self.fusion_upgraded: bool | None = None
+        self._last_fusion_check: datetime | None = None
 
     @property
     def from_date(self) -> datetime:
@@ -76,7 +87,69 @@ class SophosXDRQueryTrigger(SophosConnector):
 
     @cached_property
     def client(self) -> SophosApiClient:
-        return SophosApiClient(auth=self.authentication)
+        return SophosApiClient(auth=self.authentication, graphql_api_url=self.module.configuration.graphql_api_url)
+
+    def check_fusion_upgrade(self) -> bool | None:
+        """
+        Check whether the tenant is upgraded to Sophos Fusion: the XDR Query API then returns no new data.
+
+        The markers come from the GraphQL tenant of Sophos Fusion. Best effort: any failure gives None (unknown).
+        """
+        self._last_fusion_check = datetime.now(timezone.utc)
+        try:
+            tenant_id = self.authentication.get_credentials().tenancy_id
+            tenant = self.client.graphql(TENANT_MARKERS, {"id": tenant_id}).get("tenant") or {}
+            markers = tenant["centralTenant"] or {}
+        except Exception as error:
+            self.log(message=f"Unable to check whether the tenant is upgraded to Sophos Fusion: {error}", level="info")
+            self.fusion_upgraded = None
+            return None
+
+        xdr_ownership, hydrate_to = markers.get("xdrOwnership"), markers.get("hydrateTo")
+        self.log(
+            message=f"Sophos Fusion markers of the tenant: xdrOwnership={xdr_ownership}, hydrateTo={hydrate_to}",
+            level="info",
+        )
+
+        self.fusion_upgraded = xdr_ownership == "securityOperations" or hydrate_to == "taegis"
+        if self.fusion_upgraded:
+            self.log(message=FUSION_UPGRADE_MESSAGE, level="error")
+
+        return self.fusion_upgraded
+
+    def check_fusion_upgrade_daily(self) -> None:
+        """Check the Sophos Fusion markers at startup, then once a day: a tenant can be upgraded at any time."""
+        if self._last_fusion_check is None or datetime.now(timezone.utc) - self._last_fusion_check >= timedelta(
+            days=1
+        ):
+            self.check_fusion_upgrade()
+
+    def warn_if_stalled(self) -> None:
+        """
+        Fallback when the Sophos Fusion markers are unavailable: warn, at most once a day,
+        when nothing was collected for the maximum lookback period.
+
+        No warning when the markers answered: an upgraded tenant is already reported by the daily check,
+        and a tenant not upgraded with no IoC for 30 days is legitimate.
+        """
+        if self.fusion_upgraded is not None:
+            return
+
+        now = datetime.now(timezone.utc)
+        too_old = now - self.cursor._ignore_older_than
+        if self._from_date > too_old:
+            return
+
+        if self._last_stall_warning is not None and now - self._last_stall_warning < timedelta(days=1):
+            return
+
+        self._last_stall_warning = now
+        self.log(
+            message=f"No IoC collected for more than {self.cursor._ignore_older_than.days} days. "
+            "If the Sophos console shows 'Security Operations' instead of 'Threat Analysis Center', the tenant was "
+            "upgraded to Sophos Fusion: use the 'Get Sophos Fusion detections' connector instead.",
+            level="warning",
+        )
 
     def run(self) -> None:  # pragma: no cover
         self.log(message="Sophos Events Trigger has started", level="info")
@@ -87,6 +160,7 @@ class SophosXDRQueryTrigger(SophosConnector):
 
             while self.running:
                 start = time.time()
+                self.check_fusion_upgrade_daily()
                 try:
                     self.getting_results(self.pagination_limit)
 
@@ -123,7 +197,8 @@ class SophosXDRQueryTrigger(SophosConnector):
         response = self.client.run_query(json_query=query)
         if response.status_code >= 400:
             self.log(
-                message=f"Failed to post the query. Status code: {response.status_code}, response: {response.text}",
+                message=f"Failed to post the query. Status code: {response.status_code}, response: {response.text}"
+                f"{self._query_error_hint(response.status_code)}",
                 level="error",
             )
 
@@ -134,6 +209,7 @@ class SophosXDRQueryTrigger(SophosConnector):
         query_id = result.get("id")
 
         if query_id is None:
+            self.log(message=f"Failed to post the query: no query id in the response {result}", level="error")
             return "failed", query_id
 
         status = ""
@@ -157,22 +233,30 @@ class SophosXDRQueryTrigger(SophosConnector):
 
         self.log(message=f"Finishing the loop with status {status} and result {result}", level="info")
 
+        if result != "succeeded":
+            details = {
+                key: value
+                for key, value in result_query_status.items()
+                if key.lower().startswith("error") or key in ("message", "details")
+            }
+            self.log(message=f"The query {query_id} ended with result {result}: {details}", level="error")
+
         return result, query_id
 
+    @staticmethod
+    def _query_error_hint(status_code: int) -> str:
+        if status_code == 403:
+            return (
+                ". Check that the API credential has the 'Service Principal Forensics' role"
+                " and that the XDR licence of the tenant is valid"
+            )
+        return ""
+
     def _observe_items_events_lag(self, items: list[dict[str, Any]]) -> None:
-        def _extract_timestamp(item: dict[str, Any]) -> float:
-            RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-            return datetime.strptime(item["calendar_time"], RFC3339_STRICT_FORMAT).timestamp()
-
-        if len(items) == 0:
+        most_recent_timestamp = latest_timestamp(items, ("calendar_time",))
+        if most_recent_timestamp is None:
+            # can't measure lag, because there's no parseable timestamp
             return
-
-        if "calendar_time" not in items[0]:
-            # can't measure lag, because there's no timestamp
-            return
-
-        most_recent_item: dict[str, Any] = max(items, key=lambda item: item["calendar_time"])  # type: ignore
-        most_recent_timestamp = _extract_timestamp(most_recent_item)
 
         events_lag = int(time.time() - most_recent_timestamp)
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
@@ -223,6 +307,7 @@ class SophosXDRQueryTrigger(SophosConnector):
             else:
                 self.log(message="No messages to forward", level="info")
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+                self.warn_if_stalled()
 
 
 class SophosXDRIOCQuery(SophosXDRQueryTrigger):

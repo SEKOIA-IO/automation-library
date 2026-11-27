@@ -11,6 +11,9 @@ class SophosConfiguration(BaseModel):
     )
     client_id: str = Field(..., description="OAuth2 client identifier")
     client_secret: str = Field(secret=True, description="OAuth2 client secret")
+    graphql_api_url: str = Field(
+        "https://api.taegis.sophos.com", description="URL of the Sophos Fusion GraphQL API (Detections)"
+    )
 
 
 class SophosModule(Module):

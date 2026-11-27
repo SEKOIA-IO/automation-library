@@ -1,0 +1,231 @@
+import time
+from datetime import datetime, timedelta, timezone
+from functools import cached_property
+from typing import Any, Optional
+
+import orjson
+from requests.exceptions import HTTPError
+from sekoia_automation.checkpoint import CheckpointDatetime
+from sekoia_automation.connector import DefaultConnectorConfiguration
+from urllib3.exceptions import HTTPError as BaseHTTPError
+
+from sophos_module.base import SophosConnector
+from sophos_module.client import SophosApiClient
+from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.client.exceptions import SophosApiAuthenticationError, SophosGraphQLError
+from sophos_module.fusion_queries import DETECTION_SEARCH
+from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+
+# detectionSearch returns at most 10,000 results per search: larger windows are split
+MAX_RESULTS_PER_SEARCH = 10000
+
+
+class SophosFusionDetectionsConfiguration(DefaultConnectorConfiguration):
+    frequency: int = 60
+    chunk_size: int = 1000
+    min_severity: float | None = None
+
+
+def timestamp_to_rfc3339(value: dict[str, Any]) -> str:
+    """Convert a GraphQL Timestamp ({seconds, nanos}) into an RFC 3339 date with milliseconds."""
+    dt = datetime.fromtimestamp(int(value["seconds"]), tz=timezone.utc) + timedelta(
+        microseconds=int(value.get("nanos") or 0) // 1000
+    )
+    return dt.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def is_timestamp(value: Any) -> bool:
+    return isinstance(value, dict) and set(value.keys()) == {"seconds", "nanos"}
+
+
+def clean_detection(value: Any) -> Any:
+    """Convert the GraphQL timestamps into dates and drop the null and empty values, recursively."""
+    if is_timestamp(value):
+        return timestamp_to_rfc3339(value)
+
+    if isinstance(value, dict):
+        cleaned_dict = {key: clean_detection(item) for key, item in value.items()}
+        return {key: item for key, item in cleaned_dict.items() if item not in (None, {}, [])}
+
+    if isinstance(value, list):
+        cleaned_list = [clean_detection(item) for item in value]
+        return [item for item in cleaned_list if item not in (None, {}, [])]
+
+    return value
+
+
+def format_ql_date(dt: datetime) -> str:
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+class SophosFusionDetectionsTrigger(SophosConnector):
+    """
+    Collect the detections of Sophos Fusion (Security Operations) with the Detections GraphQL API.
+
+    Each cycle searches the detections of the window [checkpoint - overlap, now - latency].
+    The overlap catches the detections indexed late; the detections already forwarded in the overlap are skipped.
+    """
+
+    configuration: SophosFusionDetectionsConfiguration
+
+    overlap = timedelta(minutes=5)
+    latency = timedelta(minutes=1)
+
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+        super().__init__(*args, **kwargs)
+        self.cursor = CheckpointDatetime(
+            path=self.data_path, start_at=timedelta(days=1), ignore_older_than=timedelta(days=30)
+        )
+        # detection id -> window end at which it was seen, to skip the detections already forwarded
+        self._seen: dict[str, datetime] = {}
+
+    @cached_property
+    def authentication(self) -> SophosApiAuthentication:
+        return SophosApiAuthentication(
+            api_host=self.module.configuration.api_host,
+            authorization_url=self.module.configuration.oauth2_authorization_url,
+            client_id=self.module.configuration.client_id,
+            client_secret=self.module.configuration.client_secret,
+        )
+
+    @cached_property
+    def client(self) -> SophosApiClient:
+        return SophosApiClient(auth=self.authentication, graphql_api_url=self.module.configuration.graphql_api_url)
+
+    @cached_property
+    def page_size(self) -> int:
+        return min(max(self.configuration.chunk_size, 1), MAX_RESULTS_PER_SEARCH)
+
+    def build_query(self, start: datetime, end: datetime) -> str:
+        filters = ""
+        if self.configuration.min_severity is not None:
+            filters = f"where severity >= {self.configuration.min_severity} "
+
+        return (
+            f"from alert {filters}earliest='{format_ql_date(start)}' latest='{format_ql_date(end)}' "
+            "| sort created_at asc"
+        )
+
+    def search(self, start: datetime, end: datetime, offset: int) -> dict[str, Any]:
+        data = self.client.graphql(
+            DETECTION_SEARCH,
+            {"in": {"cql_query": self.build_query(start, end), "offset": offset, "limit": self.page_size}},
+        )
+        response: dict[str, Any] = data.get("detectionSearch") or {}
+        if response.get("status") not in (None, "OK"):
+            raise SophosGraphQLError(
+                [{"message": response.get("reason"), "extensions": {"code": response.get("status")}}]
+            )
+
+        return response
+
+    def fetch_window(self, start: datetime, end: datetime) -> list[dict[str, Any]]:
+        """Return the detections of the window, splitting it when it has too many results for one search."""
+        response = self.search(start, end, offset=0)
+        alerts = response.get("alerts") or {}
+        total = alerts.get("total_results") or 0
+
+        if total > MAX_RESULTS_PER_SEARCH and end - start > timedelta(seconds=1):
+            middle = start + (end - start) / 2
+            self.log(
+                message=f"{total} detections between {format_ql_date(start)} and {format_ql_date(end)}: "
+                "splitting the window",
+                level="info",
+            )
+            return self.fetch_window(start, middle) + self.fetch_window(middle, end)
+
+        detections: list[dict[str, Any]] = list(alerts.get("list") or [])
+        while len(detections) < min(total, MAX_RESULTS_PER_SEARCH):
+            page = (self.search(start, end, offset=len(detections)).get("alerts") or {}).get("list") or []
+            if not page:
+                break
+            detections.extend(page)
+
+        return detections
+
+    def _forget_seen_before(self, limit: datetime) -> None:
+        self._seen = {key: seen_at for key, seen_at in self._seen.items() if seen_at >= limit}
+
+    def forward_detections(self, detections: list[dict[str, Any]], window_end: datetime) -> int:
+        events: list[str] = []
+        most_recent_timestamp: float | None = None
+
+        for detection in detections:
+            detection_id = detection.get("id")
+            if detection_id is None or detection_id in self._seen:
+                continue
+            self._seen[detection_id] = window_end
+
+            created_at = ((detection.get("metadata") or {}).get("created_at") or {}).get("seconds")
+            if created_at is not None and (most_recent_timestamp is None or created_at > most_recent_timestamp):
+                most_recent_timestamp = float(created_at)
+
+            events.append(orjson.dumps(clean_detection(detection)).decode("utf-8"))
+
+        if most_recent_timestamp is not None:
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(time.time() - most_recent_timestamp))
+
+        if events:
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
+            for index in range(0, len(events), self.page_size):
+                self.push_events_to_intakes(events=events[index : index + self.page_size])
+
+        return len(events)
+
+    def next_batch(self) -> None:
+        end = datetime.now(timezone.utc) - self.latency
+        start = self.cursor.offset - self.overlap
+        if end <= start:
+            return
+
+        try:
+            detections = self.fetch_window(start, end)
+        except SophosGraphQLError as error:
+            # keep the checkpoint: the same window is searched again on the next cycle
+            self.log(message=f"Failed to search the Sophos Fusion detections: {error}", level="error")
+            return
+
+        INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(detections))
+        forwarded = self.forward_detections(detections, end)
+        self.log(
+            message=f"{len(detections)} detections between {format_ql_date(start)} and {format_ql_date(end)}, "
+            f"{forwarded} forwarded",
+            level="info",
+        )
+        if not detections:
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+
+        self.cursor.offset = end
+        self._forget_seen_before(start)
+
+    def run(self) -> None:  # pragma: no cover
+        self.log(message="Sophos Fusion detections trigger has started", level="info")
+
+        try:
+            self.authentication.get_credentials()
+
+            while self.running:
+                start = time.time()
+
+                try:
+                    self.next_batch()
+                except (HTTPError, BaseHTTPError) as ex:
+                    self.log_exception(ex, message="Failed to get the next detections")
+                except SophosApiAuthenticationError:
+                    raise
+                except Exception as ex:
+                    self.log_exception(ex, message="An unknown exception occurred")
+                    raise
+
+                duration = int(time.time() - start)
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
+
+                delta_sleep = self.configuration.frequency - duration
+                if delta_sleep > 0:
+                    time.sleep(delta_sleep)
+
+        except SophosApiAuthenticationError as ex:
+            self.log(message=str(ex), level="critical")
+
+        finally:
+            self.log(message="Sophos Fusion detections trigger has stopped", level="info")

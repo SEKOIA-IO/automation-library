@@ -22,6 +22,12 @@
       "client_secret": {
         "description": "OAuth2 client secret",
         "type": "string"
+      },
+      "graphql_api_url": {
+        "description": "URL of the Sophos Fusion GraphQL API, used by the Sophos Fusion detections connector",
+        "type": "string",
+        "default": "https://api.taegis.sophos.com",
+        "format": "uri"
       }
     },
     "required": [
@@ -38,7 +44,7 @@
   "name": "Sophos",
   "uuid": "0de5216e-19b0-4ad3-9b91-a547cfaf52ca",
   "slug": "sophos",
-  "version": "1.20.1",
+  "version": "1.21.0",
   "categories": [
     "Endpoint",
     "Network"
