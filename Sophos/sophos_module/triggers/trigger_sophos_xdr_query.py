@@ -119,7 +119,8 @@ class SophosXDRQueryTrigger(SophosConnector):
         self._last_fusion_check = datetime.now(UTC)
         try:
             tenant_id = self.authentication.get_credentials().tenancy_id
-            tenant = self.client.graphql(TENANT_MARKERS, {"id": tenant_id}).get("tenant") or {}
+            # best effort: one short attempt, so an unreachable GraphQL API never delays the IoC collection
+            tenant = self.client.graphql(TENANT_MARKERS, {"id": tenant_id}, best_effort=True).get("tenant") or {}
             markers = tenant["centralTenant"] or {}
         except Exception as error:
             logger.info("Unable to check whether the tenant is upgraded to Sophos Fusion", error=str(error))

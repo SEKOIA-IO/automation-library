@@ -10,6 +10,9 @@ from sophos_module.client.exceptions import SophosGraphQLError
 from sophos_module.client.helpers import retry
 
 DEFAULT_GRAPHQL_API_URL = "https://api.taegis.sophos.com"
+# seconds: GraphQL requests of the collection, and of the optional checks (single attempt)
+GRAPHQL_TIMEOUT = 60
+BEST_EFFORT_GRAPHQL_TIMEOUT = 10
 
 
 class ApiClient(requests.Session):
@@ -106,19 +109,37 @@ class SophosApiClient(ApiClient):
     @retry()
     def _post_graphql(self, query: str, variables: dict[str, Any] | None) -> requests.Response:
         response = self.post(
-            url=f"{self.graphql_api_url}/graphql", json={"query": query, "variables": variables or {}}
+            url=f"{self.graphql_api_url}/graphql",
+            json={"query": query, "variables": variables or {}},
+            timeout=GRAPHQL_TIMEOUT,
         )
         response.raise_for_status()
         return response
 
-    def graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _post_graphql_once(self, query: str, variables: dict[str, Any] | None) -> requests.Response:
+        # plain request: none of the retries of this session (urllib3 adapter, tenacity), short timeout
+        response = requests.post(
+            url=f"{self.graphql_api_url}/graphql",
+            json={"query": query, "variables": variables or {}},
+            auth=self.auth,
+            timeout=BEST_EFFORT_GRAPHQL_TIMEOUT,
+        )
+        response.raise_for_status()
+        return response
+
+    def graphql(
+        self, query: str, variables: dict[str, Any] | None = None, best_effort: bool = False
+    ) -> dict[str, Any]:
         """
         Run a query on the Sophos Fusion GraphQL API and return its `data`.
 
         The API answers HTTP 200 on query errors (invalid query, downstream errors):
         a non-empty `errors` array raises SophosGraphQLError.
+
+        best_effort: one attempt with a short timeout, for optional checks that must never delay the collection.
         """
-        body = self._post_graphql(query, variables).json()
+        response = self._post_graphql_once(query, variables) if best_effort else self._post_graphql(query, variables)
+        body = response.json()
         errors = body.get("errors")
         if errors:
             raise SophosGraphQLError(errors)

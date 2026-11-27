@@ -4,6 +4,7 @@ import requests_mock
 
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.client.client import BEST_EFFORT_GRAPHQL_TIMEOUT, GRAPHQL_TIMEOUT
 from sophos_module.client.exceptions import SophosGraphQLError
 
 DATA_REGION = "https://api-eu02.central.sophos.com"
@@ -187,3 +188,43 @@ def test_graphql_http_error(graphql_client, mock_authentication):
 
     with pytest.raises(requests.HTTPError):
         graphql_client.graphql("query { tenant { id } }")
+
+
+@pytest.mark.parametrize(
+    "best_effort, expected_timeout",
+    [
+        pytest.param(False, GRAPHQL_TIMEOUT, id="collection"),
+        pytest.param(True, BEST_EFFORT_GRAPHQL_TIMEOUT, id="best-effort"),
+    ],
+)
+def test_graphql_timeout(graphql_client, mock_authentication, best_effort, expected_timeout):
+    mock_authentication.post(GRAPHQL_URL, json={"data": {"tenant": None}})
+
+    graphql_client.graphql("query { tenant { id } }", best_effort=best_effort)
+
+    assert mock_authentication.last_request.timeout == expected_timeout
+    assert mock_authentication.last_request.headers["X-Tenant-ID"] == "tenant-id"
+
+
+@pytest.mark.parametrize(
+    "response, expected_error",
+    [
+        pytest.param({"status_code": 503, "json": {}}, requests.HTTPError, id="server-error"),
+        pytest.param({"exc": requests.ConnectTimeout}, requests.ConnectTimeout, id="timeout"),
+        pytest.param({"exc": requests.ConnectionError}, requests.ConnectionError, id="unreachable"),
+    ],
+)
+def test_graphql_best_effort_makes_a_single_attempt(graphql_client, mock_authentication, response, expected_error):
+    endpoint = mock_authentication.post(GRAPHQL_URL, **response)
+
+    with pytest.raises(expected_error):
+        graphql_client.graphql("query { tenant { id } }", best_effort=True)
+
+    assert endpoint.call_count == 1
+
+
+def test_graphql_collection_retries_server_errors(graphql_client, mock_authentication):
+    endpoint = mock_authentication.post(GRAPHQL_URL, [{"status_code": 503, "json": {}}, {"json": {"data": {"a": 1}}}])
+
+    assert graphql_client.graphql("query { a }") == {"a": 1}
+    assert endpoint.call_count >= 2

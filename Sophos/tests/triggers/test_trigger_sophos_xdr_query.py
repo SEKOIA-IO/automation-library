@@ -707,3 +707,14 @@ def test_getting_results_logs_a_summary_in_the_pod_logs_only(
     trigger.log.assert_not_called()
     summary = [record.getMessage() for record in caplog.records if "IoCs collected" in record.getMessage()]
     assert len(summary) == 1 and "pages=1" in summary[0] and "forwarded=7" in summary[0]
+
+
+def test_check_fusion_upgrade_is_a_single_short_attempt(trigger):
+    trigger.authentication = Mock()
+    trigger.client.graphql = Mock(side_effect=requests.ConnectTimeout())
+
+    assert trigger.check_fusion_upgrade() is None
+
+    trigger.client.graphql.assert_called_once()
+    assert trigger.client.graphql.call_args.kwargs == {"best_effort": True}
+    trigger.log.assert_not_called()
