@@ -197,6 +197,14 @@ class ManifestValidator(Validator):
                 )
             )
 
+        if not isinstance(fission.get("prune-botocore-data", True), bool):
+            result.errors.append(
+                CheckError(
+                    filepath=manifest_path,
+                    error="`fission.prune-botocore-data` must be a boolean in manifest.json",
+                )
+            )
+
         if python_versions and not (module_dir / "uv.lock").is_file():
             result.errors.append(
                 CheckError(
