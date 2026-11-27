@@ -1,3 +1,4 @@
+import json
 from copy import deepcopy
 from unittest.mock import MagicMock, patch
 
@@ -6,7 +7,7 @@ import requests
 import requests_mock
 
 from thinkst_canary_modules import ThinkstCanaryModule
-from thinkst_canary_modules.connector_thinkst_canary_alerts import API_TIMEOUT_SECONDS, ThinkstCanaryAlertsConnector
+from thinkst_canary_modules.connector_thinkst_canary_alerts import ThinkstCanaryAlertsConnector
 
 
 @pytest.fixture
@@ -279,7 +280,7 @@ def test_fetch_pages_should_set_a_timeout_on_every_request(trigger, message1):
         list(trigger.fetch_pages(None))
 
         assert len(mock_requests.request_history) == 2
-        assert all(request.timeout == API_TIMEOUT_SECONDS for request in mock_requests.request_history)
+        assert all(request.timeout == 60 for request in mock_requests.request_history)
 
 
 def test_acknowledge_incident_should_set_a_timeout(trigger):
@@ -288,7 +289,7 @@ def test_acknowledge_incident_should_set_a_timeout(trigger):
 
         trigger.acknowledge_incident(incident_id="incident:1")
 
-        assert mock_requests.request_history[0].timeout == API_TIMEOUT_SECONDS
+        assert mock_requests.request_history[0].timeout == 60
 
 
 def test_next_batch_should_raise_on_timeout_and_keep_the_cursor(trigger):
@@ -320,6 +321,8 @@ def test_next_batch_should_forward_events_when_acknowledge_times_out(trigger, me
         trigger.next_batch()
 
         assert trigger.push_events_to_intakes.call_count == 1
+        forwarded_events = [json.loads(event) for event in trigger.push_events_to_intakes.call_args.kwargs["events"]]
+        assert forwarded_events == ThinkstCanaryAlertsConnector.extract_events(deepcopy(message1))
         assert trigger.from_id == 3
         assert trigger.log_exception.call_count == 1
 
