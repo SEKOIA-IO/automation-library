@@ -106,10 +106,12 @@ class FlareEventsConnector(Connector):
             return None
         event_resp.raise_for_status()
         # Drop the `null` fields, at every level: Flare sends many of them
-        event = event_resp.json(object_hook=lambda obj: {k: v for k, v in obj.items() if v is not None})
+        event = event_resp.json(object_pairs_hook=lambda pairs: {k: v for k, v in pairs if v is not None})
+        activity = event.get("activity", event)
+        # The parser falls back on the header when `data` is `null`, but not when `data` is missing
+        activity.setdefault("data", None)
         # The date Flare matched the item to the tenant is only in the search results; the parser uses it as the
         # event's date, since the item can be years old (e.g. the history Flare matches when a tenant is created)
-        activity = event.get("activity", event)
         activity["metadata"] = {**(activity.get("metadata") or {}), "matched_at": item_metadata.get("matched_at")}
         return event
 
